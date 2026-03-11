@@ -456,8 +456,9 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
   // xcrun can take surprisingly long to build up its database.
   auto timeout = std::chrono::seconds(60);
   bool run_in_shell = false;
-  lldb_private::Status error = Host::RunShellCommand(
-      args, FileSpec(), &status, &signo, &output_str, timeout, run_in_shell);
+  lldb_private::Status error =
+      Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                            nullptr, timeout, run_in_shell);
 
   // Check that xcrun returned something useful.
   if (error.Fail()) {
@@ -818,7 +819,8 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
             g_dyld_image_segment_data_4HWTrace(image_copy, segmentName);
         (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
 
-        segments.push_back(seg);
+        if (seg.size > 0 && seg.data != 0)
+          segments.push_back(seg);
       });
 
   if (!segments.size())

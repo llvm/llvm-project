@@ -625,8 +625,7 @@ static std::optional<Procedure> CharacterizeProcedure(
   if (seenProcs.find(symbol) != seenProcs.end()) {
     std::string procsList{GetSeenProcs(seenProcs)};
     context.messages().Say(symbol.name(),
-        "Procedure '%s' is recursively defined.  Procedures in the cycle:"
-        " %s"_err_en_US,
+        "Procedure '%s' is recursively defined.  Procedures in the cycle: %s"_err_en_US,
         symbol.name(), procsList);
     return std::nullopt;
   }
@@ -776,8 +775,10 @@ static std::optional<Procedure> CharacterizeProcedure(
             return std::optional<Procedure>{};
           },
           [&](const auto &) {
-            context.messages().Say(
-                "'%s' is not a procedure"_err_en_US, symbol.name());
+            if (emitError) {
+              context.messages().Say(
+                  "'%s' is not a procedure"_err_en_US, symbol.name());
+            }
             return std::optional<Procedure>{};
           },
       },

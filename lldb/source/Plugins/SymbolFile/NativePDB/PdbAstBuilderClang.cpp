@@ -65,8 +65,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 
     for (const OneMethodRecord &method : method_list.Methods) {
       if (method.getType().getIndex() == func_type_index.getIndex())
-        AddMethod(overloaded.Name, method.getAccess(), method.getOptions(),
-                  method.Attrs);
+        AddMethod(overloaded.Name, method.getOptions(), method.Attrs);
     }
 
     return llvm::Error::success();
@@ -74,22 +73,20 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
 
   llvm::Error visitKnownMember(CVMemberRecord &cvr,
                                OneMethodRecord &record) override {
-    AddMethod(record.getName(), record.getAccess(), record.getOptions(),
-              record.Attrs);
+    AddMethod(record.getName(), record.getOptions(), record.Attrs);
     return llvm::Error::success();
   }
 
-  void AddMethod(llvm::StringRef name, MemberAccess access,
-                 MethodOptions options, MemberAttributes attrs) {
+  void AddMethod(llvm::StringRef name, MethodOptions options,
+                 MemberAttributes attrs) {
     if (name != proc_name || function_decl)
       return;
-    lldb::AccessType access_type = TranslateMemberAccess(access);
     bool is_virtual = attrs.isVirtual();
     bool is_static = attrs.isStatic();
     bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
-        parent_ty, proc_name, mangled_name, func_ct, /*access=*/access_type,
+        parent_ty, proc_name, mangled_name, func_ct,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -624,16 +621,12 @@ clang::QualType PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
     return {};
 
   clang::TagTypeKind ttk = TranslateUdtKind(record);
-  lldb::AccessType access = (ttk == clang::TagTypeKind::Class)
-                                ? lldb::eAccessPrivate
-                                : lldb::eAccessPublic;
-
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
   metadata.SetIsDynamicCXXType(false);
 
   CompilerType ct = m_clang.CreateRecordType(
-      context, OptionalClangModuleID(), access, uname, llvm::to_underlying(ttk),
+      context, OptionalClangModuleID(), uname, llvm::to_underlying(ttk),
       lldb::eLanguageTypeC_plus_plus, metadata);
 
   lldbassert(ct.IsValid());
@@ -936,7 +929,6 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
           parent_opaque_ty, func_name, mangled_name, func_ct,
-          /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
           /*is_attr_used=*/false, /*is_artificial=*/false);

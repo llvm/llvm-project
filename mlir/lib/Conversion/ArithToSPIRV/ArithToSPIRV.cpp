@@ -725,6 +725,8 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
       assert(srcBW < dstBW);
       Value shiftSize = getScalarOrVectorConstInt(dstType, dstBW - srcBW,
                                                   rewriter, op.getLoc());
+      if (!shiftSize)
+        return rewriter.notifyMatchFailure(op, "unsupported type for shift");
 
       // First shift left to sequeeze out all leading bits beyond the original
       // bitwidth. Here we need to use the original source and result type's
@@ -800,6 +802,8 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
       Value mask = getScalarOrVectorConstInt(
           dstType, llvm::maskTrailingOnes<uint64_t>(bitwidth), rewriter,
           op.getLoc());
+      if (!mask)
+        return rewriter.notifyMatchFailure(op, "unsupported type for mask");
       rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
                                                        adaptor.getIn(), mask);
     } else {
@@ -868,6 +872,8 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
       unsigned bw = getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
       Value mask = getScalarOrVectorConstInt(
           dstType, llvm::maskTrailingOnes<uint64_t>(bw), rewriter, op.getLoc());
+      if (!mask)
+        return rewriter.notifyMatchFailure(op, "unsupported type for mask");
       rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
                                                        adaptor.getIn(), mask);
     } else {

@@ -159,6 +159,8 @@ public:
   /// Whether infinite evaluation steps have been requested. If this is false,
   /// we use the StepsLeft value above.
   const bool InfiniteSteps = false;
+  /// ID identifying this evaluation.
+  const unsigned EvalID;
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;

@@ -30,11 +30,11 @@ void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   auto HasOptionalCallDescendant = hasDescendant(callExpr(callee(cxxMethodDecl(
       ofClass(UncheckedOptionalAccessModel::optionalClassDecl())))));
   Finder->addMatcher(
-      decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
-                              // FIXME: Remove the filter below when lambdas are
-                              // well supported by the check.
-                              unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                              hasBody(HasOptionalCallDescendant)),
+      decl(anyOf(functionDecl(
+                     // FIXME: Remove the filter below when lambdas are
+                     // well supported by the check.
+                     unless(hasDeclContext(cxxRecordDecl(isLambda()))),
+                     hasBody(HasOptionalCallDescendant)),
                  cxxConstructorDecl(hasAnyConstructorInitializer(
                      withInitializer(HasOptionalCallDescendant)))))
           .bind(FuncID),

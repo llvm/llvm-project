@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_local_size.h>
-#include <clc/workitem/clc_get_max_sub_group_size.h>
-#include <clc/workitem/clc_get_num_sub_groups.h>
-#include <clc/workitem/clc_get_sub_group_id.h>
-#include <clc/workitem/clc_get_sub_group_size.h>
+#include "clc/workitem/clc_get_local_size.h"
+#include "clc/workitem/clc_get_max_sub_group_size.h"
+#include "clc/workitem/clc_get_num_sub_groups.h"
+#include "clc/workitem/clc_get_sub_group_id.h"
+#include "clc/workitem/clc_get_sub_group_size.h"
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_sub_group_size() {
   if (__clc_get_sub_group_id() != __clc_get_num_sub_groups() - 1) {

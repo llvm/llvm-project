@@ -57,4 +57,4 @@ end program compilation_to_obj
 ! LLVM: @[[GLOB_VAR:[^[:space:]]+]]t = internal global
 
 ! LLVM: define internal void @_QQmain..omp_par
-! LLVM: call void @llvm.memcpy.p0.p0.i32(ptr %{{.+}}, ptr @[[GLOB_VAR]]t, i32 48, i1 false)
+! LLVM: call void @llvm.memcpy.p0.p0.i32(ptr{{.*}}%{{.+}}, ptr{{.*}}@[[GLOB_VAR]]t, i32 48, i1 false)

@@ -52,17 +52,6 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @ordered_region_par_level_simd() {
-  // expected-error@below {{not yet implemented: Unhandled clause parallelization-level in omp.ordered.region operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.ordered.region}}
-  omp.ordered.region par_level_simd {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @parallel_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
@@ -475,10 +464,12 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
 }
 
 // -----
-llvm.func @task_affinity(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause affinity in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task affinity(%x : !llvm.ptr) {
+llvm.func @task_affinity(%ptr : !llvm.ptr, %len : i64) {
+  // expected-error@below {{not yet implemented: omp.affinity_entry}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.affinity_entry}}
+  %ae = omp.affinity_entry %ptr, %len
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
     omp.terminator
   }
   llvm.return

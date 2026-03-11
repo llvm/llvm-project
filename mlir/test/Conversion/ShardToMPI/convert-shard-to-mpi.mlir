@@ -159,6 +159,40 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     return %0 : memref<3x4xf64>
   }
 
+  // CHECK-LABEL: func.func @reduce_scatter_memref(
+  func.func @reduce_scatter_memref(
+    // CHECK-SAME: [[varg0:%.*]]: memref<3x4xf32>
+    %arg0 : memref<3x4xf32>) -> memref<1x4xf32> {
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 0 : i32
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 7 : i32
+    // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
+    // CHECK: [[valloc:%.*]] = memref.alloc() : memref<1x4xf32>
+    // CHECK: mpi.reduce_scatter_block([[varg0]], [[valloc]], MPI_SUM, [[vnewcomm]]) : memref<3x4xf32>, memref<1x4xf32>
+    %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 0 : memref<3x4xf32> -> memref<1x4xf32>
+    // CHECK: return [[valloc]] : memref<1x4xf32>
+    return %0 : memref<1x4xf32>
+  }
+
+  // CHECK-LABEL: func.func @reduce_scatter_tensor_dim1(
+  func.func @reduce_scatter_tensor_dim1(
+    // CHECK-SAME: [[varg0:%.*]]: tensor<2x12xf32>
+    %arg0 : tensor<2x12xf32>) -> tensor<2x4xf32> {
+    // CHECK: [[vexpanded:%.*]] = tensor.expand_shape [[varg0]] {{\[\[}}0], [1, 2]] output_shape [2, 3, 4] : tensor<2x12xf32> into tensor<2x3x4xf32>
+    // CHECK: [[vempty:%.*]] = tensor.empty() : tensor<3x2x4xf32>
+    // CHECK: [[vtransposed:%.*]] = linalg.transpose ins([[vexpanded]] : tensor<2x3x4xf32>) outs([[vempty]] : tensor<3x2x4xf32>) permutation = [1, 0, 2]
+    // CHECK: [[vtobuf:%.*]] = bufferization.to_buffer [[vtransposed]] : tensor<3x2x4xf32> to memref<3x2x4xf32>
+    // CHECK: [[valloctmp:%.*]] = memref.alloc() : memref<3x2x4xf32>
+    // CHECK: linalg.copy ins([[vtobuf]] : memref<3x2x4xf32>) outs([[valloctmp]] : memref<3x2x4xf32>)
+    // CHECK: [[valloc:%.*]] = memref.alloc() : memref<2x4xf32>
+    // CHECK: mpi.reduce_scatter_block([[valloctmp]], [[valloc]], MPI_SUM,
+    // CHECK: memref.dealloc [[valloctmp]] : memref<3x2x4xf32>
+    // CHECK: [[vout:%.*]] = bufferization.to_tensor [[valloc]] restrict : memref<2x4xf32> to tensor<2x4xf32>
+    %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 1 : tensor<2x12xf32> -> tensor<2x4xf32>
+    // CHECK: return [[vout]] : tensor<2x4xf32>
+    return %0 : tensor<2x4xf32>
+  }
+
   // CHECK-LABEL: func @allgather_tensor_0
   // CHECK-SAME: [[varg0:%.*]]: tensor<3x4xf32>
   func.func @allgather_tensor_0(%arg0 : tensor<3x4xf32>) -> tensor<12x4xf32> {

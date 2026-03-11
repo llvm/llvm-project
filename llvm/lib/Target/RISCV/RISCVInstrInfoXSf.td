@@ -130,7 +130,6 @@ class RVInstVCCustom2Base<VCIXInfo info>
   let Uses = [VL, VTYPE];
   let Constraints = info.Constraints;
   let VS1VS2Constraint = info.VS1VS2Constraint;
-  let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = 1;
 
   let UseNamedOperandTable = true;
@@ -234,7 +233,6 @@ class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 
   let Constraints = "$vd = $vd_wb";
   let VMConstraint = false;
-  let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = true;
 }
 }

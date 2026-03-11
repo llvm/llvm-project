@@ -1103,7 +1103,9 @@ static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
   S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
   bool HaveIssuedWarning = false;
   for (auto Decl : R) {
-    if (!Decl->getAsFunction()->isTypeAwareOperatorNewOrDelete())
+    if (!Decl->getUnderlyingDecl()
+             ->getAsFunction()
+             ->isTypeAwareOperatorNewOrDelete())
       continue;
     if (!HaveIssuedWarning) {
       S.Diag(Loc, DiagnosticID) << Name;
@@ -1870,7 +1872,8 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
   } else {
     GroDecl = VarDecl::Create(
         S.Context, &FD, FD.getLocation(), FD.getLocation(),
-        &S.PP.getIdentifierTable().get("__coro_gro"), GroType,
+        &S.PP.getIdentifierTable().get("__coro_gro"),
+        S.BuildDecltypeType(ReturnValue).getCanonicalType(),
         S.Context.getTrivialTypeSourceInfo(GroType, Loc), SC_None);
     GroDecl->setImplicit();
 
