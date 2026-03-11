@@ -73,3 +73,14 @@ add_entrypoint_object(
     libc.src.__support.wctype_utils
     libc.hdr.types.wint_t
 )
+
+add_entrypoint_object(
+  iswxdigit
+  SRCS
+    iswxdigit.cpp
+  HDRS
+    iswxdigit.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
