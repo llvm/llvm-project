@@ -450,6 +450,11 @@ TEST(FormatAndFormatvTest, NonNegativePlusInteger) {
   // expected
   EXPECT_EQ("+333", formatv("{0:+}", 333).str());
   EXPECT_EQ("444", formatv("{0:}", 444).str());
+
+  // Try with width modifier as well, to ensure that the + is still present and
+  // that the width is correct.
+  EXPECT_EQ("  -1", formatv("{0,4:+d}", -1).str());
+  EXPECT_EQ("  +1", formatv("{0,4:+d}", 1).str());
 }
 TEST(FormatVariadicTest, PointerFormatting) {
   // 1. Trivial cases.  Hex is default.  Default Precision is pointer width.
