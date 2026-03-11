@@ -1849,8 +1849,10 @@ define i1 @same_const_sub_uitofp_olt(i32 %x) {
 define i1 @same_const_sub_no_fold_large_c(i32 %x) {
 ; CHECK-LABEL: @same_const_sub_no_fold_large_c(
 ; CHECK-NOT:    icmp
-; CHECK:       [[CMP:%.*]] = fcmp oeq float
-; CHECK-NEXT:  ret i1 [[CMP]]
+; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[S:%.*]] = fsub float 0x417FFFFFE0000000, [[F]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[S]], 0x417FFFFFE0000000
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %f = sitofp i32 %x to float
   %s = fsub float 3.355443e+07, %f
