@@ -1332,7 +1332,7 @@ void CIRGenItaniumRTTIBuilder::buildPointerTypeInfo(mlir::Location loc,
   //   };
   const unsigned int flags = extractPBaseFlags(cgm.getASTContext(), ty);
 
-  auto unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
+  mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
   fields.push_back(flagsAttr);
 
@@ -1359,7 +1359,7 @@ void CIRGenItaniumRTTIBuilder::buildPointerToMemberTypeInfo(
   if (!rd->hasDefinition())
     flags |= PTI_ContainingClassIncomplete;
 
-  auto unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
+  mlir::Type unsignedIntTy = cgm.convertType(cgm.getASTContext().UnsignedIntTy);
   mlir::Attribute flagsAttr = cir::IntAttr::get(unsignedIntTy, flags);
   fields.push_back(flagsAttr);
 
