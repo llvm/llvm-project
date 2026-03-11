@@ -12,6 +12,7 @@
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
+#include "llvm/ADT/iterator_range.h"
 #include <set>
 
 namespace clang::ssaf {
@@ -25,19 +26,23 @@ namespace clang::ssaf {
 /// *' of 'p'.
 ///
 /// An EntityPointerLevel can be identified by an EntityId and an unsigned
-/// integer indicating the pointer level: '(EntityId, PointerLevel)'.
-/// An EntityPointerLevel 'P' is valid iff 'P.EntityId' has a pointer type with
-/// at least 'P.PointerLevel' levels (This implies 'P.PointerLevel > 0').
+/// integer indicating the pointer level: '(EntityId, PointerLevel)'.  An
+/// EntityPointerLevel 'P' is valid iff
+///   - 'P.EntityId' has a pointer type with at least 'P.PointerLevel' levels
+///     (This implies 'P.PointerLevel > 0');
+///   - 'P.EntityId' identifies an lvalue object and 'P.PointerLevel == 0'.
+/// The latter case represents address-of expressions.
 ///
 /// For the same example 'int *p[10];', the EntityPointerLevels below are valid:
-/// - '(p, 2)' is associated with the 'int *' part of the declared type of 'p';
-/// - '(p, 1)' is associated with the 'int *[10]' part of the declared type of
-/// 'p'.
+/// '(p, 1)' is associated with 'int *[10]' of 'p';
+/// '(p, 2)' is associated with 'int *' of 'p';
+/// '(p, 0)' represents '&p'.
 class EntityPointerLevel {
   EntityId Entity;
   unsigned PointerLevel;
 
-  friend class UnsafeBufferUsageTUSummaryExtractor;
+  friend class UnsafeBufferUsageTUSummaryBuilder;
+  friend class UnsafeBufferUsageEntitySummary;
 
   EntityPointerLevel(EntityId Entity, unsigned PointerLevel)
       : Entity(Entity), PointerLevel(PointerLevel) {}
@@ -47,8 +52,7 @@ public:
   unsigned getPointerLevel() const { return PointerLevel; }
 
   bool operator==(const EntityPointerLevel &Other) const {
-    return std::tie(Entity, PointerLevel) ==
-           std::tie(Other.Entity, Other.PointerLevel);
+    return Entity == Other.Entity && PointerLevel == Other.PointerLevel;
   }
 
   bool operator!=(const EntityPointerLevel &Other) const {
@@ -60,8 +64,7 @@ public:
            std::tie(Other.Entity, Other.PointerLevel);
   }
 
-  /// Compares `EntityPointerLevel`s; additionally, partially compares
-  /// `EntityPointerLevel` with `EntityId`.
+  // Comparator supporting partial comparison against EntityId:
   struct Comparator {
     using is_transparent = void;
     bool operator()(const EntityPointerLevel &L,
@@ -85,19 +88,32 @@ using EntityPointerLevelSet =
 class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   const EntityPointerLevelSet UnsafeBuffers;
 
-  friend class UnsafeBufferUsageTUSummaryExtractor;
+  friend class UnsafeBufferUsageTUSummaryBuilder;
 
-  UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
+  UnsafeBufferUsageEntitySummary(EntityPointerLevelSet &&UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:
+  using const_iterator = EntityPointerLevelSet::const_iterator;
+
+  const_iterator begin() const { return UnsafeBuffers.begin(); }
+  const_iterator end() const { return UnsafeBuffers.end(); }
+
+  const_iterator find(const EntityPointerLevel &V) const {
+    return UnsafeBuffers.find(V);
+  }
+
+  llvm::iterator_range<const_iterator> getSubsetOf(EntityId Entity) const {
+    return llvm::make_range(UnsafeBuffers.equal_range(Entity));
+  }
+
+  /// \return the size of the set of EntityLevelPointers, which represents the
+  /// set of unsafe buffers
+  size_t getNumUnsafeBuffers() { return UnsafeBuffers.size(); }
+
   SummaryName getSummaryName() const override {
     return SummaryName{"UnsafeBufferUsage"};
   };
-
-  bool operator==(const EntityPointerLevelSet &Other) const {
-    return UnsafeBuffers == Other;
-  }
 };
 } // namespace clang::ssaf
 
