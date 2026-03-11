@@ -843,6 +843,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fix a crash in addUnsizedArray due assert not verifying we have a Base before doing checks on it. (#GH44212)
 - Fixed an assertion that could occur when rebuilding parenthesized list initialization expressions during template instantiation or AST transformation.
+- Fixed a crash when invoking clang with `--` followed by an empty file name. (#GH184718)
 
 #### Bug Fixes to Compiler Builtins
 
