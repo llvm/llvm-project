@@ -838,6 +838,8 @@ enum {
   X(0x5f, EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
 
 enum : unsigned {
+  // clang-format off
+
   // Processor selection mask for EF_AMDGPU_MACH_* values.
   EF_AMDGPU_MACH = 0x0ff,
 
@@ -847,6 +849,8 @@ enum : unsigned {
 #define X(NUM, ENUM, NAME) ENUM = NUM,
   AMDGPU_MACH_LIST(X)
 #undef X
+
+  // clang-format on
 
   EF_AMDGPU_MACH_R600_RESERVED_FIRST = 0x011,
   EF_AMDGPU_MACH_R600_RESERVED_LAST = 0x01f,
