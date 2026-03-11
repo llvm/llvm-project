@@ -18,9 +18,6 @@
 namespace clang::ssaf {
 
 /// Abstract base class for whole-program analysis views.
-///
-/// Concrete view classes inherit from this and add a static
-/// \c summaryName() method along with their analysis-specific query API.
 class SummaryView {
 public:
   virtual ~SummaryView() = default;

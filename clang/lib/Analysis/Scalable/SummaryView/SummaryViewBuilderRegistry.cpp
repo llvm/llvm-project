@@ -11,10 +11,21 @@
 using namespace clang;
 using namespace ssaf;
 
-LLVM_INSTANTIATE_REGISTRY(SummaryViewBuilderRegistry)
+using RegistryT = llvm::Registry<SummaryViewBuilderBase>;
+LLVM_INSTANTIATE_REGISTRY(RegistryT)
 
-bool ssaf::isSummaryViewBuilderRegistered(llvm::StringRef Name) {
-  for (const auto &Entry : SummaryViewBuilderRegistry::entries()) {
+std::unique_ptr<SummaryViewBuilderBase>
+SummaryViewBuilderRegistry::instantiate(llvm::StringRef Name) {
+  for (const auto &Entry : RegistryT::entries()) {
+    if (Entry.getName() == Name) {
+      return Entry.instantiate();
+    }
+  }
+  return nullptr;
+}
+
+bool SummaryViewBuilderRegistry::isRegistered(llvm::StringRef Name) {
+  for (const auto &Entry : RegistryT::entries()) {
     if (Entry.getName() == Name) {
       return true;
     }

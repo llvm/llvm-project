@@ -14,24 +14,11 @@
 using namespace clang;
 using namespace ssaf;
 
-static std::unique_ptr<SummaryViewBuilderBase>
-instantiateBuilder(const SummaryName &SN) {
-  for (const auto &Entry : SummaryViewBuilderRegistry::entries()) {
-    if (Entry.getName() == SN.str()) {
-      return Entry.instantiate();
-    }
-  }
-  return nullptr;
-}
-
 void LUSummaryConsumer::run(const SummaryName &SN, EntityDataMap &Data) {
-  auto Builder = instantiateBuilder(SN);
+  auto Builder = SummaryViewBuilderRegistry::instantiate(SN.str());
   if (!Builder) {
     return;
   }
-
-  assert(Builder->summaryName() == SN &&
-         "registry entry name must match SummaryViewBuilder::summaryName()");
 
   for (auto &[Id, Summary] : Data) {
     Builder->addSummary(Id, std::move(Summary));

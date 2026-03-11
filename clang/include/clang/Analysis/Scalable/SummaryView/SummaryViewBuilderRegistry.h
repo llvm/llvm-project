@@ -6,14 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Registry for SummaryViewBuilders and helper functions.
-//
-// To register a builder, add this to the builder's translation unit:
-//
-//   static SummaryViewBuilderRegistry::Add<MyViewBuilder>
-//       Register("MyAnalysis", "View builder for MyAnalysis");
-//
-// The registry entry name must match MyView::summaryName().
+// Registry for SummaryViewBuilders.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,23 +14,40 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDERREGISTRY_H
 
 #include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilder.h"
-#include "clang/Support/Compiler.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Registry.h"
+#include <memory>
 
 namespace clang::ssaf {
 
-/// Check if a SummaryViewBuilder was registered with a given name.
-bool isSummaryViewBuilderRegistered(llvm::StringRef Name);
+/// Registry for SummaryViewBuilder implementations.
+///
+/// Provides an Add helper that derives the registry entry name from
+/// BuilderT::summaryName(), eliminating the possibility of registering a
+/// builder under the wrong name.
+class SummaryViewBuilderRegistry {
+  using RegistryT = llvm::Registry<SummaryViewBuilderBase>;
 
-/// Registry for adding new SummaryViewBuilder implementations.
-using SummaryViewBuilderRegistry = llvm::Registry<SummaryViewBuilderBase>;
+public:
+  /// Registers \p BuilderT under the name returned by
+  /// \c BuilderT::summaryName(). Only a description is required.
+  template <typename BuilderT> struct Add {
+    explicit Add(llvm::StringRef Desc)
+        : Name(BuilderT::summaryName().str().str()), Node(Name, Desc) {}
+
+  private:
+    std::string Name;
+    RegistryT::Add<BuilderT> Node;
+  };
+
+  /// Returns true if a builder is registered under \p Name.
+  static bool isRegistered(llvm::StringRef Name);
+
+  /// Instantiates the builder registered under \p Name, or returns nullptr
+  /// if no such builder is registered.
+  static std::unique_ptr<SummaryViewBuilderBase>
+  instantiate(llvm::StringRef Name);
+};
 
 } // namespace clang::ssaf
-
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::SummaryViewBuilderBase>;
-} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDERREGISTRY_H
