@@ -2172,6 +2172,10 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 5);
     break;
+  case SPIRV::OpImageFetch:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 4);
+    break;
   case SPIRV::OpImageDrefGather:
   case SPIRV::OpImageGather:
     Reqs.addCapability(SPIRV::Capability::Shader);
