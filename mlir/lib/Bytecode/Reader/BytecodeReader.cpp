@@ -144,6 +144,13 @@ public:
   }
   InFlightDiagnostic emitError() const { return ::emitError(fileLoc); }
 
+  /// Emit a warning using the given arguments.
+  template <typename... Args>
+  InFlightDiagnostic emitWarning(Args &&...args) const {
+    return ::emitWarning(fileLoc).append(std::forward<Args>(args)...);
+  }
+  InFlightDiagnostic emitWarning() const { return ::emitWarning(fileLoc); }
+
   /// Parse a single byte from the stream.
   template <typename T>
   LogicalResult parseByte(T &value) {
@@ -1034,6 +1041,10 @@ public:
 
   InFlightDiagnostic emitError(const Twine &msg) const override {
     return reader.emitError(msg);
+  }
+
+  InFlightDiagnostic emitWarning(const Twine &msg) const override {
+    return reader.emitWarning(msg);
   }
 
   FailureOr<const DialectVersion *>

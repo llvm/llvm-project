@@ -62,14 +62,17 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_splitdouble:
   case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_readlane:
+  case Intrinsic::dx_wave_reduce_or:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_min:
   case Intrinsic::dx_wave_reduce_sum:
+  case Intrinsic::dx_wave_product:
   case Intrinsic::dx_wave_prefix_sum:
   case Intrinsic::dx_wave_prefix_product:
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_umin:
   case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_wave_uproduct:
   case Intrinsic::dx_wave_prefix_usum:
   case Intrinsic::dx_wave_prefix_uproduct:
   case Intrinsic::dx_imad:

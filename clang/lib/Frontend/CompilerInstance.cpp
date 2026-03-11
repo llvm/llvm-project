@@ -1214,6 +1214,9 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
+  // Pass along the GenModuleActionWrapper callback.
+  Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
+
   if (GetDependencyDirectives)
     Instance.GetDependencyDirectives =
         GetDependencyDirectives->cloneFor(Instance.getFileManager());
@@ -1268,8 +1271,14 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
   // thread so that we get a stack large enough.
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
-        GenerateModuleFromModuleMapAction Action;
-        Instance.ExecuteAction(Action);
+        std::unique_ptr<FrontendAction> Action =
+            std::make_unique<GenerateModuleFromModuleMapAction>();
+
+        if (auto WrapGenModuleAction = Instance.getGenModuleActionWrapper())
+          Action = WrapGenModuleAction(Instance.getFrontendOpts(),
+                                       std::move(Action));
+
+        Instance.ExecuteAction(*Action);
       },
       DesiredStackSize);
 

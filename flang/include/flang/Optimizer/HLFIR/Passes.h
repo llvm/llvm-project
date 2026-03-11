@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 #define FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 
+#include "flang/Support/FPMaxminBehavior.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"

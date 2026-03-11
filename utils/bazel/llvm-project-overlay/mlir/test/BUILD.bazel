@@ -458,6 +458,7 @@ cc_library(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
+        "//mlir:UBDialect",
     ],
 )
 
