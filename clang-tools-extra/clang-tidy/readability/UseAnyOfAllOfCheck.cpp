@@ -35,6 +35,15 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
 
   return InnerMatcher.matches(**I, Finder, Builder);
 }
+
+/// Matches range-based loops over temporary range expressions.
+AST_MATCHER(Expr, isTemporary) {
+  const Expr *E = &Node;
+  if (const auto *EWC = dyn_cast<ExprWithCleanups>(E))
+    E = EWC->getSubExpr();
+  E = E->IgnoreParenImpCasts();
+  return isa<MaterializeTemporaryExpr>(E) || E->isPRValue();
+}
 } // namespace
 
 namespace tidy::readability {
@@ -44,13 +53,17 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
     return returnStmt(hasReturnValue(cxxBoolLiteral(equals(V))));
   };
 
-  auto ReturnsButNotTrue =
+  const auto ReturnsButNotTrue =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
-  auto ReturnsButNotFalse =
+  const auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
+
+  const auto RangeInitMatcher =
+      getLangOpts().CPlusPlus20 ? expr() : expr(unless(isTemporary()));
 
   Finder->addMatcher(
       cxxForRangeStmt(
+          hasRangeInit(RangeInitMatcher),
           nextStmt(Returns(false).bind("final_return")),
           hasBody(allOf(hasDescendant(Returns(true)),
                         unless(anyOf(hasDescendant(breakStmt()),
@@ -61,6 +74,7 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxForRangeStmt(
+          hasRangeInit(RangeInitMatcher),
           nextStmt(Returns(true).bind("final_return")),
           hasBody(allOf(hasDescendant(Returns(false)),
                         unless(anyOf(hasDescendant(breakStmt()),
@@ -84,20 +98,9 @@ static bool isViableLoop(const CXXForRangeStmt &S, ASTContext &Context) {
   });
 }
 
-static bool isIteratingOverTemporary(const Expr *Init) {
-  if (const auto *EWC = dyn_cast<ExprWithCleanups>(Init))
-    Init = EWC->getSubExpr();
-  Init = Init->IgnoreParenImpCasts();
-  return isa<MaterializeTemporaryExpr>(Init) || Init->isPRValue();
-}
-
 void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *S = Result.Nodes.getNodeAs<CXXForRangeStmt>("any_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
-      return;
-
-    if (!getLangOpts().CPlusPlus20 &&
-        isIteratingOverTemporary(S->getRangeInit()))
       return;
 
     diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::any_of()'")
@@ -105,10 +108,6 @@ void UseAnyOfAllOfCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *S =
                  Result.Nodes.getNodeAs<CXXForRangeStmt>("all_of_loop")) {
     if (!isViableLoop(*S, *Result.Context))
-      return;
-
-    if (!getLangOpts().CPlusPlus20 &&
-        isIteratingOverTemporary(S->getRangeInit()))
       return;
 
     diag(S->getForLoc(), "replace loop by 'std%select{|::ranges}0::all_of()'")
