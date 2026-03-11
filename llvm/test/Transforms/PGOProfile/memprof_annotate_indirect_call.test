@@ -1,12 +1,12 @@
 ; RUN: split-file %s %t
 
 ;; Basic functionality with flag toggle
-; RUN: llvm-profdata merge --memprof-version=4 %t/basic.yaml -o %t/basic.memprofdata
+; RUN: llvm-profdata merge --memprof-version 4 %t/basic.yaml -o %t/basic.memprofdata
 ; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=false -S 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLE
 ; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-ENABLE --dump-input-filter=all
 
 ;; FDO conflict handling
-; RUN: llvm-profdata merge --memprof-version=4 %t/fdo_conflict.yaml -o %t/fdo_conflict.memprofdata
+; RUN: llvm-profdata merge --memprof-version 4 %t/fdo_conflict.yaml -o %t/fdo_conflict.memprofdata
 ; RUN: opt < %t/fdo_conflict.ll -passes='memprof-use<profile-filename=%t/fdo_conflict.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-FDO
 
 ;--- basic.yaml

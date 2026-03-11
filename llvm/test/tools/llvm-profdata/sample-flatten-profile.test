@@ -1,8 +1,8 @@
-; RUN: llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %S/Inputs/sample-flatten-profile.proftext -o - | FileCheck %s --match-full-lines --strict-whitespace
-; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t2 && llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %t2 -o - | FileCheck %s --match-full-lines --strict-whitespace
+; RUN: llvm-profdata merge --sample --convert-sample-profile-layout flat --text %S/Inputs/sample-flatten-profile.proftext -o - | FileCheck %s --match-full-lines --strict-whitespace
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t2 && llvm-profdata merge --sample --convert-sample-profile-layout flat --text %t2 -o - | FileCheck %s --match-full-lines --strict-whitespace
 
-; RUN: llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %S/Inputs/sample-flatten-profile-cs.proftext -o - | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CHECK-CS
-; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile-cs.proftext -o %t2 && llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %t2 -o - | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CHECK-CS
+; RUN: llvm-profdata merge --sample --convert-sample-profile-layout flat --text %S/Inputs/sample-flatten-profile-cs.proftext -o - | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CHECK-CS
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile-cs.proftext -o %t2 && llvm-profdata merge --sample --convert-sample-profile-layout flat --text %t2 -o - | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CHECK-CS
 
 ; CHECK:baz:169:10
 ; CHECK-NEXT: 1: 10

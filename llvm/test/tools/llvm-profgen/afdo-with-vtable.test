@@ -2,7 +2,7 @@ RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-p
 RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \
 RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
 
-RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s
+RUN: llvm-profdata show --sample --function _Z9loop_funciii %t.afdo 2>&1 | FileCheck %s
 
 RUN: not llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-perftrace=%p/Inputs/dap-perf-trace.txt \
 RUN:  --binary=%p/Inputs/dap.bin --format=text --pid=3446532 \

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S -o %t
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output %t.opt.yaml -sample-profile-use-profi=0 -S -o %t
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s -check-prefix=YAML --input-file %t.opt.yaml
 ; RUN: opt < %t -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -sample-profile-remove-probe -S | FileCheck %s -check-prefix=REMOVE-PROBE

@@ -3,35 +3,35 @@
 
 ; Verify that the YAML output is identical to the YAML input.
 ; memprof-in.yaml has both heap profile records and data access profiles.
-; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in.yaml -o %t/memprof-out.indexed
+; RUN: llvm-profdata merge --memprof-version 4 %t/memprof-in.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out.yaml
 ; RUN: diff -b %t/memprof-in.yaml %t/memprof-out.yaml
 
 ; Merge text profile as v3 binary profile. Test that the merged v3 profile
 ; are identical to memprof-in-v3.yaml, and doesn't have callee guids or dap.
-; RUN: llvm-profdata merge --memprof-version=3 %t/memprof-in.yaml -o %t/memprof-out-v3.indexed
+; RUN: llvm-profdata merge --memprof-version 3 %t/memprof-in.yaml -o %t/memprof-out-v3.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out-v3.indexed > %t/memprof-out-v3.yaml
 ; RUN: diff -b %t/memprof-out-v3.yaml %t/memprof-in-v3.yaml
 
 ; Make sure we can ingest a YAML profile containing AllocSites only.
 ; That is, CallSites are missing.
-; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-alloc-sites-only.yaml -o %t/memprof-out-alloc-sites-only.indexed
+; RUN: llvm-profdata merge --memprof-version 4 %t/memprof-in-alloc-sites-only.yaml -o %t/memprof-out-alloc-sites-only.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out-alloc-sites-only.indexed > %t/memprof-out-alloc-sites-only.yaml
 ; RUN: diff -b %t/memprof-out-alloc-sites-only.yaml %t/memprof-in-alloc-sites-only.yaml
 
 ; Make sure we can ingest a YAML profile containing CallSites only.
 ; That is, AllocSites are missing.
-; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-call-sites-only.yaml -o %t/memprof-out-call-sites-only.indexed
+; RUN: llvm-profdata merge --memprof-version 4 %t/memprof-in-call-sites-only.yaml -o %t/memprof-out-call-sites-only.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out-call-sites-only.indexed > %t/memprof-out-call-sites-only.yaml
 ; RUN: diff -b %t/memprof-out-call-sites-only.yaml %t/memprof-in-call-sites-only.yaml
 
 ; memprof-in-no-dap.yaml has empty data access profiles.
-; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-no-dap.yaml -o %t/memprof-out.indexed
+; RUN: llvm-profdata merge --memprof-version 4 %t/memprof-in-no-dap.yaml -o %t/memprof-out.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out.indexed > %t/memprof-out-no-dap.yaml
 ; RUN: diff -b %t/memprof-in-no-dap.yaml %t/memprof-out-no-dap.yaml
 
 ; memprof-in-no-heap.yaml has empty heap access profiles.
-; RUN: llvm-profdata merge --memprof-version=4 %t/memprof-in-no-heap.yaml -o %t/memprof-out-no-heap.indexed
+; RUN: llvm-profdata merge --memprof-version 4 %t/memprof-in-no-heap.yaml -o %t/memprof-out-no-heap.indexed
 ; RUN: llvm-profdata show --memory %t/memprof-out-no-heap.indexed > %t/memprof-out-no-heap.yaml
 ; RUN: diff -b %t/memprof-in-no-heap.yaml %t/memprof-out-no-heap.yaml
 
