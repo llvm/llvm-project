@@ -481,6 +481,10 @@ public:
         "call to lookupModuleOutput with unexpected ModuleOutputKind");
   }
 
+  std::unique_ptr<DependencyActionController> clone() const override {
+    return std::make_unique<ModuleLookupController>(OutputDir);
+  }
+
 private:
   StringRef OutputDir;
 };
@@ -773,7 +777,9 @@ public:
 class JobNode : public CGNode {
 public:
   JobNode(std::unique_ptr<Command> &&Job, NodeKind Kind)
-      : CGNode(Kind), Job(std::move(Job)) {}
+      : CGNode(Kind), Job(std::move(Job)) {
+    assert(this->Job && "Expected valid job!");
+  }
   virtual ~JobNode() override = 0;
 
   std::unique_ptr<Command> Job;
