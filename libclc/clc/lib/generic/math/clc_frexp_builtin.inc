@@ -37,7 +37,6 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_frexp(__CLC_GENTYPE x,
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
-private
   __CLC_INTN e;
   __CLC_GENTYPE result = __clc_frexp(x, &e);
   *ep = e;
