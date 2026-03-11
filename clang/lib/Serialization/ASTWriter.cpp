@@ -1694,9 +1694,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
-  SmallString<256> HSOpts_ModuleCachePath;
-  normalizeModuleCachePath(PP.getFileManager(), HSOpts.ModuleCachePath,
-                           HSOpts_ModuleCachePath);
+  StringRef HSOpts_ModuleCachePath =
+      PP.getHeaderSearchInfo().getNormalizedModuleCachePath();
 
   AddString(HSOpts.Sysroot, Record);
   AddString(HSOpts.ResourceDir, Record);
@@ -1710,10 +1709,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(HSOpts.UseStandardSystemIncludes);
   Record.push_back(HSOpts.UseStandardCXXIncludes);
   Record.push_back(HSOpts.UseLibcxx);
-  // Write out the specific module cache path that contains the module files.
-  // FIXME: We already wrote out the normalized cache path. Just write the
-  // context hash (unless suppressed).
-  AddString(PP.getHeaderSearchInfo().getSpecificModuleCachePath(), Record);
+  AddString(PP.getHeaderSearchInfo().getContextHash(), Record);
   Stream.EmitRecord(HEADER_SEARCH_OPTIONS, Record);
 
   // Preprocessor options.
