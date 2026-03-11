@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTIONBASECLASSCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTIONBASECLASSCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STDEXCEPTIONBASECLASSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STDEXCEPTIONBASECLASSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::bugprone {
 
 /// Check for thrown exceptions and enforce they are all derived from
 /// std::exception.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/exception-baseclass.html
-class ExceptionBaseclassCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/std-exception-baseclass.html
+class StdExceptionBaseclassCheck : public ClangTidyCheck {
 public:
-  ExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)
+  StdExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -29,6 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTIONBASECLASSCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_STDEXCEPTIONBASECLASSCHECK_H

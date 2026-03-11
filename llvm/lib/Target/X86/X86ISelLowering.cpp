@@ -1891,6 +1891,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SRL, MVT::i512, Custom);
     setOperationAction(ISD::SHL, MVT::i512, Custom);
     setOperationAction(ISD::SRA, MVT::i512, Custom);
+    setOperationAction(ISD::FSHR, MVT::i512, Custom);
+    setOperationAction(ISD::FSHL, MVT::i512, Custom);
     setOperationAction(ISD::FSHR, MVT::i256, Custom);
     setOperationAction(ISD::FSHL, MVT::i256, Custom);
     setOperationAction(ISD::SELECT, MVT::i512, Custom);
@@ -34525,30 +34527,55 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::FSHL:
   case ISD::FSHR: {
+    EVT VT = N->getValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     SDValue Amt = N->getOperand(2);
     assert(Subtarget.useAVX512Regs() && "AVX512F required");
-    assert(N->getValueType(0) == MVT::i256 && "Unexpected VT!");
+    assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
     if (!mayFoldIntoVector(Op0, DAG, Subtarget) ||
         !mayFoldIntoVector(Op1, DAG, Subtarget))
       return;
 
+    bool IsFSHL = Opc == ISD::FSHL;
+    unsigned BW = VT.getSizeInBits();
+    MVT AmtVT = MVT::i64;
+    MVT VecVT = MVT::getVectorVT(MVT::i64, BW / 64);
+    MVT BoolVT = MVT::getVectorVT(MVT::i1, BW / 64);
+    Amt = DAG.getNode(ISD::AND, dl, AmtVT, DAG.getZExtOrTrunc(Amt, dl, AmtVT),
+                      DAG.getConstant(BW - 1, dl, AmtVT));
+
     // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
     // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
-    SDValue Res = DAG.getBitcast(
-        MVT::i512, concatSubVectors(DAG.getBitcast(MVT::v4i64, Op1),
-                                    DAG.getBitcast(MVT::v4i64, Op0), DAG, dl));
-    Amt = DAG.getNode(ISD::AND, dl, Amt.getValueType(), Amt,
-                      DAG.getConstant(255, dl, Amt.getValueType()));
-    if (Opc == ISD::FSHL) {
-      Res = DAG.getNode(ISD::SHL, dl, MVT::i512, Res, Amt);
-      Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res,
-                        DAG.getShiftAmountConstant(256, MVT::i512, dl));
-    } else {
-      Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res, Amt);
+    if (VT == MVT::i256) {
+      SDValue Res = concatSubVectors(DAG.getBitcast(MVT::v4i64, Op1),
+                                     DAG.getBitcast(MVT::v4i64, Op0), DAG, dl);
+      Res = DAG.getBitcast(MVT::i512, Res);
+      if (IsFSHL) {
+        Res = DAG.getNode(ISD::SHL, dl, MVT::i512, Res, Amt);
+        Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res,
+                          DAG.getConstant(256, dl, AmtVT));
+      } else {
+        Res = DAG.getNode(ISD::SRL, dl, MVT::i512, Res, Amt);
+      }
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i256, Res));
+      return;
     }
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, MVT::i256, Res));
+
+    // fshl: z == 0 ? x : (x << (z % bw) | y >> (bw - (z % bw)))
+    // fshr: z == 0 ? y : (x << (bw - (z % bw)) | y >> (z % bw))
+    SDValue AmtZ = DAG.getSetCC(dl, MVT::i1, Amt, DAG.getConstant(0, dl, AmtVT),
+                                ISD::SETNE);
+    SDValue Sel = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i8, AmtZ);
+    SDValue InvAmt =
+        DAG.getNode(ISD::SUB, dl, AmtVT, DAG.getConstant(BW, dl, AmtVT), Amt);
+    SDValue ShX = DAG.getNode(ISD::SHL, dl, VT, Op0, IsFSHL ? Amt : InvAmt);
+    SDValue ShY = DAG.getNode(ISD::SRL, dl, VT, Op1, IsFSHL ? InvAmt : Amt);
+    SDValue Res = DAG.getNode(ISD::OR, dl, VecVT, DAG.getBitcast(VecVT, ShX),
+                              DAG.getBitcast(VecVT, ShY));
+    Res = DAG.getSelect(dl, VecVT, DAG.getBitcast(BoolVT, Sel), Res,
+                        DAG.getBitcast(VecVT, IsFSHL ? Op0 : Op1));
+    Results.push_back(DAG.getBitcast(VT, Res));
     return;
   }
   case ISD::CTPOP: {
