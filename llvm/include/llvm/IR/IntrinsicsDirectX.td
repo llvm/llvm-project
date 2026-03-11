@@ -126,6 +126,16 @@ def int_dx_resource_load_level
                              llvm_any_ty],
                             [IntrReadMem]>;
 
+def int_dx_resource_calculate_lod
+    : DefaultAttrsIntrinsic<[llvm_float_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_any_ty],
+                            [IntrReadMem]>;
+
+def int_dx_resource_calculate_lod_unclamped
+    : DefaultAttrsIntrinsic<[llvm_float_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_any_ty],
+                            [IntrReadMem]>;
+
 def int_dx_resource_samplecmp
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty,

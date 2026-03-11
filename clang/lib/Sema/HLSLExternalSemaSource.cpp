@@ -271,6 +271,7 @@ static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
       .addSampleLevelMethods(Dim)
       .addSampleCmpMethods(Dim)
       .addSampleCmpLevelZeroMethods(Dim)
+      .addCalculateLodMethods(Dim)
       .addGatherMethods(Dim)
       .addGatherCmpMethods(Dim);
 }

@@ -3522,6 +3522,17 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckCalculateLodBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 3))
+    return true;
+
+  if (CheckTextureSamplerAndLocation(S, TheCall))
+    return true;
+
+  TheCall->setType(S.Context.FloatTy);
+  return false;
+}
+
 static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
   if (S.checkArgCountRange(TheCall, IsCmp ? 5 : 4, IsCmp ? 6 : 5))
     return true;
@@ -3882,6 +3893,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Cmp);
   case Builtin::BI__builtin_hlsl_resource_sample_cmp_level_zero:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::CmpLevelZero);
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod:
+  case Builtin::BI__builtin_hlsl_resource_calculate_lod_unclamped:
+    return CheckCalculateLodBuiltin(SemaRef, TheCall);
   case Builtin::BI__builtin_hlsl_resource_gather:
     return CheckGatherBuiltin(SemaRef, TheCall, /*IsCmp=*/false);
   case Builtin::BI__builtin_hlsl_resource_gather_cmp:
