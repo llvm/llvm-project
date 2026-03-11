@@ -19,6 +19,7 @@
 #include "SPIRVInstrInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
+#include "SPIRVTypeInst.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -336,7 +337,7 @@ private:
   bool selectWaveOpInst(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I, unsigned Opcode) const;
 
-  bool selectBarrierInst(MachineInstr &I, unsigned Scope,
+  bool selectBarrierInst(MachineInstr &I, unsigned Scope, unsigned MemSem,
                          bool WithGroupSync) const;
 
   bool selectWaveActiveCountBits(Register ResVReg, SPIRVTypeInst ResType,
@@ -2803,11 +2804,18 @@ bool SPIRVInstructionSelector::selectWaveOpInst(Register ResVReg,
 
 bool SPIRVInstructionSelector::selectBarrierInst(MachineInstr &I,
                                                  unsigned Scope,
+                                                 unsigned MemSem,
                                                  bool WithGroupSync) const {
   auto BarrierType =
       WithGroupSync ? SPIRV::OpControlBarrier : SPIRV::OpMemoryBarrier;
-  Register MemSemReg =
-      buildI32Constant(SPIRV::MemorySemantics::SequentiallyConsistent, I);
+
+  MemSem |= SPIRV::MemorySemantics::AcquireRelease;
+
+  assert(((Scope != SPIRV::Scope::Workgroup) ||
+          ((MemSem & SPIRV::MemorySemantics::WorkgroupMemory) > 0)) &&
+         "Spirv Scope: Workgroup must set WorkGroupMemory semantic");
+
+  Register MemSemReg = buildI32Constant(MemSem, I);
   Register ScopeReg = buildI32Constant(Scope, I);
   MachineBasicBlock &BB = *I.getParent();
   auto MI =
@@ -4186,9 +4194,11 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectFirstBitLow(ResVReg, ResType, I);
   case Intrinsic::spv_group_memory_barrier:
     return selectBarrierInst(I, SPIRV::Scope::Workgroup,
+                             SPIRV::MemorySemantics::WorkgroupMemory,
                              /*WithGroupSync*/ false);
   case Intrinsic::spv_group_memory_barrier_with_group_sync:
     return selectBarrierInst(I, SPIRV::Scope::Workgroup,
+                             SPIRV::MemorySemantics::WorkgroupMemory,
                              /*WithGroupSync*/ true);
   case Intrinsic::spv_generic_cast_to_ptr_explicit: {
     Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 1).getReg();
