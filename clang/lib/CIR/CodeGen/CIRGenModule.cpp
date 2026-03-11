@@ -350,7 +350,13 @@ void CIRGenModule::emitDeferred() {
   // static function, iterate until no changes are made.
 
   assert(!cir::MissingFeatures::openMP());
-  assert(!cir::MissingFeatures::deferredVtables());
+
+  emitDeferredVTables();
+  // Emitting a vtable doesn't directly cause more vtables to
+  // become deferred, although it can cause functions to be
+  // emitted that then need those vtables.
+  assert(deferredVTables.empty());
+
   assert(!cir::MissingFeatures::cudaSupport());
 
   // Stop if we're out of both deferred vtables and deferred declarations.
@@ -368,9 +374,9 @@ void CIRGenModule::emitDeferred() {
     // If we found out that we need to emit more decls, do that recursively.
     // This has the advantage that the decls are emitted in a DFS and related
     // ones are close together, which is convenient for testing.
-    if (!deferredDeclsToEmit.empty()) {
+    if (!deferredVTables.empty() || !deferredDeclsToEmit.empty()) {
       emitDeferred();
-      assert(deferredDeclsToEmit.empty());
+      assert(deferredVTables.empty() && deferredDeclsToEmit.empty());
     }
   }
 }
@@ -2787,6 +2793,7 @@ CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
 
 void CIRGenModule::release() {
   emitDeferred();
+  emitVTablesOpportunistically();
   applyReplacements();
 
   theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),

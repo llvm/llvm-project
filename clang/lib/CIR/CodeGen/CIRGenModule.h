@@ -102,6 +102,12 @@ private:
 
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
 
+  /// A queue of (optional) vtables to consider emitting.
+  std::vector<const CXXRecordDecl *> deferredVTables;
+
+  /// A queue of (optional) vtables that may be emitted opportunistically.
+  std::vector<const CXXRecordDecl *> opportunisticVTables;
+
   void createCUDARuntime();
 
   /// A helper for constructAttributeList that handles return attributes.
@@ -489,6 +495,10 @@ public:
   void emitExplicitCastExprType(const ExplicitCastExpr *e,
                                 CIRGenFunction *cgf = nullptr);
 
+  void addDeferredVTable(const CXXRecordDecl *rd) {
+    deferredVTables.push_back(rd);
+  }
+
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
@@ -674,6 +684,16 @@ public:
 
   /// Emit any needed decls for which code generation was deferred.
   void emitDeferred();
+
+  bool shouldOpportunisticallyEmitVTables();
+  /// Emit any vtables which we deferred and still have a use for.
+  void emitDeferredVTables();
+
+  /// Try to emit external vtables as available_externally if they have emitted
+  /// all inlined virtual functions.  It runs after EmitDeferred() and therefore
+  /// is not allowed to create new references to things that need to be emitted
+  /// lazily.
+  void emitVTablesOpportunistically();
 
   /// Helper for `emitDeferred` to apply actual codegen.
   void emitGlobalDecl(const clang::GlobalDecl &d);

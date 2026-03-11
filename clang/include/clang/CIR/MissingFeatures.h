@@ -150,7 +150,6 @@ struct MissingFeatures {
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
-  static bool deferredVtables() { return false; }
   static bool deferredFuncDecls() { return false; }
 
   // CXXABI
