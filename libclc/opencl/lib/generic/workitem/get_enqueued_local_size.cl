@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/opencl-base.h>
-#include <clc/workitem/clc_get_enqueued_local_size.h>
+#include "clc/opencl/opencl-base.h"
+#include "clc/workitem/clc_get_enqueued_local_size.h"
 
 _CLC_DEF _CLC_OVERLOAD size_t get_enqueued_local_size(uint dim) {
   return __clc_get_enqueued_local_size(dim);

@@ -20,13 +20,13 @@ namespace clang::tidy::misc {
 namespace {
 
 AST_MATCHER_P(DeducedTemplateSpecializationType, refsToTemplatedDecl,
-              clang::ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
+              ast_matchers::internal::Matcher<NamedDecl>, DeclMatcher) {
   if (const auto *TD = Node.getTemplateName().getAsTemplateDecl())
     return DeclMatcher.matches(*TD, Finder, Builder);
   return false;
 }
 
-AST_MATCHER_P(Type, asTagDecl, clang::ast_matchers::internal::Matcher<TagDecl>,
+AST_MATCHER_P(Type, asTagDecl, ast_matchers::internal::Matcher<TagDecl>,
               DeclMatcher) {
   if (const TagDecl *ND = Node.getAsTagDecl())
     return DeclMatcher.matches(*ND, Finder, Builder);
