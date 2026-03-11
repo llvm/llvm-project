@@ -133,7 +133,7 @@ public:
     }
 
     // A + prefix indicates that a plus sign shall be
-    // prefixed to non-negativ numbers
+    // prefixed to non-negative numbers.
     bool NonNegativePlus = Style.consume_front('+');
 
     IntegerStyle IS = IntegerStyle::Integer;
