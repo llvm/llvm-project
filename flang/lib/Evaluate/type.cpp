@@ -198,6 +198,8 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
               std::move(*len));
     }
     break;
+  case TypeCategory::Enumeration:
+    break;
   case TypeCategory::Derived:
     if (!IsPolymorphic() && derived_ && derived_->scope()) {
       auto size{derived_->scope()->size()};

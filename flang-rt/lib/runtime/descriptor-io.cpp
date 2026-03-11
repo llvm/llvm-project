@@ -769,6 +769,9 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
         return IostatEnd;
       }
       break;
+    case TypeCategory::Enumeration:
+      handler.Crash("not yet implemented: ENUMERATION in formatted IO");
+      return IostatEnd;
     case TypeCategory::Derived: {
       // Derived type information must be present for formatted I/O.
       IoErrorHandler &handler{io_.GetIoErrorHandler()};

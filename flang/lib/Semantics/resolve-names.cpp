@@ -8491,6 +8491,8 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
     return context().MakeNumericType(type.category(), type.kind());
   case common::TypeCategory::Logical:
     return context().MakeLogicalType(type.kind());
+  case common::TypeCategory::Enumeration:
+    CRASH_NO_CASE;
   case common::TypeCategory::Derived:
     if (type.IsAssumedType()) {
       return currScope().MakeTypeStarType();

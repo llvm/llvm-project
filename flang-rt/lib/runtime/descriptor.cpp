@@ -427,6 +427,8 @@ static const char *GetTypeStr(ISO::CFI_type_t type, bool dumpRawType) {
       CASE(LOGICAL, 8)
     }
     break;
+  case TypeCategory::Enumeration:
+    break;
   case TypeCategory::Derived:
     return "DERIVED";
   }

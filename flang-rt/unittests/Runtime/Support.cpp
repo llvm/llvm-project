@@ -71,7 +71,7 @@ TEST(IsAssumedSize, Basic) {
 TEST(DescriptorBytesFor, Basic) {
   for (size_t i = 0; i < Fortran::common::TypeCategory_enumSize; ++i) {
     auto tc{static_cast<TypeCategory>(i)};
-    if (tc == TypeCategory::Derived)
+    if (tc == TypeCategory::Derived || tc == TypeCategory::Enumeration)
       continue;
 
     auto b{Descriptor::BytesFor(tc, 4)};

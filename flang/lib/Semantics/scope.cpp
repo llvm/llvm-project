@@ -280,6 +280,8 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
         break;
       case TypeCategory::Logical:
         return &MakeLogicalType(KindExpr{dyType->kind()});
+      case TypeCategory::Enumeration:
+        break;
       case TypeCategory::Derived:
         return &MakeDerivedType(dyType->IsPolymorphic()
                 ? DeclTypeSpec::ClassDerived

@@ -847,6 +847,8 @@ std::optional<Expr<SomeType>> ConvertToType(
           ConvertToKind<TypeCategory::Logical>(type.kind(), std::move(*cx))};
     }
     break;
+  case TypeCategory::Enumeration:
+    break;
   case TypeCategory::Derived:
     if (auto fromType{x.GetType()}) {
       if (type.IsTkCompatibleWith(*fromType)) {

@@ -284,6 +284,8 @@ static std::string typeToString(Fortran::common::TypeCategory cat, int kind,
     return "l" + std::to_string(kind);
   case Fortran::common::TypeCategory::Character:
     return "c" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Enumeration:
+    return "e" + std::to_string(kind);
   case Fortran::common::TypeCategory::Derived:
     return derivedName.str();
   }

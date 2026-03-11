@@ -125,6 +125,8 @@ RT_API_ATTRS TypeCode::TypeCode(TypeCategory f, int kind) {
       break;
     }
     break;
+  case TypeCategory::Enumeration:
+    break;
   case TypeCategory::Derived:
     raw_ = CFI_type_struct;
     break;
