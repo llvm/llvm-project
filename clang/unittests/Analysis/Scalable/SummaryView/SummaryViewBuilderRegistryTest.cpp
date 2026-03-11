@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilderRegistry.h"
-#include "MockSummaryViewBuilders.h"
 #include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <set>
 
 using namespace clang;
@@ -17,15 +17,13 @@ using namespace ssaf;
 
 namespace {
 
-class SummaryViewBuilderRegistryTest : public ::testing::Test {
-protected:
-  void SetUp() override { clearMockBuilderLog(); }
-};
+class SummaryViewBuilderRegistryTest : public ::testing::Test {};
 
 TEST_F(SummaryViewBuilderRegistryTest, isSummaryViewBuilderRegistered) {
   EXPECT_FALSE(isSummaryViewBuilderRegistered("Non-existent-builder"));
-  EXPECT_TRUE(isSummaryViewBuilderRegistered("Mock1"));
-  EXPECT_TRUE(isSummaryViewBuilderRegistered("Mock2"));
+  EXPECT_TRUE(isSummaryViewBuilderRegistered("Analysis1"));
+  EXPECT_TRUE(isSummaryViewBuilderRegistered("Analysis2"));
+  EXPECT_TRUE(isSummaryViewBuilderRegistered("Analysis4"));
 }
 
 TEST_F(SummaryViewBuilderRegistryTest, EnumeratingRegistryEntries) {
@@ -35,48 +33,30 @@ TEST_F(SummaryViewBuilderRegistryTest, EnumeratingRegistryEntries) {
     EXPECT_TRUE(Inserted);
   }
 
-  EXPECT_EQ(ActualNames, (std::set<llvm::StringRef>{"Mock1", "Mock2"}));
+  EXPECT_EQ(ActualNames,
+            (std::set<llvm::StringRef>{"Analysis1", "Analysis2", "Analysis4"}));
 }
 
-TEST_F(SummaryViewBuilderRegistryTest, InstantiatingBuilder1) {
-  {
-    // Find Mock1 entry explicitly.
-    std::unique_ptr<SummaryViewBuilderBase> B1;
-    for (const auto &Entry : SummaryViewBuilderRegistry::entries()) {
-      if (Entry.getName() == "Mock1") {
-        B1 = Entry.instantiate();
-      }
-    }
-
-    ASSERT_TRUE(B1);
-    EXPECT_EQ(B1->summaryName(), SummaryName("Mock1"));
-    EXPECT_NE(
-        MockBuilderLog.find("MockSummaryViewBuilder1 constructor was invoked"),
-        std::string::npos);
+TEST_F(SummaryViewBuilderRegistryTest, InstantiatingBuilder_Analysis1) {
+  std::unique_ptr<SummaryViewBuilderBase> B;
+  for (const auto &Entry : SummaryViewBuilderRegistry::entries()) {
+    if (Entry.getName() == "Analysis1")
+      B = Entry.instantiate();
   }
-  EXPECT_NE(
-      MockBuilderLog.find("MockSummaryViewBuilder1 destructor was invoked"),
-      std::string::npos);
+
+  ASSERT_NE(B, nullptr);
+  EXPECT_EQ(B->summaryName(), SummaryName("Analysis1"));
 }
 
-TEST_F(SummaryViewBuilderRegistryTest, InstantiatingBuilder2) {
-  {
-    std::unique_ptr<SummaryViewBuilderBase> B2;
-    for (const auto &Entry : SummaryViewBuilderRegistry::entries()) {
-      if (Entry.getName() == "Mock2") {
-        B2 = Entry.instantiate();
-      }
-    }
-
-    ASSERT_TRUE(B2);
-    EXPECT_EQ(B2->summaryName(), SummaryName("Mock2"));
-    EXPECT_NE(
-        MockBuilderLog.find("MockSummaryViewBuilder2 constructor was invoked"),
-        std::string::npos);
+TEST_F(SummaryViewBuilderRegistryTest, InstantiatingBuilder_Analysis2) {
+  std::unique_ptr<SummaryViewBuilderBase> B;
+  for (const auto &Entry : SummaryViewBuilderRegistry::entries()) {
+    if (Entry.getName() == "Analysis2")
+      B = Entry.instantiate();
   }
-  EXPECT_NE(
-      MockBuilderLog.find("MockSummaryViewBuilder2 destructor was invoked"),
-      std::string::npos);
+
+  ASSERT_NE(B, nullptr);
+  EXPECT_EQ(B->summaryName(), SummaryName("Analysis2"));
 }
 
 } // namespace

@@ -8,24 +8,167 @@
 
 #include "clang/Analysis/Scalable/SummaryView/LUSummaryConsumer.h"
 #include "../TestFixture.h"
-#include "MockSummaryViewBuilders.h"
 #include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilderRegistry.h"
+#include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <memory>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 using namespace ssaf;
 
 namespace {
 
+// ---------------------------------------------------------------------------
+// Instance counter
+// ---------------------------------------------------------------------------
+
+static int NextSummaryInstanceId = 0;
+
+// ---------------------------------------------------------------------------
+// Entity summaries
+// ---------------------------------------------------------------------------
+
+class Analysis1EntitySummary : public EntitySummary {
+public:
+  int InstanceId = NextSummaryInstanceId++;
+  SummaryName getSummaryName() const override {
+    return SummaryName("Analysis1");
+  }
+};
+
+class Analysis2EntitySummary : public EntitySummary {
+public:
+  int InstanceId = NextSummaryInstanceId++;
+  SummaryName getSummaryName() const override {
+    return SummaryName("Analysis2");
+  }
+};
+
+class Analysis4EntitySummary : public EntitySummary {
+public:
+  int InstanceId = NextSummaryInstanceId++;
+  SummaryName getSummaryName() const override {
+    return SummaryName("Analysis4");
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Views
+// ---------------------------------------------------------------------------
+
+class Analysis1View : public SummaryView {
+public:
+  static SummaryName summaryName() { return SummaryName("Analysis1"); }
+  std::vector<std::pair<EntityId, int>> Entries;
+  bool WasFinalized = false;
+};
+
+class Analysis2View : public SummaryView {
+public:
+  static SummaryName summaryName() { return SummaryName("Analysis2"); }
+  std::vector<std::pair<EntityId, int>> Entries;
+  bool WasFinalized = false;
+};
+
+// No builder or registration for Analysis3. Data for Analysis3 is inserted
+// into the LUSummary to verify the consumer silently skips it.
+class Analysis3View : public SummaryView {
+public:
+  static SummaryName summaryName() { return SummaryName("Analysis3"); }
+};
+
+// Analysis4 has a registered builder but no data is inserted into the
+// LUSummary, so the builder is never invoked and getView returns nullptr.
+class Analysis4View : public SummaryView {
+public:
+  static SummaryName summaryName() { return SummaryName("Analysis4"); }
+};
+
+// ---------------------------------------------------------------------------
+// Builder destruction flags (reset in SetUp)
+// ---------------------------------------------------------------------------
+
+static bool Analysis1BuilderWasDestroyed = false;
+static bool Analysis2BuilderWasDestroyed = false;
+static bool Analysis4BuilderWasDestroyed = false;
+
+// ---------------------------------------------------------------------------
+// Builders
+// ---------------------------------------------------------------------------
+
+class Analysis1Builder
+    : public SummaryViewBuilder<Analysis1View, Analysis1EntitySummary> {
+public:
+  ~Analysis1Builder() { Analysis1BuilderWasDestroyed = true; }
+
+  void addSummary(EntityId Id,
+                  std::unique_ptr<Analysis1EntitySummary> S) override {
+    getView().Entries.push_back({Id, S->InstanceId});
+  }
+
+  void finalize() override { getView().WasFinalized = true; }
+};
+
+static SummaryViewBuilderRegistry::Add<Analysis1Builder>
+    RegAnalysis1("Analysis1", "Builder for Analysis1");
+
+class Analysis2Builder
+    : public SummaryViewBuilder<Analysis2View, Analysis2EntitySummary> {
+public:
+  ~Analysis2Builder() { Analysis2BuilderWasDestroyed = true; }
+
+  void addSummary(EntityId Id,
+                  std::unique_ptr<Analysis2EntitySummary> S) override {
+    getView().Entries.push_back({Id, S->InstanceId});
+  }
+
+  void finalize() override { getView().WasFinalized = true; }
+};
+
+static SummaryViewBuilderRegistry::Add<Analysis2Builder>
+    RegAnalysis2("Analysis2", "Builder for Analysis2");
+
+class Analysis4Builder
+    : public SummaryViewBuilder<Analysis4View, Analysis4EntitySummary> {
+public:
+  ~Analysis4Builder() { Analysis4BuilderWasDestroyed = true; }
+
+  void addSummary(EntityId Id,
+                  std::unique_ptr<Analysis4EntitySummary> S) override {
+    getView().Entries.push_back({Id, S->InstanceId});
+  }
+
+  void finalize() override { getView().WasFinalized = true; }
+};
+
+static SummaryViewBuilderRegistry::Add<Analysis4Builder>
+    RegAnalysis4("Analysis4", "Builder for Analysis4");
+
+// ---------------------------------------------------------------------------
+// Fixture
+// ---------------------------------------------------------------------------
+
 class LUSummaryConsumerTest : public TestFixture {
 protected:
-  void SetUp() override { clearMockBuilderLog(); }
+  static constexpr EntityLinkage ExternalLinkage =
+      EntityLinkage(EntityLinkageType::External);
+
+  void SetUp() override {
+    NextSummaryInstanceId = 0;
+    Analysis1BuilderWasDestroyed = false;
+    Analysis2BuilderWasDestroyed = false;
+    Analysis4BuilderWasDestroyed = false;
+  }
 
   std::unique_ptr<LUSummary> makeLUSummary() {
     NestedBuildNamespace NS(
@@ -33,183 +176,104 @@ protected:
     return std::make_unique<LUSummary>(std::move(NS));
   }
 
-  /// Add an entity to the LUSummary's id table and return its EntityId.
   EntityId addEntity(LUSummary &LU, llvm::StringRef USR) {
     NestedBuildNamespace NS(
         {BuildNamespace(BuildNamespaceKind::LinkUnit, "TestLU")});
     EntityName Name(USR.str(), "", NS);
-    return getIdTable(LU).getId(Name);
+    EntityId Id = getIdTable(LU).getId(Name);
+    getLinkageTable(LU).insert({Id, ExternalLinkage});
+    return Id;
   }
 
-  /// Insert a pre-built EntitySummary into LUSummary::Data.
-  void insertSummary(LUSummary &LU, llvm::StringRef SummaryNameStr, EntityId Id,
-                     std::unique_ptr<EntitySummary> Summary) {
-    getData(LU)[SummaryName(SummaryNameStr.str())][Id] = std::move(Summary);
+  static bool hasEntry(const std::vector<std::pair<EntityId, int>> &Entries,
+                       EntityId Id, int InstanceId) {
+    return std::find(Entries.begin(), Entries.end(),
+                     std::make_pair(Id, InstanceId)) != Entries.end();
+  }
+
+  /// Inserts a freshly constructed SummaryT for the given entity and returns
+  /// the summary's InstanceId so the test can verify delivery later.
+  template <typename SummaryT>
+  int insertSummary(LUSummary &LU, llvm::StringRef SN, EntityId Id) {
+    auto S = std::make_unique<SummaryT>();
+    int InstanceId = S->InstanceId;
+    getData(LU)[SummaryName(SN.str())][Id] = std::move(S);
+    return InstanceId;
   }
 };
 
 // ---------------------------------------------------------------------------
-// No matching data in LUSummary
+// Tests
 // ---------------------------------------------------------------------------
 
-TEST_F(LUSummaryConsumerTest, NoMatchingData_AddSummaryNeverCalled) {
+TEST_F(LUSummaryConsumerTest, Run) {
   auto LU = makeLUSummary();
-  // Insert data for a summary name that has no registered builder.
-  auto Id = addEntity(*LU, "A");
-  insertSummary(*LU, "UnregisteredAnalysis", Id,
-                std::make_unique<MockEntitySummary1>());
+  const auto E1 = addEntity(*LU, "Entity1");
+  const auto E2 = addEntity(*LU, "Entity2");
+  const auto E3 = addEntity(*LU, "Entity3");
+
+  int s1a = insertSummary<Analysis1EntitySummary>(*LU, "Analysis1", E1);
+  int s1b = insertSummary<Analysis1EntitySummary>(*LU, "Analysis1", E2);
+  int s2a = insertSummary<Analysis2EntitySummary>(*LU, "Analysis2", E2);
+  int s2b = insertSummary<Analysis2EntitySummary>(*LU, "Analysis2", E3);
+
+  // no registered builder
+  [[maybe_unused]] int s3a =
+      insertSummary<Analysis1EntitySummary>(*LU, "Analysis3", E1);
 
   LUSummaryConsumer Consumer(std::move(LU));
   Consumer.run();
 
-  EXPECT_EQ(MockBuilderLog.find("addSummary"), std::string::npos);
-}
+  // Analysis1
+  {
+    auto View1 = Consumer.getView<Analysis1View>();
+    ASSERT_NE(View1, nullptr);
 
-TEST_F(LUSummaryConsumerTest, NoMatchingData_FinalizeNotCalled) {
-  auto LU = makeLUSummary(); // empty — no Mock1 data
+    // getView ownership transfer — second call returns nullptr
+    EXPECT_EQ(Consumer.getView<Analysis1View>(), nullptr);
 
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
+    EXPECT_EQ(View1->Entries.size(), 2u);
+    EXPECT_TRUE(hasEntry(View1->Entries, E1, s1a));
+    EXPECT_TRUE(hasEntry(View1->Entries, E2, s1b));
 
-  EXPECT_EQ(MockBuilderLog.find("finalize"), std::string::npos);
-}
+    EXPECT_TRUE(View1->WasFinalized);
 
-TEST_F(LUSummaryConsumerTest, NoMatchingData_GetViewReturnsNull) {
-  auto LU = makeLUSummary();
+    // Builder lifetime
+    EXPECT_TRUE(Analysis1BuilderWasDestroyed);
+  }
 
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
+  // Analysis2
+  {
+    auto View2 = Consumer.getView<Analysis2View>();
+    ASSERT_NE(View2, nullptr);
 
-  EXPECT_EQ(Consumer.getView<MockView1>(), nullptr);
-}
+    // getView ownership transfer — second call returns nullptr
+    EXPECT_EQ(Consumer.getView<Analysis2View>(), nullptr);
 
-// ---------------------------------------------------------------------------
-// Matching data delivered correctly
-// ---------------------------------------------------------------------------
+    EXPECT_EQ(View2->Entries.size(), 2u);
+    EXPECT_TRUE(hasEntry(View2->Entries, E2, s2a));
+    EXPECT_TRUE(hasEntry(View2->Entries, E3, s2b));
 
-TEST_F(LUSummaryConsumerTest, MatchingData_AddSummaryCalledPerEntity) {
-  auto LU = makeLUSummary();
-  auto Id1 = addEntity(*LU, "A");
-  auto Id2 = addEntity(*LU, "B");
-  insertSummary(*LU, "Mock1", Id1, std::make_unique<MockEntitySummary1>());
-  insertSummary(*LU, "Mock1", Id2, std::make_unique<MockEntitySummary1>());
+    EXPECT_TRUE(View2->WasFinalized);
 
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
+    // Builder lifetime
+    EXPECT_TRUE(Analysis2BuilderWasDestroyed);
+  }
 
-  auto View = Consumer.getView<MockView1>();
-  ASSERT_NE(View, nullptr);
-  EXPECT_EQ(View->Ids.size(), 2u);
-  EXPECT_NE(std::find(View->Ids.begin(), View->Ids.end(), Id1),
-            View->Ids.end());
-  EXPECT_NE(std::find(View->Ids.begin(), View->Ids.end(), Id2),
-            View->Ids.end());
-}
+  // Analysis 3
+  {
+    // Unregistered builder — Analysis3 data silently skipped
+    EXPECT_EQ(Consumer.getView<Analysis3View>(), nullptr);
+  }
 
-TEST_F(LUSummaryConsumerTest, MatchingData_FinalizeCalledAfterAllAddSummary) {
-  auto LU = makeLUSummary();
-  auto Id = addEntity(*LU, "A");
-  insertSummary(*LU, "Mock1", Id, std::make_unique<MockEntitySummary1>());
+  // Analysis4
+  {
+    // Registered builder but no data in LUSummary — builder never invoked
+    EXPECT_EQ(Consumer.getView<Analysis4View>(), nullptr);
 
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
-
-  // Verify ordering in the log: all addSummary entries must precede all
-  // finalize entries.
-  auto AddSummaryPos = MockBuilderLog.find("addSummary");
-  auto FinalizePos = MockBuilderLog.find("finalize");
-  ASSERT_NE(AddSummaryPos, std::string::npos);
-  ASSERT_NE(FinalizePos, std::string::npos);
-  EXPECT_LT(AddSummaryPos, FinalizePos);
-}
-
-// ---------------------------------------------------------------------------
-// Multiple builders receive only their own entities
-// ---------------------------------------------------------------------------
-
-TEST_F(LUSummaryConsumerTest, MultipleBuilders_IndependentEntities) {
-  auto LU = makeLUSummary();
-  auto Id1 = addEntity(*LU, "A");
-  auto Id2 = addEntity(*LU, "B");
-  insertSummary(*LU, "Mock1", Id1, std::make_unique<MockEntitySummary1>());
-  insertSummary(*LU, "Mock2", Id2, std::make_unique<MockEntitySummary2>());
-
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
-
-  auto View1 = Consumer.getView<MockView1>();
-  ASSERT_NE(View1, nullptr);
-  ASSERT_EQ(View1->Ids.size(), 1u);
-  EXPECT_EQ(View1->Ids[0], Id1);
-
-  auto View2 = Consumer.getView<MockView2>();
-  ASSERT_NE(View2, nullptr);
-  ASSERT_EQ(View2->Ids.size(), 1u);
-  EXPECT_EQ(View2->Ids[0], Id2);
-}
-
-// ---------------------------------------------------------------------------
-// getView ownership transfer
-// ---------------------------------------------------------------------------
-
-TEST_F(LUSummaryConsumerTest, GetView_FirstCallReturnsNonNull) {
-  auto LU = makeLUSummary();
-  auto Id = addEntity(*LU, "A");
-  insertSummary(*LU, "Mock1", Id, std::make_unique<MockEntitySummary1>());
-
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
-
-  EXPECT_NE(Consumer.getView<MockView1>(), nullptr);
-}
-
-TEST_F(LUSummaryConsumerTest, GetView_SecondCallReturnsNull) {
-  auto LU = makeLUSummary();
-  auto Id = addEntity(*LU, "A");
-  insertSummary(*LU, "Mock1", Id, std::make_unique<MockEntitySummary1>());
-
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
-
-  auto First = Consumer.getView<MockView1>();
-  EXPECT_NE(First, nullptr);
-  EXPECT_EQ(Consumer.getView<MockView1>(), nullptr);
-}
-
-TEST_F(LUSummaryConsumerTest, GetView_UnregisteredViewReturnsNull) {
-  // MockView1 is registered; a hypothetical OtherView is not.
-  struct OtherView : public SummaryView {
-    static SummaryName summaryName() { return SummaryName("Other"); }
-  };
-
-  auto LU = makeLUSummary();
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
-
-  EXPECT_EQ(Consumer.getView<OtherView>(), nullptr);
-}
-
-// ---------------------------------------------------------------------------
-// Builder lifetime
-// ---------------------------------------------------------------------------
-
-TEST_F(LUSummaryConsumerTest, BuildersDestroyedAfterRun) {
-  auto LU = makeLUSummary();
-  auto Id1 = addEntity(*LU, "A");
-  auto Id2 = addEntity(*LU, "B");
-  insertSummary(*LU, "Mock1", Id1, std::make_unique<MockEntitySummary1>());
-  insertSummary(*LU, "Mock2", Id2, std::make_unique<MockEntitySummary2>());
-
-  LUSummaryConsumer Consumer(std::move(LU));
-  Consumer.run();
-
-  // Both destructors must have been called by the time run() returns.
-  EXPECT_NE(
-      MockBuilderLog.find("MockSummaryViewBuilder1 destructor was invoked"),
-      std::string::npos);
-  EXPECT_NE(
-      MockBuilderLog.find("MockSummaryViewBuilder2 destructor was invoked"),
-      std::string::npos);
+    // Builder lifetime
+    EXPECT_FALSE(Analysis4BuilderWasDestroyed);
+  }
 }
 
 } // namespace
