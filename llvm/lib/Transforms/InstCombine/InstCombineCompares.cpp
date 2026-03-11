@@ -8359,26 +8359,15 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 
 // Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
 // Patterns include:
-//    fptrunc(x) <  C  -->  x <  ext(C)
-//    fptrunc(x) <= C  -->  x <= ext(C)
-//    fptrunc(x) >  C  -->  x >  ext(C)
-//    fptrunc(x) >= C  -->  x >= ext(C)
+//    fptrunc(x) <  C      -->  x <  ext(C)
+//    fptrunc(x) <= C      -->  x <= ext(C)
+//    fptrunc(x) >  C      -->  x >  ext(C)
+//    fptrunc(x) >= C      -->  x >= ext(C)
+//    fptrunc(x) ord/uno C --> x ord/uno C
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
                                     const Constant &C) {
-  FCmpInst::Predicate Pred = I.getPredicate();
-  bool RoundDown = false;
-
-  if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
-      Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT)
-    RoundDown = true;
-  else if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT ||
-           Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
-    RoundDown = false;
-  else
-    return nullptr;
-
   const APFloat *CValue;
   if (!match(&C, m_APFloat(CValue)))
     return nullptr;
@@ -8393,6 +8382,31 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
     return Dest;
   };
 
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+  const fltSemantics &DestFltSema =
+      DestType->getScalarType()->getFltSemantics();
+
+  APFloat ExtCValue = ConvertFltSema(*CValue, DestFltSema);
+
+  FCmpInst::Predicate Pred = I.getPredicate();
+
+  // Fold fcmp ord/uno fptrunc X, C -> fcmp ord/uno X, C
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                        ConstantFP::get(DestType, ExtCValue), "", &I);
+  }
+
+  bool RoundDown = false;
+
+  if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
+      Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT)
+    RoundDown = true;
+  else if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT ||
+           Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
+    RoundDown = false;
+  else
+    return nullptr;
+
   auto NextValue = [](const APFloat &Value, bool RoundDown) {
     APFloat NextValue = Value;
     NextValue.next(RoundDown);
@@ -8400,12 +8414,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
   };
 
   APFloat NextCValue = NextValue(*CValue, RoundDown);
-
-  Type *DestType = FPTrunc.getOperand(0)->getType();
-  const fltSemantics &DestFltSema =
-      DestType->getScalarType()->getFltSemantics();
-
-  APFloat ExtCValue = ConvertFltSema(*CValue, DestFltSema);
   APFloat ExtNextCValue = ConvertFltSema(NextCValue, DestFltSema);
 
   // When 'NextCValue' is infinity, use an imaged 'NextCValue' that equals

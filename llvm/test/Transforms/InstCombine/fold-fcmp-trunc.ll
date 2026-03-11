@@ -327,8 +327,7 @@ define i1 @fcmp_trunc_literal_positive_inf(double %0) {
 define i1 @fcmp_trunc_literal_negative_inf(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_literal_negative_inf(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[TMP0]] to float
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uno float [[TRUNC]], 0.000000e+00
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uno double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -675,8 +674,7 @@ define i1 @fcmp_trunc_mn_ppc_fp128(ppc_fp128 %0) {
 define i1 @fptrunc_uno_fcmp(double %arg0) {
 ; CHECK-LABEL: define i1 @fptrunc_uno_fcmp(
 ; CHECK-SAME: double [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
-; CHECK-NEXT:    [[V1:%.*]] = fcmp uno float [[V0]], 0.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fcmp uno double [[ARG0]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptrunc double %arg0 to float
@@ -687,8 +685,7 @@ define i1 @fptrunc_uno_fcmp(double %arg0) {
 define i1 @fptrunc_uno_fcmp_commuted(double %arg0) {
 ; CHECK-LABEL: define i1 @fptrunc_uno_fcmp_commuted(
 ; CHECK-SAME: double [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
-; CHECK-NEXT:    [[V1:%.*]] = fcmp uno float [[V0]], 0.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fcmp uno double [[ARG0]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptrunc double %arg0 to float
@@ -699,8 +696,7 @@ define i1 @fptrunc_uno_fcmp_commuted(double %arg0) {
 define i1 @fptrunc_ord_fcmp(double %arg0) {
 ; CHECK-LABEL: define i1 @fptrunc_ord_fcmp(
 ; CHECK-SAME: double [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
-; CHECK-NEXT:    [[V1:%.*]] = fcmp ord float [[V0]], 0.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ord double [[ARG0]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptrunc double %arg0 to float
@@ -711,8 +707,7 @@ define i1 @fptrunc_ord_fcmp(double %arg0) {
 define i1 @fptrunc_ord_fcmp_commuted(double %arg0) {
 ; CHECK-LABEL: define i1 @fptrunc_ord_fcmp_commuted(
 ; CHECK-SAME: double [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
-; CHECK-NEXT:    [[V1:%.*]] = fcmp ord float [[V0]], 0.000000e+00
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ord double [[ARG0]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
   %v0 = fptrunc double %arg0 to float
