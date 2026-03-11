@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_rsqrt.h>
+#include "clc/math/clc_rsqrt.h"
 
 float __nv_rsqrtf(float);
 double __nv_rsqrt(double);
@@ -31,4 +31,4 @@ _CLC_OVERLOAD _CLC_DEF half __clc_rsqrt(half x) {
 
 #define __CLC_FUNCTION __clc_rsqrt
 #define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

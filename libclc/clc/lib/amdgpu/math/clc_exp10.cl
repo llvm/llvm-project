@@ -12,4 +12,4 @@
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_exp10
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

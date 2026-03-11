@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_load.h>
+#include "clc/atomic/clc_atomic_load.h"
 
 #define __CLC_FUNCTION __clc_atomic_load
 #define __CLC_IMPL_FUNCTION __scoped_atomic_load_n
 #define __CLC_NO_VALUE_ARG
 
 #define __CLC_BODY <clc_atomic_def.inc>
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #undef __CLC_CASTTYPE
 #undef __CLC_AS_RETTYPE
@@ -21,4 +21,4 @@
 #define __CLC_AS_RETTYPE(x) __CLC_AS_GENTYPE(x)
 
 #define __CLC_BODY <clc_atomic_def.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

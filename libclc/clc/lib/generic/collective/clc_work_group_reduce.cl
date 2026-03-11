@@ -24,7 +24,7 @@ enum __CLC_WORK_GROUP_REDUCE_OP {
 };
 
 #define __CLC_BODY <clc_work_group_reduce.inc>
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #define __CLC_BODY <clc_work_group_reduce.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

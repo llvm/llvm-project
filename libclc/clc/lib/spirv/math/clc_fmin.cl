@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
+#include "clc/internal/clc.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_fmin(float x, float y) {
   return __builtin_fminf(x, y);
@@ -28,4 +28,4 @@ _CLC_DEF _CLC_OVERLOAD half __clc_fmin(half x, half y) {
 
 #define __CLC_FUNCTION __clc_fmin
 #define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

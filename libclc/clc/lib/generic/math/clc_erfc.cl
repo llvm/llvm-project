@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
-#include <clc/math/clc_exp.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isnan.h>
+#include "clc/internal/clc.h"
+#include "clc/math/clc_exp.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isnan.h"
 
 /*
  * ====================================================
@@ -506,7 +506,7 @@ _CLC_OVERLOAD _CLC_DEF double __clc_erfc(double x) {
 
 #ifdef cl_khr_fp16
 
-#include <clc/clc_convert.h>
+#include "clc/clc_convert.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -519,4 +519,4 @@ _CLC_OVERLOAD _CLC_DEF half __clc_erfc(half x) {
 
 #define __CLC_FUNCTION __clc_erfc
 #define __CLC_BODY <clc/shared/unary_def_scalarize_loop.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/relational/clc_isnan.h>
+#include "clc/internal/clc.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/relational/clc_isnan.h"
 
 // This file provides OpenCL C implementations of __clc_nextafter for
 // targets that don't support the clang builtin.

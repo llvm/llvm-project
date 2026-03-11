@@ -12,7 +12,7 @@
 #define __CLC_FUNCTION __clc_sub_sat
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #undef __CLC_FUNCTION
 

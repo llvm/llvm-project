@@ -13,11 +13,11 @@
 
 // Integer-type decls
 #define __CLC_BODY <clc/misc/shuffle_decl.inc>
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 // Floating-point decls
 #define __CLC_BODY <clc/misc/shuffle_decl.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 

@@ -79,7 +79,7 @@ __clc_sub_group_broadcast(double x, uint sub_group_local_id) {
 }
 
 #define __CLC_BODY <clc/subgroup/clc_subgroup_broadcast_scalarize.inc>
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #define __CLC_BODY <clc/subgroup/clc_subgroup_broadcast_scalarize.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -12,7 +12,7 @@
 #define __CLC_FUNCTION __clc_dot
 #define __CLC_BODY <clc/geometric/binary_decl.inc>
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 

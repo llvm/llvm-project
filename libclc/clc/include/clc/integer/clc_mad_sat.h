@@ -12,7 +12,7 @@
 #define __CLC_FUNCTION __clc_mad_sat
 #define __CLC_BODY <clc/shared/ternary_decl.inc>
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #undef __CLC_FUNCTION
 

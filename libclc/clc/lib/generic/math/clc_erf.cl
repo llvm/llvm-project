@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
-#include <clc/math/clc_exp.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isnan.h>
+#include "clc/internal/clc.h"
+#include "clc/math/clc_exp.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isnan.h"
 
 /*
  * ====================================================
@@ -508,4 +508,4 @@ _CLC_OVERLOAD _CLC_DEF half __clc_erf(half x) {
 
 #define __CLC_FUNCTION __clc_erf
 #define __CLC_BODY <clc/shared/unary_def_scalarize_loop.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

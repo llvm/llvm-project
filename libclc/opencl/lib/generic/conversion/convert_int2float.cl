@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/opencl/convert.h>
+#include "clc/clc_convert.h"
+#include "clc/opencl/convert.h"
 
 #define __CLC_S_SCALAR_TYPE_SRC __CLC_SCALAR_TYPE_SRC
 #define __CLC_U_SCALAR_TYPE_SRC __CLC_XCONCAT(u, __CLC_SCALAR_TYPE_SRC)
@@ -24,20 +24,20 @@
 
 #define __CLC_SCALAR_TYPE_SRC char
 #define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC short
 #define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC int
 #define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #define __CLC_SCALAR_TYPE_SRC long
 #define __CLC_BODY <convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC

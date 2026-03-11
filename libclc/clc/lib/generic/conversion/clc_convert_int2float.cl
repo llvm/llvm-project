@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/common/clc_sign.h>
-#include <clc/float/definitions.h>
-#include <clc/integer/clc_abs.h>
-#include <clc/integer/definitions.h>
-#include <clc/math/clc_nextafter.h>
-#include <clc/relational/clc_select.h>
-#include <clc/shared/clc_clamp.h>
-#include <clc/shared/clc_max.h>
-#include <clc/shared/clc_min.h>
+#include "clc/clc_convert.h"
+#include "clc/common/clc_sign.h"
+#include "clc/float/definitions.h"
+#include "clc/integer/clc_abs.h"
+#include "clc/integer/definitions.h"
+#include "clc/math/clc_nextafter.h"
+#include "clc/relational/clc_select.h"
+#include "clc/shared/clc_clamp.h"
+#include "clc/shared/clc_max.h"
+#include "clc/shared/clc_min.h"
 
 #define __CLC_GENTYPE_SRC __CLC_XCONCAT(__CLC_SCALAR_TYPE_SRC, __CLC_VECSIZE)
 
@@ -34,13 +34,13 @@
 #define __CLC_GEN_S
 #define __CLC_SCALAR_TYPE_SRC char
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_GEN_S
 
 #define __CLC_SCALAR_TYPE_SRC uchar
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #undef __CLC_SCALAR_TYPE_SRC_S
@@ -51,13 +51,13 @@
 #define __CLC_GEN_S
 #define __CLC_SCALAR_TYPE_SRC short
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_GEN_S
 
 #define __CLC_SCALAR_TYPE_SRC ushort
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #undef __CLC_SCALAR_TYPE_SRC_S
@@ -68,13 +68,13 @@
 #define __CLC_GEN_S
 #define __CLC_SCALAR_TYPE_SRC int
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_GEN_S
 
 #define __CLC_SCALAR_TYPE_SRC uint
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #undef __CLC_SCALAR_TYPE_SRC_S
@@ -85,13 +85,13 @@
 #define __CLC_GEN_S
 #define __CLC_SCALAR_TYPE_SRC long
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 #undef __CLC_GEN_S
 
 #define __CLC_SCALAR_TYPE_SRC ulong
 #define __CLC_BODY <clc_convert_float.inc>
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 #undef __CLC_SCALAR_TYPE_SRC
 
 #undef __CLC_GENTYPE_SRC

@@ -12,7 +12,7 @@
 #define __CLC_FUNCTION __clc_nan
 #define __CLC_BODY <clc/math/clc_nan.inc>
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 

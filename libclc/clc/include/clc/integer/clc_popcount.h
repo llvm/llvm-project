@@ -12,7 +12,7 @@
 #define __CLC_FUNCTION __clc_popcount
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 
-#include <clc/integer/gentype.inc>
+#include "clc/integer/gentype.inc"
 
 #undef __CLC_INTRINSIC
 #undef __CLC_FUNCTION

@@ -12,7 +12,7 @@
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 #define __CLC_FUNCTION __clc_atan2
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
 #undef __CLC_FUNCTION
 
