@@ -104,7 +104,7 @@ define i1 @fcmp_trunc_with_reassoc(double %0) {
 define i1 @fcmp_trunc_with_fast(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_with_fast(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge double [[TMP0]], 0x4058FFFFF0000000 
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge double [[TMP0]], 0x4058FFFFF0000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc double %0 to float
@@ -672,3 +672,50 @@ define i1 @fcmp_trunc_mn_ppc_fp128(ppc_fp128 %0) {
   ret i1 %result
 }
 
+define i1 @fptrunc_uno_fcmp(double %arg0) {
+; CHECK-LABEL: define i1 @fptrunc_uno_fcmp(
+; CHECK-SAME: double [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    [[V1:%.*]] = fcmp uno float [[V0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = fptrunc double %arg0 to float
+  %v1 = fcmp uno float %v0, 0.000000e+00
+  ret i1 %v1
+}
+
+define i1 @fptrunc_uno_fcmp_commuted(double %arg0) {
+; CHECK-LABEL: define i1 @fptrunc_uno_fcmp_commuted(
+; CHECK-SAME: double [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    [[V1:%.*]] = fcmp uno float [[V0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = fptrunc double %arg0 to float
+  %v1 = fcmp uno float 7.000000e+00, %v0
+  ret i1 %v1
+}
+
+define i1 @fptrunc_ord_fcmp(double %arg0) {
+; CHECK-LABEL: define i1 @fptrunc_ord_fcmp(
+; CHECK-SAME: double [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ord float [[V0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = fptrunc double %arg0 to float
+  %v1 = fcmp ord float %v0, 0.000000e+00
+  ret i1 %v1
+}
+
+define i1 @fptrunc_ord_fcmp_commuted(double %arg0) {
+; CHECK-LABEL: define i1 @fptrunc_ord_fcmp_commuted(
+; CHECK-SAME: double [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = fptrunc double [[ARG0]] to float
+; CHECK-NEXT:    [[V1:%.*]] = fcmp ord float [[V0]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[V1]]
+;
+  %v0 = fptrunc double %arg0 to float
+  %v1 = fcmp ord float 7.000000e+00, %v0
+  ret i1 %v1
+}
