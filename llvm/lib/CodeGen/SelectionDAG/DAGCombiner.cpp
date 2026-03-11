@@ -19116,7 +19116,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // X / fpext/fpround(sqrt(Y)) -> X * (fpext/fpround(1 / sqrt(Y))) ->
     // X * fpext/fpround(rsqrt(Y))
     if (N1.getOpcode() == ISD::FSQRT && FlagsN1.hasAllowContract()) {
-      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0), N1.getOperand(0)->getFlags()))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT &&
@@ -19182,9 +19182,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
         SDValue Rsqrt;
         if (Flags.hasAllowReassociation() &&
             N1->getFlags().hasAllowReassociation() &&
-            Sqrt->getFlags().hasAllowContract() &&
-            (Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0)))) {
-          Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0), Sqrt->getFlags());
+            Sqrt->getFlags().hasAllowContract() && (Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0), Sqrt->getFlags()))) {
           SDValue Div = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, Rsqrt, Y);
           AddToWorklist(Div.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, Div);
