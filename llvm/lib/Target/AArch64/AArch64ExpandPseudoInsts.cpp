@@ -1865,24 +1865,26 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      const MachineOperand &Op0 = MI.getOperand(0);
      const MachineOperand *Op1 = &MI.getOperand(1);
      const MachineOperand *Op2 = &MI.getOperand(2);
-     const Register DstReg = Op0.getReg();
+     const Register DOPReg = Op0.getReg();
+     const RegState DOPRegState =
+        getRenamableRegState(Op0.isRenamable()) | RegState::Kill;
 
-     if (DstReg == Op2->getReg()) {
+     if (DOPReg == Op2->getReg()) {
        // Commute the operands to allow destroying the second source.
        std::swap(Op1, Op2);
-     } else if (DstReg != Op1->getReg()) {
+     } else if (DOPReg != Op1->getReg()) {
        // If not in destructive form, emit a MOVPRFX. The input should only be
        // killed if unused by the subsequent instruction.
        PRFX =
            BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVPRFX_ZZ))
-               .addDef(DstReg, getRenamableRegState(Op0.isRenamable()))
+               .addDef(DOPReg, getRenamableRegState(Op0.isRenamable()))
                .addReg(Op1->getReg(),
                        getRenamableRegState(Op1->isRenamable()) |
                            getKillRegState(Op1->isKill() &&
                                            Opcode == AArch64::NAND_ZZZ));
      }
 
-     assert((DstReg == Op1->getReg() || PRFX) && "invalid expansion");
+     assert((DOPReg == Op1->getReg() || PRFX) && "invalid expansion");
 
      switch (Opcode) {
      default:
@@ -1890,24 +1892,21 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      case AArch64::EON_ZZZ:
        DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BSL2N_ZZZZ))
                  .add(Op0)
-                 .addReg(DstReg, getRenamableRegState(Op0.isRenamable()) |
-                                     RegState::Kill)
+                 .addReg(DOPReg, DOPRegState)
                  .add(*Op1)
                  .add(*Op2);
        break;
      case AArch64::NAND_ZZZ:
        DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::NBSL_ZZZZ))
                  .add(Op0)
-                 .addReg(DstReg, getRenamableRegState(Op0.isRenamable()) |
-                                     RegState::Kill)
+                 .addReg(DOPReg, DOPRegState)
                  .add(*Op2)
                  .add(*Op2);
        break;
      case AArch64::NOR_ZZZ:
        DOP = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::NBSL_ZZZZ))
                  .add(Op0)
-                 .addReg(DstReg, getRenamableRegState(Op0.isRenamable()) |
-                                     RegState::Kill)
+                 .addReg(DOPReg, DOPRegState)
                  .add(*Op2)
                  .add(*Op1);
        break;
@@ -1916,8 +1915,9 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      if (PRFX) {
        transferImpOps(MI, PRFX, DOP);
        finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
-     } else
+     } else {
        transferImpOps(MI, DOP, DOP);
+     }
 
      MI.eraseFromParent();
      return true;
