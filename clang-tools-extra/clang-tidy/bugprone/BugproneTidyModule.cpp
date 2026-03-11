@@ -159,8 +159,6 @@ public:
     CheckFactories.registerCheck<EasilySwappableParametersCheck>(
         "bugprone-easily-swappable-parameters");
     CheckFactories.registerCheck<EmptyCatchCheck>("bugprone-empty-catch");
-    CheckFactories.registerCheck<StdExceptionBaseclassCheck>(
-        "bugprone-std-exception-baseclass");
     CheckFactories.registerCheck<ExceptionCopyConstructorThrowsCheck>(
         "bugprone-exception-copy-constructor-throws");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
@@ -184,6 +182,8 @@ public:
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
         "bugprone-return-const-ref-from-parameter");
+    CheckFactories.registerCheck<StdExceptionBaseclassCheck>(
+        "bugprone-std-exception-baseclass");    
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
     CheckFactories.registerCheck<IncDecInConditionsCheck>(
