@@ -878,6 +878,14 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
                          AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
                          "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
 
+// Vector Reordering Structured Data
+def FeatureStdExtZvzip
+    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvzip),
+                         "'Zvzip' (Vector Reordering Structured Data)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,

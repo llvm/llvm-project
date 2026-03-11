@@ -44,6 +44,14 @@ let TargetPrefix = "spv" in {
   def int_spv_undef : Intrinsic<[llvm_i32_ty], []>;
   def int_spv_inline_asm : Intrinsic<[], [llvm_metadata_ty, llvm_metadata_ty, llvm_vararg_ty]>;
 
+  // Masked Gather/Scatter (SPV_INTEL_masked_gather_scatter)
+  def int_spv_masked_gather : Intrinsic<[llvm_any_ty],
+                                [llvm_any_ty, llvm_i32_ty, llvm_any_ty, llvm_any_ty],
+                                [IntrReadMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+  def int_spv_masked_scatter : Intrinsic<[],
+                                [llvm_any_ty, llvm_any_ty, llvm_i32_ty, llvm_any_ty],
+                                [IntrWriteMem, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+
   // Expect, Assume Intrinsics
   def int_spv_assume : Intrinsic<[], [llvm_i1_ty]>;
   def int_spv_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;

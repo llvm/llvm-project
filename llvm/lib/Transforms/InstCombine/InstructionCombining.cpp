@@ -1445,7 +1445,7 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       SI->swapProfMetadata();
       break;
     }
-    case Instruction::Br: {
+    case Instruction::CondBr: {
       BranchInst *BI = cast<BranchInst>(U);
       BI->swapSuccessors(); // swaps prof metadata too
       if (BPI)
