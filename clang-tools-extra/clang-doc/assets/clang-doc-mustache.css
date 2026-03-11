@@ -529,3 +529,11 @@ a, a:visited, a:hover, a:active {
 .param-container {
     display: block;
 }
+
+.paragraph-container {
+    margin-bottom: 1rem;
+}
+
+.paragraph-container:last-of-type {
+    margin-bottom: 0rem;
+}
