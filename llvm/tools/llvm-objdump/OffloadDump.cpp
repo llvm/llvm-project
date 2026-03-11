@@ -44,9 +44,7 @@ static StringRef getImageName(const OffloadBinary &OB) {
   }
 }
 
-std::string Indent(uint64_t Level) {
-  return std::string(Level * 2, ' ');
-}
+std::string Indent(uint64_t Level) { return std::string(Level * 2, ' '); }
 
 static void printOffloadBinaryMetadata(const OffloadBinary &OB,
                                        uint64_t level) {
