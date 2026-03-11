@@ -40,6 +40,7 @@
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
+; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data). 
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.

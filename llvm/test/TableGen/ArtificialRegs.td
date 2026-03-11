@@ -27,7 +27,7 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // copies of already existing register classes that only differ
 // in the presence of artificial regsiters.
 //
-// CHECK: RegisterClass RA:
+// CHECK-LABEL: RegisterClass RA:
 // CHECK-NEXT: SpillSize:
 // CHECK-NEXT: SpillAlignment:
 // CHECK-NEXT: NumRegs:
@@ -40,7 +40,7 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // CHECK-NEXT: Regs: A R0 R1{{$}}
 // CHECK-NEXT: SubClasses: RA{{$}}
 //
-// CHECK: RegisterClass DA:
+// CHECK-LABEL: RegisterClass DA:
 // CHECK-NEXT: SpillSize:
 // CHECK-NEXT: SpillAlignment:
 // CHECK-NEXT: NumRegs:
