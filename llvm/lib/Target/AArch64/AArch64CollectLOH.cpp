@@ -127,7 +127,7 @@ STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 namespace {
 
 struct AArch64CollectLOHImpl {
-  bool run(MachineFunction &MF);
+  void run(MachineFunction &MF);
 };
 
 struct AArch64CollectLOHLegacy : public MachineFunctionPass {
@@ -137,7 +137,10 @@ struct AArch64CollectLOHLegacy : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    return AArch64CollectLOHImpl().run(MF);
+    AArch64CollectLOHImpl().run(MF);
+
+    // Return "no change": The pass only collects information.
+    return false;
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -545,7 +548,7 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
   }
 }
 
-bool AArch64CollectLOHImpl::run(MachineFunction &MF) {
+void AArch64CollectLOHImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"
                     << "Looking in function " << MF.getName() << '\n');
 
@@ -596,20 +599,15 @@ bool AArch64CollectLOHImpl::run(MachineFunction &MF) {
       handleNormalInst(MI, LOHInfos);
     }
   }
-
-  // Return "no change": The pass only collects information.
-  return false;
 }
 
 PreservedAnalyses
 AArch64CollectLOHPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  bool Changed = AArch64CollectLOHImpl().run(MF);
-  if (!Changed)
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  AArch64CollectLOHImpl().run(MF);
+
+  // This pass only collects information.
+  return PreservedAnalyses::all();
 }
 
 FunctionPass *llvm::createAArch64CollectLOHPass() {
