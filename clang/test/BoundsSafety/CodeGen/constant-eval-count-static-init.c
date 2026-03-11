@@ -17,7 +17,7 @@ const Item oidRsa = { _oidRsa, sizeof(_oidRsa)};
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr  getelementptr inbounds nuw ([[STRUCT_ITEM:%.*]], ptr @oidRsa, i32 0, i32 1), align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr  getelementptr inbounds nuw (i8, ptr @oidRsa, i64 8), align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @oidRsa, align 8
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]

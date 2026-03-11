@@ -8,7 +8,7 @@
 // CHECK-LABEL: @test(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX:%.*]] to i64
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i32, ptr [[P_COERCE0:%.*]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[P_COERCE0:%.*]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[P_COERCE0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:

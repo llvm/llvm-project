@@ -66,7 +66,7 @@ int arr[] = {0, 1, 2, 3, 4, 5};
 // CHECK_X64_O0-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 0
 // CHECK_X64_O0-NEXT:    store ptr @arr, ptr [[TMP9]], align 8
 // CHECK_X64_O0-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 1
-// CHECK_X64_O0-NEXT:    store ptr getelementptr inbounds (i32, ptr @arr, i64 6), ptr [[TMP10]], align 8
+// CHECK_X64_O0-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr, i64 24), ptr [[TMP10]], align 8
 // CHECK_X64_O0-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK_X64_O0-NEXT:    store ptr @arr, ptr [[TMP11]], align 8
 // CHECK_X64_O0-NEXT:    [[WIDE_PTR_PTR_ADDR4:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 0
@@ -316,7 +316,7 @@ int arr[] = {0, 1, 2, 3, 4, 5};
 // CHECK_ARM64_O0-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 0
 // CHECK_ARM64_O0-NEXT:    store ptr @arr, ptr [[TMP9]], align 8
 // CHECK_ARM64_O0-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 1
-// CHECK_ARM64_O0-NEXT:    store ptr getelementptr inbounds (i32, ptr @arr, i64 6), ptr [[TMP10]], align 8
+// CHECK_ARM64_O0-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr, i64 24), ptr [[TMP10]], align 8
 // CHECK_ARM64_O0-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 2
 // CHECK_ARM64_O0-NEXT:    store ptr @arr, ptr [[TMP11]], align 8
 // CHECK_ARM64_O0-NEXT:    [[WIDE_PTR_PTR_ADDR4:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP3]], i32 0, i32 0

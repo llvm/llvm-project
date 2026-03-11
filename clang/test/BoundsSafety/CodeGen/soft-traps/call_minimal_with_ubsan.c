@@ -234,7 +234,7 @@
 // OPT-NEXT:    [[AGG_TEMP_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
 // OPT-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_PTR_SROA_IDX]], align 8, !tbaa [[INTPTR_TBAA8:![0-9]+]]
 // OPT-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP2]] to i64
-// OPT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM]]
+// OPT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM]]
 // OPT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, !annotation [[META11:![0-9]+]]
 // OPT-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP3]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META11]]
 // OPT-NEXT:    br i1 [[DOTNOT]], label %[[TRAP1:.*]], label %[[CONT2:.*]], !prof [[PROF7]], !annotation [[META11]]

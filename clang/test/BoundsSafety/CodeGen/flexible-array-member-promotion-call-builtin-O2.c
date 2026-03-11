@@ -17,7 +17,7 @@ typedef struct {
 // CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw i8, ptr [[FLEX]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[FLEX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ELEMS]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT]]
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
@@ -53,7 +53,7 @@ void *set(flex_t *flex, unsigned size) {
 // CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DEST]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ELEMS]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT]]
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
@@ -63,7 +63,7 @@ void *set(flex_t *flex, unsigned size) {
 // CHECK-NEXT:    [[ELEMS5:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i32, ptr [[ELEMS5]], i64 [[IDX_EXT8]]
+// CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS5]], i64 [[IDX_EXT8]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT11]]
 // CHECK:       boundscheck.cont11:
 // CHECK-NEXT:    [[AGG_TEMP3_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR9]], [[BOUNDSCHECK_NOTNULL4]] ], [ null, [[BOUNDSCHECK_CONT]] ]
@@ -106,7 +106,7 @@ void *cpy(flex_t *dest, const flex_t *src, unsigned size) {
 // CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DEST]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ELEMS]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT]]
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
@@ -116,7 +116,7 @@ void *cpy(flex_t *dest, const flex_t *src, unsigned size) {
 // CHECK-NEXT:    [[ELEMS5:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i32, ptr [[ELEMS5]], i64 [[IDX_EXT8]]
+// CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS5]], i64 [[IDX_EXT8]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT11]]
 // CHECK:       boundscheck.cont11:
 // CHECK-NEXT:    [[AGG_TEMP3_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR9]], [[BOUNDSCHECK_NOTNULL4]] ], [ null, [[BOUNDSCHECK_CONT]] ]
@@ -155,7 +155,7 @@ void *__unsafe_indexable pcpy(flex_t *dest, const flex_t *src, unsigned size) {
 // CHECK-NEXT:    [[ELEMS:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[DEST]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ELEMS]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT]]
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[ENTRY:%.*]] ]
@@ -165,7 +165,7 @@ void *__unsafe_indexable pcpy(flex_t *dest, const flex_t *src, unsigned size) {
 // CHECK-NEXT:    [[ELEMS5:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[IDX_EXT8:%.*]] = sext i32 [[TMP1]] to i64
-// CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds i32, ptr [[ELEMS5]], i64 [[IDX_EXT8]]
+// CHECK-NEXT:    [[ADD_PTR9:%.*]] = getelementptr inbounds [4 x i8], ptr [[ELEMS5]], i64 [[IDX_EXT8]]
 // CHECK-NEXT:    br label [[BOUNDSCHECK_CONT11]]
 // CHECK:       boundscheck.cont11:
 // CHECK-NEXT:    [[AGG_TEMP3_SROA_3_0:%.*]] = phi ptr [ [[ADD_PTR9]], [[BOUNDSCHECK_NOTNULL4]] ], [ null, [[BOUNDSCHECK_CONT]] ]

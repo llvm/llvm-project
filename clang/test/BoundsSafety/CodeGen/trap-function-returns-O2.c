@@ -7,28 +7,28 @@
 // X86_64-SAME: ptr noundef readonly captures(address) [[BAR:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // X86_64-NEXT:  entry:
 // X86_64-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[COUNT]] to i64
-// X86_64-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[BAR]], i64 [[IDX_EXT]]
+// X86_64-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BAR]], i64 [[IDX_EXT]]
 // X86_64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[BAR]], i64 4
-// X86_64-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BAR]], i64 8, !annotation [[META2:![0-9]+]]
-// X86_64-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[ADD_PTR]], !annotation [[META2]]
-// X86_64-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
+// X86_64-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BAR]], i64 8, !annotation [[META5:![0-9]+]]
+// X86_64-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[ADD_PTR]], !annotation [[META5]]
+// X86_64-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !prof [[PROF6:![0-9]+]], !annotation [[META5]]
 // X86_64:       trap:
-// X86_64-NEXT:    tail call void @fb_trap(i8 25) #[[ATTR1:[0-9]+]], !annotation [[META2]]
-// X86_64-NEXT:    br label [[CONT]], !annotation [[META2]]
+// X86_64-NEXT:    tail call void @fb_trap(i8 25) #[[ATTR1:[0-9]+]], !annotation [[META5]]
+// X86_64-NEXT:    br label [[CONT]], !annotation [[META5]]
 // X86_64:       cont:
-// X86_64-NEXT:    [[DOTNOT5:%.*]] = icmp ugt ptr [[ARRAYIDX]], [[TMP0]], !annotation [[META2]]
-// X86_64-NEXT:    br i1 [[DOTNOT5]], label [[TRAP1:%.*]], label [[CONT2:%.*]], !prof [[PROF3]], !annotation [[META2]]
+// X86_64-NEXT:    [[DOTNOT5:%.*]] = icmp ugt ptr [[ARRAYIDX]], [[TMP0]], !annotation [[META5]]
+// X86_64-NEXT:    br i1 [[DOTNOT5]], label [[TRAP1:%.*]], label [[CONT2:%.*]], !prof [[PROF6]], !annotation [[META5]]
 // X86_64:       trap1:
-// X86_64-NEXT:    tail call void @fb_trap(i8 25) #[[ATTR1]], !annotation [[META2]]
-// X86_64-NEXT:    br label [[CONT2]], !annotation [[META2]]
+// X86_64-NEXT:    tail call void @fb_trap(i8 25) #[[ATTR1]], !annotation [[META5]]
+// X86_64-NEXT:    br label [[CONT2]], !annotation [[META5]]
 // X86_64:       cont2:
-// X86_64-NEXT:    [[DOTNOT6:%.*]] = icmp ult ptr [[ARRAYIDX]], [[BAR]], !annotation [[META4:![0-9]+]]
-// X86_64-NEXT:    br i1 [[DOTNOT6]], label [[TRAP3:%.*]], label [[CONT4:%.*]], !prof [[PROF3]], !annotation [[META4]]
+// X86_64-NEXT:    [[DOTNOT6:%.*]] = icmp ult ptr [[ARRAYIDX]], [[BAR]], !annotation [[META7:![0-9]+]]
+// X86_64-NEXT:    br i1 [[DOTNOT6]], label [[TRAP3:%.*]], label [[CONT4:%.*]], !prof [[PROF6]], !annotation [[META7]]
 // X86_64:       trap3:
-// X86_64-NEXT:    tail call void @fb_trap(i8 25) #[[ATTR1]], !annotation [[META4]]
-// X86_64-NEXT:    br label [[CONT4]], !annotation [[META4]]
+// X86_64-NEXT:    tail call void @fb_trap(i8 25) #[[ATTR1]], !annotation [[META7]]
+// X86_64-NEXT:    br label [[CONT4]], !annotation [[META7]]
 // X86_64:       cont4:
-// X86_64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5:![0-9]+]]
+// X86_64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA1:![0-9]+]]
 // X86_64-NEXT:    ret i32 [[TMP1]]
 //
 int foo(int *__counted_by(count) bar, unsigned count) {

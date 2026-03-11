@@ -51,7 +51,7 @@
 // O2-LABEL: @foo(
 // O2-NEXT:  entry:
 // O2-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[LEN:%.*]] to i64
-// O2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
+// O2-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUF:%.*]], i64 [[IDX_EXT]]
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BUF]], i64 20
 // O2-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // O2-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[BUF]], {{!annotation ![0-9]+}}

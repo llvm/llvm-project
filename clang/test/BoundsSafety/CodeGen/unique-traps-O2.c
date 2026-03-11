@@ -23,7 +23,7 @@
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_PTR_SROA_IDX]], align 8, !tbaa [[TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, !annotation [[META9:![0-9]+]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META9]]
 // CHECK-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF10:![0-9]+]], !annotation [[META9]]
@@ -61,7 +61,7 @@ __attribute__((always_inline)) int i_want_to_be_inlined(
 // CHECK-NEXT:    [[BYVAL_TEMP_SROA_5_0_PTR2_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 16
 // CHECK-NEXT:    [[BYVAL_TEMP_SROA_5_0_COPYLOAD:%.*]] = load ptr, ptr [[BYVAL_TEMP_SROA_5_0_PTR2_SROA_IDX]], align 8, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[IDXPROM_I:%.*]] = sext i32 [[IDX]] to i64
-// CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr i32, ptr [[BYVAL_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM_I]]
+// CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr [4 x i8], ptr [[BYVAL_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM_I]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX_I]], i64 4, !annotation [[META9]]
 // CHECK-NEXT:    [[DOTNOT_I:%.*]] = icmp ugt ptr [[TMP0]], [[BYVAL_TEMP_SROA_4_0_COPYLOAD]], !annotation [[META9]]
 // CHECK-NEXT:    br i1 [[DOTNOT_I]], label %[[TRAP_I:.*]], label %[[CONT_I:.*]], !prof [[PROF10]], !annotation [[META9]]
@@ -86,7 +86,7 @@ __attribute__((always_inline)) int i_want_to_be_inlined(
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_PTR_SROA_IDX]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
 // CHECK-NEXT:    [[AGG_TEMP_SROA_3_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_3_0_PTR_SROA_IDX]], align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM_I]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[AGG_TEMP_SROA_0_0_COPYLOAD]], i64 [[IDXPROM_I]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, !annotation [[META9]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[AGG_TEMP_SROA_2_0_COPYLOAD]], !annotation [[META9]]
 // CHECK-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF10]], !annotation [[META9]]

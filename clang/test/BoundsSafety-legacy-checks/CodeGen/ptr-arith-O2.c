@@ -14,9 +14,9 @@ struct T {
 // CHECK-LABEL: @foo(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[LEN:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i32, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUF:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDX_NEG:%.*]] = sub nsw i64 0, [[IDX_EXT]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[BOUND_PTR_ARITH5:%.*]] = getelementptr i32, ptr [[BUF]], i64 [[IDX_NEG]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH5:%.*]] = getelementptr [4 x i8], ptr [[BUF]], i64 [[IDX_NEG]]
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH5]], [[ADD_PTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH5]], [[BUF]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}

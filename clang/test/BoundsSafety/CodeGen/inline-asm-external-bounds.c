@@ -12,7 +12,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0
 // CHECK-NEXT:    store ptr @.str, ptr [[TMP0]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 1
-// CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @.str, i64 5), ptr [[TMP1]], align 8
+// CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @.str, i64 5), ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    store ptr @.str, ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0

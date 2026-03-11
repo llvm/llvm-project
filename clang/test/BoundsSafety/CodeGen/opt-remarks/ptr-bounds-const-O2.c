@@ -18,7 +18,7 @@ int main() {
 
 // IR-LABEL: @foo
 
-// IR: %[[UPPER_BOUND:.+]] = getelementptr inbounds nuw i32, ptr %[[ARRAY:.+]], i64 %{{.+}}, !dbg !{{.+}}
+// IR: %[[UPPER_BOUND:.+]] = getelementptr inbounds nuw [4 x i8], ptr %[[ARRAY:.+]], i64 %{{.+}}, !dbg !{{.+}}
 // IR-NEXT: %[[PTR:.+]] = getelementptr i8, ptr %[[ARRAY]], i64 24, !dbg ![[LOC_FOO:[0-9]+]]
 // IR-NEXT: %[[ONE_PAST_END:.+]] = getelementptr i8, ptr %[[ARRAY]], i64 28, !dbg ![[LOC_FOO]], !annotation ![[ANNOT_LE_UB:[0-9]+]]
 // IR-NEXT: %[[UPPER_CHECK:.+]] = icmp ule ptr %[[ONE_PAST_END]], %[[UPPER_BOUND]], !dbg ![[LOC_FOO]], !annotation ![[ANNOT_LE_UB]]

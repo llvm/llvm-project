@@ -22,7 +22,7 @@ void f1(void *__sized_by(size) ptr, unsigned size);
 // X86_64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0
 // X86_64-NEXT:    store ptr inttoptr (i32 4096 to ptr), ptr [[TMP0]], align 8
 // X86_64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 1
-// X86_64-NEXT:    store ptr getelementptr (i8, ptr inttoptr (i32 4096 to ptr), i64 10), ptr [[TMP1]], align 8
+// X86_64-NEXT:    store ptr inttoptr (i64 4106 to ptr), ptr [[TMP1]], align 8
 // X86_64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // X86_64-NEXT:    store ptr inttoptr (i32 4096 to ptr), ptr [[TMP2]], align 8
 // X86_64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false), !annotation [[META2:![0-9]+]]
@@ -129,7 +129,7 @@ unsigned int *  __single nonstatic_single() {
 // X86_64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0
 // X86_64-NEXT:    store ptr inttoptr (i32 12300321 to ptr), ptr [[TMP0]], align 8
 // X86_64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 1
-// X86_64-NEXT:    store ptr getelementptr (i8, ptr inttoptr (i32 12300321 to ptr), i64 12), ptr [[TMP1]], align 8
+// X86_64-NEXT:    store ptr inttoptr (i64 12300333 to ptr), ptr [[TMP1]], align 8
 // X86_64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // X86_64-NEXT:    store ptr inttoptr (i32 12300321 to ptr), ptr [[TMP2]], align 8
 // X86_64-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0

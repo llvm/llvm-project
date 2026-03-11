@@ -17,7 +17,7 @@ int v;
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[TMP]], i32 0, i32 0
 // CHECK-NEXT:    store ptr @arr, ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[TMP]], i32 0, i32 1
-// CHECK-NEXT:    store ptr getelementptr inbounds (i32, ptr @arr, i64 10), ptr [[TMP2]], align 8
+// CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @arr, i64 40), ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[TMP]], i32 0, i32 2
 // CHECK-NEXT:    store ptr @arr, ptr [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[TMP]], i32 0, i32 0

@@ -15,14 +15,14 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[IMPL_BIDI_PTR]], i32 0, i32 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP0]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[IMPL_BIDI_PTR]], i32 0, i32 1
-// CHECK-NEXT:    store ptr getelementptr inbounds (i32, ptr null, i64 1), ptr [[TMP1]], align 8
+// CHECK-NEXT:    store ptr inttoptr (i64 4 to ptr), ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[IMPL_BIDI_PTR]], i32 0, i32 2
 // CHECK-NEXT:    store ptr null, ptr [[TMP2]], align 8
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[IMPL_BIDI_PTR2]], i8 0, i64 24, i1 false)
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[IMPL_BIDI_PTR2]], i32 0, i32 0
 // CHECK-NEXT:    store ptr null, ptr [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[IMPL_BIDI_PTR2]], i32 0, i32 1
-// CHECK-NEXT:    store ptr getelementptr inbounds (i32, ptr null, i64 1), ptr [[TMP4]], align 8
+// CHECK-NEXT:    store ptr inttoptr (i64 4 to ptr), ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[IMPL_BIDI_PTR2]], i32 0, i32 2
 // CHECK-NEXT:    store ptr null, ptr [[TMP5]], align 8
 // CHECK-NEXT:    ret void

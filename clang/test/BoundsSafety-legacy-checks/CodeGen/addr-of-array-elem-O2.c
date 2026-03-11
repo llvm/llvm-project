@@ -18,7 +18,7 @@ int main() {
 // CHECK: entry:
 // CHECK:   [[TMP0:%.*]] = load i32, ptr @v, align 4, {{!tbaa ![0-9]+}}
 // CHECK:   [[IDXPROM:%.*]] = sext i32 [[TMP0]] to i64
-// CHECK:   [[BOUND_PTR_ARITH:%.*]] = getelementptr i32, ptr @arr, i64 [[IDXPROM]]
+// CHECK:   [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr @arr, i64 [[IDXPROM]]
 // CHECK:   [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], getelementptr inbounds nuw (i8, ptr @arr, i64 40), {{!annotation ![0-9]+}}
 // CHECK:   [[TMP2:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], @arr, {{!annotation ![0-9]+}}
 // CHECK:   [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
