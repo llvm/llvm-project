@@ -5678,8 +5678,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   Register SrcReg = MI.getOperand(1).getReg();
   bool isSGPR = TRI->isSGPRClass(MRI.getRegClass(SrcReg));
   Register DstReg = MI.getOperand(0).getReg();
-  assert(MI.getOperand(2).isImm() &&
-         "Stratergy argument for wave reduction must be a constant.");
   unsigned Stratergy = static_cast<unsigned>(MI.getOperand(2).getImm());
   enum WAVE_REDUCE_STRATEGY : unsigned { DEFAULT = 0, ITERATIVE = 1, DPP = 2 };
   MachineBasicBlock *RetBB = nullptr;
@@ -5997,10 +5995,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                 IdentityValReg)
             .addImm(IdentityValue);
       }
-      // clang-format off
-    BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
-        .addMBB(ComputeLoop);
-      // clang-format on
+      BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH)).addMBB(ComputeLoop);
 
       // Start constructing ComputeLoop
       I = ComputeLoop->begin();
@@ -6231,9 +6226,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       Register NegatedReducedVal = MRI.createVirtualRegister(DstRegClass);
       Register RowBcast31 = MRI.createVirtualRegister(SrcRegClass);
       Register FinalDPPResult;
-      Register UndefExec = MRI.createVirtualRegister(
-          IsWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
-                   : &AMDGPU::SReg_64_XEXECRegClass);
+      Register UndefExec =
+          MRI.createVirtualRegister(TRI->getWaveMaskRegClass());
       BuildMI(BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), UndefExec);
 
       uint32_t IdentityValue = getIdentityValueFor32BitWaveReduction(Opc);
@@ -6252,33 +6246,31 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
 
       unsigned DPPOpc = getDPPOpcForWaveReduction(Opc, ST);
       auto BuildDPPMachineInstr = [&](Register Dst, Register Src,
-                                      unsigned DPPCtrl, unsigned RowMask,
-                                      unsigned BankMask, unsigned BoundCtrl) {
+                                      unsigned DPPCtrl) {
         BuildMI(BB, MI, DL, TII->get(DPPOpc), Dst)
-            .addReg(Src)        // old
-            .addReg(Src)        // src0
-            .addReg(Src)        // src1
-            .addImm(DPPCtrl)    // dpp-ctrl
-            .addImm(RowMask)    // row-mask
-            .addImm(BankMask)   // bank-mask
-            .addImm(BoundCtrl); // bound-control
+            .addReg(Src)     // old
+            .addReg(Src)     // src0
+            .addReg(Src)     // src1
+            .addImm(DPPCtrl) // dpp-ctrl
+            .addImm(0xf)     // row-mask
+            .addImm(0xf)     // bank-mask
+            .addImm(0);      // bound-control
       };
       // DPP reduction
       BuildDPPMachineInstr(DPPRowShr1, SrcWithIdentity,
-                           AMDGPU::DPP::ROW_SHR_FIRST, 0xf, 0xf, 0);
+                           AMDGPU::DPP::ROW_SHR_FIRST);
 
       BuildDPPMachineInstr(DPPRowShr2, DPPRowShr1,
-                           (AMDGPU::DPP::ROW_SHR_FIRST + 1), 0xf, 0xf, 0);
+                           (AMDGPU::DPP::ROW_SHR_FIRST + 1));
 
       BuildDPPMachineInstr(DPPRowShr4, DPPRowShr2,
-                           (AMDGPU::DPP::ROW_SHR_FIRST + 3), 0xf, 0xf, 0);
+                           (AMDGPU::DPP::ROW_SHR_FIRST + 3));
 
       BuildDPPMachineInstr(DPPRowShr8, DPPRowShr4,
-                           (AMDGPU::DPP::ROW_SHR_FIRST + 7), 0xf, 0xf, 0);
+                           (AMDGPU::DPP::ROW_SHR_FIRST + 7));
 
       if (ST.hasDPPBroadcasts()) {
-        BuildDPPMachineInstr(RowBcast15, DPPRowShr8, AMDGPU::DPP::BCAST15, 0xf,
-                             0xf, 0);
+        BuildDPPMachineInstr(RowBcast15, DPPRowShr8, AMDGPU::DPP::BCAST15);
       } else {
         // magic constant: 0x1E0
         // To Set BIT_MODE : bit 15 = 0
@@ -6301,8 +6293,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       FinalDPPResult = RowBcast15;
       if (!IsWave32) {
         if (ST.hasDPPBroadcasts()) {
-          BuildDPPMachineInstr(RowBcast31, RowBcast15, AMDGPU::DPP::BCAST31,
-                               0xf, 0xf, 0);
+          BuildDPPMachineInstr(RowBcast31, RowBcast15, AMDGPU::DPP::BCAST31);
         } else {
           Register ShiftedThreadID =
               MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -6357,7 +6348,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       // The final reduced value is in the last lane.
       BuildMI(BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), ReducedValSGPR)
           .addReg(FinalDPPResult)
-          .addImm(IsWave32 ? 31 : 63);
+          .addImm(ST.getWavefrontSize() - 1);
       if (Opc == AMDGPU::S_SUB_I32)
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedReducedVal)
             .addImm(0)
