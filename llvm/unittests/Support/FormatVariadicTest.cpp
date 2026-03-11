@@ -402,15 +402,11 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
   uint8_t HexDigits = 10;
   uint64_t N = 255;
 
-  // with format()
-  // -------------
   // Here's the old format() way of printing a hex number with
   // dynamic width and precision, both being the same.
   EXPECT_EQ("0x00000000ff",
             printToString(format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
 
-  // with formatv()
-  // --------------
   // Now, do the same with formatv()
   EXPECT_EQ("0x00000000ff",
             formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
@@ -418,15 +414,11 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
 }
 
 TEST(FormatAndFormatvTest, NonNegativePlusInteger) {
-  // with format()
-  // -------------
   EXPECT_EQ("-255", printToString(format("%+d", -255)));
   EXPECT_EQ("+255", printToString(format("%+d", 255)));
   EXPECT_EQ("+0", printToString(format("%+d", 0)));
   EXPECT_EQ("-7", printToString(format("%+d", -7)));
 
-  // with formatv()
-  // --------------
   // Check that +d works for signed and unsigned integral values.
   // Ensure the default is not changes (a + is not added without requesting it).
   EXPECT_EQ("+1", formatv("{0:+d}", static_cast<unsigned int>(1)).str());
