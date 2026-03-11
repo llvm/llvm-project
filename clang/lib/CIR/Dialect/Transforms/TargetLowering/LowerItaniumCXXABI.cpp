@@ -117,7 +117,7 @@ public:
                                   clang::CharUnits cookieSize,
                                   clang::CharUnits cookieAlignment,
                                   const mlir::DataLayout &dataLayout,
-                                  mlir::OpBuilder &builder) const override;
+                                  CIRBaseBuilderTy &builder) const override;
 };
 
 } // namespace
@@ -791,7 +791,7 @@ clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   clang::CharUnits sizeOfSizeT =
-      clang::CharUnits::fromQuantity(ptrSizeInBits / 8);
+      clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
   clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
       dataLayout.getTypeABIAlignment(elementType));
   return std::max(sizeOfSizeT, eltAlign);
@@ -800,7 +800,12 @@ clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
 mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
     mlir::Location loc, mlir::Value allocPtr, clang::CharUnits cookieSize,
     clang::CharUnits cookieAlignment, const mlir::DataLayout &dataLayout,
-    mlir::OpBuilder &builder) const {
+    CIRBaseBuilderTy &builder) const {
+  unsigned ptrSizeInBits = getPtrSizeInBits();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  auto ptrDiffTy = builder.getSIntNTy(ptrSizeInBits);
+  auto sizeTy = builder.getUIntNTy(ptrSizeInBits);
+
   // The element count is right-justified in the cookie.
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(ptrSizeInBits / 8);

@@ -16,6 +16,7 @@
 
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -30,24 +31,12 @@ class CIRCXXABI {
 protected:
   LowerModule &lm;
 
-  unsigned ptrSizeInBits;
-  cir::IntType u8Ty;
-  cir::PointerType u8PtrTy;
-  cir::PointerType voidPtrTy;
-  cir::IntType sizeTy;    // unsigned, pointer-width (models size_t)
-  cir::IntType ptrDiffTy; // signed, pointer-width (models ptrdiff_t)
+  CIRCXXABI(LowerModule &lm) : lm(lm) {}
 
-  CIRCXXABI(LowerModule &lm);
+  unsigned getPtrSizeInBits() const;
 
 public:
   virtual ~CIRCXXABI();
-
-  unsigned getPtrSizeInBits() const { return ptrSizeInBits; }
-  cir::IntType getU8Ty() const { return u8Ty; }
-  cir::PointerType getU8PtrTy() const { return u8PtrTy; }
-  cir::PointerType getVoidPtrTy() const { return voidPtrTy; }
-  cir::IntType getSizeTy() const { return sizeTy; }
-  cir::IntType getPtrDiffTy() const { return ptrDiffTy; }
 
   /// Lower the given data member pointer type to its ABI type. The returned
   /// type is also a CIR type.
@@ -149,7 +138,7 @@ public:
   /// readArrayCookieImpl.
   void readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
                        const mlir::DataLayout &dataLayout,
-                       mlir::OpBuilder &builder, mlir::Value &numElements,
+                       CIRBaseBuilderTy &builder, mlir::Value &numElements,
                        mlir::Value &allocPtr,
                        clang::CharUnits &cookieSize) const;
 
@@ -170,7 +159,7 @@ protected:
                                           clang::CharUnits cookieSize,
                                           clang::CharUnits cookieAlignment,
                                           const mlir::DataLayout &dataLayout,
-                                          mlir::OpBuilder &builder) const = 0;
+                                          CIRBaseBuilderTy &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.

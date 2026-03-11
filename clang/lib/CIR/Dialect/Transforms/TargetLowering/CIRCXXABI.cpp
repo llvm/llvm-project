@@ -16,23 +16,21 @@
 
 namespace cir {
 
-CIRCXXABI::CIRCXXABI(LowerModule &lm) : lm(lm) {
-  mlir::MLIRContext *ctx = lm.getMLIRContext();
-  ptrSizeInBits = lm.getTarget().getPointerWidth(clang::LangAS::Default);
-  u8Ty = cir::IntType::get(ctx, 8, /*isSigned=*/false);
-  u8PtrTy = cir::PointerType::get(u8Ty);
-  voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
-  sizeTy = cir::IntType::get(ctx, ptrSizeInBits, /*isSigned=*/false);
-  ptrDiffTy = cir::IntType::get(ctx, ptrSizeInBits, /*isSigned=*/true);
-}
-
 CIRCXXABI::~CIRCXXABI() {}
+
+unsigned CIRCXXABI::getPtrSizeInBits() const {
+  return lm.getTarget().getPointerWidth(clang::LangAS::Default);
+}
 
 void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
                                 const mlir::DataLayout &dataLayout,
-                                mlir::OpBuilder &builder,
+                                CIRBaseBuilderTy &builder,
                                 mlir::Value &numElements, mlir::Value &allocPtr,
                                 clang::CharUnits &cookieSize) const {
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  auto ptrDiffTy = builder.getSIntNTy(getPtrSizeInBits());
+  auto voidPtrTy = builder.getVoidPtrTy();
+
   auto ptrTy = mlir::cast<cir::PointerType>(elementPtr.getType());
   cookieSize = getArrayCookieSizeImpl(ptrTy.getPointee(), dataLayout);
 
