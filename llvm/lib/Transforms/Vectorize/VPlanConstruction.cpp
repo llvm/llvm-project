@@ -1460,27 +1460,26 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   ...extract-last-active replaces compute-reduction-result.
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
-  SmallVector<VPRecipeBase *, 4> Phis;
+  SmallVector<VPReductionPHIRecipe *, 4> Phis;
   for (VPRecipeBase &Phi :
-       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())
-    Phis.push_back(&Phi);
+       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (PhiR && RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      Phis.push_back(PhiR);
+  }
 
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
-  for (VPRecipeBase *Phi : Phis) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(Phi);
-    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
-                     PhiR->getRecurrenceKind()))
-      continue;
-
+  for (VPReductionPHIRecipe *Phi : Phis) {
     // Find the condition for the select/blend.
-    VPValue *BackedgeSelect = PhiR->getBackedgeValue();
+    VPValue *BackedgeSelect = Phi->getBackedgeValue();
     VPValue *CondSelect = BackedgeSelect;
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
     if (HeaderMask && !match(BackedgeSelect,
                              m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+                                      m_VPValue(CondSelect), m_Specific(Phi))))
       llvm_unreachable("expected header mask select");
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
@@ -1496,11 +1495,11 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       unsigned NumIncomingDataValues = 0;
       for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
         VPValue *Incoming = Blend->getIncomingValue(I);
-        if (Incoming != PhiR) {
+        if (Incoming != Phi) {
           ++NumIncomingDataValues;
           Cond = Blend->getMask(I);
           Op1 = Incoming;
-          Op2 = PhiR;
+          Op2 = Phi;
         }
       }
       return NumIncomingDataValues == 1;
@@ -1523,20 +1522,20 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
-    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+    VPBuilder Builder = VPBuilder::getToInsertAfter(Phi);
     auto *MaskPHI = new VPWidenPHIRecipe(nullptr, /*Start=*/Plan.getFalse());
     Builder.insert(MaskPHI);
 
     // Add select for mask.
     Builder.setInsertPoint(SelectR);
 
-    if (Op1 == PhiR) {
+    if (Op1 == Phi) {
       // Normalize to selecting the data operand when the condition is true by
       // swapping operands and negating the condition.
       std::swap(Op1, Op2);
       Cond = Builder.createNot(Cond);
     }
-    assert(Op2 == PhiR && "data value must be selected if Cond is true");
+    assert(Op2 == Phi && "data value must be selected if Cond is true");
 
     if (HeaderMask)
       Cond = Builder.createLogicalAnd(HeaderMask, Cond);
@@ -1549,13 +1548,13 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     VPValue *DataSelect =
         Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
     SelectR->replaceAllUsesWith(DataSelect);
-    PhiR->setBackedgeValue(DataSelect);
+    Phi->setBackedgeValue(DataSelect);
     SelectR->eraseFromParent();
 
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
-                             {PhiR->getStartValue(), DataSelect, MaskSelect},
+                             {Phi->getStartValue(), DataSelect, MaskSelect},
                              RdxResult->getDebugLoc());
     RdxResult->replaceAllUsesWith(ExtractLastActive);
     RdxResult->eraseFromParent();
