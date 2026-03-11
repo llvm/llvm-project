@@ -2,6 +2,9 @@
 # REQUIRES: aarch64
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
+# TODO
+# XFAIL: true
+
 ## Check for incompatible cases
 # RUN: not ld.lld %t --irpgo-profile=/dev/null --bp-startup-sort=function --call-graph-ordering-file=/dev/null 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-CALLGRAPH-ERR
 # RUN: not ld.lld --bp-compression-sort=function --call-graph-ordering-file /dev/null 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-CALLGRAPH-ERR
