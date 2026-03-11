@@ -448,7 +448,7 @@ class LLVM_ABI_FOR_TEST PoisoningVPValueHandle {
   }
 
   /// Return the VPlan owning \p V, or nullptr if not available.
-  static const VPlan *getVPlan(const VPValue *V);
+  static const VPlan *getPlan(const VPValue *V);
 
   const VPValue *getRawValPtr() const { return VP; }
   void setRawValPtr(const VPValue *P) {
@@ -473,9 +473,7 @@ class LLVM_ABI_FOR_TEST PoisoningVPValueHandle {
 #endif
 
   const VPValue *getValPtr() const {
-#if !defined(NDEBUG)
     assert(!Poisoned && "Accessed a poisoned VPValue handle!");
-#endif
     return VP;
   }
 
@@ -517,7 +515,7 @@ public:
   const VPValue *operator->() const { return getValPtr(); }
   const VPValue &operator*() const { return *getValPtr(); }
 
-  static void poisonAll(const VPlan *Plan, const VPValue *V);
+  static void poisonAll(const VPValue *V);
 };
 
 template <> struct DenseMapInfo<PoisoningVPValueHandle> {
@@ -533,30 +531,22 @@ template <> struct DenseMapInfo<PoisoningVPValueHandle> {
     return DenseMapInfo<const VPValue *>::getHashValue(Val.getRawValPtr());
   }
 
+  static unsigned getHashValue(const VPValue *Val) {
+    return DenseMapInfo<const VPValue *>::getHashValue(Val);
+  }
+
   static bool isEqual(const PoisoningVPValueHandle &LHS,
                       const PoisoningVPValueHandle &RHS) {
     if (!DenseMapInfo<const VPValue *>::isEqual(LHS.getRawValPtr(),
                                                 RHS.getRawValPtr()))
       return false;
-#if !defined(NDEBUG)
     assert(!LHS.Poisoned && !RHS.Poisoned &&
            "Accessed a poisoned VPValue handle!");
-#endif
     return true;
-  }
-
-  // Allow lookup by raw VPValue* via find_as().
-  static unsigned getHashValue(const VPValue *Val) {
-    return DenseMapInfo<const VPValue *>::getHashValue(Val);
   }
 
   static bool isEqual(const VPValue *LHS, const PoisoningVPValueHandle &RHS) {
-    if (!DenseMapInfo<const VPValue *>::isEqual(LHS, RHS.getRawValPtr()))
-      return false;
-#if !defined(NDEBUG)
-    assert(!RHS.Poisoned && "Accessed a poisoned VPValue handle!");
-#endif
-    return true;
+    return isEqual(PoisoningVPValueHandle(LHS), RHS);
   }
 };
 

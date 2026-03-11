@@ -153,7 +153,7 @@ VPRecipeValue::~VPRecipeValue() {
 }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
-const VPlan *PoisoningVPValueHandle::getVPlan(const VPValue *V) {
+const VPlan *PoisoningVPValueHandle::getPlan(const VPValue *V) {
   const VPRecipeBase *Def = V->getDefiningRecipe();
   if (!Def || !Def->getParent())
     return nullptr;
@@ -161,7 +161,7 @@ const VPlan *PoisoningVPValueHandle::getVPlan(const VPValue *V) {
 }
 
 void PoisoningVPValueHandle::addToList() {
-  Plan = getVPlan(VP);
+  Plan = getPlan(VP);
   if (!Plan)
     return;
   auto &Map = Plan->PoisoningHandles;
@@ -188,7 +188,8 @@ void PoisoningVPValueHandle::removeFromList() {
   Plan = nullptr;
 }
 
-void PoisoningVPValueHandle::poisonAll(const VPlan *Plan, const VPValue *V) {
+void PoisoningVPValueHandle::poisonAll(const VPValue *V) {
+  const VPlan *Plan = getPlan(V);
   if (!Plan)
     return;
   auto &Map = Plan->PoisoningHandles;
@@ -205,7 +206,7 @@ void PoisoningVPValueHandle::poisonAll(const VPlan *Plan, const VPValue *V) {
   Map.erase(It);
 }
 #else
-void PoisoningVPValueHandle::poisonAll(const VPlan *, const VPValue *) {}
+void PoisoningVPValueHandle::poisonAll(const VPValue *) {}
 #endif
 
 // Get the top-most entry block of \p Start. This is the entry block of the
