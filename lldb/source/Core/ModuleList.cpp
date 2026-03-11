@@ -1686,9 +1686,12 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   return error;
 }
 
-static llvm::Expected<ModuleSpec> loadModuleFromCASImpl(
-    llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
-    const lldb::ModuleSP &nearby, const UUID &uuid, const ArchSpec &arch) {
+/// Load the module referenced by \c cas_id from a CAS located
+/// near \c nearby.
+static llvm::Expected<ModuleSpec>
+loadModuleFromCAS(llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
+                  const lldb::ModuleSP &nearby, const UUID &uuid,
+                  const ArchSpec &arch) {
   llvm::Expected<ModuleList::CAS> maybe_cas =
       ModuleList::GetOrCreateCAS(nearby);
   if (!maybe_cas) {
@@ -1731,26 +1734,6 @@ static llvm::Expected<ModuleSpec> loadModuleFromCASImpl(
   LLDB_LOG(GetLog(LLDBLog::Modules), "loading module using CASID '{0}'",
            cas_id);
   return loaded;
-}
-
-/// Load the module referenced by \c cas_id from a CAS located
-/// near \c nearby.
-static llvm::Expected<ModuleSpec>
-loadModuleFromCAS(llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
-                  const lldb::ModuleSP &nearby, const UUID &uuid,
-                  const ArchSpec &arch) {
-  static llvm::StringMap<ModuleSpec> g_cache;
-  static std::recursive_mutex g_cache_lock;
-  std::scoped_lock<std::recursive_mutex> lock(g_cache_lock);
-  auto cached = g_cache.find(cas_id);
-  if (cached != g_cache.end())
-    return cached->second;
-
-  auto spec_or_err =
-      loadModuleFromCASImpl(cas_id, name_for_diagnostics, nearby, uuid, arch);
-  g_cache.try_emplace(cas_id, spec_or_err ? *spec_or_err : ModuleSpec());
-
-  return spec_or_err;
 }
 
 static llvm::cas::CASConfiguration
