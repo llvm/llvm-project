@@ -8690,46 +8690,58 @@ SDValue SystemZTargetLowering::combineSETCC(
   return SDValue();
 }
 
-static std::pair<SDValue, int> findCCUse(const SDValue &Val,
-                                         unsigned Depth = 0) {
+using CCResult = std::pair<SDValue, int>;
+using CCUseMemo = llvm::DenseMap<SDValue, CCResult>;
+static std::pair<SDValue, int> findCCUse(const SDValue &Val, unsigned Depth = 0,
+                                         CCUseMemo &Memo) {
+  // Check if this node has already been computed.
+  if (Memo.count(Val))
+    return Memo[Val];
+
   // Limit depth of potentially exponential walk.
   if (Depth > 5)
     return std::make_pair(SDValue(), SystemZ::CCMASK_NONE);
 
-  switch (Val.getOpcode()) {
-  default:
-    return std::make_pair(SDValue(), SystemZ::CCMASK_NONE);
-  case SystemZISD::IPM:
-    if (Val.getOperand(0).getOpcode() == SystemZISD::CLC ||
-        Val.getOperand(0).getOpcode() == SystemZISD::STRCMP)
-      return std::make_pair(Val.getOperand(0), SystemZ::CCMASK_ICMP);
-    return std::make_pair(Val.getOperand(0), SystemZ::CCMASK_ANY);
-  case SystemZISD::SELECT_CCMASK: {
-    SDValue Op4CCReg = Val.getOperand(4);
-    if (Op4CCReg.getOpcode() == SystemZISD::ICMP ||
-        Op4CCReg.getOpcode() == SystemZISD::TM) {
-      auto [OpCC, OpCCValid] = findCCUse(Op4CCReg.getOperand(0), Depth + 1);
-      if (OpCC != SDValue())
-        return std::make_pair(OpCC, OpCCValid);
-    }
-    auto *CCValid = dyn_cast<ConstantSDNode>(Val.getOperand(2));
-    if (!CCValid)
+  auto calculateCCUse = [&]() -> CCResult {
+    switch (Val.getOpcode()) {
+    default:
       return std::make_pair(SDValue(), SystemZ::CCMASK_NONE);
-    int CCValidVal = CCValid->getZExtValue();
-    return std::make_pair(Op4CCReg, CCValidVal);
-  }
-  case ISD::ADD:
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR:
-  case ISD::SHL:
-  case ISD::SRA:
-  case ISD::SRL:
-    auto [Op0CC, Op0CCValid] = findCCUse(Val.getOperand(0), Depth + 1);
-    if (Op0CC != SDValue())
-      return std::make_pair(Op0CC, Op0CCValid);
-    return findCCUse(Val.getOperand(1), Depth + 1);
-  }
+    case SystemZISD::IPM:
+      if (Val.getOperand(0).getOpcode() == SystemZISD::CLC ||
+          Val.getOperand(0).getOpcode() == SystemZISD::STRCMP)
+        return std::make_pair(Val.getOperand(0), SystemZ::CCMASK_ICMP);
+      return std::make_pair(Val.getOperand(0), SystemZ::CCMASK_ANY);
+    case SystemZISD::SELECT_CCMASK: {
+      SDValue Op4CCReg = Val.getOperand(4);
+      if (Op4CCReg.getOpcode() == SystemZISD::ICMP ||
+          Op4CCReg.getOpcode() == SystemZISD::TM) {
+        auto [OpCC, OpCCValid] =
+            findCCUse(Op4CCReg.getOperand(0), Depth + 1, Memo);
+        if (OpCC != SDValue())
+          return std::make_pair(OpCC, OpCCValid);
+      }
+      auto *CCValid = dyn_cast<ConstantSDNode>(Val.getOperand(2));
+      if (!CCValid)
+        return std::make_pair(SDValue(), SystemZ::CCMASK_NONE);
+      int CCValidVal = CCValid->getZExtValue();
+      return std::make_pair(Op4CCReg, CCValidVal);
+    }
+    case ISD::ADD:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::SHL:
+    case ISD::SRA:
+    case ISD::SRL:
+      auto [Op0CC, Op0CCValid] = findCCUse(Val.getOperand(0), Depth + 1, Memo);
+      if (Op0CC != SDValue())
+        return std::make_pair(Op0CC, Op0CCValid);
+      return findCCUse(Val.getOperand(1), Depth + 1, Memo);
+    }
+  };
+
+  // Cache the computed result.
+  return Memo[Val] = calculateCCUse();
 }
 
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
@@ -8817,6 +8829,7 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
   if (!CCNode)
     return false;
 
+  CCUseMemo Memo;
   if (CCNode->getOpcode() == SystemZISD::TM) {
     if (CCValid != SystemZ::CCMASK_TM)
       return false;
@@ -8835,7 +8848,7 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
     };
     SDValue Op0 = CCNode->getOperand(0);
     SDValue Op1 = CCNode->getOperand(1);
-    auto [Op0CC, Op0CCValid] = findCCUse(Op0);
+    auto [Op0CC, Op0CCValid] = findCCUse(Op0, Memo);
     if (Op0CC == SDValue())
       return false;
     const auto &&Op0SDVals = simplifyAssumingCCVal(Op0, Op0CC, DAG);
@@ -8863,7 +8876,7 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
   SDValue CmpOp0 = CCNode->getOperand(0);
   SDValue CmpOp1 = CCNode->getOperand(1);
   SDValue CmpOp2 = CCNode->getOperand(2);
-  auto [Op0CC, Op0CCValid] = findCCUse(CmpOp0);
+  auto [Op0CC, Op0CCValid] = findCCUse(CmpOp0, Memo);
   if (Op0CC != SDValue()) {
     const auto &&Op0SDVals = simplifyAssumingCCVal(CmpOp0, Op0CC, DAG);
     const auto &&Op1SDVals = simplifyAssumingCCVal(CmpOp1, Op0CC, DAG);
