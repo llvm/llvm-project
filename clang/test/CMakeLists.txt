@@ -107,6 +107,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-sycl-linker
   diagtool
   hmaptool
+  ssaf-format
   )
 
 if(CLANG_ENABLE_CIR)
