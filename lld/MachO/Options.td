@@ -155,8 +155,8 @@ def bp_compression_sort
       Group<grp_lld>;
 def bp_compression_sort_section
     : Joined<["--"], "bp-compression-sort-section=">,
-      MetaVarName<"<section-glob>">,
-      HelpText<"Order <section-glob> for optimal compressed size">,
+      MetaVarName<"<glob>[=<layout_priority>[=<match_priority>]]">,
+      HelpText<"Reorder sections whose segment+section name (e.g. __TEXT__text) matches <glob> to improve Lempel-Ziv compression, while letting users split sections into groups, run BP independently per group, and exclude unsuitable sections. layout_priority controls group placement order (default 0). match_priority resolves conflicts when multiple globs match (default: last match wins). May be specified multiple times">,
       Group<grp_lld>;
 def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
 def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,

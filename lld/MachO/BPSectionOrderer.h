@@ -14,10 +14,10 @@
 #ifndef LLD_MACHO_BPSECTION_ORDERER_H
 #define LLD_MACHO_BPSECTION_ORDERER_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/GlobPattern.h"
 
 namespace lld::macho {
 class InputSection;
@@ -29,7 +29,8 @@ class InputSection;
 /// and data are in their own sections and thus can be reordered.
 llvm::DenseMap<const InputSection *, int> runBalancedPartitioning(
     llvm::StringRef profilePath,
-    llvm::ArrayRef<llvm::GlobPattern> compressionSortSectionGlobs,
+    llvm::ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
+    bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose);
 
 } // namespace lld::macho

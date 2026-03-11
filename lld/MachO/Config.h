@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_CONFIG_H
 #define LLD_MACHO_CONFIG_H
 
+#include "lld/Common/BPSectionOrdererBase.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -233,8 +234,9 @@ struct Configuration {
   llvm::StringRef irpgoProfilePath;
   bool bpStartupFunctionSort = false;
   bool bpCompressionSortStartupFunctions = false;
-  std::vector<std::string> bpCompressionSortSections;
-  llvm::SmallVector<llvm::GlobPattern> bpCompressionSortSectionGlobs;
+  bool bpFunctionOrderForCompression = false;
+  bool bpDataOrderForCompression = false;
+  llvm::SmallVector<BPCompressionSortSpec> bpCompressionSortSpecs;
   bool bpVerboseSectionOrderer = false;
 
   SectionRenameMap sectionRenameMap;
