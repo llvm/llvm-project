@@ -8,7 +8,35 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+<<<<<<< HEAD
   - name: iswxdigit
+=======
+  - name: iswcntrl
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswgraph
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswlower
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswspace
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswblank
+>>>>>>> main
     standards:
       - stdc
     return_type: int

@@ -26,9 +26,9 @@ add_clang_library(clangAnalysisScalable
   clangAST
   clangASTMatchers
   clangBasic
-  clangIndex
   clangLex
   clangFrontend
+  clangUnifiedSymbolResolution
 
   DEPENDS
   )

@@ -1737,7 +1737,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     Cost += MaskLT.first *
             getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
-    Cost += getCFInstrCost(Instruction::Br, CostKind, nullptr);
+    Cost += getCFInstrCost(Instruction::CondBr, CostKind, nullptr);
     Cost += StepLT.first *
             getRISCVInstructionCost(Opcodes, StepLT.second, CostKind);
     Cost += getCastInstrCost(Instruction::ZExt,
@@ -2031,7 +2031,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
 
@@ -2050,7 +2050,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
     }
