@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -2463,8 +2464,8 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   // Check the process ID and find respective process instance.
   auto new_process_it = m_debugged_processes.find(pid);
   if (new_process_it == m_debugged_processes.end())
-    return SendErrorResponse(llvm::createStringError(
-        llvm::formatv("No process with PID {0} debugged", pid)));
+    return SendErrorResponse(
+        llvm::createStringErrorV("No process with PID {0} debugged", pid));
 
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).

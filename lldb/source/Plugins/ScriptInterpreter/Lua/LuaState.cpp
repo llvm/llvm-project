@@ -11,6 +11,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb_private;
@@ -51,8 +52,7 @@ llvm::Error LuaState::Run(llvm::StringRef buffer) {
   if (error == LUA_OK)
     return llvm::Error::success();
 
-  llvm::Error e = llvm::createStringError(
-      llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)));
+  llvm::Error e = llvm::createStringErrorV("{0}\n", lua_tostring(m_lua_state, -1));
   // Pop error message from the stack.
   lua_pop(m_lua_state, 1);
   return e;
@@ -64,8 +64,7 @@ llvm::Error LuaState::RegisterBreakpointCallback(void *baton,
   const char *fmt_str = "return function(frame, bp_loc, ...) {0} end";
   std::string func_str = llvm::formatv(fmt_str, body).str();
   if (luaL_dostring(m_lua_state, func_str.c_str()) != LUA_OK) {
-    llvm::Error e = llvm::createStringError(
-        llvm::formatv("{0}", lua_tostring(m_lua_state, -1)));
+    llvm::Error e = llvm::createStringErrorV("{0}", lua_tostring(m_lua_state, -1));
     // Pop error message from the stack.
     lua_pop(m_lua_state, 2);
     return e;
@@ -92,8 +91,7 @@ llvm::Error LuaState::RegisterWatchpointCallback(void *baton,
   const char *fmt_str = "return function(frame, wp, ...) {0} end";
   std::string func_str = llvm::formatv(fmt_str, body).str();
   if (luaL_dostring(m_lua_state, func_str.c_str()) != LUA_OK) {
-    llvm::Error e = llvm::createStringError(
-        llvm::formatv("{0}", lua_tostring(m_lua_state, -1)));
+    llvm::Error e = llvm::createStringErrorV("{0}", lua_tostring(m_lua_state, -1));
     // Pop error message from the stack.
     lua_pop(m_lua_state, 2);
     return e;
@@ -121,8 +119,7 @@ llvm::Error LuaState::CheckSyntax(llvm::StringRef buffer) {
     return llvm::Error::success();
   }
 
-  llvm::Error e = llvm::createStringError(
-      llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)));
+  llvm::Error e = llvm::createStringErrorV("{0}\n", lua_tostring(m_lua_state, -1));
   // Pop error message from the stack.
   lua_pop(m_lua_state, 1);
   return e;
@@ -141,8 +138,7 @@ llvm::Error LuaState::LoadModule(llvm::StringRef filename) {
   int error = luaL_loadfile(m_lua_state, filename.data()) ||
               lua_pcall(m_lua_state, 0, 1, 0);
   if (error != LUA_OK) {
-    llvm::Error e = llvm::createStringError(
-        llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)));
+    llvm::Error e = llvm::createStringErrorV("{0}\n", lua_tostring(m_lua_state, -1));
     // Pop error message from the stack.
     lua_pop(m_lua_state, 1);
     return e;

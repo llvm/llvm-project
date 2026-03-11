@@ -5,6 +5,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Resource.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Protocol/MCP/MCPError.h"

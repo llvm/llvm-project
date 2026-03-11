@@ -14,6 +14,7 @@
 #include "lldb/Utility/Args.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
@@ -210,8 +211,8 @@ Error TestClient::SendMessage(StringRef message, std::string &response_string,
   response.GetEscapedBinaryData(response_string);
   GTEST_LOG_(INFO) << "Read Packet: " << response_string;
   if (result != expected_result)
-    return createStringError(
-        formatv("Error sending message `{0}`: {1}", message, result));
+    return createStringErrorV("Error sending message `{0}`: {1}", message,
+                              result);
 
   return Error::success();
 }
@@ -276,10 +277,9 @@ Error TestClient::Continue(StringRef message) {
     StringExtractorGDBRemote R;
     PacketResult result = ReadPacket(R, GetPacketTimeout(), false);
     if (result != PacketResult::ErrorDisconnected) {
-      return createStringError(
-          formatv("Expected connection close after sending {0}. Got {1}/{2} "
-                  "instead.",
-                  message, result, R.GetStringRef()));
+      return createStringErrorV("Expected connection close after sending {0}. "
+                                "Got {1}/{2} instead.",
+                                message, result, R.GetStringRef());
     }
   }
   return Error::success();

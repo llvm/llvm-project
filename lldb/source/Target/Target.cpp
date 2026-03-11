@@ -2823,8 +2823,8 @@ llvm::Error Target::SetLabel(llvm::StringRef label) {
   for (size_t i = 0; i < targets.GetNumTargets(); i++) {
     TargetSP target_sp = targets.GetTargetAtIndex(i);
     if (target_sp && target_sp->GetLabel() == label) {
-      return llvm::createStringError(llvm::formatv(
-          "Cannot use label '{0}' since it's set in target #{1}.", label, i));
+      return llvm::createStringErrorV(
+          "Cannot use label '{0}' since it's set in target #{1}.", label, i);
     }
   }
 

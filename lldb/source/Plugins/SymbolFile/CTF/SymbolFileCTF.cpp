@@ -29,6 +29,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
@@ -335,10 +336,10 @@ SymbolFileCTF::CreateInteger(const CTFInteger &ctf_integer) {
   lldb::BasicType basic_type =
       TypeSystemClang::GetBasicTypeEnumeration(ctf_integer.name);
   if (basic_type == eBasicTypeInvalid)
-    return llvm::createStringError(
-        llvm::formatv("unsupported integer type: no corresponding basic clang "
-                      "type for '{0}'",
-                      ctf_integer.name));
+    return llvm::createStringErrorV(
+        "unsupported integer type: no corresponding basic clang "
+        "type for '{0}'",
+        ctf_integer.name);
 
   CompilerType compiler_type = m_ast->GetBasicType(basic_type);
 
@@ -346,18 +347,18 @@ SymbolFileCTF::CreateInteger(const CTFInteger &ctf_integer) {
     // Make sure the type we got is an integer type.
     bool compiler_type_is_signed = false;
     if (!compiler_type.IsIntegerType(compiler_type_is_signed))
-      return llvm::createStringError(llvm::formatv(
+      return llvm::createStringErrorV(
           "Found compiler type for '{0}' but it's not an integer type: {1}",
-          ctf_integer.name, compiler_type.GetDisplayTypeName().GetStringRef()));
+          ctf_integer.name, compiler_type.GetDisplayTypeName().GetStringRef());
 
     // Make sure the signing matches between the CTF and the compiler type.
     const bool type_is_signed = (ctf_integer.encoding & IntEncoding::eSigned);
     if (compiler_type_is_signed != type_is_signed)
-      return llvm::createStringError(llvm::formatv(
+      return llvm::createStringErrorV(
           "Found integer compiler type for {0} but compiler type is {1} and "
           "{0} is {2}",
           ctf_integer.name, compiler_type_is_signed ? "signed" : "unsigned",
-          type_is_signed ? "signed" : "unsigned"));
+          type_is_signed ? "signed" : "unsigned");
   }
 
   Declaration decl;
@@ -371,8 +372,8 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateModifier(const CTFModifier &ctf_modifier) {
   Type *ref_type = ResolveTypeUID(ctf_modifier.type);
   if (!ref_type)
-    return llvm::createStringError(
-        llvm::formatv("Could not find modified type: {0}", ctf_modifier.type));
+    return llvm::createStringErrorV("Could not find modified type: {0}",
+                                    ctf_modifier.type);
 
   CompilerType compiler_type;
 
@@ -390,8 +391,8 @@ SymbolFileCTF::CreateModifier(const CTFModifier &ctf_modifier) {
     compiler_type = ref_type->GetFullCompilerType().AddRestrictModifier();
     break;
   default:
-    return llvm::createStringError(llvm::formatv(
-        "ParseModifier called with unsupported kind: {0}", ctf_modifier.kind));
+    return llvm::createStringErrorV(
+        "ParseModifier called with unsupported kind: {0}", ctf_modifier.kind);
   }
 
   Declaration decl;
@@ -404,8 +405,8 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateTypedef(const CTFTypedef &ctf_typedef) {
   Type *underlying_type = ResolveTypeUID(ctf_typedef.type);
   if (!underlying_type)
-    return llvm::createStringError(llvm::formatv(
-        "Could not find typedef underlying type: {0}", ctf_typedef.type));
+    return llvm::createStringErrorV(
+        "Could not find typedef underlying type: {0}", ctf_typedef.type);
 
   CompilerType target_ast_type = underlying_type->GetFullCompilerType();
   clang::DeclContext *decl_ctx = m_ast->GetTranslationUnitDecl();
@@ -422,8 +423,8 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::CreateArray(const CTFArray &ctf_array) {
   Type *element_type = ResolveTypeUID(ctf_array.type);
   if (!element_type)
-    return llvm::createStringError(llvm::formatv(
-        "Could not find array element type: {0}", ctf_array.type));
+    return llvm::createStringErrorV("Could not find array element type: {0}",
+                                    ctf_array.type);
 
   auto element_size_or_err = element_type->GetByteSize(nullptr);
   if (!element_size_or_err)
@@ -471,8 +472,8 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
 
   Type *ret_type = ResolveTypeUID(ctf_function.return_type);
   if (!ret_type)
-    return llvm::createStringError(llvm::formatv(
-        "Could not find function return type: {0}", ctf_function.return_type));
+    return llvm::createStringErrorV("Could not find function return type: {0}",
+                                    ctf_function.return_type);
 
   CompilerType func_type = m_ast->CreateFunctionType(
       ret_type->GetFullCompilerType(), arg_types, ctf_function.variadic, 0,
@@ -582,9 +583,9 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
   case CTFType::Kind::eUnknown:
   case CTFType::Kind::eFloat:
   case CTFType::Kind::eSlice:
-    return llvm::createStringError(
-        llvm::formatv("unsupported type (uid = {0}, name = {1}, kind = {2})",
-                      ctf_type->uid, ctf_type->name, ctf_type->kind));
+    return llvm::createStringErrorV(
+        "unsupported type (uid = {0}, name = {1}, kind = {2})",
+        ctf_type->uid, ctf_type->name, ctf_type->kind);
   }
   llvm_unreachable("Unexpected CTF type kind");
 }
@@ -684,9 +685,9 @@ SymbolFileCTF::ParseType(lldb::offset_t &offset, lldb::user_id_t uid) {
     break;
   }
 
-  return llvm::createStringError(
-      llvm::formatv("unsupported type (name = {0}, kind = {1}, vlength = {2})",
-                    name, kind, variable_length));
+  return llvm::createStringErrorV(
+      "unsupported type (name = {0}, kind = {1}, vlength = {2})",
+      name, kind, variable_length);
 }
 
 size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
