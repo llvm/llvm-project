@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_GEOMETRIC_CLC_DISTANCE_H__
-#define __CLC_GEOMETRIC_CLC_DISTANCE_H__
+#ifndef CLC_GEOMETRIC_CLC_DISTANCE_H
+#define CLC_GEOMETRIC_CLC_DISTANCE_H
 
 #define __CLC_FUNCTION __clc_distance
 #define __CLC_BODY <clc/geometric/binary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_GEOMETRIC_CLC_DISTANCE_H__
+#endif // CLC_GEOMETRIC_CLC_DISTANCE_H

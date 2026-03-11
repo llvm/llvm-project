@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_COMMON_CLC_SMOOTHSTEP_H__
-#define __CLC_COMMON_CLC_SMOOTHSTEP_H__
+#ifndef CLC_COMMON_CLC_SMOOTHSTEP_H
+#define CLC_COMMON_CLC_SMOOTHSTEP_H
 
 // note: Unlike OpenCL __clc_smoothstep is only defined for three matching
 // argument types.
@@ -15,4 +15,4 @@
 #define __CLC_BODY <clc/common/clc_smoothstep.inc>
 #include <clc/math/gentype.inc>
 
-#endif // __CLC_COMMON_CLC_SMOOTHSTEP_H__
+#endif // CLC_COMMON_CLC_SMOOTHSTEP_H

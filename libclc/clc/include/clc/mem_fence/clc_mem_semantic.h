@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H__
-#define __CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H__
+#ifndef CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H
+#define CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H
 
 // The memory or address space to which the memory ordering is applied.
 typedef enum __CLC_MemorySemantics {
@@ -18,4 +18,4 @@ typedef enum __CLC_MemorySemantics {
   __CLC_MEMORY_GENERIC = 1 << 4,
 } __CLC_MemorySemantics;
 
-#endif // __CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H__
+#endif // CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_BIT_REVERSE_H__
-#define __CLC_INTEGER_CLC_BIT_REVERSE_H__
+#ifndef CLC_INTEGER_CLC_BIT_REVERSE_H
+#define CLC_INTEGER_CLC_BIT_REVERSE_H
 
 #define __CLC_FUNCTION __clc_bit_reverse
 #define __CLC_BODY <clc/shared/unary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_INTEGER_CLC_BIT_REVERSE_H__
+#endif // CLC_INTEGER_CLC_BIT_REVERSE_H

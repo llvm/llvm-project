@@ -347,8 +347,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(private __CLC_FLOATN *r,
 #ifdef __CLC_SCALAR
   if (is_small)
     return __clc_argReductionSmallS(r, rr, x);
-  else
-    return __clc_argReductionLargeS(r, rr, x);
+  return __clc_argReductionLargeS(r, rr, x);
 #else
   __CLC_FLOATN r1, rr1, r2, rr2;
   __CLC_INTN ret1 = __clc_argReductionSmallS(&r1, &rr1, x);

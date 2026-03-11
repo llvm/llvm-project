@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_ATOMIC_CLC_ATOMIC_INC_H__
-#define __CLC_ATOMIC_CLC_ATOMIC_INC_H__
+#ifndef CLC_ATOMIC_CLC_ATOMIC_INC_H
+#define CLC_ATOMIC_CLC_ATOMIC_INC_H
 
 #include <clc/internal/clc.h>
 
@@ -20,4 +20,4 @@
 #undef __CLC_NO_VALUE_ARG
 #undef __CLC_FUNCTION
 
-#endif // __CLC_ATOMIC_CLC_ATOMIC_INC_H__
+#endif // CLC_ATOMIC_CLC_ATOMIC_INC_H

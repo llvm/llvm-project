@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_COMMON_CLC_SIGN_H__
-#define __CLC_COMMON_CLC_SIGN_H__
+#ifndef CLC_COMMON_CLC_SIGN_H
+#define CLC_COMMON_CLC_SIGN_H
 
 #define __CLC_FUNCTION __clc_sign
 #define __CLC_BODY <clc/math/unary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_COMMON_CLC_SIGN_H__
+#endif // CLC_COMMON_CLC_SIGN_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_CLC_SELECT_H__
-#define __CLC_RELATIONAL_CLC_SELECT_H__
+#ifndef CLC_RELATIONAL_CLC_SELECT_H
+#define CLC_RELATIONAL_CLC_SELECT_H
 
 #include <clc/utils.h>
 
@@ -20,4 +20,4 @@
 
 #undef __CLC_SELECT_FN
 
-#endif // __CLC_RELATIONAL_CLC_SELECT_H__
+#endif // CLC_RELATIONAL_CLC_SELECT_H

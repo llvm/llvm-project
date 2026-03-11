@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_ATOMIC_CLC_ATOMIC_STORE_H__
-#define __CLC_ATOMIC_CLC_ATOMIC_STORE_H__
+#ifndef CLC_ATOMIC_CLC_ATOMIC_STORE_H
+#define CLC_ATOMIC_CLC_ATOMIC_STORE_H
 
 #include <clc/internal/clc.h>
 
@@ -23,4 +23,4 @@
 #undef __CLC_RETURN_VOID
 #undef __CLC_FUNCTION
 
-#endif // __CLC_ATOMIC_CLC_ATOMIC_STORE_H__
+#endif // CLC_ATOMIC_CLC_ATOMIC_STORE_H

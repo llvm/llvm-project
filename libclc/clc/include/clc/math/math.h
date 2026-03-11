@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_MATH_H__
-#define __CLC_MATH_MATH_H__
+#ifndef CLC_MATH_MATH_H
+#define CLC_MATH_MATH_H
 
 #include <clc/clc_as_type.h>
 #include <clc/clcfunc.h>
@@ -113,4 +113,4 @@ _CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
 
 #endif // cl_khr_fp16
 
-#endif // __CLC_MATH_MATH_H__
+#endif // CLC_MATH_MATH_H

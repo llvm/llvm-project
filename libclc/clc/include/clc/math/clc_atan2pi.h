@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_ATAN2PI_H__
-#define __CLC_MATH_CLC_ATAN2PI_H__
+#ifndef CLC_MATH_CLC_ATAN2PI_H
+#define CLC_MATH_CLC_ATAN2PI_H
 
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 #define __CLC_FUNCTION __clc_atan2pi
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_MATH_CLC_ATAN2PI_H__
+#endif // CLC_MATH_CLC_ATAN2PI_H

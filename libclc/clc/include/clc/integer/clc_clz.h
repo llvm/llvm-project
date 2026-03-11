@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_CLZ_H__
-#define __CLC_INTEGER_CLC_CLZ_H__
+#ifndef CLC_INTEGER_CLC_CLZ_H
+#define CLC_INTEGER_CLC_CLZ_H
 
 #define __CLC_FUNCTION __clc_clz
 #define __CLC_BODY <clc/shared/unary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_INTEGER_CLC_CLZ_H__
+#endif // CLC_INTEGER_CLC_CLZ_H

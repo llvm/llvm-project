@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MISC_CLC_SHUFFLE_H__
-#define __CLC_MISC_CLC_SHUFFLE_H__
+#ifndef CLC_MISC_CLC_SHUFFLE_H
+#define CLC_MISC_CLC_SHUFFLE_H
 
 #define __CLC_FUNCTION __clc_shuffle
 
@@ -21,4 +21,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_MISC_CLC_SHUFFLE_H__
+#endif // CLC_MISC_CLC_SHUFFLE_H

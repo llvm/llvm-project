@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTEGER_CLC_RHADD_H__
-#define __CLC_INTEGER_CLC_RHADD_H__
+#ifndef CLC_INTEGER_CLC_RHADD_H
+#define CLC_INTEGER_CLC_RHADD_H
 
 #define __CLC_FUNCTION __clc_rhadd
 #define __CLC_BODY <clc/shared/binary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_INTEGER_CLC_RHADD_H__
+#endif // CLC_INTEGER_CLC_RHADD_H

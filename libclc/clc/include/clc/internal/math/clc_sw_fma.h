@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_INTERNAL_MATH_CLC_SW_FMA_H__
-#define __CLC_INTERNAL_MATH_CLC_SW_FMA_H__
+#ifndef CLC_INTERNAL_MATH_CLC_SW_FMA_H
+#define CLC_INTERNAL_MATH_CLC_SW_FMA_H
 
 #define __CLC_FUNCTION __clc_sw_fma
 #define __CLC_FLOAT_ONLY
@@ -17,4 +17,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_INTERNAL_MATH_CLC_SW_FMA_H__
+#endif // CLC_INTERNAL_MATH_CLC_SW_FMA_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_ILOGB_H__
-#define __CLC_MATH_CLC_ILOGB_H__
+#ifndef CLC_MATH_CLC_ILOGB_H
+#define CLC_MATH_CLC_ILOGB_H
 
 #define __CLC_FUNCTION __clc_ilogb
 #define __CLC_BODY <clc/math/unary_decl_with_int_return.inc>
@@ -15,4 +15,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_MATH_CLC_ILOGB_H__
+#endif // CLC_MATH_CLC_ILOGB_H

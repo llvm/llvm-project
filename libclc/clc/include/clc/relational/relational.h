@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_RELATIONAL_H__
-#define __CLC_RELATIONAL_RELATIONAL_H__
+#ifndef CLC_RELATIONAL_RELATIONAL_H
+#define CLC_RELATIONAL_RELATIONAL_H
 
 /*
  * Contains relational macros that have to return 1 for scalar and -1 for vector
@@ -71,4 +71,4 @@
   _CLC_DEFINE_ISFPCLASS_VEC(VEC_RET_TYPE##16, __CLC_FUNCTION, MASK,            \
                             ARG_TYPE##16)
 
-#endif // __CLC_RELATIONAL_RELATIONAL_H__
+#endif // CLC_RELATIONAL_RELATIONAL_H

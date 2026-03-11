@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_CLC_ISEQUAL_H__
-#define __CLC_RELATIONAL_CLC_ISEQUAL_H__
+#ifndef CLC_RELATIONAL_CLC_ISEQUAL_H
+#define CLC_RELATIONAL_CLC_ISEQUAL_H
 
 #include <clc/clcfunc.h>
 
@@ -39,4 +39,4 @@ _CLC_VECTOR_ISEQUAL_DECL(half, short)
 #undef _CLC_ISEQUAL_DECL
 #undef _CLC_VECTOR_ISEQUAL_DECL
 
-#endif //  __CLC_RELATIONAL_CLC_ISEQUAL_H__
+#endif // CLC_RELATIONAL_CLC_ISEQUAL_H

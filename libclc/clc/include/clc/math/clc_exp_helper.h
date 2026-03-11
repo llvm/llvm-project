@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_MATH_CLC_EXP_HELPER
-#define __CLC_MATH_CLC_EXP_HELPER
+#ifndef CLC_MATH_CLC_EXP_HELPER_H
+#define CLC_MATH_CLC_EXP_HELPER_H
 
 #define __CLC_DOUBLE_ONLY
 #define __CLC_BODY <clc/math/clc_exp_helper.inc>
 
 #include <clc/math/gentype.inc>
 
-#endif // __CLC_MATH_CLC_EXP_HELPER
+#endif // CLC_MATH_CLC_EXP_HELPER_H

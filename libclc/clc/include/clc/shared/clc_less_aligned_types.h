@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_SHARED_CLC_LESS_ALIGNED_TYPES_H__
-#define __CLC_SHARED_CLC_LESS_ALIGNED_TYPES_H__
+#ifndef CLC_SHARED_CLC_LESS_ALIGNED_TYPES_H
+#define CLC_SHARED_CLC_LESS_ALIGNED_TYPES_H
 
 #define __CLC_BODY <clc/shared/clc_less_aligned_types.inc>
 #include <clc/integer/gentype.inc>
@@ -20,4 +20,4 @@
 #define __CLC_BODY <clc/shared/clc_less_aligned_types.inc>
 #include <clc/math/gentype.inc>
 
-#endif // __CLC_SHARED_CLC_LESS_ALIGNED_TYPES_H__
+#endif // CLC_SHARED_CLC_LESS_ALIGNED_TYPES_H

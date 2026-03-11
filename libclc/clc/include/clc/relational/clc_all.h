@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_RELATIONAL_CLC_ALL_H__
-#define __CLC_RELATIONAL_CLC_ALL_H__
+#ifndef CLC_RELATIONAL_CLC_ALL_H
+#define CLC_RELATIONAL_CLC_ALL_H
 
 #include <clc/clcfunc.h>
 
@@ -30,4 +30,4 @@ _CLC_VECTOR_ALL_DECL(long)
 #undef _CLC_ALL_DECL
 #undef _CLC_VECTOR_ALL_DECL
 
-#endif // __CLC_RELATIONAL_CLC_ALL_H__
+#endif // CLC_RELATIONAL_CLC_ALL_H
