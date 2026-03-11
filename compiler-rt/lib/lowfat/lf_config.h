@@ -143,7 +143,7 @@ inline bool IsLowFatPointer(uptr ptr) {
 inline uptr GetSize(uptr ptr) {
   uptr region = GetRegionIndex(ptr);
   if (region >= kNumSizeClasses)
-    return 0;  // Not a valid LowFat pointer
+    return (uptr)-1;  // Wide-bounds for non-LowFat pointers
   return SizeClassToSize(region);
 }
 
