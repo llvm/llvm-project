@@ -1376,6 +1376,7 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
 // can be derived from signed comparison by flipping the MSB of both operands.
 static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
                                             FixedVectorType *ResultVecType,
+                                            bool IsBigEndian,
                                             InstCombiner::BuilderTy &Builder) {
   // Check pattern existance
   Value *A, *B, *Greater1, *Greater2;
@@ -1403,12 +1404,16 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
   if (OldVecType != ResultVecType)
     return nullptr;
 
-  // Example lower shuffle mask: {0, 0, 2, 2}
-  // Example upper shuffle mask: {1, 1, 3, 3}
-  for (int I = 0; I < static_cast<int>(MaskLower.size()); I += 2)
-    if (MaskLower[I] != I || MaskLower[I + 1] != I || MaskUpper1[I] != I + 1 ||
-        MaskUpper1[I + 1] != I + 1)
+  // For little endian,
+  // example lower shuffle mask: {0, 0, 2, 2},
+  // example upper shuffle mask: {1, 1, 3, 3}
+  for (int I = 0; I < static_cast<int>(MaskLower.size()); I += 2) {
+    int LowerIdx = IsBigEndian ? I + 1 : I;
+    int UpperIdx = IsBigEndian ? I : I + 1;
+    if (MaskLower[I] != LowerIdx || MaskLower[I + 1] != LowerIdx ||
+        MaskUpper1[I] != UpperIdx || MaskUpper1[I + 1] != UpperIdx)
       return nullptr;
+  }
 
   // Check greater comparison
   ConstantInt *Zero =
@@ -1438,11 +1443,15 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
     if (!MsbFlipLower || MsbFlipLower2 != MsbFlipLower)
       return nullptr;
 
-    // Example MSB flip lower mask: {0x80000000, 0, 0x80000000, 0}
-    for (int I = 0; I < static_cast<int>(OldElementCount); I += 2)
-      if (MsbFlipLower->getAggregateElement(I) != MsbFlip ||
-          MsbFlipLower->getAggregateElement(I + 1) != Zero)
+    // For little endian,
+    // example MSB flip lower mask: {0x80000000, 0, 0x80000000, 0}
+    for (int I = 0; I < static_cast<int>(OldElementCount); I += 2) {
+      int LowerIdx = IsBigEndian ? I + 1 : I;
+      int UpperIdx = IsBigEndian ? I : I + 1;
+      if (MsbFlipLower->getAggregateElement(LowerIdx) != MsbFlip ||
+          MsbFlipLower->getAggregateElement(UpperIdx) != Zero)
         return nullptr;
+    }
   }
 
   LLVM_DEBUG(dbgs() << "IC: Folding Vn2im CmpGt using V2nim CmpGt pattern"
@@ -1474,7 +1483,8 @@ Instruction *InstCombinerImpl::foldVecCmpOnHalfElementSize(Instruction &I) {
   if (Value *V = foldVecCmpEqOnHalfElementSize(I, ResultVecType, Builder))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = foldVecCmpGtOnHalfElementSize(I, ResultVecType, Builder))
+  if (Value *V = foldVecCmpGtOnHalfElementSize(I, ResultVecType,
+                                               DL.isBigEndian(), Builder))
     return replaceInstUsesWith(I, V);
 
   return nullptr;
