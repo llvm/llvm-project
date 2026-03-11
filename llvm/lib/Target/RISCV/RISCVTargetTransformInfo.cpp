@@ -1737,7 +1737,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     Cost += MaskLT.first *
             getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
-    Cost += getCFInstrCost(Instruction::Br, CostKind, nullptr);
+    Cost += getCFInstrCost(Instruction::CondBr, CostKind, nullptr);
     Cost += StepLT.first *
             getRISCVInstructionCost(Opcodes, StepLT.second, CostKind);
     Cost += getCastInstrCost(Instruction::ZExt,
