@@ -818,6 +818,7 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
+  // FIXME: remove this hardcoded number of tries.
   for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
     auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
     if (!Branch || !Branch->isUnconditional())
