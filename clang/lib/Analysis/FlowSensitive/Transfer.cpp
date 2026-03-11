@@ -172,7 +172,7 @@ public:
           S->isCompoundAssignmentOp() ? nullptr : Env.getValue(*RHS);
       if (RHSVal == nullptr) {
         // Either way, we need to conjure a value if we don't have any so that
-        // future lookups into that locations produced consistent results.
+        // future lookups into that location produce consistent results.
         RHSVal = Env.createValue(LHS->getType());
         if (RHSVal == nullptr) {
           // At least make sure the old value is gone. It's unlikely to be there
