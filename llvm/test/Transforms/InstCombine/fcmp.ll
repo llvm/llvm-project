@@ -1812,6 +1812,52 @@ define i1 @fcmp_oeq_fsub_const(float %x, float %y) {
   ret i1 %cmp
 }
 
+define i1 @pr185561(i32 %arg0) {
+; CHECK-LABEL: @pr185561(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ARG0:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %v0 = add nsw i32 %arg0, -1
+  %v1 = sitofp i32 %v0 to float
+  %v2 = fsub float 1.000000e+00, %v1
+  %v3 = fcmp olt float %v2, 1.000000e+00
+  ret i1 %v3
+}
+
+define i1 @same_const_sub_sitofp_eq(i32 %x) {
+; CHECK-LABEL: @same_const_sub_sitofp_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 1.000000e+00, %f
+  %cmp = fcmp oeq float %s, 1.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_uitofp_olt(i32 %x) {
+; CHECK-LABEL: @same_const_sub_uitofp_olt(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = uitofp i32 %x to float
+  %s = fsub float 2.000000e+00, %f
+  %cmp = fcmp olt float %s, 2.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @same_const_sub_no_fold_large_c(i32 %x) {
+; CHECK-LABEL: @same_const_sub_no_fold_large_c(
+; CHECK-NOT:    icmp
+; CHECK:       [[CMP:%.*]] = fcmp oeq float
+; CHECK-NEXT:  ret i1 [[CMP]]
+;
+  %f = sitofp i32 %x to float
+  %s = fsub float 3.355443e+07, %f
+  %cmp = fcmp oeq float %s, 3.355443e+07
+  ret i1 %cmp
+}
+
 define i1 @fcmp_oge_fsub_const(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_oge_fsub_const(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub float [[X:%.*]], [[Y:%.*]]
