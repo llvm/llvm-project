@@ -16,10 +16,8 @@ define i32 @branch_with_immSFB_mv(i32 %a, i32 %c, i32 %d) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_mv:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bltui a2, 10011, .LBB0_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a1
-; RV32I-SFB-WITH-IMM-NEXT:  .LBB0_2: # %entry
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    qc.mvgeu a0, a2, a3, a1
 ; RV32I-SFB-WITH-IMM-NEXT:    ret
 entry:
   %x = icmp ult i32 %d, 10011
@@ -130,8 +128,9 @@ define i32 @branch_with_immSFB_add(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_add:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB5_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB5_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    add a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB5_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -157,8 +156,9 @@ define i32 @branch_with_immSFB_sub(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_sub:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB6_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB6_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    sub a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB6_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -184,8 +184,9 @@ define i32 @branch_with_immSFB_shl(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_shl:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB7_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB7_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    sll a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB7_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -211,8 +212,9 @@ define i32 @branch_with_immSFB_lshr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lshr:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB8_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB8_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    srl a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB8_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -238,8 +240,9 @@ define i32 @branch_with_immSFB_ashr(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_ashr:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB9_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB9_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    sra a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB9_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -265,8 +268,9 @@ define i32 @branch_with_immSFB_xor(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_xor:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB10_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB10_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    xor a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB10_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -292,8 +296,9 @@ define i32 @branch_with_immSFB_and(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_and:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB11_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB11_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    and a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB11_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -319,8 +324,9 @@ define i32 @branch_with_immSFB_or(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_or:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB12_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB12_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    or a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB12_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -346,8 +352,9 @@ define i32 @branch_with_immSFB_addi(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_addi:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB13_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB13_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    addi a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB13_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -373,8 +380,9 @@ define i32 @branch_with_immSFB_xori(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_xori:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB14_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB14_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    xori a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB14_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -400,8 +408,9 @@ define i32 @branch_with_immSFB_shli(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_shli:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB15_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB15_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    slli a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB15_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -427,8 +436,9 @@ define i32 @branch_with_immSFB_lshri(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lshri:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB16_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB16_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    srli a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB16_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -454,8 +464,9 @@ define i32 @branch_with_immSFB_ashri(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_ashri:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB17_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB17_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    srai a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB17_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -481,8 +492,9 @@ define i32 @branch_with_immSFB_andi(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_andi:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB18_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB18_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    andi a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB18_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -508,8 +520,9 @@ define i32 @branch_with_immSFB_ori(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_ori:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB19_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a1, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a1, .LBB19_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    ori a2, a0, 11
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB19_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -553,8 +566,9 @@ define i32 @branch_with_immSFB_mul(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_mul:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a3, 10011, .LBB20_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a4, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a3, a4, .LBB20_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mul a2, a0, a1
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB20_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -660,8 +674,9 @@ define i32 @branch_with_immSFB_lb(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lb:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB24_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB24_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    lb a2, 4(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB24_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -689,8 +704,9 @@ define i32 @branch_with_immSFB_lbu(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lbu:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB25_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB25_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    lbu a2, 4(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB25_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -718,8 +734,9 @@ define i32 @branch_with_immSFB_lh(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lh:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB26_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB26_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    lh a2, 8(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB26_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -747,8 +764,9 @@ define i32 @branch_with_immSFB_lhu(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lhu:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB27_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB27_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    lhu a2, 8(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB27_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -776,8 +794,9 @@ define i32 @branch_with_immSFB_lw(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lw:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB28_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB28_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    lw a2, 16(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB28_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -805,8 +824,9 @@ define i32 @branch_with_immSFB_lb_qc_e(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lb_qc_e:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB29_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB29_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    qc.e.lb a2, 10000(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB29_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -835,8 +855,9 @@ define i32 @branch_with_immSFB_lbu_qc_e(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lbu_qc_e:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB30_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB30_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    qc.e.lbu a2, 10000(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB30_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -866,8 +887,9 @@ define i32 @branch_with_immSFB_lh_qc_e(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lh_qc_e:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB31_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB31_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    qc.e.lh a2, 20000(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB31_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -897,8 +919,9 @@ define i32 @branch_with_immSFB_lhu_qc_e(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lhu_qc_e:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB32_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB32_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    qc.e.lhu a2, 20000(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB32_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2
@@ -928,8 +951,9 @@ define i32 @branch_with_immSFB_lw_qc_e(ptr %base, i32 %a, i32 %b) nounwind {
 ;
 ; RV32I-SFB-WITH-IMM-LABEL: branch_with_immSFB_lw_qc_e:
 ; RV32I-SFB-WITH-IMM:       # %bb.0: # %entry
-; RV32I-SFB-WITH-IMM-NEXT:    qc.e.bgeui a1, 10011, .LBB33_2
-; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1:
+; RV32I-SFB-WITH-IMM-NEXT:    qc.li a3, 10011
+; RV32I-SFB-WITH-IMM-NEXT:    bgeu a1, a3, .LBB33_2
+; RV32I-SFB-WITH-IMM-NEXT:  # %bb.1: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    qc.e.lw a2, 40000(a0)
 ; RV32I-SFB-WITH-IMM-NEXT:  .LBB33_2: # %entry
 ; RV32I-SFB-WITH-IMM-NEXT:    mv a0, a2

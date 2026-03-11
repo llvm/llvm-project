@@ -1601,7 +1601,9 @@ def : Bcci48Pat<SETLT, QC_E_BLTI, simm16nonzero>;
 def : Bcci48Pat<SETGE, QC_E_BGEI, simm16nonzero>;
 def : Bcci48Pat<SETULT, QC_E_BLTUI, uimm16nonzero>;
 def : Bcci48Pat<SETUGE, QC_E_BGEUI, uimm16nonzero>;
+} // let Predicates = [HasVendorXqcibi, IsRV32]
 
+let Predicates = [HasVendorXqcibi, NoShortForwardBranchImm, IsRV32] in {
 def : SelectQCbi<SETEQ, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
 def : SelectQCbi<SETNE, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
 def : SelectQCbi<SETLT, simm5nonzero, Select_GPRNoX0_Using_CC_SImm5NonZero_QC>;
@@ -1615,7 +1617,7 @@ def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>
 def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
 def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
-} // let Predicates = [HasVendorXqcibi, IsRV32]
+} // let Predicates = [HasVendorXqcibi, NoShortForwardBranchImm, IsRV32]
 
 def QC_EXTXForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(llvm::countr_zero(N->getZExtValue() + 1),
@@ -1676,7 +1678,7 @@ def : QCIMVCCIZeroPat<SETGE,  QC_MVGEI>;
 def : QCIMVCCIZeroPat<SETUGE, QC_MVGEUI>;
 }
 
-let Predicates = [HasVendorXqcicm, IsRV32] in {
+let Predicates = [HasVendorXqcicm, NoShortForwardBranchImm, IsRV32] in {
 // These all use *imm5nonzero because we want to use PseudoCCMOVGPR with X0 when SFB is enabled.
 // When SFB is not enabled, the `QCIMVCCIZeroPat`s above will be used if RHS=0.
 def : QCIMVCCIPat<SETEQ,  QC_MVEQI,  simm5nonzero>;
@@ -1738,15 +1740,17 @@ def : QCISELECTICCIPat<SETNE,  QC_SELECTINEI>;
 def : QCISELECTICCIPatInv<SETEQ,  QC_SELECTINEI>;
 def : QCISELECTICCIPatInv<SETNE,  QC_SELECTIEQI>;
 
+def : QCISELECTIICCPat<SETEQ,  QC_SELECTIIEQ>;
+def : QCISELECTIICCPat<SETNE,  QC_SELECTIINE>;
+} // Predicates = [HasVendorXqcics, IsRV32]
+
+let Predicates = [HasVendorXqcics, NoShortForwardBranch, IsRV32] in {
 def : QCISELECTICCPat<SETEQ,  QC_SELECTIEQ>;
 def : QCISELECTICCPat<SETNE,  QC_SELECTINE>;
 
 def : QCISELECTICCPatInv<SETEQ,  QC_SELECTINE>;
 def : QCISELECTICCPatInv<SETNE,  QC_SELECTIEQ>;
-
-def : QCISELECTIICCPat<SETEQ,  QC_SELECTIIEQ>;
-def : QCISELECTIICCPat<SETNE,  QC_SELECTIINE>;
-} // Predicates = [HasVendorXqcics, IsRV32]
+} // Predicates = [HasVendorXqcics, NoShortForwardBranch, IsRV32]
 
 // Prioritize Xqcicm over these patterns, because Xqcicm is compressible.
 let Predicates = [HasVendorXqcics, NoVendorXqcicm, IsRV32] in {
