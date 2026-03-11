@@ -49,7 +49,7 @@ void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
   // powers of 2 and cookieSize >= elementAlign), so subtracting it preserves
   // alignment. The cookie alignment therefore equals the element alignment.
   clang::CharUnits cookieAlignment = clang::CharUnits::fromQuantity(
-      dataLayout.getTypeABIAlignment(ptrTy.getPointee()));
+      dataLayout.getTypePreferredAlignment(ptrTy.getPointee()));
   numElements = readArrayCookieImpl(loc, allocBytePtr, cookieSize,
                                     cookieAlignment, dataLayout, builder);
 }

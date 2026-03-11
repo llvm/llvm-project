@@ -793,7 +793,7 @@ clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(getPtrSizeInBits() / 8);
   clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
-      dataLayout.getTypeABIAlignment(elementType));
+      dataLayout.getTypePreferredAlignment(elementType));
   return std::max(sizeOfSizeT, eltAlign);
 }
 
