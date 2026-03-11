@@ -8290,15 +8290,43 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 
 // Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
 // Patterns include:
-//    fptrunc(x) <  C  -->  x <  ext(C)
-//    fptrunc(x) <= C  -->  x <= ext(C)
-//    fptrunc(x) >  C  -->  x >  ext(C)
-//    fptrunc(x) >= C  -->  x >= ext(C)
+//    fptrunc(x) <  C                -->  x <  ext(C)
+//    fptrunc(x) <= C                -->  x <= ext(C)
+//    fptrunc(x) >  C                -->  x >  ext(C)
+//    fptrunc(x) >= C                -->  x >= ext(C)
+//    fptrunc(x) ord/uno C           -->  x ord/uno 0
+//    fptrunc(x) ord/uno fptrunc(y)  -->  x ord/uno y
 // where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
 // due to precision loss.
 static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
-                                    const Constant &C) {
+                                    const Value &CmpRHS) {
   FCmpInst::Predicate Pred = I.getPredicate();
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+
+  // Handle ord/uno [C | fptrunc(y)]
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    Value *RHS;
+    const APFloat *CValue;
+    if (match(&CmpRHS, m_FPTrunc(m_Value(RHS)))) {
+      if (DestType != RHS->getType())
+        return nullptr;
+    } else if (match(&CmpRHS, m_APFloat(CValue))) {
+      assert(!CValue->isNaN() &&
+             "NaN RHS should be folded away by simplifyFCmpInst()");
+      RHS = ConstantFP::getZero(DestType);
+    } else {
+      return nullptr;
+    }
+
+    return new FCmpInst(Pred, FPTrunc.getOperand(0), RHS, "", &I);
+  }
+
+  // Handle <, >, <=, >=
+  const APFloat *CValue;
+  // TODO: support vec
+  if (!match(&CmpRHS, m_APFloat(CValue)))
+    return nullptr;
+
   bool RoundDown = false;
 
   if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
@@ -8308,10 +8336,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
            Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
     RoundDown = false;
   else
-    return nullptr;
-
-  const APFloat *CValue;
-  if (!match(&C, m_APFloat(CValue)))
     return nullptr;
 
   if (CValue->isNaN() || CValue->isInfinity())
@@ -8332,7 +8356,6 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
 
   APFloat NextCValue = NextValue(*CValue, RoundDown);
 
-  Type *DestType = FPTrunc.getOperand(0)->getType();
   const fltSemantics &DestFltSema =
       DestType->getScalarType()->getFltSemantics();
 
@@ -8354,7 +8377,7 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
       scalbn(ExtCValue + ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
 
   const fltSemantics &SrcFltSema =
-      C.getType()->getScalarType()->getFltSemantics();
+      CmpRHS.getType()->getScalarType()->getFltSemantics();
 
   // 'MidValue' might be rounded to 'NextCValue'. Correct it here.
   APFloat MidValue = ConvertFltSema(ExtMidValue, SrcFltSema);
@@ -8835,10 +8858,16 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     }
   }
 
-  // Handle fcmp with instruction LHS and constant RHS.
   Instruction *LHSI;
+  // Handle fcmp with fptrunc LHS
+  if (match(Op0, m_Instruction(LHSI)) &&
+      LHSI->getOpcode() == Instruction::FPTrunc)
+    if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *Op1))
+      return NV;
+
+  // Handle fcmp with instruction LHS and constant RHS.
   Constant *RHSC;
-  if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
+  if (LHSI && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
     case Instruction::Select:
       // fcmp eq (cond ? x : -x), 0 --> fcmp eq x, 0
@@ -8871,10 +8900,6 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         if (Instruction *Res =
                 foldCmpLoadFromIndexedGlobal(cast<LoadInst>(LHSI), GEP, I))
           return Res;
-      break;
-    case Instruction::FPTrunc:
-      if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
-        return NV;
       break;
     }
   }
