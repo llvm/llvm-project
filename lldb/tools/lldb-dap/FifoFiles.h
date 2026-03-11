@@ -27,7 +27,7 @@ struct FifoFile {
 
   void Connect();
 
-  void WriteLine(std::string line);
+  void WriteLine(llvm::StringRef line);
 
   std::string ReadLine();
 

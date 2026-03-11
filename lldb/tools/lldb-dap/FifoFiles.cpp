@@ -30,9 +30,12 @@ namespace lldb_dap {
 
 FifoFile::FifoFile(StringRef path, lldb::pipe_t pipe) : m_path(path) {
 #ifdef _WIN32
-  if (pipe == INVALID_HANDLE_VALUE)
+  if (pipe == INVALID_HANDLE_VALUE) {
+    assert(path.starts_with("\\\\.\\pipe\\") &&
+           "FifoFile path should start with '\\\\.\\pipe\\'");
     pipe = CreateFileA(m_path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL,
                        OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+  }
 #endif
   m_pipe = pipe;
 }
@@ -48,16 +51,15 @@ FifoFile::~FifoFile() {
 #endif
 }
 
-void FifoFile::WriteLine(std::string line) {
+void FifoFile::WriteLine(llvm::StringRef line) {
 #ifdef _WIN32
   DWORD written;
-  line += "\n";
-  WriteFile(m_pipe, line.c_str(), static_cast<DWORD>(line.size()), &written,
-            NULL);
+  std::string str = line.str() + "\n";
+  WriteFile(m_pipe, str.data(), static_cast<DWORD>(str.size()), &written, NULL);
   FlushFileBuffers(m_pipe);
 #else
   std::ofstream writer(m_path, std::ofstream::out);
-  writer << line << std::endl;
+  writer << line.data() << std::endl;
 #endif
 }
 
@@ -73,11 +75,20 @@ std::string FifoFile::ReadLine() {
   char read_buffer[4096];
   DWORD bytes_read;
 
-  if (ReadFile(m_pipe, read_buffer, sizeof(read_buffer) - 1, &bytes_read,
-               NULL) &&
-      bytes_read > 0) {
-    read_buffer[bytes_read] = '\0';
-    buffer = read_buffer;
+  while (true) {
+    if (!ReadFile(m_pipe, read_buffer, sizeof(read_buffer), &bytes_read,
+                  NULL) ||
+        bytes_read == 0)
+      break;
+
+    buffer.append(read_buffer, bytes_read);
+
+    if (buffer.back() == '\n') {
+      buffer.pop_back();
+      if (!buffer.empty() && buffer.back() == '\r')
+        buffer.pop_back();
+      break;
+    }
   }
 
   return buffer;
