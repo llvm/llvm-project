@@ -11,6 +11,6 @@
 #include <iostream>
 
 int main() {
-    int x;
-    printf("%d\n", x);
+  int x;
+  printf("%d\n", x);
 }
