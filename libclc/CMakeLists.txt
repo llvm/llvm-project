@@ -138,10 +138,6 @@ add_custom_target( libclc ALL )
 add_custom_target( libclc-opencl-builtins COMMENT "Build libclc OpenCL builtins" )
 add_dependencies( libclc libclc-opencl-builtins )
 
-configure_file( libclc.pc.in libclc.pc @ONLY )
-install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-
 enable_testing()
 
 foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
@@ -279,5 +275,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     COMPILE_DEFINITIONS ${_common_defs}
     INTERNALIZE_LIBRARIES ${clc_lib}
     OPT_FLAGS ${opt_flags}
+    OUTPUT_FILENAME libclc
+    PARENT_TARGET libclc-opencl-builtins
   )
 endforeach()

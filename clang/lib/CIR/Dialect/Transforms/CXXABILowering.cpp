@@ -58,7 +58,7 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
     if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
-                  cir::CastOp, cir::CmpOp, cir::ConstantOp,
+                  cir::CastOp, cir::CmpOp, cir::ConstantOp, cir::DeleteArrayOp,
                   cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
                   cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
@@ -320,6 +320,30 @@ mlir::LogicalResult CIRBaseMethodOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
+    cir::DeleteArrayOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::FlatSymbolRefAttr deleteFn = op.getDeleteFnAttr();
+  mlir::Location loc = op->getLoc();
+  mlir::Value loweredAddress = adaptor.getAddress();
+  auto voidPtrTy =
+      cir::PointerType::get(cir::VoidType::get(rewriter.getContext()));
+  mlir::Value deletePtr = cir::CastOp::create(
+      rewriter, loc, voidPtrTy, cir::CastKind::bitcast, loweredAddress);
+
+  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
+  if (deleteParams.getSize() || deleteParams.getTypeAwareDelete() ||
+      deleteParams.getDestroyingDelete() || deleteParams.getAlignment())
+    return rewriter.notifyMatchFailure(
+        op,
+        "sized, type-aware, destroying, or aligned delete not yet supported");
+
+  llvm::SmallVector<mlir::Value> callArgs{deletePtr};
+  cir::CallOp::create(rewriter, loc, deleteFn, cir::VoidType(), callArgs);
+  rewriter.eraseOp(op);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
     cir::DerivedDataMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -454,6 +478,9 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  // Operations that do not use any special types must be explicitly marked as
+  // illegal to trigger processing here.
+  target.addIllegalOp<cir::DeleteArrayOp>();
   target.addIllegalOp<cir::DynamicCastOp>();
   target.addIllegalOp<cir::VTableGetTypeInfoOp>();
 }

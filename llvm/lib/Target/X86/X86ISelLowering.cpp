@@ -35407,7 +35407,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     bool IsStrict = N->isStrictFPOpcode();
     SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
-    SDValue Rnd = N->getOperand(IsStrict ? 2 : 1);
     EVT SrcVT = Src.getValueType();
     EVT VT = N->getValueType(0);
     SDValue V;
@@ -35422,10 +35421,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         return;
 
       if (IsStrict)
-        V = DAG.getNode(X86ISD::STRICT_CVTPS2PH, dl, {MVT::v8i16, MVT::Other},
-                        {Chain, Src, Rnd});
+        V = DAG.getNode(
+            X86ISD::STRICT_CVTPS2PH, dl, {MVT::v8i16, MVT::Other},
+            {Chain, Src,
+             DAG.getTargetConstant(X86::STATIC_ROUNDING::CUR_DIRECTION, dl,
+                                   MVT::i32)});
       else
-        V = DAG.getNode(X86ISD::CVTPS2PH, dl, MVT::v8i16, Src, Rnd);
+        V = DAG.getNode(X86ISD::CVTPS2PH, dl, MVT::v8i16, Src,
+                        DAG.getTargetConstant(
+                            X86::STATIC_ROUNDING::CUR_DIRECTION, dl, MVT::i32));
 
       Results.push_back(DAG.getBitcast(MVT::v8f16, V));
       if (IsStrict)
