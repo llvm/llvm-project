@@ -18,6 +18,8 @@ add_clang_library(clangAnalysisScalable
   Serialization/JSONFormat/TUSummary.cpp
   Serialization/JSONFormat/TUSummaryEncoding.cpp
   Serialization/SerializationFormatRegistry.cpp
+  SummaryView/LUSummaryConsumer.cpp
+  SummaryView/SummaryViewBuilderRegistry.cpp
   Support/ErrorBuilder.cpp
   TUSummary/ExtractorRegistry.cpp
   TUSummary/TUSummaryBuilder.cpp
