@@ -932,15 +932,17 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 // FIXME: This function is used by LoopUnroll and LoopUnrollAndJam, but consumes
 // many LoopUnroll-specific options. The shared functionality should be
 // refactored into it own function.
-bool llvm::computeUnrollCount(
-    Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    AssumptionCache *AC, ScalarEvolution &SE,
-    const SmallPtrSetImpl<const Value *> &EphValues,
-    OptimizationRemarkEmitter *ORE, const unsigned TripCount,
-    const unsigned MaxTripCount, const bool MaxOrZero,
-    const unsigned TripMultiple, const UnrollCostEstimator &UCE,
-    TargetTransformInfo::UnrollingPreferences &UP,
-    TargetTransformInfo::PeelingPreferences &PP, bool &UseUpperBound) {
+bool llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
+                              DominatorTree &DT, LoopInfo *LI,
+                              AssumptionCache *AC, ScalarEvolution &SE,
+                              const SmallPtrSetImpl<const Value *> &EphValues,
+                              OptimizationRemarkEmitter *ORE,
+                              const unsigned TripCount,
+                              const unsigned MaxTripCount, const bool MaxOrZero,
+                              const unsigned TripMultiple,
+                              const UnrollCostEstimator &UCE,
+                              TargetTransformInfo::UnrollingPreferences &UP,
+                              TargetTransformInfo::PeelingPreferences &PP) {
 
   unsigned LoopSize = UCE.getRolledLoopSize();
 
@@ -997,7 +999,6 @@ bool llvm::computeUnrollCount(
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
-      UseUpperBound = false;
       return ExplicitUnroll;
     }
   }
@@ -1020,7 +1021,6 @@ bool llvm::computeUnrollCount(
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
-      UseUpperBound = true;
       return ExplicitUnroll;
     }
   }
@@ -1302,10 +1302,9 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
-  bool UseUpperBound = false;
-  bool IsCountSetExplicitly = computeUnrollCount(
-      L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount, MaxTripCount,
-      MaxOrZero, TripMultiple, UCE, UP, PP, UseUpperBound);
+  bool IsCountSetExplicitly =
+      computeUnrollCount(L, TTI, DT, LI, &AC, SE, EphValues, &ORE, TripCount,
+                         MaxTripCount, MaxOrZero, TripMultiple, UCE, UP, PP);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
 

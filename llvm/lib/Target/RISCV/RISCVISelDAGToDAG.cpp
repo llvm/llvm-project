@@ -1871,6 +1871,35 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::WSLL:
+  case RISCVISD::WSLA: {
+    // Custom select WSLL/WSLA for RV32P.
+    assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
+           "Unexpected opcode");
+
+    bool IsSigned = Node->getOpcode() == RISCVISD::WSLA;
+
+    SDValue ShAmt = Node->getOperand(1);
+
+    unsigned Opc;
+
+    auto *ShAmtC = dyn_cast<ConstantSDNode>(ShAmt);
+    if (ShAmtC && ShAmtC->getZExtValue() < 64) {
+      Opc = IsSigned ? RISCV::WSLAI : RISCV::WSLLI;
+      ShAmt = CurDAG->getTargetConstant(ShAmtC->getZExtValue(), DL, XLenVT);
+    } else {
+      Opc = IsSigned ? RISCV::WSLA : RISCV::WSLL;
+    }
+
+    SDNode *WShift = CurDAG->getMachineNode(Opc, DL, MVT::Untyped,
+                                            Node->getOperand(0), ShAmt);
+
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(WShift, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::LOAD: {
     if (tryIndexedLoad(Node))
       return;
@@ -2866,6 +2895,54 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         return;
       }
     }
+    break;
+  }
+  case ISD::SPLAT_VECTOR: {
+    if (!Subtarget->hasStdExtP())
+      break;
+    auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0));
+    if (!ConstNode)
+      break;
+
+    if (ConstNode->isZero()) {
+      SDValue New =
+          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
+      ReplaceNode(Node, New.getNode());
+      return;
+    }
+
+    unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+    APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+
+    // Find the smallest splat.
+    if (Val.getBitWidth() > 16 && Val.isSplat(16))
+      Val = Val.trunc(16);
+    if (Val.getBitWidth() > 8 && Val.isSplat(8))
+      Val = Val.trunc(8);
+
+    EltSize = Val.getBitWidth();
+    int64_t Imm = Val.getSExtValue();
+
+    unsigned Opc = 0;
+    if (EltSize == 8) {
+      Opc = RISCV::PLI_B;
+    } else if (isInt<10>(Imm)) {
+      Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
+    } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
+      Opc = RISCV::PLUI_H;
+      Imm = Imm >> 6;
+    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
+      Opc = RISCV::PLUI_W;
+      Imm = Imm >> 22;
+    }
+
+    if (Opc) {
+      SDNode *NewNode = CurDAG->getMachineNode(
+          Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
+      ReplaceNode(Node, NewNode);
+      return;
+    }
+
     break;
   }
   case ISD::SCALAR_TO_VECTOR:

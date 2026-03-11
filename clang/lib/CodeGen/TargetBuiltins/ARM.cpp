@@ -534,6 +534,11 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
   return Builder.CreateAShr(Vec, Shift, name);
 }
 
+//===----------------------------------------------------------------------===//
+//  Intrinsics maps
+//
+//  Maps that help automate code-generation.
+//===----------------------------------------------------------------------===//
 enum {
   AddRetType = (1 << 0),
   Add1ArgType = (1 << 1),
@@ -555,6 +560,12 @@ enum {
   FpCmpzModifiers =
       AddRetType | VectorizeRetType | Add1ArgType | InventFloatType
 };
+
+//===----------------------------------------------------------------------===//
+//  Intrinsic maps
+//
+//  Maps that help automate code-generation.
+//===----------------------------------------------------------------------===//
 
 namespace {
 struct ARMVectorIntrinsicInfo {
@@ -1177,6 +1188,17 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vxarq_u64, aarch64_crypto_xar, 0),
 };
 
+// Single-Instruction-Single-Data (SISD) intrinsics.
+//
+// The name is somewhat misleading: not all intrinsics in this table are
+// strictly SISD. While many builtins operate on scalars,
+//   * some take vector operands (e.g. reduction builtins such as
+//     `vminvq_u16` and `vaddvq_s32`), and
+//   * some take both scalar and vector operands (e.g. crypto builtins
+//     such as `vsha1cq_u32`).
+//
+// TODO: Either rename this table to better reflect its contents, or
+// restrict it to true SISD intrinsics only.
 static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vabdd_f64, aarch64_sisd_fabd, Add1ArgType),
   NEONMAP1(vabds_f32, aarch64_sisd_fabd, Add1ArgType),
@@ -1654,6 +1676,8 @@ static bool AArch64SISDIntrinsicsProvenSorted = false;
 static bool AArch64SVEIntrinsicsProvenSorted = false;
 static bool AArch64SMEIntrinsicsProvenSorted = false;
 
+// Check if Builtin `BuiltinId` is present in `IntrinsicMap`. If yes, returns
+// the corresponding info struct.
 static const ARMVectorIntrinsicInfo *
 findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
                             unsigned BuiltinID, bool &MapProvenSorted) {
@@ -1719,12 +1743,9 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
 static Value *EmitCommonNeonSISDBuiltinExpr(
     CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
     SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
-  unsigned BuiltinID = SISDInfo.BuiltinID;
-  unsigned int Int = SISDInfo.LLVMIntrinsic;
-  unsigned Modifier = SISDInfo.TypeModifier;
-  const char *s = SISDInfo.NameHint;
+  assert(SISDInfo.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
-  switch (BuiltinID) {
+  switch (SISDInfo.BuiltinID) {
   case NEON::BI__builtin_neon_vcled_s64:
   case NEON::BI__builtin_neon_vcled_u64:
   case NEON::BI__builtin_neon_vcles_f32:
@@ -1744,12 +1765,10 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
     break;
   }
 
-  assert(Int && "Generic code assumes a valid intrinsic");
-
   // Determine the type(s) of this overloaded AArch64 intrinsic.
-  const Expr *Arg = E->getArg(0);
-  llvm::Type *ArgTy = CGF.ConvertType(Arg->getType());
-  Function *F = CGF.LookupNeonLLVMIntrinsic(Int, Modifier, ArgTy, E);
+  llvm::Type *ArgTy = CGF.ConvertType(E->getArg(0)->getType());
+  Function *F = CGF.LookupNeonLLVMIntrinsic(SISDInfo.LLVMIntrinsic,
+                                            SISDInfo.TypeModifier, ArgTy, E);
 
   int j = 0;
   ConstantInt *C0 = ConstantInt::get(CGF.SizeTy, 0);
@@ -1759,8 +1778,10 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
     if (Ops[j]->getType()->getPrimitiveSizeInBits() ==
              ArgTy->getPrimitiveSizeInBits())
       continue;
+    assert(
+        ArgTy->isVectorTy() && !Ops[j]->getType()->isVectorTy() &&
+        "Expecting vector LLVM intrinsic type and scalar Clang builtin type!");
 
-    assert(ArgTy->isVectorTy() && !Ops[j]->getType()->isVectorTy());
     // The constant argument to an _n_ intrinsic always has Int32Ty, so truncate
     // it before inserting.
     Ops[j] = CGF.Builder.CreateTruncOrBitCast(
@@ -1769,13 +1790,13 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
         CGF.Builder.CreateInsertElement(PoisonValue::get(ArgTy), Ops[j], C0);
   }
 
-  Value *Result = CGF.EmitNeonCall(F, Ops, s);
+  Value *Result = CGF.EmitNeonCall(F, Ops, SISDInfo.NameHint);
   llvm::Type *ResultType = CGF.ConvertType(E->getType());
   if (ResultType->getPrimitiveSizeInBits().getFixedValue() <
       Result->getType()->getPrimitiveSizeInBits().getFixedValue())
     return CGF.Builder.CreateExtractElement(Result, C0);
 
-  return CGF.Builder.CreateBitCast(Result, ResultType, s);
+  return CGF.Builder.CreateBitCast(Result, ResultType, SISDInfo.NameHint);
 }
 
 Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
@@ -1783,7 +1804,10 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     const char *NameHint, unsigned Modifier, const CallExpr *E,
     SmallVectorImpl<llvm::Value *> &Ops, Address PtrOp0, Address PtrOp1,
     llvm::Triple::ArchType Arch) {
-  // Get the last argument, which specifies the vector type.
+
+  // Extract the trailing immediate argument that encodes the type discriminator
+  // for this overloaded intrinsic.
+  // TODO: Move to the parent code that takes care of argument processing.
   const Expr *Arg = E->getArg(E->getNumArgs() - 1);
   std::optional<llvm::APSInt> NeonTypeConst =
       Arg->getIntegerConstantExpr(getContext());
@@ -5274,6 +5298,33 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, Args);
   }
 
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
+    Value *StoreAddr = EmitScalarExpr(E->getArg(0));
+    Value *StoreValue = EmitScalarExpr(E->getArg(1));
+
+    auto *OrderC = cast<ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    auto *PolicyC = cast<ConstantInt>(EmitScalarExpr(E->getArg(3)));
+
+    // Compute pointee bit-width from arg0 and create as i32 constant
+    QualType ValQT =
+        E->getArg(0)->getType()->castAs<PointerType>()->getPointeeType();
+    unsigned SizeBits = getContext().getTypeSize(ValQT);
+    auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
+
+    Value *StoreValue64 = Builder.CreateIntCast(StoreValue, Int64Ty,
+                                                ValQT->isSignedIntegerType());
+
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
+                                   {StoreAddr->getType()});
+
+    // Emit a single intrinsic so backend can expand to STSHH followed by
+    // atomic store, to guarantee STSHH immediately precedes STR insn
+    return Builder.CreateCall(
+        F, {StoreAddr, StoreValue64,
+            ConstantInt::get(Int32Ty, OrderC->getZExtValue()),
+            ConstantInt::get(Int32Ty, PolicyC->getZExtValue()), SizeC});
+  }
+
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rndrrs) {
 
@@ -6169,10 +6220,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         ICmpInst::FCMP_OLT, "vcltz");
 
   case NEON::BI__builtin_neon_vceqzd_u64: {
-    Ops[0] = Builder.CreateBitCast(Ops[0], Int64Ty);
-    Ops[0] =
-        Builder.CreateICmpEQ(Ops[0], llvm::Constant::getNullValue(Int64Ty));
-    return Builder.CreateSExt(Ops[0], Int64Ty, "vceqzd");
+    return EmitAArch64CompareBuiltinExpr(
+        Ops[0], ConvertType(E->getCallReturnType(getContext())),
+        ICmpInst::ICMP_EQ, "vceqzd");
   }
   case NEON::BI__builtin_neon_vceqd_f64:
   case NEON::BI__builtin_neon_vcled_f64:

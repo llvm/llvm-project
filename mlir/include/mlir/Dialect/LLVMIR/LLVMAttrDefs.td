@@ -392,7 +392,7 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     LLVM_DIEncodingParameter:$encoding
   );
@@ -913,7 +913,7 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"DIVariableAttr">:$stringLength,
