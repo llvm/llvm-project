@@ -226,7 +226,6 @@ def ConstStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
 
 
 class PointerIntPairSynthProvider:
-
     valobj: lldb.SBValue
     byteorder: Literal["big", "little"]
     ptr_size: int
@@ -350,7 +349,6 @@ class PointerIntPairSynthProvider:
 
 
 class PointerUnionSynthProvider:
-
     valobj: lldb.SBValue
     pointer_valobj: lldb.SBValue
 
