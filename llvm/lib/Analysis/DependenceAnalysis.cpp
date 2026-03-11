@@ -1222,6 +1222,9 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
     return false;
 
+  if (!Src->hasNoSignedWrap() || !Dst->hasNoSignedWrap())
+    return false;
+
   const SCEV *Coeff = Src->getStepRecurrence(*SE);
   assert(Coeff == Dst->getStepRecurrence(*SE) &&
          "Expecting same coefficient in Strong SIV test");
@@ -1700,26 +1703,28 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   auto [TL0, TU0] = inferDomainOfAffine(TB, TX, UM);
   auto [TL1, TU1] = inferDomainOfAffine(TA, TY, UM);
 
-  auto CreateVec = [](const OverflowSafeSignedAPInt &V0,
-                      const OverflowSafeSignedAPInt &V1) {
-    SmallVector<APInt, 2> Vec;
+  auto GetMaxOrMin = [](const OverflowSafeSignedAPInt &V0,
+                        const OverflowSafeSignedAPInt &V1,
+                        bool IsMin) -> std::optional<APInt> {
+    if (V0 && V1)
+      return IsMin ? APIntOps::smin(*V0, *V1) : APIntOps::smax(*V0, *V1);
     if (V0)
-      Vec.push_back(*V0);
+      return *V0;
     if (V1)
-      Vec.push_back(*V1);
-    return Vec;
+      return *V1;
+    return std::nullopt;
   };
-
-  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
-  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
 
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
 
-  if (TLVec.empty() || TUVec.empty())
+  std::optional<APInt> OptTL = GetMaxOrMin(TL0, TL1, false);
+  std::optional<APInt> OptTU = GetMaxOrMin(TU0, TU1, true);
+  if (!OptTL || !OptTU)
     return false;
-  TL = APIntOps::smax(TLVec.front(), TLVec.back());
-  TU = APIntOps::smin(TUVec.front(), TUVec.back());
+
+  TL = std::move(*OptTL);
+  TU = std::move(*OptTU);
   LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
@@ -1797,10 +1802,8 @@ static bool isRemainderZero(const SCEVConstant *Dividend,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is >= and peeling the
-// 1st iteration will break the dependence.
-// If i = UB, the direction is <= and peeling the
-// last iteration will break the dependence.
+// If i = 0, the direction is >=.
+// If i = UB, the direction is <=.
 // Otherwise, the direction is *.
 //
 // Can prove independence. Failing that, we can sometimes refine
@@ -1829,8 +1832,6 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (SrcConst == DstConst && SE->isKnownNonZero(DstCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::GE;
@@ -1838,6 +1839,10 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
     }
     return false; // dependences caused by first iteration
   }
+  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
+  if (!Delta)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
   if (!ConstCoeff)
     return false;
@@ -1908,10 +1913,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 //
 // If i is not an integer, there's no dependence.
 // If i < 0 or > UB, there's no dependence.
-// If i = 0, the direction is <= and peeling the
-// 1st iteration will break the dependence.
-// If i = UB, the direction is >= and peeling the
-// last iteration will break the dependence.
+// If i = 0, the direction is <=.
+// If i = UB, the direction is >=.
 // Otherwise, the direction is *.
 //
 // Can prove independence. Failing that, we can sometimes refine
@@ -1939,8 +1942,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
-  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (DstConst == SrcConst && SE->isKnownNonZero(SrcCoeff)) {
     if (Level < CommonLevels) {
       Result.DV[Level].Direction &= Dependence::DVEntry::LE;
@@ -1948,6 +1949,10 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
     }
     return false; // dependences caused by first iteration
   }
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   if (!ConstCoeff)
     return false;
@@ -2005,7 +2010,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
 // where i and j are induction variable, c1 and c2 are loop invariant,
 // and a and b are constants.
 // Returns true if any possible dependence is disproved.
-// Marks the result as inconsistent.
 // Works in some cases that symbolicRDIVtest doesn't, and vice versa.
 bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
@@ -2086,23 +2090,25 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    TA = " << TA << "\n");
   LLVM_DEBUG(dbgs() << "\t    TB = " << TB << "\n");
 
-  auto CreateVec = [](const OverflowSafeSignedAPInt &V0,
-                      const OverflowSafeSignedAPInt &V1) {
-    SmallVector<APInt, 2> Vec;
+  auto GetMaxOrMin = [](const OverflowSafeSignedAPInt &V0,
+                        const OverflowSafeSignedAPInt &V1,
+                        bool IsMin) -> std::optional<APInt> {
+    if (V0 && V1)
+      return IsMin ? APIntOps::smin(*V0, *V1) : APIntOps::smax(*V0, *V1);
     if (V0)
-      Vec.push_back(*V0);
+      return *V0;
     if (V1)
-      Vec.push_back(*V1);
-    return Vec;
+      return *V1;
+    return std::nullopt;
   };
 
-  SmallVector<APInt, 2> TLVec = CreateVec(TL0, TL1);
-  SmallVector<APInt, 2> TUVec = CreateVec(TU0, TU1);
-  if (TLVec.empty() || TUVec.empty())
+  std::optional<APInt> OptTL = GetMaxOrMin(TL0, TL1, false);
+  std::optional<APInt> OptTU = GetMaxOrMin(TU0, TU1, true);
+  if (!OptTL || !OptTU)
     return false;
 
-  TL = APIntOps::smax(TLVec.front(), TLVec.back());
-  TU = APIntOps::smin(TUVec.front(), TUVec.back());
+  TL = std::move(*OptTL);
+  TU = std::move(*OptTU);
   LLVM_DEBUG(dbgs() << "\t    TL = " << TL << "\n");
   LLVM_DEBUG(dbgs() << "\t    TU = " << TU << "\n");
 
@@ -2427,7 +2433,6 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
 // Returns true if any possible dependence is disproved.
-// Marks the result as inconsistent.
 // Can sometimes disprove the equal direction for 1 or more loops,
 // as discussed in Michael Wolfe's book,
 // High Performance Compilers for Parallel Computing, page 235.
@@ -3095,6 +3100,7 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
     dbgs() << "\nDstSubscripts: ";
     for (int I = 0; I < Size; I++)
       dbgs() << *DstSubscripts[I];
+    dbgs() << "\n";
   });
 
   // The delinearization transforms a single-subscript MIV dependence test into

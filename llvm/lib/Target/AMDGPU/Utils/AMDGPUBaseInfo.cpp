@@ -1265,11 +1265,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI) { return 1; }
 
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI) {
-  // Some subtargets allow encoding 2048, but this isn't tested or supported.
-  return 1024;
-}
-
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
                               unsigned FlatWorkGroupSize) {
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
@@ -2616,10 +2611,6 @@ bool isGFX10Plus(const MCSubtargetInfo &STI) {
 
 bool isGFX11(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX11);
-}
-
-bool isGFX1170(const MCSubtargetInfo &STI) {
-  return isGFX11(STI) && STI.hasFeature(AMDGPU::FeatureWMMA128bInsts);
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {

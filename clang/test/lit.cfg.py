@@ -142,6 +142,8 @@ tools = [
         command=FindTool("clang-extdef-mapping"),
         unresolved="ignore",
     ),
+    "ssaf-linker",
+    "ssaf-format",
 ]
 
 if config.clang_examples:

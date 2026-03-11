@@ -4724,23 +4724,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (auto Gather = matchSplatAsGather(Splat, VT, DL, DAG, Subtarget))
       return Gather;
 
-    // Prefer vmv.s.x/vfmv.s.f if legal to reduce work and register
-    // pressure at high LMUL.
-    if (all_of(Op->ops().drop_front(),
-               [](const SDUse &U) { return U.get().isUndef(); })) {
-      unsigned Opc =
-          VT.isFloatingPoint() ? RISCVISD::VFMV_S_F_VL : RISCVISD::VMV_S_X_VL;
-      if (!VT.isFloatingPoint())
-        Splat = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Splat);
-      Splat = DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                          Splat, VL);
-      return convertFromScalableVector(VT, Splat, DAG, Subtarget);
-    }
-
-    unsigned Opc =
-        VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
     if (!VT.isFloatingPoint())
       Splat = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Splat);
+
+    // Prefer vmv.s.x/vfmv.s.f if legal to reduce work and register
+    // pressure at high LMUL.
+    bool IsScalar = all_of(Op->ops().drop_front(),
+                           [](const SDUse &U) { return U.get().isUndef(); });
+    unsigned Opc =
+        VT.isFloatingPoint()
+            ? (IsScalar ? RISCVISD::VFMV_S_F_VL : RISCVISD::VFMV_V_F_VL)
+            : (IsScalar ? RISCVISD::VMV_S_X_VL : RISCVISD::VMV_V_X_VL);
     Splat =
         DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Splat, VL);
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
@@ -11009,13 +11003,19 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   bool IsLegalInsert = Subtarget.is64Bit() || Val.getValueType() != MVT::i64;
   // Even i64-element vectors on RV32 can be lowered without scalar
   // legalization if the most-significant 32 bits of the value are not affected
-  // by the sign-extension of the lower 32 bits.
-  // TODO: We could also catch sign extensions of a 32-bit value.
-  if (!IsLegalInsert && isa<ConstantSDNode>(Val)) {
-    const auto *CVal = cast<ConstantSDNode>(Val);
-    if (isInt<32>(CVal->getSExtValue())) {
+  // by the sign-extension of the lower 32 bits. This applies to i32 constants
+  // and sign_extend of i32 values.
+  if (!IsLegalInsert) {
+    if (isa<ConstantSDNode>(Val)) {
+      const auto *CVal = cast<ConstantSDNode>(Val);
+      if (isInt<32>(CVal->getSExtValue())) {
+        IsLegalInsert = true;
+        Val = DAG.getSignedConstant(CVal->getSExtValue(), DL, MVT::i32);
+      }
+    } else if (Val.getOpcode() == ISD::SIGN_EXTEND &&
+               Val.getOperand(0).getValueType() == MVT::i32) {
       IsLegalInsert = true;
-      Val = DAG.getSignedConstant(CVal->getSExtValue(), DL, MVT::i32);
+      Val = Val.getOperand(0);
     }
   }
 
@@ -19185,6 +19185,82 @@ static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
   return Result;
 }
 
+// vwaddu_wv C (vabd A B) -> vwabda(A B C)
+// vwaddu_wv C (zext (vabd A B)) -> vwabda(A (sext B) (sext C))
+// vwaddu_wv C (vabdu A B) -> vwabdau(A B C)
+// vwaddu_wv C (zext (vabdu A B)) -> vwabdau(A (zext B) (zext C))
+static SDValue performVWABDACombineWV(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtZvabd())
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  // The result is widened, so we can accept i16/i32 here.
+  if (VT.getVectorElementType() != MVT::i16 &&
+      VT.getVectorElementType() != MVT::i32)
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru->isUndef())
+    return SDValue();
+
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
+  unsigned ExtOpc = 0;
+  MVT ExtVT;
+  auto GetDiff = [&](SDValue Op) {
+    unsigned Opc = Op.getOpcode();
+    if (Opc == RISCVISD::VZEXT_VL) {
+      SDValue Src = Op->getOperand(0);
+      unsigned SrcOpc = Src.getOpcode();
+      switch (SrcOpc) {
+      default:
+        return SDValue();
+      case ISD::ABDS:
+      case RISCVISD::ABDS_VL:
+        ExtOpc = RISCVISD::VSEXT_VL;
+        break;
+      case ISD::ABDU:
+      case RISCVISD::ABDU_VL:
+        ExtOpc = RISCVISD::VZEXT_VL;
+        break;
+      }
+      ExtVT = Op->getSimpleValueType(0);
+      return Src;
+    }
+
+    if (Opc != ISD::ABDS && Opc != ISD::ABDU && Opc != RISCVISD::ABDS_VL &&
+        Opc != RISCVISD::ABDU_VL)
+      return SDValue();
+    return Op;
+  };
+
+  SDValue Diff = GetDiff(Op0);
+  if (!Diff) {
+    std::swap(Op0, Op1);
+    Diff = GetDiff(Op0);
+    if (!Diff)
+      return SDValue();
+  }
+  SDValue Acc = Op1;
+
+  SDLoc DL(N);
+  SDValue DiffA = Diff.getOperand(0);
+  SDValue DiffB = Diff.getOperand(1);
+  if (ExtOpc) {
+    DiffA = DAG.getNode(ExtOpc, DL, ExtVT, DiffA, Mask, VL);
+    DiffB = DAG.getNode(ExtOpc, DL, ExtVT, DiffB, Mask, VL);
+  }
+  SDValue Result = DAG.getNode(Diff.getOpcode() == ISD::ABDS ||
+                                       Diff.getOpcode() == RISCVISD::ABDS_VL
+                                   ? RISCVISD::VWABDA_VL
+                                   : RISCVISD::VWABDAU_VL,
+                               DL, VT, DiffA, DiffB, Acc, Mask, VL);
+  return Result;
+}
+
 static SDValue performVWADDSUBW_VLCombine(SDNode *N,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const RISCVSubtarget &Subtarget) {
@@ -22234,8 +22310,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADDU_VL:
     return performVWABDACombine(N, DAG, Subtarget);
-  case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWADDU_W_VL:
+    if (SDValue V = performVWABDACombineWV(N, DAG, Subtarget))
+      return V;
+    [[fallthrough]];
+  case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWSUB_W_VL:
   case RISCVISD::VWSUBU_W_VL:
     return performVWADDSUBW_VLCombine(N, DCI, Subtarget);
