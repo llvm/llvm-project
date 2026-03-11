@@ -222,6 +222,23 @@ set(USE_DEPRECATED_GCC_INSTALL_PREFIX OFF CACHE BOOL "Temporary workaround befor
 set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
 set(DEFAULT_SYSROOT "" CACHE STRING
   "Default <path> to all compiler invocations for --sysroot=<path>." )
+
+# On macOS, auto-detect SDK so that 'clang hello.c' works out-of-the-box.
+if(APPLE AND NOT CMAKE_CROSSCOMPILING AND DEFAULT_SYSROOT STREQUAL "")
+  execute_process(
+    COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE _detected_sysroot
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE _xcrun_result
+  )
+  if(_xcrun_result EQUAL 0 AND EXISTS "${_detected_sysroot}")
+    set(DEFAULT_SYSROOT "${_detected_sysroot}" CACHE STRING
+      "Default <path> to all compiler invocations for --sysroot=<path>." FORCE)
+    message(STATUS "Auto-detected macOS SDK for DEFAULT_SYSROOT: ${DEFAULT_SYSROOT}")
+  endif()
+endif()
+
 if(GCC_INSTALL_PREFIX AND NOT USE_DEPRECATED_GCC_INSTALL_PREFIX)
   message(FATAL_ERROR "GCC_INSTALL_PREFIX is deprecated and will be removed. Use "
     "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"

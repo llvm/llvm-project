@@ -4786,6 +4786,23 @@ backend.
 Operating System Features and Limitations
 -----------------------------------------
 
+Apple
+^^^^^
+
+On Apple platforms, standard headers and libraries are not provided by
+the base system. Instead, they are part of the Xcode SDK. When building
+LLVM from source on macOS, the SDK location is auto-detected at cmake
+configure time and baked into Clang as the default sysroot.
+
+The SDK location can be overridden in the following ways (highest priority
+first):
+
+- The ``-isysroot`` or ``--sysroot=`` command-line option.
+- The ``SDKROOT`` environment variable, which is set automatically by
+  Xcode tools such as ``xcrun``.
+- The ``DEFAULT_SYSROOT`` cmake option, which can be set explicitly at
+  LLVM build time with ``-DDEFAULT_SYSROOT=/path/to/sdk``.
+
 Windows
 ^^^^^^^
 
