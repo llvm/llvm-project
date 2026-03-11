@@ -22,7 +22,7 @@ using namespace lldb_private;
 
 namespace lldb_private {
 
-void RegisterMSVCRTCFrameRecognizer(Process &process) {
+void RegisterMSVCRTCFrameRecognizer(ProcessWindows &process) {
   process.GetTarget().GetFrameRecognizerManager().AddRecognizer(
       std::make_shared<MSVCRTCFrameRecognizer>(), ConstString(),
       {ConstString("failwithmessage")}, Mangled::ePreferDemangled,
