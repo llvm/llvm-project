@@ -46,6 +46,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -460,6 +461,7 @@ public:
                             std::optional<unsigned> &TiedDefIdx,
                             bool IsDef = false);
   bool parseImmediateOperand(MachineOperand &Dest);
+  bool parseInlineAsmOperand(MachineOperand &Dest);
   bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                        const Constant *&C);
   bool parseIRConstant(StringRef::iterator Loc, const Constant *&C);
@@ -1901,6 +1903,100 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
+  if (Token.is(MIToken::IntegerLiteral))
+    return parseImmediateOperand(Dest);
+
+  // Parse symbolic form: kind[:constraint].
+  if (Token.isNot(MIToken::Identifier))
+    return error("expected inline asm operand kind or integer literal");
+
+  StringRef KindStr = Token.stringValue();
+  constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
+  InlineAsm::Kind K =
+      StringSwitch<InlineAsm::Kind>(KindStr)
+          .Case("regdef", InlineAsm::Kind::RegDef)
+          .Case("reguse", InlineAsm::Kind::RegUse)
+          .Case("regdef-ec", InlineAsm::Kind::RegDefEarlyClobber)
+          .Case("clobber", InlineAsm::Kind::Clobber)
+          .Case("imm", InlineAsm::Kind::Imm)
+          .Case("mem", InlineAsm::Kind::Mem)
+          .Default(InvalidKind);
+
+  if (K == InvalidKind)
+    return error("unknown inline asm operand kind '" + KindStr + "'");
+
+  lex();
+
+  // Create the flag with default of 1 operand.
+  InlineAsm::Flag F(K, 1);
+
+  // Parse optional constraint after ':'.
+  if (Token.isNot(MIToken::colon)) {
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  }
+
+  lex();
+
+  if (Token.isNot(MIToken::Identifier))
+    return error("expected register class or memory constraint name after ':'");
+
+  StringRef ConstraintStr = Token.stringValue();
+
+  if (K == InlineAsm::Kind::Mem) {
+    InlineAsm::ConstraintCode CC =
+        StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
+            .Case("es", InlineAsm::ConstraintCode::es)
+            .Case("i", InlineAsm::ConstraintCode::i)
+            .Case("k", InlineAsm::ConstraintCode::k)
+            .Case("m", InlineAsm::ConstraintCode::m)
+            .Case("o", InlineAsm::ConstraintCode::o)
+            .Case("v", InlineAsm::ConstraintCode::v)
+            .Case("A", InlineAsm::ConstraintCode::A)
+            .Case("Q", InlineAsm::ConstraintCode::Q)
+            .Case("R", InlineAsm::ConstraintCode::R)
+            .Case("S", InlineAsm::ConstraintCode::S)
+            .Case("T", InlineAsm::ConstraintCode::T)
+            .Case("Um", InlineAsm::ConstraintCode::Um)
+            .Case("Un", InlineAsm::ConstraintCode::Un)
+            .Case("Uq", InlineAsm::ConstraintCode::Uq)
+            .Case("Us", InlineAsm::ConstraintCode::Us)
+            .Case("Ut", InlineAsm::ConstraintCode::Ut)
+            .Case("Uv", InlineAsm::ConstraintCode::Uv)
+            .Case("Uy", InlineAsm::ConstraintCode::Uy)
+            .Case("X", InlineAsm::ConstraintCode::X)
+            .Case("Z", InlineAsm::ConstraintCode::Z)
+            .Case("ZB", InlineAsm::ConstraintCode::ZB)
+            .Case("ZC", InlineAsm::ConstraintCode::ZC)
+            .Case("Zy", InlineAsm::ConstraintCode::Zy)
+            .Case("p", InlineAsm::ConstraintCode::p)
+            .Case("ZQ", InlineAsm::ConstraintCode::ZQ)
+            .Case("ZR", InlineAsm::ConstraintCode::ZR)
+            .Case("ZS", InlineAsm::ConstraintCode::ZS)
+            .Case("ZT", InlineAsm::ConstraintCode::ZT)
+            .Default(InlineAsm::ConstraintCode::Unknown);
+
+    if (CC == InlineAsm::ConstraintCode::Unknown)
+      return error("unknown memory constraint '" + ConstraintStr + "'");
+
+    F.setMemConstraint(CC);
+  } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
+             K == InlineAsm::Kind::RegDefEarlyClobber) {
+    const TargetRegisterClass *RC =
+        PFS.Target.getRegClass(ConstraintStr.lower());
+    if (!RC)
+      return error("unknown register class '" + ConstraintStr + "'");
+
+    F.setRegClass(RC->getID());
+  }
+
+  lex();
+
+  Dest = MachineOperand::CreateImm(F);
+  return false;
+}
+
 bool MIParser::parseTargetImmMnemonic(const unsigned OpCode,
                                       const unsigned OpIdx,
                                       MachineOperand &Dest,
@@ -2980,6 +3076,17 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
 bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                                    MachineOperand &Dest,
                                    std::optional<unsigned> &TiedDefIdx) {
+  bool IsInlineAsmOperand = (OpCode == TargetOpcode::INLINEASM ||
+                             OpCode == TargetOpcode::INLINEASM_BR) &&
+                            OpIdx >= InlineAsm::MIOp_FirstOperand;
+
+  if (IsInlineAsmOperand && Token.is(MIToken::Identifier)) {
+    StringRef Id = Token.stringValue();
+    if (Id == "regdef" || Id == "reguse" || Id == "regdef-ec" ||
+        Id == "clobber" || Id == "imm" || Id == "mem")
+      return parseInlineAsmOperand(Dest);
+  }
+
   switch (Token.kind()) {
   case MIToken::kw_implicit:
   case MIToken::kw_implicit_define:
@@ -2997,6 +3104,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::NamedVirtualRegister:
     return parseRegisterOperand(Dest, TiedDefIdx);
   case MIToken::IntegerLiteral:
+    if (IsInlineAsmOperand)
+      return parseInlineAsmOperand(Dest);
     return parseImmediateOperand(Dest);
   case MIToken::kw_half:
   case MIToken::kw_bfloat:
