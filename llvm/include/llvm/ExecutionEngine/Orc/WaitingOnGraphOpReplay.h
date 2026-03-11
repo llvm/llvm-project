@@ -57,17 +57,20 @@ public:
   recordSimplify(const std::vector<std::unique_ptr<SuperNode>> &SNs) override {
     std::scoped_lock<std::mutex> Lock(M);
     recordSuperNodes("simplify-and-emit", SNs);
+    OS.flush();
   }
 
   void recordFail(const ContainerElementsMap &Failed) override {
     std::scoped_lock<std::mutex> Lock(M);
     OS << "fail\n";
     recordContainerElementsMap("  ", "failed", Failed);
+    OS.flush();
   }
 
   void recordEnd() override {
     std::scoped_lock<std::mutex> Lock(M);
     OS << "end\n";
+    OS.flush();
   }
 
   // Should render the container id as a string.

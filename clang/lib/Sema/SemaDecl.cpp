@@ -2981,6 +2981,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.OpenACC().mergeRoutineDeclAttr(*RD);
   else if (Attr->shouldInheritEvenIfAlreadyPresent() || !DeclHasAttr(D, Attr))
     NewAttr = cast<InheritableAttr>(Attr->clone(S.Context));
+  else if (const auto *PA = dyn_cast<PersonalityAttr>(Attr))
+    NewAttr = S.mergePersonalityAttr(D, PA->getRoutine(), *PA);
 
   if (NewAttr) {
     NewAttr->setInherited(true);
@@ -21101,16 +21103,14 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                                                      bool Final) {
   assert(FD && "Expected non-null FunctionDecl");
 
-  // SYCL functions can be template, so we check if they have appropriate
-  // attribute prior to checking if it is a template.
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return FunctionEmissionStatus::TemplateDiscarded;
+
   if (LangOpts.SYCLIsDevice && (FD->hasAttr<SYCLKernelAttr>() ||
                                 FD->hasAttr<SYCLKernelEntryPointAttr>() ||
                                 FD->hasAttr<SYCLExternalAttr>()))
     return FunctionEmissionStatus::Emitted;
-
-  // Templates are emitted when they're instantiated.
-  if (FD->isDependentContext())
-    return FunctionEmissionStatus::TemplateDiscarded;
 
   // Check whether this function is an externally visible definition.
   auto IsEmittedForExternalSymbol = [this, FD]() {
