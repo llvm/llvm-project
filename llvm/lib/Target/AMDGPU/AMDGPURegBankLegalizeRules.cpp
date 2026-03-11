@@ -189,6 +189,10 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isDivergent(Reg);
   case DivV2S32:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isDivergent(Reg);
+  case DivV3S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(3, 32) && MUI.isDivergent(Reg);
+  case DivV4S16:
+    return MRI.getType(Reg) == LLT::fixed_vector(4, 16) && MUI.isDivergent(Reg);
   case DivB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isDivergent(Reg);
   case DivB64:
@@ -1587,5 +1591,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_ds_swizzle}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_ds_read_tr4_b64})
+      .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_read_tr6_b96})
+      .Any({{DivV3S32}, {{VgprV3S32}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_read_tr8_b64})
+      .Any({{DivV2S32}, {{VgprV2S32}, {IntrId, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_ds_read_tr16_b64})
+      .Any({{DivV4S16}, {{VgprV4S16}, {IntrId, VgprP3}}});
 
 } // end initialize rules
