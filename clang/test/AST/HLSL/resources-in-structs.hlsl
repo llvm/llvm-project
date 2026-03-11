@@ -11,7 +11,7 @@ struct A {
 // CHECK: VarDecl {{.*}} implicit a1.Buf 'hlsl::RWBuffer<float>' callinit
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
-// CHECK: VarDecl {{.*}} a1 'hlsl_constant A'
+// CHECK: VarDecl {{.*}} a1 'A'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u0" "space0"
 // CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'a1.Buf' 'hlsl::RWBuffer<float>'
 A a1 : register(u0);
@@ -27,7 +27,7 @@ struct B {
 // CHECK: VarDecl {{.*}} implicit b1.Bufs 'hlsl::RWBuffer<float>[10]'
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
-// CHECK: VarDecl {{.*}} b1 'hlsl_constant B'
+// CHECK: VarDecl {{.*}} b1 'B'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u2" "space0"
 // CHECK-NEXT: HLSLAssociatedResourceDeclAttr {{.*}} 'b1.Bufs' 'hlsl::RWBuffer<float>[10]'
 B b1 : register(u2);
@@ -46,7 +46,7 @@ struct C : A {
 // CHECK: VarDecl {{.*}} implicit c1.Buf2 'hlsl::RWBuffer<float>' callinit
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
-// CHECK: VarDecl {{.*}} c1 'hlsl_constant C'
+// CHECK: VarDecl {{.*}} c1 'C'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u3" "space0"
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'c1.A::Buf' 'hlsl::RWBuffer<float>'
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'c1.Buf2' 'hlsl::RWBuffer<float>'
@@ -65,7 +65,7 @@ struct D : A {
 // CHECK: VarDecl {{.*}} implicit d1.A.Buf 'hlsl::RWBuffer<float>' callinit
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
-// CHECK: VarDecl {{.*}} d1 'hlsl_constant D'
+// CHECK: VarDecl {{.*}} d1 'D'
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'd1.A::Buf' 'hlsl::RWBuffer<float>'
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'd1.A.Buf' 'hlsl::RWBuffer<float>'
 D d1;
@@ -100,7 +100,7 @@ class F : E {
 // CHECK: VarDecl {{.*}} implicit f.Samp 'hlsl::SamplerState' callinit
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
-// CHECK: VarDecl {{.*}} f 'hlsl_constant F'
+// CHECK: VarDecl {{.*}} f 'F'
 // CHECK: HLSLResourceBindingAttr {{.*}} "t0" "space0"
 // CHECK: HLSLResourceBindingAttr {{.*}} "u20" "space0"
 // CHECK: HLSLResourceBindingAttr {{.*}} "s3" "space0"
@@ -149,7 +149,7 @@ struct G {
 // CHECK: VarDecl {{.*}} implicit gArray.1.multiArray.1.1.Buf 'hlsl::RWBuffer<float>' callinit
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 
-// CHECK: VarDecl {{.*}} gArray 'hlsl_constant G[2]'
+// CHECK: VarDecl {{.*}} gArray 'G[2]'
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.0.0.Buf' 'hlsl::RWBuffer<float>'
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.0.1.Buf' 'hlsl::RWBuffer<float>'
 // CHECK: HLSLAssociatedResourceDeclAttr {{.*}} 'gArray.0.multiArray.1.0.Buf' 'hlsl::RWBuffer<float>'
