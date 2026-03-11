@@ -179,6 +179,60 @@ getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
                                 CommentCollectionMode::TrailingComments);
 }
 
+CharSourceRange
+findTokenTextInRange(CharSourceRange Range, const SourceManager &SM,
+                     const LangOptions &LangOpts,
+                     llvm::function_ref<bool(const Token &)> Pred) {
+  if (Range.isInvalid())
+    return {};
+
+  // Normalize to a file-based char range so raw lexing can operate on one
+  // contiguous buffer and reject unmappable (e.g. macro) ranges.
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return {};
+
+  const auto [BeginFID, BeginOffset] =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const auto [EndFID, EndOffset] = SM.getDecomposedLoc(FileRange.getEnd());
+  if (BeginFID != EndFID || BeginOffset > EndOffset)
+    return {};
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginFID, &Invalid);
+  if (Invalid)
+    return {};
+
+  const char *LexStart = Buffer.data() + BeginOffset;
+  // Re-lex raw tokens in the bounded file buffer while preserving comments so
+  // callers can match tokens regardless of interleaved comments.
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginFID), LangOpts, Buffer.begin(),
+                 LexStart, Buffer.end());
+  TheLexer.SetCommentRetentionState(true);
+
+  while (true) {
+    Token Tok;
+    if (TheLexer.LexFromRawLexer(Tok))
+      return {};
+
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      return {};
+
+    if (!Pred(Tok))
+      continue;
+
+    Token NextTok;
+    if (TheLexer.LexFromRawLexer(NextTok))
+      return {};
+    // Return a char range ending at the next token start so trailing trivia of
+    // the matched token is included (useful for fix-it removals).
+    return CharSourceRange::getCharRange(Tok.getLocation(),
+                                         NextTok.getLocation());
+  }
+}
+
 std::optional<Token> getQualifyingToken(tok::TokenKind TK,
                                         CharSourceRange Range,
                                         const ASTContext &Context,

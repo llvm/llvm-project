@@ -7,6 +7,7 @@ Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 from __future__ import annotations
 
 import collections
+from typing import Literal
 import lldb
 
 
@@ -228,7 +229,7 @@ class PointerIntPairSynthProvider:
         return None
 
     def _get_raw_value(self):
-        data: SBData = self.value.GetData()
+        data: lldb.SBData = self.value.GetData()
         error = lldb.SBError()
         raw_bytes = data.ReadRawData(error, 0, self.ptr_size)
         if error.Fail():
@@ -236,7 +237,7 @@ class PointerIntPairSynthProvider:
 
         return raw_bytes
 
-    def _get_pointer(self, pointer_bit_mask: int, pointer_ty: SBType):
+    def _get_pointer(self, pointer_bit_mask: int, pointer_ty: lldb.SBType):
         raw_bytes = self._get_raw_value()
         if raw_bytes is None:
             return
@@ -248,7 +249,7 @@ class PointerIntPairSynthProvider:
         data.SetDataFromUInt64Array([pointer_value])
         return self.valobj.CreateValueFromData("Pointer", data, pointer_ty)
 
-    def _get_int(self, int_shift: int, int_mask: int, int_ty: SBType):
+    def _get_int(self, int_shift: int, int_mask: int, int_ty: lldb.SBType):
         raw_bytes = self._get_raw_value()
         if raw_bytes is None:
             return
@@ -268,23 +269,23 @@ class PointerIntPairSynthProvider:
         return None
 
     def update(self):
-        self.byteorder = (
+        self.byteorder: Literal["big", "little"] = (
             "big"
             if self.valobj.target.GetByteOrder() == lldb.eByteOrderBig
             else "little"
         )
         self.ptr_size = self.valobj.target.GetAddressByteSize()
-        self.value: SBValue = self.valobj.GetChildMemberWithName("Value")
+        self.value: lldb.SBValue = self.valobj.GetChildMemberWithName("Value")
         if not self.value:
             return
 
         valobj_type = self.valobj.GetType()
 
-        pointer_ty: SBType = valobj_type.GetTemplateArgumentType(0)
+        pointer_ty: lldb.SBType = valobj_type.GetTemplateArgumentType(0)
         if not pointer_ty:
             return
 
-        int_ty: SBType = valobj_type.GetTemplateArgumentType(2)
+        int_ty: lldb.SBType = valobj_type.GetTemplateArgumentType(2)
         if not int_ty:
             return
 
@@ -298,20 +299,20 @@ class PointerIntPairSynthProvider:
 
         # FIXME: SBAPI should provide a way to retrieve an enum member
         # by name.
-        pointer_bit_mask: SBTypeEnumMember = (
+        pointer_bit_mask: lldb.SBTypeEnumMember = (
             mask_and_shift_constants.GetTypeEnumMemberAtIndex(0)
         )
         if pointer_bit_mask.name != "PointerBitMask":
             return
 
-        int_shift: SBTypeEnumMember = mask_and_shift_constants.GetTypeEnumMemberAtIndex(
-            1
+        int_shift: lldb.SBTypeEnumMember = (
+            mask_and_shift_constants.GetTypeEnumMemberAtIndex(1)
         )
         if int_shift.name != "IntShift":
             return
 
-        int_mask: SBTypeEnumMember = mask_and_shift_constants.GetTypeEnumMemberAtIndex(
-            2
+        int_mask: lldb.SBTypeEnumMember = (
+            mask_and_shift_constants.GetTypeEnumMemberAtIndex(2)
         )
         if int_mask.name != "IntMask":
             return
@@ -344,23 +345,23 @@ class PointerUnionSynthProvider:
         return self.pointer_valobj
 
     def update(self):
-        pointer_int_pair: SBValue = self.valobj.GetChildMemberWithName(
+        pointer_int_pair: lldb.SBValue = self.valobj.GetChildMemberWithName(
             "Val"
         ).GetSyntheticValue()
 
         if not pointer_int_pair:
             return
 
-        pointer: SBValue = pointer_int_pair.GetChildAtIndex(0)
+        pointer: lldb.SBValue = pointer_int_pair.GetChildAtIndex(0)
         if not pointer:
             return
 
-        active_tag: SBValue = pointer_int_pair.GetChildAtIndex(1)
+        active_tag: lldb.SBValue = pointer_int_pair.GetChildAtIndex(1)
         if not active_tag:
             return
 
         # Index into the parameter pack of llvm::PointerUnion to find the active type.
-        active_type: SBType = self.valobj.GetType().GetTemplateArgumentType(
+        active_type: lldb.SBType = self.valobj.GetType().GetTemplateArgumentType(
             active_tag.GetValueAsUnsigned()
         )
         if not active_type:

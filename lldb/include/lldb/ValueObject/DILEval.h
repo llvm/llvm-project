@@ -97,6 +97,9 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                            uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,

@@ -236,14 +236,14 @@ public:
                   "BlockSize: %zu%s",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
                   Entry.CommitSize, Entry.Time == 0 ? " [R]" : "");
-#if SCUDO_LINUX
-      // getResidentPages only works on linux systems currently.
-      Str->append(", Resident Pages: %" PRId64 "/%zu\n",
-                  getResidentPages(Entry.CommitBase, Entry.CommitSize),
-                  Entry.CommitSize / getPageSizeCached());
-#else
+      const s64 ResidentPages =
+          Entry.MemMap.getResidentPages(Entry.CommitBase, Entry.CommitSize);
+
+      if (ResidentPages >= 0) {
+        Str->append(", Resident Pages: %" PRId64 "/%zu", ResidentPages,
+                    Entry.CommitSize / getPageSizeCached());
+      }
       Str->append("\n");
-#endif
     }
   }
 

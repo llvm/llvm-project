@@ -1,8 +1,9 @@
-// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,CLASSIC %s readability-container-data-pointer %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=,WITH-CONFIG %s readability-container-data-pointer %t -- -config="{CheckOptions: {readability-container-data-pointer.IgnoredContainers: '::std::basic_string'}}" -- -fno-delayed-template-parsing
 
 #include <string>
 #include <vector>
+#include <utility>
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -14,14 +15,6 @@ struct is_integral;
 template <>
 struct is_integral<size_t> {
   static const bool value = true;
-};
-
-template <bool, typename T = void>
-struct enable_if { };
-
-template <typename T>
-struct enable_if<true, T> {
-  typedef T type;
 };
 
 template <typename T>

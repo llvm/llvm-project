@@ -722,6 +722,31 @@ std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
+  case Intrinsic::amdgcn_implicitarg_ptr: {
+    uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
+
+    uint64_t CurrentOrNullBytes =
+        II.getAttributes().getRetDereferenceableOrNullBytes();
+    if (CurrentOrNullBytes != 0) {
+      // Refine "dereferenceable (A) meets dereferenceable_or_null(B)"
+      // into dereferenceable(max(A, B))
+      uint64_t NewBytes = std::max(CurrentOrNullBytes, ImplicitArgBytes);
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      II.removeRetAttr(Attribute::DereferenceableOrNull);
+      return &II;
+    }
+
+    uint64_t CurrentBytes = II.getAttributes().getRetDereferenceableBytes();
+    uint64_t NewBytes = std::max(CurrentBytes, ImplicitArgBytes);
+    if (NewBytes != CurrentBytes) {
+      II.addRetAttr(
+          Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
+      return &II;
+    }
+
+    return std::nullopt;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))

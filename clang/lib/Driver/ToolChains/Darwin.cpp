@@ -1921,7 +1921,7 @@ struct DarwinPlatform {
     DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()),
                           TT.getOSVersion(), A);
     VersionTuple OsVersion = TT.getOSVersion();
-    Result.TargetVariantTriple = TargetVariantTriple;
+    Result.TargetVariantTriple = std::move(TargetVariantTriple);
     Result.setEnvironment(TT.getEnvironment(), OsVersion, SDKInfo);
     return Result;
   }
