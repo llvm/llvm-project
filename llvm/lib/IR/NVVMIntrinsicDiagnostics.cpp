@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/NVVMIntrinsicDiagnostics.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicDiagnostics.h"
 #include "llvm/IR/Intrinsics.h"
