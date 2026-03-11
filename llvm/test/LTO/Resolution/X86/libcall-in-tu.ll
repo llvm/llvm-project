@@ -8,7 +8,7 @@
 ; RUN:   -r %t.o,foo,plx \
 ; RUN:   -r %t.o,memcmp,x \
 ; RUN:   -r %t.o,bcmp,pl \
-; RUN:   -r %t.o,bcmp_impl,x %t.o --bitcode-libfuncs=bcmp -save-temps
+; RUN:   -r %t.o,bcmp_impl,x %t.o -save-temps
 ; RUN: llvm-dis %t.lto.o.0.4.opt.bc -o - | FileCheck %s
 
 define i1 @foo(ptr %0, ptr %1, i64 %2) {

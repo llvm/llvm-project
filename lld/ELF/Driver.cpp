@@ -2745,7 +2745,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     SmallVector<StringRef> bitcodeLibFuncs;
     for (StringRef libFunc : lto::LTO::getLibFuncSymbols(tt, saver))
       if (Symbol *sym = ctx.symtab->find(libFunc);
-          sym && isa<BitcodeFile>(sym->file))
+          sym && sym->isLazy() && isa<BitcodeFile>(sym->file))
         bitcodeLibFuncs.push_back(libFunc);
     lto->setBitcodeLibFuncs(bitcodeLibFuncs);
   }

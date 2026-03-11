@@ -1334,14 +1334,6 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
                                   isPrevailing, Conf.OptLevel > 0);
 
-  // Remove any prevailing definitions from BitcodeLibfuncs, as these are safe
-  // to call.
-  llvm::erase_if(BitcodeLibFuncs, [&](StringRef Name) {
-    return isPrevailing(GlobalValue::getGUIDAssumingExternalLinkage(
-               GlobalValue::dropLLVMManglingEscape(Name))) ==
-           PrevailingType::Yes;
-  });
-
   // Setup output file to emit statistics.
   auto StatsFileOrErr = setupStatsFile(Conf.StatsFile);
   if (!StatsFileOrErr)

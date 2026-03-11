@@ -449,9 +449,9 @@ public:
   LLVM_ABI Error add(std::unique_ptr<InputFile> Obj,
                      ArrayRef<SymbolResolution> Res);
 
-  /// Set the list of functions implemented in bitcode across the link, whether
-  /// extracted or not. Such functions may not be referenced if they were not
-  /// extracted by the time LTO occurs.
+  /// Set the list of functions implemented in bitcode that were not extracted
+  /// from an archive. Such functions may not be referenced, as they have
+  /// lost their opportunity to be defined.
   LLVM_ABI void setBitcodeLibFuncs(ArrayRef<StringRef> BitcodeLibFuncs);
 
   /// Returns an upper bound on the number of tasks that the client may expect.
@@ -673,11 +673,9 @@ private:
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
 
-  // LibFuncs that could have been part of the LTO unit, but was not typically
-  // because they weren't extracted from their libraries. Such functions cannot
-  // safely be called, since they have already lost their only opportunity to be
-  // defined. Before run(), this contains all libfuncs defined anywhere in
-  // bitcode; during run(), the ones defined in the LTO unit are filtered out.
+  // LibFuncs that were implemented in bitcode but were not extracted
+  // from their libraries. Such functions cannot safely be called, since
+  // they have lost their opportunity to be defined.
   SmallVector<StringRef> BitcodeLibFuncs;
 
 public:

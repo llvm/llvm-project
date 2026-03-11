@@ -8,7 +8,7 @@
 ; RUN:   -r foo.o,foo,plx \
 ; RUN:   -r foo.o,memcmp,x \
 ; RUN:   -r bcmp.o,bcmp,pl \
-; RUN:   -r bcmp.o,bcmp_impl,x --bitcode-libfuncs=bcmp foo.o bcmp.o -save-temps
+; RUN:   -r bcmp.o,bcmp_impl,x foo.o bcmp.o -save-temps
 ; RUN: llvm-dis lto.o.1.4.opt.bc -o - | FileCheck %s
 
 ;--- foo.ll

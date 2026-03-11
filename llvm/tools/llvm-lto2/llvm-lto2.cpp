@@ -234,19 +234,18 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
-// Specifying a symbol here states that it is a library symbol with a prevailing
-// definition in bitcode. If such symbols are not defined somewhere in the LTO
-// unit, (e.g., they were not extracted), they cannot safely be referenced,
-// since they have already lost their only opportunity to be defined.
+// Specifying a symbol here states that it is a library symbol that had a
+// definition in bitcode, but was not extracted. Such symbols cannot safely
+// be referenced, since they have already lost their opportunity to be defined.
 //
 // FIXME: Listing all bitcode libfunc symbols here is clunky. A higher-level way
 // to indicate which TUs made it into the link might be better, but this would
-// required more detailed tracking of the sources of constructs in the IR.
+// require more detailed tracking of the sources of constructs in the IR.
 // Alternatively, there may be some other data structure that could hold this
 // information.
-static cl::list<std::string>
-    BitcodeLibFuncs("bitcode-libfuncs", cl::Hidden,
-                    cl::desc("set of libfuncs implemented in bitcode"));
+static cl::list<std::string> BitcodeLibFuncs(
+    "bitcode-libfuncs", cl::Hidden,
+    cl::desc("set of unextracted libfuncs implemented in bitcode"));
 
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
 
