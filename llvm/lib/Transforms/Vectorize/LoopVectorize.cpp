@@ -7536,7 +7536,6 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
           SI, VPI->operandsWithoutMask(), true /* IsUniform */,
           nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
       FinalRedStoresBuilder.insert(Recipe);
-      // Recipe->insertBefore(*MiddleVPBB, MBIP);
     }
     VPI->eraseFromParent();
     return true;
