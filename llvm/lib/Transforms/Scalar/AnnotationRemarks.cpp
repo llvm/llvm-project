@@ -77,11 +77,11 @@ static void tryEmitBoundsSafetyRemark(ArrayRef<Instruction *> Instructions,
     case Instruction::And:
       Pretty.push_back("and");
       break;
-    case Instruction::Br:
-      if (cast<BranchInst>(I)->isConditional())
-        Pretty.push_back("cond branch");
-      else
-        Pretty.push_back("uncond branch");
+    case Instruction::CondBr:
+      Pretty.push_back("cond branch");
+      break;
+    case Instruction::UncondBr:
+      Pretty.push_back("uncond branch");
       break;
     case Instruction::Call: {
       auto II = dyn_cast<IntrinsicInst>(I);
