@@ -8,11 +8,10 @@
 
 #include "src/unistd/close.h"
 
-#include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 

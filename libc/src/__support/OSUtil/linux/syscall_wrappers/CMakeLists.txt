@@ -1,0 +1,64 @@
+add_header_library(
+  getrandom
+  HDRS
+    getrandom.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  close
+  HDRS
+    close.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  read
+  HDRS
+    read.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  write
+  HDRS
+    write.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  open
+  HDRS
+    open.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.fcntl_macros
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)

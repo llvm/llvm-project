@@ -10,7 +10,7 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/types/mode_t.h"
-#include "src/__support/OSUtil/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/sys/mman/linux/shm_common.h"

@@ -1,4 +1,4 @@
-//===------------ Implementation of getrandom function ----------*- C++ -*-===//
+//===-- Implementation header for write -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_GETRANDOM_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_GETRANDOM_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_WRITE_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_WRITE_H
 
 #include "hdr/types/ssize_t.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
@@ -19,17 +19,14 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
-                                              unsigned int flags) {
-  ssize_t ret =
-      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_getrandom, buf, buflen, flags);
-  if (ret < 0) {
+LIBC_INLINE ErrorOr<ssize_t> write(int fd, const void *buf, size_t count) {
+  ssize_t ret = syscall_impl<ssize_t>(SYS_write, fd, buf, count);
+  if (ret < 0)
     return Error(-static_cast<int>(ret));
-  }
   return ret;
 }
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GETRANDOM_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_WRITE_H
