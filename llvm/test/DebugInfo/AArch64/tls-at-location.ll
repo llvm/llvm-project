@@ -10,7 +10,7 @@
 ; CHECK-NEXT:   DW_AT_decl_line (1)
 ; CHECK-NEXT:   DW_AT_location  (DW_OP_const8u 0x0, DW_OP_GNU_push_tls_address)
 
-@var = dso_local thread_local global i32 0, align 4, !dbg !0
+@var = thread_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone
 define i32 @foo() #0 !dbg !11 {

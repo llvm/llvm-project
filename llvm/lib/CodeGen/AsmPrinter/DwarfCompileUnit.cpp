@@ -260,12 +260,9 @@ void DwarfCompileUnit::addLocationAttribute(
       continue;
 
     if (Global && Global->isThreadLocal()) {
-      // Do not emit TLS location for preemptible TLS variables
-      // (e.g. TLS in shared libraries). The TLS offset cannot be
-      // represented safely in DWARF. In that case let Debugger use
-      // Runtime TLS lookup via DTV (Dynmic thread vector).
-      if (!EnableDebugTLSLocation && !Global->isDSOLocal() &&
-          !Asm->TM.getTargetTriple().isAArch64())
+      // Temporary guard with option 'enable-debug-tls-location' until lld and
+      // ld support R_AARCH64_TLS_DTPREL64 relocation.
+      if (Asm->TM.getTargetTriple().isAArch64() && !EnableDebugTLSLocation)
         continue;
 
       if (!Asm->getObjFileLowering().supportDebugThreadLocalLocation())
