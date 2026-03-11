@@ -274,10 +274,6 @@ def StaticAnalyzer_Group : OptionGroup<"<Static analyzer group>">,
                            DocName<"Static analyzer options">, DocBrief<[{
 Flags controlling the behavior of the Clang Static Analyzer.}]>;
 
-def SSAF_Group : OptionGroup<"<ssaf options>">,
-                 DocName<"SSAF options">, DocBrief<[{
-Flags controlling the behavior of the Scalable Static Analysis Framework (SSAF).}]>;
-
 // gfortran options that we recognize in the driver and pass along when
 // invoking GCC to compile Fortran code.
 def gfortran_Group : OptionGroup<"<gfortran group>">,
@@ -945,22 +941,6 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def _ssaf_extract_summaries :
-  CommaJoined<["--"], "ssaf-extract-summaries=">,
-  MetaVarName<"<summary-names>">,
-  Group<SSAF_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Comma-separated list of summary names to extract">,
-  MarshallingInfoStringVector<FrontendOpts<"SSAFExtractSummaries">>;
-def _ssaf_tu_summary_file :
-  Joined<["--"], "ssaf-tu-summary-file=">,
-  MetaVarName<"<path>.<format>">,
-  Group<SSAF_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<
-    "The output file for the extracted summaries. "
-    "The extension selects which file format to use.">,
-  MarshallingInfoString<FrontendOpts<"SSAFTUSummaryFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -3870,6 +3850,13 @@ defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages
   CodeGenOpts<"ObjCConvertMessagesToRuntimeCalls">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>>;
+defm objc_msgsend_selector_stubs : BoolFOption<"objc-msgsend-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>, NegFlag<SetFalse>>;
+defm objc_msgsend_class_selector_stubs : BoolFOption<"objc-msgsend-class-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendClassSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+  NegFlag<SetFalse>>;
 defm objc_arc_exceptions : BoolFOption<"objc-arc-exceptions",
   CodeGenOpts<"ObjCAutoRefCountExceptions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5708,6 +5695,8 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
+def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
@@ -7627,6 +7616,11 @@ defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], [ClangOption], "Allocate array temporaries on the heap (default)">>;
+
+defm safe_trampoline : BoolOptionWithoutMarshalling<"f",
+  "safe-trampoline",
+  PosFlag<SetTrue, [], [FlangOption], "Use W^X compliant runtime trampoline pool for internal procedures">,
+  NegFlag<SetFalse, [], [FlangOption], "Use stack-based trampolines for internal procedures (default, may require executable stack)">>;
 
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
@@ -9855,6 +9849,8 @@ def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
+def dxc_Fre : DXCJoinedOrSeparate<"Fre">,
+              HelpText<"Set output file name for reflection files">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,

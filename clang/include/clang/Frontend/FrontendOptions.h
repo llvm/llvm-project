@@ -543,13 +543,6 @@ public:
   /// minimization hints.
   std::string DumpMinimizationHintsPath;
 
-  /// List of SSAF extractors to enable.
-  std::vector<std::string> SSAFExtractSummaries;
-
-  /// The TU summary output file with the file extension representing the file
-  /// format.
-  std::string SSAFTUSummaryFile;
-
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),

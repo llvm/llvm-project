@@ -667,7 +667,12 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  assert(!cir::MissingFeatures::attributeBuiltin());
+  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr &&
+      calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName())) {
+    callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
+                           mlir::UnitAttr::get(callOrTryCall->getContext()));
+  }
+
   return rv;
 }
 
@@ -1222,9 +1227,22 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    assert(!cir::MissingFeatures::deleteArray());
-    cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
-    return;
+    // This will be handled in CXXABILowering, but we can emit a better
+    // diagnostic here.
+    if (deleteTy.isDestructedType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXDeleteExpr: array delete of destructed type");
+    }
+    const FunctionDecl *operatorDelete = e->getOperatorDelete();
+    cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
+    auto deleteFn =
+        mlir::FlatSymbolRefAttr::get(operatorDeleteFn.getSymNameAttr());
+    UsualDeleteParams udp = operatorDelete->getUsualDeleteParams();
+    auto deleteParams = cir::UsualDeleteParamsAttr::get(
+        builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
+        isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+    cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
+                               ptr.getPointer(), deleteFn, deleteParams);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
