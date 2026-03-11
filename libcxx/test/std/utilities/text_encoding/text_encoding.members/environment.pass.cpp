@@ -28,7 +28,10 @@ int main(int, char**) {
   std::text_encoding te = std::text_encoding::environment();
   // 1. Depending on the platform's default, verify that environment() returns the corresponding text encoding.
   {
-#  if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+#  if defined(__ANDROID__)
+    assert(te.mib() == std::text_encoding::UTF8);
+    assert(std::text_encoding::environment_is<std::text_encoding::UTF8>());
+#  elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
     assert(te.mib() == std::text_encoding::ASCII);
     assert(std::text_encoding::environment_is<std::text_encoding::ASCII>());
 #  elif defined(_WIN32)
