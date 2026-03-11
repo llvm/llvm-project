@@ -98,8 +98,8 @@ cir.func @test_preserve_all_attrs(%arg0 : !cir.ptr<!s32i>) {
   cir.return
 }
 
-// CHECK-LABEL: cir.func @test_preserve_all_attrs(%arg0 : !cir.ptr<!s32i>)
-// CHECK:         %0 = cir._try_call @generalFunc(%arg0) side_effect(const) : (!cir.ptr<!s32i> {llvm.nonnull, llvm.noundef}) -> (!cir.ptr<!s32i> {llvm.nonnull})
+// CHECK-LABEL: cir.func @test_preserve_all_attrs(%arg0: !cir.ptr<!s32i>)
+// CHECK:         cir.try_call @generalFunc(%arg0) ^{{bb[0-9]+}}, ^{{bb[0-9]+}} side_effect(const) : (!cir.ptr<!s32i> {llvm.nonnull, llvm.noundef}) -> (!cir.ptr<!s32i> {llvm.nonnull})
 
 // Test that all attribute types are preserved with indirect calls.
 cir.func @test_preserve_all_attrs_indirect(
@@ -119,7 +119,9 @@ cir.func @test_preserve_all_attrs_indirect(
 }
 
 // CHECK-LABEL: cir.func @test_preserve_all_attrs_indirect
-// CHECK:      %0 = cir.try_call %fptr(%obj) side_effect(const) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> (!s32i {llvm.nonnull})
+// CHECK:             %[[FN_PTR:.*]]: !cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>,
+// CHECK-SAME:        %[[OBJ:.*]]: !cir.ptr<!rec_SomeClass>
+// CHECK:         cir.try_call %[[FN_PTR]](%[[OBJ]]) ^{{bb[0-9]+}}, ^{{bb[0-9]+}} side_effect(const) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>) -> !s32i>>, !cir.ptr<!rec_SomeClass> {llvm.nonnull}) -> (!s32i {llvm.nonnull})
 
 cir.func private @generalFunc(!cir.ptr<!s32i>) -> !cir.ptr<!s32i>
 cir.func private @takesPtr(!cir.ptr<!s32i>)
