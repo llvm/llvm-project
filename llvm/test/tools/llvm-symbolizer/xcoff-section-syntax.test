@@ -2,58 +2,101 @@
 ## This tests that the (SECTION_TYPE)(+offset) syntax produces appropriate
 ## error messages for invalid inputs.
 
-# REQUIRES: system-aix
-
 ## Create a simple XCOFF object for testing.
 # RUN: yaml2obj %s --docnum=1 -o %t.xcoff
 
-## Test invalid/unsupported section type.
+## Test invalid section type.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(INVALID)(+0x10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=INVALID-TYPE
+# RUN:   FileCheck %s -DTYPE=INVALID --check-prefix=INVALID-TYPE
 
 ## Test unsupported section type (BSS is not supported).
 # RUN: llvm-symbolizer --obj=%t.xcoff '(BSS)(+0x10)' 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=INVALID-TYPE
+# RUN:   FileCheck %s -DTYPE=BSS --check-prefix=INVALID-TYPE
+
+## Test invalid section type containing a dash.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(-)(+0x10)' 2>&1 | \
+# RUN:   FileCheck %s -DTYPE=- --check-prefix=INVALID-TYPE
+
+# INVALID-TYPE: error: '([[TYPE]])(+0x10)': unknown or unsupported section type "[[TYPE]]" in section-relative address
 
 ## Test missing '+' sign.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(0x10)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-PLUS
 
+# NO-PLUS: error: '(TEXT)(0x10)': section-relative offset "0x10" must start with '+'
+
+## Test empty offset value.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)()' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-OFFSET
+
+# EMPTY-OFFSET: error: '(TEXT)()': section-relative offset "" must start with '+'
+
+## Test invalid offset: decimal digits followed by non-decimal hex characters,
+## e.g. 123abc. getAsInteger with base 0 requires the whole string to be valid,
+## so this is rejected.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+123abc)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET-HEXSUFFIX
+
+# INVALID-OFFSET-HEXSUFFIX: error: '(TEXT)(+123abc)': invalid offset "+123abc" in section-relative address
+
+## Test invalid offset: hex prefix 'x' without leading '0', e.g. xabc.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xabc)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET-MISSINGZERO
+
+# INVALID-OFFSET-MISSINGZERO: error: '(TEXT)(+xabc)': invalid offset "+xabc" in section-relative address
+
+## Test invalid offset: hex value with non-hex letter, e.g. 0xdefg.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0xdefg)' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-OFFSET-NONHEX
+
+# INVALID-OFFSET-NONHEX: error: '(TEXT)(+0xdefg)': invalid offset "+0xdefg" in section-relative address
+
+## Test that a leading-zero value (0123) is treated as octal (decimal 83) by
+## getAsInteger(0,...), not as decimal 123. The resolved address TEXT_BASE +
+## 83 = 0x153 has no symbol, so the output shows "??".
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0123)' | \
+# RUN:   FileCheck %s --check-prefix=OCTAL
+
+# OCTAL: ??
+
 ## Test invalid offset value.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+xyz)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=INVALID-OFFSET
+
+# INVALID-OFFSET: error: '(TEXT)(+xyz)': invalid offset "+xyz" in section-relative address
 
 ## Test empty section type.
 # RUN: llvm-symbolizer --obj=%t.xcoff '()(+0x10)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=EMPTY-SECTION
 
-# INVALID-TYPE: unknown or unsupported section type
-# NO-PLUS: section-relative offset must start with '+'
-# INVALID-OFFSET: invalid offset in section-relative address
-# EMPTY-SECTION: unknown section type: empty section type
+# EMPTY-SECTION: error: '()(+0x10)': empty section type in section-relative address
 
 ## Test error: section type not found (DATA section doesn't exist).
 # RUN: yaml2obj %s --docnum=2 -o %t.nodata.xcoff
 # RUN: llvm-symbolizer --obj=%t.nodata.xcoff '(DATA)(+0x0)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NO-SECTION
 
-# NO-SECTION: section type not found in XCOFF object
+# NO-SECTION: error: '(DATA)(+0x0)': no 'DATA' section found in XCOFF object
 
-## Test error: multiple sections of same type.
-# RUN: yaml2obj %s --docnum=3 -o %t.multi.xcoff
+## Test error: multiple sections of the same type.
+## Reuse Document 1 with -D SECT2_FLAGS=STYP_TEXT to add a second TEXT section.
+# RUN: yaml2obj %s --docnum=1 -D SECT2_FLAGS=STYP_TEXT -o %t.multi.xcoff
 # RUN: llvm-symbolizer --obj=%t.multi.xcoff '(TEXT)(+0x0)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MULTI-SECTION
 
-# MULTI-SECTION: multiple sections of the same type found in XCOFF object
+# MULTI-SECTION: error: '(TEXT)(+0x0)': multiple 'TEXT' sections found in XCOFF object
 
-## Test error: section type syntax on non-XCOFF object.
-# RUN: yaml2obj %s --docnum=4 -o %t.elf
+## Test error: section type syntax with non-XCOFF object.
+# RUN: yaml2obj %s --docnum=3 -o %t.elf
 # RUN: llvm-symbolizer --obj=%t.elf '(TEXT)(+0x0)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=NON-XCOFF
 
-# NON-XCOFF: section type syntax is only supported for XCOFF objects
+# NON-XCOFF: error: '(TEXT)(+0x0)': section type syntax is only supported for XCOFF objects
 
-## Document 1: Basic XCOFF object with TEXT and DATA sections.
+## Document 1: Basic XCOFF object with TEXT and DATA sections, plus an optional
+## extra section whose type is controlled by [[SECT2_FLAGS]] (default: STYP_INFO).
+## Pass -D SECT2_FLAGS=STYP_TEXT when building to create a second TEXT section,
+## which triggers the "multiple sections" error.
 --- !XCOFF
 FileHeader:
   MagicNumber: 0x1DF
@@ -66,8 +109,12 @@ Sections:
     Address: 0x200
     Flags:   [ STYP_DATA ]
     SectionData: "00000000"
+  - Name:    .extra
+    Address: 0x300
+    Flags:   [ [[SECT2_FLAGS=STYP_INFO]] ]
+    SectionData: "00000000"
 Symbols:
-  - Name:            foo
+  - Name:            .foo
     Value:           0x100
     Section:         .text
     StorageClass:    C_EXT
@@ -87,7 +134,7 @@ Sections:
     Flags:   [ STYP_TEXT ]
     SectionData: "4E800020"
 Symbols:
-  - Name:            foo
+  - Name:            .foo
     Value:           0x100
     Section:         .text
     StorageClass:    C_EXT
@@ -97,44 +144,13 @@ Symbols:
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
 
-## Document 3: XCOFF object with multiple TEXT sections.
---- !XCOFF
-FileHeader:
-  MagicNumber: 0x1DF
-Sections:
-  - Name:    .text
-    Address: 0x100
-    Flags:   [ STYP_TEXT ]
-    SectionData: "4E800020"
-  - Name:    .text2
-    Address: 0x200
-    Flags:   [ STYP_TEXT ]
-    SectionData: "4E800020"
-Symbols:
-  - Name:            foo
-    Value:           0x100
-    Section:         .text
-    StorageClass:    C_EXT
-    NumberOfAuxEntries: 1
-    AuxEntries:
-      - Type:                 AUX_CSECT
-        SymbolType:           XTY_SD
-        StorageMappingClass:  XMC_PR
-
-## Document 4: ELF object (non-XCOFF) for testing error case.
+## Document 3: ELF object (non-XCOFF) for testing the format-check error.
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
 Sections:
   - Name:    .text
     Type:    SHT_PROGBITS
-    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address: 0x1000
     Content: "C3"
-Symbols:
-  - Name:    foo
-    Section: .text
-    Value:   0x1000

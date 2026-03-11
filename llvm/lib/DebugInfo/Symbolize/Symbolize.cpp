@@ -27,6 +27,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
@@ -50,6 +51,47 @@ LLVMSymbolizer::LLVMSymbolizer(const Options &Opts)
       BIDFetcher(std::make_unique<BuildIDFetcher>(Opts.DebugFileDirectory)) {}
 
 LLVMSymbolizer::~LLVMSymbolizer() = default;
+
+Expected<uint64_t>
+LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModuleName,
+                                        XCOFF::SectionTypeFlags SectionTypeFlag,
+                                        StringRef SectionTypeName) {
+  // Check the cache first.
+  auto CacheKey = std::make_pair(ModuleName.str(), SectionTypeFlag);
+  auto It = XCOFFSectionBaseCache.find(CacheKey);
+  if (It != XCOFFSectionBaseCache.end())
+    return It->second;
+
+  Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
+      object::createBinary(ModuleName);
+  if (!BinaryOrErr)
+    return BinaryOrErr.takeError();
+
+  const auto *XCOFFObj =
+      dyn_cast<object::XCOFFObjectFile>(BinaryOrErr->getBinary());
+  if (!XCOFFObj)
+    return createStringError(
+        "section type syntax is only supported for XCOFF objects");
+
+  std::optional<uint64_t> SectionBase;
+  for (const object::SectionRef &Section : XCOFFObj->sections()) {
+    DataRefImpl SecRef = Section.getRawDataRefImpl();
+    int32_t Flags = XCOFFObj->getSectionFlags(SecRef);
+    if ((Flags & 0xFFFF) != SectionTypeFlag)
+      continue;
+    if (SectionBase)
+      return createStringError("multiple '" + SectionTypeName +
+                               "' sections found in XCOFF object");
+    SectionBase = Section.getAddress();
+  }
+
+  if (!SectionBase)
+    return createStringError("no '" + SectionTypeName +
+                             "' section found in XCOFF object");
+
+  XCOFFSectionBaseCache.emplace(CacheKey, *SectionBase);
+  return *SectionBase;
+}
 
 template <typename T>
 Expected<DILineInfo>

@@ -1,33 +1,37 @@
 ## Test section-relative address syntax for XCOFF.
-## The syntax (SECTION_TYPE)(+offset) represents: offset from section base.
+## The syntax (SECTION_TYPE)(+offset) represents the offset from section base.
 ## Only TEXT and DATA section types are supported.
-
-# REQUIRES: system-aix
 
 ## Create XCOFF object with TEXT section at address 0x100 and DATA at 0x200.
 # RUN: yaml2obj %s --docnum=1 -o %t.xcoff
 
 ## Test 1: Symbolize function using TEXT section-relative offset.
-## foo is at 0x100 (TEXT base) + 0x0 offset.
+## .foo is at 0x100 (TEXT base) + 0x0 offset.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x0)' | FileCheck %s --check-prefix=TEXT-FOO
 
-# TEXT-FOO: foo
+# TEXT-FOO: .foo
 # TEXT-FOO-NEXT: ??:0:0
 
 ## Test 2: Symbolize function at offset within TEXT section.
-## bar is at 0x100 (TEXT base) + 0x4 offset = 0x104.
+## .bar is at 0x100 (TEXT base) + 0x4 offset = 0x104.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x4)' | FileCheck %s --check-prefix=TEXT-BAR
 
-# TEXT-BAR: bar
+# TEXT-BAR: .bar
 # TEXT-BAR-NEXT: ??:0:0
 
-## Test 3: Symbolize global variable using DATA section-relative offset.
-## global_var is at 0x200 (DATA base) + 0x0 offset.
-# RUN: llvm-symbolizer --obj=%t.xcoff 'DATA (DATA)(+0x0)' | FileCheck %s --check-prefix=DATA-VAR
+## Test 3: Symbolize global constant using TEXT section-relative offset.
+## .my_const is at 0x100 (TEXT base) + 0x8 offset = 0x108 (XMC_RO data in text).
+# RUN: llvm-symbolizer --obj=%t.xcoff 'DATA (TEXT)(+0x8)' | FileCheck %s --check-prefix=TEXT-CONST
+
+# TEXT-CONST: .my_const
+
+## Test 4: Symbolize global variable using DATA section-relative offset.
+## global_var is at 0x200 (DATA base) + 0x4 offset = 0x204.
+# RUN: llvm-symbolizer --obj=%t.xcoff 'DATA (DATA)(+0x4)' | FileCheck %s --check-prefix=DATA-VAR
 
 # DATA-VAR: global_var
 
-## Test 4: Verify decimal offset works.
+## Test 5: Verify decimal offset works.
 # RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+4)' | FileCheck %s --check-prefix=TEXT-BAR
 
 ## XCOFF object with TEXT section at 0x100 and DATA section at 0x200.
@@ -38,12 +42,16 @@ Sections:
   - Name:            .text
     Address:         0x100
     Flags:           [ STYP_TEXT ]
-    SectionData:     "4E8000204E800020"  # Two blr instructions (4 bytes each)
+    # Two blr instructions (4 bytes each) at 0x100 and 0x104, then 4 bytes of
+    # read-only constant data (.my_const) at 0x108.
+    SectionData:     "4E8000204E8000200000002A"
   - Name:            .data
     Address:         0x200
     Flags:           [ STYP_DATA ]
-    SectionData:     "0000002A"  # 32-bit value 42
+    # 4 bytes of padding then global_var at 0x204.
+    SectionData:     "000000000000002A"
 Symbols:
+  # .foo csect (XTY_SD): the function itself, as produced by -ffunction-sections.
   - Name:            .foo
     Value:           0x100
     Section:         .text
@@ -51,17 +59,9 @@ Symbols:
     NumberOfAuxEntries: 1
     AuxEntries:
       - Type:                 AUX_CSECT
-        SymbolType:           XTY_LD
-        StorageMappingClass:  XMC_PR
-  - Name:            foo
-    Value:           0x100
-    Section:         .text
-    StorageClass:    C_EXT
-    NumberOfAuxEntries: 1
-    AuxEntries:
-      - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
+  # .bar csect (XTY_SD): second function in its own csect.
   - Name:            .bar
     Value:           0x104
     Section:         .text
@@ -69,19 +69,21 @@ Symbols:
     NumberOfAuxEntries: 1
     AuxEntries:
       - Type:                 AUX_CSECT
-        SymbolType:           XTY_LD
+        SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
-  - Name:            bar
-    Value:           0x104
+  # .my_const csect (XTY_SD, XMC_RO): read-only constant in TEXT section.
+  - Name:            .my_const
+    Value:           0x108
     Section:         .text
     StorageClass:    C_EXT
     NumberOfAuxEntries: 1
     AuxEntries:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
-        StorageMappingClass:  XMC_PR
+        StorageMappingClass:  XMC_RO
+  # global_var csect at DATA+0x4 (non-zero offset to show DATA offsets work).
   - Name:            global_var
-    Value:           0x200
+    Value:           0x204
     Section:         .data
     StorageClass:    C_EXT
     NumberOfAuxEntries: 1

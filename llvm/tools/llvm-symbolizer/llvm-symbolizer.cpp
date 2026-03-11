@@ -25,11 +25,9 @@
 #include "llvm/DebugInfo/Symbolize/MarkupFilter.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
-#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -46,17 +44,10 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
-#include <iostream>
-#include <map>
 #include <string>
 
 using namespace llvm;
 using namespace symbolize;
-
-// Cache for XCOFF section base addresses to avoid re-opening binaries.
-// Key: (ModulePath, SectionTypeFlag), Value: SectionBaseAddress
-static std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>
-    XCOFFSectionBaseCache;
 
 namespace {
 enum ID {
@@ -167,10 +158,10 @@ static Error makeStringError(StringRef Msg) {
   return make_error<StringError>(Msg, inconvertibleErrorCode());
 }
 
-// Helper function to get XCOFF section type flag from string.
-// Only TEXT and DATA are supported since:
+// Only TEXT and DATA section types are supported in XCOFF section-relative
+// syntax since:
 // - These are the only sections mapped by the AIX process map (procmap).
-// - BSS addresses are relative to DATA section base.
+// - BSS addresses are relative to the DATA section base.
 // - Thread-local sections (TDATA, TBSS) cannot be symbolized from runtime
 //   addresses.
 static std::optional<XCOFF::SectionTypeFlags>
@@ -181,92 +172,27 @@ parseXCOFFSectionType(StringRef TypeStr) {
       .Default(std::nullopt);
 }
 
-// Find the base VMA of the unique section matching the given type for XCOFF.
-// The syntax (SECTION_TYPE)(+offset) represents an offset from the section
-// base, so we return the section's base address to compute: VMA = base +
-// offset. This function verifies there is exactly one section of the given
-// type, as multiple sections of the same type would make the address ambiguous.
+// Resolve a section-relative address of the form (SECTION_TYPE)(+offset) to an
+// absolute VMA for symbolization. Looks up the base address of the unique
+// section of the given type in the XCOFF object at ModulePath, then returns
+// SectionBase + Offset as the absolute VMA.
 static Expected<uint64_t>
-getXCOFFSectionBaseAddress(const object::XCOFFObjectFile *XCOFFObj,
-                           XCOFF::SectionTypeFlags TypeFlag) {
-  std::optional<uint64_t> SectionBase;
-
-  for (const object::SectionRef &Section : XCOFFObj->sections()) {
-    DataRefImpl SecRef = Section.getRawDataRefImpl();
-    int32_t Flags = XCOFFObj->getSectionFlags(SecRef);
-
-    if ((Flags & 0xFFFF) == TypeFlag) {
-      if (SectionBase)
-        return createStringError(
-            "multiple sections of the same type found in XCOFF object");
-      SectionBase = Section.getAddress();
-    }
-  }
-
-  if (!SectionBase)
-    return createStringError("section type not found in XCOFF object");
-
-  return *SectionBase;
-}
-
-static Expected<uint64_t> validateSectionType(StringRef ModulePath,
-                                              StringRef SectionType,
-                                              uint64_t &Offset,
-                                              LLVMSymbolizer &Symbolizer) {
-  // Parse the section type string
+resolveXCOFFSectionAddress(StringRef ModulePath, StringRef SectionType,
+                           uint64_t Offset, LLVMSymbolizer &Symbolizer) {
   std::optional<XCOFF::SectionTypeFlags> SectionTypeFlag =
       parseXCOFFSectionType(SectionType);
   if (!SectionTypeFlag)
-    return createStringError("unknown or unsupported section type: " +
-                             SectionType.str());
+    return createStringError("unknown or unsupported section type \"" +
+                             SectionType.str() +
+                             "\" in section-relative address");
 
-  // Get the module info to verify the module exists and is valid.
-  Expected<SymbolizableModule *> ModuleOrErr =
-      Symbolizer.getOrCreateModuleInfo(ModulePath);
-  if (!ModuleOrErr)
-    return ModuleOrErr.takeError();
-
-  // Check cache for section base address.
-  std::pair<std::string, XCOFF::SectionTypeFlags> CacheKey =
-      std::make_pair(ModulePath.str(), *SectionTypeFlag);
-  std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>::iterator
-      CacheIt = XCOFFSectionBaseCache.find(CacheKey);
-  if (CacheIt != XCOFFSectionBaseCache.end()) {
-    Offset = CacheIt->second + Offset;
-    return object::SectionedAddress::UndefSection;
-  }
-
-  // Not in cache - open binary and compute section base.
-  Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
-      object::createBinary(ModulePath);
-  if (!BinaryOrErr)
-    return BinaryOrErr.takeError();
-
-  object::Binary *Binary = BinaryOrErr->getBinary();
-  const object::XCOFFObjectFile *XCOFFObj =
-      dyn_cast<object::XCOFFObjectFile>(Binary);
-  if (!XCOFFObj)
-    return createStringError(
-        "section type syntax is only supported for XCOFF objects");
-
-  // Get the base VMA of the section matching the type
   Expected<uint64_t> SectionBaseOrErr =
-      getXCOFFSectionBaseAddress(XCOFFObj, *SectionTypeFlag);
+      Symbolizer.getXCOFFSectionAddress(ModulePath, *SectionTypeFlag,
+                                        SectionType);
   if (!SectionBaseOrErr)
     return SectionBaseOrErr.takeError();
 
-  uint64_t SectionBase = *SectionBaseOrErr;
-
-  // Cache the section base for future lookups.
-  XCOFFSectionBaseCache[CacheKey] = SectionBase;
-
-  // Convert section-relative offset to absolute VMA
-  // VMA = section_base + offset
-  Offset = SectionBase + Offset;
-
-  // Return UndefSection - XCOFF symbolizer doesn't support SectionedAddress,
-  // so we use absolute VMA addressing instead.
-  return object::SectionedAddress::UndefSection;
+  return *SectionBaseOrErr + Offset;
 }
 
 static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
@@ -359,37 +285,43 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
         AddrSpec.consume_front_insensitive("+0x");
   }
 
-  // Check for section-relative address syntax: (SECTION_TYPE)(+0x0)
-   if (AddrSpec.starts_with("(")) {
-     size_t FirstClose = AddrSpec.find(')');
-     if (FirstClose != StringRef::npos && FirstClose + 1 < AddrSpec.size() &&
-         AddrSpec[FirstClose + 1] == '(') {
-       size_t SecondOpen = FirstClose + 1;
-       size_t SecondClose = AddrSpec.find(')', SecondOpen);
-       if (SecondClose != StringRef::npos) {
-         // Extract section type from first parentheses
-         SectionType = AddrSpec.substr(1, FirstClose - 1);
+  // Check for section-relative address syntax: (SECTION_TYPE)(+offset)
+  if (AddrSpec.starts_with("(")) {
+    size_t FirstClose = AddrSpec.find(')');
+    if (FirstClose != StringRef::npos && FirstClose + 1 < AddrSpec.size() &&
+        AddrSpec[FirstClose + 1] == '(') {
+      size_t SecondOpen = FirstClose + 1;
+      size_t SecondClose = AddrSpec.find(')', SecondOpen);
+      if (SecondClose != StringRef::npos) {
+        // Extract section type from first parentheses.
+        SectionType = AddrSpec.substr(1, FirstClose - 1);
 
-         // Validate that section type is not empty
-         if (SectionType.empty())
-           return makeStringError("unknown section type: empty section type");
+        if (SectionType.empty())
+          return makeStringError(
+              "empty section type in section-relative address");
 
-         // Extract offset from second parentheses
-         StringRef OffsetPart = AddrSpec.substr(SecondOpen + 1, SecondClose - SecondOpen - 1);
+        // Extract offset string from second parentheses.
+        StringRef OffsetStr =
+            AddrSpec.substr(SecondOpen + 1, SecondClose - SecondOpen - 1);
 
-         // The offset should start with '+'
-         if (!OffsetPart.consume_front("+"))
-           return makeStringError("section-relative offset must start with '+'");
+        // The offset must start with '+'.
+        if (!OffsetStr.starts_with("+"))
+          return makeStringError(
+              "section-relative offset \"" + OffsetStr +
+              "\" must start with '+'");
 
-         // Parse the offset - auto-detect base (0x prefix = hex, otherwise decimal)
-         if (OffsetPart.getAsInteger(0, Offset))
-           return makeStringError("invalid offset in section-relative address");
+        StringRef OffsetValue = OffsetStr.drop_front(1);
+        // Parse the offset value; auto-detect base (0x prefix = hex,
+        // otherwise decimal).
+        if (OffsetValue.getAsInteger(0, Offset))
+          return makeStringError("invalid offset \"" + OffsetStr +
+                                 "\" in section-relative address");
 
-         Symbol = StringRef();
-         return Error::success();
-       }
-     }
-   }
+        Symbol = StringRef();
+        return Error::success();
+      }
+    }
+  }
 
   // If address specification is a number, treat it as a module offset.
   if (!AddrSpec.getAsInteger(IsAddr2Line ? 16 : 0, Offset)) {
@@ -510,18 +442,19 @@ static void symbolizeInput(const opt::InputArgList &Args,
     return;
   }
 
-  // Validate section index from section type if specified
-  uint64_t SectionIndex = object::SectionedAddress::UndefSection;
+  // If a section-relative address was parsed, resolve it to an absolute VMA.
   if (!SectionType.empty() && !ModuleName.empty()) {
-    auto SectionIndexOrErr = validateSectionType(ModuleName, SectionType, Offset, Symbolizer);
-    if (!SectionIndexOrErr) {
-      handleAllErrors(SectionIndexOrErr.takeError(), [&](const ErrorInfoBase &EI) {
-        printError(EI, InputString);
-      });
+    auto AbsoluteVMAOrErr =
+        resolveXCOFFSectionAddress(ModuleName, SectionType, Offset, Symbolizer);
+    if (!AbsoluteVMAOrErr) {
+      handleAllErrors(AbsoluteVMAOrErr.takeError(),
+                      [&](const ErrorInfoBase &EI) {
+                        printError(EI, InputString);
+                      });
       printUnknownLineInfo(ModuleName, Printer);
       return;
     }
-    SectionIndex = *SectionIndexOrErr;
+    Offset = *AbsoluteVMAOrErr;
   }
 
   bool ShouldInline = Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line);
@@ -530,13 +463,14 @@ static void symbolizeInput(const opt::InputArgList &Args,
     if (!Args.hasArg(OPT_no_debuginfod))
       enableDebuginfod(Symbolizer, Args);
     std::string BuildIDStr = toHex(BuildID);
-    // Note: Section type resolution is not supported for BuildID-based lookup
+    // Note: Section type resolution is not supported for BuildID-based lookup.
     executeCommand(BuildIDStr, BuildID, Cmd, Symbol, Offset, AdjustVMA,
                    ShouldInline, Style, Symbolizer, Printer,
-                    object::SectionedAddress::UndefSection);
+                   object::SectionedAddress::UndefSection);
   } else {
     executeCommand(ModuleName, ModuleName, Cmd, Symbol, Offset, AdjustVMA,
-ShouldInline, Style, Symbolizer, Printer, SectionIndex);
+                   ShouldInline, Style, Symbolizer, Printer,
+                   object::SectionedAddress::UndefSection);
   }
 }
 
