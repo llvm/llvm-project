@@ -1463,9 +1463,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   SmallVector<VPReductionPHIRecipe *, 4> Phis;
   for (VPRecipeBase &Phi :
        Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-        auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (PhiR && RecurrenceDescriptor::isFindLastRecurrenceKind(
-                     PhiR->getRecurrenceKind()))
+                    PhiR->getRecurrenceKind()))
       Phis.push_back(PhiR);
   }
 
