@@ -244,6 +244,25 @@ const RegisterType *Arm64RegisterTypeDetector::DetectFPSRType(uint64_t hwcap,
   return &fpsr_flags;
 }
 
+const RegisterType *Arm64RegisterTypeDetector::DetectX0Type(uint64_t hwcap,
+                                                              uint64_t hwcap2,
+                                                              uint64_t hwcap3) {
+  (void)hwcap;
+  (void)hwcap2;
+  (void)hwcap3;
+
+  static RegisterTypeFlags x0_flags_lhs("x0_flags_lhs", 8, {
+      {"w", 16, 63}, {"x", 0, 15}});
+  static RegisterTypeFlags x0_flags_rhs("x0_flags_rhs", 8, {
+      {"y", 48, 63}, {"z", 0, 47}});
+
+  static RegisterTypeUnion x0_union(
+      "x0_union",
+      {{"lhs", &x0_flags_lhs}, {"rhs", &x0_flags_rhs}});
+
+  return &x0_union;
+}
+
 const RegisterType *Arm64RegisterTypeDetector::DetectCPSRType(uint64_t hwcap,
                                                               uint64_t hwcap2,
                                                               uint64_t hwcap3) {

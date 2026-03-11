@@ -14,6 +14,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/RegisterTypeBuilder.h"
 #include "lldb/Target/RegisterTypeFlags.h"
+#include "lldb/Target/RegisterTypeUnion.h"
 #include "lldb/Target/Target.h"
 
 namespace lldb_private {
@@ -87,6 +88,10 @@ private:
   CompilerType BuildFlagsType(const RegisterTypeFlags &flags_info,
                               uint32_t register_byte_size,
                               lldb::TypeSystemClangSP type_system);
+
+  CompilerType BuildUnionType(const RegisterTypeUnion &union_info,
+               uint32_t register_byte_size,
+               lldb::TypeSystemClangSP type_system);
 
   // This is created the first time a register type is requested, then handed
   // to the type system. We keep a reference to it so we can add more layouts

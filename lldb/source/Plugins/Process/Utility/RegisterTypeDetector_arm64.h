@@ -67,6 +67,8 @@ private:
                                             uint64_t hwcap3);
   static const RegisterType *DetectFPMRType(uint64_t hwcap, uint64_t hwcap2,
                                             uint64_t hwcap3);
+  static const RegisterType *DetectX0Type(uint64_t hwcap, uint64_t hwcap2,
+                                            uint64_t hwcap3);
   static const RegisterType *
   DetectGCSFeaturesType(uint64_t hwcap, uint64_t hwcap2, uint64_t hwcap3);
   static const RegisterType *DetectPOREL0Type(uint64_t hwcap, uint64_t hwcap2,
@@ -79,7 +81,7 @@ private:
     llvm::StringRef m_name;
     const RegisterType *m_type;
     DetectorFn m_detector;
-  } m_registers[9] = {
+  } m_registers[10] = {
       RegisterEntry("cpsr", 4, DetectCPSRType),
       RegisterEntry("fpsr", 4, DetectFPSRType),
       RegisterEntry("fpcr", 4, DetectFPCRType),
@@ -89,6 +91,7 @@ private:
       RegisterEntry("gcs_features_enabled", 8, DetectGCSFeaturesType),
       RegisterEntry("gcs_features_locked", 8, DetectGCSFeaturesType),
       RegisterEntry("por_el0", 8, DetectPOREL0Type),
+      RegisterEntry("x0", 8, DetectX0Type),
   };
 
   // Becomes true once field detection has been run for all registers.
