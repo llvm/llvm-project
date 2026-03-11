@@ -86,8 +86,6 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case X86ISD::INSERTQI:
   case X86ISD::EXTRQI:
     // result #0 must have type v2i64, but has type v16i8/v8i16
-  case X86ISD::CMPCCXADD:
-    // operand #4 must have type i8, but has type i32
     return;
   }
 

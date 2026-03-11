@@ -52,6 +52,10 @@ struct enable_if<true, T> { typedef T type; };
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::type;
 
+template <class T> struct remove_const { using type = T; };
+template <class T> struct remove_const<const T> { using type = T; };
+template <class T> using remove_const_t = typename remove_const<T>::type;
+
 template <class T> struct remove_cv { using type = T; };
 template <class T> struct remove_cv<const T> { using type = T; };
 template <class T> struct remove_cv<volatile T> { using type = T; };
