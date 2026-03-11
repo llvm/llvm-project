@@ -39,10 +39,12 @@ template <> inline const bool __is_character_or_bool_v<char32_t> = true;
 // clang-format on
 
 template <class _Tp>
-inline const bool __is_signed_integer_v = is_integral_v<_Tp> && is_signed_v<_Tp> && !__is_character_or_bool_v<_Tp>;
+inline const bool __is_signed_integer_v =
+    is_integral<_Tp>::value && is_signed<_Tp>::value && !__is_character_or_bool_v<_Tp>;
 
 template <class _Tp>
-inline const bool __is_unsigned_integer_v = is_integral_v<_Tp> && is_unsigned_v<_Tp> && !__is_character_or_bool_v<_Tp>;
+inline const bool __is_unsigned_integer_v =
+    is_integral<_Tp>::value && is_unsigned<_Tp>::value && !__is_character_or_bool_v<_Tp>;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
