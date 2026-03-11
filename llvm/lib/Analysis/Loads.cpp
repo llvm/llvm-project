@@ -55,7 +55,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
 
         // Dereferenceable information from assumptions is only valid if the
         // value cannot be freed between the assumption and use.
-        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, CtxI)) &&
+        if ((!PtrCanBeFreed || willNotFreeOrSyncBetween(Assume, CtxI)) &&
             RK.AttrKind == Attribute::Dereferenceable)
           DerefRK = std::max(DerefRK, RK);
         IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();

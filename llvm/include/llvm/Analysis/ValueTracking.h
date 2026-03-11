@@ -632,7 +632,7 @@ LLVM_ABI bool isValidAssumeForContext(const Instruction *I,
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
 /// memory and the function is marked as NoSync. The latter ensures the current
 /// function cannot arrange for another thread to free on its behalf.
-LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
+LLVM_ABI bool willNotFreeOrSyncBetween(const Instruction *Assume,
                                  const Instruction *CtxI);
 
 enum class OverflowResult {
@@ -821,11 +821,8 @@ inline bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
   return isGuaranteedNotToBePoison(V, AC, &*CtxI, DT, Depth);
 }
 
-// Return true if this is an atomic which has an ordering stronger than
-// unordered.  Note that this is different than the predicate we use in
-// Attributor.  Here we chose to be conservative and consider monotonic
-// operations potentially synchronizing.  We generally don't do much with
-// monotonic operations, so this is simply risk reduction.
+/// Returns true if this is an atomic which has an ordering stronger than
+/// unordered.
 bool isOrderedAtomic(const Instruction *I);
 
 /// Returns true if V cannot be undef, but may be poison.

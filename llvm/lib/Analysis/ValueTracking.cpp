@@ -702,7 +702,7 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
-bool llvm::willNotFreeBetween(const Instruction *Assume,
+bool llvm::willNotFreeOrSyncBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to make sure the current function cannot arrange for
   // another thread to free on its behalf and to check if there
@@ -711,9 +711,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (I.isVolatile()) {
+      if (I.isVolatile())
         return false;
-      }
 
       // An ordered atomic may synchronize.
       if (llvm::isOrderedAtomic(&I))
@@ -729,8 +728,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
       // Non volatile memset/memcpy/memmoves are nosync
       if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-        if (MI->isVolatile())
-          return false;
+        return false;
     }
     return true;
   };
