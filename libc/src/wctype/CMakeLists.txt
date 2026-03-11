@@ -9,6 +9,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  iswcntrl
+  SRCS
+    iswcntrl.cpp
+  HDRS
+    iswcntrl.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
   iswdigit
   SRCS
     iswdigit.cpp
@@ -16,4 +27,49 @@ add_entrypoint_object(
     iswdigit.h
   DEPENDS
     libc.src.__support.wctype_utils    
+)
+
+add_entrypoint_object(
+  iswgraph
+  SRCS
+    iswgraph.cpp
+  HDRS
+    iswgraph.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswlower
+  SRCS
+    iswlower.cpp
+  HDRS
+    iswlower.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswspace
+  SRCS
+    iswspace.cpp
+  HDRS
+    iswspace.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswblank
+  SRCS
+    iswblank.cpp
+  HDRS
+    iswblank.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
 )

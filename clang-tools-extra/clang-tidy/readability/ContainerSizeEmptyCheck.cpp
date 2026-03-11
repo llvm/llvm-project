@@ -94,7 +94,7 @@ AST_MATCHER(QualType, isIntegralType) {
 }
 
 AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
-              clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
+              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   const UserDefinedLiteral::LiteralOperatorKind LOK =
       Node.getLiteralOperatorKind();
   if (LOK == UserDefinedLiteral::LOK_Template ||
@@ -107,8 +107,7 @@ AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
 }
 
 AST_MATCHER_P(CXXMethodDecl, hasCanonicalDecl,
-              clang::ast_matchers::internal::Matcher<CXXMethodDecl>,
-              InnerMatcher) {
+              ast_matchers::internal::Matcher<CXXMethodDecl>, InnerMatcher) {
   return InnerMatcher.matches(*Node.getCanonicalDecl(), Finder, Builder);
 }
 
@@ -300,9 +299,9 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                                         ReplacementText);
   } else if (BinaryOp) { // Determine the correct transformation.
     const auto *LiteralLHS =
-        llvm::dyn_cast<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts());
+        dyn_cast<IntegerLiteral>(BinaryOp->getLHS()->IgnoreImpCasts());
     const auto *LiteralRHS =
-        llvm::dyn_cast<IntegerLiteral>(BinaryOp->getRHS()->IgnoreImpCasts());
+        dyn_cast<IntegerLiteral>(BinaryOp->getRHS()->IgnoreImpCasts());
     const bool ContainerIsLHS = !LiteralLHS;
 
     uint64_t Value = 0;

@@ -381,6 +381,11 @@ void XeGPUBlockingPass::runOnOperation() {
   populateXeGPUUnrollPatterns(patterns, options);
   vector::populateVectorUnrollPatterns(patterns, vectorOptions);
 
+  // Note: The pattern driver does op folding as well and clean up.
+  // But intermediate insert/extract strided slice ops with
+  // unrealized conversion cast ops in the middle does not get
+  // cleaned up in this step. One more round of folding is needed
+  // after the walk to resolve those unrealized conversion cast ops.
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {
@@ -405,4 +410,9 @@ void XeGPUBlockingPass::runOnOperation() {
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
   });
+
+  // One more round of folding to clean up the intermediate
+  // insert/extract strided slice ops.
+  RewritePatternSet emptyPatterns(ctx);
+  (void)applyPatternsGreedily(op, std::move(emptyPatterns));
 }

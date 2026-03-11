@@ -39,6 +39,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   InvalidEnumDefaultInitializationCheck.cpp
   UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
+  StdExceptionBaseclassCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp

@@ -3602,6 +3602,47 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
+  let summary = "Delete address representing an array";
+  let description = [{
+    `cir.delete_array` operation deletes an array. For example, `delete[] ptr;`
+    will be translated to `cir.delete_array %ptr`.
+
+    The `delete_fn` attribute specifies the operator delete function to call.
+    The `delete_params` attribute describes the parameters needed by the
+    operator delete call.
+    The `element_dtor` attribute, when present, specifies the destructor to call
+    on each array element before deallocation.
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$address,
+    FlatSymbolRefAttr:$delete_fn,
+    CIR_UsualDeleteParamsAttr:$delete_params,
+    OptionalAttr<FlatSymbolRefAttr>:$element_dtor
+  );
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$address,
+                   "mlir::FlatSymbolRefAttr":$delete_fn,
+                   "cir::UsualDeleteParamsAttr":$delete_params), [{
+      build($_builder, $_state, address, delete_fn, delete_params,
+            /*element_dtor=*/mlir::FlatSymbolRefAttr{});
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    $address `:` qualified(type($address)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
+}
+
+//===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
@@ -3979,7 +4020,35 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
   }];
 }
 
-// TODO: MemMoveOp
+def CIR_MemMoveOp : CIR_MemOp<"libc.memmove"> {
+  let summary = "Equivalent to libc's `memmove`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memmove` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    similiar to `cir.libc.memcpy` but accounts for overlapping memory.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a record:
+      %2 = cir.const #cir.int<2> : !u32i
+      cir.libc.memmove %2 bytes from %arr to %record : !cir.ptr<!void>, !u64i
+    ```
+  }];
+
+  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` qualified(type($dst)) `,` type($len)
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // MemSetOp
