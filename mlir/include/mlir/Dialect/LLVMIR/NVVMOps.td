@@ -1974,26 +1974,25 @@ def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
 
 class NVVM_ConvertFPx2ToF4x2Op<string srcType>
     : NVVM_Op<"convert."#!tolower(srcType)#"x2.to.f4x2"> {
-  let summary = "Convert a pair of "#srcType#" inputs to F4x2";
+  let summary = "Convert an " # !tolower(srcType) # "x2 input to f4x2";
   let description = [{
-    This Op converts each of the given }]#srcType#[{ inputs to the specified 
-    F4x2 type.
+    This Op converts each of the given }]#srcType#[{ inputs in an }]#!tolower
+    (srcType)#[{x2 vector to the specified fp4 type.
     The result `dst` is returned as an i8 type where the converted values are 
-    packed such that the value converted from `a` is stored in the upper 4 bits 
-    of `dst` and the value converted from `b` is stored in the lower 4 bits of 
-    `dst`.
+    packed such that the value converted from the first element of `a` is 
+    stored in the lower 4 bits of `dst` and the value converted from the second 
+    element of `a` is stored in the upper 4 bits of `dst`.
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction.
     }];
-  let hasVerifier = 1;
   let results = (outs I8:$dst);
   let arguments = (ins
-      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$a,
+      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
       DefaultValuedAttr<BoolAttr, "false">:$relu,
-      TypeAttr:$dstTy);
+      TypeAttrOf<F4E2M1FN>:$dstTy);
 
   let assemblyFormat =
-      "$a attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`";
+      "$src attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
 
   let extraClassDeclaration = [{
     static NVVM::IDArgPair
@@ -2056,30 +2055,35 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
 
 class NVVM_ConvertFPx2ToF6x2Op<string srcType>
     : NVVM_Op<"convert."#!tolower(srcType)#"x2.to.f6x2"> {
-  let summary = "Convert a pair of "#srcType#" inputs to F6x2";
+  let summary = "Convert an " # !tolower(srcType) # "x2 input to f6x2";
   let description = [{
-    This Op converts each of the given }]#srcType#[{ inputs to the specified 
-    F6x2 type.
-    The result `dst` is represented as a vector type(vector<2xi8>). Each 
-    converted value is stored as an i8 element in the vector.
+    This Op converts each of the given }]#srcType#[{ inputs in an }]#!tolower
+    (srcType)#[{x2 vector to the specified fp6 type. The result `dst` is 
+    represented either as an i16 type or as a vector of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` with 2 MSB bits padded with zeros and the value 
+    converted from the second element of `a` is stored in the upper 8 bits of 
+    `dst` with 2 MSB bits padded with zeros.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector with 2 MSB bits padded with zeros.
     The `relu` attribute, when set, lowers to the '.relu' variant of
     the cvt instruction.
   }];
 
-  let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$a,
+      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
       DefaultValuedAttr<BoolAttr, "false">:$relu,
-      TypeAttr:$dstTy);
-  let assemblyFormat = "$a attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`";
+      TypeAttrOf<AnyTypeOf<[F6E2M3FN, F6E3M2FN]>>:$dstTy);
+  let assemblyFormat = "$src attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
   let extraClassDeclaration = [{
     static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy, bool hasRelu);
   }];
 
   string llvmBuilder = [{
     auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2185,15 +2189,15 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let summary = "Convert a pair of bf16 inputs to f8x2";
   let description = [{
     This Op converts the given bf16 inputs in a bf16x2 vector to the specified 
-    f8 type.
-    The result `dst` is represented as an i16 type or as a vector
-    of two i8 types.
-    If `dst` is returned as an i16 type, the converted values from `a`
-    are packed such that the value converted from the first element of `a`
-    is stored in the upper 8 bits of `dst` and the value converted from the
-    second element of `a` is stored in the lower 8 bits of `dst`.
+    f8 type. The result `dst` is represented either as a packed i16 type or as 
+    a vector of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` with 2 MSB bits padded with zeros and the value 
+    converted from the second element of `a` is stored in the upper 8 bits of 
+    `dst` with 2 MSB bits padded with zeros.
     If `dst` is returned as a vector type, each converted value is stored as an 
-    i8 element in the vector.
+    i8 element in the vector with 2 MSB bits padded with zeros.
     The `rnd` and `sat` attributes specify the rounding and saturation modes 
     respectively.
 
@@ -2203,12 +2207,12 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    VectorOfLengthAndType<[2], [BF16]>:$a,
+    VectorOfLengthAndType<[2], [BF16]>:$src,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu,
-    TypeAttr:$dstTy);
-  let assemblyFormat = "$a attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`";
+    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E4M3FN, F8E5M2]>>:$dstTy);
+  let assemblyFormat = "$src attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`";
   
   let extraClassDeclaration = [{
     static llvm::Intrinsic::ID getIntrinsicID(mlir::Type dstTy,
@@ -2218,7 +2222,7 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2267,11 +2271,20 @@ def NVVM_ConvertF32x2ToS2F6x2Op : NVVM_Op<"convert.f32x2.to.s2f6x2"> {
   let summary = "Convert a pair of f32 inputs to S2F6x2";
   let description = [{
     This Op converts each of the given f32 inputs to the
-    S2F6x2 type. The result `dst` can be an I16 or vector<2xi8>.
+    S2F6x2 type. The result `dst` can be either a packed i16 type or a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from `a` is stored in the upper 8 bits of `dst` 
+    and the value converted from `b` is stored in the lower 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
     The `relu` attribute, when set, lowers to the '.relu' variant
-    of the cvt instruction. The optional scaling-factor for the
-    conversion is provided through the operand `scaleFactor`.
-    Only `ue8m0` is supported as the type of the scale-factor currently.
+    of the cvt instruction.
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
@@ -2299,19 +2312,31 @@ def NVVM_ConvertF32x2ToS2F6x2Op : NVVM_Op<"convert.f32x2.to.s2f6x2"> {
 def NVVM_ConvertBF16x2ToS2F6x2Op : NVVM_Op<"convert.bf16x2.to.s2f6x2"> {
   let summary = "Convert a pair of BF16 inputs to S2F6x2";
   let description = [{
-    This Op converts each of the given BF16 inputs to the
-    S2F6x2 type. The result `dst` can be an I16 or vector<2xi8>.
+    This Op converts each of the given BF16 inputs in a bf16x2 vector to the
+    S2F6x2 type. The result `dst` can be either a packed i16 type or a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` and the value converted from the second element of 
+    `a` is stored in the upper 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
     The `relu` attribute, when set, lowers to the '.relu' variant
     of the cvt instruction.
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-      VectorOfLengthAndType<[2], [BF16]>:$a,
+      VectorOfLengthAndType<[2], [BF16]>:$src,
       Optional<I16>:$scaleFactor,
       DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat =
-      "$a (`,` $scaleFactor^)? attr-dict `:` type($a) `->` type($dst)";
+      "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `->` type($dst)";
   let extraClassDeclaration = [{
     static IDArgPair getIntrinsicIDAndArgs(Operation &op,
       LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
@@ -2328,32 +2353,29 @@ def NVVM_ConvertBF16x2ToS2F6x2Op : NVVM_Op<"convert.bf16x2.to.s2f6x2"> {
   }];
 }
 
-def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_Op<"convert.s2f6x2.to.bf16x2"> {
+def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_SingleResultIntrinsicOp<"convert.s2f6x2.to.bf16x2", [], "$dst"> {
   let summary = "Convert s2f6x2 to bf16x2";
   let description = [{
-    This Op converts the given s2f6x2 to bf16x2 values.
+    This Op converts a pair of s2f6x2 inputs to bf16x2 type. The result `dst` 
+    is represented as a vector of two bf16 elements.
+
     The `relu` attribute, when set, lowers to the '.relu' variant
-    of the cvt instruction. The optional scaling-factor for the
-    conversion is provided through the operand `scaleFactor`.
-    Only `ue8m0` is supported as the type of the scale-factor currently.
+    of the cvt instruction.
+    
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
 
   let results = (outs VectorOfLengthAndType<[2], [BF16]>:$dst);
-  let arguments = (ins I16:$a,
+  let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
       Optional<I16>:$scaleFactor,
       DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
       DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat =
-      "$a (`,` $scaleFactor^)? attr-dict `:` type($a) `->` type($dst)";
-  let extraClassDeclaration = [{
-    static IDArgPair getIntrinsicIDAndArgs(Operation &op,
-      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
-    $dst = createIntrinsicCall(builder, id, args);
-  }];
+      "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `->` type($dst)";
 }
 
 //===----------------------------------------------------------------------===//

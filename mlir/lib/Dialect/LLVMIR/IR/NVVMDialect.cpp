@@ -347,32 +347,6 @@ LogicalResult ConvertF32x2ToF6x2Op::verify() {
   return success();
 }
 
-LogicalResult ConvertF16x2ToF6x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<mlir::Float6E2M3FNType, mlir::Float6E3M2FNType>(getDstTy())) {
-    return emitOpError("Only ")
-           << mlir::Float6E2M3FNType::get(ctx) << " and "
-           << mlir::Float6E3M2FNType::get(ctx)
-           << " types are supported for conversions from f16x2 to f6x2.";
-  }
-
-  return success();
-}
-
-LogicalResult ConvertBF16x2ToF6x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<mlir::Float6E2M3FNType, mlir::Float6E3M2FNType>(getDstTy())) {
-    return emitOpError("Only ")
-           << mlir::Float6E2M3FNType::get(ctx) << " and "
-           << mlir::Float6E3M2FNType::get(ctx)
-           << " types are supported for conversions from bf16x2 to f6x2.";
-  }
-
-  return success();
-}
-
 LogicalResult ConvertF32x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   using SatMode = NVVM::SaturationMode;
@@ -476,11 +450,8 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
         return success();
       })
       .Default([&](mlir::Type) -> LogicalResult {
-        return emitOpError("Only ")
-               << mlir::Float8E4M3FNType::get(ctx) << ", "
-               << mlir::Float8E5M2Type::get(ctx) << ", and "
-               << mlir::Float8E8M0FNUType::get(ctx)
-               << " types are supported for conversions from bf16x2 to f8x2.";
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF8x2Op");
+        return failure();
       });
 }
 
@@ -492,26 +463,6 @@ LogicalResult ConvertF32x2ToF4x2Op::verify() {
            << mlir::Float4E2M1FNType::get(ctx)
            << " type is supported for conversions from f32x2 to f4x2.";
 
-  return success();
-}
-
-LogicalResult ConvertF16x2ToF4x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<mlir::Float4E2M1FNType>(getDstTy()))
-    return emitOpError("Only ")
-           << mlir::Float4E2M1FNType::get(ctx)
-           << " type is supported for conversions from f16x2 to f4x2.";
-  return success();
-}
-
-LogicalResult ConvertBF16x2ToF4x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<mlir::Float4E2M1FNType>(getDstTy()))
-    return emitOpError("Only ")
-           << mlir::Float4E2M1FNType::get(ctx)
-           << " type is supported for conversions from bf16x2 to f4x2.";
   return success();
 }
 
@@ -4275,7 +4226,7 @@ ConvertF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF4x2Op &op,
                     : llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_satfinite;
 
   llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(op.getA()));
+  args.push_back(mt.lookupValue(op.getSrc()));
 
   return {intId, std::move(args)};
 }
@@ -4294,7 +4245,7 @@ ConvertBF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF4x2Op &op,
                     : llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_satfinite;
 
   llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(op.getA()));
+  args.push_back(mt.lookupValue(op.getSrc()));
 
   return {intId, std::move(args)};
 }
@@ -4403,7 +4354,7 @@ ConvertBF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
       llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rp_satfinite,
   };
 
-  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy) 
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
       .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
         return hasRelu
                    ? llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_relu_satfinite
@@ -4551,7 +4502,7 @@ NVVM::IDArgPair ConvertBF16x2ToS2F6x2Op::getIntrinsicIDAndArgs(
 
   // Fill the Intrinsic Args
   llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(thisOp.getA()));
+  args.push_back(mt.lookupValue(thisOp.getSrc()));
   args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
                           : builder.getInt16(0x7f7f));
   return {id, std::move(args)};
@@ -4575,9 +4526,13 @@ NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
 
   // Fill the Intrinsic Args
   llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(thisOp.getA()));
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(thisOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+  args.push_back(packedI16);
   args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
                           : builder.getInt16(0x7f7f));
+
   return {ids[idx], std::move(args)};
 }
 

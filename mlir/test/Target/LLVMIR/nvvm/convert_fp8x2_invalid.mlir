@@ -3,7 +3,7 @@
 // -----
 
 llvm.func @convert_bf16x2_to_f8x2_invalid_type(%src : vector<2xbf16>) {
-  // expected-error @below {{Only 'f8E4M3FN', 'f8E5M2', and 'f8E8M0FNU' types are supported for conversions from bf16x2 to f8x2.}}
+  // expected-error @below {{attribute 'dstTy' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type}}
   %res = nvvm.convert.bf16x2.to.f8x2 %src : vector<2xbf16> -> vector<2xi8> (f6E2M3FN)
   llvm.return
 }

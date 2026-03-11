@@ -101,81 +101,89 @@ llvm.func @convert_bf16x2_to_s2f6x2_vector_scale(%srcA : vector<2xbf16>, %scale 
 }
 
 // 1. no relu, no scale, no satfinite
-llvm.func @convert_s2f6x2_to_bf16x2(%src : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2(i16 %0) {
-  // CHECK-NEXT: %2 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %0, i16 32639)
-  // CHECK-NEXT: ret <2 x bfloat> %2
+llvm.func @convert_s2f6x2_to_bf16x2(%src : vector<2xi8>) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2(<2 x i8> %0) {
+  // CHECK-NEXT: %2 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %2, i16 32639)
+  // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 2. relu, no scale, no satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_relu(%src : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_relu(i16 %0) {
-  // CHECK-NEXT: %2 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %0, i16 32639)
-  // CHECK-NEXT: ret <2 x bfloat> %2
+llvm.func @convert_s2f6x2_to_bf16x2_relu(%src : vector<2xi8>) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_relu(<2 x i8> %0) {
+  // CHECK-NEXT: %2 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %2, i16 32639)
+  // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {relu = true} : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {relu = true} : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 3. no relu, with scale, no satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_scale(%src : i16, %scale : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale(i16 %0, i16 %1) {
-  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %0, i16 %1)
-  // CHECK-NEXT: ret <2 x bfloat> %3
+llvm.func @convert_s2f6x2_to_bf16x2_scale(%src : vector<2xi8>, %scale : i16) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale(<2 x i8> %0, i16 %1) {
+  // CHECK-NEXT: %3 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %3, i16 %1)
+  // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 4. relu, with scale, no satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_scale_relu(%src : i16, %scale : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale_relu(i16 %0, i16 %1) {
-  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %0, i16 %1)
-  // CHECK-NEXT: ret <2 x bfloat> %3
+llvm.func @convert_s2f6x2_to_bf16x2_scale_relu(%src : vector<2xi8>, %scale : i16) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale_relu(<2 x i8> %0, i16 %1) {
+  // CHECK-NEXT: %3 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %3, i16 %1)
+  // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {relu = true} : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {relu = true} : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 5. no relu, no scale, satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_satfinite(%src : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_satfinite(i16 %0) {
-  // CHECK-NEXT: %2 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %0, i16 32639)
-  // CHECK-NEXT: ret <2 x bfloat> %2
+llvm.func @convert_s2f6x2_to_bf16x2_satfinite(%src : vector<2xi8>) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_satfinite(<2 x i8> %0) {
+  // CHECK-NEXT: %2 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %2, i16 32639)
+  // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 6. relu, no scale, satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_relu_satfinite(%src : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_relu_satfinite(i16 %0) {
-  // CHECK-NEXT: %2 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %0, i16 32639)
-  // CHECK-NEXT: ret <2 x bfloat> %2
+llvm.func @convert_s2f6x2_to_bf16x2_relu_satfinite(%src : vector<2xi8>) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_relu_satfinite(<2 x i8> %0) {
+  // CHECK-NEXT: %2 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %2, i16 32639)
+  // CHECK-NEXT: ret <2 x bfloat> %3
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {relu = true, sat = #nvvm.sat_mode<satfinite>} : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {relu = true, sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 7. no relu, with scale, satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_scale_satfinite(%src : i16, %scale : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale_satfinite(i16 %0, i16 %1) {
-  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %0, i16 %1)
-  // CHECK-NEXT: ret <2 x bfloat> %3
+llvm.func @convert_s2f6x2_to_bf16x2_scale_satfinite(%src : vector<2xi8>, %scale : i16) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale_satfinite(<2 x i8> %0, i16 %1) {
+  // CHECK-NEXT: %3 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %3, i16 %1)
+  // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {sat = #nvvm.sat_mode<satfinite>} : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
 
 // 8. relu, with scale, satfinite
-llvm.func @convert_s2f6x2_to_bf16x2_scale_relu_satfinite(%src : i16, %scale : i16) -> vector<2xbf16> {
-  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale_relu_satfinite(i16 %0, i16 %1) {
-  // CHECK-NEXT: %3 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %0, i16 %1)
-  // CHECK-NEXT: ret <2 x bfloat> %3
+llvm.func @convert_s2f6x2_to_bf16x2_scale_relu_satfinite(%src : vector<2xi8>, %scale : i16) -> vector<2xbf16> {
+  // CHECK-LABEL: define <2 x bfloat> @convert_s2f6x2_to_bf16x2_scale_relu_satfinite(<2 x i8> %0, i16 %1) {
+  // CHECK-NEXT: %3 = bitcast <2 x i8> %0 to i16
+  // CHECK-NEXT: %4 = call <2 x bfloat> @llvm.nvvm.s2f6x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %3, i16 %1)
+  // CHECK-NEXT: ret <2 x bfloat> %4
   // CHECK-NEXT: }
-  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {relu = true, sat = #nvvm.sat_mode<satfinite>} : i16 -> vector<2xbf16>
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src, %scale {relu = true, sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> -> vector<2xbf16>
   llvm.return %res : vector<2xbf16>
 }
