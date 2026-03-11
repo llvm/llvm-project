@@ -3589,6 +3589,25 @@ MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
   return RC->getRegister(Idx);
 }
 
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
+                                                   bool HasSetregVGPRMSBFixup) {
+  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
+
+  constexpr unsigned VGPRMSBShift =
+      llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
+
+  auto [HwRegId, Offset, Size] =
+      Hwreg::HwregEncoding::decode(MI.getOperand(1).getImm());
+  if (HwRegId != Hwreg::ID_MODE ||
+      (!HasSetregVGPRMSBFixup && (Offset + Size) <= VGPRMSBShift))
+    return {};
+  unsigned Imm = MI.getOperand(0).getImm();
+  Imm = ((Imm >> Offset) & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
+  if (!HasSetregVGPRMSBFixup)
+    Imm &= llvm::maskTrailingOnes<unsigned>(Size);
+  return llvm::rotr<uint8_t>(static_cast<uint8_t>(Imm), /*R=*/2);
+}
+
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
 getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   static const AMDGPU::OpName VOPOps[4] = {
