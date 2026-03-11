@@ -20,18 +20,24 @@
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
 ! BOTH-SAME: (ptr {{[^%]*}}%[[ARG1:.*]], ptr {{[^%]*}}%[[ARG2:.*]], ptr {{[^%]*}}%[[ARG3:.*]])
-! RECORDS-DAG: #dbg_declare(ptr %[[ARG1]], ![[A1:.*]], !DIExpression(), !{{.*}})
-! RECORDS-DAG: #dbg_declare(ptr %[[ARG2]], ![[B1:.*]], !DIExpression(), !{{.*}})
-! RECORDS-DAG: #dbg_declare(ptr %[[ARG3]], ![[C1:.*]], !DIExpression(), !{{.*}})
+! RECORDS-DAG: store ptr %[[ARG3]], ptr %[[ARG3S:.*]],
+! RECORDS-DAG: store ptr %[[ARG2]], ptr %[[ARG2S:.*]],
+! RECORDS-DAG: store ptr %[[ARG1]], ptr %[[ARG1S:.*]],
+! RECORDS-DAG: #dbg_declare(ptr %[[ARG1S]], ![[A1:.*]], !DIExpression(DW_OP_deref), !{{.*}})
+! RECORDS-DAG: #dbg_declare(ptr %[[ARG2S]], ![[B1:.*]], !DIExpression(DW_OP_deref), !{{.*}})
+! RECORDS-DAG: #dbg_declare(ptr %[[ARG3S]], ![[C1:.*]], !DIExpression(DW_OP_deref), !{{.*}})
 ! BOTH-DAG: %[[AL2:.*]] = alloca i64
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL2]], ![[RES1:.*]], !DIExpression(), !{{.*}})
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
 ! BOTH-SAME: (ptr {{[^%]*}}%[[FN2ARG1:.*]], ptr {{[^%]*}}%[[FN2ARG2:.*]], ptr {{[^%]*}}%[[FN2ARG3:.*]])
-! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG1]], ![[A2:.*]], !DIExpression(), !{{.*}})
-! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG2]], ![[B2:.*]], !DIExpression(), !{{.*}})
-! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG3]], ![[C2:.*]], !DIExpression(), !{{.*}})
+! RECORDS-DAG: store ptr %[[FN2ARG3]], ptr %[[FN2ARG3S:.*]],
+! RECORDS-DAG: store ptr %[[FN2ARG2]], ptr %[[FN2ARG2S:.*]],
+! RECORDS-DAG: store ptr %[[FN2ARG1]], ptr %[[FN2ARG1S:.*]],
+! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG1S]], ![[A2:.*]], !DIExpression(DW_OP_deref), !{{.*}})
+! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG2S]], ![[B2:.*]], !DIExpression(DW_OP_deref), !{{.*}})
+! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG3S]], ![[C2:.*]], !DIExpression(DW_OP_deref), !{{.*}})
 ! BOTH-DAG: %[[AL3:.*]] = alloca i32
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL3]], ![[RES2:.*]], !DIExpression(), !{{.*}})
 ! BOTH-LABEL: }

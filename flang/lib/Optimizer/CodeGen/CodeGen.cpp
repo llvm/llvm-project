@@ -65,6 +65,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
@@ -246,8 +247,75 @@ public:
       if (auto varAttr =
               mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
                   fusedLoc.getMetadata())) {
-        mlir::LLVM::DbgDeclareOp::create(rewriter, memRef.getLoc(), memRef,
-                                         varAttr, nullptr);
+        mlir::Value dbgMemRef = memRef;
+        mlir::LLVM::DIExpressionAttr expr = nullptr;
+        if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(memRef)) {
+          if (blockArg.getOwner() &&
+              llvm::isa_and_nonnull<mlir::FunctionOpInterface>(
+                  blockArg.getOwner()->getParentOp())) {
+            // When emitting DbgDeclareOp on an llvm function argument
+            // directly, the debug info for the variable may not be accessible
+            // for the whole scope of the function. That is because such SSA
+            // value will usually be maintained physical registers as long as
+            // it is used by the program, and LLVM will not maintain these
+            // registers or spill the value to the stack just because it was
+            // used in a DbgDeclareOp. This means that the DWARF generated for
+            // this variable will be only valid and accessible as long as these
+            // registers are maintained, and will appear as "<optimized out>"
+            // afterwards. While this is the expected behavior above O0, this
+            // is not desired at O0 where a user should be able to print info
+            // about the function arguments at any point of the functions.
+            //
+            // To ensure the argument addresses are always accessible at O0,
+            // their address must be placed on the stack in the prologue of the
+            // function and the debug info should use this stack location (with
+            // an implicit dereference to get the variable address and not the
+            // stack address) like this is usually done for C/C++ function
+            // arguments. At O0, llvm will not get rid of this stack allocation
+            // even after its last use, and the debug info will be valid for the
+            // entire function scope.
+            //
+            // The drawback is that when breaking on the procedure symbol, it
+            // is now needed that the debugger stops after the prologue that is
+            // setting up the stack and copying the argument addresses to it.
+            // Otherwise, since the DWARF is pointing to these stack locations,
+            // the debugger will print invalid values for the arguments when
+            // breaking on the function.  This is unfortunate because debuggers
+            // will identify prologue in different ways depending on debugger
+            // versions, so it is not hard to ensure all debuggers will print
+            // accurate info for the arguments on entry.  LLVM will emit a
+            // prologue_end flag to help the debugger to identify prologues,
+            // but it is for instance only used by gdb starting from version
+            // 13.1, and earlier version will use a gdb heuristic to identify
+            // "prologue in Fortran procedure", and this heuristic does not
+            // work well with flang generated code and will usually fallback on
+            // the first function instruction.
+            mlir::OpBuilder::InsertionGuard guard(rewriter);
+            // The location of the alloca and store is set to unknown and they
+            // are placed directly at the function entry so that LLVM will
+            // consider these instructions as belonging to the prologue and
+            // will set the "prologue_end" flag on the first instruction with
+            // line location after that.
+            // Note that in flang, the evaluation of Fortran specification
+            // expressions are not part of the DWARF prologue. Since it involves
+            // potentially complex user code, we want to give the ability to the
+            // user to step in them. Operation generated for specification
+            // expressions are given the line number of the specification
+            // expression appears.
+            mlir::Location unknownLoc = rewriter.getUnknownLoc();
+            auto alloca = genAllocaAndAddrCastWithType(
+                unknownLoc, memRef.getType(), defaultAlign, rewriter);
+            rewriter.setInsertionPointAfter(alloca.getDefiningOp());
+            rewriter.create<mlir::LLVM::StoreOp>(unknownLoc, memRef, alloca);
+            dbgMemRef = alloca;
+            auto derefOp = mlir::LLVM::DIExpressionElemAttr::get(
+                rewriter.getContext(), llvm::dwarf::DW_OP_deref, {});
+            expr = mlir::LLVM::DIExpressionAttr::get(rewriter.getContext(),
+                                                     {derefOp});
+          }
+        }
+        mlir::LLVM::DbgDeclareOp::create(rewriter, memRef.getLoc(), dbgMemRef,
+                                         varAttr, expr);
       }
     }
     rewriter.replaceOp(declareOp, memRef);
