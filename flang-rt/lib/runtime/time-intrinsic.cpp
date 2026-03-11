@@ -285,14 +285,17 @@ static void DateAndTimeUnavailable(Fortran::runtime::Terminator &terminator,
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() >= 8 &&
-            typeCode &&
+        values->rank() == 1 && typeCode &&
             typeCode->first == Fortran::common::TypeCategory::Integer);
     // DATE_AND_TIME values argument must have decimal range > 4. Do not accept
     // KIND 1 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
-    for (std::size_t i = 0; i < 8; ++i) {
+    auto extent{static_cast<std::size_t>(values->GetDimension(0).Extent())};
+    if (extent > 8u) {
+      extent = 8;
+    }
+    for (std::size_t i{0}; i < extent; ++i) {
       Fortran::runtime::ApplyIntegerKind<StoreNegativeHugeAt, void>(
           kind, terminator, *values, i);
     }
@@ -442,17 +445,19 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
     RUNTIME_CHECK(terminator,
-        values->rank() == 1 && values->GetDimension(0).Extent() >= 8 &&
-            typeCode &&
+        values->rank() == 1 && typeCode &&
             typeCode->first == Fortran::common::TypeCategory::Integer);
     // DATE_AND_TIME values argument must have decimal range > 4. Do not accept
     // KIND 1 here.
     int kind{typeCode->second};
     RUNTIME_CHECK(terminator, kind != 1);
-    auto storeIntegerAt = [&](std::size_t atIndex, std::int64_t value) {
-      Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
-          void>(kind, terminator, *values, atIndex, value);
-    };
+    auto extent{static_cast<std::size_t>(values->GetDimension(0).Extent())};
+    auto storeIntegerAt{[&](std::size_t atIndex, std::int64_t value) {
+      if (atIndex < extent) {
+        Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt,
+            void>(kind, terminator, *values, atIndex, value);
+      }
+    }};
     storeIntegerAt(0, localTime.tm_year + 1900);
     storeIntegerAt(1, localTime.tm_mon + 1);
     storeIntegerAt(2, localTime.tm_mday);

@@ -1,4 +1,4 @@
-; RUN: llc --mtriple=s390x-ibm-zos --show-mc-encoding < %s | FileCheck %s
+; RUN: llc --mtriple=s390x-ibm-zos --show-mc-encoding -emit-gnuas-syntax-on-zos=1 < %s | FileCheck %s
 
 define internal signext i32 @caller() {
 entry:

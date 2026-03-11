@@ -37,6 +37,7 @@ struct ParamOffset {
   bool IsPtr;
 };
 
+class EvalIDScope;
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
 public:
@@ -73,7 +74,20 @@ public:
 
   /// Evalute \param E and if it can be evaluated to a string literal,
   /// run strlen() on it.
-  bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
+  std::optional<uint64_t> evaluateStrlen(State &Parent, const Expr *E);
+
+  /// If \param E evaluates to a pointer the number of accessible bytes
+  /// past the pointer is estimated in \param Result as if evaluated by
+  /// the builtin function __builtin_object_size. This is a best effort
+  /// approximation, when Kind & 2 == 0 the object size is less
+  /// than or equal to the estimated size, when Kind & 2 == 1 the
+  /// true value is greater than or equal to the estimated size.
+  /// When Kind & 1 == 1 only bytes belonging to the same subobject
+  /// as the one referred to by E are considered, when Kind & 1 == 0
+  /// bytes belonging to the same storage (stack, heap allocation,
+  /// global variable) are considered.
+  std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
+                                                unsigned Kind);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -154,6 +168,7 @@ public:
   static bool isUnevaluatedBuiltin(unsigned ID);
 
 private:
+  friend class EvalIDScope;
   /// Runs a function.
   bool Run(State &Parent, const Function *Func);
 
@@ -174,6 +189,16 @@ private:
   unsigned IntWidth;
   unsigned LongWidth;
   unsigned LongLongWidth;
+};
+
+class EvalIDScope {
+public:
+  EvalIDScope(Context &Ctx) : Ctx(Ctx), OldID(Ctx.EvalID) { ++Ctx.EvalID; }
+  ~EvalIDScope() { Ctx.EvalID = OldID; }
+
+private:
+  Context &Ctx;
+  const unsigned OldID;
 };
 
 } // namespace interp

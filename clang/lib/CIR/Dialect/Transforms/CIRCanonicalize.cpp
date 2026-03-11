@@ -33,39 +33,6 @@ namespace mlir {
 
 namespace {
 
-/// Removes branches between two blocks if it is the only branch.
-///
-/// From:
-///   ^bb0:
-///     cir.br ^bb1
-///   ^bb1:  // pred: ^bb0
-///     cir.return
-///
-/// To:
-///   ^bb0:
-///     cir.return
-struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
-  using OpRewritePattern<BrOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BrOp op,
-                                PatternRewriter &rewriter) const final {
-    Block *block = op.getOperation()->getBlock();
-    Block *dest = op.getDest();
-
-    if (isa<cir::LabelOp, cir::IndirectBrOp>(dest->front()))
-      return failure();
-    // Single edge between blocks: merge it.
-    if (block->getNumSuccessors() == 1 &&
-        dest->getSinglePredecessor() == block) {
-      rewriter.eraseOp(op);
-      rewriter.mergeBlocks(dest, block);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 //===----------------------------------------------------------------------===//
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
@@ -85,18 +52,15 @@ struct CIRCanonicalizePass
   void runOnOperation() override;
 };
 
-void populateCIRCanonicalizePatterns(RewritePatternSet &patterns) {
-  // clang-format off
-  patterns.add<
-    RemoveRedundantBranches
-  >(patterns.getContext());
-  // clang-format on
-}
-
 void CIRCanonicalizePass::runOnOperation() {
-  // Collect rewrite patterns.
   RewritePatternSet patterns(&getContext());
-  populateCIRCanonicalizePatterns(patterns);
+
+  // Collect canonicalization patterns from CIR ops.
+  mlir::Dialect *cir = getContext().getLoadedDialect<cir::CIRDialect>();
+  for (mlir::RegisteredOperationName op :
+       getContext().getRegisteredOperations())
+    if (&op.getDialect() == cir)
+      op.getCanonicalizationPatterns(patterns, &getContext());
 
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;

@@ -23,7 +23,7 @@ transformations and analysis, and a compact serialized form suitable for storage
 and transport. The different forms all describe the same semantic content. This
 document describes the human-readable textual form.
 
-[TOC]
+\[TOC\]
 
 ## High-Level Structure
 
@@ -180,7 +180,6 @@ string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,
 starting with a `//` and going until the end of the line.
 
-
 ### Top level Productions
 
 ```
@@ -188,8 +187,8 @@ starting with a `//` and going until the end of the line.
 toplevel := (operation | attribute-alias-def | type-alias-def)*
 ```
 
-The production `toplevel` is the top level production that is parsed by any parsing
-consuming the MLIR syntax. [Operations](#operations),
+The production `toplevel` is the top level production that is parsed by any
+parsing consuming the MLIR syntax. [Operations](#operations),
 [Attribute aliases](#attribute-value-aliases), and [Type aliases](#type-aliases)
 can be declared on the toplevel.
 
@@ -233,7 +232,7 @@ body. Particular operations may further limit which identifiers are in scope in
 their regions. For instance, the scope of values in a region with
 [SSA control flow semantics](#control-flow-and-ssacfg-regions) is constrained
 according to the standard definition of
-[SSA dominance](https://en.wikipedia.org/wiki/Dominator_\(graph_theory\)).
+[SSA dominance](<https://en.wikipedia.org/wiki/Dominator_(graph_theory)>).
 Another example is the [IsolatedFromAbove trait](Traits/#isolatedfromabove),
 which restricts directly accessing values defined in containing regions.
 
@@ -257,12 +256,12 @@ between, and within, different dialects.
 
 A few of the dialects supported by MLIR:
 
-*   [Affine dialect](Dialects/Affine.md)
-*   [Func dialect](Dialects/Func.md)
-*   [GPU dialect](Dialects/GPU.md)
-*   [LLVM dialect](Dialects/LLVM.md)
-*   [SPIR-V dialect](Dialects/SPIR-V.md)
-*   [Vector dialect](Dialects/Vector.md)
+- [Affine dialect](Dialects/Affine.md)
+- [Func dialect](Dialects/Func.md)
+- [GPU dialect](Dialects/GPU.md)
+- [LLVM dialect](Dialects/LLVM.md)
+- [SPIR-V dialect](Dialects/SPIR-V.md)
+- [Vector dialect](Dialects/Vector.md)
 
 ### Target specific operations
 
@@ -319,8 +318,8 @@ identified by a unique string (e.g. `dim`, `tf.Conv2d`, `x86.repmovsb`,
 has storage for [properties](#properties), has a dictionary of
 [attributes](#attributes), has zero or more successors, and zero or more
 enclosed [regions](#regions). The generic printing form includes all these
-elements literally, with a function type to indicate the types of the
-results and operands.
+elements literally, with a function type to indicate the types of the results
+and operands.
 
 Example:
 
@@ -424,12 +423,12 @@ func.func @simple(i64, i1) -> i64 {
 **Context:** The "block argument" representation eliminates a number of special
 cases from the IR compared to traditional "PHI nodes are operations" SSA IRs
 (like LLVM). For example, the
-[parallel copy semantics](https://ieeexplore.ieee.org/document/4907656)
-of SSA is immediately apparent, and function arguments are no longer a special
-case: they become arguments to the entry block
-[[more rationale](Rationale/Rationale.md/#block-arguments-vs-phi-nodes)]. Blocks
-are also a fundamental concept that cannot be represented by operations because
-values defined in an operation cannot be accessed outside the operation.
+[parallel copy semantics](https://ieeexplore.ieee.org/document/4907656) of SSA
+is immediately apparent, and function arguments are no longer a special case:
+they become arguments to the entry block
+\[[more rationale](Rationale/Rationale.md/#block-arguments-vs-phi-nodes)\].
+Blocks are also a fundamental concept that cannot be represented by operations
+because values defined in an operation cannot be accessed outside the operation.
 
 ## Regions
 
@@ -440,8 +439,9 @@ region is not imposed by the IR. Instead, the containing operation defines the
 semantics of the regions it contains. MLIR currently defines two kinds of
 regions: [SSACFG regions](#control-flow-and-ssacfg-regions), which describe
 control flow between blocks, and [Graph regions](#graph-regions), which do not
-require control flow between blocks. The kinds of regions within an operation are
-described using the [RegionKindInterface](Interfaces.md/#regionkindinterfaces).
+require control flow between blocks. The kinds of regions within an operation
+are described using the
+[RegionKindInterface](Interfaces.md/#regionkindinterfaces).
 
 Regions do not have a name or an address, only the blocks contained in a region
 do. Regions must be contained within operations and have no type or attributes.
@@ -463,10 +463,9 @@ arguments must match the result types of the function signature. Similarly, the
 function arguments must match the types and count of the region arguments. In
 general, operations with regions can define these correspondences arbitrarily.
 
-An *entry block* is a block with no label and no arguments that may occur at
-the beginning of a region. It enables a common pattern of using a region to
-open a new scope.
-
+An *entry block* is a block with no label and no arguments that may occur at the
+beginning of a region. It enables a common pattern of using a region to open a
+new scope.
 
 ### Value Scoping
 
@@ -478,8 +477,7 @@ the enclosing region, if any. By default, operations inside a region can
 reference values defined outside of the region whenever it would have been legal
 for operands of the enclosing operation to reference those values, but this can
 be restricted using traits, such as
-[OpTrait::IsolatedFromAbove](Traits/#isolatedfromabove), or a custom
-verifier.
+[OpTrait::IsolatedFromAbove](Traits/#isolatedfromabove), or a custom verifier.
 
 Example:
 
@@ -707,9 +705,9 @@ dialect-type-contents ::= dialect-type-body
                             | [^\[<({\]>)}\0]+
 ```
 
-Dialect types are generally specified in an opaque form, where the contents
-of the type are defined within a body wrapped with the dialect namespace
-and `<>`. Consider the following examples:
+Dialect types are generally specified in an opaque form, where the contents of
+the type are defined within a body wrapped with the dialect namespace and `<>`.
+Consider the following examples:
 
 ```mlir
 // A tensorflow string type.
@@ -733,7 +731,8 @@ part of the syntax into an equivalent, but lighter weight form:
 !foo.something<abcd>
 ```
 
-See [here](DefiningDialects/AttributesAndTypes.md) to learn how to define dialect types.
+See [here](DefiningDialects/AttributesAndTypes.md) to learn how to define
+dialect types.
 
 ### Builtin Types
 
@@ -761,29 +760,28 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`cmpi` operation](Dialects/ArithOps.md/#arithcmpi-arithcmpiop). Each operation has an
-attribute dictionary, which associates a set of attribute names to attribute
-values. MLIR's builtin dialect provides a rich set of
+[`cmpi` operation](Dialects/ArithOps.md/#arithcmpi-arithcmpiop). Each operation
+has an attribute dictionary, which associates a set of attribute names to
+attribute values. MLIR's builtin dialect provides a rich set of
 [builtin attribute values](#builtin-attribute-values) out of the box (such as
 arrays, dictionaries, strings, etc.). Additionally, dialects can define their
 own [dialect attribute values](#dialect-attribute-values).
 
 For dialects which haven't adopted properties yet, the top-level attribute
-dictionary attached to an operation has special semantics. The attribute
-entries are considered to be of two different kinds based on whether their
-dictionary key has a dialect prefix:
+dictionary attached to an operation has special semantics. The attribute entries
+are considered to be of two different kinds based on whether their dictionary
+key has a dialect prefix:
 
--   *inherent attributes* are inherent to the definition of an operation's
-    semantics. The operation itself is expected to verify the consistency of
-    these attributes. An example is the `predicate` attribute of the
-    `arith.cmpi` op. These attributes must have names that do not start with a
-    dialect prefix.
+- *inherent attributes* are inherent to the definition of an operation's
+  semantics. The operation itself is expected to verify the consistency of these
+  attributes. An example is the `predicate` attribute of the `arith.cmpi` op.
+  These attributes must have names that do not start with a dialect prefix.
 
--   *discardable attributes* have semantics defined externally to the operation
-    itself, but must be compatible with the operations's semantics. These
-    attributes must have names that start with a dialect prefix. The dialect
-    indicated by the dialect prefix is expected to verify these attributes. An
-    example is the `gpu.container_module` attribute.
+- *discardable attributes* have semantics defined externally to the operation
+  itself, but must be compatible with the operations's semantics. These
+  attributes must have names that start with a dialect prefix. The dialect
+  indicated by the dialect prefix is expected to verify these attributes. An
+  example is the `gpu.container_module` attribute.
 
 Note that attribute values are allowed to themselves be dictionary attributes,
 but only the top-level dictionary attribute attached to the operation is subject
@@ -851,15 +849,16 @@ and `<>`. Consider the following examples:
 #foo<"a123^^^" + bar>
 ```
 
-Dialect attributes that are simple enough may use a prettier format, which unwraps
-part of the syntax into an equivalent, but lighter weight form:
+Dialect attributes that are simple enough may use a prettier format, which
+unwraps part of the syntax into an equivalent, but lighter weight form:
 
 ```mlir
 // A string attribute.
 #foo.string<"">
 ```
 
-See [here](DefiningDialects/AttributesAndTypes.md) on how to define dialect attribute values.
+See [here](DefiningDialects/AttributesAndTypes.md) on how to define dialect
+attribute values.
 
 ### Builtin Attribute Values
 

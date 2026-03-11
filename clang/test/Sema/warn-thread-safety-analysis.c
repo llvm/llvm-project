@@ -192,6 +192,12 @@ int main(void) {
     struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
     mutex_exclusive_lock(&mu1);  // With basic alias analysis lock through mu1 also works.
   }
+  {
+    int i = 0;
+    mutex_exclusive_lock(&mu1);
+    struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
+    i++;
+  }
   // Cleanup through cast alias pointer in a for-loop; a variant of this pattern
   // appears in the Linux kernel for generic scoped guard macros.
   for (int i = (mutex_exclusive_lock(foo_.mu_), 0),

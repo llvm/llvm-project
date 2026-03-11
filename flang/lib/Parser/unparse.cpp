@@ -511,6 +511,7 @@ public:
     common::visit(common::visitors{
                       [&](const CoarraySpec &) { Word("CODIMENSION["); },
                       [&](const ArraySpec &) { Word("DIMENSION("); },
+                      [&](const RankClause &) { Word("RANK("); },
                       [](const auto &) {},
                   },
         x.u);
@@ -519,6 +520,7 @@ public:
     common::visit(common::visitors{
                       [&](const CoarraySpec &) { Put(']'); },
                       [&](const ArraySpec &) { Put(')'); },
+                      [&](const RankClause &) { Put(')'); },
                       [](const auto &) {},
                   },
         x.u);
@@ -1512,9 +1514,7 @@ public:
       Walk(x.count);
       break;
     case format::ControlEditDesc::Kind::X:
-      if (x.count != 1) {
-        Walk(x.count);
-      }
+      Walk(x.count);
       Word("X");
       break;
     case format::ControlEditDesc::Kind::Slash:

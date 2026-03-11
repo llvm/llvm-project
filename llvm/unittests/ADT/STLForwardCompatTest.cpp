@@ -10,6 +10,7 @@
 #include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
+#include <iterator>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -604,6 +605,41 @@ TEST(STLForwardCompatTest, BindFrontBindBack) {
   EXPECT_TRUE(any_of(V, Spec0));
   EXPECT_TRUE(any_of(V, Spec1));
 }
+
+// Compile-time tests for llvm::is_sorted_constexpr
+static constexpr int CEmptyHelper[]{-1};
+static_assert(llvm::is_sorted_constexpr(std::begin(CEmptyHelper),
+                                        std::begin(CEmptyHelper)),
+              "Empty range should be sorted");
+
+static constexpr int CSingle[]{42};
+static_assert(llvm::is_sorted_constexpr(std::begin(CSingle), std::end(CSingle)),
+              "Single element range should be sorted");
+static_assert(llvm::is_sorted_constexpr(std::begin(CSingle), std::end(CSingle),
+                                        std::greater<>()),
+              "Single element range should be sorted with std::greater");
+
+static constexpr int CSorted[]{1, 2, 2, 3, 5};
+static_assert(llvm::is_sorted_constexpr(std::begin(CSorted), std::end(CSorted)),
+              "Non-descending order with duplicates should be sorted");
+static_assert(llvm::is_sorted_constexpr(std::begin(CSorted), std::end(CSorted),
+                                        std::less<>()),
+              "Explicit std::less non-descending order should be sorted");
+static_assert(!llvm::is_sorted_constexpr(std::begin(CSorted), std::end(CSorted),
+                                         std::greater<>()),
+              "Non-descending order should not be sorted by std::greater");
+
+static constexpr int CUnsorted[]{1, 3, 2, 4, 5};
+static_assert(!llvm::is_sorted_constexpr(std::begin(CUnsorted),
+                                         std::end(CUnsorted)),
+              "Unsorted range should not be sorted");
+
+static constexpr int CDesc[]{9, 7, 7, 3, 0};
+static_assert(llvm::is_sorted_constexpr(std::begin(CDesc), std::end(CDesc),
+                                        std::greater<>()),
+              "Non-ascending order with std::greater should be sorted");
+static_assert(llvm::is_sorted_constexpr(std::rbegin(CDesc), std::rend(CDesc)),
+              "Reverse iterators should be supported.");
 
 } // namespace
 } // namespace llvm

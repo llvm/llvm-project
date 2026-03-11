@@ -131,7 +131,17 @@ struct IdentTy {
 
 using __kmpc_impl_lanemask_t = LaneMaskTy;
 
-using ParallelRegionFnTy = void *;
+#ifdef __SPIRV__
+// Function pointers in SPIRV backend have a special address space 9.
+// Since function pointers are passed as regular void * pointers it is
+// necessary to annotate them with proper address space to avoid casting
+// errors during compilation.
+using FnPtrTy = void [[clang::address_space(9)]] *;
+#else
+using FnPtrTy = void *;
+#endif
+
+using ParallelRegionFnTy = FnPtrTy;
 
 using CriticalNameTy = int32_t[8];
 

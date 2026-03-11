@@ -11,6 +11,26 @@
 
 include "mlir/Pass/PassBase.td"
 
+//===----------------------------------------------------------------------===//
+// Common options shared by multiple ACC passes
+//===----------------------------------------------------------------------===//
+
+def AccDeviceTypeOption : Option<"deviceType", "device-type",
+    "mlir::acc::DeviceType", "mlir::acc::DeviceType::None",
+    "Target device type. One use case is ensuring that device_type-specific "
+    "clauses are considered. Another is device-specific specializations.",
+    [{::llvm::cl::values(
+       clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
+       clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
+       clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
+       clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
+       clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
+    }]>;
+
+//===----------------------------------------------------------------------===//
+// Pass definitions
+//===----------------------------------------------------------------------===//
+
 def LegalizeDataValuesInRegion : Pass<"openacc-legalize-data-values", "mlir::func::FuncOp"> {
   let summary = "Legalizes SSA values in compute regions with results from data clause operations";
   let description = [{
@@ -120,20 +140,16 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
        while avoiding infinite recursion through proper tracking.
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
-  let options = [
-    Option<"deviceType", "device-type", "mlir::acc::DeviceType",
-           "mlir::acc::DeviceType::None",
-           "Target device type for implicit routine generation. "
-           "Ensures that `acc routine` device_type clauses are "
-           "properly considered not just default clauses.",
-           [{::llvm::cl::values(
-              clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
-              clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
-              clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
-              clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
-              clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
-           }]>
-  ];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
+  let summary = "Copy globals with acc.declare into the GPU module";
+  let description = [{
+    Copies globals that have the `acc.declare` attribute into the GPU module so
+    that device code can reference them.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
 }
 
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
@@ -363,6 +379,18 @@ def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicaliza
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
+def ACCRecipeMaterialization : Pass<"acc-recipe-materialization", "mlir::ModuleOp"> {
+  let summary = "Materialize OpenACC private, firstprivate and reduction recipes";
+  let description = [{
+    Materializes OpenACC privatization, firstprivate and reduction recipes by
+    cloning init, copy, combiner, and destroy into the construct. Replaces recipe
+    references with materialized values (including acc.reduction_init and
+    acc.reduction_combine_region for reductions) and removes unused recipe
+    symbols.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::arith::ArithDialect"];
+}
+
 def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"> {
   let summary = "Verify values and symbols live into offload regions for legality";
   let description = [{
@@ -391,21 +419,35 @@ def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
   let options = [
-    Option<"deviceType", "device-type", "mlir::acc::DeviceType",
-           "mlir::acc::DeviceType::None",
-           "Target device type for verification. Host/multicore uses host "
-           "region checking, all others use device region checking.",
-           [{::llvm::cl::values(
-              clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
-              clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
-              clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
-              clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
-              clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
-           }]>,
+    AccDeviceTypeOption,
     Option<"softCheck", "soft-check", "bool", "false",
            "When true, illegal values are printed via LLVM_DEBUG instead of "
            "failing compilation. Useful for diagnostic purposes.">
   ];
+}
+
+def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
+  let summary = "Lower ACC compute constructs to acc.compute_region";
+  let description = [{
+    Converts ACC frontend compute constructs (`acc.parallel`, `acc.kernels`,
+    `acc.serial`) to `acc.compute_region` wrapped in `acc.kernel_environment`.
+    Converts `acc.loop` to SCF parallel/for loops with parallel dimension
+    annotations.
+
+    The pass applies two phases of pattern rewrites:
+    1. Loop conversion: `acc.loop` is converted to `scf.parallel` or `scf.for`
+       while the parent compute construct is still present (needed to determine
+       loop conversion strategy).
+    2. Compute construct conversion: `acc.parallel`, `acc.kernels`, and
+       `acc.serial` are replaced by `acc.kernel_environment` containing
+       `acc.compute_region`.
+  }];
+  let dependentDialects = [
+    "mlir::acc::OpenACCDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::scf::SCFDialect"
+  ];
+  let options = [ AccDeviceTypeOption ];
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

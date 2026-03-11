@@ -111,6 +111,7 @@ public:
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
+  Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
   bool sinkNotIntoLogicalOp(Instruction &I);
@@ -201,23 +202,6 @@ public:
 
   LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
                                  const Twine &Suffix = "");
-
-  KnownFPClass computeKnownFPClass(Value *Val, FastMathFlags FMF,
-                                   FPClassTest Interested = fcAllFlags,
-                                   const Instruction *CtxI = nullptr,
-                                   unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(
-        Val, FMF, Interested, getSimplifyQuery().getWithInstruction(CtxI),
-        Depth);
-  }
-
-  KnownFPClass computeKnownFPClass(Value *Val,
-                                   FPClassTest Interested = fcAllFlags,
-                                   const Instruction *CtxI = nullptr,
-                                   unsigned Depth = 0) const {
-    return llvm::computeKnownFPClass(
-        Val, Interested, getSimplifyQuery().getWithInstruction(CtxI), Depth);
-  }
 
   /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
   /// ignorable).
@@ -612,16 +596,19 @@ public:
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
   Value *SimplifyDemandedUseFPClass(Instruction *I, FPClassTest DemandedMask,
-                                    KnownFPClass &Known, Instruction *CxtI,
+                                    KnownFPClass &Known, const SimplifyQuery &Q,
                                     unsigned Depth = 0);
   Value *SimplifyMultipleUseDemandedFPClass(Instruction *I,
                                             FPClassTest DemandedMask,
                                             KnownFPClass &Known,
-                                            Instruction *CxtI, unsigned Depth);
+                                            const SimplifyQuery &Q,
+                                            unsigned Depth);
 
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
+
+  bool SimplifyDemandedInstructionFPClass(Instruction &Inst);
 
   /// Common transforms for add / disjoint or
   Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
@@ -805,6 +792,7 @@ public:
   Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
+  Instruction *foldSelectIntrinsic(SelectInst &SI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,
                             Value *A, Value *B, Instruction &Outer,

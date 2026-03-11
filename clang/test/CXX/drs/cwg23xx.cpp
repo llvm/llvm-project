@@ -270,7 +270,7 @@ namespace cwg2352 { // cwg2352: 10
   // lvalue of type 'const int *const * const'?
   const int * const * r;
   void *y = &(true ? p : r);
-  // expected-error@-1 {{rvalue of type 'const int *const *'}}
+  // expected-error@-1 {{cannot take the address of an rvalue of type 'const int *const *'}}
 
   // FIXME: We order these as a speculative defect resolution.
   void f(const int * const * const &r);

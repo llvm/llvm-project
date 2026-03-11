@@ -32,7 +32,7 @@
 // that we can enable SRLT for AArch64.
 //
 // The approach here is to just add the 'implicit-def' manually after rewriting
-// virtual regs -> phsyical regs. This still means that during the register
+// virtual regs -> physical regs. This still means that during the register
 // allocation process the dependences are not accurately represented in the MIR
 // and LiveIntervals, but there are several reasons why we believe this isn't a
 // problem in practice:

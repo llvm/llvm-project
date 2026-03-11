@@ -237,6 +237,7 @@ def Extension : GenericEnum, Operand<i32> {
   let NameField = "Name";
   let ValueField = "Value";
   let PrintMethod = "printExtension";
+  let UnderlyingType = "uint32_t";
 }
 
 class Extension<string name, bits<32> value> {
@@ -395,6 +396,9 @@ defm SPV_NV_shader_atomic_fp16_vector
     : ExtensionOperand<132, [EnvVulkan, EnvOpenCL]>;
 defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
 defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
+defm SPV_KHR_fma : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_masked_gather_scatter : ExtensionOperand<136, [EnvOpenCL]>;
+
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
 // SymbolicOperand entries with string mnemonics, versioning, extensions, and
@@ -570,6 +574,7 @@ defm FloatControls2
     : CapabilityOperand<6029, 0x10200, 0, [SPV_KHR_float_controls2], []>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
+defm FmaKHR : CapabilityOperand<6030, 0, 0, [SPV_KHR_fma], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
 defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], []>;
 defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
@@ -616,12 +621,14 @@ defm PredicatedIOINTEL : CapabilityOperand<6257, 0, 0, [SPV_INTEL_predicated_io]
 defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
 defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tensor_float32_conversion], []>;
+defm MaskedGatherScatterINTEL : CapabilityOperand<6427, 0, 0, [SPV_INTEL_masked_gather_scatter], []>;
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
+defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1686,7 +1693,7 @@ multiclass MemoryOperandOperand<bits<32> value, bits<32> minVersion, bits<32> ma
 
 defm None : MemoryOperandOperand<0x0, 0, 0, [], []>;
 defm Volatile : MemoryOperandOperand<0x1, 0, 0, [], []>;
-defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], []>;
+defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], [Kernel]>;
 defm Nontemporal : MemoryOperandOperand<0x4, 0, 0, [], []>;
 defm MakePointerAvailableKHR : MemoryOperandOperand<0x8, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakePointerVisibleKHR : MemoryOperandOperand<0x10, 0, 0, [], [VulkanMemoryModelKHR]>;

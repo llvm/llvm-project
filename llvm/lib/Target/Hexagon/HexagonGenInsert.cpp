@@ -1408,10 +1408,10 @@ bool HexagonGenInsert::generateInserts() {
       At = B.getFirstNonPHI();
 
     BuildMI(B, At, DL, D, NewR)
-      .addReg(IF.SrcR)
-      .addReg(IF.InsR, 0, InsS)
-      .addImm(Wdh)
-      .addImm(Off);
+        .addReg(IF.SrcR)
+        .addReg(IF.InsR, {}, InsS)
+        .addImm(Wdh)
+        .addImm(Off);
 
     MRI->clearKillFlags(IF.SrcR);
     MRI->clearKillFlags(IF.InsR);

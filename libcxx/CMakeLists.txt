@@ -649,7 +649,7 @@ target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 # will not be compiled into it, resulting in false positives.
 # For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
 string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
-if (NOT "${building_with_asan}" STREQUAL "-1")
+if ("${building_with_asan}" STREQUAL "0")
   config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
 else()
   config_define(OFF _LIBCPP_INSTRUMENTED_WITH_ASAN)

@@ -567,7 +567,7 @@ bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
   if ((MI.getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
     return false;
 
-  // Make indirect control flow changes unpredicable when SLS mitigation is
+  // Make indirect control flow changes unpredictable when SLS mitigation is
   // enabled.
   const ARMSubtarget &ST = MF->getSubtarget<ARMSubtarget>();
   if (ST.hardenSlsRetBr() && isIndirectControlFlowNotComingBack(MI))
@@ -619,6 +619,11 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
     return getInstBundleLength(MI);
+  case TargetOpcode::COPY:
+    if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
+      return 4;
+    else
+      return 2;
   case ARM::CONSTPOOL_ENTRY:
   case ARM::JUMPTABLE_INSTS:
   case ARM::JUMPTABLE_ADDRS:
@@ -888,7 +893,7 @@ ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // VMOVRRD is also a copy instruction but it requires
   // special way of handling. It is more complex copy version
   // and since that we are not considering it. For recognition
-  // of such instruction isExtractSubregLike MI interface fuction
+  // of such instruction isExtractSubregLike MI interface function
   // could be used.
   // VORRq is considered as a move only if two inputs are
   // the same register.
@@ -932,7 +937,7 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
 const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
                                                      unsigned Reg,
                                                      unsigned SubIdx,
-                                                     unsigned State) const {
+                                                     RegState State) const {
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
@@ -1012,7 +1017,7 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         if (Subtarget.hasV5TEOps()) {
           MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::STRD));
           AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
-          AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
+          AddDReg(MIB, SrcReg, ARM::gsub_1, {});
           MIB.addFrameIndex(FI).addReg(0).addImm(0).addMemOperand(MMO)
              .add(predOps(ARMCC::AL));
         } else {
@@ -1023,7 +1028,7 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .addMemOperand(MMO)
                                         .add(predOps(ARMCC::AL));
           AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
-          AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
+          AddDReg(MIB, SrcReg, ARM::gsub_1, {});
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1074,8 +1079,8 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
           MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
-          AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, {});
+          AddDReg(MIB, SrcReg, ARM::dsub_2, {});
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1106,9 +1111,9 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
           MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
-                AddDReg(MIB, SrcReg, ARM::dsub_3, 0);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, {});
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, {});
+          AddDReg(MIB, SrcReg, ARM::dsub_3, {});
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1126,13 +1131,13 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       .add(predOps(ARMCC::AL))
                                       .addMemOperand(MMO);
         MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_3, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_4, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_5, 0);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_6, 0);
-              AddDReg(MIB, SrcReg, ARM::dsub_7, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_3, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_4, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_5, {});
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_6, {});
+        AddDReg(MIB, SrcReg, ARM::dsub_7, {});
       } else
         llvm_unreachable("Unknown reg class!");
       break;
@@ -1849,7 +1854,7 @@ bool ARMBaseInstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
 
 /// shouldScheduleLoadsNear - This is a used by the pre-regalloc scheduler to
 /// determine (in conjunction with areLoadsFromSameBasePtr) if two loads should
-/// be scheduled togther. On some targets if two loads are loading from
+/// be scheduled together. On some targets if two loads are loading from
 /// addresses in the same cache line, it's better if they are scheduled
 /// together. This function takes two integers that represent the load offsets
 /// from the common base address. It returns true if it decides it's desirable
@@ -1975,7 +1980,7 @@ isProfitableToIfCvt(MachineBasicBlock &TBB,
 
   // In thumb code we often end up trading one branch for a IT block, and
   // if we are cloning the instruction can increase code size. Prevent
-  // blocks with multiple predecesors from being ifcvted to prevent this
+  // blocks with multiple predecessors from being ifcvted to prevent this
   // cloning.
   if (Subtarget.isThumb2() && TBB.getParent()->getFunction().hasMinSize()) {
     if (TBB.pred_size() != 1 || FBB.pred_size() != 1)
@@ -2007,7 +2012,7 @@ isProfitableToIfCvt(MachineBasicBlock &TBB,
       // discount it from PredCost.
       PredCost -= 1 * ScalingUpFactor;
     }
-    // The total cost is the cost of each path scaled by their probabilites
+    // The total cost is the cost of each path scaled by their probabilities
     unsigned TUnpredCost = Probability.scale(TUnpredCycles * ScalingUpFactor);
     unsigned FUnpredCost = Probability.getCompl().scale(FUnpredCycles * ScalingUpFactor);
     UnpredCost = TUnpredCost + FUnpredCost;
@@ -2162,27 +2167,6 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
   return MI;
 }
 
-bool ARMBaseInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                     SmallVectorImpl<MachineOperand> &Cond,
-                                     unsigned &TrueOp, unsigned &FalseOp,
-                                     bool &Optimizable) const {
-  assert((MI.getOpcode() == ARM::MOVCCr || MI.getOpcode() == ARM::t2MOVCCr) &&
-         "Unknown select instruction");
-  // MOVCC operands:
-  // 0: Def.
-  // 1: True use.
-  // 2: False use.
-  // 3: Condition code.
-  // 4: CPSR use.
-  TrueOp = 1;
-  FalseOp = 2;
-  Cond.push_back(MI.getOperand(3));
-  Cond.push_back(MI.getOperand(4));
-  // We can always fold a def.
-  Optimizable = true;
-  return false;
-}
-
 MachineInstr *
 ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -2243,7 +2227,7 @@ ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
   SeenMIs.erase(DefMI);
 
   // If MI is inside a loop, and DefMI is outside the loop, then kill flags on
-  // DefMI would be invalid when tranferred inside the loop.  Checking for a
+  // DefMI would be invalid when transferred inside the loop.  Checking for a
   // loop is expensive, but at least remove kill flags if they are in different
   // BBs.
   if (DefMI->getParent() != MI.getParent())
@@ -2510,7 +2494,7 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       return true;
     }
 
-    // Otherwise, pull as much of the immedidate into this ADDri/SUBri
+    // Otherwise, pull as much of the immediate into this ADDri/SUBri
     // as possible.
     unsigned RotAmt = ARM_AM::getSOImmValRotate(Offset);
     unsigned ThisImmVal = Offset & llvm::rotr<uint32_t>(0xFF, RotAmt);
@@ -5708,7 +5692,7 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
     unsigned Opcode = MI.getOpcode();
     if (Opcode == ARM::BX_RET || Opcode == ARM::MOVPCLR ||
         Opcode == ARM::SUBS_PC_LR || Opcode == ARM::tBX_RET ||
-        Opcode == ARM::tBXNS_RET) {
+        Opcode == ARM::tBXNS_RET || Opcode == ARM::t2BXAUT_RET) {
       // These instructions use LR, but it's not an (explicit or implicit)
       // operand.
       Live = true;
@@ -6323,7 +6307,7 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
   int LROffset = Auth ? Align - 4 : Align;
   CFIBuilder.buildOffset(ARM::LR, -LROffset);
   if (Auth) {
-    // Add a CFI for the location of the return adddress PAC.
+    // Add a CFI for the location of the return address PAC.
     CFIBuilder.buildOffset(ARM::RA_AUTH_CODE, -Align);
   }
 }
@@ -6404,7 +6388,7 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
       Et = std::prev(MBB.end());
 
     // We have to save and restore LR, we need to add it to the liveins if it
-    // is not already part of the set.  This is suffient since outlined
+    // is not already part of the set.  This is sufficient since outlined
     // functions only have one block.
     if (!MBB.isLiveIn(ARM::LR))
       MBB.addLiveIn(ARM::LR);

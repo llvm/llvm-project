@@ -25,10 +25,9 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I64-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
-; I64-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
-; I64-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
-; I64-NEXT:    [[IV:%.*]] = add i32 [[INDEX]], 0
+; I64-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i32> [[VEC_IND]], splat (i32 4)
+; I64-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <4 x i32> [[STEP_ADD]], splat (i32 4)
+; I64-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <4 x i32> [[STEP_ADD_2]], splat (i32 4)
 ; I64-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
 ; I64-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 2
 ; I64-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 3
@@ -64,7 +63,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I64-NEXT:    [[TMP69:%.*]] = extractelement <4 x double> [[TMP23]], i32 1
 ; I64-NEXT:    [[TMP70:%.*]] = extractelement <4 x double> [[TMP23]], i32 2
 ; I64-NEXT:    [[TMP71:%.*]] = extractelement <4 x double> [[TMP23]], i32 3
-; I64-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[IV]]
+; I64-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[INDEX]]
 ; I64-NEXT:    [[TMP25:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP5]]
 ; I64-NEXT:    [[TMP26:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP6]]
 ; I64-NEXT:    [[TMP27:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP7]]
@@ -134,7 +133,6 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I64:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX4:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; I64-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; I64-NEXT:    [[TMP75:%.*]] = add i32 [[INDEX4]], 0
 ; I64-NEXT:    [[TMP76:%.*]] = add i32 [[INDEX4]], 1
 ; I64-NEXT:    [[TMP77:%.*]] = add i32 [[INDEX4]], 2
 ; I64-NEXT:    [[TMP78:%.*]] = add i32 [[INDEX4]], 3
@@ -143,7 +141,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I64-NEXT:    [[TMP89:%.*]] = extractelement <4 x double> [[TMP79]], i32 1
 ; I64-NEXT:    [[TMP90:%.*]] = extractelement <4 x double> [[TMP79]], i32 2
 ; I64-NEXT:    [[TMP91:%.*]] = extractelement <4 x double> [[TMP79]], i32 3
-; I64-NEXT:    [[TMP84:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP75]]
+; I64-NEXT:    [[TMP84:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[INDEX4]]
 ; I64-NEXT:    [[TMP85:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP76]]
 ; I64-NEXT:    [[TMP86:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP77]]
 ; I64-NEXT:    [[TMP93:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP78]]
@@ -181,10 +179,9 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I32:       [[VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I32-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I32-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
-; I32-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
-; I32-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
-; I32-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; I32-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i32> [[VEC_IND]], splat (i32 4)
+; I32-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <4 x i32> [[STEP_ADD]], splat (i32 4)
+; I32-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <4 x i32> [[STEP_ADD_2]], splat (i32 4)
 ; I32-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 1
 ; I32-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 2
 ; I32-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 3
@@ -220,7 +217,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I32-NEXT:    [[TMP68:%.*]] = extractelement <4 x double> [[TMP55]], i32 1
 ; I32-NEXT:    [[TMP69:%.*]] = extractelement <4 x double> [[TMP55]], i32 2
 ; I32-NEXT:    [[TMP70:%.*]] = extractelement <4 x double> [[TMP55]], i32 3
-; I32-NEXT:    [[TMP15:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP3]]
+; I32-NEXT:    [[TMP15:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[INDEX]]
 ; I32-NEXT:    [[TMP16:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP4]]
 ; I32-NEXT:    [[TMP17:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP5]]
 ; I32-NEXT:    [[TMP18:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP6]]
@@ -290,7 +287,6 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I32:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX4:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; I32-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT7:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; I32-NEXT:    [[TMP74:%.*]] = add i32 [[INDEX4]], 0
 ; I32-NEXT:    [[TMP75:%.*]] = add i32 [[INDEX4]], 1
 ; I32-NEXT:    [[TMP76:%.*]] = add i32 [[INDEX4]], 2
 ; I32-NEXT:    [[TMP77:%.*]] = add i32 [[INDEX4]], 3
@@ -299,7 +295,7 @@ define void @test_store_initially_interleave(i32 %n, ptr noalias %src) #0 {
 ; I32-NEXT:    [[TMP88:%.*]] = extractelement <4 x double> [[TMP78]], i32 1
 ; I32-NEXT:    [[TMP89:%.*]] = extractelement <4 x double> [[TMP78]], i32 2
 ; I32-NEXT:    [[TMP90:%.*]] = extractelement <4 x double> [[TMP78]], i32 3
-; I32-NEXT:    [[TMP83:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP74]]
+; I32-NEXT:    [[TMP83:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[INDEX4]]
 ; I32-NEXT:    [[TMP84:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP75]]
 ; I32-NEXT:    [[TMP85:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP76]]
 ; I32-NEXT:    [[TMP92:%.*]] = getelementptr nusw { ptr, ptr, ptr }, ptr null, i32 [[TMP77]]
@@ -352,11 +348,10 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I64-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; I64-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; I64-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; I64-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; I64-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
+; I64-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; I64-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
 ; I64-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP2]]
 ; I64-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
@@ -364,7 +359,7 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I64-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP5]], align 8
 ; I64-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP6]], align 8
 ; I64-NEXT:    [[TMP11:%.*]] = load double, ptr [[TMP7]], align 8
-; I64-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP0]], 1
+; I64-NEXT:    [[TMP12:%.*]] = shl i64 [[INDEX]], 1
 ; I64-NEXT:    [[TMP13:%.*]] = shl i64 [[TMP1]], 1
 ; I64-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP2]], 1
 ; I64-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP3]], 1
@@ -399,11 +394,10 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I32-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; I32-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; I32-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; I32-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; I32-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP0]]
+; I32-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; I32-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
 ; I32-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP2]]
 ; I32-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
@@ -411,7 +405,7 @@ define void @test_store_loaded_value(ptr noalias %src, ptr noalias %dst, i32 %n)
 ; I32-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP5]], align 8
 ; I32-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP6]], align 8
 ; I32-NEXT:    [[TMP11:%.*]] = load double, ptr [[TMP7]], align 8
-; I32-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP0]], 1
+; I32-NEXT:    [[TMP12:%.*]] = shl i64 [[INDEX]], 1
 ; I32-NEXT:    [[TMP13:%.*]] = shl i64 [[TMP1]], 1
 ; I32-NEXT:    [[TMP14:%.*]] = shl i64 [[TMP2]], 1
 ; I32-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP3]], 1
@@ -462,38 +456,30 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64-NEXT:  [[ENTRY:.*]]:
 ; I64-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; I64:       [[OUTER_LOOP_LOOPEXIT:.*]]:
-; I64-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ [[RESULT:%.*]], %[[INNER_LOOP:.*]] ]
+; I64-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ [[RESULT:%.*]], [[INNER_LOOP:%.*]] ]
 ; I64-NEXT:    br label %[[OUTER_LOOP]]
 ; I64:       [[OUTER_LOOP]]:
 ; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[RESULT_LCSSA]], %[[OUTER_LOOP_LOOPEXIT]] ]
 ; I64-NEXT:    [[COND:%.*]] = call i1 @cond()
-; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; I64:       [[INNER_LOOP_PREHEADER]]:
-; I64-NEXT:    br label %[[INNER_LOOP]]
-; I64:       [[INNER_LOOP]]:
-; I64-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[INNER_LOOP]] ], [ 0, %[[INNER_LOOP_PREHEADER]] ]
-; I64-NEXT:    [[ACCUM_INNER:%.*]] = phi double [ [[MUL1:%.*]], %[[INNER_LOOP]] ], [ [[ACCUM]], %[[INNER_LOOP_PREHEADER]] ]
-; I64-NEXT:    [[TMP1:%.*]] = add i64 [[IV]], 1
-; I64-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR_C]], i64 [[TMP1]]
-; I64-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[PTR_A]], i64 [[TMP1]]
-; I64-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 8
-; I64-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[PTR_B]], i64 [[TMP7]]
+; I64-NEXT:    br label %[[VECTOR_PH:.*]]
+; I64:       [[VECTOR_PH]]:
+; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
+; I64:       [[VECTOR_BODY]]:
+; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[TMP10:%.*]] = load double, ptr [[PTR_A]], align 8
-; I64-NEXT:    [[ADD1:%.*]] = fadd double [[TMP10]], 0.000000e+00
-; I64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
-; I64-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP13]], align 8
-; I64-NEXT:    [[MUL1]] = fmul double [[ADD1]], 0.000000e+00
-; I64-NEXT:    [[MUL2:%.*]] = fmul double [[TMP15]], 0.000000e+00
-; I64-NEXT:    [[ADD2:%.*]] = fadd double [[MUL2]], 0.000000e+00
-; I64-NEXT:    [[ADD3:%.*]] = fadd double [[ADD2]], 1.000000e+00
-; I64-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP9]], align 8
-; I64-NEXT:    [[DIV:%.*]] = fdiv double [[TMP24]], [[ADD3]]
-; I64-NEXT:    [[RESULT]] = fsub double [[ACCUM_INNER]], [[DIV]]
-; I64-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP10]], 0.000000e+00
+; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
+; I64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; I64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
+; I64-NEXT:    [[IV]] = add nuw i64 [[INDEX]], 2
 ; I64-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 100
-; I64-NEXT:    br i1 [[EXITCOND]], label %[[OUTER_LOOP_LOOPEXIT]], label %[[INNER_LOOP]]
-; I64:       [[EXIT]]:
-; I64-NEXT:    ret double [[ACCUM]]
+; I64-NEXT:    br i1 [[EXITCOND]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; I64:       [[MIDDLE_BLOCK]]:
+; I64-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; I64-NEXT:    br label %[[SCALAR_PH:.*]]
+; I64:       [[SCALAR_PH]]:
 ;
 ; I32-LABEL: define double @test_load_used_by_other_load_scev(
 ; I32-SAME: ptr [[PTR_A:%.*]], ptr [[PTR_B:%.*]], ptr [[PTR_C:%.*]]) {
@@ -587,10 +573,10 @@ define double @test_load_used_by_other_load_scev_low_trip_count(ptr %ptr.a, ptr 
 ; I64-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[PTR_B]], i64 [[TMP7]]
 ; I64-NEXT:    [[TMP10:%.*]] = load double, ptr [[PTR_A]], align 8
 ; I64-NEXT:    [[ADD1:%.*]] = fadd double [[TMP10]], 0.000000e+00
-; I64-NEXT:    [[GEP_C_OFFSET:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
-; I64-NEXT:    [[LOAD_C:%.*]] = load double, ptr [[GEP_C_OFFSET]], align 8
+; I64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
+; I64-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP13]], align 8
 ; I64-NEXT:    [[MUL1]] = fmul double [[ADD1]], 0.000000e+00
-; I64-NEXT:    [[MUL2:%.*]] = fmul double [[LOAD_C]], 0.000000e+00
+; I64-NEXT:    [[MUL2:%.*]] = fmul double [[TMP15]], 0.000000e+00
 ; I64-NEXT:    [[ADD2:%.*]] = fadd double [[MUL2]], 0.000000e+00
 ; I64-NEXT:    [[ADD3:%.*]] = fadd double [[ADD2]], 1.000000e+00
 ; I64-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP9]], align 8
@@ -716,7 +702,6 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I32-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
 ; I32-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
 ; I32-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 2
 ; I32-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 3
@@ -724,7 +709,7 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 5
 ; I32-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 6
 ; I32-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 7
-; I32-NEXT:    [[TMP11:%.*]] = add i64 [[TMP3]], 1
+; I32-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 1
 ; I32-NEXT:    [[TMP12:%.*]] = add i64 [[TMP4]], 1
 ; I32-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], 1
 ; I32-NEXT:    [[TMP14:%.*]] = add i64 [[TMP6]], 1
@@ -798,7 +783,7 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[TMP88:%.*]] = load float, ptr [[TMP87]], align 4
 ; I32-NEXT:    [[TMP90:%.*]] = load float, ptr [[TMP89]], align 4
 ; I32-NEXT:    [[TMP92:%.*]] = load float, ptr [[TMP91]], align 4
-; I32-NEXT:    [[TMP93:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
+; I32-NEXT:    [[TMP93:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; I32-NEXT:    [[TMP94:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
 ; I32-NEXT:    [[TMP95:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
 ; I32-NEXT:    [[TMP96:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
@@ -864,7 +849,6 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I64-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; I64-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; I64-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; I64-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
@@ -872,7 +856,7 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I64-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 5
 ; I64-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 6
 ; I64-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 7
-; I64-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP0]], [[OFFSET]]
+; I64-NEXT:    [[TMP8:%.*]] = mul i64 [[INDEX]], [[OFFSET]]
 ; I64-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP1]], [[OFFSET]]
 ; I64-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP2]], [[OFFSET]]
 ; I64-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP3]], [[OFFSET]]
@@ -966,7 +950,7 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I64-NEXT:    store double [[TMP91]], ptr [[TMP83]], align 8
 ; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; I64-NEXT:    [[TMP92:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; I64-NEXT:    br i1 [[TMP92]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; I64-NEXT:    br i1 [[TMP92]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:
 ; I64-NEXT:    br label %[[SCALAR_PH:.*]]
 ; I64:       [[SCALAR_PH]]:
@@ -981,11 +965,10 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; I32-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; I32-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; I32-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; I32-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
-; I32-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP0]], [[OFFSET]]
+; I32-NEXT:    [[TMP4:%.*]] = mul i64 [[INDEX]], [[OFFSET]]
 ; I32-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP1]], [[OFFSET]]
 ; I32-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP2]], [[OFFSET]]
 ; I32-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP3]], [[OFFSET]]
@@ -1104,8 +1087,6 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; I64-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; I64-NEXT:    [[TMP15:%.*]] = mul i32 0, [[STEP]]
-; I64-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], [[TMP15]]
 ; I64-NEXT:    [[TMP17:%.*]] = mul i32 1, [[STEP]]
 ; I64-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], [[TMP17]]
 ; I64-NEXT:    [[TMP19:%.*]] = mul i32 2, [[STEP]]
@@ -1120,7 +1101,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    [[TMP28:%.*]] = add i32 [[OFFSET_IDX]], [[TMP27]]
 ; I64-NEXT:    [[TMP29:%.*]] = mul i32 7, [[STEP]]
 ; I64-NEXT:    [[TMP30:%.*]] = add i32 [[OFFSET_IDX]], [[TMP29]]
-; I64-NEXT:    [[TMP31:%.*]] = zext i32 [[TMP16]] to i64
+; I64-NEXT:    [[TMP31:%.*]] = zext i32 [[OFFSET_IDX]] to i64
 ; I64-NEXT:    [[TMP32:%.*]] = zext i32 [[TMP18]] to i64
 ; I64-NEXT:    [[TMP33:%.*]] = zext i32 [[TMP20]] to i64
 ; I64-NEXT:    [[TMP34:%.*]] = zext i32 [[TMP22]] to i64
@@ -1158,7 +1139,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and(ptr noalias %src, pt
 ; I64-NEXT:    store <4 x float> [[TMP62]], ptr [[TMP64]], align 4
 ; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; I64-NEXT:    [[TMP65:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; I64-NEXT:    br i1 [[TMP65]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; I64-NEXT:    br i1 [[TMP65]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:
 ; I64-NEXT:    br label %[[SCALAR_PH]]
 ; I64:       [[SCALAR_PH]]:
@@ -1228,8 +1209,6 @@ define void @replicated_load_wide_store_derived_iv_zext_and2(ptr noalias %dst, p
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; I64-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; I64-NEXT:    [[TMP7:%.*]] = mul i32 0, [[STEP]]
-; I64-NEXT:    [[TMP8:%.*]] = add i32 [[OFFSET_IDX]], [[TMP7]]
 ; I64-NEXT:    [[TMP9:%.*]] = mul i32 1, [[STEP]]
 ; I64-NEXT:    [[TMP10:%.*]] = add i32 [[OFFSET_IDX]], [[TMP9]]
 ; I64-NEXT:    [[TMP11:%.*]] = mul i32 2, [[STEP]]
@@ -1244,7 +1223,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and2(ptr noalias %dst, p
 ; I64-NEXT:    [[TMP20:%.*]] = add i32 [[OFFSET_IDX]], [[TMP19]]
 ; I64-NEXT:    [[TMP21:%.*]] = mul i32 7, [[STEP]]
 ; I64-NEXT:    [[TMP22:%.*]] = add i32 [[OFFSET_IDX]], [[TMP21]]
-; I64-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP8]] to i64
+; I64-NEXT:    [[TMP23:%.*]] = zext i32 [[OFFSET_IDX]] to i64
 ; I64-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP10]] to i64
 ; I64-NEXT:    [[TMP25:%.*]] = zext i32 [[TMP12]] to i64
 ; I64-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP14]] to i64
@@ -1282,7 +1261,7 @@ define void @replicated_load_wide_store_derived_iv_zext_and2(ptr noalias %dst, p
 ; I64-NEXT:    store <4 x float> [[TMP54]], ptr [[TMP56]], align 4
 ; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; I64-NEXT:    [[TMP57:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; I64-NEXT:    br i1 [[TMP57]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; I64-NEXT:    br i1 [[TMP57]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:
 ; I64-NEXT:    br label %[[SCALAR_PH]]
 ; I64:       [[SCALAR_PH]]:

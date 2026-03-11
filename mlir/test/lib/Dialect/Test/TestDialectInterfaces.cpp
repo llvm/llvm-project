@@ -350,8 +350,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     if (!returnOp)
       return;
 
-    // Replace the values directly with the return operands.
-    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    // Replace the values directly with the return operands. Skip if the
+    // number of operands doesn't match (e.g., when inlining into a call
+    // with a different result arity due to invalid IR mixing dialects).
+    if (returnOp.getNumOperands() != valuesToRepl.size())
+      return;
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }

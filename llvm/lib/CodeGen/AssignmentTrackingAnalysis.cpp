@@ -136,7 +136,7 @@ public:
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
     VarLoc.Expr = Expr;
-    VarLoc.DL = DL;
+    VarLoc.DL = std::move(DL);
     VarLoc.Values = R;
     SingleLocVars.emplace_back(VarLoc);
   }
@@ -147,7 +147,7 @@ public:
     VarLocInfo VarLoc;
     VarLoc.VariableID = insertVariable(Var);
     VarLoc.Expr = Expr;
-    VarLoc.DL = DL;
+    VarLoc.DL = std::move(DL);
     VarLoc.Values = R;
     VarLocsBeforeInst[Before].emplace_back(VarLoc);
   }

@@ -1643,8 +1643,9 @@ void PPCInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 
   BuildMI(MBB, MI, dl, get(OpCode), DestReg)
-    .addReg(FirstReg).addReg(SecondReg)
-    .addReg(Cond[1].getReg(), 0, SubIdx);
+      .addReg(FirstReg)
+      .addReg(SecondReg)
+      .addReg(Cond[1].getReg(), {}, SubIdx);
 }
 
 static unsigned getCRBitValue(unsigned CRBit) {
@@ -3004,17 +3005,31 @@ bool PPCInstrInfo::shouldClusterMemOps(
 unsigned PPCInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (Opcode == PPC::INLINEASM || Opcode == PPC::INLINEASM_BR) {
+  switch (Opcode) {
+  case PPC::INLINEASM:
+  case PPC::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
-  } else if (Opcode == TargetOpcode::STACKMAP) {
+  }
+  case TargetOpcode::STACKMAP: {
     StackMapOpers Opers(&MI);
     return Opers.getNumPatchBytes();
-  } else if (Opcode == TargetOpcode::PATCHPOINT) {
+  }
+  case TargetOpcode::PATCHPOINT: {
     PatchPointOpers Opers(&MI);
     return Opers.getNumPatchBytes();
-  } else {
+  }
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+    return Num * 4;
+  }
+  default:
     return get(Opcode).getSize();
   }
 }
@@ -3852,7 +3867,8 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
 
   // If this is not a reg+reg, but the DefMI is LI/LI8, check if its user MI
   // can be simpified to LI.
-  if (!HasImmForm && simplifyToLI(MI, *DefMI, ForwardingOperand, KilledDef))
+  if (!HasImmForm &&
+      simplifyToLI(MI, *DefMI, ForwardingOperand, KilledDef, &RegsToUpdate))
     return true;
 
   return false;
@@ -4619,7 +4635,8 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
 
 bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
                                 unsigned OpNoForForwarding,
-                                MachineInstr **KilledDef) const {
+                                MachineInstr **KilledDef,
+                                SmallSet<Register, 4> *RegsToUpdate) const {
   if ((DefMI.getOpcode() != PPC::LI && DefMI.getOpcode() != PPC::LI8) ||
       !DefMI.getOperand(1).isImm())
     return false;
@@ -4687,6 +4704,11 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
           dbgs() << "Found LI -> CMPI -> ISEL, replacing with a copy.\n");
       LLVM_DEBUG(DefMI.dump(); MI.dump(); CompareUseMI.dump());
       LLVM_DEBUG(dbgs() << "Is converted to:\n");
+      if (RegsToUpdate) {
+        for (const MachineOperand &MO : CompareUseMI.operands())
+          if (MO.isReg())
+            RegsToUpdate->insert(MO.getReg());
+      }
       // Convert to copy and remove unneeded operands.
       CompareUseMI.setDesc(get(PPC::COPY));
       CompareUseMI.removeOperand(3);

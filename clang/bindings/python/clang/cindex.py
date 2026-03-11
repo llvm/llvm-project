@@ -93,6 +93,7 @@ from typing import (
     Generic,
     Iterator,
     Literal,
+    NoReturn,
     Optional,
     Sequence,
     Type as TType,
@@ -212,12 +213,12 @@ class TranslationUnitSaveError(Exception):
         if enumeration < 1 or enumeration > 3:
             raise Exception(
                 "Encountered undefined TranslationUnit save error "
-                "constant: %d. Please file a bug to have this "
-                "value supported." % enumeration
+                "constant: {}. Please file a bug to have this "
+                "value supported.".format(enumeration)
             )
 
         self.save_error = enumeration
-        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 ### Structures and Utility Classes ###
@@ -246,7 +247,9 @@ class CachedProperty(Generic[TInstance, TResult]):
             property_name = self.wrapped.__name__
             class_name = instance_type.__name__
             raise TypeError(
-                f"'{property_name}' is not a static attribute of '{class_name}'"
+                "'{}' is not a static attribute of '{}'".format(
+                    property_name, class_name
+                )
             )
 
         value = self.wrapped(instance)
@@ -278,23 +281,25 @@ class SourceLocation(Structure):
     """
 
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
-    _data = None
+    _data: tuple[File | None, int, int, int] | None = None
 
-    def _get_instantiation(self):
+    def _get_instantiation(self) -> tuple[File | None, int, int, int]:
         if self._data is None:
             f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
             conf.lib.clang_getInstantiationLocation(
                 self, byref(f), byref(l), byref(c), byref(o)
             )
             if f:
-                f = File(f)
+                file = File(f)
             else:
-                f = None
-            self._data = (f, int(l.value), int(c.value), int(o.value))
+                file = None
+            self._data = (file, int(l.value), int(c.value), int(o.value))
         return self._data
 
     @staticmethod
-    def from_position(tu, file, line, column):
+    def from_position(
+        tu: TranslationUnit, file: File, line: int, column: int
+    ) -> SourceLocation:
         """
         Retrieve the source location associated with a given file/line/column in
         a particular translation unit.
@@ -302,7 +307,7 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocation(tu, file, line, column)  # type: ignore [no-any-return]
 
     @staticmethod
-    def from_offset(tu, file, offset):
+    def from_offset(tu: TranslationUnit, file: File, offset: int) -> SourceLocation:
         """Retrieve a SourceLocation from a given character offset.
 
         tu -- TranslationUnit file belongs to
@@ -312,36 +317,36 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocationForOffset(tu, file, offset)  # type: ignore [no-any-return]
 
     @property
-    def file(self):
+    def file(self) -> File | None:
         """Get the file represented by this source location."""
         return self._get_instantiation()[0]
 
     @property
-    def line(self):
+    def line(self) -> int:
         """Get the line represented by this source location."""
         return self._get_instantiation()[1]
 
     @property
-    def column(self):
+    def column(self) -> int:
         """Get the column represented by this source location."""
         return self._get_instantiation()[2]
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         """Get the file offset represented by this source location."""
         return self._get_instantiation()[3]
 
     @property
-    def is_in_system_header(self):
+    def is_in_system_header(self) -> bool:
         """Returns true if the given source location is in a system header."""
         return bool(conf.lib.clang_Location_isInSystemHeader(self))
 
-    def __eq__(self, other):
-        return isinstance(other, SourceLocation) and bool(
-            conf.lib.clang_equalLocations(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceLocation):
+            return NotImplemented
+        return bool(conf.lib.clang_equalLocations(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __lt__(self, other: SourceLocation) -> bool:
@@ -350,15 +355,13 @@ class SourceLocation(Structure):
     def __le__(self, other: SourceLocation) -> bool:
         return self < other or self == other
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.file:
             filename = self.file.name
         else:
             filename = None
-        return "<SourceLocation file %r, line %r, column %r>" % (
-            filename,
-            self.line,
-            self.column,
+        return "<SourceLocation file {}, line {}, column {}>".format(
+            repr(filename), repr(self.line), repr(self.column)
         )
 
 
@@ -377,11 +380,11 @@ class SourceRange(Structure):
     # FIXME: Eliminate this and make normal constructor? Requires hiding ctypes
     # object.
     @staticmethod
-    def from_locations(start, end):
+    def from_locations(start: SourceLocation, end: SourceLocation) -> SourceRange:
         return conf.lib.clang_getRange(start, end)  # type: ignore [no-any-return]
 
     @property
-    def start(self):
+    def start(self) -> SourceLocation:
         """
         Return a SourceLocation representing the first character within a
         source range.
@@ -389,28 +392,28 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeStart(self)  # type: ignore [no-any-return]
 
     @property
-    def end(self):
+    def end(self) -> SourceLocation:
         """
         Return a SourceLocation representing the last character within a
         source range.
         """
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
-    def __eq__(self, other):
-        return isinstance(other, SourceRange) and bool(
-            conf.lib.clang_equalRanges(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceRange):
+            return NotImplemented
+        return bool(conf.lib.clang_equalRanges(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __contains__(self, other):
+    def __contains__(self, other: object) -> bool:
         """Useful to detect the Token/Lexer bug"""
         if not isinstance(other, SourceLocation):
             return False
         return self.start <= other <= self.end
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
@@ -543,10 +546,8 @@ class Diagnostic:
         return _CXString.from_result(conf.lib.clang_formatDiagnostic(self, options))
 
     def __repr__(self):
-        return "<Diagnostic severity %r, location %r, spelling %r>" % (
-            self.severity,
-            self.location,
-            self.spelling,
+        return "<Diagnostic severity {}, location {}, spelling {}>".format(
+            repr(self.severity), repr(self.location), repr(self.spelling)
         )
 
     def __str__(self):
@@ -568,7 +569,7 @@ class FixIt:
         self.value = value
 
     def __repr__(self):
-        return "<FixIt range %r, value %r>" % (self.range, self.value)
+        return "<FixIt range {}, value {}>".format(repr(self.range), repr(self.value))
 
 
 class TokenGroup:
@@ -642,10 +643,7 @@ class BaseEnumeration(Enum):
         return cls(id)
 
     def __repr__(self):
-        return "%s.%s" % (
-            self.__class__.__name__,
-            self.name,
-        )
+        return "{}.{}".format(self.__class__.__name__, self.name)
 
 
 class TokenKind(BaseEnumeration):
@@ -2727,8 +2725,9 @@ class Type(Structure):
 
                 if key >= len(self):
                     raise IndexError(
-                        "Index greater than container length: "
-                        "%d > %d" % (key, len(self))
+                        "Index greater than container length: {} > {}".format(
+                            key, len(self)
+                        )
                     )
 
                 result = Type.from_result(
@@ -3018,81 +3017,136 @@ class ClangObject:
         return self._as_parameter_
 
 
+### Completion Chunk Kinds ###
+class CompletionChunkKind(BaseEnumeration):
+    """
+    Describes a single piece of text within a code-completion string.
+    """
+
+    def __str__(self) -> str:
+        """
+        Converts enum value to string in the old camelCase format.
+        This is a temporary measure that will be changed in the future release
+        to return string in ALL_CAPS format, like for other enums.
+        """
+
+        warnings.warn(
+            "String representation of 'CompletionChunkKind' will be "
+            "changed in a future release from 'camelCase' to 'ALL_CAPS' to "
+            "match other enums. 'CompletionChunkKind's can be "
+            "compared to one another without conversion to string.",
+            DeprecationWarning,
+        )
+        # Remove underscores
+        components = self.name.split("_")
+        # Upper-camel case each split component
+        components = [component.lower().capitalize() for component in components]
+        return "".join(components)
+
+    OPTIONAL = 0
+    TYPED_TEXT = 1
+    TEXT = 2
+    PLACEHOLDER = 3
+    INFORMATIVE = 4
+    CURRENT_PARAMETER = 5
+    LEFT_PAREN = 6
+    RIGHT_PAREN = 7
+    LEFT_BRACKET = 8
+    RIGHT_BRACKET = 9
+    LEFT_BRACE = 10
+    RIGHT_BRACE = 11
+    LEFT_ANGLE = 12
+    RIGHT_ANGLE = 13
+    COMMA = 14
+    RESULT_TYPE = 15
+    COLON = 16
+    SEMI_COLON = 17
+    EQUAL = 18
+    HORIZONTAL_SPACE = 19
+    VERTICAL_SPACE = 20
+
+
 class _CXUnsavedFile(Structure):
     """Helper for passing unsaved file arguments."""
 
     _fields_ = [("name", c_char_p), ("contents", c_char_p), ("length", c_ulong)]
 
 
-# Functions calls through the python interface are rather slow. Fortunately,
-# for most symbols, we do not need to perform a function call. Their spelling
-# never changes and is consequently provided by this spelling cache.
-SPELLING_CACHE = {
-    # 0: CompletionChunk.Kind("Optional"),
-    # 1: CompletionChunk.Kind("TypedText"),
-    # 2: CompletionChunk.Kind("Text"),
-    # 3: CompletionChunk.Kind("Placeholder"),
-    # 4: CompletionChunk.Kind("Informative"),
-    # 5 : CompletionChunk.Kind("CurrentParameter"),
-    6: "(",  # CompletionChunk.Kind("LeftParen"),
-    7: ")",  # CompletionChunk.Kind("RightParen"),
-    8: "[",  # CompletionChunk.Kind("LeftBracket"),
-    9: "]",  # CompletionChunk.Kind("RightBracket"),
-    10: "{",  # CompletionChunk.Kind("LeftBrace"),
-    11: "}",  # CompletionChunk.Kind("RightBrace"),
-    12: "<",  # CompletionChunk.Kind("LeftAngle"),
-    13: ">",  # CompletionChunk.Kind("RightAngle"),
-    14: ", ",  # CompletionChunk.Kind("Comma"),
-    # 15: CompletionChunk.Kind("ResultType"),
-    16: ":",  # CompletionChunk.Kind("Colon"),
-    17: ";",  # CompletionChunk.Kind("SemiColon"),
-    18: "=",  # CompletionChunk.Kind("Equal"),
-    19: " ",  # CompletionChunk.Kind("HorizontalSpace"),
-    # 20: CompletionChunk.Kind("VerticalSpace")
-}
-
-
 class CompletionChunk:
-    class Kind:
-        def __init__(self, name: str):
-            self.name = name
+    class SpellingCacheAlias:
+        """
+        A temporary utility that acts as an alias to CompletionChunk.SPELLING_CACHE.
+        This will be removed without deprecation warning in a future release.
+        Please do not use it directly!
+        """
 
-        def __str__(self) -> str:
-            return self.name
+        deprecation_message = (
+            "'SPELLING_CACHE' has been moved into the scope of 'CompletionChunk' "
+            "and adapted to use 'CompletionChunkKind's as keys instead of their "
+            "enum values. Please adapt all uses of 'SPELLING_CACHE' to use "
+            "'CompletionChunk.SPELLING_CACHE' instead. The old 'SPELLING_CACHE' "
+            "will be removed in a future release."
+        )
 
-        def __repr__(self) -> str:
-            return "<ChunkKind: %s>" % self
+        def __getattr__(self, _: Any) -> NoReturn:
+            raise AttributeError(self.deprecation_message)
+
+        def __getitem__(self, value: int) -> str:
+            warnings.warn(self.deprecation_message, DeprecationWarning)
+            return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
+
+        def __contains__(self, value: int) -> bool:
+            warnings.warn(self.deprecation_message, DeprecationWarning)
+            return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
+
+    # Functions calls through the python interface are rather slow. Fortunately,
+    # for most symbols, we do not need to perform a function call. Their spelling
+    # never changes and is consequently provided by this spelling cache.
+    SPELLING_CACHE = {
+        # 0: CompletionChunkKind.OPTIONAL
+        # 1: CompletionChunkKind.TYPED_TEXT
+        # 2: CompletionChunkKind.TEXT
+        # 3: CompletionChunkKind.PLACEHOLDER
+        # 4: CompletionChunkKind.INFORMATIVE
+        # 5: CompletionChunkKind.CURRENT_PARAMETER
+        CompletionChunkKind.LEFT_PAREN: "(",  # 6
+        CompletionChunkKind.RIGHT_PAREN: ")",  # 7
+        CompletionChunkKind.LEFT_BRACKET: "[",  # 8
+        CompletionChunkKind.RIGHT_BRACKET: "]",  # 9
+        CompletionChunkKind.LEFT_BRACE: "{",  # 10
+        CompletionChunkKind.RIGHT_BRACE: "}",  # 11
+        CompletionChunkKind.LEFT_ANGLE: "<",  # 12
+        CompletionChunkKind.RIGHT_ANGLE: ">",  # 13
+        CompletionChunkKind.COMMA: ", ",  # 14
+        # 15: CompletionChunkKind.RESULT_TYPE
+        CompletionChunkKind.COLON: ":",  # 16
+        CompletionChunkKind.SEMI_COLON: ";",  # 17
+        CompletionChunkKind.EQUAL: "=",  # 18
+        CompletionChunkKind.HORIZONTAL_SPACE: " ",  # 19
+        # 20: CompletionChunkKind.VERTICAL_SPACE
+    }
 
     def __init__(self, completionString: CObjP, key: int):
         self.cs = completionString
         self.key = key
-        self.__kindNumberCache = -1
 
     def __repr__(self) -> str:
-        return "{'" + self.spelling + "', " + str(self.kind) + "}"
+        return "{{'{}', {}}}".format(self.spelling, self.kind)
 
     @CachedProperty
     def spelling(self) -> str:
-        if self.__kindNumber in SPELLING_CACHE:
-            return SPELLING_CACHE[self.__kindNumber]
+        kind = self.kind
+        if kind in CompletionChunk.SPELLING_CACHE:
+            return CompletionChunk.SPELLING_CACHE[kind]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
 
-    # We do not use @CachedProperty here, as the manual implementation is
-    # apparently still significantly faster. Please profile carefully if you
-    # would like to add CachedProperty back.
-    @property
-    def __kindNumber(self) -> int:
-        if self.__kindNumberCache == -1:
-            self.__kindNumberCache = conf.lib.clang_getCompletionChunkKind(
-                self.cs, self.key
-            )
-        return self.__kindNumberCache
-
     @CachedProperty
-    def kind(self) -> Kind:
-        return completionChunkKindMap[self.__kindNumber]
+    def kind(self) -> CompletionChunkKind:
+        return CompletionChunkKind.from_id(
+            conf.lib.clang_getCompletionChunkKind(self.cs, self.key)
+        )
 
     @CachedProperty
     def string(self) -> CompletionString | None:
@@ -3102,45 +3156,59 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
+    __deprecation_message = (
+        "'CompletionChunk.{}' will be removed in a future release. "
+        "All uses of 'CompletionChunk.{}' should be replaced by checking "
+        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
+    )
+
     def isKindOptional(self) -> bool:
-        return self.__kindNumber == 0
+        deprecation_message = self.__deprecation_message.format(
+            "isKindOptional",
+            "isKindOptional",
+            "OPTIONAL",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
+        return self.kind == CompletionChunkKind.OPTIONAL
 
     def isKindTypedText(self) -> bool:
-        return self.__kindNumber == 1
+        deprecation_message = self.__deprecation_message.format(
+            "isKindTypedText",
+            "isKindTypedText",
+            "TYPED_TEXT",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
+        return self.kind == CompletionChunkKind.TYPED_TEXT
 
     def isKindPlaceHolder(self) -> bool:
-        return self.__kindNumber == 3
+        deprecation_message = self.__deprecation_message.format(
+            "isKindPlaceHolder",
+            "isKindPlaceHolder",
+            "PLACEHOLDER",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
+        return self.kind == CompletionChunkKind.PLACEHOLDER
 
     def isKindInformative(self) -> bool:
-        return self.__kindNumber == 4
+        deprecation_message = self.__deprecation_message.format(
+            "isKindInformative",
+            "isKindInformative",
+            "INFORMATIVE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
+        return self.kind == CompletionChunkKind.INFORMATIVE
 
     def isKindResultType(self) -> bool:
-        return self.__kindNumber == 15
+        deprecation_message = self.__deprecation_message.format(
+            "isKindResultType",
+            "isKindResultType",
+            "RESULT_TYPE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
+        return self.kind == CompletionChunkKind.RESULT_TYPE
 
 
-completionChunkKindMap = {
-    0: CompletionChunk.Kind("Optional"),
-    1: CompletionChunk.Kind("TypedText"),
-    2: CompletionChunk.Kind("Text"),
-    3: CompletionChunk.Kind("Placeholder"),
-    4: CompletionChunk.Kind("Informative"),
-    5: CompletionChunk.Kind("CurrentParameter"),
-    6: CompletionChunk.Kind("LeftParen"),
-    7: CompletionChunk.Kind("RightParen"),
-    8: CompletionChunk.Kind("LeftBracket"),
-    9: CompletionChunk.Kind("RightBracket"),
-    10: CompletionChunk.Kind("LeftBrace"),
-    11: CompletionChunk.Kind("RightBrace"),
-    12: CompletionChunk.Kind("LeftAngle"),
-    13: CompletionChunk.Kind("RightAngle"),
-    14: CompletionChunk.Kind("Comma"),
-    15: CompletionChunk.Kind("ResultType"),
-    16: CompletionChunk.Kind("Colon"),
-    17: CompletionChunk.Kind("SemiColon"),
-    18: CompletionChunk.Kind("Equal"),
-    19: CompletionChunk.Kind("HorizontalSpace"),
-    20: CompletionChunk.Kind("VerticalSpace"),
-}
+SPELLING_CACHE = CompletionChunk.SpellingCacheAlias()
 
 
 class CompletionString(ClangObject):
@@ -3223,14 +3291,11 @@ class CompletionString(ClangObject):
         return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self) -> str:
-        return (
-            " | ".join([str(a) for a in self])
-            + " || Priority: "
-            + str(self.priority)
-            + " || Availability: "
-            + str(self.availability)
-            + " || Brief comment: "
-            + str(self.briefComment)
+        return "{chunks} || Priority: {priority} || Availability: {availability} || Brief comment: {comment}".format(
+            chunks=" | ".join(str(a) for a in self),
+            priority=self.priority,
+            availability=self.availability,
+            comment=self.briefComment,
         )
 
 
@@ -3276,8 +3341,26 @@ class CodeCompletionResults(ClangObject):
     def __del__(self) -> None:
         conf.lib.clang_disposeCodeCompleteResults(self)
 
+    def __len__(self) -> int:
+        return self.ptr.contents.numResults
+
+    def __getitem__(self, key: int) -> CodeCompletionResult:
+        if len(self) <= key:
+            raise IndexError
+
+        return self.ptr.contents.results[key]
+
     @property
     def results(self) -> CCRStructure:
+        warnings.warn(
+            "'CodeCompletionResults.results' will become an implementation detail "
+            "with changed behavior in a future release and should not be used directly. "
+            "Existing uses of 'CodeCompletionResults.results' should be changed "
+            "to directly use 'CodeCompletionResults': it nows supports '__len__' "
+            "and '__getitem__', so it can be used the same as "
+            "'CodeCompletionResults.results'.",
+            DeprecationWarning,
+        )
         return self.ptr.contents
 
     @property
@@ -3633,7 +3716,7 @@ class TranslationUnit(ClangObject):
             )
         )
         if result != 0:
-            msg = "Error reparsing translation unit. Error code: " + str(result)
+            msg = "Error reparsing translation unit. Error code: {}".format(result)
             raise TranslationUnitLoadError(msg)
 
     def save(self, filename):
@@ -3751,7 +3834,7 @@ class File(ClangObject):
         return self.name
 
     def __repr__(self):
-        return "<File: %s>" % (self.name)
+        return "<File: {}>".format(self.name)
 
     def __eq__(self, other) -> bool:
         return isinstance(other, File) and bool(
@@ -3811,13 +3894,12 @@ class CompilationDatabaseError(Exception):
 
         if enumeration > 1:
             raise Exception(
-                "Encountered undefined CompilationDatabase error "
-                "constant: %d. Please file a bug to have this "
-                "value supported." % enumeration
+                "Encountered undefined CompilationDatabase error constant: {}."
+                "Please file a bug to have this value supported.".format(enumeration)
             )
 
         self.cdb_error = enumeration
-        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 class CompileCommand:

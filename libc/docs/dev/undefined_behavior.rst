@@ -2,10 +2,6 @@
 Defining Undefined Behavior
 ===========================
 
-.. contents:: Table of Contents
-   :depth: 2
-   :local:
-
 The C standard leaves behavior undefined or implementation defined in many
 places. Undefined behavior is behavior that the standards leave up to the
 implementation. As an implementation, LLVM's libc must provide a result for any
@@ -75,13 +71,11 @@ Path without Leading Slashs in shm_open
 ----------------------------------------
 POSIX.1 leaves that when the name of a shared memory object does not begin with a slash, the behavior is implementation defined. In such cases, the shm_open in LLVM libc is implemented to behave as if the name began with a slash.
 
-Handling of NULL arguments to the 's' format specifier
-------------------------------------------------------
-The C standard does not specify behavior for ``printf("%s", NULL)``. We will
-print the string literal ``(null)`` unless using the
-``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf
-behavior<printf_behavior>`.
-TODO: Move this to printf_behavior.
+Handling of NULL arguments to the 's' and 'n' format specifiers
+---------------------------------------------------------------
+The C standard does not specify behavior for ``printf("%s", NULL)`` or
+``printf("%n", NULL)``. For LLVM-libc, see
+:ref:`LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS <printf_no_nullptr_checks>` for details.
 
 Unknown Math Rounding Direction
 -------------------------------

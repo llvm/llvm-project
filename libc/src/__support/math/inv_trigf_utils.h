@@ -19,8 +19,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace inv_trigf_utils_internal {
 
 // PI and PI / 2
-static constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
-static constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
+LIBC_INLINE_VAR constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
+LIBC_INLINE_VAR constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 
 // Polynomial approximation for 0 <= x <= 1:
 //   atan(x) ~ atan((i/16) + (x - (i/16)) * Q(x - i/16)
@@ -40,7 +40,7 @@ static constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
 // Notice that degree-7 is good enough for atanf, but degree-8 helps reduce the
 // error bounds for atan2f's fast pass 16 times, and it does not affect the
 // performance of atanf much.
-static constexpr double ATAN_COEFFS[17][9] = {
+LIBC_INLINE_VAR constexpr double ATAN_COEFFS[17][9] = {
     {0.0, 1.0, 0x1.3f8d76d26d61bp-47, -0x1.5555555574cd8p-2,
      0x1.0dde5d06878eap-29, 0x1.99997738acc77p-3, 0x1.2c43eac9797cap-16,
      -0x1.25fb020007dbdp-3, 0x1.c1b6c31d7b0aep-7},
@@ -95,7 +95,7 @@ static constexpr double ATAN_COEFFS[17][9] = {
 };
 
 // Look-up table for atan(k/16) with k = 0..16.
-static constexpr double ATAN_K_OVER_16[17] = {
+LIBC_INLINE_VAR constexpr double ATAN_K_OVER_16[17] = {
     0.0,
     0x1.ff55bb72cfdeap-5,
     0x1.fd5ba9aac2f6ep-4,
@@ -117,7 +117,7 @@ static constexpr double ATAN_K_OVER_16[17] = {
 
 // For |x| <= 1/32 and 0 <= i <= 16, return Q(x) such that:
 //   Q(x) ~ (atan(x + i/16) - atan(i/16)) / x.
-LIBC_INLINE static double atan_eval(double x, unsigned i) {
+LIBC_INLINE double atan_eval(double x, unsigned i) {
   double x2 = x * x;
 
   double c0 = fputil::multiply_add(x, ATAN_COEFFS[i][2], ATAN_COEFFS[i][1]);
@@ -138,8 +138,8 @@ LIBC_INLINE static double atan_eval(double x, unsigned i) {
 // So we let q = (n - d * k/16) / (d + n * k/16),
 // and approximate with Taylor polynomial:
 //   atan(q) ~ q - q^3/3 + q^5/5 - q^7/7 + q^9/9
-LIBC_INLINE static double atan_eval_no_table(double num, double den,
-                                             double k_over_16) {
+LIBC_INLINE double atan_eval_no_table(double num, double den,
+                                      double k_over_16) {
   double num_r = fputil::multiply_add(den, -k_over_16, num);
   double den_r = fputil::multiply_add(num, k_over_16, den);
   double q = num_r / den_r;
@@ -161,20 +161,90 @@ LIBC_INLINE static double atan_eval_no_table(double num, double den,
 
 // > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20|],
 //                 [|1, D...|], [0, 0.5]);
-static constexpr double ASIN_COEFFS[10] = {
+LIBC_INLINE_VAR constexpr double ASIN_COEFFS[10] = {
     0x1.5555555540fa1p-3, 0x1.333333512edc2p-4, 0x1.6db6cc1541b31p-5,
     0x1.f1caff324770ep-6, 0x1.6e43899f5f4f4p-6, 0x1.1f847cf652577p-6,
     0x1.9b60f47f87146p-7, 0x1.259e2634c494fp-6, -0x1.df946fa875ddp-8,
     0x1.02311ecf99c28p-5};
 
 // Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x
-LIBC_INLINE static double asin_eval(double xsq) {
+LIBC_INLINE double asin_eval(double xsq) {
   double x4 = xsq * xsq;
   double r1 = fputil::polyeval(x4, ASIN_COEFFS[0], ASIN_COEFFS[2],
                                ASIN_COEFFS[4], ASIN_COEFFS[6], ASIN_COEFFS[8]);
   double r2 = fputil::polyeval(x4, ASIN_COEFFS[1], ASIN_COEFFS[3],
                                ASIN_COEFFS[5], ASIN_COEFFS[7], ASIN_COEFFS[9]);
   return fputil::multiply_add(xsq, r2, r1);
+}
+
+// the coefficients for the polynomial approximation of asin(x)/(pi*x) in the
+// range [0, 0.5] extracted using Sollya.
+//
+// Sollya code:
+// > prec = 200;
+// > display = hexadecimal;
+// > g = asin(x) / (pi * x);
+// > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22|],
+// >              [|D...|], [0, 0.5]);
+// > for i from 0 to degree(P) do coeff(P, i);
+// > print("Error:", dirtyinfnorm(P - g, [1e-30; 0.25]));
+// Error : 0x1.6b01ec54170565911f924eb53361de37df00d74e2a10a21d5p-56 ~ 2^−55.496
+//
+// Non-zero coefficients (even powers only):
+constexpr double ASINPI_COEFFS[13] = {
+    0x1.45f306dc9c883p-2,  // x^0
+    0x1.b2995e7b7af0fp-5,  // x^2
+    0x1.8723a1d61d2e9p-6,  // x^4
+    0x1.d1a4529a30a69p-7,  // x^6
+    0x1.3ce53861f8f1fp-7,  // x^8
+    0x1.d2b076c914efep-8,  // x^10
+    0x1.6a2b36f9aed68p-8,  // x^12
+    0x1.21604ae2879a2p-8,  // x^14
+    0x1.ff0549b4fd0d6p-9,  // x^16
+    0x1.035d343508f72p-9,  // x^18
+    0x1.a7b91f72b1592p-8,  // x^20
+    -0x1.6a3fb073e97aep-8, // x^22
+    0x1.547a51d51664ap-7   // x^24
+};
+
+// Evaluates P1(v2) = c1 + c2*v2 + c3*v2^2 + ... + c12*v2^11 (tail of P
+// without c0) using Estrin's scheme for instruction-level parallelism.
+//
+// The tail polynomial has 12 coefficients (ASINPI_COEFFS[1] through
+// ASINPI_COEFFS[12]) in powers of v2:
+//   P1(v2) = c1 + c2*v2 + c3*v2^2 + c4*v2^3 + ... + c12*v2^11
+//
+// Estrin pairs them bottom-up:
+//   Level 0 (6 pairs, using v2):
+//     p0 = c1  + c2*v2       p1 = c3  + c4*v2
+//     p2 = c5  + c6*v2       p3 = c7  + c8*v2
+//     p4 = c9  + c10*v2      p5 = c11 + c12*v2
+//   Level 1 (3 pairs, using v4):
+//     q0 = p0 + p1*v4        q1 = p2 + p3*v4
+//     q2 = p4 + p5*v4
+//   Level 2 (using v8):
+//     r0 = q0 + q1*v8        r1 = q2
+//   Level 3 (using v16):
+//     result = r0 + r1*v16
+LIBC_INLINE double asinpi_eval(double v2) {
+  double v4 = v2 * v2;
+  double v8 = v4 * v4;
+  double v16 = v8 * v8;
+
+  double p0 = fputil::multiply_add(v2, ASINPI_COEFFS[2], ASINPI_COEFFS[1]);
+  double p1 = fputil::multiply_add(v2, ASINPI_COEFFS[4], ASINPI_COEFFS[3]);
+  double p2 = fputil::multiply_add(v2, ASINPI_COEFFS[6], ASINPI_COEFFS[5]);
+  double p3 = fputil::multiply_add(v2, ASINPI_COEFFS[8], ASINPI_COEFFS[7]);
+  double p4 = fputil::multiply_add(v2, ASINPI_COEFFS[10], ASINPI_COEFFS[9]);
+  double p5 = fputil::multiply_add(v2, ASINPI_COEFFS[12], ASINPI_COEFFS[11]);
+
+  double q0 = fputil::multiply_add(v4, p1, p0);
+  double q1 = fputil::multiply_add(v4, p3, p2);
+  double q2 = fputil::multiply_add(v4, p5, p4);
+
+  double r0 = fputil::multiply_add(v8, q1, q0);
+
+  return fputil::multiply_add(v16, q2, r0);
 }
 
 } // namespace inv_trigf_utils_internal

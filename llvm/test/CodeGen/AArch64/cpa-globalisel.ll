@@ -584,12 +584,13 @@ define i64 @arith2(ptr noundef %0, i64 noundef %1, i64 noundef %2, i32 noundef %
 ; CHECK-NOCPA-O0-NEXT:    str x1, [sp, #16]
 ; CHECK-NOCPA-O0-NEXT:    str x2, [sp, #8]
 ; CHECK-NOCPA-O0-NEXT:    str w3, [sp, #4]
-; CHECK-NOCPA-O0-NEXT:    ldr x8, [sp, #24]
-; CHECK-NOCPA-O0-NEXT:    ldrsw x9, [sp, #4]
-; CHECK-NOCPA-O0-NEXT:    mov w10, #48 // =0x30
-; CHECK-NOCPA-O0-NEXT:    // kill: def $x10 killed $w10
-; CHECK-NOCPA-O0-NEXT:    mul x9, x9, x10
-; CHECK-NOCPA-O0-NEXT:    add x8, x8, x9
+; CHECK-NOCPA-O0-NEXT:    ldr x10, [sp, #24]
+; CHECK-NOCPA-O0-NEXT:    ldrsw x8, [sp, #4]
+; CHECK-NOCPA-O0-NEXT:    mov w9, #48 // =0x30
+; CHECK-NOCPA-O0-NEXT:    // kill: def $x9 killed $w9
+; CHECK-NOCPA-O0-NEXT:    // kill: def $w9 killed $w9 killed $x9
+; CHECK-NOCPA-O0-NEXT:    // kill: def $w8 killed $w8 killed $x8
+; CHECK-NOCPA-O0-NEXT:    smaddl x8, w8, w9, x10
 ; CHECK-NOCPA-O0-NEXT:    ldr x8, [x8, #24]
 ; CHECK-NOCPA-O0-NEXT:    ldr x10, [sp, #16]
 ; CHECK-NOCPA-O0-NEXT:    ldr x9, [sp, #8]
@@ -608,7 +609,7 @@ define i64 @arith2(ptr noundef %0, i64 noundef %1, i64 noundef %2, i32 noundef %
 ; CHECK-NOCPA-O3-NEXT:    ldrsw x8, [sp, #4]
 ; CHECK-NOCPA-O3-NEXT:    stp x1, x0, [sp, #16]
 ; CHECK-NOCPA-O3-NEXT:    str x2, [sp, #8]
-; CHECK-NOCPA-O3-NEXT:    madd x8, x8, x9, x0
+; CHECK-NOCPA-O3-NEXT:    smaddl x8, w8, w9, x0
 ; CHECK-NOCPA-O3-NEXT:    ldr x8, [x8, #24]
 ; CHECK-NOCPA-O3-NEXT:    madd x8, x1, x2, x8
 ; CHECK-NOCPA-O3-NEXT:    sub x0, x8, x2

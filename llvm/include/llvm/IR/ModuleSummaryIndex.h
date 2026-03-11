@@ -269,6 +269,8 @@ struct ValueInfo {
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   LLVM_ABI bool canAutoHide() const;
+
+  LLVM_ABI bool noRenameOnPromotion() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -509,15 +511,25 @@ public:
     /// summary. The value is interpreted as 'ImportKind' enum defined above.
     unsigned ImportType : 1;
 
+    /// This symbol was promoted. Thinlink stages need to be aware of this
+    /// transition
+    unsigned Promoted : 1;
+
+    /// This field is written by the ThinLTO prelink stage to decide whether
+    /// a particular static global value should be promoted or not.
+    unsigned NoRenameOnPromotion : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
-                     bool CanAutoHide, ImportKind ImportType)
+                     bool CanAutoHide, ImportKind ImportType,
+                     bool NoRenameOnPromotion)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
           DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
-          ImportType(static_cast<unsigned>(ImportType)) {}
+          ImportType(static_cast<unsigned>(ImportType)), Promoted(false),
+          NoRenameOnPromotion(NoRenameOnPromotion) {}
   };
 
 private:
@@ -584,10 +596,26 @@ public:
     return static_cast<GlobalValue::LinkageTypes>(Flags.Linkage);
   }
 
+  bool wasPromoted() const { return Flags.Promoted; }
+
+  void promote() {
+    assert(GlobalValue::isLocalLinkage(linkage()) &&
+           "unexpected (re-)promotion of non-local symbol");
+    assert(!Flags.Promoted);
+    Flags.Promoted = true;
+    Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;
+  }
+
   /// Sets the linkage to the value determined by global summary-based
   /// optimization. Will be applied in the ThinLTO backends.
   void setLinkage(GlobalValue::LinkageTypes Linkage) {
+    assert(!wasPromoted());
+    assert(!GlobalValue::isExternalLinkage(Linkage) && "use `promote` instead");
     Flags.Linkage = Linkage;
+  }
+
+  void setExternalLinkageForTest() {
+    Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;
   }
 
   /// Return true if this global value can't be imported.
@@ -610,6 +638,12 @@ public:
   }
 
   void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
+
+  void setNoRenameOnPromotion(bool NoRenameOnPromotion) {
+    Flags.NoRenameOnPromotion = NoRenameOnPromotion;
+  }
+
+  bool noRenameOnPromotion() const { return Flags.NoRenameOnPromotion; }
 
   GlobalValueSummary::ImportKind importType() const {
     return static_cast<ImportKind>(Flags.ImportType);
@@ -879,7 +913,8 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
+            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition,
+            /*NoRenameOnPromotion=*/false),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, SmallVector<ValueInfo, 0>(),
         std::move(Edges), std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),

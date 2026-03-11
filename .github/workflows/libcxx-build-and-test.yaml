@@ -154,6 +154,8 @@ jobs:
           machine: llvm-premerge-libcxx-runners
         - config: 'generic-asan'
           machine: llvm-premerge-libcxx-runners
+        - config: 'generic-asan-in-tests-only'
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-tsan'
           machine: llvm-premerge-libcxx-runners
         - config: 'generic-ubsan'

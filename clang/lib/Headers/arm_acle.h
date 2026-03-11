@@ -115,6 +115,7 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __plix(cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, 0, cache_level, retention_policy, 0)
+#define __pldir(addr) __builtin_arm_prefetch_ir(addr)
 #endif
 
 /* 7.7 NOP */
@@ -837,6 +838,14 @@ static __inline__ int __attribute__((__always_inline__, __nodebug__, target("ran
 __rndrrs(uint64_t *__p) {
   return __builtin_arm_rndrrs(__p);
 }
+#endif
+
+/* Atomic store with PCDPHINT */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+#define __arm_atomic_store_with_stshh(ptr, data, memory_order,                 \
+                                      retention_policy)                        \
+  __builtin_arm_atomic_store_with_stshh(ptr, data, memory_order,               \
+                                        retention_policy)
 #endif
 
 /* 11.2 Guarded Control Stack intrinsics */

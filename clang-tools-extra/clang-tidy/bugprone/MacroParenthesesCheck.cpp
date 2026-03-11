@@ -99,6 +99,15 @@ static bool possibleVarDecl(const MacroInfo *MI, const Token *Tok) {
          isVarDeclKeyword(*Tok);
 }
 
+static StringRef getMacroText(const MacroInfo *MI, Preprocessor *PP) {
+  if (MI->tokens_empty())
+    return {};
+  return Lexer::getSourceText(
+      CharSourceRange::getTokenRange(MI->tokens_begin()->getLocation(),
+                                     MI->tokens().back().getLocation()),
+      PP->getSourceManager(), PP->getLangOpts());
+}
+
 void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
                                                   const MacroInfo *MI) {
   // Make sure macro replacement isn't a variable declaration.
@@ -143,11 +152,22 @@ void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
   }
   if (Loc.isValid()) {
     const Token &Last = *std::prev(MI->tokens_end());
-    Check->diag(Loc, "macro replacement list should be enclosed in parentheses")
-        << FixItHint::CreateInsertion(MI->tokens_begin()->getLocation(), "(")
-        << FixItHint::CreateInsertion(Last.getLocation().getLocWithOffset(
-                                          PP->getSpelling(Last).length()),
-                                      ")");
+    if (PP->getSourceManager().isWrittenInCommandLineFile(Loc)) {
+      Check->diag(Loc, "macro replacement list should be enclosed in "
+                       "parentheses; macro '%0' defined as '%1'")
+          << PP->getSpelling(MacroNameTok) << getMacroText(MI, PP)
+          << FixItHint::CreateInsertion(MI->tokens_begin()->getLocation(), "(")
+          << FixItHint::CreateInsertion(Last.getLocation().getLocWithOffset(
+                                            PP->getSpelling(Last).length()),
+                                        ")");
+    } else {
+      Check->diag(Loc,
+                  "macro replacement list should be enclosed in parentheses")
+          << FixItHint::CreateInsertion(MI->tokens_begin()->getLocation(), "(")
+          << FixItHint::CreateInsertion(Last.getLocation().getLocWithOffset(
+                                            PP->getSpelling(Last).length()),
+                                        ")");
+    }
   }
 }
 
