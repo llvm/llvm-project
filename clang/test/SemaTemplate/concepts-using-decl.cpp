@@ -197,3 +197,16 @@ struct child : base<int> {
 };
 
 }
+
+// FIXME: The concept cache should consider type sugars in some instantiation-dependent context.
+namespace instantiation_dependent {
+
+template <class T> concept C = sizeof(T) >= 1;
+template <class U> using X = int;
+template <class> concept D = C<X<int>>;
+// D<V> is computed as sizeof(int) >= 1 and it affects the result of both C<X<V&>> and C<X<void&>>,
+// though C<X<void&>> is invalid. We should reject it.
+template <D V> requires C<X<V&>> struct Y {};
+Y<void> y;
+
+}

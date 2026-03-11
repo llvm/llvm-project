@@ -456,7 +456,9 @@ public:
     for (auto &ArgLoc : Mapping) {
       TemplateArgument Canonical =
           SemaRef.Context.getCanonicalTemplateArgument(ArgLoc.getArgument());
-      // We don't want sugars to impede the profile of cache.
+      // We don't want sugars to impede the profile performance of cache.
+      // FIXME: Substituting into type sugars may introduce failures. Ignoring
+      // differences in type sugar might not be feasible.
       UsedTemplateArgs.push_back(Canonical);
       TraverseTemplateArgument(Canonical);
     }
@@ -1154,8 +1156,8 @@ static bool CheckConstraintSatisfaction(
     return false;
   }
 
-  if (TemplateArgsLists.isAnyArgDependent(S.Context)) {
-    // No need to check satisfaction for dependent constraint expressions.
+  if (TemplateArgsLists.isAnyArgumentDependent()) {
+    // No need to check satisfaction for dependent template arguments.
     Satisfaction.IsSatisfied = true;
     return false;
   }
