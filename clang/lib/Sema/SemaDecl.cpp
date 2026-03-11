@@ -15862,7 +15862,11 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       // WebAssembly allows reference types as parameters. Funcref in particular
       // lives in a different address space.
       !(T->isFunctionPointerType() &&
-        T.getAddressSpace() == LangAS::wasm_funcref)) {
+        T.getAddressSpace() == LangAS::wasm_funcref) &&
+      // HLSL allows function arguments to be qualified with an address space
+      // if the groupshared annotation is used.
+      !(getLangOpts().HLSL &&
+        T.getAddressSpace() == LangAS::hlsl_groupshared)) {
     Diag(NameLoc, diag::err_arg_with_address_space);
     New->setInvalidDecl();
   }
@@ -21097,16 +21101,14 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                                                      bool Final) {
   assert(FD && "Expected non-null FunctionDecl");
 
-  // SYCL functions can be template, so we check if they have appropriate
-  // attribute prior to checking if it is a template.
+  // Templates are emitted when they're instantiated.
+  if (FD->isDependentContext())
+    return FunctionEmissionStatus::TemplateDiscarded;
+
   if (LangOpts.SYCLIsDevice && (FD->hasAttr<SYCLKernelAttr>() ||
                                 FD->hasAttr<SYCLKernelEntryPointAttr>() ||
                                 FD->hasAttr<SYCLExternalAttr>()))
     return FunctionEmissionStatus::Emitted;
-
-  // Templates are emitted when they're instantiated.
-  if (FD->isDependentContext())
-    return FunctionEmissionStatus::TemplateDiscarded;
 
   // Check whether this function is an externally visible definition.
   auto IsEmittedForExternalSymbol = [this, FD]() {

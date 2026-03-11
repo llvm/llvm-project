@@ -113,7 +113,7 @@ void main() {
   // expected-note@* {{implicitly declared private here}}
 
   // expected-error@+2 {{cannot assign to return value because function 'operator[]' returns a const value}}
-  // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float const hlsl_device &, 3>' declared here}}
+  // expected-note@* {{function 'operator[]' which returns const-qualified type 'vector<float, 3> const hlsl_device &' declared here}}
   Buff[0] = 0.0;
 }
 
