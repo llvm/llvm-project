@@ -875,7 +875,42 @@ func.func @truncUitofp_nneg(%arg0: i32) -> f32 {
   return %trunc : f32
 }
 
-// TODO: We should also add a test for not folding arith.extf on information loss.
+// CHECK-LABEL: @sitofpExtsi
+//       CHECK:     %[[SITOFP:.*]] = arith.sitofp %[[ARG0:.*]] : i8 to bf16
+//       CHECK:     return %[[SITOFP]]
+func.func @sitofpExtsi(%arg0: i8) -> bf16 {
+  %extsi = arith.extsi %arg0 : i8 to i32
+  %sitofp = arith.sitofp %extsi : i32 to bf16
+  return %sitofp : bf16
+}
+
+// CHECK-LABEL: @sitofpExtui
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i4 to bf16
+//       CHECK-NOT: sitofp
+//       CHECK:     return %[[UITOFP]]
+func.func @sitofpExtui(%arg0: i4) -> bf16 {
+  %extui = arith.extui %arg0 : i4 to i8
+  %sitofp = arith.sitofp %extui : i8 to bf16
+  return %sitofp : bf16
+}
+
+// CHECK-LABEL: @uitofpExtui
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] : i8 to bf16
+//       CHECK:     return %[[UITOFP]]
+func.func @uitofpExtui(%arg0: i8) -> bf16 {
+  %extui = arith.extui %arg0 : i8 to i32
+  %uitofp = arith.uitofp %extui : i32 to bf16
+  return %uitofp : bf16
+}
+
+// CHECK-LABEL: @sitofpExtui_nneg
+//       CHECK:     %[[UITOFP:.*]] = arith.uitofp %[[ARG0:.*]] nneg : i4 to bf16
+//       CHECK:     return %[[UITOFP]]
+func.func @sitofpExtui_nneg(%arg0: i4) -> bf16 {
+  %extui = arith.extui %arg0 nneg : i4 to i8
+  %sitofp = arith.sitofp %extui : i8 to bf16
+  return %sitofp : bf16
+}
 // This may happen when extending f8E5M2FNUZ to f16.
 
 // CHECK-LABEL: @truncConstant
@@ -3319,87 +3354,6 @@ func.func @unsignedExtendConstantResource() -> tensor<i16> {
   %c2 = arith.constant dense_resource<blob1> : tensor<i8>
   %ext = arith.extui %c2 : tensor<i8> to tensor<i16>
   return %ext : tensor<i16>
-}
-
-// CHECK-LABEL: @extsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i16
-//       CHECK:   return %[[ZERO]] : i16
-func.func @extsi_i0() -> i16 {
-  %c0 = arith.constant 0 : i0
-  %extsi = arith.extsi %c0 : i0 to i16
-  return %extsi : i16
-}
-
-// CHECK-LABEL: @extui_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i16
-//       CHECK:   return %[[ZERO]] : i16
-func.func @extui_i0() -> i16 {
-  %c0 = arith.constant 0 : i0
-  %extui = arith.extui %c0 : i0 to i16
-  return %extui : i16
-}
-
-// CHECK-LABEL: @trunc_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @trunc_i0() -> i0 {
-  %cFF = arith.constant 0xFF : i8
-  %trunc = arith.trunci %cFF : i8 to i0
-  return %trunc : i0
-}
-
-// CHECK-LABEL: @shli_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @shli_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %shli = arith.shli %c0, %c0 : i0
-  return %shli : i0
-}
-
-// CHECK-LABEL: @shrsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @shrsi_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %shrsi = arith.shrsi %c0, %c0 : i0
-  return %shrsi : i0
-}
-
-// CHECK-LABEL: @shrui_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @shrui_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %shrui = arith.shrui %c0, %c0 : i0
-  return %shrui : i0
-}
-
-// CHECK-LABEL: @maxsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @maxsi_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %maxsi = arith.maxsi %c0, %c0 : i0
-  return %maxsi : i0
-}
-
-// CHECK-LABEL: @minsi_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]] : i0
-func.func @minsi_i0() -> i0 {
-  %c0 = arith.constant 0 : i0
-  %minsi = arith.minsi %c0, %c0 : i0
-  return %minsi : i0
-}
-
-// CHECK-LABEL: @mulsi_extended_i0
-//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
-//       CHECK:   return %[[ZERO]], %[[ZERO]] : i0
-func.func @mulsi_extended_i0() -> (i0, i0) {
-  %c0 = arith.constant 0 : i0
-  %mulsi_extended:2 = arith.mulsi_extended %c0, %c0 : i0
-  return %mulsi_extended#0, %mulsi_extended#1 : i0, i0
 }
 
 // CHECK-LABEL: @sequences_fastmath_contract

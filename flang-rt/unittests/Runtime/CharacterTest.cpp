@@ -431,6 +431,214 @@ TYPED_TEST(RepeatTests, Repeat) {
   }
 }
 
+// Test TOKENIZE() - Form 1 and Form 2
+// Helper to create a scalar character descriptor from a raw C string.
+template <typename CHAR>
+OwningPtr<Descriptor> CreateScalarDescriptor(const char *raw) {
+  std::size_t len{std::strlen(raw)};
+  OwningPtr<Descriptor> desc{Descriptor::Create(
+      sizeof(CHAR), len, nullptr, 0, nullptr, CFI_attribute_other)};
+  if (desc->Allocate(kNoAsyncObject) != 0) {
+    return nullptr;
+  }
+  std::basic_string<CHAR> converted{raw, raw + len};
+  std::copy(converted.begin(), converted.end(), desc->OffsetElement<CHAR>(0));
+  return desc;
+}
+
+// Helper to create an unallocated allocatable character descriptor (rank 1,
+// deferred length) for TOKENS or SEPARATOR output.
+template <typename CHAR> StaticDescriptor<1> CreateAllocatableCharDescriptor() {
+  StaticDescriptor<1> staticDesc;
+  Descriptor &desc{staticDesc.descriptor()};
+  desc.Establish(static_cast<int>(sizeof(CHAR)), static_cast<SubscriptValue>(0),
+      nullptr, 1, nullptr, CFI_attribute_allocatable);
+  desc.GetDimension(0).SetBounds(1, 0);
+  return staticDesc;
+}
+
+// Helper to create an unallocated allocatable integer descriptor (rank 1)
+// for FIRST or LAST output.
+static StaticDescriptor<1> CreateAllocatableIntDescriptor() {
+  StaticDescriptor<1> staticDesc;
+  Descriptor &desc{staticDesc.descriptor()};
+  desc.Establish(
+      TypeCategory::Integer, 4, nullptr, 1, nullptr, CFI_attribute_allocatable);
+  desc.GetDimension(0).SetBounds(1, 0);
+  return staticDesc;
+}
+
+// Helper to extract a token string from the TOKENS descriptor.
+template <typename CHAR>
+std::basic_string<CHAR> GetToken(Descriptor &tokens, std::size_t index) {
+  std::size_t elemBytes{tokens.ElementBytes()};
+  std::size_t charLen{elemBytes / sizeof(CHAR)};
+  const CHAR *data{tokens.OffsetElement<CHAR>(index * elemBytes)};
+  return std::basic_string<CHAR>(data, charLen);
+}
+
+template <typename CHAR> struct TokenizeTests : public ::testing::Test {};
+TYPED_TEST_SUITE(TokenizeTests, CharacterTypes, );
+
+// Form 1: basic tokenization
+TYPED_TEST(TokenizeTests, Form1Basic) {
+  auto string{CreateScalarDescriptor<TypeParam>("first,second,third")};
+  auto set{CreateScalarDescriptor<TypeParam>(",")};
+  ASSERT_NE(string, nullptr);
+  ASSERT_NE(set, nullptr);
+
+  auto tokensStatic{CreateAllocatableCharDescriptor<TypeParam>()};
+  Descriptor &tokens{tokensStatic.descriptor()};
+
+  RTNAME(Tokenize)(tokens, nullptr, *string, *set);
+
+  // Expect 3 tokens: "first", "second", "third"
+  ASSERT_TRUE(tokens.IsAllocated());
+  EXPECT_EQ(tokens.GetDimension(0).Extent(), 3);
+  // Longest token is "second" (6 chars)
+  EXPECT_EQ(tokens.ElementBytes(), 6u * sizeof(TypeParam));
+
+  // Tokens are blank-padded to max length
+  std::basic_string<TypeParam> t0{GetToken<TypeParam>(tokens, 0)};
+  std::basic_string<TypeParam> t1{GetToken<TypeParam>(tokens, 1)};
+  std::basic_string<TypeParam> t2{GetToken<TypeParam>(tokens, 2)};
+  std::basic_string<TypeParam> e0{'f', 'i', 'r', 's', 't', ' '};
+  std::basic_string<TypeParam> e1{'s', 'e', 'c', 'o', 'n', 'd'};
+  std::basic_string<TypeParam> e2{'t', 'h', 'i', 'r', 'd', ' '};
+  EXPECT_EQ(t0, e0);
+  EXPECT_EQ(t1, e1);
+  EXPECT_EQ(t2, e2);
+  tokens.Deallocate();
+}
+
+// Form 1: empty string produces one zero-length token
+TYPED_TEST(TokenizeTests, Form1EmptyString) {
+  auto string{CreateScalarDescriptor<TypeParam>("")};
+  auto set{CreateScalarDescriptor<TypeParam>(",")};
+  ASSERT_NE(string, nullptr);
+  ASSERT_NE(set, nullptr);
+
+  auto tokensStatic{CreateAllocatableCharDescriptor<TypeParam>()};
+  Descriptor &tokens{tokensStatic.descriptor()};
+
+  RTNAME(Tokenize)(tokens, nullptr, *string, *set);
+
+  ASSERT_TRUE(tokens.IsAllocated());
+  EXPECT_EQ(tokens.GetDimension(0).Extent(), 1) << "empty string = 1 token";
+  EXPECT_EQ(tokens.ElementBytes(), 0u) << "token length should be 0";
+  EXPECT_EQ(tokens.GetDimension(0).LowerBound(), 1);
+  tokens.Deallocate();
+}
+
+// Form 1: consecutive delimiters produce empty tokens
+TYPED_TEST(TokenizeTests, Form1ConsecutiveDelimiters) {
+  auto string{CreateScalarDescriptor<TypeParam>("a,,b")};
+  auto set{CreateScalarDescriptor<TypeParam>(",")};
+  ASSERT_NE(string, nullptr);
+  ASSERT_NE(set, nullptr);
+
+  auto tokensStatic{CreateAllocatableCharDescriptor<TypeParam>()};
+  Descriptor &tokens{tokensStatic.descriptor()};
+
+  RTNAME(Tokenize)(tokens, nullptr, *string, *set);
+
+  ASSERT_TRUE(tokens.IsAllocated());
+  // Expect 3 tokens: "a", "", "b"
+  EXPECT_EQ(tokens.GetDimension(0).Extent(), 3);
+  tokens.Deallocate();
+}
+
+// Form 1: with SEPARATOR output
+TYPED_TEST(TokenizeTests, Form1WithSeparator) {
+  auto string{CreateScalarDescriptor<TypeParam>("a,b;c")};
+  auto set{CreateScalarDescriptor<TypeParam>(",;")};
+  ASSERT_NE(string, nullptr);
+  ASSERT_NE(set, nullptr);
+
+  auto tokensStatic{CreateAllocatableCharDescriptor<TypeParam>()};
+  Descriptor &tokens{tokensStatic.descriptor()};
+  auto sepStatic{CreateAllocatableCharDescriptor<TypeParam>()};
+  Descriptor &separator{sepStatic.descriptor()};
+
+  RTNAME(Tokenize)(tokens, &separator, *string, *set);
+
+  // Expect 3 tokens: "a", "b", "c"
+  ASSERT_TRUE(tokens.IsAllocated());
+  EXPECT_EQ(tokens.GetDimension(0).Extent(), 3);
+  ASSERT_TRUE(separator.IsAllocated());
+  // Expect 2 separators: ',' then ';'
+  EXPECT_EQ(separator.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(separator.ElementBytes(), sizeof(TypeParam));
+
+  // Check separator values: ',' then ';'
+  const TypeParam *sep0{separator.OffsetElement<TypeParam>(0)};
+  const TypeParam *sep1{
+      separator.OffsetElement<TypeParam>(separator.ElementBytes())};
+  EXPECT_EQ(*sep0, static_cast<TypeParam>(','));
+  EXPECT_EQ(*sep1, static_cast<TypeParam>(';'));
+  tokens.Deallocate();
+  separator.Deallocate();
+}
+
+// Form 2: basic position output
+TYPED_TEST(TokenizeTests, Form2Basic) {
+  // From the standard example: "first,second,,fourth"
+  auto string{CreateScalarDescriptor<TypeParam>("first,second,,fourth")};
+  auto set{CreateScalarDescriptor<TypeParam>(",;")};
+  ASSERT_NE(string, nullptr);
+  ASSERT_NE(set, nullptr);
+
+  auto firstStatic{CreateAllocatableIntDescriptor()};
+  Descriptor &first{firstStatic.descriptor()};
+  auto lastStatic{CreateAllocatableIntDescriptor()};
+  Descriptor &last{lastStatic.descriptor()};
+
+  RTNAME(TokenizePositions)(first, last, *string, *set);
+
+  ASSERT_TRUE(first.IsAllocated());
+  ASSERT_TRUE(last.IsAllocated());
+  EXPECT_EQ(first.GetDimension(0).Extent(), 4);
+  EXPECT_EQ(last.GetDimension(0).Extent(), 4);
+
+  //  Expect: FIRST = [1, 7, 14, 15], LAST = [5, 12, 13, 20]
+  EXPECT_EQ(*first.OffsetElement<std::int32_t>(0 * sizeof(std::int32_t)), 1);
+  EXPECT_EQ(*first.OffsetElement<std::int32_t>(1 * sizeof(std::int32_t)), 7);
+  EXPECT_EQ(*first.OffsetElement<std::int32_t>(2 * sizeof(std::int32_t)), 14);
+  EXPECT_EQ(*first.OffsetElement<std::int32_t>(3 * sizeof(std::int32_t)), 15);
+  EXPECT_EQ(*last.OffsetElement<std::int32_t>(0 * sizeof(std::int32_t)), 5);
+  EXPECT_EQ(*last.OffsetElement<std::int32_t>(1 * sizeof(std::int32_t)), 12);
+  EXPECT_EQ(*last.OffsetElement<std::int32_t>(2 * sizeof(std::int32_t)), 13);
+  EXPECT_EQ(*last.OffsetElement<std::int32_t>(3 * sizeof(std::int32_t)), 20);
+  first.Deallocate();
+  last.Deallocate();
+}
+
+// Form 2: empty string produces one token with FIRST=1, LAST=0
+TYPED_TEST(TokenizeTests, Form2EmptyString) {
+  auto string{CreateScalarDescriptor<TypeParam>("")};
+  auto set{CreateScalarDescriptor<TypeParam>(",")};
+  ASSERT_NE(string, nullptr);
+  ASSERT_NE(set, nullptr);
+
+  auto firstStatic{CreateAllocatableIntDescriptor()};
+  Descriptor &first{firstStatic.descriptor()};
+  auto lastStatic{CreateAllocatableIntDescriptor()};
+  Descriptor &last{lastStatic.descriptor()};
+
+  RTNAME(TokenizePositions)(first, last, *string, *set);
+
+  ASSERT_TRUE(first.IsAllocated());
+  ASSERT_TRUE(last.IsAllocated());
+  EXPECT_EQ(first.GetDimension(0).Extent(), 1) << "empty string = 1 token";
+  EXPECT_EQ(last.GetDimension(0).Extent(), 1);
+
+  // Expect FIRST(1)=1, LAST(1)=0
+  EXPECT_EQ(*first.OffsetElement<std::int32_t>(0), 1) << "FIRST(1) = 1";
+  EXPECT_EQ(*last.OffsetElement<std::int32_t>(0), 0) << "LAST(1) = 0";
+  first.Deallocate();
+  last.Deallocate();
+}
+
 // Test F_C_STRING()
 TEST(CharacterTests, FCString) {
   // Test 1: Default behavior (trim trailing blanks)

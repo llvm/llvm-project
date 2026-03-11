@@ -2534,6 +2534,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acospif_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    libc.src.math.acospif
+)
+
+add_fp_unittest(
   acospif16_test
   NEED_MPFR
   SUITE
@@ -2998,6 +3009,18 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.cbrt
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  cbrtbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrtbf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

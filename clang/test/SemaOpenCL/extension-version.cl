@@ -373,6 +373,18 @@
 #pragma OPENCL EXTENSION cl_intel_required_subgroup_size : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
+#ifndef cl_intel_split_work_group_barrier
+#error "Missing cl_intel_split_work_group_barrier define"
+#endif
+#else
+#ifdef cl_intel_split_work_group_barrier
+#error "Incorrect cl_intel_split_work_group_barrier define"
+#endif
+#endif
+// expected-warning@+1{{OpenCL extension 'cl_intel_split_work_group_barrier' unknown or does not require pragma - ignoring}}
+#pragma OPENCL EXTENSION cl_intel_split_work_group_barrier : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 #ifndef cl_intel_subgroups
 #error "Missing cl_intel_subgroups define"
 #endif

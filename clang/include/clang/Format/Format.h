@@ -57,7 +57,7 @@ struct FormatStyle {
   // If the BasedOn: was InheritParentConfig and this style needs the file from
   // the parent directories. It is not part of the actual style for formatting.
   // Thus the // instead of ///.
-  bool InheritsParentConfig;
+  std::string InheritConfig;
 
   /// The extra indent or outdent of access modifiers, e.g. ``public:``.
   /// \version 3.3
@@ -3160,22 +3160,63 @@ struct FormatStyle {
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
 
-  /// Indent goto labels.
-  ///
-  /// When ``false``, goto labels are flushed left.
-  /// \code
-  ///    true:                                  false:
-  ///    int f() {                      vs.     int f() {
-  ///      if (foo()) {                           if (foo()) {
-  ///      label1:                              label1:
-  ///        bar();                                 bar();
-  ///      }                                      }
-  ///    label2:                                label2:
-  ///      return 1;                              return 1;
-  ///    }                                      }
-  /// \endcode
+  /// Options for indenting goto labels.
+  enum IndentGotoLabelStyle : int8_t {
+    /// Do not indent goto labels.
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///    label1:
+    ///        bar();
+    ///      }
+    ///    label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_NoIndent,
+    /// Indent goto labels to the enclosing block (previous indenting level).
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///      label1:
+    ///        bar();
+    ///      }
+    ///    label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_OuterIndent,
+    /// Indent goto labels to the surrounding statements (current indenting
+    /// level).
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///        label1:
+    ///        bar();
+    ///      }
+    ///      label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_InnerIndent,
+    /// Indent goto labels to half the indentation of the surrounding code.
+    /// If the indentation width is an odd number, it will round up.
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///       label1:
+    ///        bar();
+    ///      }
+    ///     label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_HalfIndent,
+  };
+
+  /// The goto label indenting style to use.
   /// \version 10
-  bool IndentGotoLabels;
+  IndentGotoLabelStyle IndentGotoLabels;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {

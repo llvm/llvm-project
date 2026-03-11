@@ -1,17 +1,5 @@
 // RUN: %check_clang_tidy %s performance-inefficient-string-concatenation %t
-
-namespace std {
-template <typename T>
-class basic_string {
-public:
-  basic_string() {}
-  ~basic_string() {}
-  basic_string<T> *operator+=(const basic_string<T> &);
-  friend basic_string<T> operator+(const basic_string<T> &, const basic_string<T> &);
-};
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
-}
+#include <string>
 
 void f(std::string) {}
 std::string g(std::string);

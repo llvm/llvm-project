@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Registries/MockSerializationFormat.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
@@ -39,6 +42,12 @@ MockSerializationFormat::MockSerializationFormat() {
           Info->ForSummary.str());
     }
   }
+}
+
+void MockSerializationFormat::forEachRegisteredAnalysis(
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback) const {
+  for (const auto &Entry : llvm::Registry<FormatInfo>::entries())
+    Callback(Entry.getName(), Entry.getDesc());
 }
 
 llvm::Expected<TUSummary>
@@ -154,3 +163,37 @@ llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
 static SerializationFormatRegistry::Add<MockSerializationFormat>
     RegisterFormat("MockSerializationFormat",
                    "A serialization format for testing");
+
+llvm::Expected<TUSummaryEncoding>
+MockSerializationFormat::readTUSummaryEncoding(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support TUSummaryEncoding");
+}
+
+llvm::Error MockSerializationFormat::writeTUSummaryEncoding(
+    const TUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support TUSummaryEncoding");
+}
+
+llvm::Expected<LUSummary>
+MockSerializationFormat::readLUSummary(llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support LUSummary");
+}
+
+llvm::Error MockSerializationFormat::writeLUSummary(const LUSummary &Summary,
+                                                    llvm::StringRef Path) {
+  llvm_unreachable("MockSerializationFormat does not support LUSummary");
+}
+
+llvm::Expected<LUSummaryEncoding>
+MockSerializationFormat::readLUSummaryEncoding(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support LUSummaryEncoding");
+}
+
+llvm::Error MockSerializationFormat::writeLUSummaryEncoding(
+    const LUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support LUSummaryEncoding");
+}

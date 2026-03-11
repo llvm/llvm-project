@@ -35,17 +35,17 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "uniform-work-group-size"="false"}
+attributes #0 = { nounwind }
 attributes #1 = { nounwind "less-precise-fpmad"="true" "no-nans-fp-math"="true" }
 
-; NOINFS: attributes #[[ATTR0]] = { nounwind "uniform-work-group-size"="false" }
-; NOINFS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" }
+; NOINFS: attributes #[[ATTR0]] = { nounwind }
+; NOINFS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-nans-fp-math"="false" }
 ; NOINFS: [[META0]] = !{}
 ;.
-; UNSAFE: attributes #[[ATTR0]] = { nounwind "uniform-work-group-size"="false" }
+; UNSAFE: attributes #[[ATTR0]] = { nounwind }
 ; UNSAFE: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-nans-fp-math"="false" }
 ;.
-; NONANS: attributes #[[ATTR0]] = { nounwind "no-nans-fp-math"="true" "uniform-work-group-size"="false" }
+; NONANS: attributes #[[ATTR0]] = { nounwind "no-nans-fp-math"="true" }
 ; NONANS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-nans-fp-math"="true" }
 ;.
 ; UNSAFE: [[META0]] = !{}

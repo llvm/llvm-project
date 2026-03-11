@@ -1044,7 +1044,13 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtT = ExtVal.getValueType();
-  EVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getValueType(0);
+  SDValue N0 = ExtVal->getOperand(0);
+  if (N0.getOpcode() == ISD::FREEZE)
+    N0 = N0.getOperand(0);
+  auto *Load = dyn_cast<LoadSDNode>(N0);
+  if (!Load)
+    return false;
+  EVT MemT = Load->getValueType(0);
   return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
          (ExtT == MVT::v4i32 && MemT == MVT::v4i16) ||
          (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
@@ -3359,12 +3365,11 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDLoc DL(N);
-    SDValue Ret = DAG.getZExtOrTrunc(
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-                    {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
-        DL, MVT::i1);
+    SDValue Ret = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                              {DAG.getConstant(InPost, DL, MVT::i32), LHS});
     if (SetType == ISD::SETEQ)
-      Ret = DAG.getNOT(DL, Ret, MVT::i1);
+      Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
+                        DAG.getConstant(1, DL, MVT::i32));
     return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
   };
 
@@ -3397,13 +3402,13 @@ static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(N);
-  SDValue Ret = DAG.getZExtOrTrunc(
+  SDValue Ret =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                   {DAG.getConstant(Intrin, DL, MVT::i32),
-                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)}),
-      DL, MVT::i1);
+                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)});
   if (RequiresNegate)
-    Ret = DAG.getNOT(DL, Ret, MVT::i1);
+    Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
+                      DAG.getConstant(1, DL, MVT::i32));
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
 }
 

@@ -182,6 +182,7 @@ private:
   bool showMatchError(SMLoc Loc, unsigned ErrCode, uint64_t ErrorInfo,
                       OperandVector &Operands);
 
+  bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
   bool parseDataExpr(const MCExpr *&Res) override;
   bool parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc);
 
@@ -8452,8 +8453,31 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   return false;
 }
 
+bool AArch64AsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return TokError("expected '%' relocation specifier");
+  StringRef Identifier = getParser().getTok().getIdentifier();
+  auto Spec = AArch64::parsePercentSpecifierName(Identifier);
+  if (!Spec)
+    return TokError("invalid relocation specifier");
+
+  getParser().Lex(); // Eat the identifier
+  if (parseToken(AsmToken::LParen, "expected '('"))
+    return true;
+
+  const MCExpr *SubExpr;
+  if (getParser().parseParenExpression(SubExpr, E))
+    return true;
+
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
+  return false;
+}
+
 bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
   SMLoc EndLoc;
+  if (parseOptionalToken(AsmToken::Percent))
+    return parseExprWithSpecifier(Res, EndLoc);
 
   if (getParser().parseExpression(Res))
     return true;
@@ -8473,14 +8497,6 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
   if (STI->getTargetTriple().isOSBinFormatMachO()) {
     if (Identifier == "got")
       Spec = AArch64::S_MACHO_GOT;
-  } else {
-    // Unofficial, experimental syntax that will be changed.
-    if (Identifier == "gotpcrel")
-      Spec = AArch64::S_GOTPCREL;
-    else if (Identifier == "plt")
-      Spec = AArch64::S_PLT;
-    else if (Identifier == "funcinit")
-      Spec = AArch64::S_FUNCINIT;
   }
   if (Spec == AArch64::S_None)
     return Error(Loc, "invalid relocation specifier");

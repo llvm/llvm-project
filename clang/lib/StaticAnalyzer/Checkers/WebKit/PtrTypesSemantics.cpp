@@ -454,8 +454,27 @@ bool isPtrConversion(const FunctionDecl *F) {
   return false;
 }
 
-bool isNoDeleteFunction(const FunctionDecl *F) {
+static bool isNoDeleteFunctionDecl(const FunctionDecl *F) {
   return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
+}
+
+bool isNoDeleteFunction(const FunctionDecl *F) {
+  if (llvm::any_of(F->redecls(), isNoDeleteFunctionDecl))
+    return true;
+
+  const auto *MD = dyn_cast<CXXMethodDecl>(F);
+  if (!MD || !MD->isVirtual())
+    return false;
+
+  auto Overriders = llvm::to_vector(MD->overridden_methods());
+  while (!Overriders.empty()) {
+    const auto *Fn = Overriders.pop_back_val();
+    llvm::append_range(Overriders, Fn->overridden_methods());
+    if (isNoDeleteFunctionDecl(Fn))
+      return true;
+  }
+
+  return false;
 }
 
 bool isTrivialBuiltinFunction(const FunctionDecl *F) {
@@ -539,6 +558,9 @@ class TrivialFunctionAnalysisVisitor
       if (R->hasDefinition() && R->hasTrivialDestructor())
         return true;
 
+      if (HasFieldWithNonTrivialDtor(R))
+        return false;
+
       // For Webkit, side-effects are fine as long as we don't delete objects,
       // so check recursively.
       if (const auto *Dtor = R->getDestructor())
@@ -555,6 +577,44 @@ class TrivialFunctionAnalysisVisitor
       return CanTriviallyDestruct(AT->getElementType());
 
     return false; // Otherwise it's likely not trivial.
+  }
+
+  bool HasFieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
+    auto CacheIt = FieldDtorCache.find(Cls);
+    if (CacheIt != FieldDtorCache.end())
+      return CacheIt->second;
+
+    bool Result = ([&] {
+      auto HasNonTrivialField = [&](const CXXRecordDecl *R) {
+        for (const FieldDecl *F : R->fields()) {
+          if (!CanTriviallyDestruct(F->getType()))
+            return true;
+        }
+        return false;
+      };
+
+      if (HasNonTrivialField(Cls))
+        return true;
+
+      if (!Cls->hasDefinition())
+        return false;
+
+      CXXBasePaths Paths;
+      Paths.setOrigin(const_cast<CXXRecordDecl *>(Cls));
+      return Cls->lookupInBases(
+          [&](const CXXBaseSpecifier *B, CXXBasePath &) {
+            auto *T = B->getType().getTypePtrOrNull();
+            if (!T)
+              return false;
+            auto *R = T->getAsCXXRecordDecl();
+            return R && HasNonTrivialField(R);
+          },
+          Paths, /*LookupInDependent =*/true);
+    })();
+
+    FieldDtorCache[Cls] = Result;
+
+    return Result;
   }
 
 public:
@@ -765,6 +825,10 @@ public:
     if (!Callee)
       return false;
 
+    if (isa<CXXDestructorDecl>(Callee) &&
+        !CanTriviallyDestruct(MCE->getObjectType()))
+      return false;
+
     auto Name = safeGetName(Callee);
     if (Name == "ref" || Name == "incrementCheckedPtrCount")
       return true;
@@ -820,10 +884,6 @@ public:
 
     // Recursively descend into the callee to confirm that it's trivial.
     return IsFunctionTrivial(CE->getConstructor());
-  }
-
-  bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-    return CanTriviallyDestruct(DE->getDestroyedType());
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
@@ -919,6 +979,7 @@ public:
 
 private:
   CacheTy &Cache;
+  CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
 };
