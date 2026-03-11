@@ -435,21 +435,6 @@ LogicalResult TosaProfileCompliance::checkProfileOrExtension(
     return failure();
   }
 
-  // Each extension can contain a list of profiles that it works with, usually
-  // have the same data type.
-  if constexpr (std::is_same_v<T, Extension>) {
-    for (const auto &mode : opRequiredMode) {
-      SmallVector<Profile> coProfs = getCooperativeProfiles(mode);
-      if (!targetEnv.allowsAnyOf(coProfs)) {
-        op->emitOpError() << "illegal: requires ["
-                          << llvm::join(stringifyProfile<Profile>(coProfs),
-                                        ", ")
-                          << "] to work with but not enabled in target\n";
-        return failure();
-      }
-    }
-  }
-
   // Ensure the profile inference match the profile knowledge of the
   // specification.
   for (const auto &cands : specRequiredModeSet) {

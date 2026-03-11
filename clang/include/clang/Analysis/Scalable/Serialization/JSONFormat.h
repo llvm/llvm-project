@@ -62,6 +62,10 @@ public:
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
+  void forEachRegisteredAnalysis(
+      llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>
+          Callback) const override;
+
   using EntityIdToJSONFn = llvm::function_ref<Object(EntityId)>;
   using EntityIdFromJSONFn =
       llvm::function_ref<llvm::Expected<EntityId>(const Object &)>;

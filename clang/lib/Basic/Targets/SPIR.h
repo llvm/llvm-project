@@ -276,7 +276,7 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
-    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -372,7 +372,7 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
-    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
   }
 

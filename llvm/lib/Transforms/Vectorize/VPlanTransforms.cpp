@@ -5069,7 +5069,8 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
 void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
                                                  VPBasicBlock *VectorPHVPBB,
                                                  bool TailByMasking,
-                                                 bool RequiresScalarEpilogue) {
+                                                 bool RequiresScalarEpilogue,
+                                                 VPValue *Step) {
   VPSymbolicValue &VectorTC = Plan.getVectorTripCount();
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
@@ -5078,8 +5079,14 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
 
   VPValue *TC = Plan.getTripCount();
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(TC);
-  VPBuilder Builder(VectorPHVPBB, VectorPHVPBB->begin());
-  VPValue *Step = &Plan.getVFxUF();
+  VPBasicBlock::iterator InsertPt = VectorPHVPBB->begin();
+  if (auto *StepR = Step->getDefiningRecipe()) {
+    assert(StepR->getParent() == VectorPHVPBB &&
+           "Step must be defined in VectorPHVPBB");
+    // Insert after Step's definition to maintain valid def-use ordering.
+    InsertPt = std::next(StepR->getIterator());
+  }
+  VPBuilder Builder(VectorPHVPBB, InsertPt);
 
   // If the tail is to be folded by masking, round the number of iterations N
   // up to a multiple of Step instead of rounding down. This is done by first
@@ -5460,6 +5467,14 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   if (StoreGroups.empty())
     return nullptr;
 
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  bool RequiresScalarEpilogue =
+      MiddleVPBB->getNumSuccessors() == 1 &&
+      MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader();
+  // Bail out for tail-folding (middle block with a single successor to exit).
+  if (MiddleVPBB->getNumSuccessors() != 2 && !RequiresScalarEpilogue)
+    return nullptr;
+
   // All interleave groups in Plan can be narrowed for VFToOptimize. Split the
   // original Plan into 2: a) a new clone which contains all VFs of Plan, except
   // VFToOptimize, and b) the original Plan with VFToOptimize as single VF.
@@ -5490,21 +5505,29 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   // original iteration.
   auto *CanIV = VectorLoop->getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
-  VPBuilder PHBuilder(Plan.getVectorPreheader());
+  VPBasicBlock *VectorPH = Plan.getVectorPreheader();
+  VPBuilder PHBuilder(VectorPH, VectorPH->begin());
 
   VPValue *UF = &Plan.getUF();
+  VPValue *Step;
   if (VFToOptimize->isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
-    VPValue *VScaleUF = PHBuilder.createOverflowingOp(
-        Instruction::Mul, {VScale, UF}, {true, false});
-    Inc->setOperand(1, VScaleUF);
+    Step = PHBuilder.createOverflowingOp(Instruction::Mul, {VScale, UF},
+                                         {true, false});
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
-    Inc->setOperand(1, UF);
+    Step = UF;
     Plan.getVF().replaceAllUsesWith(
         Plan.getConstantInt(CanIV->getScalarType(), 1));
   }
+  // Materialize vector trip count with the narrowed step.
+  materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,
+                             RequiresScalarEpilogue, Step);
+
+  Inc->setOperand(1, Step);
+  Plan.getVFxUF().replaceAllUsesWith(Step);
+
   removeDeadRecipes(Plan);
   assert(none_of(*VectorLoop->getEntryBasicBlock(),
                  IsaPred<VPVectorPointerRecipe>) &&

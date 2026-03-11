@@ -322,12 +322,6 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);
-      } else {
-        // Anything else that is not in the hlsl_constant address space must be
-        // an empty struct or a zero-sized array and can be ignored
-        assert(BufDecl->getASTContext().getTypeSize(VDTy) == 0 &&
-               "constant buffer decl with non-zero sized type outside of "
-               "hlsl_constant address space");
       }
       continue;
     }
@@ -951,7 +945,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  llvm::DenseMap<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+  llvm::DenseMap<const DeclaratorDecl *, std::pair<llvm::Value *, llvm::Type *>>
+      OutputSemantic;
 
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
@@ -959,7 +954,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       SRetOffset = 1;
       llvm::Type *VarType = Param.getParamStructRetType();
       llvm::Value *Var = B.CreateAlloca(VarType);
-      OutputSemantic.try_emplace(FD, Var);
+      OutputSemantic.try_emplace(FD, std::make_pair(Var, VarType));
       Args.push_back(Var);
       continue;
     }
@@ -995,12 +990,14 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   CI->setCallingConv(Fn->getCallingConv());
 
   if (Fn->getReturnType() != CGM.VoidTy)
-    OutputSemantic.try_emplace(FD, CI);
+    // Element type is unused, so set to dummy value (NULL).
+    OutputSemantic.try_emplace(FD, std::make_pair(CI, nullptr));
 
-  for (auto &[Decl, Source] : OutputSemantic) {
+  for (auto &[Decl, SourcePair] : OutputSemantic) {
+    llvm::Value *Source = SourcePair.first;
+    llvm::Type *ElementType = SourcePair.second;
     AllocaInst *AI = dyn_cast<AllocaInst>(Source);
-    llvm::Value *SourceValue =
-        AI ? B.CreateLoad(AI->getAllocatedType(), Source) : Source;
+    llvm::Value *SourceValue = AI ? B.CreateLoad(ElementType, Source) : Source;
 
     auto AttrBegin = Decl->specific_attr_begin<HLSLAppliedSemanticAttr>();
     auto AttrEnd = Decl->specific_attr_end<HLSLAppliedSemanticAttr>();
