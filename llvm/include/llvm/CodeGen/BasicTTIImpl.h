@@ -255,7 +255,7 @@ private:
           getScalarizationOverhead(
               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
               /*Insert=*/false, /*Extract=*/true, CostKind) +
-          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+          VF * (thisT()->getCFInstrCost(Instruction::CondBr, CostKind) +
                 thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 

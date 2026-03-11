@@ -1131,3 +1131,9 @@ def OpFixedLogALTERA: Op<5932, (outs ID:$res), (ins TYPE:$result_type, ID:$input
       "$res = OpFixedLogALTERA $result_type $input $sign $l $rl $q $o">;
 def OpFixedExpALTERA: Op<5933, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
       "$res = OpFixedExpALTERA $result_type $input $sign $l $rl $q $o">;
+
+//SPV_INTEL_masked_gather_scatter
+def OpMaskedGatherINTEL: Op<6428, (outs ID:$res), (ins TYPE:$resType, ID:$ptrs, ID:$alignment, ID:$mask, ID:$fillEmpty),
+                  "$res = OpMaskedGatherINTEL $resType $ptrs $alignment $mask $fillEmpty">;
+def OpMaskedScatterINTEL: Op<6429, (outs), (ins ID:$ptrs, ID:$alignment, ID:$mask, ID:$values),
+                  "OpMaskedScatterINTEL $ptrs $alignment $mask $values">;

@@ -265,8 +265,11 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 /// \returns Minimum flat work group size for given subtarget \p STI.
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
 
-/// \returns Maximum flat work group size for given subtarget \p STI.
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
+/// \returns Maximum flat work group size
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
@@ -1721,7 +1724,6 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
-bool isGFX1170(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
