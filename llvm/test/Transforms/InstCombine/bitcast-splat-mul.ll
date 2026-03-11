@@ -5,9 +5,7 @@ define i32 @issue185694_i1(i64 %arg0, i64 %arg1) {
 ; CHECK-LABEL: define i32 @issue185694_i1(
 ; CHECK-SAME: i64 [[ARG0:%.*]], i64 [[ARG1:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ARG1]], [[ARG0]]
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i1> poison, i1 [[CMP]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i1> [[INS]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[NEG:%.*]] = bitcast <4 x i1> [[SPLAT]] to i4
+; CHECK-NEXT:    [[NEG:%.*]] = sext i1 [[CMP]] to i4
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i4 [[NEG]] to i32
 ; CHECK-NEXT:    ret i32 [[EXT]]
 ;
@@ -22,9 +20,8 @@ define i32 @issue185694_i1(i64 %arg0, i64 %arg1) {
 define i32 @splat_i8_nonzero_lane(i8 %x) {
 ; CHECK-LABEL: define i32 @splat_i8_nonzero_lane(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> poison, i8 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[MUL:%.*]] = bitcast <4 x i8> [[SPLAT]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i32
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[TMP1]], 16843009
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %ins = insertelement <4 x i8> poison, i8 %x, i64 2
@@ -36,9 +33,8 @@ define i32 @splat_i8_nonzero_lane(i8 %x) {
 define i64 @zext_splat_i8_to_i64(i8 %x) {
 ; CHECK-LABEL: define i64 @zext_splat_i8_to_i64(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> poison, i8 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i8> [[INS]], <2 x i8> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[MUL:%.*]] = bitcast <2 x i8> [[SPLAT]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[TMP1]], 257
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[MUL]] to i64
 ; CHECK-NEXT:    ret i64 [[EXT]]
 ;
@@ -81,9 +77,8 @@ define i128 @splat_float_to_i128(float %x) {
 define i128 @splat_i32_to_i128(i32 %x) {
 ; CHECK-LABEL: define i128 @splat_i32_to_i128(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[MUL:%.*]] = bitcast <4 x i32> [[SPLAT]] to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i128
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i128 [[TMP1]], 79228162532711081671548469249
 ; CHECK-NEXT:    ret i128 [[MUL]]
 ;
   %ins = insertelement <4 x i32> poison, i32 %x, i64 1
