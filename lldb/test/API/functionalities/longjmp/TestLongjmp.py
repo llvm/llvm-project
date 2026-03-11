@@ -18,7 +18,6 @@ class LongjmpTestCase(TestBase):
         self.step_out()
 
     @skipIfDarwin  # llvm.org/pr16769: LLDB on Mac OS X dies in function ReadRegisterBytes in GDBRemoteRegisterContext.cpp
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @skipIfNetBSD
     def test_step_over(self):
         """Test stepping when the inferior calls setjmp/longjmp, in particular, thread step-over a longjmp."""
