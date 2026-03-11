@@ -49,6 +49,7 @@
 // RISCV64-SAME: {{^}}, sifive-u74
 // RISCV64-SAME: {{^}}, sifive-x280
 // RISCV64-SAME: {{^}}, sifive-x390
+// RISCV64-SAME: {{^}}, spacemit-a100
 // RISCV64-SAME: {{^}}, spacemit-x60
 // RISCV64-SAME: {{^}}, spacemit-x100
 // RISCV64-SAME: {{^}}, syntacore-scr3-rv64
@@ -59,6 +60,8 @@
 // RISCV64-SAME: {{^}}, veyron-v1
 // RISCV64-SAME: {{^}}, xiangshan-kunminghu
 // RISCV64-SAME: {{^}}, xiangshan-nanhu
+// RISCV64-SAME: {{^}}, xt-c910v2
+// RISCV64-SAME: {{^}}, xt-c920v2
 // RISCV64-SAME: {{$}}
 
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
@@ -113,6 +116,7 @@
 // TUNE-RISCV64-SAME: {{^}}, sifive-u74
 // TUNE-RISCV64-SAME: {{^}}, sifive-x280
 // TUNE-RISCV64-SAME: {{^}}, sifive-x390
+// TUNE-RISCV64-SAME: {{^}}, spacemit-a100
 // TUNE-RISCV64-SAME: {{^}}, spacemit-x60
 // TUNE-RISCV64-SAME: {{^}}, spacemit-x100
 // TUNE-RISCV64-SAME: {{^}}, syntacore-scr3-rv64
@@ -123,6 +127,8 @@
 // TUNE-RISCV64-SAME: {{^}}, veyron-v1
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-kunminghu
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-nanhu
+// TUNE-RISCV64-SAME: {{^}}, xt-c910v2
+// TUNE-RISCV64-SAME: {{^}}, xt-c920v2
 // TUNE-RISCV64-SAME: {{^}}, andes-45-series
 // TUNE-RISCV64-SAME: {{^}}, generic
 // TUNE-RISCV64-SAME: {{^}}, generic-ooo

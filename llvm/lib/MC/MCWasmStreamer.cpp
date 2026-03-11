@@ -14,6 +14,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -129,7 +130,9 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                       Align ByteAlignment) {
-  llvm_unreachable("Common symbols are not yet implemented for Wasm");
+  getContext().reportError(getStartTokLoc(),
+                           "common symbols are not yet implemented for Wasm: " +
+                               S->getName());
 }
 
 void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
@@ -138,7 +141,10 @@ void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
 
 void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                            Align ByteAlignment) {
-  llvm_unreachable("Local common symbols are not yet implemented for Wasm");
+  getContext().reportError(getStartTokLoc(),
+                           "local common symbols are not yet implemented "
+                           "for Wasm: " +
+                               S->getName());
 }
 
 void MCWasmStreamer::emitIdent(StringRef IdentString) {

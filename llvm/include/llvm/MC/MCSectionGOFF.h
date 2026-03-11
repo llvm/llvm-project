@@ -27,6 +27,8 @@ namespace llvm {
 class MCExpr;
 
 class LLVM_ABI MCSectionGOFF final : public MCSection {
+  StringRef ExternalName; // Alternate external name.
+
   // Parent of this section. Implies that the parent is emitted first.
   MCSectionGOFF *Parent;
 
@@ -115,6 +117,12 @@ public:
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
+
+  bool hasExternalName() const { return !ExternalName.empty(); }
+  void setExternalName(StringRef Name) { ExternalName = Name; }
+  StringRef getExternalName() const {
+    return hasExternalName() ? ExternalName : getName();
+  }
 };
 } // end namespace llvm
 

@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +21,7 @@
 template <typename T>
 struct TestAddress {
   void operator()() const {
-    T x(T(1));
+    alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
     const std::atomic_ref<T> a(x);
 
     std::same_as<T*> decltype(auto) p = a.address();

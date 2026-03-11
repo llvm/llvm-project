@@ -1013,7 +1013,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       AnalysisWorklist.push_back(U);
     }
   }
-  V2SCopies[Info.ID] = Info;
+  V2SCopies[Info.ID] = std::move(Info);
 }
 
 // The main function that computes the VGPR to SGPR copy score

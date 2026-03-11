@@ -1493,7 +1493,7 @@ bool MipsFastISel::fastLowerArguments() {
   // Account for the reserved argument area on ABI's that have one (O32).
   // It seems strange to do this on the caller side but it's necessary in
   // SelectionDAG's implementation.
-  IncomingArgSizeInBytes = std::min(getABI().GetCalleeAllocdArgSizeInBytes(CC),
+  IncomingArgSizeInBytes = std::max(getABI().GetCalleeAllocdArgSizeInBytes(CC),
                                     IncomingArgSizeInBytes);
 
   MF->getInfo<MipsFunctionInfo>()->setFormalArgInfo(IncomingArgSizeInBytes,
@@ -2079,7 +2079,7 @@ bool MipsFastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::Or:
   case Instruction::Xor:
     return selectLogicalOp(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return selectBranch(I);
   case Instruction::Ret:
     return selectRet(I);

@@ -15,7 +15,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr double dsqrtl(long double x) {
+LIBC_INLINE constexpr double dsqrtl(long double x) {
   return fputil::sqrt<double>(x);
 }
 

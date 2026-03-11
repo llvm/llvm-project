@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen -gen-riscv-target-def -I %p/../../include %s | FileCheck %s
+// RUN: not llvm-tblgen -gen-riscv-target-def -DDUPLICATE -I %p/../../include %s 2>&1 | FileCheck %s --check-prefix=DUPLICATE
 
 include "llvm/Target/Target.td"
 
@@ -25,6 +26,21 @@ class RISCVExperimentalExtension<string name, int major, int minor, string desc,
                      fieldname, value> {
   let Experimental = true;
 }
+
+class RISCVTuneFeature<string name, string pos_directive, string neg_directive,
+                       string field_name, string value, string description,
+                       list<RISCVTuneFeature> implied_features = []>
+    : SubtargetFeature<name, field_name, value, description> {
+  let Implies = implied_features;
+
+  string PositiveDirectiveName = pos_directive;
+  string NegativeDirectiveName = neg_directive;
+}
+class RISCVSimpleTuneFeature<string name, string field_name, string value,
+                             string description,
+                             list<RISCVTuneFeature> implied_features = []>
+    : RISCVTuneFeature<name, name, "no-"#name, field_name, value, description,
+                       implied_features>;
 
 def FeatureStdExtI
     : RISCVExtension<"i", 2, 1,
@@ -84,13 +100,17 @@ class RISCVProcessorModel<string n,
   int MVendorID = 0;
   int MArchID = 0;
   int MImpID = 0;
+
+  list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
 }
 
 class RISCVTuneProcessorModel<string n,
                               SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-    : ProcessorModel<n, m, f,tunef>;
+    : ProcessorModel<n, m, f, tunef> {
+  list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
+}
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
@@ -188,3 +208,14 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT:     {"i", 0, 8ULL},
 // CHECK-NEXT: };
 // CHECK-NEXT: #endif
+
+#ifdef DUPLICATE
+def TuneFeatureBar : RISCVTuneFeature<"bar", "abc", "def", "HasBar", "true", "TBA">;
+
+def TuneFeatureFoo : RISCVTuneFeature<"foo", "xyz", "abc", "HasFoo", "true", "TBA">;
+
+// DUPLICATE: error: RISC-V tune feature negative directive 'abc' was already defined
+// DUPLICATE-NEXT: def TuneFeatureFoo
+// DUPLICATE: note: Previously defined here
+// DUPLICATE-NEXT: def TuneFeatureBar
+#endif

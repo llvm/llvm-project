@@ -5,7 +5,7 @@ define void @pack_constants(ptr %ptr) {
 ; CHECK-LABEL: define void @pack_constants(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
-; CHECK-NEXT:    store <2 x i8> <i8 0, i8 1>, ptr [[PTR0]], align 1
+; CHECK-NEXT:    store <2 x i8> <i8 0, i8 1>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
@@ -27,10 +27,10 @@ define void @packPHIs(ptr %ptr) {
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
 ; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
 ; CHECK-NEXT:    [[PHI3:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[PHI0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[PHI1]], i32 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[PHI0]], i32 0, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[PHI1]], i32 1, !sandboxvec [[META1]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1, !sandboxvec [[META1]]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret void
@@ -63,10 +63,10 @@ define void @packFromOtherBB(ptr %ptr, i8 %val) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0, !sandboxvec [[META2:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1, !sandboxvec [[META2]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1, !sandboxvec [[META2]]
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT:.*:]]
 ; CHECK-NEXT:    ret void
@@ -97,10 +97,10 @@ define void @packFromDiffBBs(ptr %ptr, i8 %v) {
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i8 [[V]], 2
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[ADD1]], i32 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[ADD1]], i32 1, !sandboxvec [[META3]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1, !sandboxvec [[META3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -115,3 +115,9 @@ bb:
   store i8 %add1, ptr %gep1
   ret void
 }
+;.
+; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+; CHECK: [[META2]] = distinct !{!"sandboxregion"}
+; CHECK: [[META3]] = distinct !{!"sandboxregion"}
+;.

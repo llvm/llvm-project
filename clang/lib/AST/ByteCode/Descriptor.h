@@ -227,6 +227,10 @@ public:
     return dyn_cast_if_present<RecordDecl>(asDecl());
   }
 
+  template <typename T> const T *getAs() const {
+    return dyn_cast_if_present<T>(asDecl());
+  }
+
   /// Returns the size of the object without metadata.
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");

@@ -56,8 +56,35 @@ backend convertBackend(ol_platform_backend_t Backend) {
   case OL_PLATFORM_BACKEND_AMDGPU:
     return backend::hip;
   default:
-    throw exception(make_error_code(errc::runtime),
-                    "convertBackend: Unsupported backend");
+    throw exception(make_error_code(errc::runtime), "Unsupported backend");
+  }
+}
+
+ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType) {
+  switch (DeviceType) {
+  case info::device_type::all:
+    return OL_DEVICE_TYPE_ALL;
+  case info::device_type::gpu:
+    return OL_DEVICE_TYPE_GPU;
+  case info::device_type::cpu:
+    return OL_DEVICE_TYPE_CPU;
+  case info::device_type::automatic:
+    return OL_DEVICE_TYPE_DEFAULT;
+  default:
+    throw exception(sycl::make_error_code(sycl::errc::runtime),
+                    "Device type is not supported");
+  }
+}
+
+info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType) {
+  switch (DeviceType) {
+  case OL_DEVICE_TYPE_GPU:
+    return info::device_type::gpu;
+  case OL_DEVICE_TYPE_CPU:
+    return info::device_type::cpu;
+  default:
+    throw exception(sycl::make_error_code(sycl::errc::runtime),
+                    "Device type is not supported");
   }
 }
 

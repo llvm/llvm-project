@@ -193,26 +193,26 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 
   // Convert each variant of each pattern into a Matcher.
   Timer.startTimer("Convert to matchers");
-  SmallVector<Matcher *, 0> PatternMatchers;
+  SmallVector<MatcherList, 0> PatternMatchers;
   for (const PatternToMatch *PTM : Patterns) {
     for (unsigned Variant = 0;; ++Variant) {
-      if (Matcher *M = ConvertPatternToMatcher(*PTM, Variant, CGP))
-        PatternMatchers.push_back(M);
-      else
+      MatcherList ML = ConvertPatternToMatcherList(*PTM, Variant, CGP);
+      if (ML.empty())
         break;
+      PatternMatchers.push_back(std::move(ML));
     }
   }
 
-  std::unique_ptr<Matcher> TheMatcher =
-      std::make_unique<ScopeMatcher>(std::move(PatternMatchers));
+  MatcherList Matchers;
+  Matchers.push_front(new ScopeMatcher(std::move(PatternMatchers)));
 
   Timer.startTimer("Optimize matchers");
-  OptimizeMatcher(TheMatcher, CGP);
+  OptimizeMatcher(Matchers, CGP);
 
-  // Matcher->dump();
+  // Matchers->dump();
 
   Timer.startTimer("Emit matcher table");
-  EmitMatcherTable(TheMatcher.get(), CGP, OS);
+  EmitMatcherTable(Matchers, CGP, OS);
 }
 
 static TableGen::Emitter::OptClass<DAGISelEmitter>

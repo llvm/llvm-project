@@ -22,6 +22,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -229,6 +230,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::matrix_multiply:
     return true;
   case Intrinsic::dx_resource_load_rawbuffer:
     return resourceAccessNeeds64BitExpansion(
@@ -277,7 +279,7 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   // Handle the initial start value for floating-point addition.
   if (IsFAdd) {
     Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
-    if (StartValue && !StartValue->isZeroValue())
+    if (StartValue && !StartValue->isNullValue())
       Sum = Builder.CreateFAdd(Sum, StartValue);
   }
 
@@ -1043,6 +1045,96 @@ static Value *expandSignIntrinsic(CallInst *Orig) {
   return Builder.CreateSub(ZextGT, ZextLT);
 }
 
+// Expand llvm.matrix.multiply by extracting row/column vectors and computing
+// dot products.
+// Result[r,c] = dot(row_r(LHS), col_c(RHS))
+// Element (r,c) is at index c*NumRows + r (column-major).
+static Value *expandMatrixMultiply(CallInst *Orig) {
+  Value *LHS = Orig->getArgOperand(0);
+  Value *RHS = Orig->getArgOperand(1);
+  unsigned LHSRows = cast<ConstantInt>(Orig->getArgOperand(2))->getZExtValue();
+  unsigned LHSCols = cast<ConstantInt>(Orig->getArgOperand(3))->getZExtValue();
+  unsigned RHSCols = cast<ConstantInt>(Orig->getArgOperand(4))->getZExtValue();
+
+  auto *RetTy = cast<FixedVectorType>(Orig->getType());
+  Type *EltTy = RetTy->getElementType();
+  bool IsFP = EltTy->isFloatingPointTy();
+
+  IRBuilder<> Builder(Orig);
+
+  // Column-major indexing:
+  // LHS row R, element K: index = K * LHSRows + R
+  // RHS col C, element K: index = C * LHSCols + K
+  Value *Result = PoisonValue::get(RetTy);
+
+  // Extract all scalar elements from LHS and RHS once, then reuse them.
+  unsigned LHSSize = LHSRows * LHSCols;
+  unsigned RHSSize = LHSCols * RHSCols;
+  SmallVector<Value *, 16> LHSElts(LHSSize);
+  SmallVector<Value *, 16> RHSElts(RHSSize);
+  for (unsigned I = 0; I < LHSSize; ++I)
+    LHSElts[I] = Builder.CreateExtractElement(LHS, I);
+  for (unsigned I = 0; I < RHSSize; ++I)
+    RHSElts[I] = Builder.CreateExtractElement(RHS, I);
+
+  // Choose the appropriate scalar-arg dot intrinsic for floats.
+  // K=1 and double types use scalar expansion instead.
+  Intrinsic::ID FloatDotID = Intrinsic::not_intrinsic;
+  bool UseScalarFP = IsFP && (EltTy->isDoubleTy() || LHSCols == 1);
+  if (IsFP && !UseScalarFP) {
+    switch (LHSCols) {
+    case 2:
+      FloatDotID = Intrinsic::dx_dot2;
+      break;
+    case 3:
+      FloatDotID = Intrinsic::dx_dot3;
+      break;
+    case 4:
+      FloatDotID = Intrinsic::dx_dot4;
+      break;
+    default:
+      reportFatalUsageError(
+          "Invalid matrix inner dimension for dot product: must be 2-4");
+      return nullptr;
+    }
+  }
+
+  for (unsigned C = 0; C < RHSCols; ++C) {
+    for (unsigned R = 0; R < LHSRows; ++R) {
+      // Gather row R from LHS and column C from RHS.
+      SmallVector<Value *, 4> RowElts, ColElts;
+      for (unsigned K = 0; K < LHSCols; ++K) {
+        RowElts.push_back(LHSElts[K * LHSRows + R]);
+        ColElts.push_back(RHSElts[C * LHSCols + K]);
+      }
+
+      Value *Dot;
+      if (UseScalarFP) {
+        // Scalar fmul+fmuladd expansion for double types and K=1.
+        Dot = Builder.CreateFMul(RowElts[0], ColElts[0]);
+        for (unsigned K = 1; K < LHSCols; ++K)
+          Dot = Builder.CreateIntrinsic(EltTy, Intrinsic::fmuladd,
+                                        {RowElts[K], ColElts[K], Dot});
+      } else if (IsFP) {
+        // Emit scalar-arg DXIL dot directly (dx.dot2/dx.dot3/dx.dot4).
+        SmallVector<Value *, 8> Args;
+        Args.append(RowElts.begin(), RowElts.end());
+        Args.append(ColElts.begin(), ColElts.end());
+        Dot = Builder.CreateIntrinsic(EltTy, FloatDotID, Args);
+      } else {
+        // Integer: emit multiply + imad chain.
+        Dot = Builder.CreateMul(RowElts[0], ColElts[0]);
+        for (unsigned K = 1; K < LHSCols; ++K)
+          Dot = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_imad,
+                                        {RowElts[K], ColElts[K], Dot});
+      }
+      unsigned ResIdx = C * LHSRows + R;
+      Result = Builder.CreateInsertElement(Result, Dot, ResIdx);
+    }
+  }
+  return Result;
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -1143,6 +1235,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     Result = expandVecReduceAdd(Orig, IntrinsicId);
+    break;
+  case Intrinsic::matrix_multiply:
+    Result = expandMatrixMultiply(Orig);
     break;
   }
   if (Result) {

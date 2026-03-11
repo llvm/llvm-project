@@ -997,6 +997,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*noreturn=*/nullptr, /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1030,6 +1037,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
@@ -1049,6 +1063,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1068,6 +1089,13 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
+        /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
+        /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
+        /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
@@ -4127,11 +4155,13 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
-      parentLLVMModule(*this), getBlockAddr().getFunction()));
+  Operation *sym = mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction());
+  if (!sym)
+    return nullptr;
+  auto funcOp = dyn_cast<LLVMFuncOp>(sym);
   if (!funcOp)
     return nullptr;
-
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {
     if (labelOp.getTag() == getBlockAddr().getTag()) {

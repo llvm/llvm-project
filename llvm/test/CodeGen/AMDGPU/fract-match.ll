@@ -3871,6 +3871,85 @@ entry:
   ret float %min
 }
 
+define double @fract_match_f64_assume_not_nan(double %x) #0 {
+; GFX6-LABEL: fract_match_f64_assume_not_nan:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
+; GFX6-NEXT:    v_mov_b32_e32 v4, -1
+; GFX6-NEXT:    v_mov_b32_e32 v5, 0x3fefffff
+; GFX6-NEXT:    v_min_f64 v[2:3], v[2:3], v[4:5]
+; GFX6-NEXT:    v_cmp_class_f64_e64 vcc, v[0:1], 3
+; GFX6-NEXT:    s_mov_b32 s4, -1
+; GFX6-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
+; GFX6-NEXT:    v_add_f64 v[2:3], v[0:1], -v[2:3]
+; GFX6-NEXT:    s_mov_b32 s5, 0x3fefffff
+; GFX6-NEXT:    v_add_f64 v[2:3], v[0:1], -v[2:3]
+; GFX6-NEXT:    v_min_f64 v[2:3], v[2:3], s[4:5]
+; GFX6-NEXT:    s_mov_b32 s4, 0
+; GFX6-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX6-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-LABEL: fract_match_f64_assume_not_nan:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 s4, 0
+; GFX7-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX7-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
+; GFX7-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: fract_match_f64_assume_not_nan:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_mov_b32 s4, 0
+; GFX8-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX8-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
+; GFX8-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: fract_match_f64_assume_not_nan:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
+; GFX11-NEXT:    v_cmp_neq_f64_e64 vcc_lo, 0x7ff00000, |v[0:1]|
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0, v3
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: fract_match_f64_assume_not_nan:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]
+; GFX12-NEXT:    v_cmp_neq_f64_e64 vcc_lo, 0x7ff00000, |v[0:1]|
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_cndmask_b32 v0, 0, v2 :: v_dual_cndmask_b32 v1, 0, v3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %is.ord = fcmp ord double %x, 0.000000e+00
+  tail call void @llvm.assume(i1 %is.ord)
+  %floor = tail call double @llvm.floor.f64(double %x)
+  %sub = fsub double %x, %floor
+  %min = tail call double @llvm.minnum.f64(double %sub, double 0x3FEFFFFFFFFFFFFF)
+  %x.abs = tail call double @llvm.fabs.f64(double %x)
+  %is.inf = fcmp oeq double %x.abs, 0x7FF0000000000000
+  %result = select i1 %is.inf, double 0.0, double %min
+  ret double %result
+}
+
 declare half @llvm.floor.f16(half) #0
 declare float @llvm.floor.f32(float) #0
 declare double @llvm.floor.f64(double) #0

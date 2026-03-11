@@ -344,12 +344,12 @@ def CortexA320WriteVLD4Latency6: SchedWriteRes<[CortexA320UnitLdSt]> { let Laten
 def : InstRW<[CortexA320WriteVLD4Latency5Release7], (instregex "LD4Fourv(8b|4h|2s|1d)$")>;
 def : InstRW<[CortexA320WriteVLD4Latency5Release8], (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA320WriteVLD4Latency6], (instregex "LD4i(8|16|32|64)$")>;
-def : InstRW<[CortexA320WriteVLD4Latency4], (instregex "LD4Rv(8b|16b|4h|8b|2s|4s|1d|2d)$")>;
+def : InstRW<[CortexA320WriteVLD4Latency4], (instregex "LD4Rv(8b|16b|4h|8h|2s|4s|1d|2d)$")>;
  
 def : InstRW<[WriteAdr, CortexA320WriteVLD4Latency5Release7], (instregex "LD4Fourv(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[WriteAdr, CortexA320WriteVLD4Latency5Release8], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>; 
 def : InstRW<[WriteAdr, CortexA320WriteVLD4Latency6], (instregex "LD4i(8|16|32|64)_POST$")>;
-def : InstRW<[WriteAdr, CortexA320WriteVLD4Latency4], (instregex "LD4Rv(8b|16b|4h|8b|2s|4s|1d|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD4Latency4], (instregex "LD4Rv(8b|16b|4h|8h|2s|4s|1d|2d)_POST$")>;
 //---
 // Vector Stores
 //---
@@ -460,7 +460,7 @@ def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instregex "(AND|EOR|NOT|
   "(ORR|BIC)v(16i8|4i32|8i16)$", "MVNIv(4i32|4s|8i16)")>;
 // ASIMD max/min, basic
 def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instregex "[SU](MIN|MAX)P?v(2i32|4i16|8i8)")>;
-def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i132|8i16)")>;
+def : InstRW<[CortexA320Write<3, CortexA320UnitVALU>], (instregex "[SU](MIN|MAX)P?v(16i8|4i32|8i16)")>;
 // SIMD max/min, reduce
 def : InstRW<[CortexA320Write<4, CortexA320UnitVALU>], (instregex "[SU](MAX|MIN)Vv")>;
 // ASIMD multiply, by element

@@ -17,27 +17,13 @@
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
-#include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
+#include "mlir/Bindings/Python/IRInterfaces.h"
 
 namespace nb = nanobind;
 
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
-constexpr static const char *constructorDoc =
-    R"(Creates an interface from a given operation/opview object or from a
-subclass of OpView. Raises ValueError if the operation does not implement the
-interface.)";
-
-constexpr static const char *operationDoc =
-    R"(Returns an Operation for which the interface was constructed.)";
-
-constexpr static const char *opviewDoc =
-    R"(Returns an OpView subclass _instance_ for which the interface was
-constructed)";
-
 constexpr static const char *inferReturnTypesDoc =
     R"(Given the arguments required to build an operation, attempts to infer
 its return types. Raises ValueError on failure.)";
@@ -48,10 +34,10 @@ its return shaped type components. Raises ValueError on failure.)";
 
 namespace {
 
-/// Takes in an optional ist of operands and converts them into a SmallVector
-/// of MlirVlaues. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
-  llvm::SmallVector<MlirValue> mlirOperands;
+/// Takes in an optional ist of operands and converts them into a std::vector
+/// of MlirVlaues. Returns an empty std::vector if the list is empty.
+std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
+  std::vector<MlirValue> mlirOperands;
 
   if (!operandList || operandList->size() == 0) {
     return mlirOperands;
@@ -59,13 +45,15 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
 
   // Note: as the list may contain other lists this may not be final size.
   mlirOperands.reserve(operandList->size());
-  for (const auto &&it : llvm::enumerate(*operandList)) {
-    if (it.value().is_none())
+  for (size_t i = 0, e = operandList->size(); i < e; ++i) {
+    nb::handle operand = (*operandList)[i];
+    intptr_t index = static_cast<intptr_t>(i);
+    if (operand.is_none())
       continue;
 
     PyValue *val;
     try {
-      val = nb::cast<PyValue *>(it.value());
+      val = nb::cast<PyValue *>(operand);
       if (!val)
         throw nb::cast_error();
       mlirOperands.push_back(val->get());
@@ -76,7 +64,7 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
     }
 
     try {
-      auto vals = nb::cast<nb::sequence>(it.value());
+      auto vals = nb::cast<nb::sequence>(operand);
       for (nb::handle v : vals) {
         try {
           val = nb::cast<PyValue *>(v);
@@ -85,19 +73,19 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
           mlirOperands.push_back(val->get());
         } catch (nb::cast_error &err) {
           throw nb::value_error(
-              (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-               " must be a Value or Sequence of Values (" + err.what() + ")")
-                  .str()
+              nanobind::detail::join("Operand ", index,
+                                     " must be a Value or Sequence of Values (",
+                                     err.what(), ")")
                   .c_str());
         }
       }
       continue;
     } catch (nb::cast_error &err) {
-      throw nb::value_error((llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-                             " must be a Value or Sequence of Values (" +
-                             err.what() + ")")
-                                .str()
-                                .c_str());
+      throw nb::value_error(
+          nanobind::detail::join("Operand ", index,
+                                 " must be a Value or Sequence of Values (",
+                                 err.what(), ")")
+              .c_str());
     }
 
     throw nb::cast_error();
@@ -106,11 +94,11 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
   return mlirOperands;
 }
 
-/// Takes in an optional vector of PyRegions and returns a SmallVector of
-/// MlirRegion. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirRegion>
+/// Takes in an optional vector of PyRegions and returns a std::vector of
+/// MlirRegion. Returns an empty std::vector if the list is empty.
+std::vector<MlirRegion>
 wrapRegions(std::optional<std::vector<PyRegion>> regions) {
-  llvm::SmallVector<MlirRegion> mlirRegions;
+  std::vector<MlirRegion> mlirRegions;
 
   if (regions) {
     mlirRegions.reserve(regions->size());
@@ -123,119 +111,6 @@ wrapRegions(std::optional<std::vector<PyRegion>> regions) {
 }
 
 } // namespace
-
-/// CRTP base class for Python classes representing MLIR Op interfaces.
-/// Interface hierarchies are flat so no base class is expected here. The
-/// derived class is expected to define the following static fields:
-///  - `const char *pyClassName` - the name of the Python class to create;
-///  - `GetTypeIDFunctionTy getInterfaceID` - the function producing the TypeID
-///    of the interface.
-/// Derived classes may redefine the `bindDerived(ClassTy &)` method to bind
-/// interface-specific methods.
-///
-/// An interface class may be constructed from either an Operation/OpView object
-/// or from a subclass of OpView. In the latter case, only the static interface
-/// methods are available, similarly to calling ConcereteOp::staticMethod on the
-/// C++ side. Implementations of concrete interfaces can use the `isStatic`
-/// method to check whether the interface object was constructed from a class or
-/// an operation/opview instance. The `getOpName` always succeeds and returns a
-/// canonical name of the operation suitable for lookups.
-template <typename ConcreteIface>
-class PyConcreteOpInterface {
-protected:
-  using ClassTy = nb::class_<ConcreteIface>;
-  using GetTypeIDFunctionTy = MlirTypeID (*)();
-
-public:
-  /// Constructs an interface instance from an object that is either an
-  /// operation or a subclass of OpView. In the latter case, only the static
-  /// methods of the interface are accessible to the caller.
-  PyConcreteOpInterface(nb::object object, DefaultingPyMlirContext context)
-      : obj(std::move(object)) {
-    try {
-      operation = &nb::cast<PyOperation &>(obj);
-    } catch (nb::cast_error &) {
-      // Do nothing.
-    }
-
-    try {
-      operation = &nb::cast<PyOpView &>(obj).getOperation();
-    } catch (nb::cast_error &) {
-      // Do nothing.
-    }
-
-    if (operation != nullptr) {
-      if (!mlirOperationImplementsInterface(*operation,
-                                            ConcreteIface::getInterfaceID())) {
-        std::string msg = "the operation does not implement ";
-        throw nb::value_error((msg + ConcreteIface::pyClassName).c_str());
-      }
-
-      MlirIdentifier identifier = mlirOperationGetName(*operation);
-      MlirStringRef stringRef = mlirIdentifierStr(identifier);
-      opName = std::string(stringRef.data, stringRef.length);
-    } else {
-      try {
-        opName = nb::cast<std::string>(obj.attr("OPERATION_NAME"));
-      } catch (nb::cast_error &) {
-        throw nb::type_error(
-            "Op interface does not refer to an operation or OpView class");
-      }
-
-      if (!mlirOperationImplementsInterfaceStatic(
-              mlirStringRefCreate(opName.data(), opName.length()),
-              context.resolve().get(), ConcreteIface::getInterfaceID())) {
-        std::string msg = "the operation does not implement ";
-        throw nb::value_error((msg + ConcreteIface::pyClassName).c_str());
-      }
-    }
-  }
-
-  /// Creates the Python bindings for this class in the given module.
-  static void bind(nb::module_ &m) {
-    nb::class_<ConcreteIface> cls(m, ConcreteIface::pyClassName);
-    cls.def(nb::init<nb::object, DefaultingPyMlirContext>(), nb::arg("object"),
-            nb::arg("context") = nb::none(), constructorDoc)
-        .def_prop_ro("operation", &PyConcreteOpInterface::getOperationObject,
-                     operationDoc)
-        .def_prop_ro("opview", &PyConcreteOpInterface::getOpView, opviewDoc);
-    ConcreteIface::bindDerived(cls);
-  }
-
-  /// Hook for derived classes to add class-specific bindings.
-  static void bindDerived(ClassTy &cls) {}
-
-  /// Returns `true` if this object was constructed from a subclass of OpView
-  /// rather than from an operation instance.
-  bool isStatic() { return operation == nullptr; }
-
-  /// Returns the operation instance from which this object was constructed.
-  /// Throws a type error if this object was constructed from a subclass of
-  /// OpView.
-  nb::typed<nb::object, PyOperation> getOperationObject() {
-    if (operation == nullptr)
-      throw nb::type_error("Cannot get an operation from a static interface");
-    return operation->getRef().releaseObject();
-  }
-
-  /// Returns the opview of the operation instance from which this object was
-  /// constructed. Throws a type error if this object was constructed form a
-  /// subclass of OpView.
-  nb::typed<nb::object, PyOpView> getOpView() {
-    if (operation == nullptr)
-      throw nb::type_error("Cannot get an opview from a static interface");
-    return operation->createOpView();
-  }
-
-  /// Returns the canonical name of the operation this interface is constructed
-  /// from.
-  const std::string &getOpName() { return opName; }
-
-private:
-  PyOperation *operation = nullptr;
-  std::string opName;
-  nb::object obj;
-};
 
 /// Python wrapper for InferTypeOpInterface. This interface has only static
 /// methods.
@@ -273,9 +148,8 @@ public:
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands =
-        wrapOperands(std::move(operandList));
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
+    std::vector<MlirValue> mlirOperands = wrapOperands(std::move(operandList));
+    std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyType> inferredTypes;
     PyMlirContext &pyContext = context.resolve();
@@ -430,9 +304,8 @@ public:
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands =
-        wrapOperands(std::move(operandList));
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
+    std::vector<MlirValue> mlirOperands = wrapOperands(std::move(operandList));
+    std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyShapedTypeComponents> inferredShapedTypeComponents;
     PyMlirContext &pyContext = context.resolve();
@@ -464,10 +337,75 @@ public:
   }
 };
 
+/// Wrapper around the MemoryEffectsOpInterface.
+class PyMemoryEffectsOpInterface
+    : public PyConcreteOpInterface<PyMemoryEffectsOpInterface> {
+public:
+  using PyConcreteOpInterface<
+      PyMemoryEffectsOpInterface>::PyConcreteOpInterface;
+
+  constexpr static const char *pyClassName = "MemoryEffectsOpInterface";
+  constexpr static GetTypeIDFunctionTy getInterfaceID =
+      &mlirMemoryEffectsOpInterfaceTypeID;
+
+  /// Attach a new MemoryEffectsOpInterface FallbackModel to the named
+  /// operation. The FallbackModel acts as a trampoline for callbacks on the
+  /// Python class.
+  static void attach(nb::object &target, const std::string &opName,
+                     DefaultingPyMlirContext ctx) {
+    MlirMemoryEffectsOpInterfaceCallbacks callbacks;
+    callbacks.userData = target.ptr();
+    nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
+    callbacks.construct = nullptr;
+    callbacks.destruct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+    };
+    callbacks.getEffects = [](MlirOperation op,
+                              MlirMemoryEffectInstancesList effects,
+                              void *userData) {
+      nb::handle pyClass(static_cast<PyObject *>(userData));
+
+      // Get the 'get_effects' method from the Python class.
+      auto pyGetEffects =
+          nb::cast<nb::callable>(nb::getattr(pyClass, "get_effects"));
+
+      PyMemoryEffectsInstanceList effectsWrapper{effects};
+
+      PyMlirContextRef context =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      auto opview = PyOperation::forOperation(context, op)->createOpView();
+
+      // Invoke `pyClass.get_effects(op, effects)`.
+      pyGetEffects(opview, effectsWrapper);
+    };
+
+    mlirMemoryEffectsOpInterfaceAttachFallbackModel(
+        ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
+        callbacks);
+  }
+
+  static void bindDerived(ClassTy &cls) {
+    cls.attr("attach") = classmethod(
+        [](const nb::object &cls, const nb::object &opName, nb::object target,
+           DefaultingPyMlirContext context) {
+          if (target.is_none())
+            target = cls;
+          return attach(target, nb::cast<std::string>(opName), context);
+        },
+        nb::arg("cls"), nb::arg("op_name"), nb::kw_only(),
+        nb::arg("target").none() = nb::none(),
+        nb::arg("context").none() = nb::none(),
+        "Attach the interface subclass to the given operation name.");
+  }
+};
+
 void populateIRInterfaces(nb::module_ &m) {
-  PyInferTypeOpInterface::bind(m);
-  PyShapedTypeComponents::bind(m);
+  nb::class_<PyMemoryEffectsInstanceList>(m, "MemoryEffectInstancesList");
+
   PyInferShapedTypeOpInterface::bind(m);
+  PyInferTypeOpInterface::bind(m);
+  PyMemoryEffectsOpInterface::bind(m);
+  PyShapedTypeComponents::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

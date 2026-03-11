@@ -82,6 +82,8 @@ __isl_give isl_union_map *isl_union_map_remove_redundancies(
 	__isl_take isl_union_map *umap);
 __isl_give isl_union_map *isl_union_map_simple_hull(
 	__isl_take isl_union_map *umap);
+__isl_give isl_union_map *isl_union_map_plain_unshifted_simple_hull(
+	__isl_take isl_union_map *umap);
 __isl_export
 __isl_give isl_union_map *isl_union_map_coalesce(
 	__isl_take isl_union_map *umap);

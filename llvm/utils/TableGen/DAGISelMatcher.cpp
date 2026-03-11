@@ -17,48 +17,10 @@ using namespace llvm;
 
 void Matcher::anchor() {}
 
-void Matcher::dump() const { print(errs()); }
+void Matcher::dump() const { printOne(errs()); }
 
-void Matcher::print(raw_ostream &OS, indent Indent) const {
-  printImpl(OS, Indent);
-  if (Next)
-    return Next->print(OS, Indent);
-}
-
-void Matcher::printOne(raw_ostream &OS) const { printImpl(OS, indent(0)); }
-
-/// unlinkNode - Unlink the specified node from this chain.  If Other == this,
-/// we unlink the next pointer and return it.  Otherwise we unlink Other from
-/// the list and return this.
-Matcher *Matcher::unlinkNode(Matcher *Other) {
-  if (this == Other)
-    return takeNext();
-
-  // Scan until we find the predecessor of Other.
-  Matcher *Cur = this;
-  for (; Cur && Cur->getNext() != Other; Cur = Cur->getNext())
-    /*empty*/;
-
-  if (!Cur)
-    return nullptr;
-  Cur->takeNext();
-  Cur->setNext(Other->takeNext());
-  return this;
-}
-
-/// canMoveBefore - Return true if this matcher is the same as Other, or if
-/// we can move this matcher past all of the nodes in-between Other and this
-/// node.  Other must be equal to or before this.
-bool Matcher::canMoveBefore(const Matcher *Other) const {
-  for (;; Other = Other->getNext()) {
-    assert(Other && "Other didn't come before 'this'?");
-    if (this == Other)
-      return true;
-
-    // We have to be able to move this node across the Other node.
-    if (!canMoveBeforeNode(Other))
-      return false;
-  }
+void Matcher::printOne(raw_ostream &OS, indent Indent) const {
+  printImpl(OS, indent(0));
 }
 
 /// canMoveBeforeNode - Return true if it is safe to move the current matcher
@@ -74,21 +36,6 @@ bool Matcher::canMoveBeforeNode(const Matcher *Other) const {
 
   // We can't move record nodes across each other etc.
   return false;
-}
-
-ScopeMatcher::~ScopeMatcher() {
-  for (Matcher *C : Children)
-    delete C;
-}
-
-SwitchOpcodeMatcher::~SwitchOpcodeMatcher() {
-  for (auto &C : Cases)
-    delete C.second;
-}
-
-SwitchTypeMatcher::~SwitchTypeMatcher() {
-  for (auto &C : Cases)
-    delete C.second;
 }
 
 CheckPredicateMatcher::CheckPredicateMatcher(const TreePredicateFn &pred,
@@ -113,11 +60,11 @@ unsigned CheckPredicateMatcher::getOperandNo(unsigned i) const {
 
 void ScopeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "Scope\n";
-  for (const Matcher *C : Children) {
-    if (!C)
+  for (const MatcherList &C : Children) {
+    if (C.empty())
       OS << Indent + 1 << "NULL POINTER\n";
     else
-      C->print(OS, Indent + 2);
+      C.print(OS, Indent + 2);
   }
 }
 
@@ -174,7 +121,7 @@ void SwitchOpcodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "SwitchOpcode: {\n";
   for (const auto &C : Cases) {
     OS << Indent << "case " << C.first->getEnumName() << ":\n";
-    C.second->print(OS, Indent + 2);
+    C.second.print(OS, Indent + 2);
   }
   OS << Indent << "}\n";
 }
@@ -187,7 +134,7 @@ void SwitchTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "SwitchType: {\n";
   for (const auto &C : Cases) {
     OS << Indent << "case " << getEnumName(C.first) << ":\n";
-    C.second->print(OS, Indent + 2);
+    C.second.print(OS, Indent + 2);
   }
   OS << Indent << "}\n";
 }
@@ -314,26 +261,19 @@ void MorphNodeToMatcher::anchor() {}
 
 // isContradictoryImpl Implementations.
 
-static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
-                                  const ValueTypeByHwMode &VT2) {
-  // If the two types are the same, then they are the same, so they don't
-  // contradict.
-  if (VT1 == VT2)
+// Check if two simple MVT types are contradictory.
+static bool TypesAreContradictory(MVT T1, MVT T2) {
+  // If the two types are the same, then they don't contradict.
+  if (T1 == T2)
     return false;
-
-  if (!VT1.isSimple() || !VT2.isSimple())
-    return false;
-
-  MVT T1 = VT1.getSimple();
-  MVT T2 = VT2.getSimple();
 
   if (T1 == MVT::pAny)
-    return TypesAreContradictory(MVT(MVT::iPTR), T2) &&
-           TypesAreContradictory(MVT(MVT::cPTR), T2);
+    return TypesAreContradictory(MVT::iPTR, T2) &&
+           TypesAreContradictory(MVT::cPTR, T2);
 
   if (T2 == MVT::pAny)
-    return TypesAreContradictory(T1, MVT(MVT::iPTR)) &&
-           TypesAreContradictory(T1, MVT(MVT::cPTR));
+    return TypesAreContradictory(T1, MVT::iPTR) &&
+           TypesAreContradictory(T1, MVT::cPTR);
 
   // If either type is about iPtr, then they don't conflict unless the other
   // one is not a scalar integer type.
@@ -350,6 +290,43 @@ static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
     return !T1.isCheriCapability() || T1.isVector();
 
   // Otherwise, they are two different non-iPTR/cPTR types, they conflict.
+  return true;
+}
+
+static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
+                                  const ValueTypeByHwMode &VT2) {
+  // If the two types are the same, then they are the same, so they don't
+  // contradict.
+  if (VT1 == VT2)
+    return false;
+
+  // For simple types, use the simple comparison.
+  if (VT1.isSimple() && VT2.isSimple())
+    return TypesAreContradictory(VT1.getSimple(), VT2.getSimple());
+
+  // For non-simple types, we need to check all hardware modes.
+  // The types are contradictory only if they contradict for ALL modes.
+  // If they can be compatible for at least one mode, they don't contradict.
+
+  SmallVector<unsigned, 4> Modes;
+  union_modes(VT1, VT2, Modes);
+
+  for (unsigned Mode : Modes) {
+    // get() asserts if the mode doesn't exist and there's no default.
+    // If either type can't provide a value for this mode, be conservative
+    // and assume they don't contradict.
+    if (!VT1.hasMode(Mode) && !VT1.hasDefault())
+      return false;
+    if (!VT2.hasMode(Mode) && !VT2.hasDefault())
+      return false;
+
+    MVT T1 = VT1.get(Mode);
+    MVT T2 = VT2.get(Mode);
+    if (!TypesAreContradictory(T1, T2))
+      return false;
+  }
+
+  // All modes have contradictory types.
   return true;
 }
 
@@ -447,3 +424,10 @@ bool CheckChild2CondCodeMatcher::isContradictoryImpl(const Matcher *M) const {
     return CCCCM->getCondCodeName() != getCondCodeName();
   return false;
 }
+
+void MatcherList::print(raw_ostream &OS, indent Indent) const {
+  for (const Matcher *M : *this)
+    M->printOne(OS, Indent);
+}
+
+void MatcherList::dump() const { print(errs()); }

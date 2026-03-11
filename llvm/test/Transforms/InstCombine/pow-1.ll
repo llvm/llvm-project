@@ -1051,35 +1051,10 @@ define <2 x double> @test_simplify12v(<2 x double> %x) {
 ; Check pow(x, 2.0) -> x*x.
 
 define float @pow2_strict(float %x) {
-; ANY-LABEL: define float @pow2_strict(
-; ANY-SAME: float [[X:%.*]]) {
-; ANY-NEXT:    [[SQUARE:%.*]] = fmul float [[X]], [[X]]
-; ANY-NEXT:    ret float [[SQUARE]]
-;
-; VC32-LABEL: define float @pow2_strict(
-; VC32-SAME: float [[X:%.*]]) {
-; VC32-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float 2.000000e+00)
-; VC32-NEXT:    ret float [[R]]
-;
-; VC51-LABEL: define float @pow2_strict(
-; VC51-SAME: float [[X:%.*]]) {
-; VC51-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float 2.000000e+00)
-; VC51-NEXT:    ret float [[R]]
-;
-; VC64-LABEL: define float @pow2_strict(
-; VC64-SAME: float [[X:%.*]]) {
-; VC64-NEXT:    [[SQUARE:%.*]] = fmul float [[X]], [[X]]
-; VC64-NEXT:    ret float [[SQUARE]]
-;
-; VC83-LABEL: define float @pow2_strict(
-; VC83-SAME: float [[X:%.*]]) {
-; VC83-NEXT:    [[SQUARE:%.*]] = fmul float [[X]], [[X]]
-; VC83-NEXT:    ret float [[SQUARE]]
-;
-; NOLIB-LABEL: define float @pow2_strict(
-; NOLIB-SAME: float [[X:%.*]]) {
-; NOLIB-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float 2.000000e+00)
-; NOLIB-NEXT:    ret float [[R]]
+; CHECK-LABEL: define float @pow2_strict(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call float @powf(float [[X]], float 2.000000e+00)
+; CHECK-NEXT:    ret float [[R]]
 ;
   %r = call float @powf(float %x, float 2.0)
   ret float %r
@@ -1131,15 +1106,10 @@ define <2 x float> @pow2_strictv(<2 x float> %x) {
 }
 
 define double @pow2_double_strict(double %x) {
-; LIB-LABEL: define double @pow2_double_strict(
-; LIB-SAME: double [[X:%.*]]) {
-; LIB-NEXT:    [[SQUARE:%.*]] = fmul double [[X]], [[X]]
-; LIB-NEXT:    ret double [[SQUARE]]
-;
-; NOLIB-LABEL: define double @pow2_double_strict(
-; NOLIB-SAME: double [[X:%.*]]) {
-; NOLIB-NEXT:    [[R:%.*]] = call double @pow(double [[X]], double 2.000000e+00)
-; NOLIB-NEXT:    ret double [[R]]
+; CHECK-LABEL: define double @pow2_double_strict(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call double @pow(double [[X]], double 2.000000e+00)
+; CHECK-NEXT:    ret double [[R]]
 ;
   %r = call double @pow(double %x, double 2.0)
   ret double %r

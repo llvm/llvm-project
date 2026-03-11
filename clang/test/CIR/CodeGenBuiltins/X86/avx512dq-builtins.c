@@ -74,7 +74,7 @@ __mmask8 test_kand_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kand_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kand_mask8
@@ -97,7 +97,7 @@ __mmask8 test_kandn_mask8(__mmask8 A, __mmask8 B) {
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kandn_mask8
@@ -121,7 +121,7 @@ __mmask8 test_kor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kor_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.or {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kor_mask8
@@ -142,7 +142,7 @@ __mmask8 test_kxor_mask8(__mmask8 A, __mmask8 B) {
  // CIR-LABEL: _kxor_mask8
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kxor_mask8
@@ -164,7 +164,7 @@ __mmask8 test_kxnor_mask8(__mmask8 A, __mmask8 B) {
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.unary(not, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
- // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<8 x !cir.int<s, 1>>
+ // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<8 x !cir.int<s, 1>>
  // CIR: cir.cast bitcast {{.*}} : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
  // LLVM-LABEL: _kxnor_mask8
@@ -229,9 +229,9 @@ unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
   // CIR: %[[ALL_ONES:.*]] = cir.const #cir.int<255> : !u8i
   // CIR: %[[LHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[RHS:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: %[[OR:.*]] = cir.binop(or, %[[LHS]], %[[RHS]]) : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[OR:.*]] = cir.or %[[LHS]], %[[RHS]] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: %[[OR_INT:.*]] = cir.cast bitcast %[[OR]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
-  // CIR: %[[CMP:.*]] = cir.cmp(eq, %[[OR_INT]], %[[ALL_ONES]]) : !u8i, !cir.bool
+  // CIR: %[[CMP:.*]] = cir.cmp eq %[[OR_INT]], %[[ALL_ONES]] : !u8i
   // CIR: cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
   // CIR: cir.cast integral {{.*}} : !s32i -> !u8i
 
@@ -422,7 +422,7 @@ __mmask8 test_mm512_mask_fpclass_pd_mask(__mmask8 __U, __m512d __A) {
   // CIR-LABEL: _mm512_mask_fpclass_pd_mask
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.pd.512"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[B]]) : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[B]] : !cir.vector<8 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[C]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
 
   // LLVM-LABEL: test_mm512_mask_fpclass_pd_mask
@@ -458,7 +458,7 @@ __mmask16 test_mm512_mask_fpclass_ps_mask(__mmask16 __U, __m512 __A) {
   // CIR-LABEL: _mm512_mask_fpclass_ps_mask
   // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.ps.512"
   // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
-  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[B]]) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.and %[[A]], %[[B]] : !cir.vector<16 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast %[[C]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
 
   // LLVM-LABEL: test_mm512_mask_fpclass_ps_mask

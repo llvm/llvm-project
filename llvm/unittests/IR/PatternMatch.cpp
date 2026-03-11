@@ -635,6 +635,51 @@ TEST_F(PatternMatchTest, ZExtSExtSelf) {
   EXPECT_TRUE(m_ZExtOrSExtOrSelf(m_One()).match(One64S));
 }
 
+TEST_F(PatternMatchTest, BooleanMap) {
+  Value *Alloca = IRB.CreateAlloca(IRB.getInt1Ty());
+  Value *SelectCond = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Value *C1 = IRB.getInt1(1);
+  Value *C2 = IRB.getInt1(0);
+
+  Value *Cond;
+  Constant *T, *F;
+
+  Value *select = IRB.CreateSelect(SelectCond, C1, C2);
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(select));
+  EXPECT_EQ(Cond, SelectCond);
+  EXPECT_EQ(T, C1);
+  EXPECT_EQ(F, C2);
+
+  Value *zext = IRB.CreateZExt(C1, IntegerType::getInt64Ty(Ctx));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(zext));
+  EXPECT_EQ(Cond, C1);
+  EXPECT_EQ(T, IRB.getInt64(1));
+  EXPECT_EQ(F, IRB.getInt64(0));
+
+  Value *sext = IRB.CreateSExt(C1, IntegerType::getInt64Ty(Ctx));
+  EXPECT_TRUE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(sext));
+  EXPECT_EQ(Cond, C1);
+  EXPECT_EQ(T, IRB.getInt64(-1));
+  EXPECT_EQ(F, IRB.getInt64(0));
+
+  // Negative: zext/sext of non-i1 should not match
+  Value *I8Val = IRB.getInt8(1);
+  Value *ZExtI8 = IRB.CreateZExt(I8Val, IntegerType::getInt64Ty(Ctx));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(ZExtI8));
+  Value *SExtI8 = IRB.CreateSExt(I8Val, IntegerType::getInt64Ty(Ctx));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(SExtI8));
+
+  // Negative: plain arithmetic instruction should not match
+  Value *Add = IRB.CreateAdd(IRB.getInt32(1), IRB.getInt32(2));
+  EXPECT_FALSE(
+      m_SelectLike(m_Value(Cond), m_Constant(T), m_Constant(F)).match(Add));
+}
+
 TEST_F(PatternMatchTest, BitCast) {
   Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
   Value *ScalableDouble = ConstantFP::get(
@@ -2606,8 +2651,7 @@ TEST_F(PatternMatchTest, PtrAdd) {
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
-  Value *PtrAddConst =
-      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+  Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 
   Value *A, *B;
   EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));

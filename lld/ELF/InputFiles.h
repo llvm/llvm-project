@@ -158,10 +158,6 @@ public:
   // [.got, .got + 0xFFFC].
   bool ppc64SmallCodeModelTocRelocs = false;
 
-  // True if the file has TLSGD/TLSLD GOT relocations without R_PPC64_TLSGD or
-  // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
-  bool ppc64DisableTLSRelax = false;
-
 public:
   // If not empty, this stores the name of the archive containing this file.
   // We use this string for creating error messages.

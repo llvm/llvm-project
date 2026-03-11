@@ -2173,6 +2173,24 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
+namespace {
+/// Rewriter to replace SCEVPtrToIntExpr with SCEVPtrToAddrExpr when the result
+/// type matches the pointer address type. This allows expressions mixing
+/// ptrtoint and ptrtoaddr to simplify properly.
+struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
+  const DataLayout &DL;
+  SCEVPtrToAddrRewriter(ScalarEvolution &SE, const DataLayout &DL)
+      : SCEVRewriteVisitor(SE), DL(DL) {}
+
+  const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
+    const SCEV *Op = visit(E->getOperand());
+    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
+      return SE.getPtrToAddrExpr(Op);
+    return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
+  }
+};
+} // namespace
+
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
@@ -2184,6 +2202,8 @@ Value *llvm::addDiffRuntimeChecks(
   Value *MemoryRuntimeCheck = nullptr;
 
   auto &SE = *Expander.getSE();
+  const DataLayout &DL = Loc->getDataLayout();
+  SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
@@ -2193,8 +2213,10 @@ Value *llvm::addDiffRuntimeChecks(
     auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
-    Value *Diff =
-        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+    const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
+    const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
+    Value *Diff = Expander.expandCodeFor(
+        SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.

@@ -115,8 +115,6 @@ public:
 
   bool hasMadMacF32Insts() const override { return HasMadMacF32Insts; }
 
-  bool enablePromoteAlloca() const override { return EnablePromoteAlloca; }
-
   bool hasFP64() const override { return HasFP64; }
 
   bool hasCFALUBug() const { return HasCFALUBug; }
@@ -146,7 +144,7 @@ public:
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize(this);
+    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given

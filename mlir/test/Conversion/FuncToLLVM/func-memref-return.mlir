@@ -87,13 +87,6 @@ func.func @check_memref_func_call(%in : memref<10xi8>) -> memref<20xi8> {
   return %res : memref<20xi8>
 }
 
-// BAREPTR-LABEL: func @check_return(
-// BAREPTR-SAME: %{{.*}}: memref<?xi8>) -> memref<?xi8>
-func.func @check_return(%in : memref<?xi8>) -> memref<?xi8> {
-  // BAREPTR: llvm.return {{.*}} : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  return %in : memref<?xi8>
-}
-
 // BAREPTR-LABEL: func @unconvertible_multiresult
 // BAREPTR-SAME: %{{.*}}: memref<?xf32>, %{{.*}}: memref<?xf32>) -> (memref<?xf32>, memref<?xf32>)
 func.func @unconvertible_multiresult(%arg0: memref<?xf32> , %arg1: memref<?xf32>) -> (memref<?xf32>, memref<?xf32>) {

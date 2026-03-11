@@ -1543,6 +1543,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
     Valid.addAlignmentAttr(CB.getRetAlign());
   if (std::optional<ConstantRange> Range = CB.getRange())
     Valid.addRangeAttr(*Range);
+  if (CB.hasRetAttr(Attribute::NoFPClass))
+    Valid.addNoFPClassAttr(CB.getRetNoFPClass());
   return Valid;
 }
 
@@ -1648,6 +1650,14 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
               CBRange.getRange().intersectWith(NewRange.getRange()));
         }
       }
+
+      Attribute CBNoFPClass = ValidPG.getAttribute(Attribute::NoFPClass);
+      if (CBNoFPClass.isValid() && AL.hasRetAttr(Attribute::NoFPClass)) {
+        ValidPG.addNoFPClassAttr(
+            CBNoFPClass.getNoFPClass() |
+            AL.getRetAttr(Attribute::NoFPClass).getNoFPClass());
+      }
+
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
       // return attribute will create UB anyways so we can always propagate.
@@ -3292,7 +3302,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // basic block of the inlined function.
   //
   Instruction *Br = OrigBB->getTerminator();
-  assert(Br && Br->getOpcode() == Instruction::Br &&
+  assert(Br && Br->getOpcode() == Instruction::UncondBr &&
          "splitBasicBlock broken!");
   Br->setOperand(0, &*FirstNewBlock);
 

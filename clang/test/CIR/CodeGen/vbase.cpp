@@ -51,15 +51,14 @@ void ppp() { B b; }
 // Note: OGCG speculatively emits the VTT and VTables. This is not yet implemented in CIR.
 
 // Vtable definition for B
-// CIR:  cir.global "private" external @_ZTV1B
-
-// LLVM: @_ZTV1B = external global { [3 x ptr] }
+// CIR: cir.global "private" {{.*}}@_ZTV1B = #cir.vtable<{#cir.const_array<[#cir.ptr<12 : i64> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1B> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct3 {alignment = 8 : i64}
+// LLVM: @_ZTV1B = linkonce_odr global { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
 // OGCG: @_ZTV1B = linkonce_odr unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
 // CIR: cir.func {{.*}}@_Z1fv()
 // CIR:   %[[D:.+]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d", init]
-// CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) nothrow : (!cir.ptr<!rec_Derived>) -> ()
+// CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) nothrow : (!cir.ptr<!rec_Derived> {{.*}}) -> ()
 // CIR:   %[[VPTR_PTR:.+]] = cir.vtable.get_vptr %[[D]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR:.+]] = cir.load {{.*}} %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR:   %[[VPTR_I8:.+]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!u8i>
@@ -75,23 +74,23 @@ void ppp() { B b; }
 // CIR:   %[[BASE_VPTR:.+]] = cir.load {{.*}} %[[BASE_VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR:   %[[SLOT_PTR:.+]] = cir.vtable.get_virtual_fn_addr %[[BASE_VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
 // CIR:   %[[FN:.+]] = cir.load {{.*}} %[[SLOT_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
-// CIR:   cir.call %[[FN]](%[[BASE_THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base>) -> ()
+// CIR:   cir.call %[[FN]](%[[BASE_THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 
 // CIR: cir.func {{.*}}@_Z1gv()
 // CIR:   %[[DF:.+]] = cir.alloca !rec_DerivedFinal, !cir.ptr<!rec_DerivedFinal>, ["df", init]
-// CIR:   cir.call @_ZN12DerivedFinalC1Ev(%[[DF]]) nothrow : (!cir.ptr<!rec_DerivedFinal>) -> ()
+// CIR:   cir.call @_ZN12DerivedFinalC1Ev(%[[DF]]) nothrow : (!cir.ptr<!rec_DerivedFinal> {{.*}}) -> ()
 // CIR:   %[[BASE_THIS_2:.+]] = cir.base_class_addr %[[DF]] : !cir.ptr<!rec_DerivedFinal> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:   %[[BASE_VPTR_PTR_2:.+]] = cir.vtable.get_vptr %[[BASE_THIS_2]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[BASE_VPTR_2:.+]] = cir.load {{.*}} %[[BASE_VPTR_PTR_2]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR:   %[[SLOT_PTR_2:.+]] = cir.vtable.get_virtual_fn_addr %[[BASE_VPTR_2]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
 // CIR:   %[[FN_2:.+]] = cir.load {{.*}} %[[SLOT_PTR_2]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
-// CIR:   cir.call %[[FN_2]](%[[BASE_THIS_2]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base>) -> ()
+// CIR:   cir.call %[[FN_2]](%[[BASE_THIS_2]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 
 // LLVM: define {{.*}}void @_Z1fv(){{.*}}
 // LLVM:   %[[D:.+]] = alloca {{.*}}
-// LLVM:   call void @_ZN7DerivedC1Ev(ptr %[[D]])
+// LLVM:   call void @_ZN7DerivedC1Ev(ptr {{.*}} %[[D]])
 // LLVM:   %[[VPTR_ADDR:.+]] = load ptr, ptr %[[D]]
 // LLVM:   %[[NEG32_PTR:.+]] = getelementptr i8, ptr %[[VPTR_ADDR]], i64 -32
 // LLVM:   %[[OFF:.+]] = load i64, ptr %[[NEG32_PTR]]
@@ -99,16 +98,16 @@ void ppp() { B b; }
 // LLVM:   %[[VFN_TAB:.+]] = load ptr, ptr %[[ADJ_THIS]]
 // LLVM:   %[[SLOT0:.+]] = getelementptr inbounds ptr, ptr %[[VFN_TAB]], i32 0
 // LLVM:   %[[VFN:.+]] = load ptr, ptr %[[SLOT0]]
-// LLVM:   call void %[[VFN]](ptr %[[ADJ_THIS]])
+// LLVM:   call void %[[VFN]](ptr {{.*}}%[[ADJ_THIS]])
 // LLVM:   ret void
 
 // LLVM: define {{.*}}void @_Z1gv(){{.*}}
 // LLVM:   %[[DF:.+]] = alloca {{.*}}
-// LLVM:   call void @_ZN12DerivedFinalC1Ev(ptr %[[DF]])
+// LLVM:   call void @_ZN12DerivedFinalC1Ev(ptr {{.*}} %[[DF]])
 // LLVM:   %[[VPTR2:.+]] = load ptr, ptr %[[DF]]
 // LLVM:   %[[SLOT0_2:.+]] = getelementptr inbounds ptr, ptr %[[VPTR2]], i32 0
 // LLVM:   %[[VFN2:.+]] = load ptr, ptr %[[SLOT0_2]]
-// LLVM:   call void %[[VFN2]](ptr %[[DF]])
+// LLVM:   call void %[[VFN2]](ptr {{.*}}%[[DF]])
 // LLVM:   ret void
 
 // OGCG: define {{.*}}void @_Z1fv()
@@ -138,7 +137,7 @@ void ppp() { B b; }
 // CIR:   cir.store align(8) %[[VTABLE]], %[[B_VPTR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   cir.return
 
-// LLVM: define{{.*}} void @_ZN1BC1Ev(ptr %[[THIS_ARG:.*]]){{.*}} {
+// LLVM: define{{.*}} void @_ZN1BC1Ev(ptr {{.*}} %[[THIS_ARG:.*]]){{.*}} {
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]

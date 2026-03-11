@@ -66,6 +66,9 @@ static cl::opt<bool> DisableHexagonMask(
     "disable-mask", cl::Hidden,
     cl::desc("Disable Hexagon specific Mask generation pass"));
 
+static cl::opt<bool> DisableHexagonLiveVars(
+    "disable-hlv", cl::Hidden,
+    cl::desc("Disable Hexagon specific post-RA live-variable analysis"));
 static cl::opt<bool> DisableStoreWidening("disable-store-widen", cl::Hidden,
                                           cl::init(false),
                                           cl::desc("Disable store widening"));
@@ -192,6 +195,8 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
+  initializeHexagonGlobalSchedulerPass(PR);
+  initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
@@ -448,6 +453,10 @@ void HexagonPassConfig::addPreSched2() {
   addPass(createHexagonSplitConst32AndConst64());
   if (!NoOpt && !DisableHexagonMask)
     addPass(createHexagonMask());
+
+  if (!NoOpt && !DisableHexagonLiveVars) {
+    addPass(&HexagonLiveVariablesID);
+  }
 }
 
 void HexagonPassConfig::addPreEmitPass() {
@@ -464,13 +473,19 @@ void HexagonPassConfig::addPreEmitPass() {
     // Generate MUX from pairs of conditional transfers.
     if (EnableGenMux)
       addPass(createHexagonGenMux());
+    if (!DisableHexagonLiveVars)
+      addPass(&HexagonLiveVariablesID);
   }
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
 
-  if (!NoOpt)
+  if (!NoOpt) {
+    // Global pull-up scheduler
+    addPass(createHexagonGlobalScheduler());
+
     addPass(createHexagonLoopAlign());
+  }
 
   if (EnableVectorPrint)
     addPass(createHexagonVectorPrint());

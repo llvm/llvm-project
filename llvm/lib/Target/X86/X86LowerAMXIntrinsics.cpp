@@ -31,8 +31,10 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -42,6 +44,10 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 #define DEBUG_TYPE "x86-lower-amx-intrinsics"
 
@@ -71,7 +77,7 @@ private:
   DomTreeUpdater &DTU;
   LoopInfo *LI;
   BasicBlock *createLoop(BasicBlock *Preheader, BasicBlock *Exit, Value *Bound,
-                         Value *Step, StringRef Name, IRBuilderBase &B,
+                         ConstantInt *Step, StringRef Name, IRBuilderBase &B,
                          Loop *L);
   template <bool IsTileLoad>
   Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
@@ -103,7 +109,7 @@ private:
 
 BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
                                               BasicBlock *Exit, Value *Bound,
-                                              Value *Step, StringRef Name,
+                                              ConstantInt *Step, StringRef Name,
                                               IRBuilderBase &B, Loop *L) {
   LLVMContext &Ctx = Preheader->getContext();
   BasicBlock *Header =
@@ -123,7 +129,19 @@ BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
   B.SetInsertPoint(Latch);
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
-  BranchInst::Create(Header, Exit, Cond, Latch);
+  auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
+  if (!ProfcheckDisableMetadataFixes) {
+    if (auto *BoundInt = dyn_cast<ConstantInt>(Bound)) {
+      assert(Step->getZExtValue() != 0 &&
+             "Expected a non-zero step size. This is chosen by the pass and "
+             "should always be non-zero to imply a finite loop.");
+      MDBuilder MDB(Preheader->getContext());
+      setFittedBranchWeights(
+          *BR, {BoundInt->getZExtValue() / Step->getZExtValue(), 1}, false);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+    }
+  }
   IV->addIncoming(Inc, Latch);
 
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
