@@ -9615,6 +9615,12 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted) {
     if (CSM == CXXSpecialMemberKind::DefaultConstructor && Field &&
         Field->getParent()->isUnion()) {
+      // P3074R7: In C++26, a union's defaulted default constructor is never
+      // deleted due to a variant member with a non-trivial default
+      // constructor. The old [class.default.ctor]p2 union-specific bullets
+      // are removed.
+      if (S.getLangOpts().CPlusPlus26)
+        return false;
       // [class.default.ctor]p2:
       //   A defaulted default constructor for class X is defined as deleted if
       //   - X is a union that has a variant member with a non-trivial default
@@ -9637,6 +9643,11 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     // destructor is never actually called, but is semantically checked as
     // if it were.
     if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
+      // P3074R7: In C++26, a union's defaulted default constructor is never
+      // deleted due to a variant member with a non-trivial default
+      // constructor.
+      if (S.getLangOpts().CPlusPlus26)
+        return false;
       // [class.default.ctor]p2:
       //   A defaulted default constructor for class X is defined as deleted if
       //   - X is a union that has a variant member with a non-trivial default
@@ -9645,6 +9656,13 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
       const auto *RD = cast<CXXRecordDecl>(Field->getParent());
       if (!RD->hasInClassInitializer())
         DiagKind = NonTrivialDecl;
+    } else if (CSM == CXXSpecialMemberKind::Destructor &&
+               S.getLangOpts().CPlusPlus26) {
+      // P3074R7 [class.dtor]p7: In C++26, a union's destructor is not
+      // deleted merely because a variant member has a non-trivial destructor.
+      // Deletion is determined by the new union-specific rules in
+      // ShouldDeleteSpecialMember.
+      return false;
     } else {
       DiagKind = NonTrivialDecl;
     }
@@ -10034,6 +10052,47 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
 
   SpecialMemberDeletionInfo SMI(*this, MD, CSM, ICI, Diagnose);
 
+  // P3074R7 [class.dtor]p7:
+  // In C++26, a defaulted destructor for a union X is defined as deleted if:
+  //   (7.x.1) X has a user-provided default constructor or no default
+  //           constructor (overload resolution fails or selects a deleted
+  //           constructor), or
+  //   (7.x.2) X has a variant member V of class type M (or possibly
+  //           multi-dimensional array thereof) where V has a default member
+  //           initializer and M has a destructor that is non-trivial.
+  // Otherwise, the destructor is trivial, regardless of whether variant
+  // members have non-trivial destructors.
+  if (getLangOpts().CPlusPlus26 && RD->isUnion() &&
+      CSM == CXXSpecialMemberKind::Destructor) {
+    // Check (7.x.1): user-provided default constructor.
+    if (RD->hasUserProvidedDefaultConstructor()) {
+      if (Diagnose)
+        Diag(RD->getLocation(), diag::note_deleted_dtor_user_provided_ctor)
+            << RD;
+      return true;
+    }
+    // Check (7.x.2): any variant member with DMI and non-trivial dtor?
+    for (const auto *FD : RD->fields()) {
+      if (!FD->hasInClassInitializer())
+        continue;
+      QualType FieldType = Context.getBaseElementType(FD->getType());
+      if (CXXRecordDecl *FieldRec = FieldType->getAsCXXRecordDecl()) {
+        if (FieldRec->hasNonTrivialDestructor()) {
+          if (Diagnose)
+            Diag(FD->getLocation(),
+                 diag::note_deleted_special_member_class_subobject)
+                << getSpecialMember(MD) << RD << /*IsField*/ true << FD
+                << /*NonTrivialDecl*/ 4 << /*IsDtorCallInCtor*/ false
+                << /*IsObjCPtr*/ false;
+          return true;
+        }
+      }
+    }
+    // Union destructor is not deleted — skip the normal per-member visit.
+    // Only check the virtual dtor + operator delete rule above and CUDA below.
+    goto AfterMemberVisit;
+  }
+
   // Per DR1611, do not consider virtual bases of constructors of abstract
   // classes, since we are not going to construct them.
   // Per DR1658, do not consider virtual bases of destructors of abstract
@@ -10047,6 +10106,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
   if (SMI.shouldDeleteForAllConstMembers())
     return true;
 
+AfterMemberVisit:
   if (getLangOpts().CUDA) {
     // We should delete the special member in CUDA mode if target inference
     // failed.
@@ -10467,7 +10527,17 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMemberKind CSM,
   //    -- for all of the non-static data members of its class that are of class
   //       type (or array thereof), each such class has a trivial [default
   //       constructor or destructor]
-  if (!checkTrivialClassMembers(*this, RD, CSM, ConstArg, TAH, Diagnose))
+  //
+  // P3074R7 [class.default.ctor]p3, [class.dtor]p8:
+  //   In C++26, "either X is a union or" the above member checks apply.
+  //   For unions, default constructor and destructor are trivial regardless
+  //   of member triviality.
+  if (RD->isUnion() && getLangOpts().CPlusPlus26 &&
+      (CSM == CXXSpecialMemberKind::DefaultConstructor ||
+       CSM == CXXSpecialMemberKind::Destructor)) {
+    // Union default ctor and destructor are trivial in C++26 per P3074.
+    // Skip member triviality checks.
+  } else if (!checkTrivialClassMembers(*this, RD, CSM, ConstArg, TAH, Diagnose))
     return false;
 
   // C++11 [class.dtor]p5:

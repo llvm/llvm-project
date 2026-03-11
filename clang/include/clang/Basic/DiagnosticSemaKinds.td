@@ -6406,6 +6406,9 @@ def note_enforce_read_only_placement : Note<"type was declared read-only here">;
 
 def note_deleted_dtor_no_operator_delete : Note<
   "virtual destructor requires an unambiguous, accessible 'operator delete'">;
+def note_deleted_dtor_user_provided_ctor : Note<
+  "destructor of %0 is implicitly deleted because it has a user-provided "
+  "default constructor">;
 def note_deleted_special_member_class_subobject : Note<
   "%select{default constructor of|copy constructor of|move constructor of|"
   "copy assignment operator of|move assignment operator of|destructor of|"

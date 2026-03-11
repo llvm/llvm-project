@@ -1239,7 +1239,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialDestructor()) {
-            data().DefaultedDestructorIsDeleted = true;
+            // P3074R7: In C++26, the destructor of a union is not deleted
+            // merely because a variant member has a non-trivial destructor.
+            // Deletion is determined later by Sema based on the new rules.
+            if (!Context.getLangOpts().CPlusPlus26)
+              data().DefaultedDestructorIsDeleted = true;
             // C++20 [dcl.constexpr]p5:
             //   The definition of a constexpr destructor whose function-body is
             //   not = delete shall additionally satisfy...
@@ -1267,7 +1271,12 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //    -- for all the non-static data members of its class that are of
         //       class type (or array thereof), each such class has a trivial
         //       default constructor.
-        if (!FieldRec->hasTrivialDefaultConstructor())
+        // P3074R7 [class.default.ctor]p3:
+        //   In C++26, "either X is a union or" for all non-variant
+        //   non-static data members [...] each such class has a trivial
+        //   default constructor.
+        if (!FieldRec->hasTrivialDefaultConstructor() &&
+            !(isUnion() && Context.getLangOpts().CPlusPlus26))
           data().HasTrivialSpecialMembers &= ~SMF_DefaultConstructor;
 
         // C++0x [class.copy]p13:
@@ -1305,9 +1314,15 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (!FieldRec->hasTrivialMoveAssignment())
           data().HasTrivialSpecialMembers &= ~SMF_MoveAssignment;
 
-        if (!FieldRec->hasTrivialDestructor())
+        // P3074R7 [class.dtor]p8:
+        //   In C++26, "either X is a union or" for all non-variant
+        //   non-static data members [...] each such class has a trivial
+        //   destructor.
+        if (!FieldRec->hasTrivialDestructor() &&
+            !(isUnion() && Context.getLangOpts().CPlusPlus26))
           data().HasTrivialSpecialMembers &= ~SMF_Destructor;
-        if (!FieldRec->hasTrivialDestructorForCall())
+        if (!FieldRec->hasTrivialDestructorForCall() &&
+            !(isUnion() && Context.getLangOpts().CPlusPlus26))
           data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
         if (!FieldRec->hasIrrelevantDestructor())
           data().HasIrrelevantDestructor = false;
