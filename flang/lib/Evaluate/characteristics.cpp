@@ -625,8 +625,7 @@ static std::optional<Procedure> CharacterizeProcedure(
   if (seenProcs.find(symbol) != seenProcs.end()) {
     std::string procsList{GetSeenProcs(seenProcs)};
     context.messages().Say(symbol.name(),
-        "Procedure '%s' is recursively defined.  Procedures in the cycle:"
-        " %s"_err_en_US,
+        "Procedure '%s' is recursively defined.  Procedures in the cycle: %s"_err_en_US,
         symbol.name(), procsList);
     return std::nullopt;
   }
@@ -776,8 +775,10 @@ static std::optional<Procedure> CharacterizeProcedure(
             return std::optional<Procedure>{};
           },
           [&](const auto &) {
-            context.messages().Say(
-                "'%s' is not a procedure"_err_en_US, symbol.name());
+            if (emitError) {
+              context.messages().Say(
+                  "'%s' is not a procedure"_err_en_US, symbol.name());
+            }
             return std::optional<Procedure>{};
           },
       },
@@ -1887,6 +1888,12 @@ bool DistinguishUtils::Distinguishable(const TypeAndShape &x,
   if (ignoreTKR.test(common::IgnoreTKR::Rank)) {
   } else if (x.attrs().test(TypeAndShape::Attr::AssumedRank) ||
       y.attrs().test(TypeAndShape::Attr::AssumedRank)) {
+  } else if ((x.attrs().test(TypeAndShape::Attr::AssumedSize) &&
+                 x.type().IsAssumedType() && y.Rank() == 0) ||
+      (y.attrs().test(TypeAndShape::Attr::AssumedSize) &&
+          y.type().IsAssumedType() && x.Rank() == 0)) {
+    // F'2023 15.5.2.5 p14, third bullet: scalar actual can be passed
+    // to TYPE(*) assumed-size dummy argument
   } else if (x.Rank() != y.Rank()) {
     return true;
   }

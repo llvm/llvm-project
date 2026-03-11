@@ -77,7 +77,7 @@ struct UnrollVectorOptions {
   }
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction with MMT semantics (matrix matrix multiplication
 /// with the RHS transposed). This specific form is meant to have the vector
 /// operands are organized such that the reduction dimension is contiguous.
@@ -90,7 +90,7 @@ struct UnrollVectorOptions {
 ///                  kind = #vector.kind<add>} %a, %b, %c : ...
 /// ```
 ///
-///  The `constraint` predicate is used to decide which `vector.contraction` ops
+///  The `constraint` predicate is used to decide which `vector.contract` ops
 ///  to filter out.
 void populateVectorContractCanonicalizeMatmulToMMT(
     RewritePatternSet &patterns,
@@ -388,10 +388,15 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types. The `disableAtomicRMW` indicates whether to use a normal
 /// read-modify-write sequence instead of using `memref.generic_atomic_rmw` to
-/// perform subbyte storing.
+/// perform subbyte storing. When `assumeAligned` is true, store offsets are
+/// assumed to be aligned to container element boundaries, so a store whose
+/// source vector fills whole container elements is emitted as a simple
+/// bitcast + store without checking the offset. Stores that are not divisible
+/// in size are rejected.
 void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool disableAtomicRMW = false);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false,
+    bool assumeAligned = false);
 
 /// Populates patterns for both MeMref flattening and Vector narrow type
 /// emulation.

@@ -2037,7 +2037,8 @@ public:
     // option_element_vector:
 
     Options *options = GetOptions();
-    auto defs = options->GetDefinitions();
+    auto defs = options ? options->GetDefinitions()
+                        : llvm::ArrayRef<OptionDefinition>();
 
     std::unordered_set<size_t> option_slots;
     for (const auto &elem : option_vec) {

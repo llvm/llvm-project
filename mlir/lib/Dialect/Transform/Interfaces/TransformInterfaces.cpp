@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 #include "mlir/IR/Diagnostics.h"
@@ -809,7 +811,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   LDBG() << "applying: "
          << OpWithFlags(transform, OpPrintingFlags().skipRegions());
   FULL_LDBG() << "Top-level payload before application:\n" << *getTopLevel();
-  auto printOnFailureRAII = llvm::make_scope_exit([this] {
+  llvm::scope_exit printOnFailureRAII([this] {
     (void)this;
     LDBG() << "Failing Top-level payload:\n"
            << OpWithFlags(getTopLevel(),
@@ -1171,7 +1173,8 @@ bool transform::TransformResults::isSet(unsigned resultNumber) const {
 transform::TrackingListener::TrackingListener(TransformState &state,
                                               TransformOpInterface op,
                                               TrackingListenerConfig config)
-    : TransformState::Extension(state), transformOp(op), config(config) {
+    : TransformState::Extension(state), transformOp(op),
+      config(std::move(config)) {
   if (op) {
     for (OpOperand *opOperand : transformOp.getConsumedHandleOpOperands()) {
       consumedHandles.insert(opOperand->get());

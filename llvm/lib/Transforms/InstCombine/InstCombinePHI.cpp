@@ -178,8 +178,10 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
 
     // First look backward:
     if (auto *PI = dyn_cast<PtrToIntInst>(Arg)) {
-      AvailablePtrVals.emplace_back(PI->getOperand(0));
-      continue;
+      if (PI->getOperand(0)->getType() == IntToPtr->getType()) {
+        AvailablePtrVals.emplace_back(PI->getOperand(0));
+        continue;
+      }
     }
 
     // Next look forward:
@@ -272,7 +274,7 @@ bool InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
         if (Inst->isTerminator())
           return true;
         auto *BB = Inst->getParent();
-        if (isa<PHINode>(Inst) && BB->getFirstInsertionPt() == BB->end())
+        if (isa<PHINode>(Inst) && !BB->hasInsertionPt())
           return true;
         return false;
       }))
@@ -1133,7 +1135,7 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
     // extract the value within that BB because we cannot insert any non-PHI
     // instructions in the BB.
     for (auto *Pred : PN->blocks())
-      if (Pred->getFirstInsertionPt() == Pred->end())
+      if (!Pred->hasInsertionPt())
         return nullptr;
 
     for (User *U : PN->users()) {
@@ -1451,8 +1453,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
 
   // If the incoming values are pointer casts of the same original value,
   // replace the phi with a single cast iff we can insert a non-PHI instruction.
-  if (PN.getType()->isPointerTy() &&
-      PN.getParent()->getFirstInsertionPt() != PN.getParent()->end()) {
+  if (PN.getType()->isPointerTy() && PN.getParent()->hasInsertionPt()) {
     Value *IV0 = PN.getIncomingValue(0);
     Value *IV0Stripped = IV0->stripPointerCasts();
     // Set to keep track of values known to be equal to IV0Stripped after

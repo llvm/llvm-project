@@ -7,6 +7,7 @@
 //        needed math functions in the GPU `libm` and require the GPU C library.
 // UNSUPPORTED: amdgcn-amd-amdhsa
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// XFAIL: intelgpu
 
 #include <cassert>
 #include <complex>

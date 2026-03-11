@@ -31,17 +31,16 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
   if (ABI.IsO32())
-    PrivateGlobalPrefix = "$";
+    InternalSymbolPrefix = "$";
   else if (ABI.IsN32() || ABI.IsN64())
-    PrivateGlobalPrefix = ".L";
-  PrivateLabelPrefix = PrivateGlobalPrefix;
+    InternalSymbolPrefix = ".L";
+  PrivateLabelPrefix = InternalSymbolPrefix;
 
   AlignmentIsInBytes          = false;
   Data16bitsDirective         = "\t.2byte\t";
   Data32bitsDirective         = "\t.4byte\t";
   Data64bitsDirective         = "\t.8byte\t";
   CommentString               = "#";
-  AllowDollarAtStartOfIdentifier = false;
   ZeroDirective               = "\t.space\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
@@ -57,7 +56,7 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
 
   ExceptionsType = ExceptionHandling::WinEH;
 
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
   AllowAtInName = true;
 }

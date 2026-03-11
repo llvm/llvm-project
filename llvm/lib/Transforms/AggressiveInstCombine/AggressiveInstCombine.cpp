@@ -259,30 +259,44 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
   // The 'any-bits-set' ('or' chain) pattern is simpler to match because the
   // final "and X, 1" instruction must be the final op in the sequence.
   bool MatchAllBitsSet;
-  if (match(&I, m_c_And(m_OneUse(m_And(m_Value(), m_Value())), m_Value())))
-    MatchAllBitsSet = true;
-  else if (match(&I, m_And(m_OneUse(m_Or(m_Value(), m_Value())), m_One())))
-    MatchAllBitsSet = false;
-  else
-    return false;
-
-  MaskOps MOps(I.getType()->getScalarSizeInBits(), MatchAllBitsSet);
-  if (MatchAllBitsSet) {
-    if (!matchAndOrChain(cast<BinaryOperator>(&I), MOps) || !MOps.FoundAnd1)
+  bool MatchTrunc;
+  Value *X;
+  if (I.getType()->isIntOrIntVectorTy(1)) {
+    if (match(&I, m_Trunc(m_OneUse(m_And(m_Value(), m_Value())))))
+      MatchAllBitsSet = true;
+    else if (match(&I, m_Trunc(m_OneUse(m_Or(m_Value(), m_Value())))))
+      MatchAllBitsSet = false;
+    else
       return false;
+    MatchTrunc = true;
+    X = I.getOperand(0);
   } else {
-    if (!matchAndOrChain(cast<BinaryOperator>(&I)->getOperand(0), MOps))
+    if (match(&I, m_c_And(m_OneUse(m_And(m_Value(), m_Value())), m_Value()))) {
+      X = &I;
+      MatchAllBitsSet = true;
+    } else if (match(&I,
+                     m_And(m_OneUse(m_Or(m_Value(), m_Value())), m_One()))) {
+      X = I.getOperand(0);
+      MatchAllBitsSet = false;
+    } else
       return false;
+    MatchTrunc = false;
   }
+  Type *Ty = X->getType();
+
+  MaskOps MOps(Ty->getScalarSizeInBits(), MatchAllBitsSet);
+  if (!matchAndOrChain(X, MOps) ||
+      (MatchAllBitsSet && !MatchTrunc && !MOps.FoundAnd1))
+    return false;
 
   // The pattern was found. Create a masked compare that replaces all of the
   // shift and logic ops.
   IRBuilder<> Builder(&I);
-  Constant *Mask = ConstantInt::get(I.getType(), MOps.Mask);
+  Constant *Mask = ConstantInt::get(Ty, MOps.Mask);
   Value *And = Builder.CreateAnd(MOps.Root, Mask);
   Value *Cmp = MatchAllBitsSet ? Builder.CreateICmpEQ(And, Mask)
                                : Builder.CreateIsNotNull(And);
-  Value *Zext = Builder.CreateZExt(Cmp, I.getType());
+  Value *Zext = MatchTrunc ? Cmp : Builder.CreateZExt(Cmp, Ty);
   I.replaceAllUsesWith(Zext);
   ++NumAnyOrAllBitsSet;
   return true;
@@ -643,20 +657,24 @@ struct LoadOps {
 // (ZExt(L1) << shift1) | (ZExt(L2) << shift2) -> ZExt(L3) << shift1
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
-                               AliasAnalysis &AA) {
+                               AliasAnalysis &AA, bool IsRoot = false) {
   uint64_t ShAmt2;
   Value *X;
   Instruction *L1, *L2;
 
-  // Go to the last node with loads.
-  if (match(V,
-            m_OneUse(m_c_Or(m_Value(X), m_OneUse(m_ShlOrSelf(
-                                            m_OneUse(m_ZExt(m_Instruction(L2))),
-                                            ShAmt2)))))) {
-    if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
-      // Avoid Partial chain merge.
-      return false;
-  } else
+  // For the root instruction, allow multiple uses since the final result
+  // may legitimately be used in multiple places. For intermediate values,
+  // require single use to avoid creating duplicate loads.
+  if (!IsRoot && !V->hasOneUse())
+    return false;
+
+  if (!match(V, m_c_Or(m_Value(X),
+                       m_OneUse(m_ShlOrSelf(m_OneUse(m_ZExt(m_Instruction(L2))),
+                                            ShAmt2)))))
+    return false;
+
+  if (!foldLoadsRecursive(X, LOps, DL, AA, /*IsRoot=*/false) && LOps.FoundRoot)
+    // Avoid Partial chain merge.
     return false;
 
   // Check if the pattern has loads
@@ -795,7 +813,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   LoadOps LOps;
-  if (!foldLoadsRecursive(&I, LOps, DL, AA) || !LOps.FoundRoot)
+  if (!foldLoadsRecursive(&I, LOps, DL, AA, /*IsRoot=*/true) || !LOps.FoundRoot)
     return false;
 
   IRBuilder<> Builder(&I);
@@ -911,7 +929,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
-  Val = Builder.CreateTrunc(Val, NewTy);
+  Val = Builder.CreateZExtOrTrunc(Val, NewTy);
   StoreInst *Store = Builder.CreateAlignedStore(
       Val, First.Store->getPointerOperand(), First.Store->getAlign());
 
@@ -1401,7 +1419,8 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
 
   SmallPtrSet<ConstantInt *, 4> Cases;
   for (uint64_t I = 0; I < N; ++I) {
-    ConstantInt *CaseVal = ConstantInt::get(ByteTy, Str[I]);
+    ConstantInt *CaseVal =
+        ConstantInt::get(ByteTy, static_cast<unsigned char>(Str[I]));
     if (!Cases.insert(CaseVal).second)
       continue;
 

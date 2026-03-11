@@ -211,7 +211,7 @@ class LValue {
   };
 
   // Note: Only meaningful when isMatrixRow() and the row is swizzled.
-  unsigned NumCols, NumRows;
+  llvm::Constant *MatrixRowElts = nullptr;
 
   QualType Type;
 
@@ -290,6 +290,9 @@ public:
   bool isGlobalReg() const { return LVType == GlobalReg; }
   bool isMatrixElt() const { return LVType == MatrixElt; }
   bool isMatrixRow() const { return LVType == MatrixRow; }
+  bool isMatrixRowSwizzle() const {
+    return isMatrixRow() && MatrixRowElts != nullptr;
+  }
 
   bool isVolatileQualified() const { return Quals.hasVolatile(); }
   bool isRestrictQualified() const { return Quals.hasRestrict(); }
@@ -411,14 +414,9 @@ public:
     return MatrixRowIdx;
   }
 
-  unsigned getMatrixNumRows() const {
-    assert(isMatrixRow());
-    return NumRows;
-  }
-
-  unsigned getMatrixNumCols() const {
-    assert(isMatrixRow());
-    return NumCols;
+  llvm::Constant *getMatrixRowElts() const {
+    assert(isMatrixRowSwizzle() && "not a matrix row swizzle lvalue");
+    return MatrixRowElts;
   }
 
   // extended vector elements.
@@ -510,15 +508,27 @@ public:
   }
 
   static LValue MakeMatrixRow(Address Addr, llvm::Value *RowIdx,
-                              unsigned NumCols, unsigned NumRows,
                               QualType MatrixTy, LValueBaseInfo BaseInfo,
                               TBAAAccessInfo TBAAInfo) {
     LValue LV;
     LV.LVType = MatrixRow;
     LV.MatrixRowIdx = RowIdx; // store the row index here
-    LV.NumCols = NumCols;
-    LV.NumRows = NumRows;
+    LV.MatrixRowElts = nullptr; // use sequential indexing
     LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), Addr, BaseInfo, TBAAInfo);
+    return LV;
+  }
+
+  static LValue MakeMatrixRowSwizzle(Address MatAddr, llvm::Value *RowIdx,
+                                     llvm::Constant *Cols, QualType MatrixTy,
+                                     LValueBaseInfo BaseInfo,
+                                     TBAAAccessInfo TBAAInfo) {
+    LValue LV;
+    LV.LVType = MatrixRow;
+    LV.Addr = MatAddr;
+    LV.MatrixRowIdx = RowIdx;
+    LV.MatrixRowElts = Cols; // use indices in list order
+    LV.Initialize(MatrixTy, MatrixTy.getQualifiers(), MatAddr, BaseInfo,
+                  TBAAInfo);
     return LV;
   }
 

@@ -6,10 +6,11 @@
 
 @lds_var = internal addrspace(3) global [1024 x i32] poison, align 4
 
+; @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel], no_sanitize_address
 ;.
 ; CHECK: @llvm.amdgcn.sw.lds.my_kernel = internal addrspace(3) global ptr poison, no_sanitize_address, align 4, !absolute_symbol [[META0:![0-9]+]]
 ; CHECK: @llvm.amdgcn.sw.lds.my_kernel.md = internal addrspace(1) global %llvm.amdgcn.sw.lds.my_kernel.md.type { %llvm.amdgcn.sw.lds.my_kernel.md.item { i32 0, i32 8, i32 32 }, %llvm.amdgcn.sw.lds.my_kernel.md.item { i32 32, i32 4096, i32 5120 } }, no_sanitize_address
-; @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel], no_sanitize_address
+; CHECK: @llvm.amdgcn.sw.lds.base.table = internal addrspace(1) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.sw.lds.my_kernel], no_sanitize_address
 ;.
 define void @my_function(ptr addrspace(3) %lds_arg) sanitize_address {
 ; CHECK-LABEL: define void @my_function(
@@ -33,7 +34,7 @@ define void @my_function(ptr addrspace(3) %lds_arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP17:%.*]] = and i1 [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP17]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP18]], 0
-; CHECK-NEXT:    br i1 [[TMP19]], label [[ASAN_REPORT:%.*]], label [[TMP22:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP19]], label [[ASAN_REPORT:%.*]], label [[TMP22:%.*]], !prof [[PROF2:![0-9]+]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[TMP20:%.*]], label [[TMP21:%.*]]
 ; CHECK:       20:
@@ -60,7 +61,7 @@ define void @my_function(ptr addrspace(3) %lds_arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP36:%.*]] = and i1 [[TMP31]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP36]])
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp ne i64 [[TMP37]], 0
-; CHECK-NEXT:    br i1 [[TMP38]], label [[ASAN_REPORT1:%.*]], label [[TMP41:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[TMP38]], label [[ASAN_REPORT1:%.*]], label [[TMP41:%.*]], !prof [[PROF2]]
 ; CHECK:       asan.report1:
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[TMP39:%.*]], label [[TMP40:%.*]]
 ; CHECK:       39:
@@ -81,7 +82,7 @@ define void @my_function(ptr addrspace(3) %lds_arg) sanitize_address {
 
 define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK-LABEL: define amdgpu_kernel void @my_kernel(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META3:![0-9]+]] {
 ; CHECK-NEXT:  WId:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -142,11 +143,12 @@ define amdgpu_kernel void @my_kernel() sanitize_address {
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { convergent nocallback nofree nounwind }
 ; CHECK: attributes #[[ATTR7]] = { nomerge }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-; CHECK: [[META2]] = !{i32 0}
+; CHECK: [[META1:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+; CHECK: [[META3]] = !{i32 0}
 ;.

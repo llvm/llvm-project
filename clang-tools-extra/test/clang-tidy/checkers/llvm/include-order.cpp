@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s llvm-include-order %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy %s llvm-include-order %t
 
 // CHECK-MESSAGES: [[@LINE+2]]:1: warning: #includes are not sorted properly
 #include "j.h"

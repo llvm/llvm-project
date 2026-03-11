@@ -220,6 +220,7 @@ public:
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
     Extra_IsConvergent = 32,
+    Extra_MayUnwind = 64,
   };
 
   // Inline asm operands map to multiple SDNode / MachineInstr operands.
@@ -455,6 +456,8 @@ public:
       Result.push_back("isconvergent");
     if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
       Result.push_back("alignstack");
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      Result.push_back("unwind");
 
     AsmDialect Dialect =
         InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect));

@@ -217,9 +217,8 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto name_cleanup = llvm::make_scope_exit([process, injected_name]() {
-    process->DeallocateMemory(injected_name);
-  });
+  llvm::scope_exit name_cleanup(
+      [process, injected_name]() { process->DeallocateMemory(injected_name); });
 
   process->WriteMemory(injected_name, name.data(),
                        name.size() * sizeof(llvm::UTF16), status);
@@ -289,10 +288,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto injected_module_path_cleanup =
-      llvm::make_scope_exit([process, injected_module_path]() {
-    process->DeallocateMemory(injected_module_path);
-  });
+  llvm::scope_exit injected_module_path_cleanup(
+      [process, injected_module_path]() {
+        process->DeallocateMemory(injected_module_path);
+      });
 
   /* Inject __lldb_LoadLibraryResult into inferior */
   const uint32_t word_size = process->GetAddressByteSize();
@@ -307,7 +306,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto result_cleanup = llvm::make_scope_exit([process, injected_result]() {
+  llvm::scope_exit result_cleanup([process, injected_result]() {
     process->DeallocateMemory(injected_result);
   });
 
@@ -347,8 +346,8 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
-  auto parameter_cleanup =
-      llvm::make_scope_exit([invocation, &context, injected_parameters]() {
+  llvm::scope_exit parameter_cleanup(
+      [invocation, &context, injected_parameters]() {
         invocation->DeallocateFunctionResults(context, injected_parameters);
       });
 
@@ -523,9 +522,9 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
-  if (error.Success())
-    process_sp->SetPseudoConsoleHandle(launch_info.GetPTYSP());
-  else {
+  if (error.Success()) {
+    process_sp->SetPseudoConsoleHandle();
+  } else {
     Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
               error.AsCString());

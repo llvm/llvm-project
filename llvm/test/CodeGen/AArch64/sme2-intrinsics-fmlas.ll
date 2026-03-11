@@ -6,9 +6,7 @@
 define void @multi_vector_add_single_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: multi_vector_add_single_vg1x2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx2], { z0.s, z1.s }, z2.s
 ; CHECK-NEXT:    fmla za.s[w8, 7, vgx2], { z0.s, z1.s }, z2.s
 ; CHECK-NEXT:    ret
@@ -25,9 +23,7 @@ define void @multi_vector_add_single_vg1x2_s(i32 %slice, <vscale x 4 x float> %z
 define void @multi_vector_add_single_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: multi_vector_add_single_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmla za.d[w8, 0, vgx2], { z0.d, z1.d }, z2.d
 ; CHECK-NEXT:    fmla za.d[w8, 7, vgx2], { z0.d, z1.d }, z2.d
 ; CHECK-NEXT:    ret
@@ -44,11 +40,7 @@ define void @multi_vector_add_single_vg1x2_d(i32 %slice, <vscale x 2 x double> %
 define void @multi_vector_add_single_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3,
 ; CHECK-LABEL: multi_vector_add_single_vg1x4_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx4], { z0.s - z3.s }, z4.s
 ; CHECK-NEXT:    fmla za.s[w8, 7, vgx4], { z0.s - z3.s }, z4.s
 ; CHECK-NEXT:    ret
@@ -68,11 +60,7 @@ define void @multi_vector_add_single_vg1x4_s(i32 %slice, <vscale x 4 x float> %z
 define void @multi_vector_add_single_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3,
 ; CHECK-LABEL: multi_vector_add_single_vg1x4_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmla za.d[w8, 0, vgx4], { z0.d - z3.d }, z4.d
 ; CHECK-NEXT:    fmla za.d[w8, 7, vgx4], { z0.d - z3.d }, z4.d
 ; CHECK-NEXT:    ret
@@ -94,9 +82,7 @@ define void @multi_vector_add_single_vg1x4_d(i32 %slice, <vscale x 2 x double> %
 define void @multi_vector_sub_single_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: multi_vector_sub_single_vg1x2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmls za.s[w8, 0, vgx2], { z0.s, z1.s }, z2.s
 ; CHECK-NEXT:    fmls za.s[w8, 7, vgx2], { z0.s, z1.s }, z2.s
 ; CHECK-NEXT:    ret
@@ -113,9 +99,7 @@ define void @multi_vector_sub_single_vg1x2_s(i32 %slice, <vscale x 4 x float> %z
 define void @multi_vector_sub_single_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: multi_vector_sub_single_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmls za.d[w8, 0, vgx2], { z0.d, z1.d }, z2.d
 ; CHECK-NEXT:    fmls za.d[w8, 7, vgx2], { z0.d, z1.d }, z2.d
 ; CHECK-NEXT:    ret
@@ -132,11 +116,7 @@ define void @multi_vector_sub_single_vg1x2_d(i32 %slice, <vscale x 2 x double> %
 define void @multi_vector_sub_single_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3,
 ; CHECK-LABEL: multi_vector_sub_single_vg1x4_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmls za.s[w8, 0, vgx4], { z0.s - z3.s }, z4.s
 ; CHECK-NEXT:    fmls za.s[w8, 7, vgx4], { z0.s - z3.s }, z4.s
 ; CHECK-NEXT:    ret
@@ -156,11 +136,7 @@ define void @multi_vector_sub_single_vg1x4_s(i32 %slice, <vscale x 4 x float> %z
 define void @multi_vector_sub_single_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3,
 ; CHECK-LABEL: multi_vector_sub_single_vg1x4_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmls za.d[w8, 0, vgx4], { z0.d - z3.d }, z4.d
 ; CHECK-NEXT:    fmls za.d[w8, 7, vgx4], { z0.d - z3.d }, z4.d
 ; CHECK-NEXT:    ret
@@ -182,11 +158,7 @@ define void @multi_vector_sub_single_vg1x4_d(i32 %slice, <vscale x 2 x double> %
 define void @multi_vector_add_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
 ; CHECK-LABEL: multi_vector_add_vg1x2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx2], { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    fmla za.s[w8, 7, vgx2], { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    ret
@@ -204,11 +176,7 @@ define void @multi_vector_add_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vs
 define void @multi_vector_add_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1,
 ; CHECK-LABEL: multi_vector_add_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmla za.d[w8, 0, vgx2], { z0.d, z1.d }, { z2.d, z3.d }
 ; CHECK-NEXT:    fmla za.d[w8, 7, vgx2], { z0.d, z1.d }, { z2.d, z3.d }
 ; CHECK-NEXT:    ret
@@ -244,15 +212,7 @@ define void @multi_vector_add_vg1x2_s_regclass(i32 %slice, <vscale x 4 x float> 
 define void @multi_vector_add_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3,
 ; CHECK-LABEL: multi_vector_add_vg1x4_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx4], { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    fmla za.s[w8, 7, vgx4], { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    ret
@@ -270,15 +230,7 @@ define void @multi_vector_add_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vs
 define void @multi_vector_add_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3,
 ; CHECK-LABEL: multi_vector_add_vg1x4_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmla za.d[w8, 0, vgx4], { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    fmla za.d[w8, 7, vgx4], { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    ret
@@ -320,11 +272,7 @@ define void @multi_vector_add_vg1x4_s_regclass(i32 %slice, <vscale x 4 x float> 
 define void @multi_vector_sub_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1,
 ; CHECK-LABEL: multi_vector_sub_vg1x2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmls za.s[w8, 0, vgx2], { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    fmls za.s[w8, 7, vgx2], { z0.s, z1.s }, { z2.s, z3.s }
 ; CHECK-NEXT:    ret
@@ -342,11 +290,7 @@ define void @multi_vector_sub_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vs
 define void @multi_vector_sub_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1,
 ; CHECK-LABEL: multi_vector_sub_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z2_z3 def $z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmls za.d[w8, 0, vgx2], { z0.d, z1.d }, { z2.d, z3.d }
 ; CHECK-NEXT:    fmls za.d[w8, 7, vgx2], { z0.d, z1.d }, { z2.d, z3.d }
 ; CHECK-NEXT:    ret
@@ -364,15 +308,7 @@ define void @multi_vector_sub_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <v
 define void @multi_vector_sub_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3,
 ; CHECK-LABEL: multi_vector_sub_vg1x4_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmls za.s[w8, 0, vgx4], { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    fmls za.s[w8, 7, vgx4], { z0.s - z3.s }, { z4.s - z7.s }
 ; CHECK-NEXT:    ret
@@ -390,15 +326,7 @@ define void @multi_vector_sub_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vs
 define void @multi_vector_sub_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3,
 ; CHECK-LABEL: multi_vector_sub_vg1x4_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmls za.d[w8, 0, vgx4], { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    fmls za.d[w8, 7, vgx4], { z0.d - z3.d }, { z4.d - z7.d }
 ; CHECK-NEXT:    ret
@@ -418,9 +346,7 @@ define void @multi_vector_sub_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <v
 define void @multi_vector_add_lane_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: multi_vector_add_lane_vg1x2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx2], { z0.s, z1.s }, z2.s[3]
 ; CHECK-NEXT:    fmla za.s[w8, 7, vgx2], { z0.s, z1.s }, z2.s[3]
 ; CHECK-NEXT:    ret
@@ -437,9 +363,7 @@ define void @multi_vector_add_lane_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0
 define void @multi_vector_add_lane_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: multi_vector_add_lane_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmla za.d[w8, 0, vgx2], { z0.d, z1.d }, z2.d[1]
 ; CHECK-NEXT:    fmla za.d[w8, 7, vgx2], { z0.d, z1.d }, z2.d[1]
 ; CHECK-NEXT:    ret
@@ -458,8 +382,8 @@ define void @multi_vector_add_lane_vg1x2_s_regclass(i32 %slice, <vscale x 4 x fl
 ; CHECK-LABEL: multi_vector_add_lane_vg1x2_s_regclass:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z4.d, z1.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z0.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx2], { z4.s, z5.s }, z2.s[3]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.fmla.lane.vg1x2.nxv4f32(i32 %slice,
@@ -471,11 +395,7 @@ define void @multi_vector_add_lane_vg1x2_s_regclass(i32 %slice, <vscale x 4 x fl
 define void @multi_vector_add_lane_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3,
 ; CHECK-LABEL: multi_vector_add_lane_vg1x4_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx4], { z0.s - z3.s }, z4.s[3]
 ; CHECK-NEXT:    fmla za.s[w8, 7, vgx4], { z0.s - z3.s }, z4.s[3]
 ; CHECK-NEXT:    ret
@@ -495,11 +415,7 @@ define void @multi_vector_add_lane_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0
 define void @multi_vector_add_lane_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3,
 ; CHECK-LABEL: multi_vector_add_lane_vg1x4_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmla za.d[w8, 0, vgx4], { z0.d - z3.d }, z4.d[1]
 ; CHECK-NEXT:    fmla za.d[w8, 7, vgx4], { z0.d - z3.d }, z4.d[1]
 ; CHECK-NEXT:    ret
@@ -521,8 +437,8 @@ define void @multi_vector_add_lane_vg1x4_s_regclass(i32 %slice, <vscale x 4 x fl
 ; CHECK-LABEL: multi_vector_add_lane_vg1x4_s_regclass:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z25.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    mov z27.d, z0.d
 ; CHECK-NEXT:    fmla za.s[w8, 0, vgx4], { z24.s - z27.s }, z4.s[3]
@@ -540,9 +456,7 @@ define void @multi_vector_add_lane_vg1x4_s_regclass(i32 %slice, <vscale x 4 x fl
 define void @multi_vector_sub_lane_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zm) {
 ; CHECK-LABEL: multi_vector_sub_lane_vg1x2_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmls za.s[w8, 0, vgx2], { z0.s, z1.s }, z2.s[3]
 ; CHECK-NEXT:    fmls za.s[w8, 7, vgx2], { z0.s, z1.s }, z2.s[3]
 ; CHECK-NEXT:    ret
@@ -559,9 +473,7 @@ define void @multi_vector_sub_lane_vg1x2_s(i32 %slice, <vscale x 4 x float> %zn0
 define void @multi_vector_sub_lane_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zm) {
 ; CHECK-LABEL: multi_vector_sub_lane_vg1x2_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fmls za.d[w8, 0, vgx2], { z0.d, z1.d }, z2.d[1]
 ; CHECK-NEXT:    fmls za.d[w8, 7, vgx2], { z0.d, z1.d }, z2.d[1]
 ; CHECK-NEXT:    ret
@@ -578,11 +490,7 @@ define void @multi_vector_sub_lane_vg1x2_d(i32 %slice, <vscale x 2 x double> %zn
 define void @multi_vector_sub_lane_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zn3,
 ; CHECK-LABEL: multi_vector_sub_lane_vg1x4_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmls za.s[w8, 0, vgx4], { z0.s - z3.s }, z4.s[3]
 ; CHECK-NEXT:    fmls za.s[w8, 7, vgx4], { z0.s - z3.s }, z4.s[3]
 ; CHECK-NEXT:    ret
@@ -602,11 +510,7 @@ define void @multi_vector_sub_lane_vg1x4_s(i32 %slice, <vscale x 4 x float> %zn0
 define void @multi_vector_sub_lane_vg1x4_d(i32 %slice, <vscale x 2 x double> %zn0, <vscale x 2 x double> %zn1, <vscale x 2 x double> %zn2, <vscale x 2 x double> %zn3,
 ; CHECK-LABEL: multi_vector_sub_lane_vg1x4_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fmls za.d[w8, 0, vgx4], { z0.d - z3.d }, z4.d[1]
 ; CHECK-NEXT:    fmls za.d[w8, 7, vgx4], { z0.d - z3.d }, z4.d[1]
 ; CHECK-NEXT:    ret

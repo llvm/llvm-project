@@ -18,7 +18,7 @@
 #include "DLWrap.h"
 #include "ffi.h"
 
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 DLWRAP_INITIALIZE()
 
@@ -43,8 +43,8 @@ uint32_t ffi_init() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(FFI_PATH, &ErrMsg));
 
   if (!DynlibHandle->isValid()) {
-    ODBG(ODT_Init) << "Unable to load library '" << FFI_PATH << "': " << ErrMsg
-                   << "!";
+    ODBG(OLDT_Init) << "Unable to load library '" << FFI_PATH << "': " << ErrMsg
+                    << "!";
     return DYNAMIC_FFI_FAIL;
   }
 
@@ -53,12 +53,12 @@ uint32_t ffi_init() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      ODBG(ODT_Init) << "Unable to find '" << Sym << "' in '" << FFI_PATH
-                     << "'!";
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << FFI_PATH
+                      << "'!";
       return DYNAMIC_FFI_FAIL;
     }
-    ODBG(ODT_Init) << "Implementing " << Sym << " with dlsym(" << Sym << ") -> "
-                   << P;
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }
@@ -67,8 +67,8 @@ uint32_t ffi_init() {
   {                                                                            \
     void *SymbolPtr = DynlibHandle->getAddressOfSymbol(#SYMBOL);               \
     if (!SymbolPtr) {                                                          \
-      ODBG(ODT_Init) << "Unable to find '" << #SYMBOL << "' in '" << FFI_PATH  \
-                     << "'!";                                                  \
+      ODBG(OLDT_Init) << "Unable to find '" << #SYMBOL << "' in '" << FFI_PATH \
+                      << "'!";                                                 \
       return DYNAMIC_FFI_FAIL;                                                 \
     }                                                                          \
     SYMBOL = *reinterpret_cast<decltype(SYMBOL) *>(SymbolPtr);                 \

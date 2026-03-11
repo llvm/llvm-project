@@ -815,7 +815,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   const DispatchFunction *this_dispatch = nullptr;
 
   if (target.ResolveLoadAddress(curr_pc, func_addr)) {
-    Symbol *curr_sym = func_addr.CalculateSymbolContextSymbol();
+    const Symbol *curr_sym = func_addr.CalculateSymbolContextSymbol();
     if (curr_sym)
       sym_name = curr_sym->GetName().GetStringRef();
 

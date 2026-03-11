@@ -48,9 +48,9 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
       initListExpr(
           hasType(qualType(hasCanonicalType(hasDeclaration(recordDecl()))))));
 
-  auto DataMethod =
-      cxxMethodDecl(hasName("data"),
-                    ofClass(matchers::matchesAnyListedName(StringViewTypes)));
+  auto DataMethod = cxxMethodDecl(
+      hasName("data"),
+      ofClass(matchers::matchesAnyListedRegexName(StringViewTypes)));
 
   auto SizeCall = cxxMemberCallExpr(
       callee(cxxMethodDecl(hasAnyName("size", "length"))),
@@ -73,13 +73,14 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
                       ignoringParenImpCasts(equalsBoundNode("data-call"))),
                   unless(hasAnyArgument(ignoringParenImpCasts(SizeCall))),
                   unless(hasAnyArgument(DescendantSizeCall)),
-                  hasDeclaration(namedDecl(
-                      unless(matchers::matchesAnyListedName(AllowedCallees))))),
-              initListExpr(expr().bind("parent"),
-                           hasType(qualType(hasCanonicalType(hasDeclaration(
-                               recordDecl(unless(matchers::matchesAnyListedName(
-                                   AllowedCallees))))))),
-                           unless(DescendantSizeCall)))))),
+                  hasDeclaration(namedDecl(unless(
+                      matchers::matchesAnyListedRegexName(AllowedCallees))))),
+              initListExpr(
+                  expr().bind("parent"),
+                  hasType(qualType(hasCanonicalType(hasDeclaration(
+                      recordDecl(unless(matchers::matchesAnyListedRegexName(
+                          AllowedCallees))))))),
+                  unless(DescendantSizeCall)))))),
       this);
 }
 

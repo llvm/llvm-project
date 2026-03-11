@@ -96,13 +96,14 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", [Pure]> {
   );
 
   let assemblyFormat = "`(` $comm `)` attr-dict `:` type(results)";
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
 // CommSplitOp
 //===----------------------------------------------------------------------===//
 
-def MPI_CommSplitOp : MPI_Op<"comm_split", [Pure]> {
+def MPI_CommSplitOp : MPI_Op<"comm_split"> {
   let summary = "Partition the group associated with the given communicator into "
                 "disjoint subgroups";
   let description = [{
@@ -262,6 +263,44 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// AllGatherOp
+//===----------------------------------------------------------------------===//
+
+def MPI_AllGatherOp : MPI_Op<"allgather", []> {
+  let summary = [{
+    Equivalent to `MPI_Allgather(sendbuf, sendcount, sendtype,
+                                 recvbuf, recvcount, recvtype,
+                                 comm)`.
+  }];
+  let description = [{
+    MPI_Allgather collects data from all processes in a given communicator and
+    stores the gathered data in the receive buffer of each process.
+
+    Each process contributes the same amount of data defined by `sendbuf`.
+    The MPI call specifies the number of elements contributed by each process
+    via the `recvcount` parameter. However, this operation, assumes `recvbuf`
+    to be sufficiently large to hold the data contributed by all processes.
+    Therefore, `recvcount` is implicitly defined as
+    `num_elements(recvbuf) / MPI_Comm_size(comm)`.
+
+    This operation may optionally return an !mpi.retval value, which can be
+    used for error checking.
+  }];
+
+  let arguments = (
+    ins AnyMemRef : $sendbuf,
+        AnyMemRef : $recvbuf,
+        MPI_Comm : $comm
+  );
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $comm `)` "
+                       "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
+                       "(`->` type($retval)^)?";
+}
+
+//===----------------------------------------------------------------------===//
 // AllReduceOp
 //===----------------------------------------------------------------------===//
 
@@ -292,6 +331,41 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op `,` $comm `)` "
                        "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
                        "(`->` type($retval)^)?";
+}
+
+//===----------------------------------------------------------------------===//
+// ReduceScatterBlockOp
+//===----------------------------------------------------------------------===//
+
+def MPI_ReduceScatterBlockOp : MPI_Op<"reduce_scatter_block", []> {
+  let summary = "Equivalent to `MPI_Reduce_scatter_block(sendbuf, recvbuf, "
+                "recvcount, dtype, op, comm)`";
+  let description = [{
+    MPI_Reduce_scatter_block first performs an element-wise reduction on the
+    sendbuf across all processes in the communicator, then scatters the result
+    by distributing equal-sized blocks to each process into recvbuf.
+
+    The `op` attribute specifies the reduction operation to be performed.
+    Currently only the `MPI_Op` predefined in the standard (e.g. `MPI_SUM`) are
+    supported.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (
+    ins AnyNon0RankedMemRef : $sendbuf,
+    AnyNon0RankedMemRef : $recvbuf,
+    MPI_ReductionOpEnum : $op,
+    MPI_Comm : $comm
+  );
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op `,` $comm `)` "
+                       "attr-dict `:` type($sendbuf) `,` type($recvbuf) "
+                       "(`->` type($retval)^)?";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

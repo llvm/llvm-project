@@ -76,7 +76,7 @@ public:
 
   void release();
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __res_; }
 
   [[__gnu__::__pure__]] pool_options options() const;
 

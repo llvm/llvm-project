@@ -390,6 +390,30 @@ TEST(FormatVariadicTest, IntegralHexFormatting) {
   EXPECT_EQ(" 000255", formatv("{0,7:6}", 255).str());
 }
 
+template <typename FormatTy>
+std::string printToString(unsigned MaxN, FormatTy &&Fmt) {
+  std::vector<char> Dst(MaxN + 2);
+  int N = Fmt.snprint(Dst.data(), Dst.size());
+  Dst.back() = 0;
+  return N < 0 ? "" : Dst.data();
+}
+
+TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
+  uint8_t HexDigits = 10;
+  uint64_t N = 255;
+
+  // Here's the old format() way of printing a hex number with
+  // dynamic width and precision, both being the same.
+  EXPECT_EQ(
+      "0x00000000ff",
+      printToString(100, format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
+
+  // Now, do the same with formatv()
+  EXPECT_EQ("0x00000000ff",
+            formatv("0x{0:x-}", fmt_align(N, AlignStyle::Right, HexDigits, '0'))
+                .str());
+}
+
 TEST(FormatVariadicTest, PointerFormatting) {
   // 1. Trivial cases.  Hex is default.  Default Precision is pointer width.
   if (sizeof(void *) == 4) {

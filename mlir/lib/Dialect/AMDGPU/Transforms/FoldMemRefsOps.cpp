@@ -1,4 +1,4 @@
-//===- FoldSubviewOps.cpp - AMDGPU fold subview ops -----------------------===//
+//===- FoldMemRefsOps.cpp - AMDGPU fold memref ops ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,7 +37,7 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
     return failure();
   }
   return llvm::TypeSwitch<Operation *, LogicalResult>(defOp)
-      .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
+      .Case([&](memref::SubViewOp subviewOp) {
         mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
             rewriter, loc, subviewOp.getMixedOffsets(),
             subviewOp.getMixedStrides(), subviewOp.getDroppedDims(), indices,
@@ -45,25 +45,18 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
         memrefBase = subviewOp.getSource();
         return success();
       })
-      .Case<memref::ExpandShapeOp>([&](memref::ExpandShapeOp expandShapeOp) {
-        if (failed(mlir::memref::resolveSourceIndicesExpandShape(
-                loc, rewriter, expandShapeOp, indices, resolvedIndices,
-                false))) {
-          return failure();
-        }
+      .Case([&](memref::ExpandShapeOp expandShapeOp) {
+        mlir::memref::resolveSourceIndicesExpandShape(
+            loc, rewriter, expandShapeOp, indices, resolvedIndices, false);
         memrefBase = expandShapeOp.getViewSource();
         return success();
       })
-      .Case<memref::CollapseShapeOp>(
-          [&](memref::CollapseShapeOp collapseShapeOp) {
-            if (failed(mlir::memref::resolveSourceIndicesCollapseShape(
-                    loc, rewriter, collapseShapeOp, indices,
-                    resolvedIndices))) {
-              return failure();
-            }
-            memrefBase = collapseShapeOp.getViewSource();
-            return success();
-          })
+      .Case([&](memref::CollapseShapeOp collapseShapeOp) {
+        mlir::memref::resolveSourceIndicesCollapseShape(
+            loc, rewriter, collapseShapeOp, indices, resolvedIndices);
+        memrefBase = collapseShapeOp.getViewSource();
+        return success();
+      })
       .Default([&](Operation *op) {
         return rewriter.notifyMatchFailure(
             op, (role + " producer is not one of SubViewOp, ExpandShapeOp, or "
@@ -73,7 +66,7 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
 }
 
 struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherToLDSOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
@@ -99,16 +92,77 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
       destIndices = op.getDstIndices();
     }
 
-    rewriter.replaceOpWithNewOp<GatherToLDSOp>(op, memrefSource, sourceIndices,
-                                               memrefDest, destIndices,
-                                               op.getTransferType());
+    if (failed(foldSrcResult) && failed(foldDstResult))
+      return rewriter.notifyMatchFailure(op, "no fold found");
 
+    rewriter.replaceOpWithNewOp<GatherToLDSOp>(
+        op, memrefSource, sourceIndices, memrefDest, destIndices,
+        op.getTransferType(), op.getAsync());
+
+    return success();
+  }
+};
+
+template <typename OpTy>
+struct FoldMemRefOpsIntoDmaBaseOp final : OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    SmallVector<Value> globalIndices, ldsIndices;
+    Value globalBase, ldsBase;
+
+    LogicalResult didFoldGlobal =
+        foldMemrefViewOp(rewriter, loc, op.getGlobal(), op.getGlobalIndices(),
+                         globalIndices, globalBase, "global");
+    if (failed(didFoldGlobal)) {
+      globalBase = op.getGlobal();
+      globalIndices = op.getGlobalIndices();
+    }
+
+    LogicalResult didFoldLds =
+        foldMemrefViewOp(rewriter, loc, op.getLds(), op.getLdsIndices(),
+                         ldsIndices, ldsBase, "lds");
+    if (failed(didFoldLds)) {
+      ldsBase = op.getLds();
+      ldsIndices = op.getLdsIndices();
+    }
+
+    if (failed(didFoldGlobal) && failed(didFoldLds))
+      return rewriter.notifyMatchFailure(op, "no fold found");
+
+    rewriter.replaceOpWithNewOp<OpTy>(op, op.getBase().getType(), globalBase,
+                                      globalIndices, ldsBase, ldsIndices);
+    return success();
+  }
+};
+
+struct FoldMemRefOpsIntoTransposeLoadOp final
+    : OpRewritePattern<TransposeLoadOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(TransposeLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> sourceIndices;
+    Value memrefSource;
+
+    if (failed(foldMemrefViewOp(rewriter, op.getLoc(), op.getSrc(),
+                                op.getSrcIndices(), sourceIndices, memrefSource,
+                                "source")))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TransposeLoadOp>(op, op.getResult().getType(),
+                                                 memrefSource, sourceIndices);
     return success();
   }
 };
 
 void populateAmdgpuFoldMemRefOpsPatterns(RewritePatternSet &patterns,
                                          PatternBenefit benefit) {
-  patterns.add<FoldMemRefOpsIntoGatherToLDSOp>(patterns.getContext(), benefit);
+  patterns.add<FoldMemRefOpsIntoGatherToLDSOp,
+               FoldMemRefOpsIntoDmaBaseOp<MakeDmaBaseOp>,
+               FoldMemRefOpsIntoDmaBaseOp<MakeGatherDmaBaseOp>,
+               FoldMemRefOpsIntoTransposeLoadOp>(patterns.getContext(),
+                                                 benefit);
 }
 } // namespace mlir::amdgpu

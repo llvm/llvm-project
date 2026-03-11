@@ -161,7 +161,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         return success();
       }
       recursiveStack.push_back(type);
-      auto popConversionCallStack = llvm::make_scope_exit(
+      llvm::scope_exit popConversionCallStack(
           [&recursiveStack]() { recursiveStack.pop_back(); });
 
       SmallVector<Type> convertedElemTypes;

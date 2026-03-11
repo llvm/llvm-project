@@ -1502,6 +1502,15 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
   EXPECT_TRUE(QueryHandlerRun) << "Query handler never ran";
 }
 
+TEST_F(CoreAPIsStandardTest, FailDefineDueToDefunctJITDylib) {
+  JITDylibSP FooJD(&ES.createBareJITDylib("FooJD"));
+
+  cantFail(ES.removeJITDylib(*FooJD));
+
+  EXPECT_THAT_ERROR(FooJD->define(absoluteSymbols({{Foo, FooSym}})),
+                    Failed<JITDylibDefunct>());
+}
+
 TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
   // Check that a defunct resource tracker causes defineMaterializing to error
   // immediately.
@@ -1718,7 +1727,7 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // form a tree.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1760,7 +1769,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   // contain a diamond.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");
@@ -1784,7 +1793,7 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   // contain a cycle.
 
   ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>()};
-  auto _ = make_scope_exit([&]() { cantFail(ES.endSession()); });
+  llvm::scope_exit _([&]() { cantFail(ES.endSession()); });
 
   auto &LibA = ES.createBareJITDylib("A");
   auto &LibB = ES.createBareJITDylib("B");

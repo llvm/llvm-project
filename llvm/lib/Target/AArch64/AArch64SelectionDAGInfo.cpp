@@ -27,6 +27,11 @@ static cl::opt<bool>
                                 "to lower to librt functions"),
                        cl::init(true));
 
+static cl::opt<bool> UseMOPS("aarch64-use-mops", cl::Hidden,
+                             cl::desc("Enable AArch64 MOPS instructions "
+                                      "for memcpy/memset/memmove"),
+                             cl::init(true));
+
 AArch64SelectionDAGInfo::AArch64SelectionDAGInfo()
     : SelectionDAGGenTargetInfo(AArch64GenSDNodeInfo) {}
 
@@ -43,6 +48,10 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 #ifndef NDEBUG
   // Some additional checks not yet implemented by verifyTargetNode.
   switch (N->getOpcode()) {
+  case AArch64ISD::CTTZ_ELTS:
+    assert(N->getOperand(0).getValueType() == N->getOperand(1).getValueType() &&
+           "Expected the general-predicate and mask to have matching types");
+    break;
   case AArch64ISD::SADDWT:
   case AArch64ISD::SADDWB:
   case AArch64ISD::UADDWT:
@@ -194,14 +203,19 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
     return SDValue();
   }
 
+  RTLIB::LibcallImpl NewLCImpl = DAG.getLibcalls().getLibcallImpl(NewLC);
+  if (NewLCImpl == RTLIB::Unsupported)
+    return SDValue();
+
   EVT PointerVT = TLI->getPointerTy(DAG.getDataLayout());
-  SDValue Symbol = DAG.getExternalSymbol(TLI->getLibcallName(NewLC), PointerVT);
+  SDValue Symbol = DAG.getExternalSymbol(NewLCImpl, PointerVT);
   Args.emplace_back(Size, DAG.getDataLayout().getIntPtrType(*DAG.getContext()));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   PointerType *RetTy = PointerType::getUnqual(*DAG.getContext());
   CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
-      TLI->getLibcallCallingConv(NewLC), RetTy, Symbol, std::move(Args));
+      DAG.getLibcalls().getLibcallImplCallingConv(NewLCImpl), RetTy, Symbol,
+      std::move(Args));
 
   auto [Result, ChainOut] = TLI->LowerCallTo(CLI);
   return UsesResult ? DAG.getMergeValues({Result, ChainOut}, DL) : ChainOut;
@@ -214,7 +228,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryCopyPseudo, DAG, DL, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 
@@ -233,7 +247,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemorySetPseudo, DAG, dl, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo,
                     MachinePointerInfo{});
@@ -253,7 +267,7 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
 
-  if (STI.hasMOPS())
+  if (UseMOPS && STI.hasMOPS())
     return EmitMOPS(AArch64::MOPSMemoryMovePseudo, DAG, dl, Chain, Dst, Src,
                     Size, Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
 

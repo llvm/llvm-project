@@ -123,7 +123,7 @@ def ClauseMapFlagsPresent : I32BitEnumAttrCaseBit<"present", 10>;
 def ClauseMapFlagsOMPXHold : I32BitEnumAttrCaseBit<"ompx_hold", 11>;
 def ClauseMapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 12>;
 def ClauseMapFlagsAttachAlways : I32BitEnumAttrCaseBit<"attach_always", 13>;
-def ClauseMapFlagsAttachNone : I32BitEnumAttrCaseBit<"attach_none", 14>;
+def ClauseMapFlagsAttachNever : I32BitEnumAttrCaseBit<"attach_never", 14>;
 def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
 def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
 def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
@@ -148,7 +148,7 @@ def ClauseMapFlags : OpenMP_BitEnumAttr<
       ClauseMapFlagsOMPXHold,
       ClauseMapFlagsAttach,
       ClauseMapFlagsAttachAlways,
-      ClauseMapFlagsAttachNone,
+      ClauseMapFlagsAttachNever,
       ClauseMapFlagsAttachAuto,
       ClauseMapFlagsRefPtr,
       ClauseMapFlagsRefPtee,

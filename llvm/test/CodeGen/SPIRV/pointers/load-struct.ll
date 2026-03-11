@@ -22,43 +22,45 @@
 @gsfuf = external addrspace(10) global %struct.SFUF
 ; CHECK: %[[#gsfuf:]] = OpVariable %[[#sfuf_pp]] Private
 
-define internal spir_func float @foo() {
+define internal spir_func float @foo() #0 {
   %1 = alloca %struct.SF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sf_fp]] Function
 
   %2 = load float, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
-; CHECK: %[[#val:]]  = OpLoad %[[#float]] %[[#tmp]] Aligned 4
+; CHECK: %[[#val:]]  = OpLoad %[[#float]] %[[#tmp]]
 
   ret float %2
 }
 
-define internal spir_func i32 @bar() {
+define internal spir_func i32 @bar() #0 {
   %1 = alloca %struct.SU, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#su_fp]] Function
 
   %2 = load i32, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]]
-; CHECK: %[[#val:]]  = OpLoad %[[#uint]] %[[#tmp]] Aligned 4
+; CHECK: %[[#val:]]  = OpLoad %[[#uint]] %[[#tmp]]
 
   ret i32 %2
 }
 
-define internal spir_func float @baz() {
+define internal spir_func float @baz() #0 {
   %1 = alloca %struct.SFUF, align 4
 ; CHECK: %[[#var:]]  = OpVariable %[[#sfuf_fp]] Function
 
   %2 = load float, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
-; CHECK: %[[#val:]]  = OpLoad %[[#float]] %[[#tmp]] Aligned 4
+; CHECK: %[[#val:]]  = OpLoad %[[#float]] %[[#tmp]]
 
   ret float %2
 }
 
-define internal spir_func float @biz() {
+define internal spir_func float @biz() #0 {
   %2 = load float, ptr addrspace(10) @gsfuf, align 4
 ; CHECK: %[[#tmp:]]  = OpAccessChain %[[#float_pp]] %[[#gsfuf]] %[[#uint_0]]
-; CHECK: %[[#val:]]  = OpLoad %[[#float]] %[[#tmp]] Aligned 4
+; CHECK: %[[#val:]]  = OpLoad %[[#float]] %[[#tmp]]
 
   ret float %2
 }
+
+attributes #0 = { optnone noinline }

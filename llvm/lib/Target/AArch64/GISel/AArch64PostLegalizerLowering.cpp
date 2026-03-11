@@ -954,7 +954,7 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 
 /// \returns a function which builds a vector floating point compare instruction
 /// for a condition code \p CC.
-/// \param [in] NoNans - True if the target has NoNansFPMath.
+/// \param [in] NoNans - True if the instruction has nnan flag.
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
               MachineRegisterInfo &MRI) {
@@ -1016,7 +1016,6 @@ bool matchLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &MIB) {
   assert(MI.getOpcode() == TargetOpcode::G_FCMP);
-  const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
 
   const auto &CmpMI = cast<GFCmp>(MI);
 
@@ -1045,8 +1044,8 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   // Instead of having an apply function, just build here to simplify things.
   MIB.setInstrAndDebugLoc(MI);
 
-  const bool NoNans =
-      ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
+  // TODO: Also consider GISelValueTracking result if eligible.
+  const bool NoNans = MI.getFlag(MachineInstr::FmNoNans);
 
   auto Cmp = getVectorFCMP(CC, LHS, RHS, NoNans, MRI);
   Register CmpRes;

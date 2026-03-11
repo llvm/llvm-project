@@ -51,7 +51,6 @@ Getting Started with libc++
    Status/Cxx2c
    Status/Format
    Status/Parallelism
-   Status/PSTL
 
 
 .. toctree::
@@ -143,7 +142,7 @@ Libc++ also supports common platforms and architectures:
 ===================== ========================= ============================
 Target platform       Target architecture       Notes
 ===================== ========================= ============================
-macOS 10.13+          i386, x86_64, arm64
+macOS 11.0+           i386, x86_64, arm64       Deployment target lower bound is the minimum between what Chrome resp. the last stable `Xcode release <https://developer.apple.com/support/xcode>`_ support
 FreeBSD 12+           i386, x86_64, arm
 Linux                 i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
 Android 5.0+          i386, x86_64, arm, arm64
@@ -165,6 +164,11 @@ we don't make any guarantees. If you would like your compiler and/or platform
 to be formally supported and listed here, please work with the libc++ team to set
 up testing for your configuration.
 
+.. _HeaderSupportPolicy:
+
+Libc++ maintains backwards compatibility with programs compiled against older
+versions of the headers. The library can currently be configured by vendors to
+support headers from LLVM 2.8 or any later major release.
 
 C++ Standards Conformance
 =========================

@@ -265,7 +265,7 @@ contain the following key/value pairs:
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
 | **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
 | **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
-| **stdio**                         | [string]    |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version.
+| **stdio**                         | [string]    |     | Redirects the debuggee's standard I/O (stdin, stdout, stderr) to a file path, named pipe, or TTY device.<br/>Use null to redirect a stream to the default debug terminal.<br/>The first three values map to stdin, stdout, and stderr respectively, Additional values create extra file descriptors (4, 5, etc.).<br/><br/>Example: `stdio: [null, "./output_file"]`, the debuggee uses the default terminal for `stdin` and `stderr`, but writes `stdout` to `./output_file`.<br/>Added in version 22.0.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain
@@ -278,6 +278,8 @@ the following `lldb-dap` specific key/value pairs:
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after attaching.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
+| **gdb-remote-port** | int      |     | TCP/IP port to attach to a remote system. Specifying both pid and port is an error.
+| **gdb-remote-host** | string   |     | The hostname to connect to a remote system. The default hostname being used `localhost`.                    
 
 ### Configuring `lldb-dap` defaults
 
@@ -422,4 +424,4 @@ The source code is part of the [LLVM repository](https://github.com/llvm/llvm-pr
 We use Github's [issue tracker](https://github.com/llvm/llvm-project/issues?q=label%3Alldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls?q=label%3Alldb-dap).
 Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
 
-For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)" guide.
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap-contributing.html)" guide.

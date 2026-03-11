@@ -1,4 +1,5 @@
 # RUN: llc %s -o - --run-pass=x86-cmov-conversion -mtriple=x86_64-- | FileCheck %s
+# RUN: llc %s -o - -passes=x86-cmov-conversion -mtriple=x86_64-- | FileCheck %s
 # REQUIRES: x86-registered-target
 #
 # Check that when we create new blocks and PHIs to represent CMOVs, that the
@@ -126,7 +127,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %10:gr32 = MOV32rr %5, debug-location !13
-    %0:gr64 = SUBREG_TO_REG 0, killed %10, %subreg.sub_32bit, debug-location !13
+    %0:gr64 = SUBREG_TO_REG killed %10, %subreg.sub_32bit, debug-location !13
     JMP_1 %bb.3
 
   bb.2.for.cond.cleanup:

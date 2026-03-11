@@ -284,7 +284,7 @@ static int run(int argc, char **argv) {
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  auto TimeTraceScopeExit = make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (TimeTrace) {
       check(timeTraceProfilerWrite(TimeTraceFile, OutputFilename),
             "timeTraceProfilerWrite failed");
@@ -376,7 +376,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  llvm::append_range(Conf.PassPlugins, PassPlugins);
+  llvm::append_range(Conf.PassPluginFilenames, PassPlugins);
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {

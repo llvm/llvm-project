@@ -260,7 +260,7 @@ static std::optional<evaluate::Assignment> GetEvaluateAssignment(
   using AssignmentStmt = common::Indirection<parser::AssignmentStmt>;
   using PointerAssignmentStmt =
       common::Indirection<parser::PointerAssignmentStmt>;
-  using TypedAssignment = parser::AssignmentStmt::TypedAssignment;
+  using TypedAssignment = parser::TypedAssignment;
 
   return common::visit(
       [](auto &&s) -> std::optional<evaluate::Assignment> {
@@ -426,7 +426,7 @@ static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   }
 }
 
-static void SetAssignment(parser::AssignmentStmt::TypedAssignment &assign,
+static void SetAssignment(parser::TypedAssignment &assign,
     std::optional<evaluate::Assignment> value) {
   if (value) {
     assign.Reset(new evaluate::GenericAssignmentWrapper(std::move(value)),

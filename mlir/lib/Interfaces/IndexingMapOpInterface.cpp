@@ -14,6 +14,38 @@ namespace mlir {
 #include "mlir/Interfaces/IndexingMapOpInterface.cpp.inc"
 } // namespace mlir
 
+static LogicalResult verifyIndexingMapOperandType(Operation *op, Type t,
+                                                  unsigned operandNumber) {
+  // Scalars are allowed (treated as rank-0). verifyImpl checks the rank.
+  if (t.isIntOrIndexOrFloat() || isa<ComplexType>(t))
+    return success();
+
+  // Vectors are allowed.
+  if (isa<VectorType>(t))
+    return success();
+
+  // MemRefs: must be ranked.
+  if (isa<UnrankedMemRefType>(t)) {
+    return op->emitOpError("operand #")
+           << operandNumber << " must be a ranked memref, but got " << t;
+  }
+  if (isa<MemRefType>(t))
+    return success();
+
+  // Tensors: must be ranked.
+  if (isa<UnrankedTensorType>(t)) {
+    return op->emitOpError("operand #")
+           << operandNumber << " must be a ranked tensor, but got " << t;
+  }
+  if (isa<RankedTensorType>(t))
+    return success();
+
+  // Any other shaped type is not supported by this interface.
+  return op->emitOpError("operand #")
+         << operandNumber
+         << " must be ranked tensor/memref, vector, or scalar, but got " << t;
+}
+
 LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
   // All input/output operands must be indexed.
   if (static_cast<int64_t>(getIndexingMapsArray().size()) !=
@@ -22,6 +54,41 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
            << getIndexingMapsArray().size()
            << ") to be equal to the number of input/output operands ("
            << getOperation()->getNumOperands() << ")";
+
+  SmallVector<int64_t> allShapesSizes;
+
+  for (OpOperand &opOperand : getOperation()->getOpOperands()) {
+    Type ty = opOperand.get().getType();
+    if (failed(verifyIndexingMapOperandType(getOperation(), ty,
+                                            opOperand.getOperandNumber())))
+      return failure();
+    AffineMap indexingMap = getMatchingIndexingMap(&opOperand);
+    // Symbols disallowed.
+    if (indexingMap.getNumSymbols() != 0)
+      return this->emitOpError("unexpected symbols in indexing_map #")
+             << opOperand.getOperandNumber();
+    // Handle scalars.
+    if (ty.isIntOrIndexOrFloat() || isa<ComplexType>(ty)) {
+      int64_t rank = 0;
+      if (indexingMap.getNumResults() != rank)
+        return this->emitOpError("expected operand #")
+               << opOperand.getOperandNumber() << " rank (" << rank
+               << ") to match the result rank of indexing_map ("
+               << indexingMap.getNumResults() << ")";
+      continue;
+    }
+    SmallVector<int64_t> shape = getStaticOperandShape(&opOperand);
+    int64_t rank = shape.size();
+
+    // Result rank must match operand rank.
+    if (indexingMap.getNumResults() != rank)
+      return this->emitOpError("expected operand #")
+             << opOperand.getOperandNumber() << " rank (" << rank
+             << ") to match the result rank of indexing_map ("
+             << indexingMap.getNumResults() << ")";
+
+    llvm::append_range(allShapesSizes, shape);
+  }
 
   AffineMap invertedMap = getShapesToLoopsMap();
   if (!invertedMap) {
@@ -32,34 +99,7 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
            << "(" << str << ")";
   }
 
-  SmallVector<int64_t> endLoopRangeValues = getStaticLoopRanges();
-
-  // Set this flag if this op has user defined maps. This is required to guard
-  // the below error condition which assume default indexing maps.
-  for (OpOperand &opOperand : getOperation()->getOpOperands()) {
-    AffineMap indexingMap = getMatchingIndexingMap(&opOperand);
-
-    // Symbols disallowed.
-    if (indexingMap.getNumSymbols() != 0)
-      return getOperation()->emitOpError("unexpected symbols in indexing_map #")
-             << opOperand.getOperandNumber();
-
-    // Domain must be consistent.
-    if (indexingMap.getNumDims() != endLoopRangeValues.size())
-      return getOperation()->emitOpError("expected indexing_map #")
-             << opOperand.getOperandNumber() << " to have "
-             << endLoopRangeValues.size()
-             << " dim(s) to match the number of loops";
-
-    SmallVector<int64_t> shape = getStaticOperandShape(&opOperand);
-    int64_t rank = shape.size();
-
-    if (indexingMap.getNumResults() != rank)
-      return getOperation()->emitOpError("expected operand rank (")
-             << rank << ") to match the result rank of indexing_map #"
-             << opOperand.getOperandNumber() << " ("
-             << indexingMap.getNumResults() << ")";
-  }
+  SmallVector<int64_t> endLoopRangeValues = invertedMap.compose(allShapesSizes);
 
   // Check if given shapes match to inferred shapes.
   SmallVector<int64_t> startLoopRangeValues(endLoopRangeValues.size(), 0);

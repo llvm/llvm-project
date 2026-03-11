@@ -230,8 +230,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   auto CommonBinder =
       CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
+  llvm::scope_exit UnbindCommonOnExit([&] { CommonBinder.unbind(CGF); });
 
   auto Prefix = buildSuspendPrefixStr(Coro, Kind);
   BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
@@ -448,6 +447,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   Fn->setMustProgress();
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+  Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
   StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
 
@@ -464,8 +464,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   auto *SuspendRet = EmitScalarExpr(S.getSuspendExpr());
 
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { AwaiterBinder.unbind(*this); });
+  llvm::scope_exit UnbindCommonOnExit([&] { AwaiterBinder.unbind(*this); });
   if (SuspendRet != nullptr) {
     Fn->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
     Builder.CreateStore(SuspendRet, ReturnValue);

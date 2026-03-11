@@ -19,18 +19,25 @@
 #include "lldb/API/SBEnvironment.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <mutex>
 
-#if !defined(_WIN32)
+#ifdef _WIN32
+#include "lldb/Host/windows/PosixApi.h"
+#else
 #include <unistd.h>
+#endif
+
+#ifndef LLDB_DAP_README_URL
+#define LLDB_DAP_README_URL                                                    \
+  "https://lldb.llvm.org/use/lldbdap.html#debug-console"
 #endif
 
 using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-static std::vector<const char *>
-MakeArgv(const llvm::ArrayRef<std::string> &strs) {
+static std::vector<const char *> MakeArgv(const llvm::ArrayRef<String> &strs) {
   // Create and return an array of "const char *", one for each C string in
   // "strs" and terminate the list with a NULL. This can be used for argument
   // vectors (argv) or environment vectors (envp) like those passed to the
@@ -52,28 +59,27 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
-static void
-SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
-                   lldb::SBLaunchInfo &launch_info) {
-  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
-  for (size_t i = 0; i < n; i++) {
-    std::optional<std::string> path;
-    if (stdio.size() <= i)
-      path = stdio.back();
-    else
-      path = stdio[i];
-    if (!path)
+static void SetupIORedirection(const std::vector<std::optional<String>> &stdio,
+                               lldb::SBLaunchInfo &launch_info) {
+  for (const auto &[idx, value_opt] : llvm::enumerate(stdio)) {
+    if (!value_opt)
       continue;
-    switch (i) {
+    const std::string &path = value_opt.value();
+    assert(!path.empty() && "paths should not be empty");
+
+    const int fd = static_cast<int>(idx);
+    switch (fd) {
     case 0:
-      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      launch_info.AddOpenFileAction(STDIN_FILENO, path.c_str(), true, false);
       break;
     case 1:
+      launch_info.AddOpenFileAction(STDOUT_FILENO, path.c_str(), false, true);
+      break;
     case 2:
-      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      launch_info.AddOpenFileAction(STDERR_FILENO, path.c_str(), false, true);
       break;
     default:
-      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      launch_info.AddOpenFileAction(fd, path.c_str(), true, true);
       break;
     }
   }
@@ -183,7 +189,7 @@ void BaseRequestHandler::Run(const Request &request) {
 
 llvm::Error BaseRequestHandler::LaunchProcess(
     const protocol::LaunchRequestArguments &arguments) const {
-  const std::vector<std::string> &launchCommands = arguments.launchCommands;
+  const std::vector<String> &launchCommands = arguments.launchCommands;
 
   // Instantiate a launch info instance for the target.
   auto launch_info = dap.target.GetLaunchInfo();
@@ -226,6 +232,10 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     ScopeSyncMode scope_sync_mode(dap.debugger);
 
     if (arguments.console != protocol::eConsoleInternal) {
+      if (!dap.clientFeatures.contains(eClientFeatureRunInTerminalRequest))
+        return llvm::make_error<DAPError>(
+            R"(Client does not support RunInTerminal. Please set '"console": "integratedConsole"' in your launch configuration)");
+
       if (llvm::Error err = RunInTerminal(dap, arguments))
         return err;
     } else if (launchCommands.empty()) {
@@ -257,9 +267,47 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 }
 
 void BaseRequestHandler::PrintWelcomeMessage() const {
+  std::string message;
+  llvm::raw_string_ostream OS(message);
+
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
 #endif
+
+  // Trying to provide a brief but helpful welcome message for users to better
+  // understand how the debug console repl works.
+  OS << "To get started with the debug console try ";
+  switch (dap.repl_mode) {
+  case ReplMode::Auto:
+    OS << "\"<variable>\", \"<lldb-cmd>\" or \"help [<lldb-cmd>]\"\r\n";
+    break;
+  case ReplMode::Command:
+    OS << "\"<lldb-cmd>\" or \"help [<lldb-cmd>]\".\r\n";
+    break;
+  case ReplMode::Variable:
+    OS << "\"<variable>\" or \"" << dap.configuration.commandEscapePrefix
+       << "help [<lldb-cmd>]\".\r\n";
+    break;
+  }
+
+  OS << "For more information visit " LLDB_DAP_README_URL ".\r\n";
+
+  dap.SendOutput(OutputType::Console, message);
+}
+
+void BaseRequestHandler::PrintIntroductionMessage() const {
+  std::string msg;
+  llvm::raw_string_ostream os(msg);
+  if (dap.target && dap.target.GetExecutable()) {
+    std::string path = GetSBFileSpecPath(dap.target.GetExecutable());
+    os << llvm::formatv("Executable binary set to '{0}' ({1}).\r\n", path,
+                        dap.target.GetTriple());
+  }
+  if (dap.target.GetProcess()) {
+    os << llvm::formatv("Attached to process {0}.\r\n",
+                        dap.target.GetProcess().GetProcessID());
+  }
+  dap.SendOutput(OutputType::Console, msg);
 }
 
 bool BaseRequestHandler::HasInstructionGranularity(
@@ -290,8 +338,8 @@ void BaseRequestHandler::BuildErrorResponse(
         error_message.format = err.getMessage();
         error_message.showUser = err.getShowUser();
         error_message.id = err.convertToErrorCode().value();
-        error_message.url = err.getURL();
-        error_message.urlLabel = err.getURLLabel();
+        error_message.url = err.getURL().value_or("");
+        error_message.urlLabel = err.getURLLabel().value_or("");
         protocol::ErrorResponseBody body;
         body.error = error_message;
 

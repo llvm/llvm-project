@@ -385,17 +385,14 @@ int main(int argc, char **argv) {
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
   initializeLoopStrengthReducePass(*Registry);
-  initializeLowerIntrinsicsPass(*Registry);
   initializePostInlineEntryExitInstrumenterPass(*Registry);
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
   initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
+  initializeIPO(*Registry);
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
-  initializeExpandReductionsPass(*Registry);
-  initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
-  initializeReplaceWithVeclibLegacyPass(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
@@ -424,7 +421,7 @@ int main(int argc, char **argv) {
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  auto TimeTraceScopeExit = make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (TimeTrace) {
       if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
         handleAllErrors(std::move(E), [&](const StringError &SE) {
@@ -752,9 +749,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      M->getTargetTriple(), Target->Options.ExceptionModel,
-      Target->Options.FloatABIType, Target->Options.EABIVersion,
-      Options.MCOptions.ABIName, Target->Options.VecLib));
+      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
+      Target->Options.EABIVersion, Options.MCOptions.ABIName,
+      Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

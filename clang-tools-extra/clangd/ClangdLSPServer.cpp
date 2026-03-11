@@ -433,7 +433,7 @@ private:
     // When the request ends, we can clean up the entry we just added.
     // The cookie lets us check that it hasn't been overwritten due to ID
     // reuse.
-    return Task.first.derive(llvm::make_scope_exit([this, StrID, Cookie] {
+    return Task.first.derive(llvm::scope_exit([this, StrID, Cookie] {
       std::lock_guard<std::mutex> Lock(RequestCancelersMutex);
       auto It = RequestCancelers.find(StrID);
       if (It != RequestCancelers.end() && It->second.second == Cookie)
@@ -1833,7 +1833,7 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   // Cache DiagRefMap
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap[File] = LocalDiagMap;
+    DiagRefMap[File] = std::move(LocalDiagMap);
   }
 
   // Send a notification to the LSP client.

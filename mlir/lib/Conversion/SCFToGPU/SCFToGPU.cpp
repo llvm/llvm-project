@@ -184,6 +184,12 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
   steps.reserve(numLoops);
   AffineForOp currentLoop = forOp;
   for (unsigned i = 0; i < numLoops; ++i) {
+    if (currentLoop.getNumIterOperands() > 0) {
+      currentLoop.emitError(
+          "affine loop with iter_args cannot be converted to GPU kernel");
+      return std::nullopt;
+    }
+
     Value lowerBound = getOrEmitLowerBound(currentLoop, builder);
     Value upperBound = getOrEmitUpperBound(currentLoop, builder);
     if (!lowerBound || !upperBound) {
@@ -705,7 +711,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // Ensure reduction region is isolated from above.
       llvm::SetVector<Value> externalValues;
       getUsedValuesDefinedAbove(reduceOp.getRegion(0), externalValues);
-      if (externalValues.size())
+      if (!externalValues.empty())
         return failure();
       // Replace by gpu.all_reduce.
       auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);

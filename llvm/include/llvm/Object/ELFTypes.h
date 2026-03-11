@@ -10,6 +10,7 @@
 #define LLVM_OBJECT_ELFTYPES_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Error.h"
@@ -25,6 +26,19 @@
 #include <type_traits>
 
 namespace llvm {
+
+namespace callgraph {
+// ELF call graph section entry Flag field supported values.
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+enum Flags : uint8_t {
+  None = 0,
+  IsIndirectTarget = 1u << 0,
+  HasDirectCallees = 1u << 1,
+  HasIndirectCallees = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/HasIndirectCallees)
+};
+} // namespace callgraph
+
 namespace object {
 
 template <class ELFT> struct Elf_Ehdr_Impl;

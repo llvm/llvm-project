@@ -956,3 +956,15 @@ func.func @verify_data(%arg0 : memref<i32>) {
   }
   return
 }
+
+// -----
+
+func.func @verify_host_data_duplicate_use_device(%arg0 : memref<i32>) {
+  %0 = acc.use_device varPtr(%arg0 : memref<i32>) -> memref<i32>
+  %1 = acc.use_device varPtr(%arg0 : memref<i32>) -> memref<i32>
+// expected-error @below {{duplicate use_device variable}}
+  acc.host_data dataOperands(%0, %1 : memref<i32>, memref<i32>) {
+    acc.terminator
+  }
+  return
+}

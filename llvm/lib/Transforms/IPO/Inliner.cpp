@@ -279,7 +279,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // Capture updatable variable for the current SCC.
   auto *C = &InitialC;
 
-  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(C); });
+  llvm::scope_exit AdvisorOnExit([&] { Advisor.onPassExit(C); });
 
   if (Calls.empty())
     return PreservedAnalyses::all();

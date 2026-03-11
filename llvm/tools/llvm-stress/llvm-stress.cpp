@@ -443,7 +443,8 @@ struct ConstModifier: public Modifier {
       case 4:
       case 5:
       case 6:
-        PT->push_back(ConstantInt::get(Ty, getRandom()));
+        PT->push_back(ConstantInt::get(Ty, getRandom(), /*IsSigned=*/false,
+                                       /*ImplicitTrunc=*/true));
       }
     }
   }

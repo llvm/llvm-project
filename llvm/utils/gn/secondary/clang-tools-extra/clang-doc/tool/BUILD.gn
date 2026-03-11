@@ -1,5 +1,6 @@
 copy("assets") {
   sources = [
+    "../assets/alias-template.mustache",
     "../assets/clang-doc-default-stylesheet.css",
     "../assets/clang-doc-mustache.css",
     "../assets/class-template.mustache",

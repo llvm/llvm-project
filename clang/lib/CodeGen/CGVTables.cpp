@@ -38,6 +38,12 @@ llvm::Constant *CodeGenModule::GetAddrOfThunk(StringRef Name, llvm::Type *FnTy,
                                  /*DontDefer=*/true, /*IsThunk=*/true);
 }
 
+llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTable(const CXXRecordDecl *RD) {
+  llvm::GlobalVariable *VTable =
+      CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
+  return VTable;
+}
+
 static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
                                llvm::Function *ThunkFn, bool ForVTable,
                                GlobalDecl GD) {
@@ -134,19 +140,32 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
   // they are referencing.
+  //
+  // DIDerivedTypes referring to incomplete Clang types, or
+  // LLVM enumeration types representing complete enums with no definition
+  // may be still unresolved. As they can't be cloned, keep references
+  // to the types from the base subprogram.
+  // FIXME: As a result, variables of cloned subprogram may refer to local types
+  // from base subprogram. In such case, type locality information is damaged.
+  // Find a way to enable cloning of all local types.
+  auto PrepareVariableMapping = [&VMap](llvm::DILocalVariable *DILocal) {
+    if (DILocal->isResolved())
+      return;
+
+    if (llvm::DIType *Ty = DILocal->getType(); Ty && !Ty->isResolved())
+      VMap.MD()[Ty].reset(Ty);
+
+    DILocal->resolve();
+  };
+
   for (auto &BB : *Fn) {
     for (auto &I : BB) {
       for (llvm::DbgVariableRecord &DVR :
-           llvm::filterDbgVars(I.getDbgRecordRange())) {
-        auto *DILocal = DVR.getVariable();
-        if (!DILocal->isResolved())
-          DILocal->resolve();
-      }
-      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
-        auto *DILocal = DII->getVariable();
-        if (!DILocal->isResolved())
-          DILocal->resolve();
-      }
+           llvm::filterDbgVars(I.getDbgRecordRange()))
+        PrepareVariableMapping(DVR.getVariable());
+
+      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
+        PrepareVariableMapping(DII->getVariable());
     }
   }
 }

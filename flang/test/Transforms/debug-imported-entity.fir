@@ -11,6 +11,7 @@ module {
     fir.has_value %c12_i32 : i32
   } loc(#loc4)
   func.func @test() attributes {fir.bindc_name = "test"} {
+    fir.use_stmt "foo"
     %0 = fir.address_of(@_QMfooEv1) : !fir.ref<i32>
     %1 = fircg.ext_declare %0 {uniq_name = "_QMfooEv1"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
     %4 = fir.address_of(@_QFtestExyz) : !fir.ref<i32>

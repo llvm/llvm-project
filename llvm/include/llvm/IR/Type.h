@@ -234,7 +234,7 @@ public:
   bool isTokenTy() const { return getTypeID() == TokenTyID; }
 
   /// Returns true if this is 'token' or a token-like target type.s
-  bool isTokenLikeTy() const;
+  LLVM_ABI bool isTokenLikeTy() const;
 
   /// True if this is an instance of IntegerType.
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }

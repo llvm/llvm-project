@@ -52,7 +52,14 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
-    m_opaque_sp = process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    llvm::Expected<ModuleSP> module_sp_or_err =
+        process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    if (auto err = module_sp_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+      return;
+    }
+
+    m_opaque_sp = *module_sp_or_err;
     if (m_opaque_sp) {
       Target &target = process_sp->GetTarget();
       bool changed = false;

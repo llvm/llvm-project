@@ -106,6 +106,8 @@ list(APPEND CLANG_TEST_DEPS
   clang-sycl-linker
   diagtool
   hmaptool
+  ssaf-linker
+  ssaf-format
   )
 
 if(CLANG_ENABLE_CIR)
@@ -184,6 +186,10 @@ if( NOT CLANG_BUILT_STANDALONE )
     split-file
     yaml2obj
     )
+
+  if(TARGET lld)
+    list(APPEND CLANG_TEST_DEPS lld)
+  endif()
 
   if(TARGET llvm-lto)
     list(APPEND CLANG_TEST_DEPS llvm-lto)

@@ -91,8 +91,10 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
       LibStdcppTupleSyntheticFrontEndCreator(nullptr, tuple_sp));
 
   ValueObjectSP ptr_obj = tuple_frontend->GetChildAtIndex(0);
-  if (ptr_obj)
-    m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
+  if (!ptr_obj)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
 
   // Add a 'deleter' child if there was a non-empty deleter type specified.
   //

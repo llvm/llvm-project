@@ -20,9 +20,8 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[OFFSET:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[OFFSET]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -77,7 +76,7 @@ define dso_local double @test(ptr nocapture noundef readonly %data, ptr nocaptur
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SVE:       vector.ph:
 ; SVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], [[TMP3]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; SVE-NEXT:    br label [[VECTOR_BODY:%.*]]

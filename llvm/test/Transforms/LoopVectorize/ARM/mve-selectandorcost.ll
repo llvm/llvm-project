@@ -8,8 +8,8 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: test
 ; CHECK-COST: LV: Found an estimated cost of 1 for VF 1 For instruction:   %or.cond = select i1 %cmp2, i1 true, i1 %cmp3
-; CHECK-COST: Cost of 26 for VF 2: WIDEN-SELECT ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
-; CHECK-COST: Cost of 2 for VF 4: WIDEN-SELECT ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
+; CHECK-COST: Cost of 26 for VF 2: WIDEN ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
+; CHECK-COST: Cost of 2 for VF 4: WIDEN ir<%or.cond> = select ir<%cmp2>, ir<true>, ir<%cmp3>
 
 define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %blockSize) #0 {
 ; CHECK-LABEL: @test(

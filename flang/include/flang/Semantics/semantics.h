@@ -68,7 +68,8 @@ class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
       const common::LanguageFeatureControl &, const common::LangOptions &,
-      parser::AllCookedSources &);
+      parser::AllCookedSources &,
+      common::FPMaxminBehavior = common::FPMaxminBehavior::Legacy);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -331,6 +332,9 @@ public:
 
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
+  void NoteUsedSymbol(const Symbol &);
+  void NoteUsedSymbols(const UnorderedSymbolSet &);
+  bool IsSymbolUsed(const Symbol &) const;
 
   void DumpSymbols(llvm::raw_ostream &);
 
@@ -390,6 +394,7 @@ private:
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
+  UnorderedSymbolSet isUsed_;
   std::list<ProgramTree> programTrees_;
 };
 

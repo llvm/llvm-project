@@ -96,11 +96,12 @@ LLVM_ABI Error handleSection(
 LLVM_ABI Expected<InfoSectionUnitHeader>
 parseInfoSectionUnitHeader(StringRef Info);
 
-LLVM_ABI void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
-                                     MCSection *StrOffsetSection,
-                                     StringRef CurStrSection,
-                                     StringRef CurStrOffsetSection,
-                                     uint16_t Version);
+LLVM_ABI void
+writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
+                       MCSection *StrOffsetSection, StringRef CurStrSection,
+                       StringRef CurStrOffsetSection, uint16_t Version,
+                       SectionLengths &SectionLength,
+                       const Dwarf64StrOffsetsPromotion StrOffsetsOptValue);
 
 LLVM_ABI Error
 buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,

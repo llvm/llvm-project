@@ -28,7 +28,7 @@ def parse_line(line: str) -> Tuple[int, str]:
     """
     match = re.match(r"(\.+) (.+)", line)
     if not match:
-        raise ArgumentError(f"Line {line} contains invalid data.")
+        raise ValueError(f"Line {line} contains invalid data.")
 
     # The number of periods in front of the header name is the nesting level of
     # that header.

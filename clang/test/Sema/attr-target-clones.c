@@ -138,3 +138,11 @@ void bad_isa_level(int) __attribute__((target_clones("default", "arch=x86-64-v5"
 
 // expected-warning@+1 {{unsupported 'sha' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void bad_feature(void) __attribute__((target_clones("default", "sse4.2", "sha")));
+
+// expected-error@+1 {{'target_clones' multiversioning requires a default target}}
+void __attribute__((target_clones()))
+gh173684_empty_attribute_args(void);
+
+// expected-error@+1 {{'target_clones' multiversioning requires a default target}}
+void __attribute__((target_clones))
+gh173684_empty_attribute_args_2(void);
