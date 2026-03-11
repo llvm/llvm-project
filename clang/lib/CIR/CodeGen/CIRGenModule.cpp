@@ -176,7 +176,8 @@ CharUnits CIRGenModule::getClassPointerAlignment(const CXXRecordDecl *rd) {
 }
 
 CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
-                                                LValueBaseInfo *baseInfo) {
+                                                LValueBaseInfo *baseInfo,
+                                                bool forPointeeType) {
   assert(!cir::MissingFeatures::opTBAA());
 
   // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown, but
@@ -192,6 +193,8 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
       return astContext.toCharUnitsFromBits(align);
     }
   }
+
+  bool alignForArray = t->isArrayType();
 
   // Analyze the base element type, so we don't get confused by incomplete
   // array types.
@@ -213,10 +216,13 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
     *baseInfo = LValueBaseInfo(AlignmentSource::Type);
 
   CharUnits alignment;
+  const CXXRecordDecl *rd = nullptr;
   if (t.getQualifiers().hasUnaligned()) {
     alignment = CharUnits::One();
+  } else if (forPointeeType && !alignForArray &&
+             (rd = t->getAsCXXRecordDecl())) {
+    alignment = getClassPointerAlignment(rd);
   } else {
-    assert(!cir::MissingFeatures::alignCXXRecordDecl());
     alignment = astContext.getTypeAlignInChars(t);
   }
 

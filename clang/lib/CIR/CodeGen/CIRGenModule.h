@@ -396,7 +396,8 @@ public:
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
   clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
-                                           LValueBaseInfo *baseInfo = nullptr);
+                                           LValueBaseInfo *baseInfo = nullptr,
+                                           bool forPointeeType = false);
 
   /// Returns the minimum object size for an object of the given class type
   /// (or a class derived from it).
