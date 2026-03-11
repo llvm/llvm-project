@@ -327,12 +327,13 @@ __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, un
 // CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[HAS_S_MEMTIME_INST_:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstantib(i32 -1, i1 false)
-// CHECK-NEXT:    br i1 [[HAS_S_MEMTIME_INST_]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstantib(i32 -1, i1 false)
+// CHECK-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP0]], metadata [[META5:![0-9]+]])
+// CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
-// CHECK-NEXT:    [[TMP0:%.*]] = call addrspace(4) i64 @llvm.amdgcn.s.memtime()
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    store i64 [[TMP0]], ptr addrspace(4) [[TMP1]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = call addrspace(4) i64 @llvm.amdgcn.s.memtime()
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i64 [[TMP1]], ptr addrspace(4) [[TMP2]], align 8
 // CHECK-NEXT:    br label [[IF_END]]
 // CHECK:       if.end:
 // CHECK-NEXT:    ret void
@@ -346,12 +347,13 @@ __global__ void test_uicmp_i64(unsigned long long *out, unsigned long long a, un
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    [[OUT1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ASCAST]], align 8
 // AMDGCNSPIRV-NEXT:    store ptr addrspace(4) [[OUT1]], ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// AMDGCNSPIRV-NEXT:    [[HAS_S_MEMTIME_INST_:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstantib(i32 -1, i1 false)
-// AMDGCNSPIRV-NEXT:    br i1 [[HAS_S_MEMTIME_INST_]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstantib(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP0]], metadata [[META7:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // AMDGCNSPIRV:       if.then:
-// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i64 @llvm.amdgcn.s.memtime()
-// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
-// AMDGCNSPIRV-NEXT:    store i64 [[TMP0]], ptr addrspace(4) [[TMP1]], align 8
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i64 @llvm.amdgcn.s.memtime()
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[OUT_ADDR_ASCAST]], align 8
+// AMDGCNSPIRV-NEXT:    store i64 [[TMP1]], ptr addrspace(4) [[TMP2]], align 8
 // AMDGCNSPIRV-NEXT:    br label [[IF_END]]
 // AMDGCNSPIRV:       if.end:
 // AMDGCNSPIRV-NEXT:    ret void
@@ -385,7 +387,7 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR8:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 // AMDGCNSPIRV-LABEL: @_Z17test_ds_fmin_funcfPf(
@@ -408,7 +410,7 @@ __device__ void func(float *x);
 // AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // AMDGCNSPIRV-NEXT:    store volatile float [[TMP3]], ptr addrspace(4) [[X_ASCAST]], align 4
 // AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[SHARED_ADDR_ASCAST]], align 8
-// AMDGCNSPIRV-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR7:[0-9]+]]
+// AMDGCNSPIRV-NEXT:    call spir_func addrspace(4) void @_Z4funcPf(ptr addrspace(4) noundef [[TMP4]]) #[[ATTR8:[0-9]+]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
 __global__ void test_ds_fmin_func(float src, float *__restrict shared) {
