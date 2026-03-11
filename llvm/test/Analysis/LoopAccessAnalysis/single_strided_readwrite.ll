@@ -4,13 +4,8 @@
 define void @known_safe(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_safe'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -44,13 +39,8 @@ exit:
 define void @known_safe_byte_gep(ptr %p, i8 %a) {
 ; CHECK-LABEL: 'known_safe_byte_gep'
 ; CHECK-NEXT:    header:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
-; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -231,6 +221,87 @@ header:
   %idx = mul nsw nuw i64 %iv, %stride
 
   %gep = getelementptr inbounds i8, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep
+  %add = add i64 %ld, %iv
+  store i64 %add, ptr %gep
+
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+; Not too important to actually support for now, the priority is to handle the
+; one below correctly.
+define void @known_safe_varying_stride(ptr %p, i8 %a) {
+; CHECK-LABEL: 'known_safe_varying_stride'
+; CHECK-NEXT:    header:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
+; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %mul = mul nsw nuw i64 %iv.next, %iv.next
+
+  %gep = getelementptr inbounds i64, ptr %p, i64 %mul
+  %ld = load i64, ptr %gep
+  %add = add i64 %ld, %iv
+  store i64 %add, ptr %gep
+
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @unsafe_varying_stride(ptr %p) {
+; CHECK-LABEL: 'unsafe_varying_stride'
+; CHECK-NEXT:    header:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %ld = load i64, ptr %gep, align 4 ->
+; CHECK-NEXT:            store i64 %add, ptr %gep, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %mul = mul nsw nuw i64 %iv.next, %iv.next
+
+  ; 0, 0, 3, ...
+  %idx = sub nsw nuw i64 %mul, %iv
+
+  %gep = getelementptr inbounds i64, ptr %p, i64 %idx
   %ld = load i64, ptr %gep
   %add = add i64 %ld, %iv
   store i64 %add, ptr %gep
