@@ -21,6 +21,8 @@ define i1 @assumeeq(i32 %x, i32 %y) {
     ret i1 %cmp
 }
 
+; NOTE: The operand bundle information is not lowered to
+; SPIR-V as there is no corresponding representation
 ; CHECK:      %[[#]] = OpFunction
 ; CHECK:      %[[#]] = OpFunctionParameter
 ; CHECK:      %[[#]] = OpLabel
