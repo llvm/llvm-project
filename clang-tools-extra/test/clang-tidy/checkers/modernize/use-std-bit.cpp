@@ -161,12 +161,19 @@ unsigned popcount_bitset_expr(unsigned x) {
   return std::bitset<sizeof(x) * 8>{x + 1}.count();
 }
 
+unsigned popcount_bitset_cast(unsigned x) {
+  std::bitset<7>(static_cast<unsigned char>(x)).count(); // no warn
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::popcount' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return std::popcount(static_cast<unsigned char>(x));
+  return std::bitset<8>(static_cast<unsigned char>(x)).count();
+}
+
 /*
  * Invalid has_one_bit patterns
  */
 template<std::size_t N> class bitset {
   public:
-  bitset(unsigned long);
+  bitset(unsigned long long);
   std::size_t count() const;
 };
 

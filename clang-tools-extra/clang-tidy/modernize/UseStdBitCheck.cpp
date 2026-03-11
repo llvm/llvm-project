@@ -125,21 +125,19 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
         BitsetInstantiatedDecl->getTemplateArgs()[0].getAsIntegral();
     const auto *MatchedArg = Result.Nodes.getNodeAs<Expr>("v");
     const uint64_t MatchedVarSize = Context.getTypeSize(MatchedArg->getType());
-    if (BitsetSize >= MatchedVarSize) {
-      MatchedArg->dump();
-      auto Diag =
-          diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
-      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                  MatchedArg->getEndLoc().getLocWithOffset(1),
-                  MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
-           << FixItHint::CreateReplacement(
-                  CharSourceRange::getTokenRange(
-                      MatchedExpr->getBeginLoc(),
-                      MatchedArg->getBeginLoc().getLocWithOffset(-1)),
-                  "std::popcount(")
-           << IncludeInserter.createIncludeInsertion(
-                  Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
-    }
+    if (BitsetSize < MatchedVarSize)
+      return;
+    auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
+    Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                MatchedArg->getEndLoc().getLocWithOffset(1),
+                MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
+         << FixItHint::CreateReplacement(
+                CharSourceRange::getTokenRange(
+                    MatchedExpr->getBeginLoc(),
+                    MatchedArg->getBeginLoc().getLocWithOffset(-1)),
+                "std::popcount(")
+         << IncludeInserter.createIncludeInsertion(
+                Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
   } else {
     llvm_unreachable("unexpected match");
   }
