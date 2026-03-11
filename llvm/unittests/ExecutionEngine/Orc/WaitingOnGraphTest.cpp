@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/WaitingOnGraph.h"
+#include "llvm/ExecutionEngine/Orc/WaitingOnGraphOpReplay.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 namespace llvm::orc::detail {
@@ -812,4 +814,46 @@ TEST_F(WaitingOnGraphTest, Fail_ZigZag) {
   auto ER1 = emit(TestGraph::simplify(B.takeSuperNodes()));
   EXPECT_EQ(ER1.Ready.size(), 0U);
   EXPECT_EQ(collapseDefs(ER1.Failed, false), merge(Defs0, Defs1));
+}
+
+TEST_F(WaitingOnGraphTest, RecordAndReplay) {
+  // Record a sequence of operations, then replay them on a fresh graph.
+  std::string RecordBuf;
+  raw_string_ostream RecordOS(RecordBuf);
+  WaitingOnGraphOpStreamRecorder<uintptr_t, uintptr_t> Rec(RecordOS);
+
+  SuperNodeBuilder B;
+
+  // Emit a node with no deps -- becomes Ready immediately.
+  ContainerElementsMap Defs0({{0, {0}}});
+  B.add(Defs0, ContainerElementsMap());
+  auto ER0 = integrate(
+      G.emit(TestGraph::simplify(B.takeSuperNodes(), &Rec), GetExternalState));
+  EXPECT_EQ(collapseDefs(ER0.Ready), Defs0);
+  EXPECT_EQ(ER0.Failed.size(), 0U);
+
+  // Emit a node depending on an external dep -- stays Pending.
+  ContainerElementsMap Defs1({{0, {1}}});
+  ContainerElementsMap Deps1({{1, {0}}});
+  B.add(Defs1, Deps1);
+  auto ER1 = integrate(
+      G.emit(TestGraph::simplify(B.takeSuperNodes(), &Rec), GetExternalState));
+  EXPECT_EQ(ER1.Ready.size(), 0U);
+  EXPECT_EQ(ER1.Failed.size(), 0U);
+
+  // Fail the external dep -- causes the pending node to fail.
+  ContainerElementsMap FailElems({{1, {0}}});
+  auto FailedSNs = G.fail(FailElems, &Rec);
+  EXPECT_EQ(FailedSNs.size(), 1U);
+
+  Rec.recordEnd();
+
+  // Now replay on a fresh graph.
+  TestGraph G2;
+  typename WaitingOnGraphOpReplay<uintptr_t, uintptr_t>::Replayer R(G2);
+  Error Err = Error::success();
+  for (auto &Op :
+       readWaitingOnGraphOpsFromBuffer<uintptr_t, uintptr_t>(RecordBuf, Err))
+    R.replay(std::move(Op));
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }

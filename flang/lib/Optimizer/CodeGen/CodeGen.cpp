@@ -44,6 +44,7 @@
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
+#include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -110,6 +111,22 @@ static unsigned getTypeDescFieldId(mlir::Type ty) {
 }
 static unsigned getLenParamFieldId(mlir::Type ty) {
   return getTypeDescFieldId(ty) + 1;
+}
+
+/// Set LLVM alignment operand attributes on a memcpy op using the ABI
+/// alignment of the given type (for dst and src; size has no alignment).
+static void setMemcpyAlignmentArgAttrs(
+    mlir::LLVM::MemcpyOp memcpy, mlir::ConversionPatternRewriter &rewriter,
+    const mlir::DataLayout &dataLayout, mlir::Type llvmType) {
+  unsigned alignValue = dataLayout.getTypeABIAlignment(llvmType);
+  mlir::IntegerAttr alignAttr = rewriter.getI64IntegerAttr(alignValue);
+  mlir::NamedAttribute alignNamedAttr(
+      mlir::StringAttr::get(rewriter.getContext(),
+                            mlir::LLVM::LLVMDialect::getAlignAttrName()),
+      alignAttr);
+  mlir::DictionaryAttr alignDict = rewriter.getDictionaryAttr(alignNamedAttr);
+  memcpy.setArgAttrsAttr(rewriter.getArrayAttr(
+      {alignDict, alignDict, rewriter.getDictionaryAttr({})}));
 }
 
 static llvm::SmallVector<mlir::NamedAttribute>
@@ -3489,11 +3506,13 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
           computeBoxSize(loc, boxTypePair, inputBoxStorage, rewriter);
       auto memcpy = mlir::LLVM::MemcpyOp::create(
           rewriter, loc, newBoxStorage, inputBoxStorage, boxSize, isVolatile);
+      setMemcpyAlignmentArgAttrs(memcpy, rewriter, getDataLayout(), llvmLoadTy);
 
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         memcpy.setTBAATags(*optionalTag);
       else
         attachTBAATag(memcpy, boxTy, boxTy, nullptr);
+
       rewriter.replaceOp(load, newBoxStorage);
     } else {
       mlir::LLVM::LoadOp loadOp =
@@ -4367,6 +4386,7 @@ public:
     mlir::OpPassManager mathConversionPM("builtin.module");
 
     bool isAMDGCN = fir::getTargetTriple(mod).isAMDGCN();
+    bool isNVPTX = fir::getTargetTriple(mod).isNVPTX();
     // If compiling for AMD target some math operations must be lowered to AMD
     // GPU library calls, the rest can be converted to LLVM intrinsics, which
     // is handled in the mathToLLVM conversion. The lowering to libm calls is
@@ -4375,6 +4395,10 @@ public:
       mathConversionPM.addPass(mlir::createConvertMathToROCDL());
       mathConversionPM.addPass(mlir::createConvertComplexToROCDLLibraryCalls());
     }
+    // If compiling for NVIDIA target some math operations must be lowered to
+    // NVVM libdevice calls.
+    if (isNVPTX)
+      mathConversionPM.addPass(mlir::createConvertMathToNVVM());
 
     // Convert math::FPowI operations to inline implementation
     // only if the exponent's width is greater than 32, otherwise,
@@ -4429,7 +4453,7 @@ public:
     mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
-    if (!isAMDGCN)
+    if (!isAMDGCN && !isNVPTX)
       mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);

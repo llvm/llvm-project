@@ -28,7 +28,7 @@ Using Clang as a Compiler
    ClangStaticAnalyzer
    ThreadSafetyAnalysis
    SafeBuffers
-   ScalableStaticAnalysisFramework/Framework
+   ScalableStaticAnalysisFramework/index
    DataFlowAnalysisIntro
    FunctionEffectAnalysis
    AddressSanitizer

@@ -141,7 +141,6 @@ struct MissingFeatures {
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
-  static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 
@@ -311,7 +310,6 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
-  static bool neonSISDIntrinsics() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }

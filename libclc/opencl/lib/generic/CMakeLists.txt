@@ -45,6 +45,7 @@ libclc_configure_source_list(OPENCL_GENERIC_SOURCES
   atomic/atomic_work_item_fence.cl
   collective/work_group_any_all.cl
   collective/work_group_broadcast.cl
+  collective/work_group_reduce.cl
   common/degrees.cl
   common/mix.cl
   common/radians.cl

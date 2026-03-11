@@ -4724,23 +4724,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (auto Gather = matchSplatAsGather(Splat, VT, DL, DAG, Subtarget))
       return Gather;
 
-    // Prefer vmv.s.x/vfmv.s.f if legal to reduce work and register
-    // pressure at high LMUL.
-    if (all_of(Op->ops().drop_front(),
-               [](const SDUse &U) { return U.get().isUndef(); })) {
-      unsigned Opc =
-          VT.isFloatingPoint() ? RISCVISD::VFMV_S_F_VL : RISCVISD::VMV_S_X_VL;
-      if (!VT.isFloatingPoint())
-        Splat = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Splat);
-      Splat = DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                          Splat, VL);
-      return convertFromScalableVector(VT, Splat, DAG, Subtarget);
-    }
-
-    unsigned Opc =
-        VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
     if (!VT.isFloatingPoint())
       Splat = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Splat);
+
+    // Prefer vmv.s.x/vfmv.s.f if legal to reduce work and register
+    // pressure at high LMUL.
+    bool IsScalar = all_of(Op->ops().drop_front(),
+                           [](const SDUse &U) { return U.get().isUndef(); });
+    unsigned Opc =
+        VT.isFloatingPoint()
+            ? (IsScalar ? RISCVISD::VFMV_S_F_VL : RISCVISD::VFMV_V_F_VL)
+            : (IsScalar ? RISCVISD::VMV_S_X_VL : RISCVISD::VMV_V_X_VL);
     Splat =
         DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Splat, VL);
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
@@ -11009,13 +11003,19 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   bool IsLegalInsert = Subtarget.is64Bit() || Val.getValueType() != MVT::i64;
   // Even i64-element vectors on RV32 can be lowered without scalar
   // legalization if the most-significant 32 bits of the value are not affected
-  // by the sign-extension of the lower 32 bits.
-  // TODO: We could also catch sign extensions of a 32-bit value.
-  if (!IsLegalInsert && isa<ConstantSDNode>(Val)) {
-    const auto *CVal = cast<ConstantSDNode>(Val);
-    if (isInt<32>(CVal->getSExtValue())) {
+  // by the sign-extension of the lower 32 bits. This applies to i32 constants
+  // and sign_extend of i32 values.
+  if (!IsLegalInsert) {
+    if (isa<ConstantSDNode>(Val)) {
+      const auto *CVal = cast<ConstantSDNode>(Val);
+      if (isInt<32>(CVal->getSExtValue())) {
+        IsLegalInsert = true;
+        Val = DAG.getSignedConstant(CVal->getSExtValue(), DL, MVT::i32);
+      }
+    } else if (Val.getOpcode() == ISD::SIGN_EXTEND &&
+               Val.getOperand(0).getValueType() == MVT::i32) {
       IsLegalInsert = true;
-      Val = DAG.getSignedConstant(CVal->getSExtValue(), DL, MVT::i32);
+      Val = Val.getOperand(0);
     }
   }
 

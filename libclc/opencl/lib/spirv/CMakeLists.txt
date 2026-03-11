@@ -6,8 +6,6 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   ${_gen}
   async/async_work_group_strided_copy.cl
   async/wait_group_events.cl
-  collective/work_group_any_all.cl
-  collective/work_group_broadcast.cl
   common/degrees.cl
   common/mix.cl
   common/radians.cl
@@ -22,8 +20,8 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   geometric/fast_normalize.cl
   geometric/length.cl
   geometric/normalize.cl
-  integer/mad_sat.cl
   integer/rotate.cl
+  integer/mad_sat.cl
   math/acos.cl
   math/acosh.cl
   math/acospi.cl
@@ -42,9 +40,9 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   math/erf.cl
   math/erfc.cl
   math/exp.cl
+  math/expm1.cl
   math/exp2.cl
   math/exp10.cl
-  math/expm1.cl
   math/fmod.cl
   math/fract.cl
   math/frexp.cl
@@ -56,9 +54,9 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   math/lgamma.cl
   math/lgamma_r.cl
   math/log.cl
-  math/log2.cl
   math/log10.cl
   math/log1p.cl
+  math/log2.cl
   math/logb.cl
   math/modf.cl
   math/pow.cl
@@ -75,12 +73,6 @@ libclc_configure_source_list(OPENCL_SPIRV_SOURCES
   math/tanh.cl
   math/tanpi.cl
   math/tgamma.cl
-  mem_fence/fence.cl
   shared/vload.cl
   shared/vstore.cl
-  subgroup/subgroup.cl
-  synchronization/sub_group_barrier.cl
-  synchronization/work_group_barrier.cl
-  workitem/get_global_offset.cl
-  workitem/get_work_dim.cl
 )
