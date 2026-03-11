@@ -89,25 +89,25 @@ double2x2 shape_mismatch_vec_mat(double2x2 a, double2 b, double2x2 c) {
 
 int bad_int(int a, int b, int c) {
   return fma(a, b, c);
-  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of any floating-point type (was 'int')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
 }
 
 int2 bad_int2(int2 a, int2 b, int2 c) {
   return fma(a, b, c);
-  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of any floating-point type (was 'int2' (aka 'vector<int, 2>'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int2' (aka 'vector<int, 2>'))}}
 }
 
 bool bad_bool(bool a, bool b, bool c) {
   return fma(a, b, c);
-  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of any floating-point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 bool2 bad_bool2(bool2 a, bool2 b, bool2 c) {
   return fma(a, b, c);
-  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of any floating-point type (was 'bool2' (aka 'vector<bool, 2>'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool2' (aka 'vector<bool, 2>'))}}
 }
 
 bool2x2 bad_bool2x2(bool2x2 a, bool2x2 b, bool2x2 c) {
   return fma(a, b, c);
-  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of any floating-point type (was 'bool2x2' (aka 'matrix<bool, 2, 2>'))}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool2x2' (aka 'matrix<bool, 2, 2>'))}}
 }
