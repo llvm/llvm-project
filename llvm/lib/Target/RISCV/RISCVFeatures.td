@@ -536,7 +536,9 @@ def FeatureStdExtZbkc
 def HasStdExtZbkc
     : Predicate<"Subtarget->hasStdExtZbkc()">,
       AssemblerPredicate<(all_of FeatureStdExtZbkc),
-          "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+                         "'Zbc' (Carry-Less Multiplication) or "
+                         "'Zbkc' (Carry-less multiply instructions "
+                         "for Cryptography)">;
 
 def FeatureStdExtZbc
     : RISCVExtension<1, 0, "Carry-Less Multiplication",
@@ -545,13 +547,6 @@ def FeatureStdExtZbc
 def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbc),
                                       "'Zbc' (Carry-Less Multiplication)">;
-
-def HasStdExtZbcOrZbkc
-    : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbc, FeatureStdExtZbkc),
-                         "'Zbc' (Carry-Less Multiplication) or "
-                         "'Zbkc' (Carry-less multiply instructions "
-                         "for Cryptography)">;
 
 // Cryptography Extensions
 
