@@ -9,7 +9,6 @@
 #ifndef LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 #define LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 
-#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "llvm/ADT/Twine.h"
@@ -81,10 +80,6 @@ template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
   OS << toJSON(input);
   return llvm::json::parse<T>(encoded);
 }
-
-std::pair<lldb::SBTarget, lldb::SBProcess> LoadCore(lldb::SBDebugger &debugger,
-                                                    llvm::StringRef binary_path,
-                                                    llvm::StringRef core_path);
 
 } // namespace lldb_private
 

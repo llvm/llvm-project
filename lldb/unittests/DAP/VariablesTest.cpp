@@ -10,6 +10,7 @@
 #include "DAPLog.h"
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
+#include "SBTestingSupport/SBTestUtilities.h"
 #include "TestUtilities.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDebugger.h"
