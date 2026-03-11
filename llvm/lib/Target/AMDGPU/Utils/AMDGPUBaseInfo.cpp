@@ -1265,11 +1265,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI) { return 1; }
 
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI) {
-  // Some subtargets allow encoding 2048, but this isn't tested or supported.
-  return 1024;
-}
-
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
                               unsigned FlatWorkGroupSize) {
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));

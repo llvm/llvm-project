@@ -8,12 +8,18 @@
 
 #include "JSONFormatImpl.h"
 
+#include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/Support/Registry.h"
 
 LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
 
+static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
+    RegisterJSONFormat("JSON", "JSON serialization format");
+
 namespace clang::ssaf {
+
+void initializeJSONFormat() {}
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
@@ -120,6 +126,12 @@ std::map<SummaryName, JSONFormat::FormatInfo> JSONFormat::initFormatInfos() {
   return FormatInfos;
 }
 
+void JSONFormat::forEachRegisteredAnalysis(
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback) const {
+  for (const auto &Entry : llvm::Registry<FormatInfo>::entries())
+    Callback(Entry.getName(), Entry.getDesc());
+}
+
 //----------------------------------------------------------------------------
 // SummaryName
 //----------------------------------------------------------------------------
@@ -140,6 +152,40 @@ EntityId JSONFormat::entityIdFromJSON(const uint64_t EntityIdIndex) const {
 
 uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
   return static_cast<uint64_t>(getIndex(EI));
+}
+
+llvm::Expected<EntityId>
+JSONFormat::entityIdFromJSONObject(const Object &EntityIdObject) {
+  if (EntityIdObject.size() != 1) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadEntityIdObject,
+                                JSONEntityIdKey)
+        .build();
+  }
+
+  const llvm::json::Value *AtVal = EntityIdObject.get(JSONEntityIdKey);
+  if (!AtVal) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadEntityIdObject,
+                                JSONEntityIdKey)
+        .build();
+  }
+
+  std::optional<uint64_t> OptEntityIdIndex = AtVal->getAsUINT64();
+  if (!OptEntityIdIndex) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadEntityIdObject,
+                                JSONEntityIdKey)
+        .build();
+  }
+
+  return makeEntityId(static_cast<size_t>(*OptEntityIdIndex));
+}
+
+Object JSONFormat::entityIdToJSONObject(EntityId EI) {
+  Object Result;
+  Result[JSONEntityIdKey] = static_cast<uint64_t>(getIndex(EI));
+  return Result;
 }
 
 //----------------------------------------------------------------------------
@@ -611,8 +657,8 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
   const auto &InfoEntry = InfoIt->second;
   assert(InfoEntry.ForSummary == SN);
 
-  EntityIdConverter Converter(*this);
-  return InfoEntry.Deserialize(EntitySummaryObject, IdTable, Converter);
+  return InfoEntry.Deserialize(EntitySummaryObject, IdTable,
+                               entityIdFromJSONObject);
 }
 
 llvm::Expected<Object>
@@ -629,8 +675,7 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
   const auto &InfoEntry = InfoIt->second;
   assert(InfoEntry.ForSummary == SN);
 
-  EntityIdConverter Converter(*this);
-  return InfoEntry.Serialize(ES, Converter);
+  return InfoEntry.Serialize(ES, entityIdToJSONObject);
 }
 
 //----------------------------------------------------------------------------

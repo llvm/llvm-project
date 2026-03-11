@@ -3201,11 +3201,10 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
-                    *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
-                    Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-                    Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
-                    Twine(AFI->createPICLabelUId())
-                  );
+        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
+        Twine(DAG.getDataLayout().getInternalSymbolPrefix()) + "CP" +
+            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
+            Twine(AFI->createPICLabelUId()));
     SDValue GA = DAG.getTargetGlobalAddress(dyn_cast<GlobalValue>(GV),
                                             dl, PtrVT);
     return LowerGlobalAddress(GA, DAG);
