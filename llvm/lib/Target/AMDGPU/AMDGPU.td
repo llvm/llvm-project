@@ -532,8 +532,8 @@ defm GFX10_3Insts : AMDGPUSubtargetFeature<"gfx10-3-insts",
   /*GenPredicate=*/0
 >;
 
-defm GFX11_7Insts : AMDGPUSubtargetFeature<"gfx1170-insts",
-  "Additional instructions for GFX1170",
+defm GFX11_7Insts : AMDGPUSubtargetFeature<"gfx11-7-insts",
+  "Additional instructions for GFX11.7",
   /*GenPredicate=*/0
 >;
 
