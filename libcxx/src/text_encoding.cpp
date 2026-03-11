@@ -225,7 +225,7 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
   wchar_t __number_buffer[11]{};
 
   auto __codepage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
-  auto __lctype = ::AreFileApisANSI() ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
+  auto __lctype   = ::AreFileApisANSI() ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
 
   int __ret = ::MultiByteToWideChar(
       __codepage, MB_ERR_INVALID_CHARS, __name.data(), __name.size(), __locale_wbuffer, LOCALE_MAX_NAME_LENGTH);
