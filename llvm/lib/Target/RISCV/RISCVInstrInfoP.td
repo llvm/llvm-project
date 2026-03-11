@@ -2012,11 +2012,6 @@ let Predicates = [HasStdExtP, IsRV64] in {
            (PMSLT_W GPR:$rs1, GPR:$rs2)>;
   def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULT)),
            (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
-  // a > b => b < a
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETGT)),
-           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETUGT)),
-           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit [s|u]min/[s|u]max patterns
   def: Pat<(v2i32 (smin GPR:$rs1, GPR:$rs2)), (PMIN_W GPR:$rs1, GPR:$rs2)>;
