@@ -100,6 +100,18 @@ func.func @elementwise_conflict() -> vector<32x32xf16> {
   return %2 : vector<32x32xf16>
 }
 
+// CHECK-LABEL: func.func @elementwise_conflict_uniform
+// CHECK-DAG:     %[[V0:.*]] = "some_op"() : () -> vector<2xf16>
+// CHECK-DAG:     %[[V1:.*]] = "some_op"() : () -> vector<2xf16>
+// CHECK:         %[[ADD:.*]] = arith.addf %[[V0]], %[[V1]] : vector<2xf16>
+// CHECK:         return %[[ADD]] : vector<2xf16>
+func.func @elementwise_conflict_uniform() -> vector<2xf16> {
+  %0 = "some_op"() : () -> vector<2xf16>
+  %1 = "some_op"() : () -> vector<2xf16>
+  %non_tensor_data_vec = arith.addf %0, %1 : vector<2xf16>
+  return %non_tensor_data_vec : vector<2xf16>
+}
+
 // CHECK-LABEL: func.func @broadcast_source_conflict
 // CHECK:         %[[V0:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16]>} : () -> vector<16xf16>
 // CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[V0]]

@@ -1497,6 +1497,15 @@ void addInstrRequirements(const MachineInstr &MI,
     unsigned NumComponents = MI.getOperand(2).getImm();
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
+
+    assert(MI.getOperand(1).isReg());
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
+        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
+      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
+    }
     break;
   }
   case SPIRV::OpTypePointer: {
@@ -2701,6 +2710,10 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
     MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
+    if (MF->getFunction()
+            .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+            .isValid())
+      continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
     for (auto &MBB : *MF) {
       if (!MBB.hasName() || MBB.empty())
@@ -2840,8 +2853,6 @@ static void collectFPFastMathDefaults(const Module &M,
     }
   }
 }
-
-struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

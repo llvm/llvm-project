@@ -30,6 +30,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   clangFrontend
   clangSerialization
   clangTooling
+  clangUnifiedSymbolResolution
   LINK_LIBS
   clangTesting
   LLVMTestingSupport

@@ -14,7 +14,7 @@ define i1 @foo() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef>, <8 x i1> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP4]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 false, i1 [[TMP5]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP5]], i1 false, i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
 entry:

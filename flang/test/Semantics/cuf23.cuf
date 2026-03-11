@@ -81,5 +81,24 @@ end subroutine
 subroutine intrinsic_error_skip_show_descriptor(n)
   use flang_debug
   real(8), allocatable, device :: d(:)
-  call show_descriptor(d) ! ok, descriptore in managed memory
+  call show_descriptor(d) ! ok, descriptor in managed memory
 end subroutine
+
+double complex function acc_routine_check(n, x, y)
+  !$acc routine(acc_routine_check) vector
+  implicit none
+  integer :: n, i
+  double complex, device, dimension(*) :: x, y
+  double complex :: temp
+  intrinsic dconjg
+  
+  !$acc loop vector reduction(+:temp)
+  do i = 1, n
+    ! Check that the error message is not triggered since the subprogram has
+    ! an OpenACC routine directive.
+    !   Actual argument x associated with host intrinsic conjg is on the device
+    temp = temp + dconjg(x(i))*y(i)
+  end do
+  acc_routine_check = temp
+  return
+end function acc_routine_check

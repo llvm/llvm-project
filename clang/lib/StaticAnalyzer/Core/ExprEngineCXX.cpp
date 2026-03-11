@@ -1123,7 +1123,7 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
       defaultEvalCall(Bldr, I, *Call);
     }
   } else {
-    DstPostCall = DstPreCall;
+    DstPostCall = std::move(DstPreCall);
   }
   getCheckerManager().runCheckersForPostCall(Dst, DstPostCall, *Call, *this);
 }
