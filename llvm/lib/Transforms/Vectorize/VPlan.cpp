@@ -390,40 +390,22 @@ BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
   return NewBB;
 }
 
-/// Determine the parent loop for \p VPBB by checking if it is an exit block
-/// or if all of its successors lead to exit blocks (following single-successor
-/// chains). Returns the innermost loop containing any of the exits if all
-/// paths lead to exits, or \p DefaultLoop otherwise.
-static Loop *getParentLoopForBlock(VPBlockBase *VPBB, VPlan &Plan, LoopInfo &LI,
-                                   Loop *DefaultLoop) {
-  Loop *ParentLoop = nullptr;
-  for (VPBlockBase *Succ : VPBB->getSuccessors()) {
-    while (Succ && !Plan.isExitBlock(Succ))
-      Succ = Succ->getSingleSuccessor();
-    if (!Succ)
-      return DefaultLoop;
-    Loop *L = LI.getLoopFor(cast<VPIRBasicBlock>(Succ)->getIRBasicBlock());
-    if (L && (!ParentLoop || ParentLoop->contains(L)))
-      ParentLoop = L;
-  }
-  return ParentLoop;
-}
-
 void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
   auto &CFG = State.CFG;
   BasicBlock *NewBB = CFG.VPBB2IRBB[this];
 
   // Register NewBB in its loop. In innermost loops its the same for all
   // BB's.
-  Loop *ParentLoop = nullptr;
-  if (State.Plan->isExitBlock(this))
-    ParentLoop =
-        State.LI->getLoopFor(cast<VPIRBasicBlock>(this)->getIRBasicBlock());
-  else if (getNumSuccessors() == 0)
-    ParentLoop = State.CurrentParentLoop;
-  else
-    ParentLoop = getParentLoopForBlock(this, *State.Plan, *State.LI,
-                                       State.CurrentParentLoop);
+  Loop *ParentLoop = State.CurrentParentLoop;
+  // If this block has a sole successor that is an exit block or is an exit
+  // block itself then it needs adding to the same parent loop as the exit
+  // block.
+  VPBlockBase *SuccOrExitVPB = getSingleSuccessor();
+  SuccOrExitVPB = SuccOrExitVPB ? SuccOrExitVPB : this;
+  if (State.Plan->isExitBlock(SuccOrExitVPB)) {
+    ParentLoop = State.LI->getLoopFor(
+        cast<VPIRBasicBlock>(SuccOrExitVPB)->getIRBasicBlock());
+  }
 
   if (ParentLoop && !State.LI->getLoopFor(NewBB))
     ParentLoop->addBasicBlockToLoop(NewBB, *State.LI);
@@ -982,6 +964,32 @@ void VPlan::execute(VPTransformState *State) {
   // successor blocks including the middle, exit and scalar preheader blocks.
   for (VPBlockBase *Block : RPOT)
     Block->execute(State);
+
+  if (hasEarlyExit()) {
+    // Fix up LoopInfo for extra dispatch blocks when vectorizing loops with
+    // early exits. For dispatch blocks, we need to find the smallest common
+    // loop of all successors. Note: we only need to update loop info for blocks
+    // after the middle block, but there is no easy way to get those at this
+    // point.
+    for (VPBlockBase *VPB : reverse(RPOT)) {
+      auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+      if (!VPBB || isa<VPIRBasicBlock>(VPBB))
+        continue;
+      BasicBlock *BB = State->CFG.VPBB2IRBB[VPBB];
+      Loop *L = State->LI->getLoopFor(BB);
+      if (!L || any_of(successors(BB),
+                       [L](BasicBlock *Succ) { return L->contains(Succ); }))
+        continue;
+      // Find the innermost loop containing all successors.
+      Loop *Target = State->LI->getLoopFor(*succ_begin(BB));
+      for (BasicBlock *Succ : drop_begin(successors(BB)))
+        Target = State->LI->getSmallestCommonLoop(Target,
+                                                  State->LI->getLoopFor(Succ));
+      State->LI->removeBlock(BB);
+      if (Target)
+        Target->addBasicBlockToLoop(BB, *State->LI);
+    }
+  }
 
   // If the original loop is unreachable, delete it and all its blocks.
   if (!ScalarPhVPBB->hasPredecessors()) {
