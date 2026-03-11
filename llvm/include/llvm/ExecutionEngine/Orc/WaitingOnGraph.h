@@ -85,9 +85,134 @@ template <typename ContainerIdT, typename ElementIdT> class WaitingOnGraph {
 public:
   using ContainerId = ContainerIdT;
   using ElementId = ElementIdT;
-  using ElementSet = DenseSet<ElementId>;
-  using ContainerElementsMap = DenseMap<ContainerId, ElementSet>;
 
+  class ElementSet : public DenseSet<ElementId> {
+    friend class ElementSetTest;
+
+  public:
+    using DenseSet<ElementId>::DenseSet;
+
+    /// Merge the elements of Other into this set. Returns true if any new
+    /// elements are added.
+    bool merge(const ElementSet &Other, bool AssertNoOverlap = false) {
+      size_t OrigSize = this->size();
+      this->insert(Other.begin(), Other.end());
+      assert((!AssertNoOverlap || this->size() == (OrigSize + Other.size())) &&
+             "merge of overlapping elements");
+      return this->size() != OrigSize;
+    }
+
+    /// Remove all elements in Other from this set. Returns true if any
+    /// elements were removed.
+    bool remove(const ElementSet &Other) {
+      size_t OrigSize = this->size();
+
+      // Early out for empty sets.
+      if (OrigSize == 0 || Other.empty())
+        return false;
+
+      // TODO: Tweak condition to account for SmallVector cost. We may want to
+      //       prefer iterating over elements if the size difference is small.
+      if (OrigSize > Other.size()) {
+        for (auto &Elem : Other)
+          this->erase(Elem);
+      } else {
+        SmallVector<ElementId> ToRemove;
+        for (auto &Elem : *this)
+          if (Other.count(Elem))
+            ToRemove.push_back(Elem);
+        for (auto &Elem : ToRemove)
+          this->erase(Elem);
+      }
+      return this->size() < OrigSize;
+    }
+
+    /// Remove all elements for which Pred returns true.
+    /// Returns true if any elements were removed.
+    template <typename Pred> bool remove_if(Pred &&P) {
+      if (this->empty())
+        return false;
+
+      SmallVector<ElementId> ToRemove;
+      for (auto &Elem : *this)
+        if (P(Elem))
+          ToRemove.push_back(Elem);
+
+      for (auto &Elem : ToRemove)
+        this->erase(Elem);
+
+      return !ToRemove.empty();
+    }
+  };
+
+  class ContainerElementsMap : public DenseMap<ContainerId, ElementSet> {
+    friend class ContainerElementsMapTest;
+
+  public:
+    using DenseMap<ContainerId, ElementSet>::DenseMap;
+
+    /// Merge the elements of Other into this map. Returns true if any new
+    /// elements are added.
+    bool merge(const ContainerElementsMap &Other,
+               bool AssertNoElementsOverlap = false) {
+      bool Changed = false;
+      for (auto &[Container, Elements] : Other)
+        Changed |= (*this)[Container].merge(Elements, AssertNoElementsOverlap);
+      return Changed;
+    }
+
+    /// Remove all elements in Other from this map. Returns true if any
+    /// elements were removed.
+    bool remove(const ContainerElementsMap &Other) {
+      bool Changed = false;
+      for (auto &[Container, Elements] : Other) {
+        assert(!Elements.empty() && "Stale row for Container in Other");
+        auto I = this->find(Container);
+        if (I == this->end())
+          continue;
+        Changed |= I->second.remove(Elements);
+        if (I->second.empty())
+          this->erase(Container);
+      }
+      return Changed;
+    }
+
+    /// Call V on each (Container, Elements) pair in this map.
+    ///
+    /// V should return true if it modifies any elements.
+    ///
+    /// Returns true if V returns true for any pair.
+    template <typename Visitor> bool visit(Visitor &&V) {
+      if (this->empty())
+        return false;
+
+      bool Changed = false;
+      SmallVector<ContainerId> ToRemove;
+      for (auto &[Container, Elements] : *this) {
+        assert(!Elements.empty() && "empty row for container");
+        if (V(Container, Elements)) {
+          Changed = true;
+          if (Elements.empty())
+            ToRemove.push_back(Container);
+        }
+      }
+
+      for (auto &Container : ToRemove)
+        this->erase(Container);
+
+      return Changed;
+    }
+  };
+
+  class SuperNode;
+
+private:
+  using ElemToSuperNodeMap =
+      DenseMap<ContainerId, DenseMap<ElementId, SuperNode *>>;
+
+  using SuperNodeDepsMap = DenseMap<SuperNode *, DenseSet<SuperNode *>>;
+
+public:
   class SuperNode {
     friend class WaitingOnGraph;
     friend class WaitingOnGraphTest;
@@ -103,13 +228,97 @@ public:
   private:
     ContainerElementsMap Defs;
     ContainerElementsMap Deps;
+
+    ElemToSuperNodeMap *RegisteredElemToSN = nullptr;
+
+    /// Add a mapping from the Defs in this SuperNode to SN (which may or may
+    /// not be the same as this).
+    void mapDefsTo(ElemToSuperNodeMap &ElemToSN, SuperNode *SN,
+                   bool AbandonOldMapping = false) {
+      assert(!Defs.empty() && "Empty defs!?");
+      for (auto &[Container, Elements] : Defs) {
+        assert(!Elements.empty() && "Empty elements for container?");
+        auto &ContainerElemToSN = ElemToSN[Container];
+        for (auto &Elem : Elements)
+          ContainerElemToSN[Elem] = SN;
+      }
+      assert((AbandonOldMapping || !SN->RegisteredElemToSN ||
+              SN->RegisteredElemToSN == &ElemToSN) &&
+             "SN defs split across maps");
+      SN->RegisteredElemToSN = &ElemToSN;
+    }
+
+    /// Add a mapping from the Defs in this SuperNode to this.
+    /// (Equivalent to `SN.mapDefsTo(ElemToSN, &SN);`)
+    void mapDefsToThis(ElemToSuperNodeMap &ElemToSN,
+                       bool AbandonOldMapping = false) {
+      mapDefsTo(ElemToSN, this, AbandonOldMapping);
+    }
+
+    /// Remove a mapping from the Defs in this SuperNode from the registered
+    /// ElemToSuperNodeMap. The mapping must already exist.
+    void unmapDefsFromThis() {
+      assert(RegisteredElemToSN && "No registered ElemToSuperNodeMap");
+      for (auto &[Container, Elements] : Defs) {
+        auto I = RegisteredElemToSN->find(Container);
+        assert(I != RegisteredElemToSN->end() && "Container not in map");
+        auto &ContainerElemToSN = I->second;
+        for (auto &Elem : Elements) {
+          assert(ContainerElemToSN[Elem] == this && "Mapping not present");
+          ContainerElemToSN.erase(Elem);
+        }
+        if (ContainerElemToSN.empty())
+          RegisteredElemToSN->erase(I);
+      }
+      RegisteredElemToSN = nullptr;
+    }
+
+    /// For all Defs of this node that are defined by some node in ElemToSN,
+    /// remove the Def from this map and add this SuperNode to the list of
+    /// dependants of the defining node.
+    ///
+    /// Returns true if any elements were removed.
+    bool hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
+                   ElemToSuperNodeMap &ElemToSN) {
+      return Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+        auto I = ElemToSN.find(Container);
+        if (I == ElemToSN.end())
+          return false;
+
+        auto &ContainerElemToSN = I->second;
+        return Elements.remove_if([&](const ElementId &Elem) {
+          auto J = ContainerElemToSN.find(Elem);
+          if (J == ContainerElemToSN.end())
+            return false;
+
+          auto *DefSN = J->second;
+          if (DefSN != this)
+            SuperNodeDeps[DefSN].insert(this);
+          return true;
+        });
+      });
+    }
   };
 
 private:
-  using ElemToSuperNodeMap =
-      DenseMap<ContainerId, DenseMap<ElementId, SuperNode *>>;
-
-  using SuperNodeDepsMap = DenseMap<SuperNode *, DenseSet<SuperNode *>>;
+  /// Fast visit with removal.
+  ///
+  /// Visits the elements of Vec, removing each element for which V returns
+  /// true.
+  ///
+  /// This is O(1) in the number of elements removed, but does not preserve
+  /// element order.
+  template <typename Vector, typename Visitor>
+  static void visitWithRemoval(Vector &Vec, Visitor &&V) {
+    for (size_t I = 0; I != Vec.size();) {
+      if (V(Vec[I])) {
+        if (I != Vec.size() - 1)
+          std::swap(Vec[I], Vec.back());
+        Vec.pop_back();
+      } else
+        ++I;
+    }
+  }
 
   class Coalescer {
   public:
@@ -117,13 +326,7 @@ private:
                                                     ContainerElementsMap Deps) {
       auto H = getHash(Deps);
       if (auto *ExistingSN = findCanonicalSuperNode(H, Deps)) {
-        for (auto &[Container, Elems] : Defs) {
-          auto &DstCElems = ExistingSN->Defs[Container];
-          [[maybe_unused]] size_t ExpectedSize =
-              DstCElems.size() + Elems.size();
-          DstCElems.insert(Elems.begin(), Elems.end());
-          assert(DstCElems.size() == ExpectedSize);
-        }
+        ExistingSN->Defs.merge(Defs, /* AssertNoElementsOverlap */ true);
         return nullptr;
       }
 
@@ -136,27 +339,21 @@ private:
     }
 
     void coalesce(std::vector<std::unique_ptr<SuperNode>> &SNs,
-                  ElemToSuperNodeMap &ElemToSN) {
-      for (size_t I = 0; I != SNs.size();) {
-        auto &SN = SNs[I];
+                  ElemToSuperNodeMap &ElemToSN,
+                  bool AbandonOldMapping = false) {
+      visitWithRemoval(SNs, [&](std::unique_ptr<SuperNode> &SN) {
         assert(!SNHashes.count(SN.get()) &&
                "Elements of SNs should be new to the coalescer");
         auto H = getHash(SN->Deps);
         if (auto *CanonicalSN = findCanonicalSuperNode(H, SN->Deps)) {
-          for (auto &[Container, Elems] : SN->Defs) {
-            CanonicalSN->Defs[Container].insert(Elems.begin(), Elems.end());
-            auto &ContainerElemToSN = ElemToSN[Container];
-            for (auto &Elem : Elems)
-              ContainerElemToSN[Elem] = CanonicalSN;
-          }
-          std::swap(SN, SNs.back());
-          SNs.pop_back();
-        } else {
-          CanonicalSNs[H].push_back(SN.get());
-          SNHashes[SN.get()] = H;
-          ++I;
+          SN->mapDefsTo(ElemToSN, CanonicalSN, AbandonOldMapping);
+          CanonicalSN->Defs.merge(SN->Defs, /* AssertNoElementsOverlap */ true);
+          return true;
         }
-      }
+        CanonicalSNs[H].push_back(SN.get());
+        SNHashes[SN.get()] = H;
+        return false;
+      });
     }
 
     /// Remove all coalescing information.
@@ -237,21 +434,7 @@ public:
     void add(ContainerElementsMap Defs, ContainerElementsMap Deps) {
       if (Defs.empty())
         return;
-      // Remove any self-reference.
-      SmallVector<ContainerId> ToRemove;
-      for (auto &[Container, Elems] : Defs) {
-        assert(!Elems.empty() && "Defs for container must not be empty");
-        auto I = Deps.find(Container);
-        if (I == Deps.end())
-          continue;
-        auto &DepsForContainer = I->second;
-        for (auto &Elem : Elems)
-          DepsForContainer.erase(Elem);
-        if (DepsForContainer.empty())
-          ToRemove.push_back(Container);
-      }
-      for (auto &Container : ToRemove)
-        Deps.erase(Container);
+      Deps.remove(Defs); // Remove any self-reference.
       if (auto SN = C.addOrCreateSuperNode(std::move(Defs), std::move(Deps)))
         SNs.push_back(std::move(SN));
     }
@@ -282,20 +465,28 @@ public:
     ElemToSuperNodeMap ElemToSN;
   };
 
+  class OpRecorder {
+  public:
+    virtual ~OpRecorder() = default;
+    virtual void
+    recordSimplify(const std::vector<std::unique_ptr<SuperNode>> &SNs) = 0;
+    virtual void recordFail(const ContainerElementsMap &Failed) = 0;
+    virtual void recordEnd() = 0;
+  };
+
   /// Preprocess a list of SuperNodes to remove all intra-SN dependencies.
-  static SimplifyResult simplify(std::vector<std::unique_ptr<SuperNode>> SNs) {
+  static SimplifyResult simplify(std::vector<std::unique_ptr<SuperNode>> SNs,
+                                 OpRecorder *Rec = nullptr) {
+    if (Rec)
+      Rec->recordSimplify(SNs);
+
     // Build ElemToSN map.
     ElemToSuperNodeMap ElemToSN;
-    for (auto &SN : SNs) {
-      for (auto &[Container, Elements] : SN->Defs) {
-        auto &ContainerElemToSN = ElemToSN[Container];
-        for (auto &E : Elements)
-          ContainerElemToSN[E] = SN.get();
-      }
-    }
+    for (auto &SN : SNs)
+      SN->mapDefsToThis(ElemToSN);
 
     SuperNodeDepsMap SuperNodeDeps;
-    hoistDeps(SuperNodeDeps, SNs, ElemToSN);
+    hoistDeps(SNs, SuperNodeDeps, ElemToSN);
     propagateDeps(SuperNodeDeps);
 
     // Pre-coalesce nodes.
@@ -324,41 +515,23 @@ public:
     // First process any dependencies on nodes with external state.
     auto FailedSNs = processExternalDeps(NewSNs, GetExternalState);
 
+    SuperNodeDepsMap SuperNodeDeps;
+
     // Collect the PendingSNs whose dep sets are about to be modified.
     std::vector<std::unique_ptr<SuperNode>> ModifiedPendingSNs;
-    for (size_t I = 0; I != PendingSNs.size();) {
-      auto &SN = PendingSNs[I];
-      bool Remove = false;
-      for (auto &[Container, Elems] : SN->Deps) {
-        auto I = ElemToNewSN.find(Container);
-        if (I == ElemToNewSN.end())
-          continue;
-        for (auto Elem : Elems) {
-          if (I->second.contains(Elem)) {
-            Remove = true;
-            break;
-          }
-        }
-        if (Remove)
-          break;
-      }
-      if (Remove) {
+    visitWithRemoval(PendingSNs, [&](std::unique_ptr<SuperNode> &SN) {
+      if (SN->hoistDeps(SuperNodeDeps, ElemToNewSN)) {
         ModifiedPendingSNs.push_back(std::move(SN));
-        std::swap(SN, PendingSNs.back());
-        PendingSNs.pop_back();
-      } else
-        ++I;
-    }
+        return true;
+      }
+      return false;
+    });
 
-    // Remove cycles from the graphs.
-    SuperNodeDepsMap SuperNodeDeps;
-    hoistDeps(SuperNodeDeps, ModifiedPendingSNs, ElemToNewSN);
-
-    // If SN's deps are about to be modified then remove it from the coalescer.
+    // Remove SNs whose deps have been modified from the coalescer.
     for (auto &SN : ModifiedPendingSNs)
       CoalesceToPendingSNs.erase(SN.get());
 
-    hoistDeps(SuperNodeDeps, NewSNs, ElemToPendingSN);
+    hoistDeps(NewSNs, SuperNodeDeps, ElemToPendingSN);
     propagateDeps(SuperNodeDeps);
 
     propagateFailures(FailedSNs, SuperNodeDeps);
@@ -367,12 +540,13 @@ public:
     // incorporate NewSNs.
     std::vector<std::unique_ptr<SuperNode>> ReadyNodes, FailedNodes;
     processReadyOrFailed(ModifiedPendingSNs, ReadyNodes, FailedNodes,
-                         SuperNodeDeps, FailedSNs, &ElemToPendingSN);
+                         SuperNodeDeps, FailedSNs, true);
     processReadyOrFailed(NewSNs, ReadyNodes, FailedNodes, SuperNodeDeps,
-                         FailedSNs, nullptr);
+                         FailedSNs, false);
 
     CoalesceToPendingSNs.coalesce(ModifiedPendingSNs, ElemToPendingSN);
-    CoalesceToPendingSNs.coalesce(NewSNs, ElemToPendingSN);
+    CoalesceToPendingSNs.coalesce(NewSNs, ElemToPendingSN,
+                                  /* AbandonOldMapping = */ true);
 
     // Integrate remaining ModifiedPendingSNs and NewSNs into PendingSNs.
     for (auto &SN : ModifiedPendingSNs)
@@ -380,11 +554,7 @@ public:
 
     // Update ElemToPendingSN for the remaining elements.
     for (auto &SN : NewSNs) {
-      for (auto &[Container, Elems] : SN->Defs) {
-        auto &Row = ElemToPendingSN[Container];
-        for (auto &Elem : Elems)
-          Row[Elem] = SN.get();
-      }
+      SN->mapDefsToThis(ElemToPendingSN, /* AbandonOldMapping = */ true);
       PendingSNs.push_back(std::move(SN));
     }
 
@@ -396,46 +566,30 @@ public:
   /// result, so clients should take whatever actions are needed to mark
   /// this as failed in their external representation.
   std::vector<std::unique_ptr<SuperNode>>
-  fail(const ContainerElementsMap &Failed) {
+  fail(const ContainerElementsMap &Failed, OpRecorder *Rec = nullptr) {
+    if (Rec)
+      Rec->recordFail(Failed);
+
     std::vector<std::unique_ptr<SuperNode>> FailedSNs;
 
-    for (size_t I = 0; I != PendingSNs.size();) {
-      auto &PendingSN = PendingSNs[I];
-      bool FailPendingSN = false;
-      for (auto &[Container, Elems] : PendingSN->Deps) {
-        if (FailPendingSN)
-          break;
+    visitWithRemoval(PendingSNs, [&](std::unique_ptr<SuperNode> &SN) {
+      for (auto &[Container, Elements] : SN->Deps) {
         auto I = Failed.find(Container);
         if (I == Failed.end())
           continue;
-        for (auto &Elem : Elems) {
-          if (I->second.count(Elem)) {
-            FailPendingSN = true;
-            break;
+
+        auto &FailedElems = I->second;
+        for (auto &Elem : Elements) {
+          if (FailedElems.count(Elem)) {
+            CoalesceToPendingSNs.erase(SN.get());
+            SN->unmapDefsFromThis();
+            FailedSNs.push_back(std::move(SN));
+            return true;
           }
         }
       }
-      if (FailPendingSN) {
-        FailedSNs.push_back(std::move(PendingSN));
-        PendingSN = std::move(PendingSNs.back());
-        PendingSNs.pop_back();
-      } else
-        ++I;
-    }
-
-    for (auto &FailedSN : FailedSNs)
-      CoalesceToPendingSNs.erase(FailedSN.get());
-
-    for (auto &SN : FailedSNs) {
-      for (auto &[Container, Elems] : SN->Defs) {
-        assert(ElemToPendingSN.count(Container));
-        auto &CElems = ElemToPendingSN[Container];
-        for (auto &Elem : Elems)
-          CElems.erase(Elem);
-        if (CElems.empty())
-          ElemToPendingSN.erase(Container);
-      }
-    }
+      return false;
+    });
 
     return FailedSNs;
   }
@@ -514,57 +668,12 @@ public:
 
 private:
   // Replace individual dependencies with supernode dependencies.
-  static void hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
-                        std::vector<std::unique_ptr<SuperNode>> &SNs,
+  static void hoistDeps(std::vector<std::unique_ptr<SuperNode>> &SNs,
+                        SuperNodeDepsMap &SuperNodeDeps,
                         ElemToSuperNodeMap &ElemToSN) {
     // For all SNs...
-    for (auto &SN : SNs) {
-      SmallVector<ContainerId> ContainersToRemove;
-      for (auto &[DepContainer, DepElems] : SN->Deps) {
-
-        // Check ElemToSN to see if any other SuperNodes define elements in
-        // DepContainer. If not then bail out early.
-        auto I = ElemToSN.find(DepContainer);
-        if (I == ElemToSN.end())
-          continue;
-        auto &ContainerElemToSN = I->second;
-
-        // ElemToSN includes SuperNodes that define elements in DepContainer.
-        // We need to iterate over ContainerElemToSN or DepElems: we pick the
-        // smaller to minimize the cost.
-        if (ContainerElemToSN.size() < DepElems.size()) {
-          for (auto &[DefElem, DefSN] : ContainerElemToSN)
-            if (DepElems.erase(DefElem) && DefSN != SN.get())
-              SuperNodeDeps[DefSN].insert(SN.get());
-        } else {
-          SmallVector<ElementId> ElemsToRemove;
-          for (auto &DepElem : DepElems) {
-            auto J = ContainerElemToSN.find(DepElem);
-            if (J == ContainerElemToSN.end())
-              continue;
-            ElemsToRemove.push_back(DepElem);
-            SuperNode *DefSN = J->second;
-            if (DefSN != SN.get())
-              SuperNodeDeps[DefSN].insert(SN.get());
-          }
-
-          for (auto &DepElem : ElemsToRemove)
-            DepElems.erase(DepElem);
-        }
-
-        // If DepElems has become empty then add DepContainer to the list of
-        // containers to remove.
-        if (DepElems.empty())
-          ContainersToRemove.push_back(DepContainer);
-      }
-
-      // Remove any containers in SN->Deps that have become empty.
-      for (auto &DepContainer : ContainersToRemove) {
-        assert(SN->Deps.count(DepContainer) && "DepContainer already removed?");
-        assert(SN->Deps[DepContainer].empty() && "DepContainer deps not empty");
-        SN->Deps.erase(DepContainer);
-      }
-    }
+    for (auto &SN : SNs)
+      SN->hoistDeps(SuperNodeDeps, ElemToSN);
   }
 
   // Compute transitive closure of deps for each node.
@@ -590,16 +699,9 @@ private:
         if (I == SuperNodeDeps.end())
           continue;
 
-        for (auto *DependantSN : I->second) {
-          bool Changed = false;
-          for (auto &[DepContainer, DepElems] : SN->Deps) {
-            auto &DepSNContainerElems = DependantSN->Deps[DepContainer];
-            for (auto &DepElem : DepElems)
-              Changed |= DepSNContainerElems.insert(DepElem).second;
-          }
-          if (Changed)
+        for (auto *DependantSN : I->second)
+          if (DependantSN->Deps.merge(SN->Deps))
             ToVisitNext.insert(DependantSN);
-        }
       }
 
       if (ToVisitNext.empty())
@@ -633,34 +735,21 @@ private:
   processExternalDeps(std::vector<std::unique_ptr<SuperNode>> &SNs,
                       GetExternalStateFn &GetExternalState) {
     DenseSet<SuperNode *> FailedSNs;
-    for (auto &SN : SNs) {
-      bool SNHasError = false;
-      SmallVector<ContainerId> ContainersToRemove;
-      for (auto &[Container, Elems] : SN->Deps) {
-        SmallVector<ElementId> ElemToRemove;
-        for (auto &Elem : Elems) {
+    for (auto &SN : SNs)
+      SN->Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+        return Elements.remove_if([&](ElementId &Elem) {
           switch (GetExternalState(Container, Elem)) {
           case ExternalState::None:
-            break;
+            return false;
           case ExternalState::Ready:
-            ElemToRemove.push_back(Elem);
-            break;
+            return true;
           case ExternalState::Failed:
-            ElemToRemove.push_back(Elem);
-            SNHasError = true;
-            break;
-          }
-        }
-        for (auto &Elem : ElemToRemove)
-          Elems.erase(Elem);
-        if (Elems.empty())
-          ContainersToRemove.push_back(Container);
-      }
-      for (auto &Container : ContainersToRemove)
-        SN->Deps.erase(Container);
-      if (SNHasError)
-        FailedSNs.insert(SN.get());
-    }
+            FailedSNs.insert(SN.get());
+            return true;
+          };
+          llvm_unreachable("Unknown ExternalState enum");
+        });
+      });
 
     return FailedSNs;
   }
@@ -670,35 +759,21 @@ private:
                             std::vector<std::unique_ptr<SuperNode>> &Failed,
                             SuperNodeDepsMap &SuperNodeDeps,
                             const DenseSet<SuperNode *> &FailedSNs,
-                            ElemToSuperNodeMap *ElemToSNs) {
+                            bool UnmapFromElemToSN) {
 
-    SmallVector<SuperNode *> ToRemoveFromElemToSNs;
-
-    for (size_t I = 0; I != SNs.size();) {
-      auto &SN = SNs[I];
-
+    visitWithRemoval(SNs, [&](std::unique_ptr<SuperNode> &SN) {
       bool SNFailed = FailedSNs.count(SN.get());
       bool SNReady = SN->Deps.empty();
 
       if (SNReady || SNFailed) {
-        if (ElemToSNs)
-          ToRemoveFromElemToSNs.push_back(SN.get());
-        auto &NodeList = SNFailed ? Failed : Ready;
-        NodeList.push_back(std::move(SN));
-        std::swap(SN, SNs.back());
-        SNs.pop_back();
-      } else
-        ++I;
-    }
-
-    // Update ElemToSNs (if passed) to remove elements pointing at SN.
-    for (auto *SN : ToRemoveFromElemToSNs) {
-      for (auto &[Container, Elems] : SN->defs()) {
-        auto &Row = (*ElemToSNs)[Container];
-        for (auto &Elem : Elems)
-          Row.erase(Elem);
+        if (UnmapFromElemToSN)
+          SN->unmapDefsFromThis();
+        auto &ToList = SNFailed ? Failed : Ready;
+        ToList.push_back(std::move(SN));
+        return true;
       }
-    }
+      return false;
+    });
   }
 
   std::vector<std::unique_ptr<SuperNode>> PendingSNs;

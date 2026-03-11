@@ -60,12 +60,6 @@ llvm.func @simple_teams_reduction_() attributes {fir.internal_name = "_QPsimple_
 // Non atomic version
 // CHECK: call void @__kmpc_end_reduce
 
-// Finalize
-// CHECK: br label %[[FINALIZE:.+]]
-
-// CHECK: [[FINALIZE]]:
-// CHECK: call void @__kmpc_barrier
-
 // Reduction function.
 // CHECK: define internal void @[[REDFUNC]]
 // CHECK: add i32

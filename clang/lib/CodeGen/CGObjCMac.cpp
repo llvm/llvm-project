@@ -4353,7 +4353,7 @@ void FragileHazards::emitHazardsInNewBlocks() {
   if (Locals.empty())
     return;
 
-  CGBuilderTy Builder(CGF, CGF.getLLVMContext());
+  CGBuilderTy Builder(CGF.CGM, CGF.getLLVMContext());
 
   // Iterate through all blocks, skipping those prior to the try.
   for (llvm::BasicBlock &BB : *CGF.CurFn) {

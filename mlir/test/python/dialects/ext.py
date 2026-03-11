@@ -3,6 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects.ext import *
+from mlir import ir
 from typing import Any, Optional, Sequence, TypeVar, Union
 import sys
 
@@ -604,4 +605,92 @@ def testExtDialectWithType():
         # CHECK: %1 = "ext_type.make_array"() : () -> !ext_type.array<i64, 6 : i32>
         # CHECK: %2 = "ext_type.make_array3"() : () -> !ext_type.array<i32, 3 : i32>
         assert module.operation.verify()
+        print(module)
+
+
+# CHECK: TEST: testExtDialectWithAttr
+@run
+def testExtDialectWithAttr():
+    class TestAttr(Dialect, name="ext_attr"):
+        pass
+
+    class IntPair(TestAttr.Attribute, name="pair"):
+        first: IntegerAttr
+        second: IntegerAttr
+
+    class StrPair(TestAttr.Attribute, name="str_pair"):
+        first: StringAttr
+        second: StringAttr
+
+    class Op1(TestAttr.Operation, name="op1"):
+        pair: IntPair
+
+    class Op2(TestAttr.Operation, name="op2"):
+        pair: StrPair
+        pair2: StrPair[StringAttr["a"], StringAttr["b"]]
+
+    with Context(), Location.unknown():
+        TestAttr.load()
+        # CHECK: irdl.dialect @ext_attr {
+        # CHECK:   irdl.attribute @pair {
+        # CHECK:     %0 = irdl.base "#builtin.integer"
+        # CHECK:     %1 = irdl.base "#builtin.integer"
+        # CHECK:     irdl.parameters(first: %0, second: %1)
+        # CHECK:   }
+        # CHECK:   irdl.attribute @str_pair {
+        # CHECK:     %0 = irdl.base "#builtin.string"
+        # CHECK:     %1 = irdl.base "#builtin.string"
+        # CHECK:     irdl.parameters(first: %0, second: %1)
+        # CHECK:   }
+        # CHECK:   irdl.operation @op1 {
+        # CHECK:     %0 = irdl.base @ext_attr::@pair
+        # CHECK:     irdl.attributes {"pair" = %0}
+        # CHECK:   }
+        # CHECK:   irdl.operation @op2 {
+        # CHECK:     %0 = irdl.base @ext_attr::@str_pair
+        # CHECK:     %1 = irdl.is "a"
+        # CHECK:     %2 = irdl.is "b"
+        # CHECK:     %3 = irdl.parametric @ext_attr::@str_pair<%1, %2>
+        # CHECK:     irdl.attributes {"pair" = %0, "pair2" = %3}
+        # CHECK:   }
+        # CHECK: }
+        print(TestAttr._mlir_module)
+
+        # CHECK: ext_attr.pair
+        print(IntPair.attr_name)
+
+        # CHECK: ext_attr.str_pair
+        print(StrPair.attr_name)
+
+        ip = IntPair.get(
+            IntegerAttr.get(IntegerType.get_signless(32), 1),
+            IntegerAttr.get(IntegerType.get_signless(32), 2),
+        )
+        sp = StrPair.get(StringAttr.get("hello"), StringAttr.get("world"))
+        # CHECK: #ext_attr.pair<1 : i32, 2 : i32>
+        print(ip)
+        # CHECK: #ext_attr.str_pair<"hello", "world">
+        print(sp)
+
+        # CHECK: "hello"
+        print(sp.first)
+        # CHECK: "world"
+        print(sp.second)
+
+        sp2 = ir.Attribute(sp).maybe_downcast()
+        # CHECK: <locals>.StrPair
+        print(type(sp2))
+        # CHECK: #ext_attr.str_pair<"hello", "world">
+        print(str(sp2))
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            Op1(ip)
+            p2 = StrPair.get(StringAttr.get("a"), StringAttr.get("b"))
+            Op2(sp, p2)
+
+        assert module.operation.verify()
+
+        # CHECK: "ext_attr.op1"() {pair = #ext_attr.pair<1 : i32, 2 : i32>} : () -> ()
+        # CHECK: "ext_attr.op2"() {pair = #ext_attr.str_pair<"hello", "world">, pair2 = #ext_attr.str_pair<"a", "b">} : () -> ()
         print(module)

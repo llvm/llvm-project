@@ -255,7 +255,7 @@ private:
           getScalarizationOverhead(
               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
               /*Insert=*/false, /*Extract=*/true, CostKind) +
-          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+          VF * (thisT()->getCFInstrCost(Instruction::CondBr, CostKind) +
                 thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 
@@ -801,9 +801,8 @@ public:
     return BaseT::preferPredicateOverEpilogue(TFI);
   }
 
-  TailFoldingStyle
-  getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const override {
-    return BaseT::getPreferredTailFoldingStyle(IVUpdateMayOverflow);
+  TailFoldingStyle getPreferredTailFoldingStyle() const override {
+    return BaseT::getPreferredTailFoldingStyle();
   }
 
   std::optional<Instruction *>

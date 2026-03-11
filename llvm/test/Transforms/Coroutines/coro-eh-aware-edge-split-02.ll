@@ -77,15 +77,15 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @h.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[H_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @h.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[Y_SPILL_ADDR:%.*]] = getelementptr inbounds [[H_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[Y_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
 ; CHECK-NEXT:    store i32 [[Y]], ptr [[Y_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[X_SPILL_ADDR:%.*]] = getelementptr inbounds [[H_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[X_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i32 [[X]], ptr [[X_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[COND_SPILL_ADDR:%.*]] = getelementptr inbounds [[H_FRAME]], ptr [[HDL]], i32 0, i32 5
+; CHECK-NEXT:    [[COND_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 25
 ; CHECK-NEXT:    store i1 [[COND]], ptr [[COND_SPILL_ADDR]], align 1
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[H_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -93,7 +93,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-LABEL: define internal fastcc void @h.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) personality i32 0 {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
-; CHECK-NEXT:    [[COND_RELOAD_ADDR:%.*]] = getelementptr inbounds [[H_FRAME:%.*]], ptr [[HDL]], i32 0, i32 5
+; CHECK-NEXT:    [[COND_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 25
 ; CHECK-NEXT:    [[COND_RELOAD:%.*]] = load i1, ptr [[COND_RELOAD_ADDR]], align 1
 ; CHECK-NEXT:    br i1 [[COND_RELOAD]], label %[[INVOKE1:.*]], label %[[INVOKE2:.*]]
 ; CHECK:       [[INVOKE1]]:
@@ -104,12 +104,12 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-NEXT:            to label %[[COROEND]] unwind label %[[PAD_WITH_PHI_FROM_INVOKE2:.*]]
 ; CHECK:       [[PAD_WITH_PHI_FROM_INVOKE2]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    [[Y_RELOAD_ADDR:%.*]] = getelementptr inbounds [[H_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[Y_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
 ; CHECK-NEXT:    [[Y_RELOAD:%.*]] = load i32, ptr [[Y_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    cleanupret from [[TMP0]] unwind label %[[PAD_WITH_PHI:.*]]
 ; CHECK:       [[PAD_WITH_PHI_FROM_INVOKE1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = cleanuppad within none []
-; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds [[H_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[X_RELOAD:%.*]] = load i32, ptr [[X_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    cleanupret from [[TMP1]] unwind label %[[PAD_WITH_PHI]]
 ; CHECK:       [[PAD_WITH_PHI]]:
