@@ -15,13 +15,32 @@
 // RUN:            -I%S/Inputs/ %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG-DEVICE --input-file=%t.ll %s
 
+// CIR-DEVICE: cir.global "private" internal dso_local @_ZZ2fnvE1j = #cir.undef : !s32i {alignment = 4 : i64}
+// LLVM-DEVICE: @_ZZ2fnvE1j = internal global i32 undef, align 4
+
+__device__ int a;
+// CIR-DEVICE: cir.global external @[[DEV:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
+// LLVM-DEVICE: @[[DEV_LD:.*]] = externally_initialized global i32 0, align 4
+// OGCG-DEVICE: @[[DEV_OD:.*]] = addrspace(1) externally_initialized global i32 0, align 4
+
+__shared__ int b;
+// CIR-DEVICE: cir.global external @[[SHARED:.*]] = #cir.undef : !s32i {alignment = 4 : i64}
+// LLVM-DEVICE: @[[SHARED_LL:.*]] = global i32 undef, align 4
+// OGCG-DEVICE: @[[SHARED_OD:.*]] = addrspace(3) global i32 undef, align 4
+
+__constant__ int c;
+// CIR-DEVICE: cir.global constant external @[[CONST:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
+// LLVM-DEVICE: @[[CONST_LL:.*]] = externally_initialized constant i32 0, align 4
+// OGCG-DEVICE: @[[CONST_OD:.*]] = addrspace(4) externally_initialized constant i32 0, align 4
+
+// OGCG-DEVICE: @_ZZ2fnvE1j = internal addrspace(3) global i32 undef, align 4
+
 __global__ void fn() {
   int i = 0;
   __shared__ int j;
   j = i;
 }
 
-// CIR-DEVICE: cir.global "private" internal dso_local @_ZZ2fnvE1j : !s32i
 // CIR-DEVICE: cir.func {{.*}}@_Z2fnv() {{.*}} {
 // CIR-DEVICE:   %[[ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
 // CIR-DEVICE:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -31,7 +50,6 @@ __global__ void fn() {
 // CIR-DEVICE:   cir.store {{.*}}%[[VAL]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR-DEVICE:   cir.return
 
-// LLVM-DEVICE: @_ZZ2fnvE1j = internal global i32 undef, align 4
 // LLVM-DEVICE: define dso_local void @_Z2fnv()
 // LLVM-DEVICE:   %[[ALLOCA:.*]] = alloca i32, i64 1, align 4
 // LLVM-DEVICE:   store i32 0, ptr %[[ALLOCA]], align 4
@@ -39,7 +57,6 @@ __global__ void fn() {
 // LLVM-DEVICE:   store i32 %[[VAL]], ptr @_ZZ2fnvE1j, align 4
 // LLVM-DEVICE:   ret void
 
-// OGCG-DEVICE: @_ZZ2fnvE1j = internal addrspace(3) global i32 undef, align 4
 // OGCG-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
 // OGCG-DEVICE: entry:
 // OGCG-DEVICE:   %[[ALLOCA:.*]] = alloca i32, align 4

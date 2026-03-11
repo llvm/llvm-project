@@ -58,7 +58,7 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::WebAssembly:
   case TargetCXXABI::XL:
   case TargetCXXABI::Microsoft:
-    cgm.errorNYI("C++ ABI kind not yet implemented");
+    cgm.errorNYI("createCXXABI: C++ ABI kind");
     return nullptr;
   }
 
@@ -696,7 +696,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   cir::GlobalOp entry;
   if (mlir::Operation *v = getGlobalValue(mangledName)) {
     if (!isa<cir::GlobalOp>(v))
-      errorNYI(d->getSourceRange(), "global with non-GlobalOp type");
+      errorNYI(d->getSourceRange(),
+               "getOrCreateCIRGlobal: global with non-GlobalOp type");
     entry = cast<cir::GlobalOp>(v);
   }
 
@@ -717,7 +718,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // recognizing the global as a declaration, for now only check if
     // initializer is present.
     if (isForDefinition && !entry.isDeclaration()) {
-      errorNYI(d->getSourceRange(), "global with conflicting type");
+      errorNYI(d->getSourceRange(),
+               "getOrCreateCIRGlobal: global with conflicting type");
     }
 
     // Address space check removed because it is unnecessary because CIR records
@@ -762,7 +764,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // Handle things which are present even on external declarations.
   if (d) {
     if (langOpts.OpenMP && !langOpts.OpenMPSimd)
-      errorNYI(d->getSourceRange(), "OpenMP target global variable");
+      errorNYI(d->getSourceRange(),
+               "getOrCreateCIRGlobal: OpenMP target global variable");
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
 
@@ -770,7 +773,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     if (d->getTLSKind()) {
       if (d->getTLSKind() == VarDecl::TLS_Dynamic)
-        errorNYI(d->getSourceRange(), "TLS dynamic");
+        errorNYI(d->getSourceRange(), "getOrCreateCIRGlobal: TLS dynamic");
       setTLSMode(gv, *d);
     }
 
@@ -779,14 +782,16 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // If required by the ABI, treat declarations of static data members with
     // inline initializers as definitions.
     if (astContext.isMSStaticDataMemberInlineDefinition(d))
-      errorNYI(d->getSourceRange(), "MS static data member inline definition");
+      errorNYI(d->getSourceRange(),
+               "getOrCreateCIRGlobal: MS static data member inline definition");
 
     assert(!cir::MissingFeatures::opGlobalSection());
     gv.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(d));
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
-      errorNYI(d->getSourceRange(), "XCore specific ABI requirements");
+      errorNYI(d->getSourceRange(),
+               "getOrCreateCIRGlobal: XCore specific ABI requirements");
 
     // Check if we a have a const declaration with an initializer, we may be
     // able to emit it as available_externally to expose it's value to the
@@ -794,8 +799,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     if (getLangOpts().CPlusPlus && gv.isPublic() &&
         d->getType().isConstQualified() && gv.isDeclaration() &&
         !d->hasDefinition() && d->hasInit() && !d->hasAttr<DLLImportAttr>())
-      errorNYI(d->getSourceRange(),
-               "external const declaration with initializer");
+      errorNYI(
+          d->getSourceRange(),
+          "getOrCreateCIRGlobal: external const declaration with initializer");
   }
 
   if (d &&
@@ -806,7 +812,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     // in both device and host compilations.
     if (getLangOpts().CUDA && d && d->hasAttr<HIPManagedAttr>() &&
         d->hasExternalStorage())
-      errorNYI(d->getSourceRange(), "HIP managed attribute");
+      errorNYI(d->getSourceRange(),
+               "getOrCreateCIRGlobal: HIP managed attribute");
   }
 
   assert(!cir::MissingFeatures::addressSpace());
@@ -861,7 +868,8 @@ cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
   if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
-    errorNYI(vd->getSourceRange(), "emit OpenCL/OpenMP global variable");
+    errorNYI(vd->getSourceRange(),
+             "emitGlobalVarDefinition: emit OpenCL/OpenMP global variable");
     return;
   }
 
@@ -904,7 +912,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (getLangOpts().CUDA && isCUDASharedVar) {
     init = cir::UndefAttr::get(&getMLIRContext(), convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
-    errorNYI(vd->getSourceRange(), "loader uninitialized attribute");
+    errorNYI(vd->getSourceRange(),
+             "emitGlobalVarDefinition: loader uninitialized attribute");
   } else if (!initExpr) {
     // This is a tentative definition; tentative definitions are
     // implicitly initialized with { 0 }.
@@ -927,12 +936,14 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
       if (getLangOpts().CPlusPlus) {
         if (initDecl->hasFlexibleArrayInit(astContext))
-          errorNYI(vd->getSourceRange(), "flexible array initializer");
+          errorNYI(vd->getSourceRange(),
+                   "emitGlobalVarDefinition: flexible array initializer");
         init = builder.getZeroInitAttr(convertType(qt));
         if (!isDefinitionAvailableExternally)
           needsGlobalCtor = true;
       } else {
-        errorNYI(vd->getSourceRange(), "static initializer");
+        errorNYI(vd->getSourceRange(),
+                 "emitGlobalVarDefinition: static initializer");
       }
     } else {
       init = initializer;
@@ -945,7 +956,9 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   mlir::Type initType;
   if (mlir::isa<mlir::SymbolRefAttr>(init)) {
-    errorNYI(vd->getSourceRange(), "global initializer is a symbol reference");
+    errorNYI(
+        vd->getSourceRange(),
+        "emitGlobalVarDefinition: global initializer is a symbol reference");
     return;
   } else {
     assert(mlir::isa<mlir::TypedAttr>(init) && "This should have a type");
@@ -959,14 +972,16 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   // TODO(cir): Strip off pointer casts from Entry if we get them?
 
   if (!gv || gv.getSymType() != initType) {
-    errorNYI(vd->getSourceRange(), "global initializer with type mismatch");
+    errorNYI(vd->getSourceRange(),
+             "emitGlobalVarDefinition: global initializer with type mismatch");
     return;
   }
 
   assert(!cir::MissingFeatures::maybeHandleStaticInExternC());
 
   if (vd->hasAttr<AnnotateAttr>()) {
-    errorNYI(vd->getSourceRange(), "annotate global variable");
+    errorNYI(vd->getSourceRange(),
+             "emitGlobalVarDefinition: annotate global variable");
   }
 
   // Set CIR's linkage type as appropriate.
@@ -1608,39 +1623,6 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   cir::PointerType ptrTy = getBuilder().getPointerTo(arrayTy.getElementType());
 
   return builder.getGlobalViewAttr(ptrTy, gv);
-}
-
-LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
-  if (langOpts.OpenCL) {
-    LangAS as = d ? d->getType().getAddressSpace() : LangAS::opencl_global;
-    assert(as == LangAS::opencl_global || as == LangAS::opencl_global_device ||
-           as == LangAS::opencl_global_host || as == LangAS::opencl_constant ||
-           as == LangAS::opencl_local || as >= LangAS::FirstTargetAddressSpace);
-    return as;
-  }
-
-  if (langOpts.SYCLIsDevice &&
-      (!d || d->getType().getAddressSpace() == LangAS::Default))
-    errorNYI(d->getSourceRange(), "global as for SYCL device");
-
-  if (langOpts.CUDA && langOpts.CUDAIsDevice) {
-    if (d) {
-      if (d->hasAttr<CUDAConstantAttr>())
-        return LangAS::cuda_constant;
-      if (d->hasAttr<CUDASharedAttr>())
-        return LangAS::cuda_shared;
-      if (d->hasAttr<CUDADeviceAttr>())
-        return LangAS::cuda_device;
-      if (d->getType().isConstQualified())
-        return LangAS::cuda_constant;
-    }
-    return LangAS::cuda_device;
-  }
-
-  if (langOpts.OpenMP)
-    errorNYI(d->getSourceRange(), "global as for OpenMP");
-
-  return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
 
 // TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.

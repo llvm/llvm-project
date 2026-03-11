@@ -20,6 +20,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -40,7 +41,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
   emission.isEscapingByRef = d.isEscapingByref();
   if (emission.isEscapingByRef)
     cgm.errorNYI(d.getSourceRange(),
-                 "emitAutoVarDecl: decl escaping by reference");
+                 "emitAutoVarAlloca: decl escaping by reference");
 
   CharUnits alignment = getContext().getDeclAlign(&d);
 
@@ -365,7 +366,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
     if (d.getType()->isSamplerT()) {
       // Nothing needs to be done here, but let's flag it as an error until we
       // have a test. It requires OpenCL support.
-      cgm.errorNYI(d.getSourceRange(), "emitVarDecl static sampler type");
+      cgm.errorNYI(d.getSourceRange(), "emitVarDecl: static sampler type");
       return;
     }
 
@@ -380,7 +381,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
   }
 
   if (d.getType().getAddressSpace() == LangAS::opencl_local)
-    cgm.errorNYI(d.getSourceRange(), "emitVarDecl openCL address space");
+    cgm.errorNYI(d.getSourceRange(), "emitVarDecl: openCL address space");
 
   assert(d.hasLocalStorage());
 
@@ -401,11 +402,14 @@ static std::string getStaticDeclName(CIRGenModule &cgm, const VarDecl &d) {
   if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     contextName = std::string(cgm.getMangledName(fd));
   else if (isa<BlockDecl>(dc))
-    cgm.errorNYI(d.getSourceRange(), "block decl context for static var");
+    cgm.errorNYI(d.getSourceRange(),
+                 "getStaticDeclName: block decl context for static var");
   else if (isa<ObjCMethodDecl>(dc))
-    cgm.errorNYI(d.getSourceRange(), "ObjC decl context for static var");
+    cgm.errorNYI(d.getSourceRange(),
+                 "getStaticDeclName: ObjC decl context for static var");
   else
-    cgm.errorNYI(d.getSourceRange(), "Unknown context for static var decl");
+    cgm.errorNYI(d.getSourceRange(),
+                 "getStaticDeclName: Unknown context for static var decl");
 
   contextName += "." + d.getNameAsString();
   return contextName;
@@ -435,15 +439,14 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   mlir::Type lty = getTypes().convertTypeForMem(ty);
   assert(!cir::MissingFeatures::addressSpace());
 
+  // OpenCL variables in local address space and CUDA shared
+  // variables cannot have an initializer.
   mlir::Attribute init = nullptr;
-  if (d.hasAttr<LoaderUninitializedAttr>())
-    errorNYI(d.getSourceRange(),
-             "getOrCreateStaticVarDecl: LoaderUninitializedAttr");
-  else if (ty.getAddressSpace() != LangAS::opencl_local &&
-           !d.hasAttr<CUDASharedAttr>())
+  if (ty.getAddressSpace() == LangAS::opencl_local ||
+      d.hasAttr<CUDASharedAttr>() || d.hasAttr<LoaderUninitializedAttr>())
+    init = cir::UndefAttr::get(lty);
+  else
     init = builder.getZeroInitAttr(convertType(ty));
-
-  assert(!cir::MissingFeatures::addressSpace());
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
@@ -673,22 +676,23 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // There are a lot of attributes that need to be handled here. Until
   // we start to support them, we just report an error if there are any.
   if (d.hasAttr<AnnotateAttr>())
-    cgm.errorNYI(d.getSourceRange(), "Global annotations are NYI");
+    cgm.errorNYI(d.getSourceRange(), "emitStaticVarDecl: Global annotations");
   if (d.getAttr<PragmaClangBSSSectionAttr>())
-    cgm.errorNYI(d.getSourceRange(), "CIR global BSS section attribute is NYI");
+    cgm.errorNYI(d.getSourceRange(),
+                 "emitStaticVarDecl: CIR global BSS section attribute");
   if (d.getAttr<PragmaClangDataSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
-                 "CIR global Data section attribute is NYI");
+                 "emitStaticVarDecl: CIR global Data section attribute");
   if (d.getAttr<PragmaClangRodataSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
-                 "CIR global Rodata section attribute is NYI");
+                 "emitStaticVarDecl: CIR global Rodata section attribute");
   if (d.getAttr<PragmaClangRelroSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
-                 "CIR global Relro section attribute is NYI");
+                 "emitStaticVarDecl: CIR global Relro section attribute");
 
   if (d.getAttr<SectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
-                 "CIR global object file section attribute is NYI");
+                 "emitStaticVarDecl: CIR global object file section attribute");
 
   if (cgm.getCodeGenOpts().KeepPersistentStorageVariables)
     cgm.errorNYI(d.getSourceRange(), "static var keep persistent storage");
