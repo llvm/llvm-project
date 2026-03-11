@@ -14591,15 +14591,22 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Result.reserve(NumElements);
 
     for (unsigned I = 0; I < NumElements; ++I) {
-	  APSInt DotProduct = Source.getVectorElt(I).getInt();
+      APSInt DotProduct = Source.getVectorElt(I).getInt();
+      if (IsSaturating) {
+		DotProduct = DotProduct.sext(64);
+      }
       for (unsigned J = 0; J < 4; ++J) {
         APSInt OpA = APSInt(OperandA.getVectorElt(4*I+J).getInt().zext(16), false);
-        APSInt OpB = APSInt(OperandB.getVectorElt(4*I+J).getInt().sext(16), false);
-		DotProduct += (OpA * OpB);
+        APSInt OpB =
+            APSInt(OperandB.getVectorElt(4 * I + J).getInt().sext(16), false);
+        DotProduct += APSInt((OpA * OpB).sext(64), false);
+      }
+      if (IsSaturating) {
+        DotProduct = APSInt(DotProduct.truncSSat(32), false);
 	  }
 	  Result.push_back(APValue(DotProduct));
     }
-    
+
 	return Success(APValue(Result.data(), Result.size()), E);
   }
   }
