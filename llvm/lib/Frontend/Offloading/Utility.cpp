@@ -380,6 +380,7 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
 }
 
 Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
+                                    llvm::Triple Triple,
                                     object::ImageKind ImageKind,
                                     object::OffloadKind OffloadKind,
                                     int32_t ImageFlags,
@@ -392,6 +393,7 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
   InnerImage.TheOffloadKind = OffloadKind;
   InnerImage.Flags = ImageFlags;
 
+  InnerImage.StringData["triple"] = Triple.getTriple();
   for (const auto &[Key, Value] : MetaData)
     InnerImage.StringData[Key] = Value;
 
@@ -404,17 +406,16 @@ Error offloading::containerizeImage(std::unique_ptr<MemoryBuffer> &Img,
 }
 
 Error offloading::intel::containerizeOpenMPSPIRVImage(
-    std::unique_ptr<MemoryBuffer> &Binary, StringRef CompileOpts,
-    StringRef LinkOpts) {
+    std::unique_ptr<MemoryBuffer> &Binary, llvm::Triple Triple,
+    StringRef CompileOpts, StringRef LinkOpts) {
   MapVector<StringRef, StringRef> MetaData;
   MetaData["version"] = "1.0";
-  MetaData["triple"] = "spirv64-intel";
   if (!CompileOpts.empty())
     MetaData["compile-opts"] = CompileOpts;
   if (!LinkOpts.empty())
     MetaData["link-opts"] = LinkOpts;
 
-  return containerizeImage(Binary, object::ImageKind::IMG_SPIRV,
+  return containerizeImage(Binary, Triple, object::ImageKind::IMG_SPIRV,
                            object::OffloadKind::OFK_OpenMP, /*ImageFlags=*/0,
                            MetaData);
 }
