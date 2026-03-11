@@ -11,6 +11,9 @@
 float
 MATH_MANGLE(tan)(float x)
 {
+    if (!FINITE_ONLY_OPT())
+        x = BUILTIN_ISINF_F32(x) ? QNAN_F32 : x;
+
     float ax = BUILTIN_ABS_F32(x);
 
     struct redret r = MATH_PRIVATE(trigred)(ax);
@@ -22,10 +25,6 @@ MATH_MANGLE(tan)(float x)
 #endif
 
     t = AS_FLOAT(AS_INT(t) ^ (AS_INT(x) ^ AS_INT(ax)));
-
-    if (!FINITE_ONLY_OPT()) {
-        t = BUILTIN_ISFINITE_F32(ax) ? t : QNAN_F32;
-    }
 
     return t;
 }

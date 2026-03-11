@@ -22,6 +22,9 @@ MATH_MANGLE2(sincos)(half2 x, __private half2 *cp)
 CONSTATTR half
 MATH_MANGLE(sincos)(half x, __private half *cp)
 {
+    if (!FINITE_ONLY_OPT())
+        x = BUILTIN_ISINF_F16(x) ? QNAN_F16 : x;
+
     half ax = BUILTIN_ABS_F16(x);
     struct redret r = MATH_PRIVATE(trigred)(ax);
     struct scret sc = MATH_PRIVATE(sincosred)(r.hi);
@@ -35,12 +38,6 @@ MATH_MANGLE(sincos)(half x, __private half *cp)
     sc.s = -sc.s;
     half c = odd ? sc.s : sc.c;
     c = AS_HALF((short)(AS_SHORT(c) ^ flip));
-
-    if (!FINITE_ONLY_OPT()) {
-        bool finite = BUILTIN_ISFINITE_F16(ax);
-        c = finite ? c : QNAN_F16;
-        s = finite ? s : QNAN_F16;
-    }
 
     *cp = c;
     return s;

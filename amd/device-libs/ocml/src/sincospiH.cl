@@ -23,6 +23,9 @@ MATH_MANGLE2(sincospi)(half2 x, __private half2 *cp)
 half
 MATH_MANGLE(sincospi)(half x, __private half *cp)
 {
+    if (!FINITE_ONLY_OPT())
+        x = BUILTIN_ISINF_F16(x) ? QNAN_F16 : x;
+
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F16(x));
     struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
 
@@ -34,12 +37,6 @@ MATH_MANGLE(sincospi)(half x, __private half *cp)
 
     sc.s = -sc.s;
     half c = AS_HALF((short)(AS_SHORT(odd ? sc.s : sc.c) ^ flip));
-
-    if (!FINITE_ONLY_OPT()) {
-        bool finite = BUILTIN_ISFINITE_F16(x);
-        c = finite ? c : QNAN_F16;
-        s = finite ? s : QNAN_F16;
-    }
 
     *cp = c;
     return s;
