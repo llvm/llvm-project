@@ -2297,7 +2297,7 @@ protected:
 /// A recipe to compute the pointers for widened memory accesses of \p
 /// SourceElementTy, with the \p Stride expressed in units of \p
 /// SourceElementTy. Unrolling adds an extra \p VFxPart operand for unrolled
-/// parts > 0 and it produces `GEP Ptr, VFxPart * Stride`.
+/// parts > 0 and it produces `GEP SourceElementTy Ptr, VFxPart * Stride`.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 

@@ -2868,6 +2868,7 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *Offset = State.get(getVFxPart(), true);
+  // TODO: Expand to VPInstruction to support constant folding.
   if (!match(getStride(), m_One())) {
     Value *Stride = Builder.CreateZExtOrTrunc(State.get(getStride(), true),
                                               Offset->getType());

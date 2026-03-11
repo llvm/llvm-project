@@ -6834,7 +6834,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
       const SCEV *Start;
       const APInt *Step;
-      // TODO: Support loop invariant stride.
+      // TODO: Support non-constant loop invariant stride.
       if (!match(PtrSCEV,
                  m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step))))
         continue;
@@ -6843,7 +6843,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!isa<SCEVUnknown, SCEVConstant>(Start))
         continue;
 
-      // Add VF of i32 version for EVL.
+      // Get VF as i32 for the vector length operand.
       if (!I32VF) {
         VPBuilder Builder(Plan.getVectorPreheader());
         I32VF = Builder.createScalarZExtOrTrunc(
