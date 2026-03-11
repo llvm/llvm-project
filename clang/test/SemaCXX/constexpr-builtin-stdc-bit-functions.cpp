@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++14 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++14 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
-// RUN: %if clang-target-64-bits %{ %clang_cc1 -std=c++14 -fsyntax-only -verify %s %}
-// RUN: %if clang-target-64-bits %{ %clang_cc1 -std=c++14 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter %}
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 namespace test_stdc_leading_zeros {
 
@@ -15,9 +15,6 @@ static_assert(__builtin_stdc_leading_zeros((unsigned short)0x8000) == 0, "");
 static_assert(__builtin_stdc_leading_zeros(0U) == 32, "");
 static_assert(__builtin_stdc_leading_zeros(1U) == 31, "");
 static_assert(__builtin_stdc_leading_zeros(0x80000000U) == 0, "");
-static_assert(__builtin_stdc_leading_zeros(0UL) == 64, "");
-static_assert(__builtin_stdc_leading_zeros(1UL) == 63, "");
-static_assert(__builtin_stdc_leading_zeros(0x8000000000000000UL) == 0, "");
 static_assert(__builtin_stdc_leading_zeros(0ULL) == 64, "");
 static_assert(__builtin_stdc_leading_zeros(1ULL) == 63, "");
 static_assert(__builtin_stdc_leading_zeros(0x8000000000000000ULL) == 0, "");
@@ -35,9 +32,6 @@ static_assert(__builtin_stdc_leading_ones((unsigned short)0xF000) == 4, "");
 static_assert(__builtin_stdc_leading_ones(0U) == 0, "");
 static_assert(__builtin_stdc_leading_ones(0xFFFFFFFFU) == 32, "");
 static_assert(__builtin_stdc_leading_ones(0xF0000000U) == 4, "");
-static_assert(__builtin_stdc_leading_ones(0UL) == 0, "");
-static_assert(__builtin_stdc_leading_ones(0xFFFFFFFFFFFFFFFFUL) == 64, "");
-static_assert(__builtin_stdc_leading_ones(0xF000000000000000UL) == 4, "");
 static_assert(__builtin_stdc_leading_ones(0ULL) == 0, "");
 static_assert(__builtin_stdc_leading_ones(0xFFFFFFFFFFFFFFFFULL) == 64, "");
 
@@ -54,9 +48,6 @@ static_assert(__builtin_stdc_trailing_zeros((unsigned short)0x8000) == 15, "");
 static_assert(__builtin_stdc_trailing_zeros(0U) == 32, "");
 static_assert(__builtin_stdc_trailing_zeros(1U) == 0, "");
 static_assert(__builtin_stdc_trailing_zeros(0x80000000U) == 31, "");
-static_assert(__builtin_stdc_trailing_zeros(0UL) == 64, "");
-static_assert(__builtin_stdc_trailing_zeros(1UL) == 0, "");
-static_assert(__builtin_stdc_trailing_zeros(0x8000000000000000UL) == 63, "");
 static_assert(__builtin_stdc_trailing_zeros(0ULL) == 64, "");
 static_assert(__builtin_stdc_trailing_zeros(1ULL) == 0, "");
 static_assert(__builtin_stdc_trailing_zeros(0x8000000000000000ULL) == 63, "");
@@ -75,9 +66,6 @@ static_assert(__builtin_stdc_trailing_ones(0U) == 0, "");
 static_assert(__builtin_stdc_trailing_ones(1U) == 1, "");
 static_assert(__builtin_stdc_trailing_ones(0xFFFFFFFFU) == 32, "");
 static_assert(__builtin_stdc_trailing_ones(0x0000000FU) == 4, "");
-static_assert(__builtin_stdc_trailing_ones(0UL) == 0, "");
-static_assert(__builtin_stdc_trailing_ones(0xFFFFFFFFFFFFFFFFUL) == 64, "");
-static_assert(__builtin_stdc_trailing_ones(0x000000000000000FUL) == 4, "");
 static_assert(__builtin_stdc_trailing_ones(0ULL) == 0, "");
 static_assert(__builtin_stdc_trailing_ones(1ULL) == 1, "");
 static_assert(__builtin_stdc_trailing_ones(0xFFFFFFFFFFFFFFFFULL) == 64, "");
@@ -95,9 +83,6 @@ static_assert(__builtin_stdc_first_leading_zero((unsigned short)0xFFFF) == 0, ""
 static_assert(__builtin_stdc_first_leading_zero((unsigned short)0xF000) == 5, "");
 static_assert(__builtin_stdc_first_leading_zero(0xFFFFFFFFU) == 0, "");
 static_assert(__builtin_stdc_first_leading_zero(0xF0000000U) == 5, "");
-static_assert(__builtin_stdc_first_leading_zero(0UL) == 1, "");
-static_assert(__builtin_stdc_first_leading_zero(0xFFFFFFFFFFFFFFFFUL) == 0, "");
-static_assert(__builtin_stdc_first_leading_zero(0xF000000000000000UL) == 5, "");
 static_assert(__builtin_stdc_first_leading_zero(0ULL) == 1, "");
 static_assert(__builtin_stdc_first_leading_zero(0xFFFFFFFFFFFFFFFFULL) == 0, "");
 static_assert(__builtin_stdc_first_leading_zero(0xF000000000000000ULL) == 5, "");
@@ -116,9 +101,6 @@ static_assert(__builtin_stdc_first_leading_one((unsigned short)1) == 16, "");
 static_assert(__builtin_stdc_first_leading_one(0U) == 0, "");
 static_assert(__builtin_stdc_first_leading_one(0x80000000U) == 1, "");
 static_assert(__builtin_stdc_first_leading_one(1U) == 32, "");
-static_assert(__builtin_stdc_first_leading_one(0UL) == 0, "");
-static_assert(__builtin_stdc_first_leading_one(0x8000000000000000UL) == 1, "");
-static_assert(__builtin_stdc_first_leading_one(1UL) == 64, "");
 static_assert(__builtin_stdc_first_leading_one(0ULL) == 0, "");
 static_assert(__builtin_stdc_first_leading_one(0x8000000000000000ULL) == 1, "");
 static_assert(__builtin_stdc_first_leading_one(1ULL) == 64, "");
@@ -136,9 +118,6 @@ static_assert(__builtin_stdc_first_trailing_zero((unsigned short)0xFFFF) == 0, "
 static_assert(__builtin_stdc_first_trailing_zero((unsigned short)0x000F) == 5, "");
 static_assert(__builtin_stdc_first_trailing_zero(0xFFFFFFFFU) == 0, "");
 static_assert(__builtin_stdc_first_trailing_zero(0x0000000FU) == 5, "");
-static_assert(__builtin_stdc_first_trailing_zero(0UL) == 1, "");
-static_assert(__builtin_stdc_first_trailing_zero(0xFFFFFFFFFFFFFFFFUL) == 0, "");
-static_assert(__builtin_stdc_first_trailing_zero(0x000000000000000FUL) == 5, "");
 static_assert(__builtin_stdc_first_trailing_zero(0ULL) == 1, "");
 static_assert(__builtin_stdc_first_trailing_zero(0xFFFFFFFFFFFFFFFFULL) == 0, "");
 static_assert(__builtin_stdc_first_trailing_zero(0x000000000000000FULL) == 5, "");
@@ -157,9 +136,6 @@ static_assert(__builtin_stdc_first_trailing_one((unsigned short)0x8000) == 16, "
 static_assert(__builtin_stdc_first_trailing_one(0U) == 0, "");
 static_assert(__builtin_stdc_first_trailing_one(0x80000000U) == 32, "");
 static_assert(__builtin_stdc_first_trailing_one(1U) == 1, "");
-static_assert(__builtin_stdc_first_trailing_one(0UL) == 0, "");
-static_assert(__builtin_stdc_first_trailing_one(1UL) == 1, "");
-static_assert(__builtin_stdc_first_trailing_one(0x8000000000000000UL) == 64, "");
 static_assert(__builtin_stdc_first_trailing_one(0ULL) == 0, "");
 static_assert(__builtin_stdc_first_trailing_one(1ULL) == 1, "");
 static_assert(__builtin_stdc_first_trailing_one(0x8000000000000000ULL) == 64, "");
@@ -177,9 +153,6 @@ static_assert(__builtin_stdc_count_zeros((unsigned short)0xAAAA) == 8, "");
 static_assert(__builtin_stdc_count_zeros(0U) == 32, "");
 static_assert(__builtin_stdc_count_zeros(0xFFFFFFFFU) == 0, "");
 static_assert(__builtin_stdc_count_zeros(0xAAAAAAAAU) == 16, "");
-static_assert(__builtin_stdc_count_zeros(0UL) == 64, "");
-static_assert(__builtin_stdc_count_zeros(0xFFFFFFFFFFFFFFFFUL) == 0, "");
-static_assert(__builtin_stdc_count_zeros(0xAAAAAAAAAAAAAAAAUL) == 32, "");
 static_assert(__builtin_stdc_count_zeros(0ULL) == 64, "");
 static_assert(__builtin_stdc_count_zeros(0xFFFFFFFFFFFFFFFFULL) == 0, "");
 static_assert(__builtin_stdc_count_zeros(0xAAAAAAAAAAAAAAAAULL) == 32, "");
@@ -197,9 +170,6 @@ static_assert(__builtin_stdc_count_ones((unsigned short)0xAAAA) == 8, "");
 static_assert(__builtin_stdc_count_ones(0U) == 0, "");
 static_assert(__builtin_stdc_count_ones(0xFFFFFFFFU) == 32, "");
 static_assert(__builtin_stdc_count_ones(0xAAAAAAAAU) == 16, "");
-static_assert(__builtin_stdc_count_ones(0UL) == 0, "");
-static_assert(__builtin_stdc_count_ones(0xFFFFFFFFFFFFFFFFUL) == 64, "");
-static_assert(__builtin_stdc_count_ones(0xAAAAAAAAAAAAAAAAUL) == 32, "");
 static_assert(__builtin_stdc_count_ones(0ULL) == 0, "");
 static_assert(__builtin_stdc_count_ones(0xFFFFFFFFFFFFFFFFULL) == 64, "");
 static_assert(__builtin_stdc_count_ones(0xAAAAAAAAAAAAAAAAULL) == 32, "");
@@ -221,10 +191,6 @@ static_assert(__builtin_stdc_has_single_bit(0U) == 0, "");
 static_assert(__builtin_stdc_has_single_bit(1U) == 1, "");
 static_assert(__builtin_stdc_has_single_bit(0x80000000U) == 1, "");
 static_assert(__builtin_stdc_has_single_bit(0xFFFFFFFFU) == 0, "");
-static_assert(__builtin_stdc_has_single_bit(0UL) == 0, "");
-static_assert(__builtin_stdc_has_single_bit(1UL) == 1, "");
-static_assert(__builtin_stdc_has_single_bit(0x8000000000000000UL) == 1, "");
-static_assert(__builtin_stdc_has_single_bit(0xFFFFFFFFFFFFFFFFUL) == 0, "");
 static_assert(__builtin_stdc_has_single_bit(0ULL) == 0, "");
 static_assert(__builtin_stdc_has_single_bit(1ULL) == 1, "");
 static_assert(__builtin_stdc_has_single_bit(0x8000000000000000ULL) == 1, "");
@@ -246,9 +212,6 @@ static_assert(__builtin_stdc_bit_width((unsigned short)0x8000) == 16, "");
 static_assert(__builtin_stdc_bit_width(0U) == 0, "");
 static_assert(__builtin_stdc_bit_width(1U) == 1, "");
 static_assert(__builtin_stdc_bit_width(0x80000000U) == 32, "");
-static_assert(__builtin_stdc_bit_width(0UL) == 0, "");
-static_assert(__builtin_stdc_bit_width(1UL) == 1, "");
-static_assert(__builtin_stdc_bit_width(0x8000000000000000UL) == 64, "");
 static_assert(__builtin_stdc_bit_width(0ULL) == 0, "");
 static_assert(__builtin_stdc_bit_width(1ULL) == 1, "");
 static_assert(__builtin_stdc_bit_width(0x8000000000000000ULL) == 64, "");
@@ -273,9 +236,6 @@ static_assert(__builtin_stdc_bit_floor(1U) == 1U, "");
 static_assert(__builtin_stdc_bit_floor(7U) == 4U, "");
 static_assert(__builtin_stdc_bit_floor(0x80000000U) == 0x80000000U, "");
 static_assert(__builtin_stdc_bit_floor(0xFFFFFFFFU) == 0x80000000U, "");
-static_assert(__builtin_stdc_bit_floor(0UL) == 0UL, "");
-static_assert(__builtin_stdc_bit_floor(1UL) == 1UL, "");
-static_assert(__builtin_stdc_bit_floor(0xFFFFFFFFFFFFFFFFUL) == 0x8000000000000000UL, "");
 static_assert(__builtin_stdc_bit_floor(0ULL) == 0ULL, "");
 static_assert(__builtin_stdc_bit_floor(1ULL) == 1ULL, "");
 static_assert(__builtin_stdc_bit_floor(0xFFFFFFFFFFFFFFFFULL) == 0x8000000000000000ULL, "");
@@ -301,10 +261,6 @@ static_assert(__builtin_stdc_bit_ceil(7U) == 8U, "");
 static_assert(__builtin_stdc_bit_ceil(0x80000000U) == 0x80000000U, "");
 // Overflow: next power of 2 exceeds type width; implementation wraps.
 static_assert(__builtin_stdc_bit_ceil(0xFFFFFFFFU) == 0xFFFFFFFFU, "");
-static_assert(__builtin_stdc_bit_ceil(0UL) == 1UL, "");
-static_assert(__builtin_stdc_bit_ceil(1UL) == 1UL, "");
-static_assert(__builtin_stdc_bit_ceil(7UL) == 8UL, "");
-static_assert(__builtin_stdc_bit_ceil(0x8000000000000000UL) == 0x8000000000000000UL, "");
 static_assert(__builtin_stdc_bit_ceil(0ULL) == 1ULL, "");
 static_assert(__builtin_stdc_bit_ceil(1ULL) == 1ULL, "");
 static_assert(__builtin_stdc_bit_ceil(7ULL) == 8ULL, "");
@@ -415,6 +371,60 @@ static_assert(__builtin_stdc_bit_width((unsigned _BitInt(9))0x100) == 9, "");
 static_assert(__builtin_stdc_bit_floor((unsigned _BitInt(9))0x1FF) == 0x100, "");
 
 } // namespace test_bitint
+
+namespace test_stdc_ulong {
+
+constexpr unsigned long ULongWidth = __SIZEOF_LONG__ * 8;
+constexpr unsigned long ULongMSB = 1UL << (ULongWidth - 1);
+constexpr unsigned long ULongAllOnes = ~0UL;
+constexpr unsigned long ULongTopNibbleOnes = ULongAllOnes << (ULongWidth - 4);
+
+static_assert(__builtin_stdc_leading_zeros(0UL) == ULongWidth, "");
+static_assert(__builtin_stdc_leading_zeros(1UL) == ULongWidth - 1, "");
+static_assert(__builtin_stdc_leading_zeros(ULongMSB) == 0, "");
+static_assert(__builtin_stdc_leading_ones(0UL) == 0, "");
+static_assert(__builtin_stdc_leading_ones(ULongAllOnes) == ULongWidth, "");
+static_assert(__builtin_stdc_leading_ones(ULongTopNibbleOnes) == 4, "");
+static_assert(__builtin_stdc_trailing_zeros(0UL) == ULongWidth, "");
+static_assert(__builtin_stdc_trailing_zeros(1UL) == 0, "");
+static_assert(__builtin_stdc_trailing_zeros(ULongMSB) == ULongWidth - 1, "");
+static_assert(__builtin_stdc_trailing_ones(0UL) == 0, "");
+static_assert(__builtin_stdc_trailing_ones(ULongAllOnes) == ULongWidth, "");
+static_assert(__builtin_stdc_trailing_ones(0xFUL) == 4, "");
+static_assert(__builtin_stdc_first_leading_zero(0UL) == 1, "");
+static_assert(__builtin_stdc_first_leading_zero(ULongAllOnes) == 0, "");
+static_assert(__builtin_stdc_first_leading_zero(ULongTopNibbleOnes) == 5, "");
+static_assert(__builtin_stdc_first_leading_one(0UL) == 0, "");
+static_assert(__builtin_stdc_first_leading_one(ULongMSB) == 1, "");
+static_assert(__builtin_stdc_first_leading_one(1UL) == ULongWidth, "");
+static_assert(__builtin_stdc_first_trailing_zero(0UL) == 1, "");
+static_assert(__builtin_stdc_first_trailing_zero(ULongAllOnes) == 0, "");
+static_assert(__builtin_stdc_first_trailing_zero(0xFUL) == 5, "");
+static_assert(__builtin_stdc_first_trailing_one(0UL) == 0, "");
+static_assert(__builtin_stdc_first_trailing_one(1UL) == 1, "");
+static_assert(__builtin_stdc_first_trailing_one(ULongMSB) == ULongWidth, "");
+static_assert(__builtin_stdc_count_zeros(0UL) == ULongWidth, "");
+static_assert(__builtin_stdc_count_zeros(ULongAllOnes) == 0, "");
+static_assert(__builtin_stdc_count_zeros(ULongMSB) == ULongWidth - 1, "");
+static_assert(__builtin_stdc_count_ones(0UL) == 0, "");
+static_assert(__builtin_stdc_count_ones(ULongAllOnes) == ULongWidth, "");
+static_assert(__builtin_stdc_count_ones(ULongMSB) == 1, "");
+static_assert(__builtin_stdc_has_single_bit(0UL) == 0, "");
+static_assert(__builtin_stdc_has_single_bit(1UL) == 1, "");
+static_assert(__builtin_stdc_has_single_bit(ULongMSB) == 1, "");
+static_assert(__builtin_stdc_has_single_bit(ULongAllOnes) == 0, "");
+static_assert(__builtin_stdc_bit_width(0UL) == 0, "");
+static_assert(__builtin_stdc_bit_width(1UL) == 1, "");
+static_assert(__builtin_stdc_bit_width(ULongMSB) == ULongWidth, "");
+static_assert(__builtin_stdc_bit_floor(0UL) == 0UL, "");
+static_assert(__builtin_stdc_bit_floor(1UL) == 1UL, "");
+static_assert(__builtin_stdc_bit_floor(ULongAllOnes) == ULongMSB, "");
+static_assert(__builtin_stdc_bit_ceil(0UL) == 1UL, "");
+static_assert(__builtin_stdc_bit_ceil(1UL) == 1UL, "");
+static_assert(__builtin_stdc_bit_ceil(7UL) == 8UL, "");
+static_assert(__builtin_stdc_bit_ceil(ULongMSB) == ULongMSB, "");
+
+} // namespace test_stdc_ulong
 
 namespace test_errors {
 
