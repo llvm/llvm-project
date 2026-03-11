@@ -117,10 +117,10 @@ public:
     return __te_impl::__environment_is<_Id>();
   }
 #    else
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment() = delete;
+  static text_encoding environment() = delete;
 
   template <id _Id>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() = delete;
+  static bool environment_is() = delete;
 #    endif
 };
 
