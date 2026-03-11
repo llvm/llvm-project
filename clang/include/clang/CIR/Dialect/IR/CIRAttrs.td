@@ -1358,6 +1358,30 @@ def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
 }
 
 //===----------------------------------------------------------------------===//
+// UsualDeleteParamsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_UsualDeleteParamsAttr
+    : CIR_Attr<"UsualDeleteParams", "usual_delete_params"> {
+  let summary = "Parameters describing the usual operator delete signature";
+  let description = [{
+    Captures the properties of the usual deallocation function associated with
+    an operator delete. These mirror the fields of `clang::UsualDeleteParams`.
+  }];
+
+  let parameters = (ins
+    DefaultValuedParameter<"bool", "false">:$size,
+    DefaultValuedParameter<"bool", "false">:$alignment,
+    DefaultValuedParameter<"bool", "false">:$type_aware_delete,
+    DefaultValuedParameter<"bool", "false">:$destroying_delete
+  );
+
+  let assemblyFormat = [{
+    `<` struct($size, $alignment, $type_aware_delete, $destroying_delete) `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // AST Wrappers
 //===----------------------------------------------------------------------===//
 
