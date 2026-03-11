@@ -150,8 +150,7 @@ define i1 @fpext_maybe_nan(float %arg0) {
 
 define i1 @fptrunc_maybe_nan(double %arg0) {
 ; CHECK-LABEL: @fptrunc_maybe_nan(
-; CHECK-NEXT:    [[OP:%.*]] = fptrunc double [[ARG0:%.*]] to float
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord float [[OP]], 0.000000e+00
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ARG0:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[TMP]]
 ;
   %op = fptrunc double %arg0 to float
