@@ -2041,6 +2041,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
 
 void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     const parser::Name &iv) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   // Find the parallel or task generating construct enclosing the
   // sequential loop.
   auto targetIt{dirContext_.rbegin()};
@@ -2051,6 +2052,11 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (llvm::omp::allParallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
+    }
+    if (version >= 52) {
+      if (llvm::omp::allTeamsSet.test(targetIt->directive)) {
+        break;
+      }
     }
   }
   if (IsLocalInsideScope(*iv.symbol, targetIt->scope)) {
