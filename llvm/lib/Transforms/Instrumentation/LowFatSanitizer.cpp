@@ -99,6 +99,18 @@ private:
   GlobalVariable *MasksTableGV  = nullptr;
 #endif
 
+  // Helper: GEP + load from a fixed absolute base at runtime index.
+  Value *loadFromFixedTable(IRBuilder<> &IRB, uint64_t TableBase,
+                            Type *ElemTy, Value *Idx) {
+    LLVMContext &Ctx = M.getContext();
+    Type *I64Ty = Type::getInt64Ty(Ctx);
+    Value *BasePtr = IRB.CreateIntToPtr(ConstantInt::get(I64Ty, TableBase),
+                                        PointerType::getUnqual(Ctx));
+    Value *Idx64   = IRB.CreateZExtOrTrunc(Idx, I64Ty);
+    Value *GEP     = IRB.CreateInBoundsGEP(ElemTy, BasePtr, {Idx64});
+    return IRB.CreateLoad(ElemTy, GEP);
+  }
+
   // Constants (kept in sync with lf_config.h / lf_config_generated.h)
 #ifdef LOWFAT_CUSTOM_CONFIG
   static constexpr uint64_t RegionBase     = 0x100000000000ULL;
@@ -111,6 +123,10 @@ private:
   static constexpr uint64_t NumSizeClasses = 27; // kMaxSizeLog(30) - kMinSizeLog(4) + 1
   static constexpr uint64_t MinSizeLog     = 4;
 #endif
+
+  // Fixed absolute addresses for metadata tables (must match lf_rtl.cpp)
+  static constexpr uint64_t kTablesBase   = 0x200000000ULL;
+  static constexpr uint64_t kTablesOffset = 0x1000000ULL;
 };
 
 FunctionCallee LowFatSanitizer::getReportOobFn() {
@@ -248,21 +264,11 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   LLVMContext &Ctx = M.getContext();
   Type *I64Ty  = Type::getInt64Ty(Ctx);
   Type *I128Ty = Type::getInt128Ty(Ctx);
-  Type *I8Ty   = Type::getInt8Ty(Ctx);
 
-  // Helper: GEP + load from a GlobalVariable array at runtime index.
-  auto loadFromTable = [&](GlobalVariable *GV, Type *ElemTy,
-                            Value *Idx) -> Value * {
-    Value *Zero = ConstantInt::get(Type::getInt64Ty(Ctx), 0);
-    // Extend RegionIndex to i64 if it's a different width
-    Value *Idx64 = IRB.CreateZExtOrTrunc(Idx, I64Ty);
-    Value *GEP   = IRB.CreateInBoundsGEP(GV->getValueType(), GV,
-                                          {Zero, Idx64});
-    return IRB.CreateLoad(ElemTy, GEP);
-  };
-
-  Value *AllocSize64 = loadFromTable(getSizesTable(),  I64Ty, RegionIndex);
-  Value *Mask64      = loadFromTable(getMasksTable(),  I64Ty, RegionIndex);
+  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *Mask64      = loadFromFixedTable(IRB, kTablesBase + 3 * kTablesOffset,
+                                          I64Ty, RegionIndex);
 
   // Narrow to IntptrTy (which is i64 on 64-bit targets)
   Value *AllocSize = IRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
@@ -293,7 +299,8 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
     return {AllocSize, BaseAnd};
 
   // --- MUL (non-POW2) base ---
-  Value *Magic64     = loadFromTable(getMagicsTable(), I64Ty, RegionIndex);
+  Value *Magic64     = loadFromFixedTable(IRB, kTablesBase + 1 * kTablesOffset,
+                                          I64Ty, RegionIndex);
 
   Value *Ptr128   = IRB.CreateZExt(PtrInt, I128Ty);
   Value *Magic128 = IRB.CreateZExt(IRB.CreateZExtOrTrunc(Magic64, IntptrTy),
@@ -354,9 +361,15 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   Value *RegionOffset  = IRB.CreateSub(PtrInt, RegionBaseVal);
   Value *RegionIndex   = IRB.CreateLShr(RegionOffset, RegionSizeLog);
 
-  // 2. Check if LowFat pointer: RegionIndex < NumSizeClasses
-  Value *MaxRegion  = ConstantInt::get(IntptrTy, NumSizeClasses);
-  Value *IsLowFat   = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+  // 2. Optimized IsLowFat check:
+  // Instead of comparing RegionIndex < NumSizeClasses, we load the Size
+  // from the fixed table and check if it's non-zero. If it's zero, this
+  // is not a LowFat pointer and we skip the check.
+  LLVMContext &Ctx = M.getContext();
+  Type *I64Ty = Type::getInt64Ty(Ctx);
+  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
   IRBuilder<> ThenIRB(ThenTerm);
@@ -364,16 +377,15 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   bool IsWrite = isa<StoreInst>(I) || isa<AtomicRMWInst>(I) ||
                  isa<AtomicCmpXchgInst>(I);
 
+  Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
+
 #ifdef LOWFAT_CUSTOM_CONFIG
-  auto [AllocSize, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
+  auto [_, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
 #else
-  Value *MinSizeLogVal = ConstantInt::get(IntptrTy, MinSizeLog);
-  Value *ShiftAmount   = ThenIRB.CreateAdd(RegionIndex, MinSizeLogVal);
-  Value *SizeOne       = ConstantInt::get(IntptrTy, 1);
-  Value *AllocSize     = ThenIRB.CreateShl(SizeOne, ShiftAmount);
-  Value *SizeMinusOne  = ThenIRB.CreateSub(AllocSize, SizeOne);
-  Value *Mask          = ThenIRB.CreateNot(SizeMinusOne);
-  Value *Base          = ThenIRB.CreateAnd(PtrInt, Mask);
+  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
+  Value *Base      = ThenIRB.CreateAnd(PtrInt, Mask);
 #endif
 
   emitOobCheck(ThenIRB, PtrInt, Base, AllocSize, FixedAccessSize, nullptr,
@@ -396,22 +408,24 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
   Value *RegionOffset  = IRB.CreateSub(PtrInt, RegionBaseVal);
   Value *RegionIndex   = IRB.CreateLShr(RegionOffset, RegionSizeLog);
 
-  Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
-  Value *IsLowFat  = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+  LLVMContext &Ctx = M.getContext();
+  Type *I64Ty = Type::getInt64Ty(Ctx);
+  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
   IRBuilder<> ThenIRB(ThenTerm);
 
+  Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
+
 #ifdef LOWFAT_CUSTOM_CONFIG
-  auto [AllocSize, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
+  auto [_, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
 #else
-  Value *MinSizeLogVal = ConstantInt::get(IntptrTy, MinSizeLog);
-  Value *ShiftAmount   = ThenIRB.CreateAdd(RegionIndex, MinSizeLogVal);
-  Value *SizeOne       = ConstantInt::get(IntptrTy, 1);
-  Value *AllocSize     = ThenIRB.CreateShl(SizeOne, ShiftAmount);
-  Value *SizeMinusOne  = ThenIRB.CreateSub(AllocSize, SizeOne);
-  Value *Mask          = ThenIRB.CreateNot(SizeMinusOne);
-  Value *Base          = ThenIRB.CreateAnd(PtrInt, Mask);
+  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
+  Value *Base      = ThenIRB.CreateAnd(PtrInt, Mask);
 #endif
 
   emitOobCheck(ThenIRB, PtrInt, Base, AllocSize, 0, SizeInt, ThenTerm, IsWrite);
@@ -454,30 +468,32 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
   // RESULT pointer — what we're checking stays within [Base, Base+AllocSize).
   Value *ResInt = IRB.CreatePtrToInt(GEP, IntptrTy);
 
-  // 1. Is the source a LowFat pointer?
+  // 1. Compute Base and AllocSize from the SOURCE pointer.
   Value *RegionBaseVal = ConstantInt::get(IntptrTy, RegionBase);
   Value *RegionOffset  = IRB.CreateSub(SrcInt, RegionBaseVal);
   Value *RegionIndex   = IRB.CreateLShr(RegionOffset, RegionSizeLog);
-  Value *MaxRegion     = ConstantInt::get(IntptrTy, NumSizeClasses);
-  Value *IsLowFat      = IRB.CreateICmpULT(RegionIndex, MaxRegion);
+
+  LLVMContext &Ctx = M.getContext();
+  Type *I64Ty = Type::getInt64Ty(Ctx);
+  Value *AllocSize64 = loadFromFixedTable(IRB, kTablesBase + 0 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *IsLowFat = IRB.CreateICmpNE(AllocSize64, ConstantInt::get(I64Ty, 0));
 
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, InsertPt, false);
   IRBuilder<> ThenIRB(ThenTerm);
 
-  // 2. Compute Base and AllocSize from the SOURCE pointer.
+  Value *AllocSize = ThenIRB.CreateZExtOrTrunc(AllocSize64, IntptrTy);
+
 #ifdef LOWFAT_CUSTOM_CONFIG
-  auto [AllocSize, Base] = emitDynamicBaseMagic(ThenIRB, SrcInt, RegionIndex);
+  auto [_, Base] = emitDynamicBaseMagic(ThenIRB, SrcInt, RegionIndex);
 #else
-  Value *MinSizeLogVal = ConstantInt::get(IntptrTy, MinSizeLog);
-  Value *ShiftAmount   = ThenIRB.CreateAdd(RegionIndex, MinSizeLogVal);
-  Value *SizeOne       = ConstantInt::get(IntptrTy, 1);
-  Value *AllocSize     = ThenIRB.CreateShl(SizeOne, ShiftAmount);
-  Value *SizeMinusOne  = ThenIRB.CreateSub(AllocSize, SizeOne);
-  Value *Mask          = ThenIRB.CreateNot(SizeMinusOne);
-  Value *Base          = ThenIRB.CreateAnd(SrcInt, Mask);
+  Value *Mask64      = loadFromFixedTable(ThenIRB, kTablesBase + 3 * kTablesOffset,
+                                          I64Ty, RegionIndex);
+  Value *Mask      = ThenIRB.CreateZExtOrTrunc(Mask64, IntptrTy);
+  Value *Base      = ThenIRB.CreateAnd(SrcInt, Mask);
 #endif
 
-  // 3. OOB if result underflows (< Base) or reaches/passes the end (>= Base+AllocSize).
+  // 2. OOB if result underflows (< Base) or reaches/passes the end (>= Base+AllocSize).
   emitOobCheck(ThenIRB, ResInt, Base, AllocSize, 0, nullptr, ThenTerm, false);
 
   NumInstrumentedGEPs++;

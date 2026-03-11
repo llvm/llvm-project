@@ -65,6 +65,17 @@ static FreeBlock *free_lists[kMaxSizeClasses];
 // size classes, which is the common case in multi-threaded programs.
 static StaticSpinMutex region_locks[kMaxSizeClasses];
 
+// Fixed address where the metadata tables (sizes, magics, is_pow2, masks)
+// are mapped during initialization. This allows the LLVM pass to use
+// absolute addressing (imm[index*8]) instead of PC-relative loads.
+//
+//   0x200000000: Sizes (8 bytes per class)
+//   0x201000000: Magics (8 bytes per class)
+//   0x202000000: IsPow2 (1 byte per class)
+//   0x203000000: Masks (8 bytes per class)
+static constexpr uptr kTablesBase   = 0x200000000ULL;
+static constexpr uptr kTablesOffset = 0x1000000ULL;  // 16 MB between tables
+
 static void InitializeFlags() {
   SetCommonFlagsDefaults();
 
@@ -83,6 +94,45 @@ static void InitializeFlags() {
   parser.ParseStringFromEnv("LOWFAT_OPTIONS");
 
   InitializeCommonFlags();
+}
+
+static void InitTables() {
+  // Map 64 MB of address space at kTablesBase for the metadata tables.
+  // This is enough for 2^21 (2 million) size classes, which covers the entire
+  // 64 TB address space given 32 GB regions.
+  if (!MmapFixedNoReserve(kTablesBase, 64 * 1024 * 1024, "lowfat_tables"))
+    Die();
+
+  u64 *sizes  = (u64 *)(kTablesBase + 0 * kTablesOffset);
+  u64 *magics = (u64 *)(kTablesBase + 1 * kTablesOffset);
+  u8  *ispow2 = (u8  *)(kTablesBase + 2 * kTablesOffset);
+  u64 *masks  = (u64 *)(kTablesBase + 3 * kTablesOffset);
+
+  // Initialize all possible region indices (up to 1024 for now, which covers 32TB)
+  // with "poison" values: Size=0, Base=0. Any access to a non-LowFat pointer
+  // will then result in (Base=0, End=0), which always fails the OOB check:
+  //   Ptr < 0 || Ptr >= 0  => Always True.
+  for (uptr i = 0; i < 1024; i++) {
+    if (i < kNumSizeClasses) {
+#ifdef LOWFAT_CUSTOM_CONFIG
+      sizes[i]  = (u64)kLowFatGenSizes[i];
+      magics[i] = (u64)kLowFatGenMagics[i];
+      ispow2[i] = (u8) kLowFatGenIsPow2[i];
+      masks[i]  = (u64)kLowFatGenMasks[i];
+#else
+      u64 size = (u64)SizeClassToSize(i);
+      sizes[i]  = size;
+      magics[i] = 0;
+      ispow2[i] = 1;
+      masks[i]  = ~(size - 1);
+#endif
+    } else {
+      sizes[i]  = 0;
+      magics[i] = 0;
+      ispow2[i] = 0;
+      masks[i]  = 0;
+    }
+  }
 }
 
 static void InitRegionTable() {
@@ -235,6 +285,8 @@ void __lf_init() {
     return;
 
   __lowfat::InitializeFlags();
+
+  __lowfat::InitTables();
 
   __lowfat::InitRegionTable();
 
