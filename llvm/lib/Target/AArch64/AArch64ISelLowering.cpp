@@ -10514,7 +10514,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       assert(Subtarget->isTargetWindows() &&
              "Windows is the only supported COFF target");
       Callee = getGOT(G, DAG, AArch64II::MO_DLLIMPORT);
-    } else {
+    } else if (!CLI.PAI || !IsTailCall) {
       const GlobalValue *GV = G->getGlobal();
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
     }
