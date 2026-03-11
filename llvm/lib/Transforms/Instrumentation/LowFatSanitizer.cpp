@@ -319,22 +319,21 @@ void LowFatSanitizer::emitOobCheck(IRBuilder<> &IRB, Value *PtrInt, Value *Base,
                                   Value *AllocSize, uint64_t FixedAccessSize,
                                   Value *DynAccessSize,
                                   Instruction *InsertBefore, bool IsWrite) {
-  Value *AccessSize = DynAccessSize;
-  if (!AccessSize)
-    AccessSize = ConstantInt::get(IntptrTy, FixedAccessSize);
-
-  Value *End = IRB.CreateAdd(Base, AllocSize);
-  Value *AccessEnd = IRB.CreateAdd(PtrInt, AccessSize);
-
-  // For GEPs (no AccessSize/DynAccessSize), we check if result is < Base OR >=
-  // End. For loads/stores, we just check if AccessEnd > End.
   Value *IsOOB = nullptr;
   if (!FixedAccessSize && !DynAccessSize) {
-    Value *TooLow = IRB.CreateICmpULT(PtrInt, Base);
-    Value *TooHigh = IRB.CreateICmpUGE(PtrInt, End);
-    IsOOB = IRB.CreateOr(TooLow, TooHigh);
+    // Compact GEP check: OOB iff (ptr - base) >= alloc_size (unsigned).
+    // This catches both underflow and overflow without separate compares.
+    Value *Diff = IRB.CreateSub(PtrInt, Base);
+    IsOOB = IRB.CreateICmpUGE(Diff, AllocSize);
   } else {
-    IsOOB = IRB.CreateICmpUGT(AccessEnd, End);
+    Value *AccessSize = DynAccessSize;
+    if (!AccessSize)
+      AccessSize = ConstantInt::get(IntptrTy, FixedAccessSize);
+    Value *Diff = IRB.CreateSub(PtrInt, Base);
+    Value *TooWide = IRB.CreateICmpUGT(AccessSize, AllocSize);
+    Value *Limit = IRB.CreateSub(AllocSize, AccessSize);
+    Value *PastEnd = IRB.CreateICmpUGT(Diff, Limit);
+    IsOOB = IRB.CreateOr(TooWide, PastEnd);
   }
 
   Instruction *OobTerm =
