@@ -424,6 +424,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswlower
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
+    libc.src.wctype.iswxdigit
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
