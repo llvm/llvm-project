@@ -81,10 +81,8 @@ protected:
 
   static ContainerElementsMap merge(ContainerElementsMap M1,
                                     const ContainerElementsMap &M2) {
-    ContainerElementsMap Result = std::move(M1);
-    for (auto &[Container, Elems] : M2)
-      Result[Container].insert(Elems.begin(), Elems.end());
-    return Result;
+    M1.merge(M2);
+    return M1;
   }
 
   ContainerElementsMap
@@ -100,7 +98,7 @@ protected:
 
     for (size_t I = 1; I != SNs.size(); ++I) {
       assert(!DepsMustMatch || SNs[I]->deps() == Deps);
-      Result = merge(std::move(Result), SNs[I]->defs());
+      Result.merge(SNs[I]->defs());
     }
 
     return Result;
@@ -108,11 +106,9 @@ protected:
 
   EmitResult integrate(EmitResult ER) {
     for (auto &SN : ER.Ready)
-      for (auto &[Container, Elems] : SN->defs())
-        Ready[Container].insert(Elems.begin(), Elems.end());
+      Ready.merge(SN->defs());
     for (auto &SN : ER.Failed)
-      for (auto &[Container, Elems] : SN->defs())
-        Failed[Container].insert(Elems.begin(), Elems.end());
+      Failed.merge(SN->defs());
     return ER;
   }
 
