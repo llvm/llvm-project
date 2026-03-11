@@ -420,7 +420,7 @@ TEST(FormatAndFormatvTest, NonNegativePlusInteger) {
   EXPECT_EQ("-7", printToString(format("%+d", -7)));
 
   // Check that +d works for signed and unsigned integral values.
-  // Ensure the default is not changes (a + is not added without requesting it).
+  // Ensure the default is not changed (a + is not added without requesting it).
   EXPECT_EQ("+1", formatv("{0:+d}", static_cast<unsigned int>(1)).str());
   EXPECT_EQ("+2", formatv("{0:+d}", static_cast<int>(2)).str());
   EXPECT_EQ("+3", formatv("{0:+d}", static_cast<unsigned long>(3)).str());
