@@ -50,26 +50,22 @@ define <4 x i64> @test3(ptr %in) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    movzbl %al, %ecx
-; CHECK-NEXT:    shrb %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    negl %edx
-; CHECK-NEXT:    vmovd %edx, %xmm0
-; CHECK-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    shrb $2, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    shrb $3, %cl
-; CHECK-NEXT:    movzbl %cl, %eax
-; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    btl $2, %eax
+; CHECK-NEXT:    movl $0, %edx
+; CHECK-NEXT:    sbbl %edx, %edx
+; CHECK-NEXT:    btl $1, %eax
+; CHECK-NEXT:    movl $0, %esi
+; CHECK-NEXT:    sbbl %esi, %esi
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    vmovd %edi, %xmm0
+; CHECK-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; CHECK-NEXT:    btl $3, %eax
+; CHECK-NEXT:    sbbl %ecx, %ecx
+; CHECK-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm1
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0

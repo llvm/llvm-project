@@ -57471,19 +57471,19 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  EVT SrcVT = N0.getValueType();
 
   // (i32 (aext (i8 (x86isd::setcc_carry)))) -> (i32 (x86isd::setcc_carry))
   // FIXME: Is this needed? We don't seem to have any tests for it.
   if (!DCI.isBeforeLegalizeOps() && N->getOpcode() == ISD::ANY_EXTEND &&
       N0.getOpcode() == X86ISD::SETCC_CARRY) {
     SDValue Setcc = DAG.getNode(X86ISD::SETCC_CARRY, dl, VT, N0->getOperand(0),
-                                 N0->getOperand(1));
+                                N0->getOperand(1));
     bool ReplaceOtherUses = !N0.hasOneUse();
     DCI.CombineTo(N, Setcc);
     // Replace other uses with a truncate of the widened setcc_carry.
     if (ReplaceOtherUses) {
-      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0),
-                                  N0.getValueType(), Setcc);
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SDLoc(N0), SrcVT, Setcc);
       DCI.CombineTo(N0.getNode(), Trunc);
     }
 
@@ -57510,6 +57510,20 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineOrCmpEqZeroToCtlzSrl(N, DAG, DCI, Subtarget))
     return R;
+
+  // Promote sub-i32 shifts if its free to zero-extend.
+  if (VT.isScalarInteger() && VT.bitsGE(MVT::i32) && SrcVT.bitsLT(MVT::i32)) {
+    switch (N0.getOpcode()) {
+    case ISD::SRL: {
+      if (DAG.getTargetLoweringInfo().isZExtFree(N0.getOperand(0), VT))
+        return DAG.getNode(
+            ISD::SRL, dl, VT,
+            DAG.getNode(ISD::ZERO_EXTEND, dl, VT, N0.getOperand(0)),
+            N0.getOperand(1));
+      break;
+    }
+    }
+  }
 
   // TODO: Combine with any target/faux shuffle.
   if (N0.getOpcode() == X86ISD::PACKUS && N0.getValueSizeInBits() == 128 &&

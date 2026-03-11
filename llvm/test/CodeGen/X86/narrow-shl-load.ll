@@ -33,6 +33,13 @@ while.end:                                        ; preds = %while.cond
 ; DAG Combiner can't fold this into a load of the 1'th byte.
 ; PR8757
 define i32 @test3(ptr%P) nounwind ssp {
+; CHECK-LABEL: test3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $128, (%rdi)
+; CHECK-NEXT:    movsbl (%rdi), %eax
+; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    shrl $8, %eax
+; CHECK-NEXT:    retq
   store volatile i32 128, ptr %P
   %tmp4.pre = load i32, ptr %P
   %phitmp = trunc i32 %tmp4.pre to i16

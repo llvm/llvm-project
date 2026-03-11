@@ -923,8 +923,8 @@ define void @zext_v8i8_to_v8i20_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    orr x10, x14, x11, lsl #20
 ; CHECK-NEXT:    orr x9, x9, x13, lsl #40
 ; CHECK-NEXT:    orr x10, x10, x16, lsl #40
-; CHECK-NEXT:    lsr w11, w12, #4
-; CHECK-NEXT:    lsr w13, w15, #4
+; CHECK-NEXT:    lsr x11, x12, #4
+; CHECK-NEXT:    lsr x13, x15, #4
 ; CHECK-NEXT:    orr x9, x9, x12, lsl #60
 ; CHECK-NEXT:    orr x10, x10, x15, lsl #60
 ; CHECK-NEXT:    strh w11, [x1, #18]

@@ -48,7 +48,13 @@ define i64 @f3(i64 %dummy, i64 %a, i64 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $r3d killed $r3d def $r2q
 ; CHECK-NEXT:    mlgr %r2, %r4
-; CHECK-NEXT:    srlg %r2, %r2, 3
+; CHECK-NEXT:    vlvgp %v0, %r2, %r2
+; CHECK-NEXT:    larl %r1, .LCPI2_0
+; CHECK-NEXT:    vrepib %v1, 3
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vsrl %v0, %v0, %v1
+; CHECK-NEXT:    vn %v0, %v0, %v2
+; CHECK-NEXT:    vlgvg %r2, %v0, 1
 ; CHECK-NEXT:    br %r14
   %ax = zext i64 %a to i128
   %bx = zext i64 %b to i128

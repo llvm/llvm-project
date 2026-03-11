@@ -205,10 +205,9 @@ define i64 @fun10(i8 zeroext %v) {
 ; X86-LABEL: fun10:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrb $4, %al
-; X86-NEXT:    movzbl %al, %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shrl $4, %ecx
+; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl

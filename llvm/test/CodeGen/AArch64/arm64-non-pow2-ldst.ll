@@ -128,15 +128,16 @@ define void @sti280(ptr %p, i280 %a) nounwind {
 define void @i56_or(ptr %a) {
 ; CHECK-LABEL: i56_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    mov x9, x0
-; CHECK-NEXT:    ldrh w10, [x9, #4]!
-; CHECK-NEXT:    ldrb w11, [x9, #2]
-; CHECK-NEXT:    orr w8, w8, #0x180
-; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    orr w8, w10, w11, lsl #16
-; CHECK-NEXT:    strb w11, [x9, #2]
-; CHECK-NEXT:    strh w8, [x9]
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr w11, [x0]
+; CHECK-NEXT:    ldrh w9, [x8, #4]!
+; CHECK-NEXT:    ldrb w10, [x8, #2]
+; CHECK-NEXT:    orr w9, w9, w10, lsl #16
+; CHECK-NEXT:    orr w10, w11, #0x180
+; CHECK-NEXT:    str w10, [x0]
+; CHECK-NEXT:    lsr x10, x9, #16
+; CHECK-NEXT:    strh w9, [x8]
+; CHECK-NEXT:    strb w10, [x8, #2]
 ; CHECK-NEXT:    ret
   %aa = load i56, ptr %a, align 1
   %b = or i56 %aa, 384
@@ -147,16 +148,17 @@ define void @i56_or(ptr %a) {
 define void @i56_and_or(ptr %a) {
 ; CHECK-LABEL: i56_and_or:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    mov x9, x0
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    ldrh w10, [x9, #4]!
 ; CHECK-NEXT:    ldrb w11, [x9, #2]
 ; CHECK-NEXT:    orr w8, w8, #0x180
+; CHECK-NEXT:    orr w10, w10, w11, lsl #16
 ; CHECK-NEXT:    and w8, w8, #0xffffff80
-; CHECK-NEXT:    strb w11, [x9, #2]
 ; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    orr w8, w10, w11, lsl #16
-; CHECK-NEXT:    strh w8, [x9]
+; CHECK-NEXT:    lsr x8, x10, #16
+; CHECK-NEXT:    strh w10, [x9]
+; CHECK-NEXT:    strb w8, [x9, #2]
 ; CHECK-NEXT:    ret
   %b = load i56, ptr %a, align 1
   %c = and i56 %b, -128
@@ -169,16 +171,17 @@ define void @i56_insert_bit(ptr %a, i1 zeroext %bit) {
 ; CHECK-LABEL: i56_insert_bit:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    ldr w11, [x0]
 ; CHECK-NEXT:    ldrh w9, [x8, #4]!
 ; CHECK-NEXT:    ldrb w10, [x8, #2]
 ; CHECK-NEXT:    orr w9, w9, w10, lsl #16
-; CHECK-NEXT:    strb w10, [x8, #2]
-; CHECK-NEXT:    orr x11, x11, x9, lsl #32
+; CHECK-NEXT:    ldr w10, [x0]
+; CHECK-NEXT:    orr x10, x10, x9, lsl #32
+; CHECK-NEXT:    lsr x11, x9, #16
 ; CHECK-NEXT:    strh w9, [x8]
-; CHECK-NEXT:    and x11, x11, #0xffffffffffffdfff
-; CHECK-NEXT:    orr w11, w11, w1, lsl #13
-; CHECK-NEXT:    str w11, [x0]
+; CHECK-NEXT:    and x10, x10, #0xffffffffffffdfff
+; CHECK-NEXT:    strb w11, [x8, #2]
+; CHECK-NEXT:    orr w10, w10, w1, lsl #13
+; CHECK-NEXT:    str w10, [x0]
 ; CHECK-NEXT:    ret
   %extbit = zext i1 %bit to i56
   %b = load i56, ptr %a, align 1
