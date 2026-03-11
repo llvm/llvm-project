@@ -808,8 +808,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
         __set_valid_range(__new_begin, __new_end);
       } else {
         auto __mid = __end - __d;
-        std::__uninitialized_allocator_relocate(
-            __get_allocator(), std::__to_address(__mid), std::__to_address(__end), std::__to_address(__new_end));
+        std::__uninitialized_allocator_copy(
+            __get_allocator(), move_iterator<pointer>(__mid), move_iterator<pointer>(__end), __end);
         auto __new_begin = std::move_backward(begin(), __mid, __end);
         __destruct_at_begin(__new_begin);
         __set_valid_range(__new_begin, __new_end);
@@ -841,8 +841,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
         __set_valid_range(__new_begin, __end - __d);
       } else {
         auto __mid = begin() + __d;
-        std::__uninitialized_allocator_relocate(
-            __get_allocator(), std::__to_address(begin()), std::__to_address(__mid), std::__to_address(__new_begin));
+        std::__uninitialized_allocator_copy(
+            __get_allocator(), move_iterator<pointer>(begin()), move_iterator<pointer>(__mid), __new_begin);
         auto __new_end = std::move(__mid, __end, begin());
         __destruct_at_end(__new_end);
         __set_valid_range(__new_begin, __new_end);
