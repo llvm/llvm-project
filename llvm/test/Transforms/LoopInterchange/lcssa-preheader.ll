@@ -161,7 +161,7 @@ define void @test2(i32 %N) {
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[TMP0:%.*]], %[[INNER]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x [4 x [2 x i16]]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x i16], ptr @global, i64 [[INNER_IV]], i64 [[OUTER_IV]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[TMP0]] = add nsw i64 [[INNER_IV]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[TMP0]], [[N_EXT]]
@@ -189,7 +189,7 @@ define void @test2(i32 %N) {
 ; CHECK-DELIN-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
 ; CHECK-DELIN-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK-DELIN:       [[INNER_SPLIT1]]:
-; CHECK-DELIN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x [4 x [2 x i16]]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]], i64 0
+; CHECK-DELIN-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x i16], ptr @global, i64 [[INNER_IV]], i64 [[OUTER_IV]]
 ; CHECK-DELIN-NEXT:    store i16 0, ptr [[TMP8]], align 2
 ; CHECK-DELIN-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
 ; CHECK-DELIN-NEXT:    [[C_1:%.*]] = icmp ne i64 [[INNER_IV_NEXT]], [[N_EXT]]
@@ -216,7 +216,7 @@ outer.header:                                              ; preds = %bb11, %bb2
 
 inner:                                              ; preds = %bb6, %bb4
   %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
-  %gep = getelementptr inbounds [4 x [4 x [2 x i16]]], ptr @global, i64 0, i64 %inner.iv, i64 %outer.iv, i64 0
+  %gep = getelementptr inbounds [2 x i16], ptr @global, i64 %inner.iv, i64 %outer.iv
   store i16 0, ptr %gep
   %inner.iv.next = add nsw i64 %inner.iv, 1
   %c.1 = icmp ne i64 %inner.iv.next, %N.ext

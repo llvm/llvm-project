@@ -169,8 +169,8 @@ gpu.module @test_distribution {
     %c0 = arith.constant 0 : index
     %c128 = arith.constant 128 : index
     %c1024 = arith.constant 1024 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %0 = arith.muli %block_id_x, %c128 : index
     %1 = arith.muli %block_id_y, %c128 : index
     %2 = xegpu.create_nd_tdesc %arg2 : memref<1024x1024xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>>
@@ -832,8 +832,8 @@ gpu.module @test_distribution {
     %c4096 = arith.constant 4096 : index
     %c0 = arith.constant 0 : index
     %c256 = arith.constant 256 : index
-    %block_id_x = gpu.block_id  x
-    %block_id_y = gpu.block_id  y
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
     %0 = arith.muli %block_id_x, %c256 overflow<nsw> : index
     %1 = arith.muli %block_id_y, %c256 overflow<nsw> : index
     %2 = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf32> -> !xegpu.tensor_desc<256x256xf32, #xegpu.block_tdesc_attr<boundary_check = false>, #xegpu.layout<sg_layout = [8, 8], sg_data = [32, 32], inst_data = [8, 16]>>
