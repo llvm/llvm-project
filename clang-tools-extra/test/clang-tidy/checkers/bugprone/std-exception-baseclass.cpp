@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s hicpp-exception-baseclass %t -- -- -fcxx-exceptions
+// RUN: %check_clang_tidy %s bugprone-std-exception-baseclass %t -- -- -fcxx-exceptions
 
 namespace std {
 class exception {};

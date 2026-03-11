@@ -153,9 +153,12 @@ Changes to the RISC-V Backend
   extensions.
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
+* Adds CodeGen support for the 'Zvabd` extension.
 * `-mcpu=spacemit-a100` was added.
 * The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
+* Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
+  Reordering Structured Data) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
