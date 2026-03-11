@@ -5953,6 +5953,46 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
         },
         /*IsScalar=*/true);
+  case X86::BI__builtin_ia32_vpdpwssd128:
+  case X86::BI__builtin_ia32_vpdpwssd256:
+  case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpwssds128:
+  case X86::BI__builtin_ia32_vpdpwssds256:
+  case X86::BI__builtin_ia32_vpdpwssds512:
+  case X86::BI__builtin_ia32_vpdpbusds128:
+  case X86::BI__builtin_ia32_vpdpbusds256:
+  case X86::BI__builtin_ia32_vpdpbusds512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512: {
+	bool IsByteDot =
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusd128  ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusd256  ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusd512  ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds128 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds256 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds512;
+    bool IsSaturating =
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpwssds128 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpwssds256 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpwssds512 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds128 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds256 ||
+	  Call->getBuiltinCallee() == X86::BI__builtin_ia32_vpdpbusds512;
+    return interp__builtin_elementwise_triop(
+        S, OpPC, Call,
+        [](const APSInt &Source, const APSInt &A, const APSInt &B) {
+          APSInt DotProduct = Source;
+          unsigned Iters = 4;
+          unsigned Shift = 8;
+          for (unsigned J = 0; J < Iters; ++J) {
+            APSInt OpA = APSInt(APSInt(A.lshr(J * Shift).trunc(Shift)).zext(16), false);
+            APSInt OpB = APSInt(APSInt(B.lshr(J * Shift).trunc(Shift)).sext(16), false);
+			DotProduct += APSInt((OpA * OpB).sext(32), false);
+		  }
+          return DotProduct;
+        });
+  }
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
