@@ -83,7 +83,7 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
 }
 
 template <unsigned N>
-inline void removeNameHelpers(const SmallPtrSet<CallInst *, N>& ToRemove,
+inline void removeNameHelpers(const SmallPtrSet<CallInst *, N> &ToRemove,
                               Function *PredicateName) {
   for (auto &&CI : ToRemove) {
     CI->dropDroppableUses();
