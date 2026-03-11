@@ -1957,9 +1957,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
         .widenScalarToNextPow2(BigTyIdx, 32)
         .customIf([=](const LegalityQuery &Query) {
-          // Generic lower is not aware of subregs and can produce inefficient
-          // shift+trunc/mask sequences. We can instead use custom lowering
-          // for simple 32-bit aligned cases and use unmerge/merge.
+          // Generic lower operates on the full-width value, producing
+          // shift+trunc/mask sequences. For simple cases where extract/insert
+          // values are 32-bit aligned, we can instead unmerge/merge and work on
+          // the 32-bit components. However, we can't check the offset here so
+          // custom lower function will have to call generic lowering if offset
+          // is not 32-bit aligned.
           const LLT BigTy = Query.Types[BigTyIdx];
           const LLT LitTy = Query.Types[LitTyIdx];
           return !BigTy.isVector() && BigTy.getSizeInBits() % 32 == 0 &&
