@@ -281,7 +281,7 @@ Function *Program::getFunction(const FunctionDecl *F) {
   F = F->getCanonicalDecl();
   assert(F);
   auto It = Funcs.find(F);
-  return It == Funcs.end() ? nullptr : It->second.get();
+  return It == Funcs.end() ? nullptr : It->second;
 }
 
 Record *Program::getOrCreateRecord(const RecordDecl *RD) {
@@ -300,11 +300,6 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   if (!Inserted)
     return It->second;
 
-  // Number of bytes required by fields and base classes.
-  unsigned BaseSize = 0;
-  // Number of bytes required by virtual base.
-  unsigned VirtSize = 0;
-
   // Helper to get a base descriptor.
   auto GetBaseDesc = [this](const RecordDecl *BD,
                             const Record *BR) -> const Descriptor * {
@@ -316,10 +311,28 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   };
 
   // Reserve space for base classes.
-  Record::BaseList Bases;
-  Record::VirtualBaseList VirtBases;
+  unsigned NumRecordBases = 0;
+  unsigned NumRecordVBases = 0;
+  unsigned NumFields = RD->getNumFields();
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
-    Bases.reserve(CD->getNumBases());
+    NumRecordBases = CD->getNumBases();
+    NumRecordVBases = CD->getNumVBases();
+  }
+
+  char *Memory = new (*this) char[Record::allocSize(NumFields, NumRecordBases,
+                                                    NumRecordVBases)];
+  Record *R =
+      new (Memory) Record(RD, NumRecordBases, NumFields, NumRecordVBases);
+  bool HasPtrField = false;
+
+  // Number of bytes required by fields and base classes.
+  unsigned BaseSize = 0;
+  // Number of bytes required by virtual base.
+  unsigned VirtSize = 0;
+
+  if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+    unsigned BaseIndex = 0;
+    Record::Base *Bases = R->getBases();
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
@@ -335,28 +348,40 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       BaseSize += align(sizeof(InlineDescriptor));
-      Bases.emplace_back(BD, Desc, BR, BaseSize);
+      Record::Base *B =
+          new (&Bases[BaseIndex]) Record::Base(BD, Desc, BR, BaseSize);
       BaseSize += align(BR->getSize());
+      ++BaseIndex;
+      R->BaseMap[B->Decl] = B;
+      if (!HasPtrField)
+        HasPtrField |= B->R->hasPtrField();
     }
+    R->NumBases = BaseIndex;
 
+    unsigned VBaseIndex = 0;
+    Record::Base *VBases = R->getVBases();
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
       const auto *BD = Spec.getType()->castAsCXXRecordDecl();
       const Record *BR = getOrCreateRecord(BD);
+
+      if (!BR)
+        return nullptr;
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
       if (!Desc)
         return nullptr;
 
       VirtSize += align(sizeof(InlineDescriptor));
-      VirtBases.emplace_back(BD, Desc, BR, VirtSize);
+      new (&VBases[VBaseIndex]) Record::Base(BD, Desc, BR, VirtSize);
       VirtSize += align(BR->getSize());
+      ++VBaseIndex;
     }
+    R->NumVBases = VBaseIndex;
   }
 
   // Reserve space for fields.
-  Record::FieldList Fields;
-  Fields.reserve(RD->getNumFields());
-  bool HasPtrField = false;
+  Record::Field *Fields = R->getFields();
+  unsigned FieldIndex = 0;
   for (const FieldDecl *FD : RD->fields()) {
     FD = FD->getFirstDecl();
     // Note that we DO create fields and descriptors
@@ -386,13 +411,22 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     } else {
       return nullptr;
     }
-    Fields.emplace_back(FD, Desc, BaseSize);
+    new (&Fields[FieldIndex]) Record::Field(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
+    ++FieldIndex;
   }
 
-  Record *R = new (Allocator)
-      Record(RD, std::move(Bases), std::move(Fields), std::move(VirtBases),
-             VirtSize, BaseSize, HasPtrField);
+  for (unsigned I = 0; I != R->getNumVirtualBases(); ++I) {
+    Record::Base *V = &R->getVBases()[I];
+    V->Offset += BaseSize;
+    R->VirtualBaseMap[V->Decl] = V;
+    if (!HasPtrField)
+      HasPtrField |= V->R->hasPtrField();
+  }
+
+  R->HasPtrField = HasPtrField;
+  R->VirtualSize = VirtSize;
+  R->BaseSize = BaseSize;
   Records[RD] = R;
   return R;
 }
