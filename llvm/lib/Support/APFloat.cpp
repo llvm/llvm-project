@@ -137,8 +137,9 @@ constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
    Precision is given in terms of the radix, e.g., Hex_FP32 has
    6 hexits of precision.
 
-   HesFloat is described in http://eece.cu.edu.eg/~hfahmy/arith_class/hex_bin_FP.pdf
-   and in chapters 9 and 18 of the z/Architecture Principles of Operation.
+   HesFloat is described in
+   http://eece.cu.edu.eg/~hfahmy/arith_class/hex_bin_FP.pdf and in chapters 9
+   and 18 of the z/Architecture Principles of Operation.
 
    Note that in the fltSemantics below the size of the significand is
    given in terms of radix places.  As the radix is 16, the number of
@@ -5898,7 +5899,7 @@ unsigned int HexFloat::getNumPrecisionBits(const fltSemantics *semantics) {
 void HexFloat::initialize(const fltSemantics *ourSemantics) {
   semantics = ourSemantics;
   significand = APInt(getNumPrecisionBits(semantics), 0);
-  makeZero(/*IsNegative=*/ false);
+  makeZero(/*IsNegative=*/false);
 }
 
 void HexFloat::assign(const HexFloat &rhs) {

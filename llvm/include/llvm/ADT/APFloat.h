@@ -1782,9 +1782,7 @@ public:
     return isHexFloat() ? getHex().isNegative() : getIEEE().isNegative();
   }
   bool isDenormal() const { APFLOAT_DISPATCH_ON_SEMANTICS(isDenormal()); }
-  bool isSignaling() const {
-    return !isHexFloat() && getIEEE().isSignaling();
-  }
+  bool isSignaling() const { return !isHexFloat() && getIEEE().isSignaling(); }
 
   bool isNormal() const { return !isDenormal() && isFiniteNonZero(); }
   bool isFinite() const { return !isNaN() && !isInfinity(); }
