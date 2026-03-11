@@ -1614,7 +1614,7 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
     return selectLoad(I);
   case Instruction::Store:
     return selectStore(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return selectBr(I);
   case Instruction::Ret:
     return selectRet(I);
