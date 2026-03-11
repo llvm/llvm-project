@@ -2196,6 +2196,19 @@ Error RewriteInstance::readSpecialSections() {
     check_error(SectionNameOrErr.takeError(), "cannot get section name");
     StringRef SectionName = *SectionNameOrErr;
 
+    // Detect a debug section and check if it's compressed.
+    // Compressed debug sections currently aren't supported.
+    if (isDebugSection(SectionName)) {
+      HasDebugInfo = true;
+      if (opts::UpdateDebugSections && isCompressedDebugSection(Section)) {
+        return createStringError(errc::not_supported,
+                                 Twine("compressed debug section '") +
+                                     SectionName +
+                                     "' detected. --update-debug-sections "
+                                     "requires uncompressed debug info");
+      }
+    }
+
     if (Error E = Section.getContents().takeError())
       return E;
     BC->registerSection(Section);
@@ -2204,8 +2217,6 @@ Error RewriteInstance::readSpecialSections() {
                << Twine::utohexstr(Section.getAddress()) << ":0x"
                << Twine::utohexstr(Section.getAddress() + Section.getSize())
                << "\n");
-    if (isDebugSection(SectionName))
-      HasDebugInfo = true;
   }
 
   // Set IsRelro section attribute based on PT_GNU_RELRO segment.
@@ -6490,4 +6501,8 @@ bool RewriteInstance::isDebugSection(StringRef SectionName) {
     return true;
 
   return false;
+}
+
+bool RewriteInstance::isCompressedDebugSection(const SectionRef &Section) {
+  return (ELFSectionRef(Section).getFlags() & ELF::SHF_COMPRESSED) != 0;
 }

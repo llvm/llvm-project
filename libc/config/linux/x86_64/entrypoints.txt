@@ -418,7 +418,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswcntrl
     libc.src.wctype.iswdigit
+    libc.src.wctype.iswlower
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -488,6 +490,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
