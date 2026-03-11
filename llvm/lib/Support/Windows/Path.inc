@@ -352,14 +352,30 @@ std::error_code create_symlink(const Twine &to, const Twine &from) {
     if (C == L'/')
       C = L'\\';
 
-  // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks.
+  // Windows requires SYMBOLIC_LINK_FLAG_DIRECTORY for directory symlinks, so
+  // check first what type the target is. Relative symlink targets are relative
+  // to the link's parent directory, not the CWD, so resolve accordingly before
+  // checking attributes.
+  SmallVector<wchar_t, 128> wide_resolved;
+  const SmallVectorImpl<wchar_t> *attr_path = &wide_to;
+  SmallString<128> to_str;
+  to.toVector(to_str);
+  if (sys::path::is_relative(to_str)) {
+    SmallString<128> from_str;
+    from.toVector(from_str);
+    SmallString<128> resolved = sys::path::parent_path(from_str);
+    sys::path::append(resolved, to_str);
+    if (std::error_code ec = widenPath(resolved, wide_resolved))
+      return ec;
+    attr_path = &wide_resolved;
+  }
+  DWORD Attr = ::GetFileAttributesW(attr_path->begin());
   DWORD Flags = 0;
-  DWORD Attr = ::GetFileAttributesW(wide_to.begin());
   if (Attr != INVALID_FILE_ATTRIBUTES && (Attr & FILE_ATTRIBUTE_DIRECTORY))
     Flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
 
   // Try with SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE first, which works
-  // when Developer Mode is enabled on Windows 10+.
+  // in non-UWP programs and when Developer Mode is enabled on Windows 10+.
   if (::CreateSymbolicLinkW(wide_from.begin(), wide_to.begin(),
                             Flags |
                                 SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))

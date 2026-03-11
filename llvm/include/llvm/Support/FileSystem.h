@@ -303,7 +303,9 @@ LLVM_ABI std::error_code create_directory(const Twine &path,
 ///
 /// This may fail on Windows if run without create symbolic link permissions.
 ///
-/// On Windows slashes in the symlink target are normalized to `\`.
+/// On Windows
+///   - slashes in the symlink target are normalized to `\`, and
+///   - if \a to does not exist, it will always create a file symlink.
 ///
 /// @param to The path to the symlink target.
 /// @param from The path of the symlink to create.

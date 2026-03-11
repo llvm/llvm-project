@@ -864,6 +864,53 @@ TEST_F(FileSystemTest, ReadlinkRelativeWithSlash) {
   ASSERT_NO_ERROR(fs::remove(SubDir));
 }
 
+TEST_F(FileSystemTest, CreateRelativeDirectorySymlink) {
+  // Verify that a relative symlink to a directory is correctly detected as a
+  // directory symlink. On Windows, create_symlink needs to resolve the relative
+  // target against the link's parent to check if the target is a directory.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  SmallString<128> TargetDir(SubDir);
+  path::append(TargetDir, "target_dir");
+  ASSERT_NO_ERROR(fs::create_directory(TargetDir));
+
+  // Create a symlink in TestDirectory pointing to "subdir/target_dir" using a
+  // relative path. The target is relative to the link's parent (TestDirectory),
+  // not the CWD.
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  SmallString<128> RelTarget("subdir");
+  path::append(RelTarget, "target_dir");
+  path::native(RelTarget);
+  std::error_code EC = fs::create_symlink(RelTarget, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(TargetDir));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  // The symlink should be recognized as a directory.
+  EXPECT_TRUE(fs::is_directory(Link));
+
+  // Verify we can access a file through the directory symlink.
+  int FD;
+  SmallString<128> FileInTarget(TargetDir);
+  path::append(FileInTarget, "file");
+  ASSERT_NO_ERROR(fs::openFileForWrite(FileInTarget, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> FileThroughLink(Link);
+  path::append(FileThroughLink, "file");
+  EXPECT_TRUE(fs::is_regular_file(FileThroughLink));
+
+  ASSERT_NO_ERROR(fs::remove(FileInTarget));
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(TargetDir));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
 TEST_F(FileSystemTest, ReadlinkNonSymlink) {
   int FD;
   SmallString<128> Regular(TestDirectory);
