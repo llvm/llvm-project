@@ -378,18 +378,14 @@ define i32 @zext_i8_i32(ptr %p) {
 ; WASM32-FAST-LABEL: zext_i8_i32:
 ; WASM32-FAST:         .functype zext_i8_i32 (i32) -> (i32)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load8_u $push2=, 0($0)
-; WASM32-FAST-NEXT:    i32.const $push0=, 255
-; WASM32-FAST-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM32-FAST-NEXT:    return $pop1
+; WASM32-FAST-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: zext_i8_i32:
 ; WASM32-FAST-MVP:         .functype zext_i8_i32 (i32) -> (i32)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.load8_u $push2=, 0($0)
-; WASM32-FAST-MVP-NEXT:    i32.const $push0=, 255
-; WASM32-FAST-MVP-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM32-FAST-MVP-NEXT:    return $pop1
+; WASM32-FAST-MVP-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: zext_i8_i32:
 ; WASM64-DAG:         .functype zext_i8_i32 (i64) -> (i32)
@@ -406,18 +402,14 @@ define i32 @zext_i8_i32(ptr %p) {
 ; WASM64-FAST-LABEL: zext_i8_i32:
 ; WASM64-FAST:         .functype zext_i8_i32 (i64) -> (i32)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load8_u $push2=, 0($0)
-; WASM64-FAST-NEXT:    i32.const $push0=, 255
-; WASM64-FAST-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM64-FAST-NEXT:    return $pop1
+; WASM64-FAST-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: zext_i8_i32:
 ; WASM64-FAST-MVP:         .functype zext_i8_i32 (i64) -> (i32)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i32.load8_u $push2=, 0($0)
-; WASM64-FAST-MVP-NEXT:    i32.const $push0=, 255
-; WASM64-FAST-MVP-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM64-FAST-MVP-NEXT:    return $pop1
+; WASM64-FAST-MVP-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM64-FAST-MVP-NEXT:    return $pop0
   %v = load i8, ptr %p
   %e = zext i8 %v to i32
   ret i32 %e
@@ -500,18 +492,14 @@ define i32 @zext_i16_i32(ptr %p) {
 ; WASM32-FAST-LABEL: zext_i16_i32:
 ; WASM32-FAST:         .functype zext_i16_i32 (i32) -> (i32)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load16_u $push2=, 0($0)
-; WASM32-FAST-NEXT:    i32.const $push0=, 65535
-; WASM32-FAST-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM32-FAST-NEXT:    return $pop1
+; WASM32-FAST-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: zext_i16_i32:
 ; WASM32-FAST-MVP:         .functype zext_i16_i32 (i32) -> (i32)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.load16_u $push2=, 0($0)
-; WASM32-FAST-MVP-NEXT:    i32.const $push0=, 65535
-; WASM32-FAST-MVP-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM32-FAST-MVP-NEXT:    return $pop1
+; WASM32-FAST-MVP-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: zext_i16_i32:
 ; WASM64-DAG:         .functype zext_i16_i32 (i64) -> (i32)
@@ -528,18 +516,14 @@ define i32 @zext_i16_i32(ptr %p) {
 ; WASM64-FAST-LABEL: zext_i16_i32:
 ; WASM64-FAST:         .functype zext_i16_i32 (i64) -> (i32)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load16_u $push2=, 0($0)
-; WASM64-FAST-NEXT:    i32.const $push0=, 65535
-; WASM64-FAST-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM64-FAST-NEXT:    return $pop1
+; WASM64-FAST-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: zext_i16_i32:
 ; WASM64-FAST-MVP:         .functype zext_i16_i32 (i64) -> (i32)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i32.load16_u $push2=, 0($0)
-; WASM64-FAST-MVP-NEXT:    i32.const $push0=, 65535
-; WASM64-FAST-MVP-NEXT:    i32.and $push1=, $pop2, $pop0
-; WASM64-FAST-MVP-NEXT:    return $pop1
+; WASM64-FAST-MVP-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM64-FAST-MVP-NEXT:    return $pop0
   %v = load i16, ptr %p
   %e = zext i16 %v to i32
   ret i32 %e
@@ -628,20 +612,16 @@ define i64 @zext_i8_i64(ptr %p) {
 ; WASM32-FAST-LABEL: zext_i8_i64:
 ; WASM32-FAST:         .functype zext_i8_i64 (i32) -> (i64)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load8_u $push3=, 0($0)
-; WASM32-FAST-NEXT:    i32.const $push0=, 255
-; WASM32-FAST-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM32-FAST-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM32-FAST-NEXT:    return $pop2
+; WASM32-FAST-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM32-FAST-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM32-FAST-NEXT:    return $pop1
 ;
 ; WASM32-FAST-MVP-LABEL: zext_i8_i64:
 ; WASM32-FAST-MVP:         .functype zext_i8_i64 (i32) -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.load8_u $push3=, 0($0)
-; WASM32-FAST-MVP-NEXT:    i32.const $push0=, 255
-; WASM32-FAST-MVP-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM32-FAST-MVP-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM32-FAST-MVP-NEXT:    return $pop2
+; WASM32-FAST-MVP-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM32-FAST-MVP-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM32-FAST-MVP-NEXT:    return $pop1
 ;
 ; WASM64-DAG-LABEL: zext_i8_i64:
 ; WASM64-DAG:         .functype zext_i8_i64 (i64) -> (i64)
@@ -658,20 +638,16 @@ define i64 @zext_i8_i64(ptr %p) {
 ; WASM64-FAST-LABEL: zext_i8_i64:
 ; WASM64-FAST:         .functype zext_i8_i64 (i64) -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load8_u $push3=, 0($0)
-; WASM64-FAST-NEXT:    i32.const $push0=, 255
-; WASM64-FAST-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM64-FAST-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM64-FAST-NEXT:    return $pop2
+; WASM64-FAST-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM64-FAST-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM64-FAST-NEXT:    return $pop1
 ;
 ; WASM64-FAST-MVP-LABEL: zext_i8_i64:
 ; WASM64-FAST-MVP:         .functype zext_i8_i64 (i64) -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i32.load8_u $push3=, 0($0)
-; WASM64-FAST-MVP-NEXT:    i32.const $push0=, 255
-; WASM64-FAST-MVP-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM64-FAST-MVP-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM64-FAST-MVP-NEXT:    return $pop2
+; WASM64-FAST-MVP-NEXT:    i32.load8_u $push0=, 0($0)
+; WASM64-FAST-MVP-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM64-FAST-MVP-NEXT:    return $pop1
   %v = load i8, ptr %p
   %e = zext i8 %v to i64
   ret i64 %e
@@ -760,20 +736,16 @@ define i64 @zext_i16_i64(ptr %p) {
 ; WASM32-FAST-LABEL: zext_i16_i64:
 ; WASM32-FAST:         .functype zext_i16_i64 (i32) -> (i64)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load16_u $push3=, 0($0)
-; WASM32-FAST-NEXT:    i32.const $push0=, 65535
-; WASM32-FAST-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM32-FAST-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM32-FAST-NEXT:    return $pop2
+; WASM32-FAST-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM32-FAST-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM32-FAST-NEXT:    return $pop1
 ;
 ; WASM32-FAST-MVP-LABEL: zext_i16_i64:
 ; WASM32-FAST-MVP:         .functype zext_i16_i64 (i32) -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
-; WASM32-FAST-MVP-NEXT:    i32.load16_u $push3=, 0($0)
-; WASM32-FAST-MVP-NEXT:    i32.const $push0=, 65535
-; WASM32-FAST-MVP-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM32-FAST-MVP-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM32-FAST-MVP-NEXT:    return $pop2
+; WASM32-FAST-MVP-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM32-FAST-MVP-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM32-FAST-MVP-NEXT:    return $pop1
 ;
 ; WASM64-DAG-LABEL: zext_i16_i64:
 ; WASM64-DAG:         .functype zext_i16_i64 (i64) -> (i64)
@@ -790,20 +762,16 @@ define i64 @zext_i16_i64(ptr %p) {
 ; WASM64-FAST-LABEL: zext_i16_i64:
 ; WASM64-FAST:         .functype zext_i16_i64 (i64) -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load16_u $push3=, 0($0)
-; WASM64-FAST-NEXT:    i32.const $push0=, 65535
-; WASM64-FAST-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM64-FAST-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM64-FAST-NEXT:    return $pop2
+; WASM64-FAST-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM64-FAST-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM64-FAST-NEXT:    return $pop1
 ;
 ; WASM64-FAST-MVP-LABEL: zext_i16_i64:
 ; WASM64-FAST-MVP:         .functype zext_i16_i64 (i64) -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
-; WASM64-FAST-MVP-NEXT:    i32.load16_u $push3=, 0($0)
-; WASM64-FAST-MVP-NEXT:    i32.const $push0=, 65535
-; WASM64-FAST-MVP-NEXT:    i32.and $push1=, $pop3, $pop0
-; WASM64-FAST-MVP-NEXT:    i64.extend_i32_u $push2=, $pop1
-; WASM64-FAST-MVP-NEXT:    return $pop2
+; WASM64-FAST-MVP-NEXT:    i32.load16_u $push0=, 0($0)
+; WASM64-FAST-MVP-NEXT:    i64.extend_i32_u $push1=, $pop0
+; WASM64-FAST-MVP-NEXT:    return $pop1
   %v = load i16, ptr %p
   %e = zext i16 %v to i64
   ret i64 %e
