@@ -775,6 +775,10 @@ static void convertRecipesInRegionBlocksToSingleScalar(
                              {BranchOnMask->getOperand(0)},
                              BranchOnMask->getDebugLoc());
         BranchOnMask->eraseFromParent();
+      } else {
+        assert((isa<VPScalarIVStepsRecipe>(&NewR) ||
+                vputils::isSingleScalar(NewR.getVPSingleValue())) &&
+               "unexpected unhandled recipe");
       }
     }
   }
