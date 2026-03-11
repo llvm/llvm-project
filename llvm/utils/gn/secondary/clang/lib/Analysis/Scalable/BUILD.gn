@@ -6,8 +6,8 @@ static_library("Scalable") {
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
-    "//clang/lib/Index",
     "//clang/lib/Lex",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/Support",
   ]
   sources = [
@@ -19,6 +19,7 @@ static_library("Scalable") {
     "Model/EntityLinkage.cpp",
     "Model/EntityName.cpp",
     "Model/SummaryName.cpp",
+    "Serialization/JSONFormat/JSONEntitySummaryEncoding.cpp",
     "Serialization/JSONFormat/JSONFormatImpl.cpp",
     "Serialization/JSONFormat/LUSummary.cpp",
     "Serialization/JSONFormat/LUSummaryEncoding.cpp",
