@@ -37,7 +37,6 @@
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamedParameterCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "ExceptionBaseclassCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
 #include "SignedBitwiseCheck.h"
 
