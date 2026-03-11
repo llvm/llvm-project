@@ -195,9 +195,23 @@ bool good_any_of_temporary_vector() {
   return false;
 }
 
-bool good_all_of_temporary_vector() {
+bool all_of_temporary_vector() {
   for (int i : get_dummy_vec())
     if (i)
+      return false;
+  return true;
+}
+
+bool any_of_initializer_list(int a, int b, int c) {
+  for (const auto i : {a, b, c})
+    if (i == 0)
+      return true;
+  return false;
+}
+
+bool all_of_initializer_list(int a, int b, int c) {
+  for (const auto i : {a, b, c})
+    if (i == 0)
       return false;
   return true;
 }

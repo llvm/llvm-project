@@ -36,13 +36,11 @@ AST_MATCHER_P(Stmt, nextStmt, ast_matchers::internal::Matcher<Stmt>,
   return InnerMatcher.matches(**I, Finder, Builder);
 }
 
-/// Matches range-based loops over temporary range expressions.
-AST_MATCHER(Expr, isTemporary) {
-  const Expr *E = &Node;
-  if (const auto *EWC = dyn_cast<ExprWithCleanups>(E))
-    E = EWC->getSubExpr();
-  E = E->IgnoreParenImpCasts();
-  return isa<MaterializeTemporaryExpr>(E) || E->isPRValue();
+AST_MATCHER(Expr, isUnsupportedRangeInit) {
+  const Expr *E = Node.IgnoreParenImpCasts();
+  if (Finder->getASTContext().getLangOpts().CPlusPlus20)
+    return isa<CXXStdInitializerListExpr>(E);
+  return E->isPRValue();
 }
 } // namespace
 
@@ -57,9 +55,7 @@ void UseAnyOfAllOfCheck::registerMatchers(MatchFinder *Finder) {
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(true)))));
   const auto ReturnsButNotFalse =
       returnStmt(hasReturnValue(unless(cxxBoolLiteral(equals(false)))));
-
-  const auto RangeInitMatcher =
-      getLangOpts().CPlusPlus20 ? expr() : expr(unless(isTemporary()));
+  const auto RangeInitMatcher = expr(unless(isUnsupportedRangeInit()));
 
   Finder->addMatcher(
       cxxForRangeStmt(
