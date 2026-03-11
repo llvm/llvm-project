@@ -891,7 +891,6 @@ set(s390x_SOURCES
 
 set(wasm_SOURCES
   wasm/__c_longjmp.S
-  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
