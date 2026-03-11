@@ -889,7 +889,7 @@ def FeatureStdExtZvzip
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
-                     "'Zvzip' (Vector Reordering Structured Data)">;
+                         "'Zvzip' (Vector Reordering Structured Data)">;
 
 // Vector instruction predicates
 
