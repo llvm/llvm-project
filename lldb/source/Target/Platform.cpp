@@ -1241,9 +1241,12 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
-                         signo_ptr, command_output, timeout);
+                         signo_ptr, command_output, separated_error_output,
+                         timeout);
 }
 
 lldb_private::Status Platform::RunShellCommand(
@@ -1257,10 +1260,13 @@ lldb_private::Status Platform::RunShellCommand(
                     // process to exit
     std::string
         *command_output, // Pass nullptr if you don't want the command output
+    std::string *separated_error_output, // Pass nullptr if you don't want the
+                                         // command error output
     const Timeout<std::micro> &timeout) {
   if (IsHost())
     return Host::RunShellCommand(shell, command, working_dir, status_ptr,
-                                 signo_ptr, command_output, timeout);
+                                 signo_ptr, command_output,
+                                 separated_error_output, timeout);
   return Status::FromErrorString(
       "unable to run a remote command without a platform");
 }
