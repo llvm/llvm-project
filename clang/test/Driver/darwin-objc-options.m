@@ -1,6 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-
 // Check miscellaneous Objective-C options.
 
 // RUN: %clang -target x86_64-apple-darwin10 -S -### %s \

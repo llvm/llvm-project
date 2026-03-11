@@ -1,6 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-
 // Check that darwin passes -fbuiltin-headers-in-system-modules
 // when expected.
 

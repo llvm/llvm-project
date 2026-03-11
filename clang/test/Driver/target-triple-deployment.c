@@ -1,6 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-
 // RUN: touch %t.o
 // RUN: %clang -fuse-ld= -target x86_64-apple-macosx10.4 -mlinker-version=400 -### %t.o 2> %t.log
 // RUN: %clang -fuse-ld= -target x86_64-apple-darwin9 -mlinker-version=400 -### %t.o 2>> %t.log

@@ -1,6 +1,3 @@
-// XFAIL: xcselect
-// FIXME: There's no reason why this should fail with CLANG_USE_XCSELECT.
-
 // RUN: not %clang -ObjC -target i386-apple-darwin10 -stdlib=libstdc++ -m32 -fobjc-arc %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: not %clang -x objective-c -target i386-apple-darwin10 -stdlib=libstdc++ -m32 -fobjc-arc %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: not %clang -x objective-c++ -target i386-apple-darwin10 -stdlib=libstdc++ -m32 -fobjc-arc %s -fsyntax-only 2>&1 | FileCheck %s
