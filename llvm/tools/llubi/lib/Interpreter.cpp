@@ -165,16 +165,12 @@ void InstExecutor::jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
     setResult(*K, std::move(V));
 }
 
-/// Helper function to determine whether an inline asm is a no-op, which is
-/// used to implement black_box style optimization blockers.
 bool InstExecutor::isNoopInlineAsm(Value *V, Type *RetTy) {
   if (auto *Asm = dyn_cast<InlineAsm>(V))
     return Asm->getAsmString().empty() && RetTy->isVoidTy();
   return false;
 }
 
-/// Check if the upcoming memory access is valid. Returns the offset relative
-/// to the underlying object if it is valid.
 std::optional<uint64_t> InstExecutor::verifyMemAccess(const MemoryObject &MO,
                                                       const APInt &Address,
                                                       uint64_t AccessSize,
@@ -1026,9 +1022,6 @@ void InstExecutor::visitBitCastInst(BitCastInst &BCI) {
   setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
 }
 
-/// This function implements the main interpreter loop.
-/// It handles function calls in a non-recursive manner to avoid stack
-/// overflows.
 bool InstExecutor::runMainLoop() {
   uint32_t MaxSteps = Ctx.getMaxSteps();
   uint32_t Steps = 0;
