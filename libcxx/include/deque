@@ -234,6 +234,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
+#  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
 #  include <__utility/pair.h>
 #  include <__utility/swap.h>
@@ -2368,7 +2369,7 @@ deque<_Tp, _Allocator>::__move_and_check(iterator __f, iterator __l, iterator __
       __bs = __n;
       __fe = __fb + __bs;
     }
-    if (__fb <= __vt && __vt < __fe)
+    if (std::__is_pointer_in_range(std::__to_address(__fb), std::__to_address(__fe), std::__to_address(__vt)))
       __vt = (const_iterator(__f.__m_iter_, __vt) -= __f - __r).__ptr_;
     __r = std::move(__fb, __fe, __r);
     __n -= __bs;
@@ -2395,7 +2396,7 @@ deque<_Tp, _Allocator>::__move_backward_and_check(iterator __f, iterator __l, it
       __bs = __n;
       __lb = __le - __bs;
     }
-    if (__lb <= __vt && __vt < __le)
+    if (std::__is_pointer_in_range(std::__to_address(__lb), std::__to_address(__le), std::__to_address(__vt)))
       __vt = (const_iterator(__l.__m_iter_, __vt) += __r - __l - 1).__ptr_;
     __r = std::move_backward(__lb, __le, __r);
     __n -= __bs;
@@ -2422,7 +2423,7 @@ deque<_Tp, _Allocator>::__move_construct_and_check(iterator __f, iterator __l, i
       __bs = __n;
       __fe = __fb + __bs;
     }
-    if (__fb <= __vt && __vt < __fe)
+    if (std::__is_pointer_in_range(std::__to_address(__fb), std::__to_address(__fe), std::__to_address(__vt)))
       __vt = (const_iterator(__f.__m_iter_, __vt) += __r - __f).__ptr_;
     for (; __fb != __fe; ++__fb, ++__r, ++__size())
       __alloc_traits::construct(__a, std::addressof(*__r), std::move(*__fb));
@@ -2454,7 +2455,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void deque<_Tp, _Allocator>::__move_construct_back
       __bs = __n;
       __lb = __le - __bs;
     }
-    if (__lb <= __vt && __vt < __le)
+    if (std::__is_pointer_in_range(std::__to_address(__lb), std::__to_address(__le), std::__to_address(__vt)))
       __vt = (const_iterator(__l.__m_iter_, __vt) -= __l - __r + 1).__ptr_;
     while (__le != __lb) {
       __alloc_traits::construct(__a, std::addressof(*--__r), std::move(*--__le));
