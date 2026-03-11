@@ -1169,8 +1169,7 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
       !GetCompilerType().IsPointerType() &&
       !GetCompilerType().IsNullPtrType() &&
       !GetCompilerType().IsReferenceType() && !GetCompilerType().IsBoolean())
-    return llvm::make_error<llvm::StringError>(
-        "type cannot be converted to APSInt", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("type cannot be converted to APSInt");
 
   if (CanProvideValue()) {
     Scalar scalar;
@@ -1178,15 +1177,12 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
       return scalar.GetAPSInt();
   }
 
-  return llvm::make_error<llvm::StringError>(
-      "error occurred; unable to convert to APSInt",
-      llvm::inconvertibleErrorCode());
+  return llvm::createStringError("error occurred; unable to convert to APSInt");
 }
 
 llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {
   if (!HasFloatingRepresentation(GetCompilerType()))
-    return llvm::make_error<llvm::StringError>(
-        "type cannot be converted to APFloat", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("type cannot be converted to APFloat");
 
   if (CanProvideValue()) {
     Scalar scalar;
@@ -1194,9 +1190,8 @@ llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {
       return scalar.GetAPFloat();
   }
 
-  return llvm::make_error<llvm::StringError>(
-      "error occurred; unable to convert to APFloat",
-      llvm::inconvertibleErrorCode());
+  return llvm::createStringError(
+      "error occurred; unable to convert to APFloat");
 }
 
 llvm::Expected<bool> ValueObject::GetValueAsBool() {
@@ -1215,8 +1210,7 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   if (val_type.IsArrayType())
     return GetAddressOf().address != 0;
 
-  return llvm::make_error<llvm::StringError>("type cannot be converted to bool",
-                                             llvm::inconvertibleErrorCode());
+  return llvm::createStringError("type cannot be converted to bool");
 }
 
 void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
@@ -3027,9 +3021,8 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
   // type of cast; otherwise return the shared pointer to the original
   // (unchanged) ValueObject.
   if (!type.IsPointerType() && !type.IsReferenceType())
-    return llvm::make_error<llvm::StringError>(
-        "Invalid target type: should be a pointer or a reference",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Invalid target type: should be a pointer or a reference");
 
   CompilerType start_type = GetCompilerType();
   if (start_type.IsReferenceType())
@@ -3041,18 +3034,15 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
       start_type.IsPointerType() ? start_type.GetPointeeType() : start_type;
 
   if (!target_record_type.IsRecordType() || !start_record_type.IsRecordType())
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be record types",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be record types");
 
   if (target_record_type.CompareTypes(start_record_type))
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be different",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be different");
 
   if (base_type_indices.empty())
-    return llvm::make_error<llvm::StringError>(
-        "Children sequence must be non-empty", llvm::inconvertibleErrorCode());
+    return llvm::createStringError("Children sequence must be non-empty");
 
   // Both the starting & target types are valid for the cast, and the list of
   // base class indices is non-empty, so we can proceed with the cast.
@@ -3071,9 +3061,8 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
   CompilerType inner_value_type = inner_value->GetCompilerType();
   if (type.IsPointerType()) {
     if (!inner_value_type.CompareTypes(type.GetPointeeType()))
-      return llvm::make_error<llvm::StringError>(
-          "casted value doesn't match the desired type",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(
+          "casted value doesn't match the desired type");
 
     uintptr_t addr = inner_value->GetLoadAddress();
     llvm::StringRef name = "";
@@ -3084,9 +3073,8 @@ llvm::Expected<lldb::ValueObjectSP> ValueObject::CastDerivedToBaseType(
 
   // At this point the target type should be a reference.
   if (!inner_value_type.CompareTypes(type.GetNonReferenceType()))
-    return llvm::make_error<llvm::StringError>(
-        "casted value doesn't match the desired type",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "casted value doesn't match the desired type");
 
   return lldb::ValueObjectSP(inner_value->Cast(type.GetNonReferenceType()));
 }
@@ -3097,9 +3085,8 @@ ValueObject::CastBaseToDerivedType(CompilerType type, uint64_t offset) {
   // type of cast; otherwise return the shared pointer to the original
   // (unchanged) ValueObject.
   if (!type.IsPointerType() && !type.IsReferenceType())
-    return llvm::make_error<llvm::StringError>(
-        "Invalid target type: should be a pointer or a reference",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Invalid target type: should be a pointer or a reference");
 
   CompilerType start_type = GetCompilerType();
   if (start_type.IsReferenceType())
@@ -3111,25 +3098,22 @@ ValueObject::CastBaseToDerivedType(CompilerType type, uint64_t offset) {
       start_type.IsPointerType() ? start_type.GetPointeeType() : start_type;
 
   if (!target_record_type.IsRecordType() || !start_record_type.IsRecordType())
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be record types",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be record types");
 
   if (target_record_type.CompareTypes(start_record_type))
-    return llvm::make_error<llvm::StringError>(
-        "Underlying start & target types should be different",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "Underlying start & target types should be different");
 
   CompilerType virtual_base;
   if (target_record_type.IsVirtualBase(start_record_type, &virtual_base)) {
     if (!virtual_base.IsValid())
-      return llvm::make_error<llvm::StringError>(
-          "virtual base should be valid", llvm::inconvertibleErrorCode());
-    return llvm::make_error<llvm::StringError>(
+      return llvm::createStringError("virtual base should be valid");
+    return llvm::createStringError(
         llvm::Twine("cannot cast " + start_type.TypeDescription() + " to " +
                     type.TypeDescription() + " via virtual base " +
-                    virtual_base.TypeDescription()),
-        llvm::inconvertibleErrorCode());
+                    virtual_base.TypeDescription())
+            .str());
   }
 
   // Both the starting & target types are valid for the cast,  so we can
