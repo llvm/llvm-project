@@ -84,7 +84,8 @@
 // This LOH aims at getting rid of redundant ADRP instructions.
 //
 // The overall design for emitting the LOHs is:
-// 1. AArch64CollectLOH (this pass) records the LOHs in the AArch64FunctionInfo.
+// 1. AArch64CollectLOHLegacy (this pass) records the LOHs in the
+// AArch64FunctionInfo.
 // 2. AArch64AsmPrinter reads the LOHs from AArch64FunctionInfo and it:
 //     1. Associates them a label.
 //     2. Emits them in a MCStreamer (EmitLOHDirective).
@@ -125,11 +126,21 @@ STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 
 namespace {
 
-struct AArch64CollectLOH : public MachineFunctionPass {
-  static char ID;
-  AArch64CollectLOH() : MachineFunctionPass(ID) {}
+struct AArch64CollectLOHImpl {
+  bool run(MachineFunction &MF);
+};
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+struct AArch64CollectLOHLegacy : public MachineFunctionPass {
+  static char ID;
+  AArch64CollectLOHLegacy() : MachineFunctionPass(ID) {
+    initializeAArch64CollectLOHLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    return AArch64CollectLOHImpl().run(MF);
+  }
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
@@ -143,11 +154,11 @@ struct AArch64CollectLOH : public MachineFunctionPass {
   }
 };
 
-char AArch64CollectLOH::ID = 0;
+char AArch64CollectLOHLegacy::ID = 0;
 
 } // end anonymous namespace.
 
-INITIALIZE_PASS(AArch64CollectLOH, "aarch64-collect-loh",
+INITIALIZE_PASS(AArch64CollectLOHLegacy, "aarch64-collect-loh",
                 AARCH64_COLLECT_LOH_NAME, false, false)
 
 static bool canAddBePartOfLOH(const MachineInstr &MI) {
@@ -536,10 +547,7 @@ static void handleNormalInst(const MachineInstr &MI, LOHInfo *LOHInfos) {
   }
 }
 
-bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool AArch64CollectLOHImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Collect LOH **********\n"
                     << "Looking in function " << MF.getName() << '\n');
 
@@ -595,6 +603,17 @@ bool AArch64CollectLOH::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
+PreservedAnalyses
+AArch64CollectLOHPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = AArch64CollectLOHImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 FunctionPass *llvm::createAArch64CollectLOHPass() {
-  return new AArch64CollectLOH();
+  return new AArch64CollectLOHLegacy();
 }
