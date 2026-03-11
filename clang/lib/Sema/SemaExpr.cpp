@@ -17651,7 +17651,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::CompatibleOBTDiscards:
     return false;
   case AssignConvertType::IncompatibleOBTKinds: {
-    if (SrcType->isArrayType() || SrcType->isFunctionType()) {
+    if (SrcType->isArrayType()) {
       SrcType = Context.getDecayedType(SrcType);
     }
     auto getOBTKindName = [](QualType Ty) -> StringRef {
