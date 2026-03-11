@@ -936,3 +936,211 @@ uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
   return vabaq_u32(v1, v2, v3);
 }
+
+//===----------------------------------------------------------------------===//
+// 2.x. Vector rounding shift right
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-rounding-shift-right
+//===----------------------------------------------------------------------===//
+
+// vrshr_n_* (64-bit vectors)
+// LLVM-LABEL: @test_vrshr_n_s8(
+// CIR-LABEL: @test_vrshr_n_s8(
+// LLVM-SAME: <8 x i8> noundef [[A:%.*]])
+int8x8_t test_vrshr_n_s8(int8x8_t a) {
+// CIR: cir.const #cir.const_vector
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.srshl.v8i8(<8 x i8> [[A]], <8 x i8> splat (i8 -3))
+// LLVM: ret <8 x i8> [[VRSHR_N]]
+  return vrshr_n_s8(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshr_n_s16(
+// CIR-LABEL: @test_vrshr_n_s16(
+// LLVM-SAME: <4 x i16> noundef [[A:%.*]])
+int16x4_t test_vrshr_n_s16(int16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.srshl.v4i16(<4 x i16> {{.*}}, <4 x i16> splat (i16 -3))
+// LLVM: ret <4 x i16> [[VRSHR_N1]]
+  return vrshr_n_s16(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshr_n_s32(
+// CIR-LABEL: @test_vrshr_n_s32(
+// LLVM-SAME: <2 x i32> noundef [[A:%.*]])
+int32x2_t test_vrshr_n_s32(int32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.srshl.v2i32(<2 x i32> {{.*}}, <2 x i32> splat (i32 -3))
+// LLVM: ret <2 x i32> [[VRSHR_N1]]
+  return vrshr_n_s32(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshr_n_s64(
+// CIR-LABEL: @test_vrshr_n_s64(
+// LLVM-SAME: <1 x i64> noundef [[A:%.*]])
+int64x1_t test_vrshr_n_s64(int64x1_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <1 x i64> @llvm.aarch64.neon.srshl.v1i64(<1 x i64> {{.*}}, <1 x i64> splat (i64 -1))
+// LLVM: ret <1 x i64> [[VRSHR_N1]]
+  return vrshr_n_s64(a, 1);
+}
+
+// LLVM-LABEL: @test_vrshr_n_u8(
+// CIR-LABEL: @test_vrshr_n_u8(
+// LLVM-SAME: <8 x i8> noundef [[A:%.*]])
+uint8x8_t test_vrshr_n_u8(uint8x8_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.urshl.v8i8(<8 x i8> [[A]], <8 x i8> splat (i8 -3))
+// LLVM: ret <8 x i8> [[VRSHR_N]]
+  return vrshr_n_u8(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshr_n_u16(
+// CIR-LABEL: @test_vrshr_n_u16(
+// LLVM-SAME: <4 x i16> noundef [[A:%.*]])
+uint16x4_t test_vrshr_n_u16(uint16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.urshl.v4i16(<4 x i16> {{.*}}, <4 x i16> splat (i16 -3))
+// LLVM: ret <4 x i16> [[VRSHR_N1]]
+  return vrshr_n_u16(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshr_n_u32(
+// CIR-LABEL: @test_vrshr_n_u32(
+// LLVM-SAME: <2 x i32> noundef [[A:%.*]])
+uint32x2_t test_vrshr_n_u32(uint32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.urshl.v2i32(<2 x i32> {{.*}}, <2 x i32> splat (i32 -3))
+// LLVM: ret <2 x i32> [[VRSHR_N1]]
+  return vrshr_n_u32(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshr_n_u64(
+// CIR-LABEL: @test_vrshr_n_u64(
+// LLVM-SAME: <1 x i64> noundef [[A:%.*]])
+uint64x1_t test_vrshr_n_u64(uint64x1_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <1 x i64> @llvm.aarch64.neon.urshl.v1i64(<1 x i64> {{.*}}, <1 x i64> splat (i64 -1))
+// LLVM: ret <1 x i64> [[VRSHR_N1]]
+  return vrshr_n_u64(a, 1);
+}
+
+// vrshrq_n_* (128-bit vectors)
+// LLVM-LABEL: @test_vrshrq_n_s8(
+// CIR-LABEL: @test_vrshrq_n_s8(
+// LLVM-SAME: <16 x i8> noundef [[A:%.*]])
+int8x16_t test_vrshrq_n_s8(int8x16_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N:%.*]] = call <16 x i8> @llvm.aarch64.neon.srshl.v16i8(<16 x i8> [[A]], <16 x i8> splat (i8 -3))
+// LLVM: ret <16 x i8> [[VRSHR_N]]
+  return vrshrq_n_s8(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_s16(
+// CIR-LABEL: @test_vrshrq_n_s16(
+// LLVM-SAME: <8 x i16> noundef [[A:%.*]])
+int16x8_t test_vrshrq_n_s16(int16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <8 x i16> @llvm.aarch64.neon.srshl.v8i16(<8 x i16> {{.*}}, <8 x i16> splat (i16 -3))
+// LLVM: ret <8 x i16> [[VRSHR_N1]]
+  return vrshrq_n_s16(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_s32(
+// CIR-LABEL: @test_vrshrq_n_s32(
+// LLVM-SAME: <4 x i32> noundef [[A:%.*]])
+int32x4_t test_vrshrq_n_s32(int32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <4 x i32> @llvm.aarch64.neon.srshl.v4i32(<4 x i32> {{.*}}, <4 x i32> splat (i32 -3))
+// LLVM: ret <4 x i32> [[VRSHR_N1]]
+  return vrshrq_n_s32(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_s64(
+// CIR-LABEL: @test_vrshrq_n_s64(
+// LLVM-SAME: <2 x i64> noundef [[A:%.*]])
+int64x2_t test_vrshrq_n_s64(int64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <2 x i64> @llvm.aarch64.neon.srshl.v2i64(<2 x i64> {{.*}}, <2 x i64> splat (i64 -3))
+// LLVM: ret <2 x i64> [[VRSHR_N1]]
+  return vrshrq_n_s64(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_u8(
+// CIR-LABEL: @test_vrshrq_n_u8(
+// LLVM-SAME: <16 x i8> noundef [[A:%.*]])
+uint8x16_t test_vrshrq_n_u8(uint8x16_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N:%.*]] = call <16 x i8> @llvm.aarch64.neon.urshl.v16i8(<16 x i8> [[A]], <16 x i8> splat (i8 -3))
+// LLVM: ret <16 x i8> [[VRSHR_N]]
+  return vrshrq_n_u8(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_u16(
+// CIR-LABEL: @test_vrshrq_n_u16(
+// LLVM-SAME: <8 x i16> noundef [[A:%.*]])
+uint16x8_t test_vrshrq_n_u16(uint16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <8 x i16> @llvm.aarch64.neon.urshl.v8i16(<8 x i16> {{.*}}, <8 x i16> splat (i16 -3))
+// LLVM: ret <8 x i16> [[VRSHR_N1]]
+  return vrshrq_n_u16(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_u32(
+// CIR-LABEL: @test_vrshrq_n_u32(
+// LLVM-SAME: <4 x i32> noundef [[A:%.*]])
+uint32x4_t test_vrshrq_n_u32(uint32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N1:%.*]] = call <4 x i32> @llvm.aarch64.neon.urshl.v4i32(<4 x i32> {{.*}}, <4 x i32> splat (i32 -3))
+// LLVM: ret <4 x i32> [[VRSHR_N1]]
+  return vrshrq_n_u32(a, 3);
+}
+
+// LLVM-LABEL: @test_vrshrq_n_u64(
+// CIR-LABEL: @test_vrshrq_n_u64(
+// LLVM-SAME: <2 x i64> noundef [[A:%.*]])
+uint64x2_t test_vrshrq_n_u64(uint64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+// LLVM: [[VRSHR_N1:%.*]] = call <2 x i64> @llvm.aarch64.neon.urshl.v2i64(<2 x i64> {{.*}}, <2 x i64> splat (i64 -3))
+// LLVM: ret <2 x i64> [[VRSHR_N1]]
+  return vrshrq_n_u64(a, 3);
+}
+
+// vrshrd_n_* (scalar 64-bit)
+// LLVM-LABEL: @test_vrshrd_n_s64(
+// CIR-LABEL: @test_vrshrd_n_s64(
+// LLVM-SAME: i64 noundef [[A:%.*]])
+int64_t test_vrshrd_n_s64(int64_t a) {
+// CIR: cir.const #cir.int<{{.*}}> : !s64i
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.srshl" {{%.*}}, {{%.*}}
+
+// LLVM: [[VRSHR_N:%.*]] = call i64 @llvm.aarch64.neon.srshl.i64(i64 [[A]], i64 -63)
+// LLVM: ret i64 [[VRSHR_N]]
+  return (int64_t)vrshrd_n_s64(a, 63);
+}
+
+// LLVM-LABEL: @test_vrshrd_n_u64(
+// CIR-LABEL: @test_vrshrd_n_u64(
+// LLVM-SAME: i64 noundef [[A:%.*]])
+uint64_t test_vrshrd_n_u64(uint64_t a) {
+// CIR: cir.const #cir.int<{{.*}}> : !s64i
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.urshl" {{%.*}}, {{%.*}}
+  
+// LLVM: [[VRSHR_N:%.*]] = call i64 @llvm.aarch64.neon.urshl.i64(i64 [[A]], i64 -63)
+// LLVM: ret i64 [[VRSHR_N]]
+  return (uint64_t)vrshrd_n_u64(a, 63);
+}
