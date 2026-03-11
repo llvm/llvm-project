@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_exp2.h"
+#include <clc/math/clc_exp2.h>
 
 #define __CLC_FUNCTION exp2
-#define __CLC_BODY "clc/shared/unary_def.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/shared/unary_def.inc>
+#include <clc/math/gentype.inc>
