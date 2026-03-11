@@ -3847,7 +3847,7 @@ bool InitializedEntity::allowsNRVO() const {
   switch (getKind()) {
   case EK_Result:
   case EK_Exception:
-    return LocAndNRVO.IsNRVO;
+    return LocAndNRVO.NRVO == NRVOKind::Allowed;
 
   case EK_StmtExprResult:
   case EK_Variable:

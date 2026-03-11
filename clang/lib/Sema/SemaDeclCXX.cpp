@@ -5045,9 +5045,11 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
 
     InitializedEntity Entity =
         Indirect ? InitializedEntity::InitializeMember(
-                       Indirect, nullptr, InitializedEntity::ImplicitFieldInit)
+                       Indirect, nullptr,
+                       InitializedEntity::ImplicitFieldInitKind::Yes)
                  : InitializedEntity::InitializeMember(
-                       Field, nullptr, InitializedEntity::ImplicitFieldInit);
+                       Field, nullptr,
+                       InitializedEntity::ImplicitFieldInitKind::Yes);
 
     // Direct-initialize to use the copy constructor.
     InitializationKind InitKind =
@@ -5079,9 +5081,11 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
   if (FieldBaseElementType->isRecordType()) {
     InitializedEntity InitEntity =
         Indirect ? InitializedEntity::InitializeMember(
-                       Indirect, nullptr, InitializedEntity::ImplicitFieldInit)
+                       Indirect, nullptr,
+                       InitializedEntity::ImplicitFieldInitKind::Yes)
                  : InitializedEntity::InitializeMember(
-                       Field, nullptr, InitializedEntity::ImplicitFieldInit);
+                       Field, nullptr,
+                       InitializedEntity::ImplicitFieldInitKind::Yes);
     InitializationKind InitKind =
       InitializationKind::CreateDefault(Loc);
 
@@ -5283,7 +5287,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
       return true;
 
     auto Entity = InitializedEntity::InitializeMember(
-        Field, nullptr, InitializedEntity::ImplicitFieldInit);
+        Field, nullptr, InitializedEntity::ImplicitFieldInitKind::Yes);
     SemaRef.checkInitializerLifetime(Entity, DIE.get());
 
     CXXCtorInitializer *Init;

@@ -2207,7 +2207,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
     InitializedEntity Entity = InitializedEntity::InitializeNew(
-        StartLoc, AllocType, InitializedEntity::KnownLengthNewArray);
+        StartLoc, AllocType, InitializedEntity::NewArrayKind::KnownLength);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
@@ -2592,8 +2592,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     bool VariableLengthArrayNew = ArraySize && *ArraySize && !KnownArraySize;
     InitializedEntity Entity = InitializedEntity::InitializeNew(
         StartLoc, InitType,
-        VariableLengthArrayNew ? InitializedEntity::UnknownLengthNewArray
-                               : InitializedEntity::KnownLengthNewArray);
+        VariableLengthArrayNew ? InitializedEntity::NewArrayKind::UnknownLength
+                               : InitializedEntity::NewArrayKind::KnownLength);
     InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
