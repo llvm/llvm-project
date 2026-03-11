@@ -607,7 +607,7 @@ public:
 
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
-                               unsigned Depth = 0);
+                               const SimplifyQuery &Q, unsigned Depth = 0);
 
   bool SimplifyDemandedInstructionFPClass(Instruction &Inst);
 
