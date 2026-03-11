@@ -124,6 +124,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-std-bit
+  <clang-tidy/checks/modernize/use-std-bit>` check.
+
+  Finds common idioms which can be replaced by standard functions from the
+  ``<bit>`` C++20 header.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

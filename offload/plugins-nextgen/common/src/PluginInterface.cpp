@@ -1910,7 +1910,10 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    return false;
+    auto MatchOrErr = isImageCompatible(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
 }
 
@@ -1946,7 +1949,10 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     return *MatchOrErr;
   }
   default:
-    return false;
+    auto MatchOrErr = isImageCompatible(DeviceId, Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
   }
 }
 

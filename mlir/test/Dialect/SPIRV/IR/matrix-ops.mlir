@@ -61,7 +61,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 // -----
 
 func.func @input_type_mismatch(%arg0 : !spirv.matrix<3 x vector<3xf32>>, %arg1 : f16) {
-  // expected-error @+1 {{input matrix components' type and scaling value must have the same type}}
+  // expected-error @+1 {{op failed to verify that all of {matrix, scalar} have same element type}}
   %result = spirv.MatrixTimesScalar %arg0, %arg1 : !spirv.matrix<3 x vector<3xf32>>, f16
   return
 }
@@ -69,7 +69,7 @@ func.func @input_type_mismatch(%arg0 : !spirv.matrix<3 x vector<3xf32>>, %arg1 :
 // -----
 
 func.func @input_type_mismatch(%arg0 : !spirv.matrix<3 x vector<3xf32>>, %arg1 : f64) {
-  // expected-error @+1 {{input matrix components' type and scaling value must have the same type}}
+  // expected-error @+1 {{op failed to verify that all of {matrix, scalar} have same element type}}
   %result = spirv.MatrixTimesScalar %arg0, %arg1 : !spirv.matrix<3 x vector<3xf32>>, f64
   return
 }
@@ -93,7 +93,7 @@ func.func @transpose_op_shape_mismatch_2(%arg0 : !spirv.matrix<3 x vector<4xf32>
 // -----
 
 func.func @transpose_op_type_mismatch(%arg0 : !spirv.matrix<3 x vector<4xf32>>) {
-   // expected-error @+1 {{input and output matrices must have the same component type}}
+   // expected-error @+1 {{op failed to verify that all of {matrix, result} have same element type}}
    %result = spirv.Transpose %arg0 : !spirv.matrix<3 x vector<4xf32>> -> !spirv.matrix<4 x vector<3xf16>>
    return
 }
@@ -125,7 +125,7 @@ func.func @matrix_times_matrix_inputs_shape_mismatch(%arg0 : !spirv.matrix<3 x v
 // -----
 
 func.func @matrix_times_matrix_component_type_mismatch_1(%arg0 : !spirv.matrix<3 x vector<3xf32>>, %arg1 : !spirv.matrix<3x vector<3xf32>>){
-   // expected-error @+1 {{right and result matrices' component type must be the same}}
+   // expected-error @+1 {{op failed to verify that all of {leftmatrix, rightmatrix, result} have same element type}}
    %result = spirv.MatrixTimesMatrix %arg0, %arg1 : !spirv.matrix<3 x vector<3xf32>>, !spirv.matrix<3 x vector<3xf32>> -> !spirv.matrix<3 x vector<3xf64>>
    return
 }
@@ -133,7 +133,7 @@ func.func @matrix_times_matrix_component_type_mismatch_1(%arg0 : !spirv.matrix<3
 // -----
 
 func.func @matrix_times_matrix_component_type_mismatch_2(%arg0 : !spirv.matrix<3 x vector<3xf64>>, %arg1 : !spirv.matrix<3x vector<3xf32>>){
-   // expected-error @+1 {{left and result matrices' component type must be the same}}
+   // expected-error @+1 {{op failed to verify that all of {leftmatrix, rightmatrix, result} have same element type}}
    %result = spirv.MatrixTimesMatrix %arg0, %arg1 : !spirv.matrix<3 x vector<3xf64>>, !spirv.matrix<3 x vector<3xf32>> -> !spirv.matrix<3 x vector<3xf32>>
    return
 }
@@ -143,6 +143,14 @@ func.func @matrix_times_matrix_component_type_mismatch_2(%arg0 : !spirv.matrix<3
 func.func @matrix_times_vector_element_type_mismatch(%arg0: !spirv.matrix<4 x vector<3xf32>>, %arg1: vector<4xf16>) {
   // expected-error @+1 {{op failed to verify that all of {vector, result} have same element type}}
   %result = spirv.MatrixTimesVector %arg0, %arg1 : !spirv.matrix<4 x vector<3xf32>>, vector<4xf16> -> vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @matrix_times_vector_element_type_mismatch(%arg0: !spirv.matrix<4 x vector<3xf16>>, %arg1: vector<4xf32>) {
+  // expected-error @+1 {{op failed to verify that all of {matrix, result} have same element type}}
+  %result = spirv.MatrixTimesVector %arg0, %arg1 : !spirv.matrix<4 x vector<3xf16>>, vector<4xf32> -> vector<3xf32>
   return
 }
 
@@ -189,7 +197,7 @@ func.func @vector_times_matrix_vector_type_mismatch(%arg0: vector<3xf16>, %arg1:
 // -----
 
 func.func @vector_times_matrix_matrix_type_mismatch(%arg0: vector<3xf32>, %arg1: !spirv.matrix<4 x vector<3xf16>>) {
-  // expected-error @+1 {{matrix must be a matrix with the same component type as the component type in result}}
+  // expected-error @+1 {{op failed to verify that all of {matrix, result} have same element type}}
   %result = spirv.VectorTimesMatrix %arg0, %arg1 : vector<3xf32>, !spirv.matrix<4 x vector<3xf16>> -> vector<4xf32>
   return
 }
