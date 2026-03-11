@@ -6,7 +6,7 @@ subroutine f00
   integer, parameter :: n = 1024
   integer :: i, j, k, array(n, n, n)
 
-  !The i and j are predermined private as loop induction variables nested
+  !The i and j are predetermined private as loop induction variables nested
   !in a teams construct.
   !$omp target teams distribute default(none) shared(array)
   do i = 1, n
