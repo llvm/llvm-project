@@ -20,6 +20,7 @@
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -96,6 +97,58 @@ FunctionPass *llvm::createAArch64CodeLayoutOptPass() {
   return new AArch64CodeLayoutOpt();
 }
 
+/// Returns true if Opc is a floating-point comparison (FCMP/FCMPE).
+static bool isFloatingPointCompare(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::FCMPSrr:
+  case AArch64::FCMPDrr:
+  case AArch64::FCMPESrr:
+  case AArch64::FCMPEDrr:
+  case AArch64::FCMPHrr:
+  case AArch64::FCMPEHrr:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Returns true if Opc is a floating-point conditional select (FCSEL).
+static bool isFloatingPointConditionalSelect(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::FCSELSrrr:
+  case AArch64::FCSELDrrr:
+  case AArch64::FCSELHrrr:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Returns true if MI is a qualifying 32-bit CMP or CMN instruction.
+/// CMP is encoded as SUBS with WZR destination, CMN as ADDS with WZR.
+/// Only simple variants (no shifted/extended reg) qualify, and immediate
+/// variants require no LSL shift and small immediates (<=15).
+static bool isQualifyingIntCompare(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::SUBSWrr:
+  case AArch64::ADDSWrr:
+    return MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr);
+  case AArch64::SUBSWri:
+  case AArch64::ADDSWri:
+    return MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) &&
+           MI.getOperand(3).getImm() == 0 && MI.getOperand(2).getImm() <= 15;
+  case AArch64::SUBSWrs:
+  case AArch64::ADDSWrs:
+    return MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) &&
+           !AArch64InstrInfo::hasShiftedReg(MI);
+  case AArch64::SUBSWrx:
+    return MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) &&
+           !AArch64InstrInfo::hasExtendedReg(MI);
+  default:
+    return false;
+  }
+}
+
 bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableCodeAlignment)
     return false;
@@ -116,83 +169,35 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
 // consumer (FCMP→FCSEL or CMP/CMN→CSEL), with no intervening instructions.
 bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
     MachineBasicBlock *MBB) {
-  MachineInstr *PendingFCMPInstr = nullptr;
-  MachineInstr *PendingCMPInstr = nullptr;
+  auto Instrs = instructionsWithoutDebug(MBB->begin(), MBB->end());
+  auto End = MBB->instr_end();
 
-  for (auto &MI : instructionsWithoutDebug(MBB->begin(), MBB->end())) {
-    if (MI.isMetaInstruction())
-      continue;
-
-    unsigned Opc = MI.getOpcode();
-
-    // --- FCMP-FCSEL detection (bit 0) ---
-    if (EnableCodeAlignment & 0x1) {
-      switch (Opc) {
-      case AArch64::FCMPSrr:
-      case AArch64::FCMPDrr:
-      case AArch64::FCMPESrr:
-      case AArch64::FCMPEDrr:
-      case AArch64::FCMPHrr:
-      case AArch64::FCMPEHrr:
-        PendingFCMPInstr = &MI;
-        break;
-      case AArch64::FCSELSrrr:
-      case AArch64::FCSELDrrr:
-      case AArch64::FCSELHrrr:
-        if (PendingFCMPInstr) {
-          ++NumFcmpFcselPairsDetected;
-          return true;
-        }
-        PendingFCMPInstr = nullptr;
-        break;
-      default:
-        PendingFCMPInstr = nullptr;
-        break;
-      }
+  // --- FCMP-FCSEL detection (bit 0) ---
+  if (EnableCodeAlignment & 0x1) {
+    if (llvm::any_of(Instrs, [End](MachineInstr &MI) {
+          if (!isFloatingPointCompare(MI.getOpcode()))
+            return false;
+          auto NextIt =
+              skipDebugInstructionsForward(std::next(MI.getIterator()), End);
+          return NextIt != End &&
+                 isFloatingPointConditionalSelect(NextIt->getOpcode());
+        })) {
+      ++NumFcmpFcselPairsDetected;
+      return true;
     }
+  }
 
-    // --- CMP/CMN-CSEL detection (bit 1) ---
-    // CMP is encoded as SUBS with WZR destination (32-bit only).
-    // CMN is encoded as ADDS with WZR destination (32-bit only).
-    // Only simple variants (no shifted/extended reg) qualify.
-    if (EnableCodeAlignment & 0x2) {
-      bool IsCMP = false;
-      switch (Opc) {
-      case AArch64::SUBSWrr:
-      case AArch64::ADDSWrr:
-        IsCMP = MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr);
-        break;
-      case AArch64::SUBSWri:
-      case AArch64::ADDSWri:
-        // Only CMP/CMN #imm (no LSL #12 shift) with small immediates (<=15)
-        IsCMP = MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) &&
-                MI.getOperand(3).getImm() == 0 &&
-                MI.getOperand(2).getImm() <= 15;
-        break;
-      case AArch64::SUBSWrs:
-      case AArch64::ADDSWrs:
-        IsCMP = MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) &&
-                !AArch64InstrInfo::hasShiftedReg(MI);
-        break;
-      case AArch64::SUBSWrx:
-        IsCMP = MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) &&
-                !AArch64InstrInfo::hasExtendedReg(MI);
-        break;
-      case AArch64::CSELWr:
-        if (PendingCMPInstr) {
-          ++NumCmpCselPairsDetected;
-          return true;
-        }
-        PendingCMPInstr = nullptr;
-        break;
-      default:
-        break;
-      }
-
-      if (IsCMP)
-        PendingCMPInstr = &MI;
-      else if (Opc != AArch64::CSELWr)
-        PendingCMPInstr = nullptr;
+  // --- CMP/CMN-CSEL detection (bit 1) ---
+  if (EnableCodeAlignment & 0x2) {
+    if (llvm::any_of(Instrs, [End](MachineInstr &MI) {
+          if (!isQualifyingIntCompare(MI))
+            return false;
+          auto NextIt =
+              skipDebugInstructionsForward(std::next(MI.getIterator()), End);
+          return NextIt != End && NextIt->getOpcode() == AArch64::CSELWr;
+        })) {
+      ++NumCmpCselPairsDetected;
+      return true;
     }
   }
 
