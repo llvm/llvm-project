@@ -423,6 +423,8 @@ private:
   Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
                                      bool IsAnd);
 
+  Instruction *foldVecCmpOnHalfElementSize(Instruction &I);
+
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should
   /// already be inserted into the function.
@@ -483,10 +485,6 @@ private:
     setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE, &F);
     return Sel;
   }
-
-  Instruction *foldVni2mCmpEqUsingV2nim(Instruction &I);
-
-  Instruction *foldVni2mCmpGtUsingV2nim(Instruction &I);
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable

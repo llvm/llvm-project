@@ -1311,14 +1311,9 @@ Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
 //
 // Bitwise AND between the upper and lower parts can be achived by performing
 // the operation between the original and shuffled equality vector.
-Instruction *InstCombinerImpl::foldVni2mCmpEqUsingV2nim(Instruction &I) {
-  auto *ResultVecType = dyn_cast<VectorType>(I.getType());
-
-  if (!ResultVecType || ResultVecType->isScalableTy() ||
-      !ResultVecType->getElementType()->isIntegerTy() ||
-      ResultVecType->getElementCount().getFixedValue() % 2 != 0)
-    return nullptr;
-
+static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
+                                            FixedVectorType *ResultVecType,
+                                            InstCombiner::BuilderTy &Builder) {
   // Check pattern existance
   Value *L, *R;
   CmpPredicate Pred;
@@ -1332,13 +1327,13 @@ Instruction *InstCombinerImpl::foldVni2mCmpEqUsingV2nim(Instruction &I) {
       Pred != CmpInst::ICMP_EQ)
     return nullptr;
 
-  auto *OldVecType = cast<VectorType>(L->getType());
+  auto *OldVecType = cast<FixedVectorType>(L->getType());
 
   if (OldVecType != ResultVecType)
     return nullptr;
 
   // Example shuffle mask: {1, 0, 3, 2}
-  for (auto I = 0; I < static_cast<int>(Mask.size()); I += 2)
+  for (int I = 0; I < static_cast<int>(Mask.size()); I += 2)
     if (Mask[I] != I + 1 || Mask[I + 1] != I)
       return nullptr;
 
@@ -1346,18 +1341,18 @@ Instruction *InstCombinerImpl::foldVni2mCmpEqUsingV2nim(Instruction &I) {
                     << '\n');
 
   // Perform folding
-  auto OldElementCount = OldVecType->getElementCount().getFixedValue();
-  auto OldElementWidth = OldVecType->getElementType()->getIntegerBitWidth();
-  auto *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
-  auto *NewVecType =
+  unsigned int OldElementCount = OldVecType->getElementCount().getFixedValue();
+  unsigned int OldElementWidth = OldVecType->getScalarSizeInBits();
+  Type *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
+  Type *NewVecType =
       VectorType::get(NewElementType, OldElementCount / 2, false);
-  auto *BitCastL = Builder.CreateBitCast(L, NewVecType);
-  auto *BitCastR = Builder.CreateBitCast(R, NewVecType);
-  auto *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);
-  auto *SExt = Builder.CreateSExt(Cmp, NewVecType);
-  auto *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
+  Value *BitCastL = Builder.CreateBitCast(L, NewVecType);
+  Value *BitCastR = Builder.CreateBitCast(R, NewVecType);
+  Value *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);
+  Value *SExt = Builder.CreateSExt(Cmp, NewVecType);
+  Value *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
 
-  return replaceInstUsesWith(I, BitCastCmp);
+  return BitCastCmp;
 }
 
 // Folds patterns which uses comparisons on <2N x iM> type for a <N x i2M>
@@ -1379,14 +1374,9 @@ Instruction *InstCombinerImpl::foldVni2mCmpEqUsingV2nim(Instruction &I) {
 // Note that comparison of the lower parts are always unsigned comparisons
 // regardless of the resulting signedness. Also note that, unsigned comparison
 // can be derived from signed comparison by flipping the MSB of both operands.
-Instruction *InstCombinerImpl::foldVni2mCmpGtUsingV2nim(Instruction &I) {
-  auto *ResultVecType = dyn_cast<VectorType>(I.getType());
-
-  if (!ResultVecType || ResultVecType->isScalableTy() ||
-      !ResultVecType->getElementType()->isIntegerTy() ||
-      ResultVecType->getElementCount().getFixedValue() % 2 != 0)
-    return nullptr;
-
+static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
+                                            FixedVectorType *ResultVecType,
+                                            InstCombiner::BuilderTy &Builder) {
   // Check pattern existance
   Value *A, *B, *Greater1, *Greater2;
   CmpPredicate PredEq;
@@ -1408,21 +1398,22 @@ Instruction *InstCombinerImpl::foldVni2mCmpGtUsingV2nim(Instruction &I) {
       PredEq != ICmpInst::ICMP_EQ)
     return nullptr;
 
-  auto *OldVecType = cast<VectorType>(A->getType());
+  auto *OldVecType = cast<FixedVectorType>(A->getType());
 
   if (OldVecType != ResultVecType)
     return nullptr;
 
   // Example lower shuffle mask: {0, 0, 2, 2}
   // Example upper shuffle mask: {1, 1, 3, 3}
-  for (auto I = 0; I < static_cast<int>(MaskLower.size()); I += 2)
+  for (int I = 0; I < static_cast<int>(MaskLower.size()); I += 2)
     if (MaskLower[I] != I || MaskLower[I + 1] != I || MaskUpper1[I] != I + 1 ||
         MaskUpper1[I + 1] != I + 1)
       return nullptr;
 
   // Check greater comparison
-  auto *Zero = ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0);
-  auto *MsbFlip =
+  ConstantInt *Zero =
+      ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0);
+  ConstantInt *MsbFlip =
       ConstantInt::get(IntegerType::getInt32Ty(I.getContext()), 0x80000000);
   Value *MsbFlipLower1 = nullptr, *MsbFlipLower2 = nullptr;
   CmpPredicate PredGt;
@@ -1440,7 +1431,7 @@ Instruction *InstCombinerImpl::foldVni2mCmpGtUsingV2nim(Instruction &I) {
         (PredGt == ICmpInst::ICMP_SGT || PredGt == ICmpInst::ICMP_SLT)))
     return nullptr;
 
-  auto OldElementCount = OldVecType->getElementCount().getFixedValue();
+  unsigned int OldElementCount = OldVecType->getElementCount().getFixedValue();
 
   if (MsbFlipLower1) {
     auto *MsbFlipLower = dyn_cast<ConstantDataVector>(MsbFlipLower1);
@@ -1448,7 +1439,7 @@ Instruction *InstCombinerImpl::foldVni2mCmpGtUsingV2nim(Instruction &I) {
       return nullptr;
 
     // Example MSB flip lower mask: {0x80000000, 0, 0x80000000, 0}
-    for (auto I = 0; I < static_cast<int>(OldElementCount); I += 2)
+    for (int I = 0; I < static_cast<int>(OldElementCount); I += 2)
       if (MsbFlipLower->getAggregateElement(I) != MsbFlip ||
           MsbFlipLower->getAggregateElement(I + 1) != Zero)
         return nullptr;
@@ -1458,17 +1449,35 @@ Instruction *InstCombinerImpl::foldVni2mCmpGtUsingV2nim(Instruction &I) {
                     << '\n');
 
   // Perform folding
-  auto OldElementWidth = OldVecType->getElementType()->getIntegerBitWidth();
-  auto *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
-  auto *NewVecType =
+  unsigned int OldElementWidth = OldVecType->getScalarSizeInBits();
+  Type *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
+  Type *NewVecType =
       VectorType::get(NewElementType, OldElementCount / 2, false);
-  auto *BitCastA = Builder.CreateBitCast(A, NewVecType);
-  auto *BitCastB = Builder.CreateBitCast(B, NewVecType);
-  auto *Cmp = Builder.CreateICmp(PredGt, BitCastA, BitCastB);
-  auto *SExt = Builder.CreateSExt(Cmp, NewVecType);
-  auto *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
+  Value *BitCastA = Builder.CreateBitCast(A, NewVecType);
+  Value *BitCastB = Builder.CreateBitCast(B, NewVecType);
+  Value *Cmp = Builder.CreateICmp(PredGt, BitCastA, BitCastB);
+  Value *SExt = Builder.CreateSExt(Cmp, NewVecType);
+  Value *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
 
-  return replaceInstUsesWith(I, BitCastCmp);
+  return BitCastCmp;
+}
+
+// Folds patterns which uses comparisons on <2N x iM> type for a <N x i2M>
+// comparison.
+Instruction *InstCombinerImpl::foldVecCmpOnHalfElementSize(Instruction &I) {
+  auto *ResultVecType = dyn_cast<FixedVectorType>(I.getType());
+
+  if (!ResultVecType || !ResultVecType->getElementType()->isIntegerTy() ||
+      ResultVecType->getElementCount().getFixedValue() % 2 != 0)
+    return nullptr;
+
+  if (Value *V = foldVecCmpEqOnHalfElementSize(I, ResultVecType, Builder))
+    return replaceInstUsesWith(I, V);
+
+  if (Value *V = foldVecCmpGtOnHalfElementSize(I, ResultVecType, Builder))
+    return replaceInstUsesWith(I, V);
+
+  return nullptr;
 }
 
 static std::optional<std::pair<Value *, Value *>>

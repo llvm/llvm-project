@@ -1896,10 +1896,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     }
   }
 
-  if (auto *Folded = foldVni2mCmpEqUsingV2nim(Sext))
-    return Folded;
-
-  if (auto *Folded = foldVni2mCmpGtUsingV2nim(Sext))
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(Sext))
     return Folded;
 
   return nullptr;

@@ -2898,7 +2898,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateAnd(Op0, V);
 
-  if (auto *Folded = foldVni2mCmpEqUsingV2nim(I))
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(I))
     return Folded;
 
   return nullptr;
@@ -4652,7 +4652,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
 
-  if (Instruction *Folded = foldVni2mCmpGtUsingV2nim(I))
+  if (Instruction *Folded = foldVecCmpOnHalfElementSize(I))
     return Folded;
 
   return nullptr;
