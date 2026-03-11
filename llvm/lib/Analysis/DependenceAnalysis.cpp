@@ -3100,6 +3100,7 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
     dbgs() << "\nDstSubscripts: ";
     for (int I = 0; I < Size; I++)
       dbgs() << *DstSubscripts[I];
+    dbgs() << "\n";
   });
 
   // The delinearization transforms a single-subscript MIV dependence test into
