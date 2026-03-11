@@ -262,8 +262,6 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   };
 
   Value *AllocSize64 = loadFromTable(getSizesTable(),  I64Ty, RegionIndex);
-  Value *Magic64     = loadFromTable(getMagicsTable(), I64Ty, RegionIndex);
-  Value *IsPow2_8    = loadFromTable(getIsPow2Table(), I8Ty,  RegionIndex);
   Value *Mask64      = loadFromTable(getMasksTable(),  I64Ty, RegionIndex);
 
   // Narrow to IntptrTy (which is i64 on 64-bit targets)
@@ -273,7 +271,31 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   // --- AND (POW2) base ---
   Value *BaseAnd = IRB.CreateAnd(PtrInt, Mask);
 
+  // Build-time specialization: if we know the region is POW2 (or all are),
+  // skip the MUL path entirely to avoid the cmov.
+  bool KnownPow2 = false;
+  if (auto *CI = dyn_cast<ConstantInt>(RegionIndex)) {
+    uint64_t Idx = CI->getZExtValue();
+    if (Idx < LOWFAT_NUM_SIZE_CLASSES && kLowFatGenIsPow2[Idx])
+      KnownPow2 = true;
+  } else {
+    // Check if ALL configured regions are POW2.
+    KnownPow2 = true;
+    for (int i = 0; i < LOWFAT_NUM_SIZE_CLASSES; ++i) {
+      if (!kLowFatGenIsPow2[i]) {
+        KnownPow2 = false;
+        break;
+      }
+    }
+  }
+
+  if (KnownPow2)
+    return {AllocSize, BaseAnd};
+
   // --- MUL (non-POW2) base ---
+  Value *Magic64     = loadFromTable(getMagicsTable(), I64Ty, RegionIndex);
+  Value *IsPow2_8    = loadFromTable(getIsPow2Table(), I8Ty,  RegionIndex);
+
   Value *Ptr128   = IRB.CreateZExt(PtrInt, I128Ty);
   Value *Magic128 = IRB.CreateZExt(IRB.CreateZExtOrTrunc(Magic64, IntptrTy),
                                    I128Ty);
@@ -289,6 +311,38 @@ LowFatSanitizer::emitDynamicBaseMagic(IRBuilder<> &IRB, Value *PtrInt,
   return {AllocSize, Base};
 }
 #endif  // LOWFAT_CUSTOM_CONFIG
+
+// Emit the OOB-check block given a pre-computed (Base, AllocSize, PtrInt).
+void LowFatSanitizer::emitOobCheck(IRBuilder<> &IRB, Value *PtrInt, Value *Base,
+                                  Value *AllocSize, uint64_t FixedAccessSize,
+                                  Value *DynAccessSize,
+                                  Instruction *InsertBefore, bool IsWrite) {
+  Value *AccessSize = DynAccessSize;
+  if (!AccessSize)
+    AccessSize = ConstantInt::get(IntptrTy, FixedAccessSize);
+
+  Value *End = IRB.CreateAdd(Base, AllocSize);
+  Value *AccessEnd = IRB.CreateAdd(PtrInt, AccessSize);
+
+  // For GEPs (no AccessSize/DynAccessSize), we check if result is < Base OR >=
+  // End. For loads/stores, we just check if AccessEnd > End.
+  Value *IsOOB = nullptr;
+  if (!FixedAccessSize && !DynAccessSize) {
+    Value *TooLow = IRB.CreateICmpULT(PtrInt, Base);
+    Value *TooHigh = IRB.CreateICmpUGE(PtrInt, End);
+    IsOOB = IRB.CreateOr(TooLow, TooHigh);
+  } else {
+    IsOOB = IRB.CreateICmpUGT(AccessEnd, End);
+  }
+
+  Instruction *OobTerm =
+      SplitBlockAndInsertIfThen(IsOOB, InsertBefore, /*Unreachable=*/false);
+  IRBuilder<> OobIRB(OobTerm);
+  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
+  Type *I8Ty = Type::getInt8Ty(M.getContext());
+  Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
+  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
+}
 
 bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
                                               Type *AccessTy) {
@@ -316,25 +370,8 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
                  isa<AtomicCmpXchgInst>(I);
 
 #ifdef LOWFAT_CUSTOM_CONFIG
-  // --- Custom config: dual-path (AND vs. magic multiply) ---
-  // Emit dynamic table-lookup path; the static constant-folded path would
-  // require knowing the region index at IR-construction time, which is only
-  // possible for stack/global accesses. Heap accesses always go through here.
   auto [AllocSize, Base] = emitDynamicBaseMagic(ThenIRB, PtrInt, RegionIndex);
-
-  Value *AccessSizeVal = ConstantInt::get(IntptrTy, FixedAccessSize);
-  Value *AccessEnd     = ThenIRB.CreateAdd(PtrInt, AccessSizeVal);
-  Value *End           = ThenIRB.CreateAdd(Base, AllocSize);
-  Value *IsOOB         = ThenIRB.CreateICmpUGT(AccessEnd, End);
-
-  Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
-  IRBuilder<> OobIRB(OobTerm);
-  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
-  Type *I8Ty = Type::getInt8Ty(M.getContext());
-  Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
-  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
 #else
-  // --- POW2-only mode: existing shift-and-mask logic ---
   Value *MinSizeLogVal = ConstantInt::get(IntptrTy, MinSizeLog);
   Value *ShiftAmount   = ThenIRB.CreateAdd(RegionIndex, MinSizeLogVal);
   Value *SizeOne       = ConstantInt::get(IntptrTy, 1);
@@ -342,19 +379,10 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   Value *SizeMinusOne  = ThenIRB.CreateSub(AllocSize, SizeOne);
   Value *Mask          = ThenIRB.CreateNot(SizeMinusOne);
   Value *Base          = ThenIRB.CreateAnd(PtrInt, Mask);
-  Value *End           = ThenIRB.CreateAdd(Base, AllocSize);
-
-  Value *AccessSizeVal = ConstantInt::get(IntptrTy, FixedAccessSize);
-  Value *AccessEnd     = ThenIRB.CreateAdd(PtrInt, AccessSizeVal);
-  Value *IsOOB         = ThenIRB.CreateICmpUGT(AccessEnd, End);
-
-  Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
-  IRBuilder<> OobIRB(OobTerm);
-  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
-  Type *I8Ty = Type::getInt8Ty(M.getContext());
-  Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
-  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
 #endif
+
+  emitOobCheck(ThenIRB, PtrInt, Base, AllocSize, FixedAccessSize, nullptr,
+               ThenTerm, IsWrite);
 
   if (isa<LoadInst>(I))          NumInstrumentedLoads++;
   else if (isa<StoreInst>(I))    NumInstrumentedStores++;
@@ -391,16 +419,7 @@ bool LowFatSanitizer::instrumentMemoryRange(Instruction *I, Value *Ptr,
   Value *Base          = ThenIRB.CreateAnd(PtrInt, Mask);
 #endif
 
-  Value *End       = ThenIRB.CreateAdd(Base, AllocSize);
-  Value *AccessEnd = ThenIRB.CreateAdd(PtrInt, SizeInt);
-  Value *IsOOB     = ThenIRB.CreateICmpUGT(AccessEnd, End);
-
-  Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
-  IRBuilder<> OobIRB(OobTerm);
-  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
-  Type *I8Ty = Type::getInt8Ty(M.getContext());
-  Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
-  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
+  emitOobCheck(ThenIRB, PtrInt, Base, AllocSize, 0, SizeInt, ThenTerm, IsWrite);
 
   NumInstrumentedMemIntrinsics++;
   return true;
@@ -464,18 +483,7 @@ bool LowFatSanitizer::instrumentGEP(GetElementPtrInst *GEP) {
 #endif
 
   // 3. OOB if result underflows (< Base) or reaches/passes the end (>= Base+AllocSize).
-  Value *End     = ThenIRB.CreateAdd(Base, AllocSize);
-  Value *TooLow  = ThenIRB.CreateICmpULT(ResInt, Base);
-  Value *TooHigh = ThenIRB.CreateICmpUGE(ResInt, End);
-  Value *IsOOB   = ThenIRB.CreateOr(TooLow, TooHigh);
-
-  Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
-  IRBuilder<> OobIRB(OobTerm);
-  FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
-  Type *I8Ty = Type::getInt8Ty(M.getContext());
-  // GEPs are neither reads nor writes; report as read (0).
-  OobIRB.CreateCall(OobFn,
-                    {ResInt, Base, AllocSize, ConstantInt::get(I8Ty, 0)});
+  emitOobCheck(ThenIRB, ResInt, Base, AllocSize, 0, nullptr, ThenTerm, false);
 
   NumInstrumentedGEPs++;
   return true;
