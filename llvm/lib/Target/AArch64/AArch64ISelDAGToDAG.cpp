@@ -628,12 +628,21 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
       return std::nullopt;
     return DecodeFMOVImm(Op);
   }
+  if (N->getOpcode() == AArch64ISD::MOVI)
+    return APInt(SplatWidth, N.getConstantOperandVal(0));
   if (N->getOpcode() == AArch64ISD::MOVIshift)
     return APInt(SplatWidth, N.getConstantOperandVal(0)
                                  << N.getConstantOperandVal(1));
   if (N->getOpcode() == AArch64ISD::MVNIshift)
     return ~APInt(SplatWidth, N.getConstantOperandVal(0)
                                   << N.getConstantOperandVal(1));
+  if (N->getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Op = N->getOperand(0);
+    // In some cases, NEON splats are promoted to SVE splat_vectors.
+    if (Op.getOpcode() == ISD::SPLAT_VECTOR)
+      if (auto *Const = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
+        return Const->getAPIntValue();
+  }
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
   // in AArch64ISelLowering. AArch64ISD::MOVIedit support will allow more folds.
   return std::nullopt;
