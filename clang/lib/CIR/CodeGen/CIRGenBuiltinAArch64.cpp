@@ -2802,10 +2802,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vqdmlsls_lane_s32:
   case NEON::BI__builtin_neon_vqdmlsls_laneq_s32:
   case NEON::BI__builtin_neon_vget_lane_bf16:
-  case NEON::BI__builtin_neon_vduph_lane_bf16:
   case NEON::BI__builtin_neon_vduph_lane_f16:
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
-  case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_f16:
   case NEON::BI__builtin_neon_vcvt_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32:
@@ -2822,6 +2820,16 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  }
+
+  switch (builtinID) {
+  default:
+    break;
+  case NEON::BI__builtin_neon_vduph_lane_bf16:
+  case NEON::BI__builtin_neon_vduph_laneq_bf16: {
+    uint64_t index = getZExtIntValueFromConstOp(ops[1]);
+    return builder.createExtractElement(loc, ops[0], index);
+  }
   }
 
   cir::VectorType ty = getNeonType(this, type, loc);
