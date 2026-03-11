@@ -126,6 +126,12 @@ std::map<SummaryName, JSONFormat::FormatInfo> JSONFormat::initFormatInfos() {
   return FormatInfos;
 }
 
+void JSONFormat::forEachRegisteredAnalysis(
+    llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> Callback) const {
+  for (const auto &Entry : llvm::Registry<FormatInfo>::entries())
+    Callback(Entry.getName(), Entry.getDesc());
+}
+
 //----------------------------------------------------------------------------
 // SummaryName
 //----------------------------------------------------------------------------

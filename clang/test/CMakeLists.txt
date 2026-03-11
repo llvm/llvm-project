@@ -112,6 +112,7 @@ list(APPEND CLANG_TEST_DEPS
   diagtool
   hmaptool
   ssaf-linker
+  ssaf-format
   )
 
 if(CLANG_ENABLE_CIR)

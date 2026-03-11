@@ -64,4 +64,5 @@ add_llvm_external_project(tapi)
 add_clang_subdirectory(libclang)
 
 add_clang_subdirectory(offload-arch)
+add_clang_subdirectory(ssaf-format)
 add_clang_subdirectory(ssaf-linker)
