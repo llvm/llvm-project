@@ -49,6 +49,7 @@
 // #define _LIBCPP_MESSAGES_MASK  /* implementation-defined */
 // #define _LIBCPP_ALL_MASK       /* implementation-defined */
 // #define _LIBCPP_LC_ALL         /* implementation-defined */
+// #define _LIBCPP_NL_CODESET     /* implementation-defined */
 //
 // Strtonum functions
 // ------------------
@@ -102,6 +103,8 @@
 //
 //  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
+//
+// const char* __nl_langinfo_l(decltype(_LIBCPP_NL_CODESET) __item, __locale_t __loc);
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION

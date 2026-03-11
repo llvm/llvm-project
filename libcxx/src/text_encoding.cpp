@@ -243,8 +243,7 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
 
 _LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(nullptr); }
 
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FREEBSD__) || defined(__NETBSD__) ||                       \
-    _LIBCPP_LIBC_NEWLIB || defined(_AIX) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
+#elif !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
 // POSIX
 _LIBCPP_HIDDEN __te_impl __get_locale_encoding(string_view __name) {
   // TODO: An assert that checks if the string is null-terminated may be prudent.

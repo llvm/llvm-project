@@ -10,7 +10,6 @@
 // REQUIRES: locale.en_US.UTF-8
 
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: android
 // UNSUPPORTED: availability-te-environment-missing
 
 // <text_encoding>
@@ -25,16 +24,17 @@
 #include "platform_support.h"
 
 int main(int, char**) {
+#if !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
   std::text_encoding te = std::text_encoding::environment();
   // 1. Depending on the platform's default, verify that environment() returns the corresponding text encoding.
   {
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+#  if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
     assert(te.mib() == std::text_encoding::ASCII);
     assert(std::text_encoding::environment_is<std::text_encoding::ASCII>());
-#elif defined(_WIN32)
+#  elif defined(_WIN32)
     assert(te.mib() == std::text_encoding::windows1252);
     assert(std::text_encoding::environment_is<std::text_encoding::windows1252>());
-#endif
+#  endif
   }
 
   // 2. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
@@ -46,5 +46,13 @@ int main(int, char**) {
     assert(te == te2);
   }
 
+  {
+    std::setlocale(LC_CTYPE, LOCALE_en_US_UTF_8);
+
+    std::text_encoding te2 = std::text_encoding::environment();
+    assert(te2 != std::text_encoding::UTF8);
+    assert(te == te2);
+  }
+#endif
   return 0;
 }

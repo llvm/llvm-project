@@ -532,7 +532,6 @@ private:
   }
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
   _LIBCPP_HIDDEN friend __te_impl __get_locale_encoding(string_view __name);
   _LIBCPP_HIDDEN friend __te_impl __get_env_encoding();
 #    if defined(_LIBCPP_WIN32)
