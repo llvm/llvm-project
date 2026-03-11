@@ -1650,7 +1650,7 @@ def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
 def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
-def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask64", [], [], 0>;
+def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask<64>", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
