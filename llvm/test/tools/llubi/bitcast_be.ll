@@ -13,7 +13,6 @@ entry:
   %bitcast_float2int = bitcast float 2.0 to i32
   %bitcast_half2bf16 = bitcast half 1.0 to bfloat
   %ptr = alloca i32
-  ; FIXME: The provenance is lost.
   %bitcast_ptr2ptr = bitcast ptr %ptr to ptr
 
   %bitcast_vec2scalar1 = bitcast <2 x i32> <i32 0, i32 1> to i64
@@ -42,7 +41,7 @@ entry:
 ; CHECK-NEXT:   %bitcast_float2int = bitcast float 2.000000e+00 to i32 => i32 1073741824
 ; CHECK-NEXT:   %bitcast_half2bf16 = bitcast half 0xH3C00 to bfloat => bfloat 7.812500e-03
 ; CHECK-NEXT:   %ptr = alloca i32, align 4 => ptr 0x8 [ptr]
-; CHECK-NEXT:   %bitcast_ptr2ptr = bitcast ptr %ptr to ptr => ptr 0x8 [dangling]
+; CHECK-NEXT:   %bitcast_ptr2ptr = bitcast ptr %ptr to ptr => ptr 0x8 [ptr]
 ; CHECK-NEXT:   %bitcast_vec2scalar1 = bitcast <2 x i32> <i32 0, i32 1> to i64 => i64 1
 ; CHECK-NEXT:   %bitcast_vec2scalar2 = bitcast <4 x i4> <i4 1, i4 2, i4 3, i4 5> to i16 => i16 4661
 ; CHECK-NEXT:   %bitcast_scalar2vec1 = bitcast i64 1 to <2 x i32> => { i32 0, i32 1 }

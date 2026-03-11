@@ -27,15 +27,18 @@ class AnyValue;
 /// - If the concrete mask bit is 0, the bit is either undef or poison. The
 /// value bit indicates whether it is undef.
 /// - If the concrete mask bit is 1, the bit is a concrete value. The value bit
-/// stores the concrete bit value.
+/// stores the concrete bit value. The tag mask bit indicates whether it is a
+/// pointer bit, and the tag value bit is used for provenance tracking of
+/// pointers.
 struct Byte {
   uint8_t ConcreteMask;
   uint8_t Value;
-  // TODO: captured capabilities of pointers.
+  uint8_t TagMask;  // A mask to indicate which bits are pointer bits.
+  uint8_t TagValue; // Part of the tag for provenance tracking of pointers.
 
-  static Byte poison() { return Byte{0, 0}; }
-  static Byte undef() { return Byte{0, 255}; }
-  static Byte concrete(uint8_t Val) { return Byte{255, Val}; }
+  static Byte poison() { return Byte{0, 0, 0, 0}; }
+  static Byte undef() { return Byte{0, 255, 0, 0}; }
+  static Byte concrete(uint8_t Val) { return Byte{255, Val, 0, 0}; }
 
   void zeroBits(uint8_t Mask) {
     ConcreteMask |= Mask;
@@ -55,6 +58,15 @@ struct Byte {
   void writeBits(uint8_t Mask, uint8_t Val) {
     ConcreteMask |= Mask;
     Value = (Value & ~Mask) | (Val & Mask);
+    TagMask &= ~Mask;
+  }
+
+  void writeTagBits(uint8_t Mask, uint8_t Tag) {
+    assert(
+        (ConcreteMask & Mask) == Mask &&
+        "Please ensure pointer bits are concrete before calling writeTagBits.");
+    TagMask |= Mask;
+    TagValue = (TagValue & ~Mask) | (Tag & Mask);
   }
 
   /// Returns a logical byte that is part of two adjacent bytes.
@@ -63,14 +75,19 @@ struct Byte {
   /// LSB | 0 1 0 1 0 1 0 1 | 0 0 0 0 1 1 1 1 | MSB
   ///     Result =  | 1 0 1   0 0 0 0 1 |
   static Byte fshr(const Byte &Low, const Byte &High, uint32_t ShAmt) {
-    return Byte{static_cast<uint8_t>(
-                    (Low.ConcreteMask | (High.ConcreteMask << 8)) >> ShAmt),
-                static_cast<uint8_t>((Low.Value | (High.Value << 8)) >> ShAmt)};
+    return Byte{
+        static_cast<uint8_t>((Low.ConcreteMask | (High.ConcreteMask << 8)) >>
+                             ShAmt),
+        static_cast<uint8_t>((Low.Value | (High.Value << 8)) >> ShAmt),
+        static_cast<uint8_t>((Low.TagMask | (High.TagMask << 8)) >> ShAmt),
+        static_cast<uint8_t>((Low.TagValue | (High.TagValue << 8)) >> ShAmt)};
   }
 
   Byte lshr(uint8_t Shift) const {
     return Byte{static_cast<uint8_t>(ConcreteMask >> Shift),
-                static_cast<uint8_t>(Value >> Shift)};
+                static_cast<uint8_t>(Value >> Shift),
+                static_cast<uint8_t>(TagMask >> Shift),
+                static_cast<uint8_t>(TagValue >> Shift)};
   }
 };
 
