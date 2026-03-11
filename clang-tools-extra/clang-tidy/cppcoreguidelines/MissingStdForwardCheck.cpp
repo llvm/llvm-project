@@ -46,6 +46,16 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 
   const QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
+
+  // Explicit object parameters with a type constraint are still forwarding
+  // references per [temp.deduct.call]. We conservatively suppress warnings
+  // here to avoid false positives when constraints restrict the deduced type,
+  // accepting false negatives as a trade-off.
+  if (Node.isExplicitObjectParameter())
+    if (const auto *TTPT = ParamType->getAs<TemplateTypeParmType>())
+      if (const auto *Decl = TTPT->getDecl(); Decl && Decl->hasTypeConstraint())
+        return false;
+
   const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
     return false;

@@ -689,6 +689,36 @@ add_header_library(
 )
 
 add_header_library(
+  sincos_integer_utils
+  HDRS
+    sincos_integer_utils.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.big_int
+    libc.src.__support.frac128
+    libc.src.__support.math_extras
+)
+
+add_header_library(
+  cos_integer_eval
+  HDRS
+    cos_integer_eval.h
+  DEPENDS
+    .sincos_integer_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.frac128
+)
+
+add_header_library(
   cos
   HDRS
     cos.h
@@ -2748,6 +2778,20 @@ add_header_library(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.FPUtil.triple_double
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  sin_integer_eval
+  HDRS
+    sin_integer_eval.h
+  DEPENDS
+    .sincos_integer_utils
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.frac128
 )
 
 add_header_library(
