@@ -413,8 +413,8 @@ define <vscale x 2 x i64> @nor_comm(<vscale x 2 x i1> %m, <vscale x 2 x i64> %a,
 define <vscale x 2 x i64> @eon_needs_mov(<vscale x 2 x i1> %m1, <vscale x 2 x i1> %m2, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: eon_needs_mov:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    bsl2n z2.d, z2.d, z2.d, z1.d
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    bsl2n z2.d, z2.d, z0.d, z1.d
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
 ; CHECK-NEXT:    mov z0.d, p1/m, z1.d
 ; CHECK-NEXT:    ret

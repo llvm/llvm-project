@@ -4148,19 +4148,17 @@ let Predicates = [HasSVE2_or_SME] in {
   defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  AArch64nbsl>;
 
   // Pseudos for commutable operations that expand to NBSL or BSL2N. These can
-  // avoid a COPY if one of the source registers can be clobbered.
+  // avoid a COPY if one of the source registers can be clobbered, or otherwise
+  // use a MOVPRFX.
   let isCommutable = 1, hasSideEffects = 0 in {
     // EON (a, b) = BSL2N (a, a, b) = BSL2N (b, b, a)
-    def EON_ZZZ : Pseudo<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, ZPR64:$Zm), [], "$Zdn = $_Zdn">,
-                  PseudoInstExpansion<(BSL2N_ZZZZ ZPR64:$Zdn, ZPR64:$_Zdn, ZPR64:$_Zdn, ZPR64:$Zm)>;
+    def EON_ZZZ : Pseudo<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm), []>;
 
     // NAND (a, b) = NBSL (a, b, b) = NBSL (b, a, a)
-    def NAND_ZZZ : Pseudo<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, ZPR64:$Zm), [], "$Zdn = $_Zdn">,
-                   PseudoInstExpansion<(NBSL_ZZZZ ZPR64:$Zdn, ZPR64:$_Zdn, ZPR64:$Zm, ZPR64:$Zm)>;
+    def NAND_ZZZ : Pseudo<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm), []>;
 
     // NOR (a, b) = NBSL (a, b, a) = NBSL (b, a, b)
-    def NOR_ZZZ : Pseudo<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, ZPR64:$Zm), [], "$Zdn = $_Zdn">,
-                  PseudoInstExpansion<(NBSL_ZZZZ ZPR64:$Zdn, ZPR64:$_Zdn, ZPR64:$Zm, ZPR64:$_Zdn)>;
+    def NOR_ZZZ : Pseudo<(outs ZPR64:$Zd), (ins ZPR64:$Zn, ZPR64:$Zm), []>;
   }
 
   multiclass binary_bitwise<ValueType VT, SDPatternOperator InOp, SDPatternOperator OutOp> {
