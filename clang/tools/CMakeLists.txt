@@ -61,4 +61,5 @@ if (CLANG_ENABLE_AMDCLANG)
 endif()
 
 add_clang_subdirectory(offload-arch)
+add_clang_subdirectory(ssaf-format)
 add_clang_subdirectory(ssaf-linker)

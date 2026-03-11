@@ -141,7 +141,6 @@ struct MissingFeatures {
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
-  static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
 

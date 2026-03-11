@@ -752,7 +752,7 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
       FileSystem::Instance().Resolve(working_spec);
       Status err =
           Host::RunShellCommand(path.c_str(), working_spec, &status, &signo,
-                                &output, std::chrono::seconds(10));
+                                &output, nullptr, std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");
