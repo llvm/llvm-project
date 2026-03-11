@@ -490,13 +490,6 @@ def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
 def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
                   AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
 
-def FeatureStdExtZbc
-    : RISCVExtension<1, 0, "Carry-Less Multiplication">,
-      RISCVExtensionBitmask<0, 29>;
-def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
-                   AssemblerPredicate<(all_of FeatureStdExtZbc),
-                                      "'Zbc' (Carry-Less Multiplication)">;
-
 def FeatureStdExtZbs
     : RISCVExtension<1, 0, "Single-Bit Instructions">,
       RISCVExtensionBitmask<0, 33>;
@@ -543,14 +536,17 @@ def FeatureStdExtZbkc
 def HasStdExtZbkc
     : Predicate<"Subtarget->hasStdExtZbkc()">,
       AssemblerPredicate<(all_of FeatureStdExtZbkc),
-          "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
-
-def HasStdExtZbcOrZbkc
-    : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
-      AssemblerPredicate<(any_of FeatureStdExtZbc, FeatureStdExtZbkc),
                          "'Zbc' (Carry-Less Multiplication) or "
                          "'Zbkc' (Carry-less multiply instructions "
                          "for Cryptography)">;
+
+def FeatureStdExtZbc
+    : RISCVExtension<1, 0, "Carry-Less Multiplication",
+                     [FeatureStdExtZbkc]>,
+      RISCVExtensionBitmask<0, 29>;
+def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
+                   AssemblerPredicate<(all_of FeatureStdExtZbc),
+                                      "'Zbc' (Carry-Less Multiplication)">;
 
 // Cryptography Extensions
 
@@ -817,15 +813,11 @@ def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
 
 def FeatureStdExtZvknhb
     : RISCVExtension<1, 0, "Vector SHA-2 (SHA-256 and SHA-512)",
-                     [FeatureStdExtZve64x]>,
+                     [FeatureStdExtZve64x, FeatureStdExtZvknha]>,
       RISCVExtensionBitmask<0, 56>;
 def HasStdExtZvknhb : Predicate<"Subtarget->hasStdExtZvknhb()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvknhb),
                           "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))">;
-
-def HasStdExtZvknhaOrZvknhb : Predicate<"Subtarget->hasStdExtZvknha() || Subtarget->hasStdExtZvknhb()">,
-                              AssemblerPredicate<(any_of FeatureStdExtZvknha, FeatureStdExtZvknhb),
-                                  "'Zvknha' or 'Zvknhb' (Vector SHA-2)">;
 
 def FeatureStdExtZvksed
     : RISCVExtension<1, 0, "SM4 Block Cipher Instructions",
@@ -885,6 +877,14 @@ def FeatureStdExtZvdot4a8i
 def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
                          AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
                          "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
+
+// Vector Reordering Structured Data
+def FeatureStdExtZvzip
+    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvzip),
+                         "'Zvzip' (Vector Reordering Structured Data)">;
 
 // Vector instruction predicates
 

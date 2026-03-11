@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RedirectionManager.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
+#include "llvm/ExecutionEngine/Orc/WaitingOnGraphOpReplay.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
@@ -32,6 +33,29 @@
 namespace llvm {
 
 struct Session {
+
+  class WaitingOnGraphOpRecorder
+      : public orc::detail::WaitingOnGraphOpStreamRecorder<
+            orc::JITDylib *, orc::NonOwningSymbolStringPtr> {
+  public:
+    static Expected<std::unique_ptr<WaitingOnGraphOpRecorder>>
+    Create(StringRef Path) {
+      std::error_code EC;
+      std::unique_ptr<WaitingOnGraphOpRecorder> Instance(
+          new WaitingOnGraphOpRecorder(Path, EC));
+
+      if (EC)
+        return createFileError(Path, EC);
+      return std::move(Instance);
+    }
+
+  private:
+    WaitingOnGraphOpRecorder(StringRef Path, std::error_code EC)
+        : orc::detail::WaitingOnGraphOpStreamRecorder<
+              orc::JITDylib *, orc::NonOwningSymbolStringPtr>(OutStream),
+          OutStream(Path, EC) {}
+    raw_fd_ostream OutStream;
+  };
 
   struct LazyLinkingSupport {
     LazyLinkingSupport(
@@ -143,6 +167,8 @@ struct Session {
 
 private:
   Session(std::unique_ptr<orc::ExecutorProcessControl> EPC, Error &Err);
+
+  std::unique_ptr<WaitingOnGraphOpRecorder> GOpRecorder;
 };
 
 /// Record symbols, GOT entries, stubs, and sections for ELF file.
