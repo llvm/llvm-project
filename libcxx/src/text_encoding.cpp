@@ -30,7 +30,7 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
     // Such a locale cannot be set as the system locale.
     // Applications that do not support Unicode do not work correctly with locales
     // marked as "Unicode only".
-    return __te_impl::id::unkown;
+    return __te_impl::__id::unkown;
   case 037:
     return __te_impl::__id::IBM037;
   case 437:
