@@ -16,8 +16,8 @@
 // compiled with that option. Ideally clang would expose a direct way to get the
 // correctly rounded and opencl precision versions.
 
-#define __CLC_BODY <clc/shared/binary_decl.inc>
 #define __CLC_FUNCTION __clc_div_cr
+#define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
