@@ -630,12 +630,10 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
 // Iterate over the elements from \p Table by trying to find/match all
 // the numbers from 0 to \p InputBits that should represent log2 results.
 static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
-                        const APInt &AndMask, Type *AccessTy,
-                        unsigned InputBits, const APInt &GEPIdxFactor,
-                        const DataLayout &DL) {
+                        Type *AccessTy, unsigned InputBits,
+                        const APInt &GEPIdxFactor, const DataLayout &DL) {
   for (unsigned Idx = 0; Idx < InputBits; Idx++) {
-    APInt Index =
-        (APInt::getLowBitsSet(InputBits, Idx + 1) * Mul).lshr(Shift) & AndMask;
+    APInt Index = (APInt::getLowBitsSet(InputBits, Idx + 1) * Mul).lshr(Shift);
     ConstantInt *C = dyn_cast_or_null<ConstantInt>(
         ConstantFoldLoadFromConst(Table, AccessTy, Index * GEPIdxFactor, DL));
     if (!C || C->getValue() != Idx)
@@ -643,7 +641,7 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
   }
 
   // Verify that an input of zero will select table index 0.
-  APInt ZeroIndex = Mul.lshr(Shift) & AndMask;
+  APInt ZeroIndex = Mul.lshr(Shift);
   if (!ZeroIndex.isZero())
     return false;
 
@@ -738,7 +736,7 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
   auto [GepIdx, GEPScale] = VarOffsets.front();
 
   Value *X;
-  const APInt *MulConst, *ShiftConst, *AndCst = nullptr;
+  const APInt *MulConst, *ShiftConst;
   // Check that the gep variable index is (x * MulConst) >> ShiftConst.
   auto MatchInner =
       m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
@@ -766,8 +764,7 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
 
   if (!GEPScale.isIntN(InputBits) ||
       !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
-                   AndCst ? *AndCst : APInt::getAllOnes(InputBits), AccessType,
-                   InputBits, GEPScale.zextOrTrunc(InputBits), DL))
+                   AccessType, InputBits, GEPScale.zextOrTrunc(InputBits), DL))
     return false;
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
