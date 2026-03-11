@@ -21,10 +21,10 @@ define i1 @assumeeq(i32 %x, i32 %y) {
     ret i1 %cmp
 }
 
-; CHECK:      %[[#FUNC:]] = OpFunction
-; CHECK:      %[[#P:]] = OpFunctionParameter
-; CHECK:      %[[#LABEL:]] = OpLabel
-; EXT:        OpAssumeTrueKHR %[[#TRUE:]]
+; CHECK:      %[[#]] = OpFunction
+; CHECK:      %[[#]] = OpFunctionParameter
+; CHECK:      %[[#]] = OpLabel
+; EXT:        OpAssumeTrueKHR %[[#]]
 ; NOEXT-NOT:  OpAssumeTrueKHR
 ; CHECK:      OpReturn
 ; CHECK:      OpFunctionEnd
