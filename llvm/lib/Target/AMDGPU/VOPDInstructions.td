@@ -194,7 +194,8 @@ defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
 defvar VOPDYPseudosGFX1250 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1250);
 
-def GFX11GenD : GFXGenD<GFX11Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX11GenD : GFXGenD<GFX11Not11_70Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX1170GenD : GFXGenD<GFX1170Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX12GenD : GFXGenD<GFX12Not12_50Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
 def GFX1250GenD : GFXGenD<GFX1250Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
 def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
@@ -211,7 +212,7 @@ class getRenamed<string VOPDName, GFXGen Gen> {
                      true                                   : VOPDName);
 }
 
-foreach Gen = [GFX11GenD, GFX12GenD, GFX1250GenD, GFX13GenD] in {
+foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD, GFX1250GenD, GFX13GenD] in {
   foreach x = Gen.VOPDXPseudos in {
     foreach y = Gen.VOPDYPseudos in {
       defvar xInst = !cast<VOP_Pseudo>(x);

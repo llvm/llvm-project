@@ -233,6 +233,11 @@ Error LevelZeroPluginTy::asyncBarrierImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }
 
+// We only need to check for formats other than ELF here
+Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
+  return identify_magic(Image) == file_magic::spirv_object;
+}
+
 } // namespace llvm::omp::target::plugin
 
 extern "C" {
