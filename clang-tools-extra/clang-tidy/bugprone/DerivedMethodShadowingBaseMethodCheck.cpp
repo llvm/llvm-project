@@ -83,6 +83,10 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
 // similar matchers are used elsewhere in LLVM
 AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
 
+AST_MATCHER(CXXMethodDecl, isTemplate) {
+  return Node.getDescribedFunctionTemplate() != nullptr;
+}
+
 } // namespace
 
 DerivedMethodShadowingBaseMethodCheck::DerivedMethodShadowingBaseMethodCheck(
@@ -97,7 +101,7 @@ void DerivedMethodShadowingBaseMethodCheck::registerMatchers(
                        cxxConstructorDecl(), isOverride(), isPrivate(),
                        // isFinal(), //included with isOverride,
                        // Templates are not handled yet
-                       ast_matchers::isTemplateInstantiation(),
+                       isTemplate(), ast_matchers::isTemplateInstantiation(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           ofClass(cxxRecordDecl(isDerivedFrom(cxxRecordDecl()))
                       .bind("derived_class")),
