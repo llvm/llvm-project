@@ -31,21 +31,18 @@ CIRCXXABI::~CIRCXXABI() {}
 void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
                                 const mlir::DataLayout &dataLayout,
                                 mlir::OpBuilder &builder,
-                                mlir::Value &numElements,
-                                mlir::Value &allocPtr,
+                                mlir::Value &numElements, mlir::Value &allocPtr,
                                 clang::CharUnits &cookieSize) const {
   auto ptrTy = mlir::cast<cir::PointerType>(elementPtr.getType());
   cookieSize = getArrayCookieSizeImpl(ptrTy.getPointee(), dataLayout);
 
   mlir::Value bytePtr = cir::CastOp::create(builder, loc, u8PtrTy,
-                                             cir::CastKind::bitcast,
-                                             elementPtr);
+                                            cir::CastKind::bitcast, elementPtr);
 
   mlir::Value negCookieSize = cir::ConstantOp::create(
-      builder, loc,
-      cir::IntAttr::get(ptrDiffTy, -cookieSize.getQuantity()));
-  mlir::Value allocBytePtr = cir::PtrStrideOp::create(builder, loc, u8PtrTy,
-                                                       bytePtr, negCookieSize);
+      builder, loc, cir::IntAttr::get(ptrDiffTy, -cookieSize.getQuantity()));
+  mlir::Value allocBytePtr =
+      cir::PtrStrideOp::create(builder, loc, u8PtrTy, bytePtr, negCookieSize);
 
   allocPtr = cir::CastOp::create(builder, loc, voidPtrTy,
                                  cir::CastKind::bitcast, allocBytePtr);

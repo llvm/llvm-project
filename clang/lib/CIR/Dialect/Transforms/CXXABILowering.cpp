@@ -355,8 +355,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
     mlir::Value allocSize =
         cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
     mlir::Value cookieSizeVal = cir::ConstantOp::create(
-        rewriter, loc,
-        cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+        rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
     allocSize =
         cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
     callArgs.push_back(allocSize);

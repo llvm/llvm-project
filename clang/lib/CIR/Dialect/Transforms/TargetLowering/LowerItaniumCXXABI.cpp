@@ -792,8 +792,8 @@ clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(
   // The cookie is actually right-justified in that space.
   clang::CharUnits sizeOfSizeT =
       clang::CharUnits::fromQuantity(ptrSizeInBits / 8);
-  clang::CharUnits eltAlign =
-      clang::CharUnits::fromQuantity(dataLayout.getTypeABIAlignment(elementType));
+  clang::CharUnits eltAlign = clang::CharUnits::fromQuantity(
+      dataLayout.getTypeABIAlignment(elementType));
   return std::max(sizeOfSizeT, eltAlign);
 }
 
@@ -810,17 +810,15 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
   clang::CharUnits countAlignment = cookieAlignment;
   if (!countOffset.isZero()) {
     mlir::Value offsetVal = cir::ConstantOp::create(
-        builder, loc,
-        cir::IntAttr::get(ptrDiffTy, countOffset.getQuantity()));
+        builder, loc, cir::IntAttr::get(ptrDiffTy, countOffset.getQuantity()));
     countBytePtr =
         cir::PtrStrideOp::create(builder, loc, u8PtrTy, allocPtr, offsetVal);
     countAlignment = cookieAlignment.alignmentAtOffset(countOffset);
   }
 
   auto countPtrTy = cir::PointerType::get(sizeTy);
-  mlir::Value countPtr = cir::CastOp::create(builder, loc, countPtrTy,
-                                             cir::CastKind::bitcast,
-                                             countBytePtr);
+  mlir::Value countPtr = cir::CastOp::create(
+      builder, loc, countPtrTy, cir::CastKind::bitcast, countBytePtr);
   return cir::LoadOp::create(
       builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
       builder.getI64IntegerAttr(countAlignment.getQuantity()),

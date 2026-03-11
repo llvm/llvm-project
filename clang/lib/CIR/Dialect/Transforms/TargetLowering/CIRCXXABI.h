@@ -165,12 +165,12 @@ protected:
   /// \p cookieSize is the value returned by getArrayCookieSizeImpl.
   /// \p cookieAlignment is the alignment at the cookie start, derived from
   /// the element type's ABI alignment.
-  virtual mlir::Value
-  readArrayCookieImpl(mlir::Location loc, mlir::Value allocPtr,
-                      clang::CharUnits cookieSize,
-                      clang::CharUnits cookieAlignment,
-                      const mlir::DataLayout &dataLayout,
-                      mlir::OpBuilder &builder) const = 0;
+  virtual mlir::Value readArrayCookieImpl(mlir::Location loc,
+                                          mlir::Value allocPtr,
+                                          clang::CharUnits cookieSize,
+                                          clang::CharUnits cookieAlignment,
+                                          const mlir::DataLayout &dataLayout,
+                                          mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.
