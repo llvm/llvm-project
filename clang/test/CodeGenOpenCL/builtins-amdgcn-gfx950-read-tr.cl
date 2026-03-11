@@ -4,7 +4,7 @@
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v3i   __attribute__((ext_vector_type(3)));
 typedef short  v4s   __attribute__((ext_vector_type(4)));
-typedef _Float16 v4h __attribute__((ext_vector_type(4)));
+typedef half   v4h   __attribute__((ext_vector_type(4)));
 typedef __bf16 v4y   __attribute__((ext_vector_type(4)));
 
 // GFX950-LABEL: define dso_local <2 x i32> @test_amdgcn_ds_read_b64_tr_b4_v2i32(
