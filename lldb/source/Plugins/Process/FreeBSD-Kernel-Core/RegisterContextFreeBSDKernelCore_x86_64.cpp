@@ -13,7 +13,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
-#ifdef FreeBSD_amd64
+#if defined(__FreeBSD__) && defined(__amd64__)
 #include <cstddef>
 #include <machine/pcb.h>
 #endif
@@ -59,7 +59,7 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     llvm::support::ulittle64_t rip;
   } pcb;
 
-#ifdef FreeBSD_amd64
+#if defined(__FreeBSD__) && defined(__amd64__)
   static_assert(offsetof(struct pcb, pcb_r15) == offsetof(decltype(pcb), r15));
   static_assert(offsetof(struct pcb, pcb_r14) == offsetof(decltype(pcb), r14));
   static_assert(offsetof(struct pcb, pcb_r13) == offsetof(decltype(pcb), r13));

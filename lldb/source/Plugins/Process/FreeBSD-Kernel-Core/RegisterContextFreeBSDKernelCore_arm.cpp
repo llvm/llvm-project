@@ -14,7 +14,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
-#ifdef FreeBSD_armv7
+#if defined(__FreeBSD__) && defined(__arm__)
 #include <cstddef>
 #include <machine/frame.h>
 #endif
@@ -66,7 +66,7 @@ bool RegisterContextFreeBSDKernelCore_arm::ReadRegister(
     llvm::support::ulittle32_t pc;
   } pcb;
 
-#ifdef FreeBSD_armv7
+#if defined(__FreeBSD__) && defined(__arm__)
   static_assert(offsetof(struct switchframe, sf_r4) ==
                 offsetof(decltype(pcb), r4));
   static_assert(offsetof(struct switchframe, sf_r5) ==

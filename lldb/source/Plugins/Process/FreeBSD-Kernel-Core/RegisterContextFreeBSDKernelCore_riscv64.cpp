@@ -13,7 +13,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
-#ifdef FreeBSD_riscv64
+#if defined(__FreeBSD__) && defined(__riscv) && __riscv_xlen == 64
 #include <cstddef>
 #include <machine/pcb.h>
 #endif
@@ -57,7 +57,7 @@ bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
     llvm::support::ulittle64_t s[12];
   } pcb;
 
-#ifdef FreeBSD_riscv64
+#if defined(__FreeBSD__) && defined(__riscv) && __riscv_xlen == 64
   static_assert(offsetof(struct pcb, pcb_ra) == offsetof(decltype(pcb), ra));
   static_assert(offsetof(struct pcb, pcb_sp) == offsetof(decltype(pcb), sp));
   static_assert(offsetof(struct pcb, pcb_gp) == offsetof(decltype(pcb), gp));

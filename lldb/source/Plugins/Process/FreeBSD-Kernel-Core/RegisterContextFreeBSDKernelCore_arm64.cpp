@@ -18,7 +18,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
-#ifdef FreeBSD_aarch64
+#if defined(__FreeBSD__) && defined(__aarch64__)
 #include <cstddef>
 #include <machine/pcb.h>
 #include <sys/param.h>
@@ -58,7 +58,7 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     llvm::support::ulittle64_t sp;
   } pcb;
 
-#if defined(FreeBSD_aarch64) && __FreeBSD_version >= 1400084
+#if defined(__FreeBSD__) && defined(__aarch64__) && __FreeBSD_version >= 1400084
   static_assert(offsetof(struct pcb, pcb_x) == offsetof(decltype(pcb), x));
   static_assert(offsetof(struct pcb, pcb_sp) == offsetof(decltype(pcb), sp));
 #endif
@@ -71,7 +71,7 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     llvm::support::ulittle64_t sp;
   } pcb13;
 
-#if defined(FreeBSD_aarch64) && __FreeBSD_version < 1400084
+#if defined(__FreeBSD__) && defined(__aarch64__) && __FreeBSD_version < 1400084
   static_assert(offsetof(struct pcb, pcb_x) == offsetof(decltype(pcb13), x));
   static_assert(offsetof(struct pcb, pcb_lr) == offsetof(decltype(pcb13), lr));
   static_assert(offsetof(struct pcb, pcb_sp) == offsetof(decltype(pcb13), sp));
