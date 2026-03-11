@@ -16898,7 +16898,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       APInt ValMinusOne = Val - 1;
       unsigned LZ = ValMinusOne.countl_zero();
       if (LZ == 0)
-        return Success(APSInt(Val), E); // would overflow; return input unchanged
+        return Success(APSInt(Val),
+                       E); // would overflow; return input unchanged
       APInt Result = APInt::getOneBitSet(BitWidth, BitWidth - LZ);
       return Success(APSInt(Result, /*IsUnsigned*/ true), E);
     }
