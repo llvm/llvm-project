@@ -42,11 +42,11 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
-                                mlir::Location loc, mlir::Type argType,
-                                mlir::Region &cleanupRegion,
-                                const Fortran::semantics::Symbol *sym,
-                                bool isDoConcurrent) {
+static void createCleanupRegion(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Type argType, mlir::Region &cleanupRegion,
+    const Fortran::semantics::Symbol *sym, bool isDoConcurrent,
+    std::optional<cuf::DataAttributeAttr> cudaDataAttr = std::nullopt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(cleanupRegion.empty());
   mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
@@ -105,9 +105,14 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
         fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-    mlir::Value cast = builder.createConvert(
-        loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
-    fir::FreeMemOp::create(builder, loc, cast);
+    if (cudaDataAttr) {
+      cuf::FreeOp::create(builder, loc, addr, *cudaDataAttr);
+    } else {
+      mlir::Value cast = builder.createConvert(
+          loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())),
+          addr);
+      fir::FreeMemOp::create(builder, loc, cast);
+    }
 
     builder.setInsertionPointAfter(ifOp);
     if (isDoConcurrent)
@@ -488,6 +493,32 @@ bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack() const {
   return offloadMod && offloadMod.getIsGPU();
 }
 
+/// Create a device-allocated temporary from a mold using cuf.alloc
+static hlfir::Entity
+createCUFTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
+                      hlfir::Entity mold, cuf::DataAttributeAttr dataAttr,
+                      llvm::ArrayRef<mlir::Value> lenParams) {
+  mlir::Type sequenceType =
+      hlfir::getFortranElementOrSequenceType(mold.getType());
+  mlir::Value shape = hlfir::genShape(loc, builder, mold);
+  auto extents = hlfir::getIndexExtents(loc, builder, shape);
+  llvm::SmallVector<mlir::Value> elidedExtents =
+      fir::factory::elideExtentsAlreadyInType(sequenceType, extents);
+  llvm::SmallVector<mlir::Value> elidedLenParams =
+      fir::factory::elideLengthsAlreadyInType(sequenceType, lenParams);
+  auto idxTy = builder.getIndexType();
+  for (mlir::Value &ext : elidedExtents)
+    ext = builder.createConvert(loc, idxTy, ext);
+  auto allocOp = cuf::AllocOp::create(builder, loc, sequenceType,
+                                      /*uniqName=*/"", /*bindcName=*/".tmp",
+                                      dataAttr, elidedLenParams, elidedExtents);
+  auto declareOp = hlfir::DeclareOp::create(
+      builder, loc, allocOp.getResult(), ".tmp", shape, lenParams,
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
+      fir::FortranVariableFlagsAttr{}, dataAttr);
+  return hlfir::Entity{declareOp.getBase()};
+}
+
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     fir::BaseBoxType boxTy, bool needsInitialization) {
   bool isAllocatableOrPointer =
@@ -540,51 +571,12 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
       cuf::DataAttributeAttr dataAttr =
           Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
                                                           sym->GetUltimate());
-      mlir::Type sequenceType =
-          hlfir::getFortranElementOrSequenceType(source.getType());
-      mlir::Value shape = hlfir::genShape(loc, builder, source);
-      auto extents = hlfir::getIndexExtents(loc, builder, shape);
-      llvm::SmallVector<mlir::Value> elidedExtents =
-          fir::factory::elideExtentsAlreadyInType(sequenceType, extents);
-      llvm::SmallVector<mlir::Value> elidedLenParams =
-          fir::factory::elideLengthsAlreadyInType(sequenceType, lenParams);
-      auto idxTy = builder.getIndexType();
-      for (mlir::Value &ext : elidedExtents)
-        ext = builder.createConvert(loc, idxTy, ext);
-      auto allocOp = cuf::AllocOp::create(builder, loc, sequenceType,
-                                          /*uniqName=*/"",
-                                          /*bindcName=*/".tmp", dataAttr,
-                                          elidedLenParams, elidedExtents);
-      auto declareOp = hlfir::DeclareOp::create(
-          builder, loc, allocOp.getResult(), ".tmp", shape, lenParams,
-          /*dummy_scope=*/nullptr, /*storage=*/nullptr,
-          /*storage_offset=*/0, fir::FortranVariableFlagsAttr{}, dataAttr);
-
-      // Create cleanup region using cuf.free for device deallocation.
-      {
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        assert(cleanupRegion.empty());
-        mlir::Block *block = builder.createBlock(
-            &cleanupRegion, cleanupRegion.end(), {argType}, {loc});
-        builder.setInsertionPointToEnd(block);
-
-        mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
-        assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
-        mlir::Value addr =
-            hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
-        mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
-        fir::IfOp ifOp = fir::IfOp::create(builder, loc, isAllocated,
-                                           /*withElseRegion=*/false);
-        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-        cuf::FreeOp::create(builder, loc, addr, dataAttr);
-        builder.setInsertionPointAfter(ifOp);
-        if (isDoConcurrent)
-          fir::YieldOp::create(builder, loc);
-        else
-          mlir::omp::YieldOp::create(builder, loc);
-      }
-
-      return hlfir::Entity{declareOp.getBase()};
+      hlfir::Entity temp =
+          createCUFTempFromMold(loc, builder, source, dataAttr, lenParams);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                          isDoConcurrent, dataAttr);
+      return temp;
     }
 
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
