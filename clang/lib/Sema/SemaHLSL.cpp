@@ -3052,6 +3052,8 @@ static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
           ? PassedType->castAs<clang::MatrixType>()->getElementType()
           : PassedType;
   if (!BaseType->isDoubleType()) {
+    // FIXME: adopt standard `err_builtin_invalid_arg_type` instead of using
+    // this custom error.
     return S->Diag(Loc, diag::err_builtin_requires_double_type)
            << ArgOrdinal << PassedType;
   }
