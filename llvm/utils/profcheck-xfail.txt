@@ -79,9 +79,6 @@ Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
 Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
 Transforms/InstCombine/X86/x86-avx512.ll
-Transforms/InstCombine/and-or-icmps.ll
-Transforms/InstCombine/and2.ll
-Transforms/InstCombine/bit-checks.ll
 Transforms/InstCombine/bitreverse.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll

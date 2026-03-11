@@ -118,12 +118,12 @@ public:
   bool canAdjustCmp(MachineInstr &CmpMI);
   bool registersMatch(MachineInstr *FirstMI, MachineInstr *SecondMI);
   bool nzcvLivesOut(MachineBasicBlock *MBB);
-  MachineInstr *findSuitableCompare(MachineBasicBlock *MBB);
+  MachineInstr *getBccTerminator(MachineBasicBlock *MBB);
+  MachineInstr *findAdjustableCmp(MachineInstr *CondMI);
   CmpInfo adjustCmp(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
   void modifyCmp(MachineInstr *CmpMI, const CmpInfo &Info);
   bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
                 int ToImm);
-  bool isPureCmp(MachineInstr &CmpMI);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -221,28 +221,43 @@ static bool isCSINCInstruction(unsigned Opc) {
   return Opc == AArch64::CSINCWr || Opc == AArch64::CSINCXr;
 }
 
-// Finds compare instruction that corresponds to supported types of branching.
-// Returns the instruction or nullptr on failures or detecting unsupported
-// instructions.
-MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
-    MachineBasicBlock *MBB) {
+// Returns the Bcc terminator if present, otherwise nullptr.
+MachineInstr *
+AArch64ConditionOptimizer::getBccTerminator(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator Term = MBB->getFirstTerminator();
-  if (Term == MBB->end())
+  if (Term == MBB->end()) {
+    LLVM_DEBUG(dbgs() << "No terminator in " << printMBBReference(*MBB)
+                      << '\n');
     return nullptr;
+  }
 
-  if (Term->getOpcode() != AArch64::Bcc)
+  if (Term->getOpcode() != AArch64::Bcc) {
+    LLVM_DEBUG(dbgs() << "Non-Bcc terminator in " << printMBBReference(*MBB)
+                      << ": " << *Term);
     return nullptr;
+  }
 
-  // Since we may modify cmp of this MBB, make sure NZCV does not live out.
-  if (nzcvLivesOut(MBB))
-    return nullptr;
+  return &*Term;
+}
 
-  // Now find the instruction controlling the terminator.
-  for (MachineBasicBlock::iterator B = MBB->begin(), It = Term; It != B;) {
+// Find the CMP instruction controlling the given conditional instruction and
+// ensure it can be adjusted for CSE optimization. Searches backward from
+// CondMI, ensuring no NZCV interference. Returns nullptr if no suitable CMP
+// is found or if adjustments are not safe.
+MachineInstr *
+AArch64ConditionOptimizer::findAdjustableCmp(MachineInstr *CondMI) {
+  assert(CondMI && "CondMI cannot be null");
+  MachineBasicBlock *MBB = CondMI->getParent();
+
+  // Search backward from the conditional to find the instruction controlling
+  // it.
+  for (MachineBasicBlock::iterator B = MBB->begin(),
+                                   It = MachineBasicBlock::iterator(CondMI);
+       It != B;) {
     It = prev_nodbg(It, B);
     MachineInstr &I = *It;
     assert(!I.isTerminator() && "Spurious terminator");
-    // Check if there is any use of NZCV between CMP and Bcc.
+    // Ensure there is no use of NZCV between CMP and conditional.
     if (I.readsRegister(AArch64::NZCV, /*TRI=*/nullptr))
       return nullptr;
 
@@ -396,23 +411,6 @@ bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
   return false;
 }
 
-bool AArch64ConditionOptimizer::isPureCmp(MachineInstr &CmpMI) {
-  unsigned ShiftAmt = AArch64_AM::getShiftValue(CmpMI.getOperand(3).getImm());
-  if (!CmpMI.getOperand(2).isImm()) {
-    LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << CmpMI << '\n');
-    return false;
-  } else if (CmpMI.getOperand(2).getImm() << ShiftAmt >= 0xfff) {
-    LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << CmpMI
-                      << '\n');
-    return false;
-  } else if (!MRI->use_nodbg_empty(CmpMI.getOperand(0).getReg())) {
-    LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << CmpMI << '\n');
-    return false;
-  }
-
-  return true;
-}
-
 static bool isGreaterThan(AArch64CC::CondCode Cmp) {
   return Cmp == AArch64CC::GT || Cmp == AArch64CC::HI;
 }
@@ -439,37 +437,22 @@ static bool isLessThan(AArch64CC::CondCode Cmp) {
 // The second CMP is eliminated, enabling CSE to remove the redundant
 // comparison.
 bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
-  MachineInstr *FirstCmp = nullptr;
   MachineInstr *FirstCSINC = nullptr;
-  MachineInstr *SecondCmp = nullptr;
   MachineInstr *SecondCSINC = nullptr;
 
-  // Find two CMP + CSINC pairs
+  // Find two CSINC instructions
   for (MachineInstr &MI : MBB) {
-    if (isCmpInstruction(MI.getOpcode())) {
-      if (!FirstCmp) {
-        FirstCmp = &MI;
-      } else if (FirstCSINC && !SecondCmp) {
-        SecondCmp = &MI;
-      }
-      continue;
-    }
-
     if (isCSINCInstruction(MI.getOpcode())) {
-      // Found a CSINC, ensure it comes after the corresponding comparison
-      if (FirstCmp && !FirstCSINC) {
+      if (!FirstCSINC) {
         FirstCSINC = &MI;
-      } else if (SecondCmp && !SecondCSINC) {
+      } else if (!SecondCSINC) {
         SecondCSINC = &MI;
+        break; // Found both
       }
     }
-
-    if (SecondCSINC)
-      break;
   }
 
-  if (!SecondCmp || !SecondCSINC) {
-    LLVM_DEBUG(dbgs() << "Didn't find two CMP+CSINC pairs\n");
+  if (!FirstCSINC || !SecondCSINC) {
     return false;
   }
 
@@ -477,19 +460,26 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
   if (nzcvLivesOut(&MBB))
     return false;
 
-  if (!registersMatch(FirstCmp, SecondCmp))
+  // Find the CMPs controlling each CSINC
+  MachineInstr *FirstCmpMI = findAdjustableCmp(FirstCSINC);
+  MachineInstr *SecondCmpMI = findAdjustableCmp(SecondCSINC);
+  if (!FirstCmpMI || !SecondCmpMI)
     return false;
 
-  if (!isPureCmp(*FirstCmp) || !isPureCmp(*SecondCmp)) {
-    LLVM_DEBUG(dbgs() << "One or both CMPs are not pure\n");
+  // Ensure we have two distinct CMPs
+  if (FirstCmpMI == SecondCmpMI) {
+    LLVM_DEBUG(dbgs() << "Both CSINCs already controlled by same CMP\n");
     return false;
   }
 
+  if (!registersMatch(FirstCmpMI, SecondCmpMI))
+    return false;
+
   // Check that nothing else modifies the flags between the first CMP and second
   // conditional
-  for (auto It = std::next(MachineBasicBlock::iterator(FirstCmp));
+  for (auto It = std::next(MachineBasicBlock::iterator(FirstCmpMI));
        It != std::next(MachineBasicBlock::iterator(SecondCSINC)); ++It) {
-    if (&*It != SecondCmp &&
+    if (&*It != SecondCmpMI &&
         It->modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
       LLVM_DEBUG(dbgs() << "Flags modified between CMPs by: " << *It << '\n');
       return false;
@@ -511,8 +501,8 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
   AArch64CC::CondCode SecondCond =
       (AArch64CC::CondCode)(int)SecondCSINC->getOperand(3).getImm();
 
-  const int FirstImm = (int)FirstCmp->getOperand(2).getImm();
-  const int SecondImm = (int)SecondCmp->getOperand(2).getImm();
+  const int FirstImm = (int)FirstCmpMI->getOperand(2).getImm();
+  const int SecondImm = (int)SecondCmpMI->getOperand(2).getImm();
 
   LLVM_DEBUG(dbgs() << "Comparing intra-block CSINCs: "
                     << AArch64CC::getCondCodeName(FirstCond) << " #" << FirstImm
@@ -532,7 +522,7 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
       adjustFirst = !adjustFirst;
     }
 
-    MachineInstr *CmpToAdjust = adjustFirst ? FirstCmp : SecondCmp;
+    MachineInstr *CmpToAdjust = adjustFirst ? FirstCmpMI : SecondCmpMI;
     MachineInstr *CSINCToAdjust = adjustFirst ? FirstCSINC : SecondCSINC;
     AArch64CC::CondCode CondToAdjust = adjustFirst ? FirstCond : SecondCond;
     int TargetImm = adjustFirst ? SecondImm : FirstImm;
@@ -541,7 +531,7 @@ bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
 
     if (std::get<0>(AdjustedInfo) == TargetImm &&
         std::get<1>(AdjustedInfo) ==
-            (adjustFirst ? SecondCmp : FirstCmp)->getOpcode()) {
+            (adjustFirst ? SecondCmpMI : FirstCmpMI)->getOpcode()) {
       LLVM_DEBUG(dbgs() << "Successfully optimizing intra-block CSINC pair\n");
 
       // Modify the selected CMP and CSINC
@@ -575,19 +565,22 @@ bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
     return false;
   }
 
-  MachineInstr *HeadCmpMI = findSuitableCompare(&HBB);
-  if (!HeadCmpMI) {
+  MachineInstr *HeadBrMI = getBccTerminator(&HBB);
+  MachineInstr *TrueBrMI = getBccTerminator(TBB);
+  if (!HeadBrMI || !TrueBrMI)
     return false;
-  }
 
-  MachineInstr *TrueCmpMI = findSuitableCompare(TBB);
-  if (!TrueCmpMI) {
+  // Since we may modify cmps in these blocks, make sure NZCV does not live out.
+  if (nzcvLivesOut(&HBB) || nzcvLivesOut(TBB))
     return false;
-  }
 
-  if (!registersMatch(HeadCmpMI, TrueCmpMI)) {
+  MachineInstr *HeadCmpMI = findAdjustableCmp(HeadBrMI);
+  MachineInstr *TrueCmpMI = findAdjustableCmp(TrueBrMI);
+  if (!HeadCmpMI || !TrueCmpMI)
     return false;
-  }
+
+  if (!registersMatch(HeadCmpMI, TrueCmpMI))
+    return false;
 
   AArch64CC::CondCode HeadCmp;
   if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {

@@ -17,13 +17,13 @@
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
 // CHECK-NEXT:    store double [[TMP3]], ptr [[TMP2]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 4
 // CHECK-NEXT:    store double [[TMP4]], ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 8
 // CHECK-NEXT:    store double [[TMP6]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 12
 // CHECK-NEXT:    store double [[TMP8]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -43,13 +43,13 @@ void ZerosSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
 // CHECK-NEXT:    store double [[TMP2]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    store double [[TMP3]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 2
 // CHECK-NEXT:    store double [[TMP5]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store double [[TMP7]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -69,16 +69,16 @@ void ZerosSwizzleToVector(out double4x4 A, double4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x double> [[CAST_SPLAT]], <1 x double> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 1
 // CHECK-NEXT:    store double [[TMP3]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 5
 // CHECK-NEXT:    store double [[TMP5]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 9
 // CHECK-NEXT:    store double [[TMP7]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 13
 // CHECK-NEXT:    store double [[TMP9]], ptr [[TMP10]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -96,16 +96,16 @@ void OnesSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 4
 // CHECK-NEXT:    store double [[TMP2]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP0]], i32 1
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 5
 // CHECK-NEXT:    store double [[TMP4]], ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 6
 // CHECK-NEXT:    store double [[TMP6]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store double [[TMP8]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -125,16 +125,16 @@ void OnesSwizzleToVector(out double4x4 A, double4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x double> [[CAST_SPLAT]], <1 x double> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 2
 // CHECK-NEXT:    store double [[TMP3]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 6
 // CHECK-NEXT:    store double [[TMP5]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
 // CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 10
 // CHECK-NEXT:    store double [[TMP7]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 11
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 14
 // CHECK-NEXT:    store double [[TMP9]], ptr [[TMP10]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -152,16 +152,16 @@ void TwosSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 8
 // CHECK-NEXT:    store double [[TMP2]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 9
 // CHECK-NEXT:    store double [[TMP4]], ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP0]], i32 2
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 10
 // CHECK-NEXT:    store double [[TMP6]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store double [[TMP8]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    ret void
 //
@@ -181,13 +181,13 @@ void TwosSwizzleToVector(out double4x4 A, double4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x double> [[CAST_SPLAT]], <1 x double> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 3
 // CHECK-NEXT:    store double [[TMP3]], ptr [[TMP4]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 7
 // CHECK-NEXT:    store double [[TMP5]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 11
 // CHECK-NEXT:    store double [[TMP7]], ptr [[TMP8]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP1]], i32 3
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x double>, ptr [[TMP2]], i32 0, i32 15
@@ -208,13 +208,13 @@ void ThreesSwizzleToScalar(out double4x4 A, double D) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[V_ADDR]], align 32
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 12
 // CHECK-NEXT:    store double [[TMP2]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 13
 // CHECK-NEXT:    store double [[TMP4]], ptr [[TMP5]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 11
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 14
 // CHECK-NEXT:    store double [[TMP6]], ptr [[TMP7]], align 8
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP0]], i32 3
 // CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x double>, ptr [[TMP1]], i32 0, i32 15

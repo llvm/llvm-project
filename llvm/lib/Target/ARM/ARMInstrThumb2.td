@@ -5886,6 +5886,10 @@ let isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
 }
 }
 
+let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
+  def t2BXAUT_RET : tPseudoExpand<(outs), (ins pred:$p), 4, IIC_Br,
+                   [(ARMretglue)], (t2BXAUT pred:$p, R12, LR, SP)>, Sched<[WriteBr]>;
+}
 
 class PACBTIHintSpaceInst<string asm, string ops, bits<8> imm>
   : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, !strconcat(asm, "\t", ops), "", []>,

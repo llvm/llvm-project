@@ -29,7 +29,7 @@ void StoreScalarAtMat11(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 4
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -46,7 +46,7 @@ void StoreScalarAtMat12(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -63,7 +63,7 @@ void StoreScalarAtMat13(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -80,7 +80,7 @@ void StoreScalarAtMat14(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -114,7 +114,7 @@ void StoreScalarAtMat22(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 9
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -131,7 +131,7 @@ void StoreScalarAtMat23(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -148,7 +148,7 @@ void StoreScalarAtMat24(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -165,7 +165,7 @@ void StoreScalarAtMat31(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -199,7 +199,7 @@ void StoreScalarAtMat33(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 14
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -216,7 +216,7 @@ void StoreScalarAtMat34(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -233,7 +233,7 @@ void StoreScalarAtMat41(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -250,7 +250,7 @@ void StoreScalarAtMat42(out int4x4 A, int I) {
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //

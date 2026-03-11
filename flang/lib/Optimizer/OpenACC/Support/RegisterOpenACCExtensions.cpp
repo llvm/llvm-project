@@ -65,6 +65,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::TypeDescOp::attachInterface<
         IndirectGlobalAccessModel<fir::TypeDescOp>>(*ctx);
+    fir::UseStmtOp::attachInterface<IndirectGlobalAccessModel<fir::UseStmtOp>>(
+        *ctx);
 
     // Attach OutlineRematerializationOpInterface to FIR operations that
     // produce synthetic types (shapes, field indices) which cannot be passed
@@ -77,6 +79,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         *ctx);
     fir::FieldIndexOp::attachInterface<
         OutlineRematerializationModel<fir::FieldIndexOp>>(*ctx);
+    fir::ConvertOp::attachInterface<
+        OutlineRematerializationModel<fir::ConvertOp>>(*ctx);
   });
 
   // Register HLFIR operation interfaces

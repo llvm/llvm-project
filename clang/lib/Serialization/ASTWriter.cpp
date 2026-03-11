@@ -3357,7 +3357,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 
     Record.push_back(FileIDAndFile.second.StateTransitions.size());
     for (auto &StatePoint : FileIDAndFile.second.StateTransitions) {
-      Record.push_back(getAdjustedOffset(StatePoint.Offset));
+      Record.push_back(StatePoint.Offset);
       AddDiagState(StatePoint.State, false);
     }
   }
@@ -7825,7 +7825,8 @@ void ASTWriter::DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {
 }
 
 void ASTWriter::DeclarationMarkedOpenMPIndirectCall(const Decl *D) {
-  if (Chain && Chain->isProcessingUpdateRecords()) return;
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
   assert(!WritingAST && "Already writing the AST!");
   if (!D->isFromASTFile())
     return;

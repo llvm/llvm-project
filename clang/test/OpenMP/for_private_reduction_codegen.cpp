@@ -79,12 +79,12 @@ int main(void) {
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RESULT:%.*]] = alloca [[CLASS_SUM:%.*]], align 4
-// CHECK-NEXT:    [[ARRAY:%.*]] = alloca [10 x %class.Sum], align 16
+// CHECK-NEXT:    [[ARRAY:%.*]] = alloca [10 x [[CLASS_SUM]]], align 16
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_SUM]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]])
 // CHECK-NEXT:    call void @_ZN3SumC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[RESULT]], i32 noundef 0)
-// CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [10 x %class.Sum], ptr [[ARRAY]], i32 0, i32 0
+// CHECK-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [10 x [[CLASS_SUM]]], ptr [[ARRAY]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYCTOR_END:%.*]] = getelementptr inbounds [[CLASS_SUM]], ptr [[ARRAY_BEGIN]], i64 10
 // CHECK-NEXT:    br label [[ARRAYCTOR_LOOP:%.*]]
 // CHECK:       arrayctor.loop:
@@ -105,7 +105,7 @@ int main(void) {
 // CHECK-NEXT:    call void @_ZN3SumC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]], i32 noundef [[TMP2]])
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP3]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x %class.Sum], ptr [[ARRAY]], i64 0, i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [[CLASS_SUM]]], ptr [[ARRAY]], i64 0, i64 [[IDXPROM]]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARRAYIDX]], ptr align 4 [[REF_TMP]], i64 4, i1 false)
 // CHECK-NEXT:    br label [[FOR_INC:%.*]]
 // CHECK:       for.inc:
@@ -152,7 +152,7 @@ int main(void) {
 // CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK-NEXT:    store ptr [[ARRAY]], ptr [[ARRAY_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY_ADDR]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
 // CHECK-NEXT:    call void @_ZN3SumC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[RESULT]], i32 noundef 0)
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK-NEXT:    store i32 9, ptr [[DOTOMP_UB]], align 4
@@ -188,7 +188,7 @@ int main(void) {
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP9]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x %class.Sum], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [[CLASS_SUM]]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i32 @_ZNK3SumplERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[RESULT1]], ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYIDX]])
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[CLASS_SUM]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-NEXT:    store i32 [[CALL]], ptr [[COERCE_DIVE]], align 4
@@ -259,7 +259,7 @@ int main(void) {
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[RHS]], ptr [[RHS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RHS_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RHS_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw [[CLASS_SUM:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VAL]], align 4
 // CHECK-NEXT:    [[VAL2:%.*]] = getelementptr inbounds nuw [[CLASS_SUM]], ptr [[THIS1]], i32 0, i32 0
@@ -293,7 +293,7 @@ int main(void) {
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[VAL:%.*]] = getelementptr inbounds nuw [[CLASS_SUM]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RHS_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RHS_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    [[VAL2:%.*]] = getelementptr inbounds nuw [[CLASS_SUM]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VAL2]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP2]]
@@ -353,9 +353,9 @@ int main(void) {
 // CHECK-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[SUM_V]], ptr [[SUM_V_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -374,7 +374,7 @@ int main(void) {
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[DOTOMP_UB]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 0, ptr [[SUM_V4]], align 4
 // CHECK-NEXT:    store ptr [[SUM_V4]], ptr [[_TMP5]], align 8
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP0]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -409,7 +409,7 @@ int main(void) {
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP17]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[_TMP5]], align 8
+// CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[_TMP5]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
 // CHECK-NEXT:    [[ADD9:%.*]] = add nsw i32 [[TMP20]], [[TMP18]]
 // CHECK-NEXT:    store i32 [[ADD9]], ptr [[TMP19]], align 4
@@ -507,13 +507,13 @@ int main(void) {
 // CHECK-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[SUM_V]], ptr [[SUM_V_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[PROD_V]], ptr [[PROD_V_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PROD_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PROD_V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SUM_V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PROD_V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PROD_V_ADDR]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[_TMP1]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[DOTCAPTURE_EXPR_]], align 4
@@ -532,10 +532,10 @@ int main(void) {
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[DOTOMP_UB]], align 4
 // CHECK-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // CHECK-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 0, ptr [[SUM_V5]], align 4
 // CHECK-NEXT:    store ptr [[SUM_V5]], ptr [[_TMP6]], align 8
-// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP1]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[_TMP1]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    store i32 1, ptr [[PROD_V7]], align 4
 // CHECK-NEXT:    store ptr [[PROD_V7]], ptr [[_TMP8]], align 8
 // CHECK-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP0]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -570,7 +570,7 @@ int main(void) {
 // CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP20]] to i64
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[_TMP6]], align 8
+// CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[_TMP6]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 // CHECK-NEXT:    [[ADD12:%.*]] = add nsw i32 [[TMP23]], [[TMP21]]
 // CHECK-NEXT:    store i32 [[ADD12]], ptr [[TMP22]], align 4
@@ -579,7 +579,7 @@ int main(void) {
 // CHECK-NEXT:    [[IDXPROM13:%.*]] = sext i32 [[TMP25]] to i64
 // CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[IDXPROM13]]
 // CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX14]], align 4
-// CHECK-NEXT:    [[TMP27:%.*]] = load ptr, ptr [[_TMP8]], align 8
+// CHECK-NEXT:    [[TMP27:%.*]] = load ptr, ptr [[_TMP8]], align 8, !nonnull [[META5]], !align [[META6]]
 // CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
 // CHECK-NEXT:    [[MUL15:%.*]] = mul nsw i32 [[TMP28]], [[TMP26]]
 // CHECK-NEXT:    store i32 [[MUL15]], ptr [[TMP27]], align 4
@@ -698,7 +698,7 @@ int main(void) {
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP0]], i32 4)
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @main.omp_outlined, ptr [[V]])
@@ -707,4 +707,3 @@ int main(void) {
 // CHECK-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP0]], i32 4)
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 3, ptr @main.omp_outlined.1, ptr [[V]], ptr [[SUM_V_EXT]], ptr [[PROD_V_EXT]])
 // CHECK-NEXT:    ret i32 0
-
