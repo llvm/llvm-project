@@ -12,7 +12,9 @@
 #include "ToolChains/Gnu.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/SmallString.h"
 
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -86,8 +88,14 @@ private:
   using OrderedMultilibs =
       llvm::iterator_range<llvm::SmallVector<Multilib>::const_reverse_iterator>;
   OrderedMultilibs getOrderedMultilibs() const;
+  std::string computeClangRuntimesSysRoot(bool IncludeTriple) const;
+  std::optional<llvm::SmallString<128>>
+  getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,
+                        const llvm::opt::ArgList &Args) const;
 
   std::string SysRoot;
+  CStdlibType SelectedCStdlib = ToolChain::CST_System;
+  mutable bool MissingCStdlibDiagEmitted = false;
 
   bool IsGCCInstallationValid;
 

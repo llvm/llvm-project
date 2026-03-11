@@ -1422,6 +1422,8 @@ ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
 
   if (LibName == "newlib")
     cStdlibType = ToolChain::CST_Newlib;
+  else if (LibName == "newlib-nano")
+    cStdlibType = ToolChain::CST_NewlibNano;
   else if (LibName == "picolibc")
     cStdlibType = ToolChain::CST_Picolibc;
   else if (LibName == "llvm-libc")
@@ -1436,6 +1438,22 @@ ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
   }
 
   return *cStdlibType;
+}
+
+StringRef ToolChain::GetCStdlibName(CStdlibType CStdlib) {
+  switch (CStdlib) {
+  case ToolChain::CST_Newlib:
+    return "newlib";
+  case ToolChain::CST_NewlibNano:
+    return "newlib-nano";
+  case ToolChain::CST_Picolibc:
+    return "picolibc";
+  case ToolChain::CST_LLVMLibC:
+    return "llvm-libc";
+  case ToolChain::CST_System:
+    return "system";
+  }
+  llvm_unreachable("Unknown C standard library type");
 }
 
 /// Utility function to add a system framework directory to CC1 arguments.

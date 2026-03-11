@@ -9,6 +9,7 @@
 #include "BareMetal.h"
 
 #include "Gnu.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/InputInfo.h"
 
@@ -115,13 +116,24 @@ static bool findRISCVMultilibs(const Driver &D,
   return false;
 }
 
-static std::string computeClangRuntimesSysRoot(const Driver &D,
-                                               bool IncludeTriple) {
+std::string BareMetal::computeClangRuntimesSysRoot(bool IncludeTriple) const {
+  const Driver &D = getDriver();
   if (!D.SysRoot.empty())
     return D.SysRoot;
 
   SmallString<128> SysRootDir(D.Dir);
   llvm::sys::path::append(SysRootDir, "..", "lib", "clang-runtimes");
+
+  StringRef CStdlibName = ToolChain::GetCStdlibName(SelectedCStdlib);
+  if (CStdlibName != "system" && CStdlibName != CLANG_DEFAULT_C_STDLIB) {
+    llvm::sys::path::append(SysRootDir, CStdlibName);
+
+    if (!MissingCStdlibDiagEmitted && !D.getVFS().exists(SysRootDir)) {
+      D.Diag(diag::err_drv_cstdlib_not_found)
+          << CStdlibName.str() << SysRootDir.str();
+      MissingCStdlibDiagEmitted = true;
+    }
+  }
 
   if (IncludeTriple)
     llvm::sys::path::append(SysRootDir, D.getTargetTriple());
@@ -189,7 +201,7 @@ std::string BareMetal::computeSysRoot() const {
     return std::string(inferredSysRoot);
 
   // Use the clang-runtimes path.
-  return computeClangRuntimesSysRoot(D, /*IncludeTriple*/ true);
+  return computeClangRuntimesSysRoot(/*IncludeTriple*/ true);
 }
 
 std::string BareMetal::getCompilerRTPath() const {
@@ -219,6 +231,7 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
   IsGCCInstallationValid = initGCCInstallation(Triple, Args);
+  SelectedCStdlib = GetCStdlibType(Args);
   std::string ComputedSysRoot = computeSysRoot();
   if (IsGCCInstallationValid) {
     if (!isRISCVBareMetal(Triple))
@@ -303,9 +316,9 @@ findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
 
 static constexpr llvm::StringLiteral MultilibFilename = "multilib.yaml";
 
-static std::optional<llvm::SmallString<128>>
-getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,
-                      const ArgList &Args) {
+std::optional<llvm::SmallString<128>>
+BareMetal::getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,
+                                 const ArgList &Args) const {
   llvm::SmallString<128> MultilibPath;
   if (Arg *ConfigFileArg = Args.getLastArg(options::OPT_multi_lib_config)) {
     MultilibPath = ConfigFileArg->getValue();
@@ -314,7 +327,7 @@ getMultilibConfigPath(const Driver &D, const llvm::Triple &Triple,
       return {};
     }
   } else {
-    MultilibPath = computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
+    MultilibPath = computeClangRuntimesSysRoot(/*IncludeTriple=*/false);
     llvm::sys::path::append(MultilibPath, MultilibFilename);
   }
   return MultilibPath;
@@ -332,7 +345,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
   if (D.getVFS().exists(*MultilibPath)) {
     // If multilib.yaml is found, update sysroot so it doesn't use a target
     // specific suffix
-    SysRoot = computeClangRuntimesSysRoot(D, /*IncludeTriple=*/false);
+    SysRoot = computeClangRuntimesSysRoot(/*IncludeTriple=*/false);
     SmallVector<StringRef> CustomFlagMacroDefines;
     findMultilibsFromYAML(*this, D, *MultilibPath, Args, Result,
                           CustomFlagMacroDefines);

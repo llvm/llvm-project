@@ -189,6 +189,8 @@ def err_drv_incompatible_options : Error<
   "the combination of '%0' and '%1' is incompatible">;
 def err_drv_invalid_cstdlib_name : Error<
   "invalid C library name in argument '%0'">;
+def err_drv_cstdlib_not_found : Error<
+  "selected C library '%0' not found: '%1'">;
 def err_drv_invalid_stdlib_name : Error<
   "invalid library name in argument '%0'">;
 def err_drv_invalid_output_with_multiple_archs : Error<

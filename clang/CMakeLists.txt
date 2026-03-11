@@ -255,6 +255,19 @@ if (NOT(CLANG_DEFAULT_CXX_STDLIB STREQUAL "" OR
     "Default C++ stdlib to use (\"libstdc++\" or \"libc++\", empty for platform default" FORCE)
 endif()
 
+set(CLANG_DEFAULT_C_STDLIB "" CACHE STRING
+  "Default C stdlib to use (\"newlib\", \"newlib-nano\", \"picolibc\", \"llvm-libc\", or \"system\", empty for platform default)")
+if (NOT(CLANG_DEFAULT_C_STDLIB STREQUAL "" OR
+        CLANG_DEFAULT_C_STDLIB STREQUAL "newlib" OR
+        CLANG_DEFAULT_C_STDLIB STREQUAL "newlib-nano" OR
+        CLANG_DEFAULT_C_STDLIB STREQUAL "picolibc" OR
+        CLANG_DEFAULT_C_STDLIB STREQUAL "llvm-libc" OR
+        CLANG_DEFAULT_C_STDLIB STREQUAL "system"))
+  message(WARNING "Resetting default C stdlib to use platform default")
+  set(CLANG_DEFAULT_C_STDLIB "" CACHE STRING
+    "Default C stdlib to use (\"newlib\", \"newlib-nano\", \"picolibc\", \"llvm-libc\", or \"system\", empty for platform default)" FORCE)
+endif()
+
 set(CLANG_DEFAULT_RTLIB "" CACHE STRING
   "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)")
 if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR

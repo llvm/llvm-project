@@ -111,6 +111,7 @@ public:
 
   enum CStdlibType {
     CST_Newlib,
+    CST_NewlibNano,
     CST_Picolibc,
     CST_LLVMLibC,
     CST_System,
@@ -741,6 +742,8 @@ public:
   // compilation arguments. Defaults to CST_System when no --cstdlib= flag
   // is provided.
   virtual CStdlibType GetCStdlibType(const llvm::opt::ArgList &Args) const;
+  // Return the canonical validated C standard library name.
+  static llvm::StringRef GetCStdlibName(CStdlibType CStdlib);
 
   // Detect the highest available version of libc++ in include path.
   virtual std::string detectLibcxxVersion(StringRef IncludePath) const;

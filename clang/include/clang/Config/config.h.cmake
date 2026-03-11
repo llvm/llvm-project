@@ -17,6 +17,9 @@
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB "${CLANG_DEFAULT_CXX_STDLIB}"
 
+/* Default C stdlib to use. */
+#define CLANG_DEFAULT_C_STDLIB "${CLANG_DEFAULT_C_STDLIB}"
+
 /* Default runtime library to use. */
 #define CLANG_DEFAULT_RTLIB "${CLANG_DEFAULT_RTLIB}"
 
