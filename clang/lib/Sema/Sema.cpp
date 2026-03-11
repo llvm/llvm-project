@@ -956,6 +956,12 @@ bool Sema::isExternalWithNoLinkageType(const ValueDecl *VD) const {
          !isFunctionOrVarDeclExternC(VD);
 }
 
+bool Sema::isMainFileLoc(SourceLocation Loc) const {
+  if (TUKind != TU_Complete || getLangOpts().IsHeaderFile)
+    return false;
+  return SourceMgr.isInMainFile(Loc);
+}
+
 /// Obtains a sorted list of functions and variables that are undefined but
 /// ODR-used.
 void Sema::getUndefinedButUsed(
@@ -1631,8 +1637,8 @@ void Sema::ActOnEndOfTranslationUnit() {
     llvm::sort(DeclDiags,
                [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
                  // Sorting purely for determinism; matches behavior in
-                 // Sema::ActOnPopScope.
-                 return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
+                 // Sema::ActOnPopScope (operator< compares raw encoding).
+                 return LHS.Loc < RHS.Loc;
                });
     for (const LocAndDiag &D : DeclDiags)
       Diag(D.Loc, D.PD);
