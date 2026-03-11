@@ -25,9 +25,6 @@
 ; Verify OpVariable uses the array type, not pointer-to-pointer
 ; CHECK: %[[#Var:]] = OpVariable %[[#PtrFunc]] Function
 
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
-target triple = "spirv64-unknown-unknown"
-
 define spir_kernel void @test_alloca_aggregate() local_unnamed_addr {
 entry:
   %y = alloca [1 x { { { ptr addrspace(1), i64, [1 x i64], i64 }, [2 x [1 x i64]] } }], align 8
