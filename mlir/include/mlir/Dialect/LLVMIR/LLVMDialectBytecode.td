@@ -192,13 +192,15 @@ def DICompositeTypeAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def DIDerivedTypeAttr : DialectAttribute<(attr
-  VarInt:$tag, OptionalAttribute<"StringAttr">:$name,
+  VarInt:$tag,
+  OptionalAttribute<"StringAttr">:$name,
   OptionalAttribute<"DIFileAttr">:$file,
   VarInt:$line,
   OptionalAttribute<"DIScopeAttr">:$scope,
   OptionalAttribute<"DITypeAttr">:$baseType,
   VarInt:$sizeInBits,
-  VarInt:$alignInBits, VarInt:$offsetInBits,
+  VarInt:$alignInBits,
+  VarInt:$offsetInBits,
   OptionalInt<"unsigned">:$dwarfAddressSpace,
   EnumClassFlag<"DIFlags", "getFlags()">:$_rawflags,
   LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
