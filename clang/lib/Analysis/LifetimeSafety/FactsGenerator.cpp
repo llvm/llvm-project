@@ -459,6 +459,10 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
     OriginList *InitList = getOriginsList(*Init);
     if (!InitList)
       continue;
+    // FIXME: Consider flowing all origin levels once lambdas support more than
+    // one origin. Currently only the outermost origin is flowed, so by-ref
+    // captures like `[&p]` (where p is string_view) miss inner-level
+    // invalidation.
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         LambdaList->getOuterOriginID(), InitList->getOuterOriginID(), Kill));
     Kill = false;

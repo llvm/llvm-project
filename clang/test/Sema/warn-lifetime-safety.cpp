@@ -1870,7 +1870,7 @@ namespace lambda_captures {
   }
 
   auto implicit_ref_capture() {
-    int local = 1, local2 = 2;
+    int local = 1;
     auto lambda = [&]() { return local; }; // expected-warning {{address of stack memory is returned later}}
     return lambda; // expected-note {{returned here}}
   }
@@ -1909,16 +1909,25 @@ namespace lambda_captures {
   }
 
   auto capture_static_address_by_value() {
-      static int local = 1;
-      int* p = &local;
-      auto lambda = [p]() { return p; };
-      return lambda;
+    static int local = 1;
+    int* p = &local;
+    auto lambda = [p]() { return p; };
+    return lambda;
   }
 
   auto capture_static_address_by_ref() {
-      static int local = 1;
-      int* p = &local;
-      auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
-      return lambda; // expected-note {{returned here}}
+    static int local = 1;
+    int* p = &local;
+    auto lambda = [&p]() { return p; }; // expected-warning {{address of stack memory is returned later}}
+    return lambda; // expected-note {{returned here}}
+  }
+
+  auto capture_multilevel_pointer() {
+    int x;
+    int *p = &x; // expected-warning {{address of stack memory is returned later}}
+    int **q = &p; // expected-warning {{address of stack memory is returned later}}
+    int ***r = &q; // expected-warning {{address of stack memory is returned later}}
+    auto lambda = [=]() { return *p + **q + ***r; };
+    return lambda; // expected-note 3 {{returned here}}
   }
 } // namespace lambda_captures
