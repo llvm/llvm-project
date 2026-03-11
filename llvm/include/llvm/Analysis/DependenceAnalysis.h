@@ -592,8 +592,7 @@ private:
   /// Works in some cases that exactRDIVtest doesn't,
   /// and vice versa. Can also be used as a backup for
   /// ordinary SIV tests.
-  bool symbolicRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
-                        const SCEV *SrcConst, const SCEV *DstConst,
+  bool symbolicRDIVtest(const SCEVAddRecExpr *Src, const SCEVAddRecExpr *Dst,
                         const Loop *SrcLoop, const Loop *DstLoop) const;
 
   /// gcdMIVtest - Tests an MIV subscript pair for dependence.
