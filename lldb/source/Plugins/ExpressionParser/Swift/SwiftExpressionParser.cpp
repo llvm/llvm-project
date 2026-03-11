@@ -2117,7 +2117,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         return parse_result;
       swift::performLLVMOptimizations(
           IRGenOpts, m_swift_ast_ctx.GetDiagnosticEngine(), nullptr,
-          GenModule.getModule(), GenModule.getTargetMachine(), nullptr);
+          GenModule.getModule(), GenModule.getTargetMachine(),
+          m_swift_ast_ctx.GetSourceManager().getFileSystem(), nullptr);
       parse_result = verify(*GenModule.getModule());
       if (parse_result != ParseResult::success)
         return parse_result;
