@@ -457,7 +457,7 @@ enum Car {
 // MD-VEHICLES: |---|---|---|
 // MD-VEHICLES: | Sedan | 0 | Comment 1 |
 // MD-VEHICLES: | SUV | 1 | Comment 2 |
-// MD-VEHICLES: | Pickup | 2 | Comment 3 |
+// MD-VEHICLES: | Pickup | 2 | -- |
 // MD-VEHICLES: | Hatchback | 3 | Comment 4 |
 // MD-VEHICLES: **brief** specify type of car
 
