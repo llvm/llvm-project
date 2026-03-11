@@ -277,7 +277,7 @@ public:
     /// remove the Def from this map and add this SuperNode to the list of
     /// dependants of the defining node.
     ///
-    /// Returns true if SuperNodeDeps was changed.
+    /// Returns true if any elements were removed.
     bool hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
                    ElemToSuperNodeMap &ElemToSN) {
       return Deps.visit([&](ContainerId &Container, ElementSet &Elements) {

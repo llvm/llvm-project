@@ -245,6 +245,9 @@ public:
   void storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
                      uint64_t Size);
 
+  /// Freeze the value in-place.
+  void freeze(AnyValue &Val, Type *Ty);
+
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
 

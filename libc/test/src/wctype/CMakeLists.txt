@@ -32,6 +32,16 @@ add_libc_test(
     libc.src.wctype.iswcntrl
 )
 
+add_libc_test(
+  iswgraph_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswgraph_test.cpp
+  DEPENDS
+    libc.src.wctype.iswgraph
+)
+
 add_libc_test(  
   iswlower_test
   SUITE
@@ -41,3 +51,14 @@ add_libc_test(
   DEPENDS
     libc.src.wctype.iswlower
 )
+
+add_libc_test(
+  iswspace_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswspace_test.cpp
+  DEPENDS
+    libc.src.wctype.iswspace
+)
+
