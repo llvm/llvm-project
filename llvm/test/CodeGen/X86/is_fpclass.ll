@@ -2906,12 +2906,8 @@ define i1 @not_issubnormal_or_zero_or_qnan_f(float %x) {
 define i1 @isclass_positive_nnan(float nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_positive_nnan:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    cmpl $0, (%esp)
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setns %al
-; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isclass_positive_nnan:
@@ -2944,13 +2940,9 @@ define i1 @isclass_positive(float %x) nounwind {
 define i1 @isclass_negative_nnan(float nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_negative_nnan:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    movl (%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: isclass_negative_nnan:
@@ -2998,15 +2990,6 @@ define i1 @isclass_negative(float %x) nounwind {
 define <4 x i1> @isclass_positive_nnan_v4f32(<4 x float> nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_positive_nnan_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setns %cl
@@ -3015,7 +2998,7 @@ define <4 x i1> @isclass_positive_nnan_v4f32(<4 x float> nofpclass(nan) %x) noun
 ; X86-NEXT:    setns %dl
 ; X86-NEXT:    shlb $3, %dl
 ; X86-NEXT:    orb %cl, %dl
-; X86-NEXT:    cmpl $0, (%esp)
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setns %cl
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setns %ch
@@ -3023,7 +3006,6 @@ define <4 x i1> @isclass_positive_nnan_v4f32(<4 x float> nofpclass(nan) %x) noun
 ; X86-NEXT:    orb %cl, %ch
 ; X86-NEXT:    orb %dl, %ch
 ; X86-NEXT:    movb %ch, (%eax)
-; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: isclass_positive_nnan_v4f32:
@@ -3073,15 +3055,6 @@ define <4 x i1> @isclass_positive_v4f32(<4 x float> %x) nounwind {
 define <4 x i1> @isclass_negative_nnan_v4f32(<4 x float> nofpclass(nan) %x) nounwind {
 ; X86-LABEL: isclass_negative_nnan_v4f32:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sets %cl
@@ -3090,7 +3063,7 @@ define <4 x i1> @isclass_negative_nnan_v4f32(<4 x float> nofpclass(nan) %x) noun
 ; X86-NEXT:    sets %dl
 ; X86-NEXT:    shlb $3, %dl
 ; X86-NEXT:    orb %cl, %dl
-; X86-NEXT:    cmpl $0, (%esp)
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sets %ch
@@ -3098,7 +3071,6 @@ define <4 x i1> @isclass_negative_nnan_v4f32(<4 x float> nofpclass(nan) %x) noun
 ; X86-NEXT:    orb %cl, %ch
 ; X86-NEXT:    orb %dl, %ch
 ; X86-NEXT:    movb %ch, (%eax)
-; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: isclass_negative_nnan_v4f32:
