@@ -1,0 +1,43 @@
+/* Enable flexible wide-viewing for Furo theme. */
+:root {
+  /* Remove Furo's default max-width for the content area. */
+  --content-width: none;
+}
+
+/* Allow the top-level container to fill the entire browser width. */
+.page {
+  max-width: none;
+}
+
+/* Ensure the main content area is allowed to shrink/not-overflow
+   its grid cell, preventing it from pushing the TOC sidebar away. */
+.main, .content {
+  min-width: 0;
+  max-width: 100%;
+
+  /* Remove default width setting from furo's content. */
+  width: unset;
+}
+
+/* Ensure wide tables and code blocks have their own scrollbars
+   instead of forcing the container to expand beyond the viewport. */
+.content table,
+.content .literal-block,
+.content .highlight {
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+.page .sidebar-drawer {
+  width: unset;
+}
+
+.main .toc-drawer {
+  min-width: 15em;
+}
+
+/* Ensure paragraphs wrap within the content area. */
+.content p {
+  overflow-wrap: break-word;
+}
