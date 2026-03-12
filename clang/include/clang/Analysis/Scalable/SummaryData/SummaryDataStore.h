@@ -18,6 +18,7 @@
 #include "clang/Analysis/Scalable/SummaryData/SummaryData.h"
 #include "clang/Analysis/Scalable/SummaryData/SummaryDataTraits.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
+#include "llvm/Support/Error.h"
 #include <map>
 #include <memory>
 

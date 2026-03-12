@@ -20,13 +20,29 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <utility>
 
 namespace clang::ssaf {
 
 /// Consumes a LUSummary by dispatching its entity data to registered
 /// SummaryDataBuilders and returning the results in a SummaryDataStore.
+///
+/// Three consumption patterns are supported:
+///   - \c run() &&          — processes every analysis present in the
+///                            LUSummary, silently skipping any whose data is
+///                            absent or whose builder is not registered.
+///                            Cannot fail, so it returns \c SummaryDataStore
+///                            directly. Requires an rvalue consumer because
+///                            this pattern exhausts all remaining data.
+///   - \c run(names)        — processes a named subset; returns
+///                            \c llvm::Expected<SummaryDataStore> and fails if
+///                            any requested name has no data in the LUSummary
+///                            or no registered builder.
+///   - \c run<DataTs...>()  — type-safe variant of \c run(names) with the
+///                            same error semantics and return type.
+///
 /// All patterns consume the underlying LUSummary data, so each analysis can
-/// only be retrieved once across all patterns.
+/// only be retrieved once across all run() calls.
 class LUSummaryConsumer final {
 public:
   explicit LUSummaryConsumer(std::unique_ptr<LUSummary> LU)
@@ -58,10 +74,17 @@ public:
 private:
   std::unique_ptr<LUSummary> LU;
 
-  /// Looks up \p SN in the LUSummary, instantiates the registered builder,
-  /// delivers all entities, finalizes, and returns the built data.
+  /// Iterator into LUSummary::Data — the map from SummaryName to entity data.
+  using LUDataIterator = decltype(std::declval<LUSummary &>().Data)::iterator;
+
+  /// Core build implementation. Instantiates the registered builder for the
+  /// analysis at \p It, delivers all entities, finalizes, and returns the
+  /// built data. Returns an error if no builder is registered. Erases the
+  /// LUSummary entry on success.
+  llvm::Expected<std::unique_ptr<SummaryData>> build(LUDataIterator It);
+
+  /// Looks up \p SN in the LUSummary and delegates to the iterator overload.
   /// Returns an error if no data for \p SN exists or no builder is registered.
-  /// Consumes the LUSummary entry for \p SN on success.
   llvm::Expected<std::unique_ptr<SummaryData>> build(const SummaryName &SN);
 };
 

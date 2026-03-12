@@ -62,6 +62,8 @@ class SummaryDataBuilder : public SummaryDataBuilderBase {
                 "DataT must derive from SummaryData");
   static_assert(HasSummaryName<DataT>::value,
                 "DataT must have a static summaryName() method");
+  static_assert(std::is_base_of_v<EntitySummary, SummaryT>,
+                "SummaryT must derive from EntitySummary");
 
   std::unique_ptr<DataT> Data;
 

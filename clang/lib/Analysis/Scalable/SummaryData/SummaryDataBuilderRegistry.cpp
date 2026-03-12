@@ -14,21 +14,23 @@ using namespace ssaf;
 using RegistryT = llvm::Registry<SummaryDataBuilderBase>;
 LLVM_INSTANTIATE_REGISTRY(RegistryT)
 
-std::unique_ptr<SummaryDataBuilderBase>
-SummaryDataBuilderRegistry::instantiate(llvm::StringRef Name) {
+namespace {
+const RegistryT::entry *findEntry(llvm::StringRef Name) {
   for (const auto &Entry : RegistryT::entries()) {
     if (Entry.getName() == Name) {
-      return Entry.instantiate();
+      return &Entry;
     }
   }
   return nullptr;
 }
+} // namespace
 
 bool SummaryDataBuilderRegistry::contains(llvm::StringRef Name) {
-  for (const auto &Entry : RegistryT::entries()) {
-    if (Entry.getName() == Name) {
-      return true;
-    }
-  }
-  return false;
+  return findEntry(Name) != nullptr;
+}
+
+std::unique_ptr<SummaryDataBuilderBase>
+SummaryDataBuilderRegistry::instantiate(llvm::StringRef Name) {
+  const auto *Entry = findEntry(Name);
+  return Entry ? Entry->instantiate() : nullptr;
 }

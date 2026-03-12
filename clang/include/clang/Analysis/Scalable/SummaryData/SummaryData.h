@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Abstract base class for all whole-program analysis data built from
+// Base class for all whole-program analysis data built from
 // LUSummary data. Carries no query API — all analysis-specific methods live
 // on concrete subclasses.
 //
@@ -17,7 +17,7 @@
 
 namespace clang::ssaf {
 
-/// Abstract base class for whole-program analysis data.
+/// Base class for whole-program analysis data.
 class SummaryData {
 public:
   virtual ~SummaryData() = default;

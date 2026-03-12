@@ -37,12 +37,21 @@ namespace clang::ssaf {
 class SummaryDataBuilderRegistry {
   using RegistryT = llvm::Registry<SummaryDataBuilderBase>;
 
+  SummaryDataBuilderRegistry() = delete;
+
 public:
   /// Registers \p BuilderT under the name returned by
   /// \c BuilderT::summaryName(). Only a description is required.
+  ///
+  /// \c Add objects must be declared \c static at namespace scope — they
+  /// register an entry in a global linked list on construction and are
+  /// not copyable or movable.
   template <typename BuilderT> struct Add {
     explicit Add(llvm::StringRef Desc)
         : Name(BuilderT::summaryName().str().str()), Node(Name, Desc) {}
+
+    Add(const Add &) = delete;
+    Add &operator=(const Add &) = delete;
 
   private:
     std::string Name;
