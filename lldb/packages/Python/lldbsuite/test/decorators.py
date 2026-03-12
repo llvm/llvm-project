@@ -1060,6 +1060,7 @@ def skipUnlessCompilerIsClang(func):
 
     return skipTestIfFn(is_compiler_clang)(func)
 
+
 def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
