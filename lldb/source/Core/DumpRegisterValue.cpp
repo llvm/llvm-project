@@ -21,20 +21,23 @@
 
 using namespace lldb;
 
-template <typename T>
-static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
+static void dump_type_value(lldb_private::CompilerType &fields_type,
+                            lldb_private::RegisterValue reg_val,
+                            const lldb_private::RegisterInfo &reg_info,
                             lldb_private::ExecutionContextScope *exe_scope,
                             lldb_private::Stream &strm) {
+  auto heap_buf_sp =
+      std::make_shared<lldb_private::DataBufferHeap>(reg_val.GetByteSize(), 0);
   lldb::ByteOrder target_order = exe_scope->CalculateProcess()->GetByteOrder();
+  lldb_private::Status err;
+  uint32_t wrote =
+      reg_val.GetAsMemoryData(reg_info, heap_buf_sp->GetBytes(),
+                              reg_val.GetByteSize(), target_order, err);
+  if (wrote != reg_val.GetByteSize() || err.Fail())
+    return;
 
-  // The type will be rendered in the target's type system, so it must match
-  // its endian.
-  if (lldb_private::endian::InlHostByteOrder() != target_order)
-    value = llvm::byteswap(value);
-
-  lldb_private::DataExtractor data_extractor{&value, sizeof(T), target_order,
-                                             8};
-
+  lldb_private::DataExtractor data_extractor(heap_buf_sp);
+  data_extractor.SetByteOrder(target_order);
   lldb::ValueObjectSP vobj_sp = lldb_private::ValueObjectConstResult::Create(
       exe_scope, fields_type, lldb_private::ConstString(), data_extractor);
   lldb_private::DumpValueObjectOptions dump_options;
@@ -107,8 +110,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  if (!print_flags || !reg_info.register_type || !exe_scope || !target_sp ||
-      (reg_info.byte_size != 4 && reg_info.byte_size != 8))
+  if (!print_flags || !reg_info.register_type || !exe_scope || !target_sp)
     return;
 
   CompilerType register_type =
@@ -119,13 +121,8 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
   // Use a new stream so we can remove a trailing newline later.
   StreamString register_type_stream;
 
-  if (reg_info.byte_size == 4) {
-    dump_type_value(register_type, reg_val.GetAsUInt32(), exe_scope,
-                    register_type_stream);
-  } else {
-    dump_type_value(register_type, reg_val.GetAsUInt64(), exe_scope,
-                    register_type_stream);
-  }
+  dump_type_value(register_type, reg_val, reg_info, exe_scope,
+                  register_type_stream);
 
   // Registers are indented like:
   // (lldb) register read foo
