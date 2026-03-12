@@ -1695,9 +1695,7 @@ public:
 
     /// Set the symbol context specifier. The hook takes ownership.
     void SetSCSpecifier(SymbolContextSpecifier *specifier);
-    SymbolContextSpecifier *GetSCSpecifier() {
-      return m_sc_specifier_sp.get();
-    }
+    SymbolContextSpecifier *GetSCSpecifier() { return m_sc_specifier_sp.get(); }
 
     /// Check if the execution context passes the specifier and thread spec
     /// filters. Always returns true if no filters are set.
@@ -1732,8 +1730,7 @@ public:
     virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
                                                 lldb::StreamSP output) = 0;
 
-    virtual void GetDescription(Stream &s,
-                                lldb::DescriptionLevel level) const;
+    virtual void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
 
   protected:
     lldb::TargetSP m_target_sp;
@@ -1753,6 +1750,7 @@ public:
   public:
     ~HookCommandLine() override = default;
 
+    /// Return the list of commands that this hook runs.
     StringList &GetCommands() { return m_commands; }
 
     /// Populate the command list by splitting a single string on newlines.
@@ -1761,8 +1759,7 @@ public:
     /// Populate the command list from a vector of individual command strings.
     void SetActionFromStrings(const std::vector<std::string> &strings);
 
-    void GetDescription(Stream &s,
-                        lldb::DescriptionLevel level) const override;
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;
     StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
@@ -1780,8 +1777,7 @@ public:
   public:
     ~HookScripted() override = default;
 
-    void GetDescription(Stream &s,
-                        lldb::DescriptionLevel level) const override;
+    void GetDescription(Stream &s, lldb::DescriptionLevel level) const override;
 
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;

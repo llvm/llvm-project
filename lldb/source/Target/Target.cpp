@@ -4319,8 +4319,7 @@ Target::Hook::Hook(lldb::TargetSP target_sp, lldb::user_id_t uid)
 
 Target::Hook::Hook(const Hook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp), m_active(rhs.m_active),
-      m_event_mask(rhs.m_event_mask),
-      m_sc_specifier_sp(rhs.m_sc_specifier_sp),
+      m_event_mask(rhs.m_event_mask), m_sc_specifier_sp(rhs.m_sc_specifier_sp),
       m_auto_continue(rhs.m_auto_continue),
       m_at_initial_stop(rhs.m_at_initial_stop),
       m_suppress_output(rhs.m_suppress_output) {
@@ -4581,8 +4580,8 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
                              : StopHook::StopHookResult::RequestContinue;
 }
 
-void Target::HookScripted::GetDescription(
-    Stream &s, lldb::DescriptionLevel level) const {
+void Target::HookScripted::GetDescription(Stream &s,
+                                          lldb::DescriptionLevel level) const {
   Hook::GetDescription(s, level);
   if (level == eDescriptionLevelBrief) {
     s.PutCString(m_class_name);
