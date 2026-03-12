@@ -93,6 +93,8 @@ STATISTIC(NumGVNPRE, "Number of instructions PRE'd");
 STATISTIC(NumGVNBlocks, "Number of blocks merged");
 STATISTIC(NumGVNSimpl, "Number of instructions simplified");
 STATISTIC(NumGVNEqProp, "Number of equalities propagated");
+STATISTIC(NumGVNScalarMulToExtract,
+          "Number of scalar muls folded to extract of vector mul");
 STATISTIC(NumPRELoad, "Number of loads PRE'd");
 STATISTIC(NumPRELoopLoad, "Number of loop loads PRE'd");
 STATISTIC(NumPRELoadMoved2CEPred,
@@ -3291,6 +3293,81 @@ bool GVNPass::propagateEquality(
   return Changed;
 }
 
+/// If I is a scalar mul/fmul whose operands are both extracted from the same
+/// index of two vectors, and a matching vector mul/fmul dominates I, replace
+/// I with an extractelement from that vector result.
+bool GVNPass::foldScalarMulToVectorExtract(Instruction *I) {
+  unsigned Opc = I->getOpcode();
+  if (Opc != Instruction::Mul && Opc != Instruction::FMul)
+    return false;
+
+  auto *Ext0 = dyn_cast<ExtractElementInst>(I->getOperand(0));
+  auto *Ext1 = dyn_cast<ExtractElementInst>(I->getOperand(1));
+  if (!Ext0 || !Ext1)
+    return false;
+
+  Value *Idx = Ext0->getIndexOperand();
+  if (Idx != Ext1->getIndexOperand())
+    return false;
+
+  Value *Vec0 = Ext0->getVectorOperand();
+  Value *Vec1 = Ext1->getVectorOperand();
+  if (Vec0->getType() != Vec1->getType())
+    return false;
+
+  // Search users of Vec0 for a matching vector mul/fmul.
+  for (User *U : Vec0->users()) {
+    auto *VecBO = dyn_cast<BinaryOperator>(U);
+    if (!VecBO || VecBO->getOpcode() != Opc)
+      continue;
+
+    // Match vector operands. Mul/FMul are commutative.
+    if (!((VecBO->getOperand(0) == Vec0 && VecBO->getOperand(1) == Vec1) ||
+          (VecBO->getOperand(0) == Vec1 && VecBO->getOperand(1) == Vec0)))
+      continue;
+
+    // The vector op must dominate the scalar op.
+    if (!DT->dominates(VecBO, I))
+      continue;
+
+    // The replacement is only equivalent when relevant flags are compatible.
+    // For mul/fmul, this includes poison-related flags and FP value semantics
+    // that affect equality (for example, nsz).
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(VecBO)) {
+      auto *ScalarOBO = cast<OverflowingBinaryOperator>(I);
+      if (OBO->hasNoSignedWrap() != ScalarOBO->hasNoSignedWrap())
+        continue;
+      if (OBO->hasNoUnsignedWrap() != ScalarOBO->hasNoUnsignedWrap())
+        continue;
+    }
+    if (isa<FPMathOperator>(VecBO)) {
+      FastMathFlags VecFMF = VecBO->getFastMathFlags();
+      FastMathFlags ScalarFMF = I->getFastMathFlags();
+      // nnan/ninf are poison-generating constraints for fmul.
+      if (VecFMF.noNaNs() != ScalarFMF.noNaNs())
+        continue;
+      if (VecFMF.noInfs() != ScalarFMF.noInfs())
+        continue;
+      // nsz has value semantics, so a vector op with nsz cannot replace a
+      // scalar op that requires the exact sign of zero.
+      if (VecFMF.noSignedZeros() && !ScalarFMF.noSignedZeros())
+        continue;
+    }
+
+    // Replace the scalar mul with extractelement from the vector result.
+    auto *Extract = ExtractElementInst::Create(VecBO, Idx, "", I->getIterator());
+    Extract->setDebugLoc(I->getDebugLoc());
+
+    ICF->removeUsersOf(I);
+    patchAndReplaceAllUsesWith(I, Extract);
+    salvageAndRemoveInstruction(I);
+    ++NumGVNScalarMulToExtract;
+    return true;
+  }
+
+  return false;
+}
+
 /// When calculating availability, handle an instruction
 /// by inserting it into the appropriate sets.
 bool GVNPass::processInstruction(Instruction *I) {
@@ -3322,6 +3399,11 @@ bool GVNPass::processInstruction(Instruction *I) {
 
   if (auto *Assume = dyn_cast<AssumeInst>(I))
     return processAssumeIntrinsic(Assume);
+
+  // Try to replace a scalar mul/fmul with extractelement of an existing
+  // vector mul/fmul before regular value numbering.
+  if (foldScalarMulToVectorExtract(I))
+    return true;
 
   if (LoadInst *Load = dyn_cast<LoadInst>(I)) {
     if (processLoad(Load))
