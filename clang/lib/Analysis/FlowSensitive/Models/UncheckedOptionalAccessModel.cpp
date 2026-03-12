@@ -115,6 +115,18 @@ static bool isSupportedOptionalType(QualType Ty) {
   return Optional != nullptr;
 }
 
+static bool isAssertionResultType(QualType Type) {
+  if (Type.isNull())
+    return false;
+
+  if (auto *RD = Type->getAsRecordDecl())
+    if (RD->getName() == "AssertionResult")
+      if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD->getDeclContext()))
+        return isFullyQualifiedNamespaceEqualTo(*N, "testing");
+
+  return false;
+}
+
 namespace {
 
 using namespace ::clang::ast_matchers;
@@ -909,6 +921,75 @@ valueOperatorCall(const std::optional<StatementMatcher> &IgnorableOptional) {
                     isOptionalOperatorCallWithName("->", IgnorableOptional)));
 }
 
+auto isAssertionResultOperatorBoolCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxMemberCallExpr(
+      on(expr(unless(cxxThisExpr()))),
+      callee(cxxMethodDecl(hasName("operator bool"),
+                           ofClass(hasName("testing::AssertionResult")))));
+}
+
+static auto isAssertionResultConstructFromBoolCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(
+      hasType(recordDecl(hasName("testing::AssertionResult"))),
+      hasArgument(0, hasType(booleanType())));
+}
+
+static auto isAssertionResultConstructFromOptionalCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(
+      hasType(recordDecl(hasName("testing::AssertionResult"))),
+      hasArgument(0, hasOptionalOrDerivedType()));
+}
+
+void transferAssertionResultOperatorBoolCall(
+    			const CXXMemberCallExpr *Expr,
+                        const MatchFinder::MatchResult &,
+                        LatticeTransferState &State) { 
+  auto *OptionalLoc = getImplicitObjectLocation(*Expr, State.Env);
+  if (OptionalLoc == nullptr)
+    return;
+
+  BoolValue *HasVal = getHasValue(State.Env, OptionalLoc);
+  if (HasVal == nullptr)
+    return;
+
+  State.Env.setValue(*Expr, *HasVal);
+}
+
+void transferAssertionResultConstructFromBoolCall(
+    const CXXConstructExpr *ConstructExpr, const MatchFinder::MatchResult &,
+    LatticeTransferState &State) {
+  assert(ConstructExpr->getNumArgs() > 0);
+  const Expr *Arg = ConstructExpr->getArg(0)->IgnoreImplicit();
+
+  BoolValue *HasVal = State.Env.get<BoolValue>(*Arg);
+  if (HasVal == nullptr)
+    return;
+ 
+  auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
+  State.Env.setValue(locForHasValue(ResultLoc), *HasVal);
+}
+
+void transferAssertionResultConstructFromOptionalCall(
+    const CXXConstructExpr *ConstructExpr, const MatchFinder::MatchResult &,
+    LatticeTransferState &State) {
+  assert(ConstructExpr->getNumArgs() > 0);
+
+  const Expr *Arg = ConstructExpr->getArg(0)->IgnoreImplicit();
+  auto *OptionalLoc = cast_or_null<RecordStorageLocation>(State.Env.getStorageLocation(*Arg));
+  if (OptionalLoc == nullptr)
+    return;
+
+  BoolValue *HasVal = getHasValue(State.Env, OptionalLoc);
+  if (HasVal == nullptr)
+    return;
+
+  auto &ResultLoc = State.Env.getResultObjectLocation(*ConstructExpr);
+  State.Env.setValue(locForHasValue(ResultLoc), *HasVal);
+}
+
 auto buildTransferMatchSwitch() {
   // FIXME: Evaluate the efficiency of matchers. If using matchers results in a
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
@@ -1117,6 +1198,16 @@ auto buildTransferMatchSwitch() {
                 [](StorageLocation &Loc) {});
           })
 
+       // gtest
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+    	  isAssertionResultOperatorBoolCall(),
+    	  transferAssertionResultOperatorBoolCall)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isAssertionResultConstructFromBoolCall(),
+          transferAssertionResultConstructFromBoolCall)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+    	  isAssertionResultConstructFromOptionalCall(),
+    	  transferAssertionResultConstructFromOptionalCall)
       // const accessor calls
       .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
                                         transferConstMemberCall)
@@ -1128,11 +1219,10 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isNonConstMemberOperatorCall(),
           transferValue_NonConstMemberOperatorCall)
-
       // other cases of returning optional
       .CaseOfCFGStmt<CallExpr>(isCallReturningOptional(),
                                transferCallReturningOptional)
-
+  
       .Build();
 }
 
@@ -1202,6 +1292,9 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
       TransferMatchSwitch(buildTransferMatchSwitch()) {
   Env.getDataflowAnalysisContext().setSyntheticFieldCallback(
       [&Ctx](QualType Ty) -> llvm::StringMap<QualType> {
+	if (isAssertionResultType(Ty))
+	  return {{"has_value", Ctx.BoolTy}};
+
         const CXXRecordDecl *Optional =
             getOptionalBaseClass(Ty->getAsCXXRecordDecl());
         if (Optional == nullptr)
