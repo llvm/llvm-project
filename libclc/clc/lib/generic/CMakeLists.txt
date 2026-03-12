@@ -74,6 +74,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_cospi.cl
   math/clc_div_cr.cl
   math/clc_div_fast.cl
+  math/clc_ep.cl
   math/clc_ep_log.cl
   math/clc_erf.cl
   math/clc_erfc.cl
@@ -136,6 +137,8 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_native_sqrt.cl
   math/clc_native_tan.cl
   math/clc_nextafter.cl
+  math/clc_nextdown.cl
+  math/clc_nextup.cl
   math/clc_pow.cl
   math/clc_pown.cl
   math/clc_powr.cl
