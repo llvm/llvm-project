@@ -206,7 +206,10 @@ const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
 
 StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
   StringRef ArchName = getArchNameAMDGCN(AK);
-  if (ArchName.ends_with("-generic")) {
+  assert((AK >= GK_AMDGCN_GENERIC_FIRST && AK <= GK_AMDGCN_GENERIC_LAST) ==
+             ArchName.ends_with("-generic") &&
+         "Generic AMDGCN arch not classified correctly!");
+  if (AK >= GK_AMDGCN_GENERIC_FIRST && AK <= GK_AMDGCN_GENERIC_LAST) {
     // Return the part before the first '-', e.g. "gfx9-4-generic" -> "gfx9".
     return ArchName.take_front(ArchName.find('-'));
   }
