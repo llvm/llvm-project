@@ -6859,7 +6859,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
     * ``X`` and ``W`` are both performed on ``BO``.
     * ``X`` is a barrier *arrive* or *drop* operation.
-    * ``X`` does not already *barrier-participate-in<BO>* a distinct barrier *wait* ``W'`` in the same thread as ``W``.
+    * ``X`` does not *barrier-participate-in<BO>* a distinct barrier *wait* ``W'`` in the same thread as ``W``.
     * ``W -> X`` not in *thread-barrier-order<BO>*.
     * All dependent constraint and relations are satisfied as well. [0]_
 
