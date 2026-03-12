@@ -769,11 +769,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
             : CGM.getOpenMPRuntime().translateParameter(FD, Arg));
     ++I;
   }
-  Args.append(std::next(CD->param_begin(), CD->getContextParamPosition() + 1),
-              CD->param_end());
-  TargetArgs.append(
-      std::next(CD->param_begin(), CD->getContextParamPosition() + 1),
-      CD->param_end());
 
   // If Xteam, add the new args here to the signature.
   if (isXteamKernel) {
@@ -814,6 +809,14 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       }
     }
   }
+
+  // Append post-context implicit params (e.g. dyn_ptr) after all other args
+  // so they remain at the end, matching the host-side CombinedInfo ordering.
+  Args.append(std::next(CD->param_begin(), CD->getContextParamPosition() + 1),
+              CD->param_end());
+  TargetArgs.append(
+      std::next(CD->param_begin(), CD->getContextParamPosition() + 1),
+      CD->param_end());
 
   SmallVector<CanQualType, 16> argCanQualTypes;
   if (CGM.getLangOpts().OpenMPIsTargetDevice && argsNeedAddrSpace &&

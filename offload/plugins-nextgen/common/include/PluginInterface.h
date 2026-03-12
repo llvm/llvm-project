@@ -536,7 +536,8 @@ private:
               ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
               llvm::SmallVectorImpl<void *> &Args,
               llvm::SmallVectorImpl<void *> &Ptrs,
-              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
+              uint32_t Version) const;
 
   /// Lower number of threads if tripcount is low.
   virtual std::pair<bool, uint32_t>

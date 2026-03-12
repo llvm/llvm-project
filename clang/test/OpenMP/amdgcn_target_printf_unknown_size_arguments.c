@@ -16,17 +16,17 @@ int CheckMultipleArgs(int a) {
     printf("%s %d %s", t, 21, test);
 // CHECK-LABEL: define weak_odr protected amdgpu_kernel void @{{.*}}CheckMultipleArgs
 // CHECK: entry:
-// CHECK:   [[DYN_PTR_ADDR:%[a-zA-Z0-9_.]+]] = alloca ptr, align 8, addrspace(5)
 // CHECK:   [[TEST_ADDR:%[a-zA-Z0-9_.]+]] = alloca ptr, align 8, addrspace(5)
 // CHECK:   [[A_ADDR:%[a-zA-Z0-9_.]+]] = alloca i64, align 8, addrspace(5)
+// CHECK:   [[DYN_PTR_ADDR:%[a-zA-Z0-9_.]+]] = alloca ptr, align 8, addrspace(5)
 // CHECK:   [[T_ADDR:%[a-zA-Z0-9_.]+]] = alloca ptr, align 8, addrspace(5)
-// CHECK:   [[DYN_PTR_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK:   [[TEST_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[TEST_ADDR]] to ptr
 // CHECK:   [[A_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// CHECK:   [[DYN_PTR_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK:   [[T_CAST:%[a-zA-Z0-9_.]+]] = addrspacecast ptr addrspace(5) [[T_ADDR]] to ptr
-// CHECK:   store ptr %dyn_ptr, ptr [[DYN_PTR_CAST]], align 8
 // CHECK:   store ptr %test, ptr [[TEST_CAST]], align 8
 // CHECK:   store i64 %a, ptr [[A_CAST]], align 8
+// CHECK:   store ptr %dyn_ptr, ptr [[DYN_PTR_CAST]], align 8
 // CHECK:   [[INIT_CALL:%[a-zA-Z0-9_.]+]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) {{.*}} to ptr), ptr %dyn_ptr)
 // CHECK:   [[EXEC_USER_CODE:%[a-zA-Z0-9_.]+]] = icmp eq i32 [[INIT_CALL]], -1
 // CHECK:   br i1 [[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.+]], label %[[WORKER_EXIT:.+]]

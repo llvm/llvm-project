@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 
-// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]])
+// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_{{.*}}(ptr %[[ARG1:.*]], ptr %{{.*}})
 
 // CHECK: %[[ARG1_ALLOCA:.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK: %[[ARG1_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ARG1_ALLOCA]] to ptr

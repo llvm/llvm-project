@@ -84,13 +84,13 @@ void CheckAllocaIsInEntryBlock(void) {
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_CheckAllocaIsInEntryBlock_l37
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[FOO:%.*]]) #[[ATTR0]] {
+// CHECK-64-SAME: (i64 noundef [[FOO:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[FOO_ADDR:%.*]] = alloca i64, align 8
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[TMP:%.*]] = alloca [[PRINTF_ARGS_1:%.*]], align 8
-// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store i64 [[FOO]], ptr [[FOO_ADDR]], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_CheckAllocaIsInEntryBlock_l37_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -153,13 +153,13 @@ void CheckAllocaIsInEntryBlock(void) {
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_CheckAllocaIsInEntryBlock_l37
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i32 noundef [[FOO:%.*]]) #[[ATTR0]] {
+// CHECK-32-SAME: (i32 noundef [[FOO:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-32-NEXT:  entry:
-// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[FOO_ADDR:%.*]] = alloca i32, align 4
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[TMP:%.*]] = alloca [[PRINTF_ARGS_1:%.*]], align 8
-// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[FOO]], ptr [[FOO_ADDR]], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_CheckAllocaIsInEntryBlock_l37_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]

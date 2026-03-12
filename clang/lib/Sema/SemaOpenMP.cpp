@@ -4473,12 +4473,12 @@ static SmallVector<SemaOpenMP::CapturedParamNameType>
 getTargetRegionParams(Sema &SemaRef) {
   ASTContext &Context = SemaRef.getASTContext();
   SmallVector<SemaOpenMP::CapturedParamNameType> Params;
-  if (SemaRef.getLangOpts().OpenMPIsTargetDevice) {
-    QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-    Params.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
-  }
   // __context with shared vars
   Params.push_back(std::make_pair(StringRef(), QualType()));
+  // Implicit dyn_ptr argument, appended as the last parameter. Present on both
+  // host and device so argument counts match without runtime manipulation.
+  QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
+  Params.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
   return Params;
 }
 
@@ -4640,10 +4640,9 @@ void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
     SmallVector<SemaOpenMP::CapturedParamNameType, 2> ParamsTarget;
-    if (getLangOpts().OpenMPIsTargetDevice)
-      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
     ParamsTarget.push_back(
         std::make_pair(StringRef(), QualType())); // __context with shared vars;
+    ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
     // Start a captured region for 'target' with no implicit parameters.
     SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
                                      CR_OpenMP, ParamsTarget,
@@ -4689,10 +4688,9 @@ void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
     SmallVector<SemaOpenMP::CapturedParamNameType, 2> ParamsTarget;
-    if (getLangOpts().OpenMPIsTargetDevice)
-      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
     ParamsTarget.push_back(
         std::make_pair(StringRef(), QualType())); // __context with shared vars;
+    ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
     SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
                                      CR_OpenMP, ParamsTarget,
                                      /*OpenMPCaptureLevel=*/1);
@@ -4910,10 +4908,9 @@ void SemaOpenMP::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind,
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
     SmallVector<SemaOpenMP::CapturedParamNameType, 2> ParamsTarget;
-    if (getLangOpts().OpenMPIsTargetDevice)
-      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
     ParamsTarget.push_back(
         std::make_pair(StringRef(), QualType())); // __context with shared vars;
+    ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
     // Start a captured region for 'target' with no implicit parameters.
     SemaRef.ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope,
                                      CR_OpenMP, ParamsTarget,

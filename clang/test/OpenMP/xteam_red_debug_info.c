@@ -11,6 +11,6 @@ void test_xteam_red_debug_info() {
   sum = sum/(double)N;
 }
 
-// CHECK:       @.offload_sizes = private unnamed_addr constant [6 x i64]
-// CHECK-NEXT:  @.offload_maptypes = private unnamed_addr constant [6 x i64]
-// CHECK-NEXT:  @.offload_mapnames = private constant [6 x ptr]
+// CHECK:       @.offload_sizes = private unnamed_addr constant [7 x i64]
+// CHECK-NEXT:  @.offload_maptypes = private unnamed_addr constant [7 x i64]
+// CHECK-NEXT:  @.offload_mapnames = private constant [7 x ptr]
