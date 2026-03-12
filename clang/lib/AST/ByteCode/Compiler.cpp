@@ -3538,6 +3538,10 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   bool IsStatic = E->getStorageDuration() == SD_Static;
   if (IsStatic ||
       (ExtendingDecl && Context::shouldBeGloballyIndexed(ExtendingDecl))) {
+
+    if (this->constantFolding())
+      return false;
+
     UnsignedOrNone GlobalIndex = P.createGlobal(E, Inner->getType());
     if (!GlobalIndex)
       return false;
@@ -5440,6 +5444,8 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
+  assert(E);
+  assert(!E->getType().isNull());
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
   auto maybeDestroyLocals = [&]() -> bool {

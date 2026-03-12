@@ -76,7 +76,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   size_t StackSizeBefore = Stk.size();
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
-  auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
+  auto Res = C.interpretExpr(E);
 
   if (Res.isInvalid()) {
     C.cleanup();
@@ -96,7 +96,6 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   }
 
   Result = Res.stealAPValue();
-
   return true;
 }
 
@@ -105,7 +104,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc, Kind);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
                              /*DestroyToplevelScope=*/true);
@@ -137,8 +136,8 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   bool CheckGlobalInitialized =
-      shouldBeGloballyIndexed(VD) &&
       (VD->getType()->isRecordType() || VD->getType()->isArrayType());
+
   auto Res = C.interpretDecl(VD, Init, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     C.cleanup();
