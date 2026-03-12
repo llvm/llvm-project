@@ -411,15 +411,15 @@ Error DataAggregator::generatePerfTextData() {
   if (opts::ParseMemProfile)
     ProcessInfos.push_back(&MemEventsPPI);
 
-  // Create a file header as a table of the contents.
-  // Initially pre-allocate enough space for the header at the beginning of
+  // Create a file header as a Table of Contents.
+  // Initially pre-allocate sufficient space for the header at the beginning of
   // the file.
-  // The header can be maximum 132 character, this number is pre-calculated,
-  // the sum of the length of the magic strings, event names, their sizes,
-  // and the field separators.
-  // PERFTEXT;EVENT1={0x$SIZE};EVENT2={0x$SIZE}...
-  // The size of the events are printed in hex format (16 width) in order to be
-  // predictable fixed length.
+  // The header has a maximum length of 132 character (pre-calculated value
+  // including the magic strings, event names, their maximum sizes,
+  // and the field separators).
+  // PERFTEXT;EVENT1={$SIZE};EVENT2={$SIZE}...
+  // Event sizes are printed in hexadecimal format to ensure a predictable
+  // length.
   OutFile << std::string(132, ' ') << "\n";
   std::string Header;
   raw_string_ostream SS(Header);
@@ -436,7 +436,7 @@ Error DataAggregator::generatePerfTextData() {
     ErrorOr<uint64_t> FsRes = getFileSize(PathData);
     if (std::error_code EC = FsRes.getError())
       return errorCodeToError(EC);
-    SS << PPI->Type << formatv("={0:x-16};", *FsRes);
+    SS << PPI->Type << formatv("={0:x-};", *FsRes);
 
     // Merge all perf-scripts jobs' output into the single OutputFile
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
