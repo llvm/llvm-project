@@ -1051,7 +1051,7 @@ void test_read_exec_hi(global uint* out) {
 }
 
 // CHECK-LABEL: @test_dispatch_ptr
-// CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK: {{.*}}call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 #if !defined(__SPIRV__)
 void test_dispatch_ptr(__constant unsigned char ** out)
 #else
@@ -1138,7 +1138,7 @@ void test_get_local_id(int d, global int *out)
 // CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
 
 // CHECK-LABEL: @test_get_grid_size(
-// CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK: {{.*}}call{{.*}}ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 %{{.+}}
 // CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !range [[$GRID_RANGE:![0-9]+]], !invariant.load
 void test_get_grid_size(int d, global int *out)

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_cosh.h"
+#include <clc/math/clc_cosh.h>
 
 #define __CLC_FUNCTION cosh
-#define __CLC_BODY "clc/shared/unary_def.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/shared/unary_def.inc>
+#include <clc/math/gentype.inc>

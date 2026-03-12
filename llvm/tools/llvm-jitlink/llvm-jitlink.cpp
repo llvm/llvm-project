@@ -87,8 +87,7 @@ using namespace llvm::orc;
 
 static cl::OptionCategory JITLinkCategory("JITLink Options");
 
-static cl::list<std::string> InputFiles(cl::Positional, cl::ZeroOrMore,
-                                        cl::desc("input files"),
+static cl::list<std::string> InputFiles(cl::Positional, cl::desc("input files"),
                                         cl::cat(JITLinkCategory));
 
 static cl::list<bool> LazyLink("lazy",

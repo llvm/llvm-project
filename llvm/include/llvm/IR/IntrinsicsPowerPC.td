@@ -1739,13 +1739,13 @@ let TargetPrefix = "ppc" in {
   def int_ppc_mma_xxsetaccz :
       DefaultAttrsIntrinsic<[llvm_v512i1_ty], [], [IntrNoMem]>;
 
-  def int_ppc_mma_dmsetdmrz :
+  def int_ppc_dmsetdmrz :
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [], [IntrNoMem]>;
 
-  def int_ppc_mma_dmmr :
+  def int_ppc_dmmr :
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty], [IntrNoMem]>;
 
-  def int_ppc_mma_dmxor :
+  def int_ppc_dmxor :
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
                              llvm_v1024i1_ty], [IntrNoMem]>;
 
@@ -1765,11 +1765,11 @@ let TargetPrefix = "ppc" in {
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty, llvm_v256i1_ty,
                              llvm_i32_ty], [IntrNoMem]>;
 
-  def int_ppc_mma_disassemble_dmr :
+  def int_ppc_disassemble_dmr :
       DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_v1024i1_ty],
                             [IntrWriteMem, IntrArgMemOnly]>;
 
-  def int_ppc_mma_build_dmr :
+  def int_ppc_build_dmr :
       DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v16i8_ty, llvm_v16i8_ty,
                              llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty,
                              llvm_v16i8_ty, llvm_v16i8_ty, llvm_v16i8_ty],

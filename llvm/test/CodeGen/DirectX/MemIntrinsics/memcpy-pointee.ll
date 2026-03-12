@@ -7,18 +7,18 @@ define void @test_structarray_alloca() "hlsl.export" {
 ; CHECK-LABEL: define void @test_structarray_alloca(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OUT:%.*]] = alloca [[STRUCT_S:%.*]], align 16
-; CHECK-NEXT:    [[IN:%.*]] = alloca [[STRUCT_S]], align 16
+; CHECK-NEXT:    [[OUT:%.*]] = alloca [[STRUCT_S:%.*]], align 8
+; CHECK-NEXT:    [[IN:%.*]] = alloca [[STRUCT_S]], align 8
 ; CHECK-NEXT:    [[OUT_I:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i32 16
 ; CHECK-NEXT:    [[IN_I:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i32 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IN_I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[IN_I]], i32 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 16
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -34,18 +34,18 @@ define void @test_structarray_alloca_typed() "hlsl.export" {
 ; CHECK-LABEL: define void @test_structarray_alloca_typed(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OUT:%.*]] = alloca [[STRUCT_S:%.*]], align 16
-; CHECK-NEXT:    [[IN:%.*]] = alloca [[STRUCT_S]], align 16
+; CHECK-NEXT:    [[OUT:%.*]] = alloca [[STRUCT_S:%.*]], align 8
+; CHECK-NEXT:    [[IN:%.*]] = alloca [[STRUCT_S]], align 8
 ; CHECK-NEXT:    [[OUT_I:%.*]] = getelementptr { <4 x i32>, [2 x <4 x i32>] }, ptr [[OUT]], i32 0, i32 1
 ; CHECK-NEXT:    [[IN_I:%.*]] = getelementptr { <4 x i32>, [2 x <4 x i32>] }, ptr [[IN]], i32 0, i32 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[IN_I]], i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[GEP]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[GEP1]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[IN_I]], i32 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[GEP2]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 16
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[GEP3]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -63,10 +63,10 @@ define void @test_structarray_groupshared() "hlsl.export" {
 ; CHECK-LABEL: define void @test_structarray_groupshared(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared2, i32 16), align 16
-; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared1, i32 16), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared2, i32 16), i32 16), align 16
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared1, i32 16), i32 16), align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared2, i32 16), align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared1, i32 16), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared2, i32 16), i32 16), align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @shared1, i32 16), i32 16), align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -85,13 +85,13 @@ define void @test_structarray_in_buffer() "hlsl.export" {
 ; CHECK-NEXT:    [[P_IN:%.*]] = tail call noundef nonnull align 1 dereferenceable(48) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_s_struct.Ss_0_0t(target("dx.RawBuffer", [[STRUCT_S]], 0, 0) [[H_IN]], i32 0)
 ; CHECK-NEXT:    [[IN_I:%.*]] = getelementptr inbounds nuw i8, ptr [[P_IN]], i32 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[IN_I]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[OUT_I]], i32 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP3]], align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[IN_I]], i32 16
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

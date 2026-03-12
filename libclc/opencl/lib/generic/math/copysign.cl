@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_copysign.h"
+#include <clc/math/clc_copysign.h>
 
 #define __CLC_FUNCTION copysign
-#define __CLC_BODY "clc/shared/binary_def.inc"
+#define __CLC_BODY <clc/shared/binary_def.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

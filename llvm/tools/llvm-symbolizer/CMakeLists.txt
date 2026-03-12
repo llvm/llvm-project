@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
+  SupportHTTP
   Symbolize
   )
 

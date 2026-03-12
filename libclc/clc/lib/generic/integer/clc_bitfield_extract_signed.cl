@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/integer/clc_bitfield_extract_signed.h"
+#include <clc/integer/clc_bitfield_extract_signed.h>
 
-#define __CLC_BODY "clc_bitfield_extract_signed.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc_bitfield_extract_signed.inc>
+#include <clc/integer/gentype.inc>

@@ -9,7 +9,7 @@
 #ifndef __CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H__
 #define __CLC_ATOMIC_CLC_ATOMIC_FLAG_CLEAR_H__
 
-#include "clc/internal/clc.h"
+#include <clc/internal/clc.h>
 
 #define __CLC_DECLARE_ATOMIC_FLAG_CLEAR(ADDRSPACE)                             \
   _CLC_OVERLOAD _CLC_DECL void __clc_atomic_flag_clear(                        \

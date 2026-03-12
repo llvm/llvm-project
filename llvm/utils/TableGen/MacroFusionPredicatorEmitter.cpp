@@ -180,7 +180,7 @@ void MacroFusionPredicatorEmitter::emitFirstPredicate(const Record *Predicate,
     OS.indent(2) << "}\n";
   } else if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
-    OS.indent(4) << "const MachineInstr *MI = FirstMI;\n";
+    OS.indent(4) << "[[maybe_unused]] const MachineInstr *MI = FirstMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
     PE.getIndent() = 3;
@@ -201,7 +201,7 @@ void MacroFusionPredicatorEmitter::emitSecondPredicate(const Record *Predicate,
                                                        raw_ostream &OS) {
   if (Predicate->isSubClassOf("FusionPredicateWithMCInstPredicate")) {
     OS.indent(2) << "{\n";
-    OS.indent(4) << "const MachineInstr *MI = &SecondMI;\n";
+    OS.indent(4) << "[[maybe_unused]] const MachineInstr *MI = &SecondMI;\n";
     OS.indent(4) << "if (";
     PE.setNegatePredicate(true);
     PE.getIndent() = 3;

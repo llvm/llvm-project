@@ -2072,3 +2072,21 @@ module {
   // expected-error@+1 {{'llvm.blockaddress' op expects an existing block label target in the referenced function}}
   %0 = llvm.blockaddress <function = @missing_func, tag = <id = 1>> : !llvm.ptr
 }
+
+// -----
+
+llvm.func @too_narrow_ptr_to_addr(%arg0 : !llvm.ptr) -> () {
+  // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i32' must match the pointer bitwidth (64) specified in the datalayout}}
+  %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i32
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<[32, 32, 64]> : vector<3xi64>>
+>} {
+  llvm.func @too_narrow_ptr_to_addr(%arg0 : !llvm.ptr) -> () {
+    // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i64' must match the pointer bitwidth (32) specified in the datalayout}}
+    %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+  }
+}

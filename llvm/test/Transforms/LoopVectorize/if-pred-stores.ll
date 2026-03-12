@@ -736,10 +736,10 @@ define void @sinkable_predicated_store(ptr %A, ptr %B) {
 ; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
 ; UNROLL-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope [[META8:![0-9]+]]
 ; UNROLL-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4, !alias.scope [[META8]]
-; UNROLL-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
-; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP6]], 0
-; UNROLL-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i32 0, i32 1
-; UNROLL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP8]], i32 0, i32 1
+; UNROLL-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP5]], 0
+; UNROLL-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP6]], 0
+; UNROLL-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i32 1, i32 0
+; UNROLL-NEXT:    [[TMP10:%.*]] = select i1 [[TMP8]], i32 1, i32 0
 ; UNROLL-NEXT:    store i32 [[TMP9]], ptr [[TMP1]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
 ; UNROLL-NEXT:    store i32 [[TMP10]], ptr [[TMP2]], align 4, !alias.scope [[META11]], !noalias [[META8]]
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -789,10 +789,10 @@ define void @sinkable_predicated_store(ptr %A, ptr %B) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP0]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP3]], align 4, !alias.scope [[META9:![0-9]+]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP4]], align 4, !alias.scope [[META9]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP6]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i32 0, i32 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP10:%.*]] = select i1 [[TMP8]], i32 0, i32 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP5]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP6]], 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9:%.*]] = select i1 [[TMP7]], i32 1, i32 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP10:%.*]] = select i1 [[TMP8]], i32 1, i32 0
 ; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[TMP9]], ptr [[TMP1]], align 4, !alias.scope [[META12:![0-9]+]], !noalias [[META9]]
 ; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[TMP10]], ptr [[TMP2]], align 4, !alias.scope [[META12]], !noalias [[META9]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -838,8 +838,8 @@ define void @sinkable_predicated_store(ptr %A, ptr %B) {
 ; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP1]]
 ; VEC-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META8:![0-9]+]]
-; VEC-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; VEC-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> zeroinitializer, <2 x i32> splat (i32 1)
+; VEC-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; VEC-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x i32> splat (i32 1), <2 x i32> zeroinitializer
 ; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
 ; VEC-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META8]]
 ; VEC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1

@@ -520,6 +520,11 @@ public:
     return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
   }
 
+  mlir::Value createPtrIsNotNull(mlir::Value ptr) {
+    mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
+    return createCompare(ptr.getLoc(), cir::CmpOpKind::ne, ptr, nullPtr);
+  }
+
   mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,
                                   mlir::Type newTy) {
     return createCast(loc, cir::CastKind::address_space, src, newTy);

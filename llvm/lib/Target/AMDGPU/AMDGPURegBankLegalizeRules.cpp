@@ -1351,10 +1351,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
+  bool hasSALUMinimumMaximumInsts = ST->hasSALUMinimumMaximumInsts();
+
   addRulesForGOpcs({G_FMINIMUM, G_FMAXIMUM}, Standard)
-      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUMinimumMaximumInsts)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUMinimumMaximumInsts)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
-      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUMinimumMaximumInsts)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUMinimumMaximumInsts)
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}})
@@ -1493,6 +1497,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32, Sgpr32, Sgpr32}, S_BFE})
       .Uni(S64, {{Sgpr64}, {IntrId, Sgpr64, Sgpr32, Sgpr32}, S_BFE})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32, Vgpr32}, V_BFE});
+
+  addRulesForIOpcs({amdgcn_cvt_pk_u16, amdgcn_cvt_pk_i16, amdgcn_cvt_pkrtz},
+                   Standard)
+      .Div(V2S16, {{VgprV2S16}, {IntrId, Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_global_load_tr_b64})
       .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})

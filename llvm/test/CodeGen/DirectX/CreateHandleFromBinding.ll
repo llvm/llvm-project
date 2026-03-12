@@ -52,7 +52,7 @@ define void @test_bindings() {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
           i32 4, i32 2, i32 1, i32 0, ptr null)
   ; CHECK: [[BUF3:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 2, i32 2, i32 4, i8 0 }, i32 2, i1 false) #[[#ATTR]]
-  ; CHECK: = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF3]], %dx.types.ResourceProperties { i32 1036, i32 32 }) #[[#ATTR]]
+  ; CHECK: = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BUF3]], %dx.types.ResourceProperties { i32 524, i32 32 }) #[[#ATTR]]
 
   ; ByteAddressBuffer Buf : register(t8, space1)
   %byteaddr0 = call target("dx.RawBuffer", i8, 0, 0)

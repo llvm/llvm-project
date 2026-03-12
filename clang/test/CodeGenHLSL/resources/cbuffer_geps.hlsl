@@ -69,13 +69,13 @@ cbuffer CBStructs {
 
 // CHECK-LABEL: define hidden void @_Z9cbstructsv()
 void cbstructs() {
-  // CHECK: load <2 x float>, ptr addrspace(2) @s1, align 8
+  // CHECK: load <2 x float>, ptr addrspace(2) @s1, align 4
   use(s1.a1);
   // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s2, i32 8), align 2
   use(s2.b1);
-  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s3, i32 16), align 8
+  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s3, i32 16), align 4
   use(s3.c2.a1);
-  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s4, i32 32), align 8
+  // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s4, i32 32), align 4
   use(s4[2].a1);
   // CHECK: load <3 x i16>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @s5, i32 376), align 2
   use(s5.d1[3][5].b1);
@@ -108,9 +108,9 @@ void cbmix() {
   use(m3.y);
   // CHECK: load <2 x float>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m4, i32 176), align 16
   use(m4[2][3]);
-  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m5, i32 16), align 16
+  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m5, i32 16), align 4
   use(m5.d);
-  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m6, i32 240), align 16
+  // CHECK: load <4 x i32>, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @m6, i32 240), align 4
   use(m6.j[2].x[2]);
   // CHECK: load <1 x double>, ptr addrspace(2) @m7, align 8
   use(m7);

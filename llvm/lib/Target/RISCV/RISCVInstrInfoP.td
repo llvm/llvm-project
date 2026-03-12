@@ -1650,7 +1650,7 @@ def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
 def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
-def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask64", [], [], 0>;
+def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask<64>", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
@@ -1709,158 +1709,145 @@ let Predicates = [HasStdExtP] in {
             (PPAIRE_B zexti8:$rs1, GPR:$rs2)>;
 
   // Basic 8-bit arithmetic patterns
-  def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_B GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<add, PADD_B, XLenVecI8VT>;
+  def : PatGprGpr<sub, PSUB_B, XLenVecI8VT>;
 
   // Basic 16-bit arithmetic patterns
-  def: Pat<(XLenVecI16VT (add GPR:$rs1, GPR:$rs2)), (PADD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<add, PADD_H, XLenVecI16VT>;
+  def : PatGprGpr<sub, PSUB_H, XLenVecI16VT>;
 
   // 8-bit bitwise operation patterns
-  def: Pat<(XLenVecI8VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  def : PatGprGpr<and, AND, XLenVecI8VT>;
+  def : PatGprGpr<or,  OR,  XLenVecI8VT>;
+  def : PatGprGpr<xor, XOR, XLenVecI8VT>;
+  def : Pat<(XLenVecI8VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
   let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def: Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI8VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI8VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI8VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
   }
 
   // 16-bit bitwise operation patterns
-  def: Pat<(XLenVecI16VT (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  def : PatGprGpr<and, AND, XLenVecI16VT>;
+  def : PatGprGpr<or,  OR,  XLenVecI16VT>;
+  def : PatGprGpr<xor, XOR, XLenVecI16VT>;
+  def : Pat<(XLenVecI16VT (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
   let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def: Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI16VT (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI16VT (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(XLenVecI16VT (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
   }
 
   // 8-bit saturating add/sub patterns
-  def: Pat<(XLenVecI8VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_B GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<saddsat, PSADD_B, XLenVecI8VT>;
+  def : PatGprGpr<uaddsat, PSADDU_B, XLenVecI8VT>;
+  def : PatGprGpr<ssubsat, PSSUB_B, XLenVecI8VT>;
+  def : PatGprGpr<usubsat, PSSUBU_B, XLenVecI8VT>;
 
   // 16-bit saturating add/sub patterns
-  def: Pat<(XLenVecI16VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<saddsat, PSADD_H, XLenVecI16VT>;
+  def : PatGprGpr<uaddsat, PSADDU_H, XLenVecI16VT>;
+  def : PatGprGpr<ssubsat, PSSUB_H, XLenVecI16VT>;
+  def : PatGprGpr<usubsat, PSSUBU_H, XLenVecI16VT>;
 
   // 8-bit averaging patterns
-  def: Pat<(XLenVecI8VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (riscv_asub GPR:$rs1, GPR:$rs2)), (PASUB_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (riscv_asubu GPR:$rs1, GPR:$rs2)), (PASUBU_B GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<avgfloors, PAADD_B, XLenVecI8VT>;
+  def : PatGprGpr<avgflooru, PAADDU_B, XLenVecI8VT>;
+  def : PatGprGpr<riscv_asub, PASUB_B, XLenVecI8VT>;
+  def : PatGprGpr<riscv_asubu, PASUBU_B, XLenVecI8VT>;
 
   // 16-bit averaging patterns
-  def: Pat<(XLenVecI16VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_asub GPR:$rs1, GPR:$rs2)), (PASUB_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_asubu GPR:$rs1, GPR:$rs2)), (PASUBU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<avgfloors, PAADD_H, XLenVecI16VT>;
+  def : PatGprGpr<avgflooru, PAADDU_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_asub, PASUB_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_asubu, PASUBU_H, XLenVecI16VT>;
 
   // 8-bit absolute difference patterns
-  def: Pat<(XLenVecI8VT (abs GPR:$rs1)), (PABD_B GPR:$rs1, (XLenVecI8VT X0))>;
-  def: Pat<(XLenVecI8VT (abds GPR:$rs1, GPR:$rs2)), (PABD_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (abdu GPR:$rs1, GPR:$rs2)), (PABDU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (abs GPR:$rs1)), (PABD_B GPR:$rs1, (XLenVecI8VT X0))>;
+  def : PatGprGpr<abds, PABD_B, XLenVecI8VT>;
+  def : PatGprGpr<abdu, PABDU_B, XLenVecI8VT>;
 
   // 16-bit absolute difference patterns
-  def: Pat<(XLenVecI16VT (abs GPR:$rs1)), (PABD_H GPR:$rs1, (XLenVecI16VT X0))>;
-  def: Pat<(XLenVecI16VT (abds GPR:$rs1, GPR:$rs2)), (PABD_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PABDU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (abs GPR:$rs1)), (PABD_H GPR:$rs1, (XLenVecI16VT X0))>;
+  def : PatGprGpr<abds, PABD_H, XLenVecI16VT>;
+  def : PatGprGpr<abdu, PABDU_H, XLenVecI16VT>;
 
   // 16-bit multiply high patterns
-  def: Pat<(XLenVecI16VT (mulhs GPR:$rs1, GPR:$rs2)), (PMULH_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (mulhu GPR:$rs1, GPR:$rs2)), (PMULHU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_mulhsu GPR:$rs1, GPR:$rs2)), (PMULHSU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<mulhs, PMULH_H, XLenVecI16VT>;
+  def : PatGprGpr<mulhu, PMULHU_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulhsu, PMULHSU_H, XLenVecI16VT>;
 
   // 16-bit multiply high rounding patterns
-  def: Pat<(XLenVecI16VT (riscv_mulhr GPR:$rs1, GPR:$rs2)), (PMULHR_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_mulhru GPR:$rs1, GPR:$rs2)), (PMULHRU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_mulhrsu GPR:$rs1, GPR:$rs2)), (PMULHRSU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_mulhr, PMULHR_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulhru, PMULHRU_H, XLenVecI16VT>;
+  def : PatGprGpr<riscv_mulhrsu, PMULHRSU_H, XLenVecI16VT>;
 
   // 8-bit logical shift left/right patterns
-  def: Pat<(XLenVecI8VT (riscv_pshl GPR:$rs1, uimm3:$shamt)),
-           (PSLLI_B GPR:$rs1, uimm3:$shamt)>;
-  def: Pat<(XLenVecI8VT (riscv_psrl GPR:$rs1, uimm3:$shamt)),
-           (PSRLI_B GPR:$rs1, uimm3:$shamt)>;
+  def : PatGprImm<riscv_pshl, PSLLI_B, uimm3, XLenVecI8VT>;
+  def : PatGprImm<riscv_psrl, PSRLI_B, uimm3, XLenVecI8VT>;
 
   // 16-bit logical shift left/right patterns
-  def: Pat<(XLenVecI16VT (riscv_pshl GPR:$rs1, uimm4:$shamt)),
-           (PSLLI_H GPR:$rs1, uimm4:$shamt)>;
-  def: Pat<(XLenVecI16VT (riscv_psrl GPR:$rs1, uimm4:$shamt)),
-           (PSRLI_H GPR:$rs1, uimm4:$shamt)>;
+  def : PatGprImm<riscv_pshl, PSLLI_H, uimm4, XLenVecI16VT>;
+  def : PatGprImm<riscv_psrl, PSRLI_H, uimm4, XLenVecI16VT>;
 
   // 8-bit arithmetic shift right patterns
-  def: Pat<(XLenVecI8VT (riscv_psra GPR:$rs1, uimm3:$shamt)),
-           (PSRAI_B GPR:$rs1, uimm3:$shamt)>;
+  def : PatGprImm<riscv_psra, PSRAI_B, uimm3, XLenVecI8VT>;
 
   // 16-bit arithmetic shift right patterns
-  def: Pat<(XLenVecI16VT (riscv_psra GPR:$rs1, uimm4:$shamt)),
-           (PSRAI_H GPR:$rs1, uimm4:$shamt)>;
+  def : PatGprImm<riscv_psra, PSRAI_H, uimm4, XLenVecI16VT>;
 
   // 16-bit signed saturation shift left patterns
-  def: Pat<(XLenVecI16VT (riscv_psslai GPR:$rs1, timm:$shamt)),
-           (PSSLAI_H GPR:$rs1, timm:$shamt)>;
+  def : PatGprImm<riscv_psslai, PSSLAI_H, timm, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
-  def: Pat<(XLenVecI8VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
-           (PSLL_BS GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (riscv_psrl GPR:$rs1, GPR:$rs2)),
-           (PSRL_BS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
+            (PSLL_BS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_psrl GPR:$rs1, GPR:$rs2)),
+            (PSRL_BS GPR:$rs1, GPR:$rs2)>;
 
   // 8-bit arithmetic shift left/right
-  def: Pat<(XLenVecI8VT (riscv_psra GPR:$rs1, GPR:$rs2)),
-           (PSRA_BS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (riscv_psra GPR:$rs1, GPR:$rs2)),
+            (PSRA_BS GPR:$rs1, GPR:$rs2)>;
 
   // 16-bit logical shift left/right
-  def: Pat<(XLenVecI16VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
-           (PSLL_HS GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (riscv_psrl GPR:$rs1, GPR:$rs2)),
-           (PSRL_HS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
+            (PSLL_HS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_psrl GPR:$rs1, GPR:$rs2)),
+            (PSRL_HS GPR:$rs1, GPR:$rs2)>;
 
   // 16-bit arithmetic shift left/right
-  def: Pat<(XLenVecI16VT (riscv_psra GPR:$rs1, GPR:$rs2)),
-           (PSRA_HS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (riscv_psra GPR:$rs1, GPR:$rs2)),
+            (PSRA_HS GPR:$rs1, GPR:$rs2)>;
 
   // // splat pattern
-  def: Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(XLenVecI16VT (splat_vector (XLenVT GPR:$rs2))), (PADD_HS (XLenVT X0), GPR:$rs2)>;
 
   // 8/16-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETEQ)),
-           (PMSEQ_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETEQ)),
-           (PMSEQ_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<seteq, PMSEQ_B, XLenVecI8VT>;
+  def : PatGprGpr<seteq, PMSEQ_H, XLenVecI16VT>;
   // a < b
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETLT)),
-           (PMSLT_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (setcc (XLenVecI8VT GPR:$rs1), (XLenVecI8VT GPR:$rs2), SETULT)),
-           (PMSLTU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETLT)),
-           (PMSLT_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (setcc (XLenVecI16VT GPR:$rs1), (XLenVecI16VT GPR:$rs2), SETULT)),
-           (PMSLTU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<setlt, PMSLT_B, XLenVecI8VT>;
+  def : PatGprGpr<setult, PMSLTU_B, XLenVecI8VT>;
+  def : PatGprGpr<setlt, PMSLT_H, XLenVecI16VT>;
+  def : PatGprGpr<setult, PMSLTU_H, XLenVecI16VT>;
 
   // 8/16-bit [s|u]min/[s|u]max patterns
-  def: Pat<(XLenVecI8VT (smin GPR:$rs1, GPR:$rs2)), (PMIN_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (umin GPR:$rs1, GPR:$rs2)), (PMINU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (smin GPR:$rs1, GPR:$rs2)), (PMIN_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (umin GPR:$rs1, GPR:$rs2)), (PMINU_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI8VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_B GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (smax GPR:$rs1, GPR:$rs2)), (PMAX_H GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(XLenVecI16VT (umax GPR:$rs1, GPR:$rs2)), (PMAXU_H GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<smin, PMIN_B, XLenVecI8VT>;
+  def : PatGprGpr<umin, PMINU_B, XLenVecI8VT>;
+  def : PatGprGpr<smin, PMIN_H, XLenVecI16VT>;
+  def : PatGprGpr<umin, PMINU_H, XLenVecI16VT>;
+  def : PatGprGpr<smax, PMAX_B, XLenVecI8VT>;
+  def : PatGprGpr<umax, PMAXU_B, XLenVecI8VT>;
+  def : PatGprGpr<smax, PMAX_H, XLenVecI16VT>;
+  def : PatGprGpr<umax, PMAXU_H, XLenVecI16VT>;
 
   // 8/16-bit vselect patterns
-  def: Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
-           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
-  def: Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
-           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(XLenVecI8VT (vselect (XLenVecI8VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
+            (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
+            (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 } // Predicates = [HasStdExtP]
 
 let Predicates = [HasStdExtP, IsRV32] in {
@@ -1896,10 +1883,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
                   (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // 8/16-bit multiply low patterns
-  def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
-           (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
-  def: Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
-           (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
+  def : Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
+  def : Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
 
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
@@ -1930,103 +1917,91 @@ let Predicates = [HasStdExtP, IsRV64] in {
                       (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // Basic 32-bit arithmetic patterns
-  def: Pat<(v2i32 (add GPR:$rs1, GPR:$rs2)), (PADD_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (sub GPR:$rs1, GPR:$rs2)), (PSUB_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<add, PADD_W, v2i32>;
+  def : PatGprGpr<sub, PSUB_W, v2i32>;
 
   // 32-bit bitwise operation patterns
-  def: Pat<(v2i32 (and GPR:$rs1, GPR:$rs2)), (AND GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (or GPR:$rs1, GPR:$rs2)), (OR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (xor GPR:$rs1, GPR:$rs2)), (XOR GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
+  def : PatGprGpr<and, AND, v2i32>;
+  def : PatGprGpr<or, OR, v2i32>;
+  def : PatGprGpr<xor, XOR, v2i32>;
+  def : Pat<(v2i32 (vnot GPR:$rs1)), (XORI GPR:$rs1, -1)>;
   let Predicates = [HasStdExtP, HasStdExtZbbOrZbkb] in {
-    def: Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
-    def: Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(v2i32 (and GPR:$rs1, (vnot GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(v2i32 (or  GPR:$rs1, (vnot GPR:$rs2))), (ORN GPR:$rs1, GPR:$rs2)>;
+    def : Pat<(v2i32 (vnot (xor GPR:$rs1, GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
   }
 
   // 32-bit saturating add/sub patterns
-  def: Pat<(v2i32 (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<saddsat, PSADD_W, v2i32>;
+  def : PatGprGpr<uaddsat, PSADDU_W, v2i32>;
+  def : PatGprGpr<ssubsat, PSSUB_W, v2i32>;
+  def : PatGprGpr<usubsat, PSSUBU_W, v2i32>;
 
   // 32-bit averaging patterns
-  def: Pat<(v2i32 (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<avgfloors, PAADD_W, v2i32>;
+  def : PatGprGpr<avgflooru, PAADDU_W, v2i32>;
 
   // 32-bit averaging-sub patterns
-  def: Pat<(v2i32 (riscv_asub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_asubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_asub, PASUB_W, v2i32>;
+  def : PatGprGpr<riscv_asubu, PASUBU_W, v2i32>;
 
   // 32-bit multiply high patterns
-  def: Pat<(v2i32 (mulhs GPR:$rs1, GPR:$rs2)), (PMULH_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (mulhu GPR:$rs1, GPR:$rs2)), (PMULHU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_mulhsu GPR:$rs1, GPR:$rs2)), (PMULHSU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<mulhs, PMULH_W, v2i32>;
+  def : PatGprGpr<mulhu, PMULHU_W, v2i32>;
+  def : PatGprGpr<riscv_mulhsu, PMULHSU_W, v2i32>;
 
   // 32-bit multiply high rounding patterns
-  def: Pat<(v2i32 (riscv_mulhr GPR:$rs1, GPR:$rs2)), (PMULHR_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_mulhru GPR:$rs1, GPR:$rs2)), (PMULHRU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_mulhrsu GPR:$rs1, GPR:$rs2)), (PMULHRSU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<riscv_mulhr, PMULHR_W, v2i32>;
+  def : PatGprGpr<riscv_mulhru, PMULHRU_W, v2i32>;
+  def : PatGprGpr<riscv_mulhrsu, PMULHRSU_W, v2i32>;
 
   // 8/16/32-bit multiply low patterns
-  def: Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
-           (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2), (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
-  def: Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
-           (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2), (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
-  def: Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
-           (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
+            (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2), (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
+            (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2), (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
+            (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
 
   // 32-bit logical shift left/right patterns
-  def: Pat<(v2i32 (riscv_pshl GPR:$rs1, uimm5:$shamt)),
-           (PSLLI_W GPR:$rs1, uimm5:$shamt)>;
-  def: Pat<(v2i32 (riscv_psrl GPR:$rs1, uimm5:$shamt)),
-           (PSRLI_W GPR:$rs1, uimm5:$shamt)>;
+  def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
+  def : PatGprImm<riscv_psrl, PSRLI_W, uimm5, v2i32>;
 
   // 32-bit arithmetic shift left/right patterns
-  def: Pat<(v2i32 (riscv_psra GPR:$rs1, uimm5:$shamt)),
-           (PSRAI_W GPR:$rs1, uimm5:$shamt)>;
+  def : PatGprImm<riscv_psra, PSRAI_W, uimm5, v2i32>;
 
   // 32-bit signed saturation shift left patterns
-  def: Pat<(v2i32 (riscv_psslai GPR:$rs1, timm:$shamt)),
-           (PSSLAI_W GPR:$rs1, timm:$shamt)>;
+  def : PatGprImm<riscv_psslai, PSSLAI_W, timm, v2i32>;
 
   // 32-bit logical shift left/right
-  def: Pat<(v2i32 (riscv_pshl GPR:$rs1, GPR:$rs2)),
-           (PSLL_WS GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (riscv_psrl GPR:$rs1, GPR:$rs2)),
-           (PSRL_WS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pshl GPR:$rs1, GPR:$rs2)),
+            (PSLL_WS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_psrl GPR:$rs1, GPR:$rs2)),
+            (PSRL_WS GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit arithmetic shift left/right
-  def: Pat<(v2i32 (riscv_psra GPR:$rs1, GPR:$rs2)),
-           (PSRA_WS GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_psra GPR:$rs1, GPR:$rs2)),
+            (PSRA_WS GPR:$rs1, GPR:$rs2)>;
 
   // splat pattern
-  def: Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
+  def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
 
   // 32-bit comparison patterns (result is all 1s or all 0s per element)
   // a == b
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETEQ)),
-           (PMSEQ_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<seteq, PMSEQ_W, v2i32>;
   // a < b
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETLT)),
-           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs1), (v2i32 GPR:$rs2), SETULT)),
-           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
-  // a > b => b < a
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETGT)),
-           (PMSLT_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (setcc (v2i32 GPR:$rs2), (v2i32 GPR:$rs1), SETUGT)),
-           (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<setlt, PMSLT_W, v2i32>;
+  def : PatGprGpr<setult, PMSLTU_W, v2i32>;
 
   // 32-bit [s|u]min/[s|u]max patterns
-  def: Pat<(v2i32 (smin GPR:$rs1, GPR:$rs2)), (PMIN_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (umin GPR:$rs1, GPR:$rs2)), (PMINU_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (smax GPR:$rs1, GPR:$rs2)), (PMAX_W GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i32 (umax GPR:$rs1, GPR:$rs2)), (PMAXU_W GPR:$rs1, GPR:$rs2)>;
+  def : PatGprGpr<smin, PMIN_W, v2i32>;
+  def : PatGprGpr<umin, PMINU_W, v2i32>;
+  def : PatGprGpr<smax, PMAX_W, v2i32>;
+  def : PatGprGpr<umax, PMAXU_W, v2i32>;
 
   // 32-bit vselect patterns
-  def: Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
-           (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+  def : Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
+            (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;

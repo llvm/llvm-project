@@ -104,8 +104,8 @@ static cl::opt<unsigned int> MaxLoopNestDepth(
 
 // We prefer cache cost to vectorization by default.
 static cl::list<RuleTy> Profitabilities(
-    "loop-interchange-profitabilities", cl::ZeroOrMore,
-    cl::MiscFlags::CommaSeparated, cl::Hidden,
+    "loop-interchange-profitabilities", cl::MiscFlags::CommaSeparated,
+    cl::Hidden,
     cl::desc("List of profitability heuristics to be used. They are applied in "
              "the given order"),
     cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,

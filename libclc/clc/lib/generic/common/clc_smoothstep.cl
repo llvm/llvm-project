@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/common/clc_smoothstep.h"
-#include "clc/internal/clc.h"
-#include "clc/shared/clc_clamp.h"
+#include <clc/common/clc_smoothstep.h>
+#include <clc/internal/clc.h>
+#include <clc/shared/clc_clamp.h>
 
-#define __CLC_BODY "clc_smoothstep.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_smoothstep.inc>
+#include <clc/math/gentype.inc>

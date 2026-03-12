@@ -390,7 +390,9 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 /// Note: In order to lower Microsoft's _InterlockedCompareExchange* intrinsics
 /// invoke the function EmitAtomicCmpXchgForMSIntrin.
 Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
-                                     bool ReturnBool) {
+                              bool ReturnBool,
+                              llvm::AtomicOrdering SuccessOrdering,
+                              llvm::AtomicOrdering FailureOrdering) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
@@ -403,8 +405,7 @@ Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
   Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      DestAddr, Cmp, New, llvm::AtomicOrdering::SequentiallyConsistent,
-      llvm::AtomicOrdering::SequentiallyConsistent);
+      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
     return CGF.Builder.CreateZExt(CGF.Builder.CreateExtractValue(Pair, 1),
@@ -5079,14 +5080,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__sync_val_compare_and_swap_4:
   case Builtin::BI__sync_val_compare_and_swap_8:
   case Builtin::BI__sync_val_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, false));
+    return RValue::get(MakeAtomicCmpXchgValue(
+        *this, E, false, AtomicOrdering::SequentiallyConsistent,
+        AtomicOrdering::SequentiallyConsistent));
 
   case Builtin::BI__sync_bool_compare_and_swap_1:
   case Builtin::BI__sync_bool_compare_and_swap_2:
   case Builtin::BI__sync_bool_compare_and_swap_4:
   case Builtin::BI__sync_bool_compare_and_swap_8:
   case Builtin::BI__sync_bool_compare_and_swap_16:
-    return RValue::get(MakeAtomicCmpXchgValue(*this, E, true));
+    return RValue::get(MakeAtomicCmpXchgValue(
+        *this, E, true, AtomicOrdering::SequentiallyConsistent,
+        AtomicOrdering::SequentiallyConsistent));
 
   case Builtin::BI__sync_swap_1:
   case Builtin::BI__sync_swap_2:

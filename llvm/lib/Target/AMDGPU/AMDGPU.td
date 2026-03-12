@@ -186,6 +186,10 @@ defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-inst
   "v_pk_minimum/maximum_f16 instructions"
 >;
 
+defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
+  "Has s_minimum/maximum_f16/f32 instructions"
+>;
+
 defm Minimum3Maximum3F32 : AMDGPUSubtargetFeature<"minimum3-maximum3-f32",
   "Has v_minimum3_f32 and v_maximum3_f32 instructions"
 >;
@@ -1488,9 +1492,10 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24, FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
   ]
 >;
 
@@ -1513,9 +1518,10 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureUnalignedDSAccess, FeatureTrue16BitInsts,
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
-   FeatureFlatOffsetBits24, FeatureFlatSignedOffset, FeatureInstCacheLineSize128
+   FeatureIEEEMinimumMaximumInsts, FeatureSALUMinimumMaximumInsts,
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
+   FeatureFlatSignedOffset, FeatureInstCacheLineSize128
   ]
 >;
 //===----------------------------------------------------------------------===//

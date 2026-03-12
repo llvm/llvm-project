@@ -4492,6 +4492,7 @@ def SPIRV_OC_OpMatrixTimesScalar              : I32EnumAttrCase<"OpMatrixTimesSc
 def SPIRV_OC_OpVectorTimesMatrix              : I32EnumAttrCase<"OpVectorTimesMatrix", 144>;
 def SPIRV_OC_OpMatrixTimesVector              : I32EnumAttrCase<"OpMatrixTimesVector", 145>;
 def SPIRV_OC_OpMatrixTimesMatrix              : I32EnumAttrCase<"OpMatrixTimesMatrix", 146>;
+def SPIRV_OC_OpOuterProduct                   : I32EnumAttrCase<"OpOuterProduct", 147>;
 def SPIRV_OC_OpDot                            : I32EnumAttrCase<"OpDot", 148>;
 def SPIRV_OC_OpIAddCarry                      : I32EnumAttrCase<"OpIAddCarry", 149>;
 def SPIRV_OC_OpISubBorrow                     : I32EnumAttrCase<"OpISubBorrow", 150>;
@@ -4690,7 +4691,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpSMod, SPIRV_OC_OpFRem, SPIRV_OC_OpFMod,
       SPIRV_OC_OpVectorTimesScalar, SPIRV_OC_OpMatrixTimesScalar,
       SPIRV_OC_OpVectorTimesMatrix, SPIRV_OC_OpMatrixTimesVector,
-      SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpDot, SPIRV_OC_OpIAddCarry,
+      SPIRV_OC_OpMatrixTimesMatrix, SPIRV_OC_OpOuterProduct, SPIRV_OC_OpDot,
+      SPIRV_OC_OpIAddCarry,
       SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended,
       SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpIsFinite,
       SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,

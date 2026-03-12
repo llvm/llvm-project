@@ -50,6 +50,7 @@ public:
   void VisitInitListExpr(const InitListExpr *ILE);
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
+  void VisitLambdaExpr(const LambdaExpr *LE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);

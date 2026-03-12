@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/utils.h"
+#include <clc/utils.h>
 
 _CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x,
                                                                 __CLC_INTN y);

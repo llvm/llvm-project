@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/utils.h"
+#include <clc/utils.h>
 
 #ifndef __CLC_IMPL_FUNCTION
 #define __CLC_IMPL_FUNCTION(x) __CLC_CONCAT(__clc_, x)

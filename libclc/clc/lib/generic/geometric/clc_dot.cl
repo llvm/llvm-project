@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fma.h"
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fma.h>
 
-#define __CLC_BODY "clc_dot.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_dot.inc>
+#include <clc/math/gentype.inc>

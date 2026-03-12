@@ -23,8 +23,8 @@ enum __CLC_WORK_GROUP_REDUCE_OP {
   __CLC_WORK_GROUP_REDUCE_MAX
 };
 
-#define __CLC_BODY "clc_work_group_reduce.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc_work_group_reduce.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "clc_work_group_reduce.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_work_group_reduce.inc>
+#include <clc/math/gentype.inc>

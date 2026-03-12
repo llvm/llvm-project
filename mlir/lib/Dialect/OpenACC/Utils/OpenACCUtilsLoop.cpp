@@ -151,29 +151,33 @@ scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
                                          Location loc, RewriterBase &rewriter,
                                          bool convertFuncReturn) {
-  auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
+  SmallVector<Operation *> terminators;
+  for (Block &block : region.getBlocks()) {
+    if (block.empty())
+      continue;
+    Operation *term = block.getTerminator();
+    if ((convertFuncReturn && isa<func::ReturnOp>(*term)) ||
+        isa<acc::YieldOp>(*term))
+      terminators.push_back(term);
+  }
+  SmallVector<Type> resultTypes;
+  if (!terminators.empty())
+    for (Value operand : terminators.front()->getOperands())
+      resultTypes.push_back(operand.getType());
+
+  auto exeRegionOp =
+      scf::ExecuteRegionOp::create(rewriter, loc, TypeRange(resultTypes));
 
   rewriter.cloneRegionBefore(region, exeRegionOp.getRegion(),
                              exeRegionOp.getRegion().end(), mapping);
 
-  SmallVector<Block *, 8> blocks(
-      llvm::make_pointer_range(exeRegionOp.getRegion().getBlocks()));
-
-  for (Block *block : blocks) {
-    if (block->empty())
-      continue;
-    Operation *blockTerminator = block->getTerminator();
-    if ((convertFuncReturn && isa<func::ReturnOp>(*blockTerminator)) ||
-        isa<acc::YieldOp>(*blockTerminator)) {
-      if (blockTerminator->getNumOperands()) {
-        region.getParentOp()->emitError(
-            "region with results not yet supported");
-        return nullptr;
-      }
-      rewriter.setInsertionPointToEnd(block);
-      (void)scf::YieldOp::create(rewriter, blockTerminator->getLoc());
-      rewriter.eraseOp(blockTerminator);
-    }
+  for (Operation *term : terminators) {
+    Operation *blockTerminator = mapping.lookup(term);
+    assert(blockTerminator && "expected terminator to be in mapping");
+    rewriter.setInsertionPoint(blockTerminator);
+    (void)scf::YieldOp::create(rewriter, blockTerminator->getLoc(),
+                               blockTerminator->getOperands());
+    rewriter.eraseOp(blockTerminator);
   }
 
   return exeRegionOp;

@@ -19,7 +19,7 @@
 // LLVM-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP2]], i32 [[TMP7]]
 // LLVM-NEXT:    [[TMP9:%.*]] = load i16, ptr addrspace(4) [[TMP8]], align 2, !range [[RNG2:![0-9]+]], !invariant.load [[META1]], !noundef [[META1]]
 // LLVM-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP9]] to i32
-// LLVM-NEXT:    [[TMP11:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// LLVM-NEXT:    [[TMP11:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // LLVM-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP11]], i64 4
 // LLVM-NEXT:    [[TMP13:%.*]] = load i16, ptr addrspace(4) [[TMP12]], align 2, !range [[RNG2]], !invariant.load [[META1]], !noundef [[META1]]
 // LLVM-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP13]] to i32

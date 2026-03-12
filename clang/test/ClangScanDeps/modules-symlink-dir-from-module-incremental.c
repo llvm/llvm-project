@@ -1,3 +1,6 @@
+// The Framework search path (-F option) is not supported on AIX.
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+
 // Check that symlink aliases to a module map directory produce the same PCM
 // across incremental scans. This test was adapted from 
 // modules-symlink-dir-from-module.c, where a transitive module dependency (Mod)

@@ -35,7 +35,7 @@ A *a() {
 // LLVM:   br label %[[EH_SCOPE:.*]]
 // LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
-// LLVM:   invoke void @_ZN1AC1Ei(ptr %[[PTR]], i32 5)
+// LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 5)
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[EH_SCOPE_END:.*]]
@@ -113,7 +113,7 @@ A *b() {
 // LLVM:   %[[FOO:.*]] = invoke i32 @_Z3foov()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
-// LLVM:   invoke void @_ZN1AC1Ei(ptr %[[PTR]], i32 %[[FOO]])
+// LLVM:   invoke void @_ZN1AC1Ei(ptr {{.*}} %[[PTR]], i32 %[[FOO]])
 // LLVM:           to label %[[INVOKE_CONT_2:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT_2]]:
 // LLVM:   br label %[[EH_SCOPE_END:.*]]
@@ -200,7 +200,7 @@ B *c() {
 // LLVM:   br label %[[EH_SCOPE:.*]]
 // LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
-// LLVM:   invoke void @_ZN1BC1Ei(ptr %[[PTR]], i32 5)
+// LLVM:   invoke void @_ZN1BC1Ei(ptr {{.*}} %[[PTR]], i32 5)
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[EH_SCOPE_END:.*]]

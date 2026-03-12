@@ -8692,7 +8692,12 @@ SDValue SystemZTargetLowering::combineSETCC(
   return SDValue();
 }
 
-static std::pair<SDValue, int> findCCUse(const SDValue &Val) {
+static std::pair<SDValue, int> findCCUse(const SDValue &Val,
+                                         unsigned Depth = 0) {
+  // Limit depth of potentially exponential walk.
+  if (Depth > 5)
+    return std::make_pair(SDValue(), SystemZ::CCMASK_NONE);
+
   switch (Val.getOpcode()) {
   default:
     return std::make_pair(SDValue(), SystemZ::CCMASK_NONE);
@@ -8705,7 +8710,7 @@ static std::pair<SDValue, int> findCCUse(const SDValue &Val) {
     SDValue Op4CCReg = Val.getOperand(4);
     if (Op4CCReg.getOpcode() == SystemZISD::ICMP ||
         Op4CCReg.getOpcode() == SystemZISD::TM) {
-      auto [OpCC, OpCCValid] = findCCUse(Op4CCReg.getOperand(0));
+      auto [OpCC, OpCCValid] = findCCUse(Op4CCReg.getOperand(0), Depth + 1);
       if (OpCC != SDValue())
         return std::make_pair(OpCC, OpCCValid);
     }
@@ -8722,10 +8727,10 @@ static std::pair<SDValue, int> findCCUse(const SDValue &Val) {
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
-    auto [Op0CC, Op0CCValid] = findCCUse(Val.getOperand(0));
+    auto [Op0CC, Op0CCValid] = findCCUse(Val.getOperand(0), Depth + 1);
     if (Op0CC != SDValue())
       return std::make_pair(Op0CC, Op0CCValid);
-    return findCCUse(Val.getOperand(1));
+    return findCCUse(Val.getOperand(1), Depth + 1);
   }
 }
 

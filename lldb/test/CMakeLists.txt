@@ -132,6 +132,11 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
+if(TARGET darwin-mte-launcher)
+  add_lldb_test_dependency(darwin-mte-launcher)
+  set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
+endif()
+
 if (LLDB_CAN_USE_LLDB_RPC_SERVER)
   add_lldb_test_dependency(lldb-rpc-generate-sources)
 endif()

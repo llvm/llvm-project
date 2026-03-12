@@ -1,4 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[EQ:%.*]] "test_eq"
 ; CHECK-DAG: OpName [[NE:%.*]] "test_ne"
@@ -21,6 +22,7 @@
 ; CHECK-DAG: OpName [[v3SGT:%.*]] "test_v3_sgt"
 ; CHECK-DAG: OpName [[v3UGE:%.*]] "test_v3_uge"
 ; CHECK-DAG: OpName [[v3SGE:%.*]] "test_v3_sge"
+; CHECK-DAG: OpName [[v16NE:%.*]] "test_v16_ne"
 
 ; CHECK:      [[EQ]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
@@ -260,4 +262,15 @@ define <3 x i1> @test_v3_uge(<3 x i32> %a, <3 x i32> %b) {
 define <3 x i1> @test_v3_sge(<3 x i32> %a, <3 x i32> %b) {
   %r = icmp sge <3 x i32> %a, %b
   ret <3 x i1> %r
+}
+
+; CHECK:      [[v16NE]] = OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: [[R:%.*]] = OpLogicalNotEqual {{%.+}} {{%.*}} {{%.*}}
+; CHECK-NEXT: OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+
+define spir_func <16 x i1> @test_v16_ne() {
+  %A = icmp ne <16 x i1> zeroinitializer, zeroinitializer
+  ret <16 x i1> %A
 }

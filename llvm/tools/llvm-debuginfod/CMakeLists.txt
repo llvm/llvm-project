@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Support
+  SupportHTTP
   )
 set(LLVM_TARGET_DEFINITIONS Opts.td)
 tablegen(LLVM Opts.inc -gen-opt-parser-defs)

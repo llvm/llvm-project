@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/workitem/clc_get_max_sub_group_size.h"
+#include <clc/workitem/clc_get_max_sub_group_size.h>
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_get_max_sub_group_size() {
   return __nvvm_read_ptx_sreg_warpsize();

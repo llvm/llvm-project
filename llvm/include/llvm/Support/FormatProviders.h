@@ -112,6 +112,9 @@ protected:
 ///   | X+ / X  | Hex + prefix, upper  |   42   |   0x2A  | Minimum # digits   |
 ///   | N / n   | Digit grouped number | 123456 | 123,456 | Ignored            |
 ///   | D / d   | Integer              | 100000 | 100000  | Ignored            |
+///   |+D / +d  | Integer with + prefix| 100000 | +100000 | Ignored            |
+///   |         | for numbers => 0     |        |         |                    |
+///   |   +     | Same as +D / +d      |        |         |                    |
 ///   | (empty) | Same as D / d        |        |         |                    |
 ///   ==========================================================================
 ///
@@ -130,6 +133,10 @@ public:
       return;
     }
 
+    // A + prefix indicates that a plus sign shall be
+    // prefixed to non-negative numbers.
+    bool NonNegativePlus = Style.consume_front('+');
+
     IntegerStyle IS = IntegerStyle::Integer;
     if (Style.consume_front("N") || Style.consume_front("n"))
       IS = IntegerStyle::Number;
@@ -138,7 +145,11 @@ public:
 
     Style.consumeInteger(10, Digits);
     assert(Style.empty() && "Invalid integral format style!");
-    write_integer(Stream, V, Digits, IS);
+
+    // We currently only support the + for integer style numbers.
+    NonNegativePlus = NonNegativePlus && IS == IntegerStyle::Integer;
+
+    write_integer(Stream, V, Digits, IS, NonNegativePlus);
   }
 };
 

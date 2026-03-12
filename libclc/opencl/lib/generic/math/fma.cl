@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_fma.h"
-#include "clc/math/math.h"
+#include <clc/math/clc_fma.h>
+#include <clc/math/math.h>
 
 #define __CLC_FUNCTION fma
-#define __CLC_BODY "clc/shared/ternary_def.inc"
+#define __CLC_BODY <clc/shared/ternary_def.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

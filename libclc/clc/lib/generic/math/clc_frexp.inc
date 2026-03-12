@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/utils.h"
+#include <clc/utils.h>
 
 #if __CLC_FPSIZE == 32
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE

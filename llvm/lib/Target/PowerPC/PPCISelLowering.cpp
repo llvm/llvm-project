@@ -11175,7 +11175,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
-  case Intrinsic::ppc_mma_build_dmr: {
+  case Intrinsic::ppc_build_dmr: {
     SmallVector<SDValue, 8> Pairs;
     SmallVector<SDValue, 8> Chains;
     for (int i = 1; i < 9; i += 2) {
@@ -11595,7 +11595,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             Op.getOperand(0)),
         0);
   }
-  case Intrinsic::ppc_mma_disassemble_dmr: {
+  case Intrinsic::ppc_disassemble_dmr: {
     return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }

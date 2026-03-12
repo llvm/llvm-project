@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangAnalysisScalable
-  Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp
   ASTEntityMapping.cpp
   EntityLinker/EntityLinker.cpp
   Model/BuildNamespace.cpp

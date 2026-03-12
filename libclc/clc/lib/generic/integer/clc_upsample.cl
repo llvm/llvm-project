@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/internal/clc.h"
+#include <clc/clc_convert.h>
+#include <clc/internal/clc.h>
 
 #define __CLC_UPSAMPLE_IMPL(BGENTYPE, GENTYPE, UGENTYPE, GENSIZE)              \
   _CLC_OVERLOAD _CLC_DEF BGENTYPE __clc_upsample(GENTYPE hi, UGENTYPE lo) {    \

@@ -266,3 +266,43 @@ loop:
 exit:
   ret i32 %select
 }
+
+define ptr @loop_inv_select_condition_issue_185682(i32 %a, i32 %b) {
+; CHECK-LABEL: @loop_inv_select_condition_issue_185682(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INV_COND:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[INV_COND]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x ptr> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4]] = select i1 [[TMP2]], <4 x i1> [[TMP0]], <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP5]] = select i1 [[TMP2]], <4 x ptr> zeroinitializer, <4 x ptr> [[VEC_PHI]]
+; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> [[TMP5]], <4 x i1> [[TMP4]], ptr null)
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[TMP6]]
+;
+entry:
+  %inv.cond = icmp eq i32 %a, %b
+  br label %loop
+
+loop:
+  %rdx = phi ptr [ null, %entry ], [ %select, %loop ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %select = select i1 %inv.cond, ptr %rdx, ptr null
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv.next, 4
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret ptr %select
+}

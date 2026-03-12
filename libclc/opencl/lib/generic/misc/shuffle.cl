@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/misc/clc_shuffle.h"
+#include <clc/misc/clc_shuffle.h>
 
 #define __CLC_FUNCTION shuffle
 
-#define __CLC_BODY "clc/misc/shuffle_def.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc/misc/shuffle_def.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "clc/misc/shuffle_def.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/misc/shuffle_def.inc>
+#include <clc/math/gentype.inc>

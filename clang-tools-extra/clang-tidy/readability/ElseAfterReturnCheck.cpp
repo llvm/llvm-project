@@ -48,7 +48,7 @@ AST_MATCHER_P(Stmt, stripLabelLikeStatements,
 } // namespace
 
 static constexpr char InterruptingStr[] = "interrupting";
-static constexpr char WarningMessage[] = "do not use 'else' after '%0'";
+static constexpr char WarningMessage[] = "do not use 'else' after %0";
 static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
 static constexpr char WarnOnConditionVariablesStr[] =
     "WarnOnConditionVariables";
@@ -174,7 +174,8 @@ void ElseAfterReturnCheck::registerPPCallbacks(const SourceManager &SM,
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
-      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
+      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr),
+      callExpr(callee(functionDecl(isNoReturn()))).bind(InterruptingStr)));
 
   const auto IfWithInterruptingThenElse =
       ifStmt(unless(isConstexpr()), unless(isConsteval()),
@@ -231,13 +232,15 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
 static StringRef getControlFlowString(const Stmt &Stmt) {
   if (isa<ReturnStmt>(Stmt))
-    return "return";
+    return "'return'";
   if (isa<ContinueStmt>(Stmt))
-    return "continue";
+    return "'continue'";
   if (isa<BreakStmt>(Stmt))
-    return "break";
+    return "'break'";
   if (isa<CXXThrowExpr>(Stmt))
-    return "throw";
+    return "'throw'";
+  if (isa<CallExpr>(Stmt))
+    return "calling a function that doesn't return";
   llvm_unreachable("Unknown control flow interrupter");
 }
 

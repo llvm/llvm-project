@@ -246,8 +246,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 //
 // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[I32]] : i32 to !llvm.ptr
 // CHECK: %{{.*}} = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i32
+// CHECK: %{{.*}} = llvm.ptrtoaddr %[[PTR]] : !llvm.ptr to i64
   %25 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %26 = llvm.ptrtoint %25 : !llvm.ptr to i32
+  %a26 = llvm.ptrtoaddr %25 : !llvm.ptr to i64
+  %vp = llvm.mlir.poison : vector<3 x !llvm.ptr>
+  %va26 = llvm.ptrtoaddr %vp : vector<3 x !llvm.ptr> to vector<3 x i64>
 
 // Extended and Quad floating point
 //

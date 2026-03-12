@@ -168,8 +168,7 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
-                                  cl::init(false),
+static cl::opt<bool> SampledInstr("sampled-instrumentation",
                                   cl::desc("Do PGO instrumentation sampling"));
 
 static cl::opt<unsigned> SampledInstrPeriod(

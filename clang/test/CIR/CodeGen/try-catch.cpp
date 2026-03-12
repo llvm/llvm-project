@@ -226,7 +226,7 @@ void call_function_inside_try_catch_all() {
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
 // LLVM: [[TRY_BEGIN]]:
-// LLVM:   %[[CALL:.*]] = invoke i32 @_Z8divisionv()
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[TRY_CONT:.*]]
@@ -316,7 +316,7 @@ void call_function_inside_try_catch_with_exception_type() {
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
 // LLVM: [[TRY_BEGIN]]:
-// LLVM:   %[[CALL:.*]] = invoke i32 @_Z8divisionv()
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[TRY_CONT:.*]]
@@ -433,7 +433,7 @@ void call_function_inside_try_catch_with_ref_exception_type() {
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
 // LLVM: [[TRY_BEGIN]]:
-// LLVM:   invoke i32 @_Z8divisionv()
+// LLVM:   invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT:.*]]:
 // LLVM:   br label %[[TRY_CONT:.*]]
@@ -549,7 +549,7 @@ void call_function_inside_try_catch_with_complex_exception_type() {
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
 // LLVM: [[TRY_BEGIN]]:
-// LLVM:   %[[CALL:.*]] = invoke i32 @_Z8divisionv()
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[TRY_CONT:.*]]
@@ -672,7 +672,7 @@ void call_function_inside_try_catch_with_array_exception_type() {
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
 // LLVM: [[TRY_BEGIN]]:
-// LLVM:   %[[CALL:.*]] = invoke i32 @_Z8divisionv()
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[TRY_CONT:.*]]
@@ -796,7 +796,7 @@ void call_function_inside_try_catch_with_exception_type_and_catch_all() {
 // LLVM: [[TRY_SCOPE]]:
 // LLVM:   br label %[[TRY_BEGIN:.*]]
 // LLVM: [[TRY_BEGIN]]:
-// LLVM:   %[[CALL:.*]] = invoke i32 @_Z8divisionv()
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[TRY_CONT:.*]]
@@ -930,7 +930,7 @@ void cleanup_inside_try_body() {
 // LLVM: [[TRY_BEGIN]]:
 // LLVM:   br label %[[CLEANUP_SCOPE:.*]]
 // LLVM: [[CLEANUP_SCOPE]]:
-// LLVM:   %[[CALL:.*]] = invoke i32 @_Z8divisionv()
+// LLVM:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // LLVM:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // LLVM: [[INVOKE_CONT]]:
 // LLVM:   br label %[[CLEANUP:.*]]
@@ -977,7 +977,7 @@ void cleanup_inside_try_body() {
 // OGCG:   %[[S:.*]] = alloca %struct.S
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
 // OGCG:   %[[EHSELECTOR_SLOT:.*]] = alloca i32
-// OGCG:   %[[CALL:.*]] = invoke {{.*}} i32 @_Z8divisionv()
+// OGCG:   %[[CALL:.*]] = invoke noundef i32 @_Z8divisionv()
 // OGCG:           to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD:.*]]
 // OGCG: [[INVOKE_CONT]]:
 // OGCG:   call void @_ZN1SD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[S]])

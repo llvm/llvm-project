@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/shared/clc_vload.h"
+#include <clc/shared/clc_vload.h>
 
 #define __CLC_BODY "vload.inc"
-#include "clc/integer/gentype.inc"
+#include <clc/integer/gentype.inc>
 
 #define __CLC_BODY "vload.inc"
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

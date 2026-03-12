@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/integer/clc_mad_sat.h"
+#include <clc/integer/clc_mad_sat.h>
 
 #define __CLC_FUNCTION mad_sat
-#define __CLC_BODY "clc/shared/ternary_def.inc"
+#define __CLC_BODY <clc/shared/ternary_def.inc>
 
-#include "clc/integer/gentype.inc"
+#include <clc/integer/gentype.inc>

@@ -11,10 +11,10 @@
 
 #include "clc/internal/clc.h"
 
-#define __CLC_BODY "clc/subgroup/clc_sub_group_reduce.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc/subgroup/clc_sub_group_reduce.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "clc/subgroup/clc_sub_group_reduce.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/subgroup/clc_sub_group_reduce.inc>
+#include <clc/math/gentype.inc>
 
 #endif // __CLC_SUBGROUP_CLC_SUB_GROUP_REDUCE_H__

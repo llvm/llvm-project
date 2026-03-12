@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/atomic/clc_atomic_compare_exchange.h"
+#include <clc/atomic/clc_atomic_compare_exchange.h>
 
-#define __CLC_BODY "clc_atomic_compare_exchange.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc_atomic_compare_exchange.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "clc_atomic_compare_exchange.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_atomic_compare_exchange.inc>
+#include <clc/math/gentype.inc>

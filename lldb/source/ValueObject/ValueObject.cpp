@@ -1233,10 +1233,9 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
     return;
   }
 
-  lldb::DataExtractorSP data_sp;
-  data_sp->SetData(value.getRawData(), byte_size,
-                   target->GetArchitecture().GetByteOrder());
-  data_sp->SetAddressByteSize(
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      reinterpret_cast<const void *>(value.getRawData()), byte_size,
+      target->GetArchitecture().GetByteOrder(),
       static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
   SetData(*data_sp, error);
 }

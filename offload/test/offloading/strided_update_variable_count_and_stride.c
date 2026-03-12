@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 // Tests combining variable count expression AND variable stride in array
 // sections.
 

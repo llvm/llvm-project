@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
+#include <clc/internal/clc.h>
 
 #define _CLC_ANY(v) (((v) >> ((sizeof(v) * 8) - 1)) & 0x1)
 

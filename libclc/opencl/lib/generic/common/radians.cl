@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/common/clc_radians.h"
+#include <clc/common/clc_radians.h>
 
 #define __CLC_FUNCTION radians
-#define __CLC_BODY "clc/shared/unary_def.inc"
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

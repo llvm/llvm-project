@@ -212,8 +212,8 @@ static cl::opt<unsigned> MemProfICPNoInlineThreshold(
 
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
-    "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
+    "enable-memprof-context-disambiguation", cl::Hidden,
+    cl::desc("Enable MemProf context disambiguation"));
 
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
@@ -1057,7 +1057,7 @@ public:
     for (auto &I : FunctionCalleesToSynthesizedCallsiteInfos) {
       auto *FS = I.first;
       for (auto &Callsite : I.second)
-        FS->addCallsite(*Callsite.second);
+        FS->addCallsite(std::move(*Callsite.second));
     }
   }
 

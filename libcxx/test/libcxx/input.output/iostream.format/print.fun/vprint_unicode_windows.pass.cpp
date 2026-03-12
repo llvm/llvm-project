@@ -13,7 +13,7 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
-// XFAIL: clang-modules-build
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // XFAIL: availability-fp_to_chars-missing
 
@@ -21,8 +21,7 @@
 
 // Tests the implementation of
 //   void __print::__vprint_unicode_windows(FILE* __stream, string_view __fmt,
-//                                          format_args __args, bool __write_nl,
-//                                          bool __is_terminal);
+//                                          format_args __args, bool __write_nl);
 //
 // In the library when the stdout is redirected to a file it is no
 // longer considered a terminal and the special terminal handling is no
@@ -62,40 +61,19 @@ static void test_basics() {
   FILE* file = std::fopen(filename.c_str(), "wb");
   assert(file);
 
-  // Test writing to a "non-terminal" stream does not call WriteConsoleW.
-  std::__print::__vprint_unicode_windows(file, "Hello", std::make_format_args(), false, false);
-  assert(std::ftell(file) == 5);
-
-  // It's not possible to reliably test whether writing to a "terminal" stream
-  // flushes before writing. Testing flushing a closed stream worked on some
-  // platforms, but was unreliable.
   calling = true;
-  std::__print::__vprint_unicode_windows(file, " world", std::make_format_args(), false, true);
+  std::__print::__vprint_unicode_windows(file, " world", std::make_format_args(), false);
 }
 
-// When the output is a file the data is written as-is.
-// When the output is a "terminal" invalid UTF-8 input is flagged.
+// Invalid UTF-8 input is flagged.
 static void test(std::wstring_view output, std::string_view input) {
-  // *** File ***
   FILE* file = std::fopen(filename.c_str(), "wb");
   assert(file);
 
-  std::__print::__vprint_unicode_windows(file, input, std::make_format_args(), false, false);
-  assert(std::ftell(file) == static_cast<long>(input.size()));
-  std::fclose(file);
-
-  file = std::fopen(filename.c_str(), "rb");
-  assert(file);
-
-  std::vector<char> buffer(input.size());
-  size_t read = fread(buffer.data(), 1, buffer.size(), file);
-  assert(read == input.size());
-  assert(input == std::string_view(buffer.begin(), buffer.end()));
-  std::fclose(file);
-
-  // *** Terminal ***
   expected = output;
-  std::__print::__vprint_unicode_windows(file, input, std::make_format_args(), false, true);
+  std::__print::__vprint_unicode_windows(file, input, std::make_format_args(), false);
+  assert(std::ftell(file) == 0);
+  std::fclose(file);
 }
 
 static void test() {

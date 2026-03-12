@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/geometric/clc_fast_normalize.h"
+#include <clc/geometric/clc_fast_normalize.h>
 
 #define __CLC_FUNCTION fast_normalize
 #define __CLC_FLOAT_ONLY
 #define __CLC_GEOMETRIC_RET_GENTYPE
-#define __CLC_BODY "clc/geometric/unary_def.inc"
+#define __CLC_BODY <clc/geometric/unary_def.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

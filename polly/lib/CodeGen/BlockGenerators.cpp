@@ -1319,12 +1319,12 @@ void RegionGenerator::generateScalarStores(
           Value *Address = getImplicitAddress(*MA, getLoopForStmt(Stmt), LTS,
                                               BBMap, NewAccesses);
           assert((!isa<Instruction>(NewVal) ||
-                  DT.dominates(cast<Instruction>(NewVal)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(NewVal)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           Builder.CreateStore(NewVal, Address);
         });

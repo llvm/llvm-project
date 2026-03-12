@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
+#include <clc/internal/clc.h>
 
 #define _CLC_ELEMENT_CASES2(VAR)                                               \
   case 0:                                                                      \

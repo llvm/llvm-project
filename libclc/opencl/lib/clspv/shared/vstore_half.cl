@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_as_type.h"
-#include "clc/float/definitions.h"
-#include "clc/math/clc_copysign.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_nextafter.h"
-#include "clc/opencl/opencl-base.h"
-#include "clc/relational/clc_isinf.h"
-#include "clc/relational/clc_isnan.h"
-#include "clc/shared/clc_min.h"
+#include <clc/clc_as_type.h>
+#include <clc/float/definitions.h>
+#include <clc/math/clc_copysign.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_nextafter.h>
+#include <clc/opencl/opencl-base.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/shared/clc_min.h>
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
@@ -145,7 +145,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rte(float x) {
   __CLC_XFUNC(SUFFIX, VEC_SIZE, TYPE, AS)
 
 #define __CLC_BODY "vstore_half.inc"
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>
 #undef __CLC_FUNC
 #undef __CLC_XFUNC
 #undef __CLC_XFUNC_IMPL

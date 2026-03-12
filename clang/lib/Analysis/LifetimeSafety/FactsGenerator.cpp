@@ -182,6 +182,20 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
+  // Implicit copy/move constructors of lambda closures lack
+  // [[clang::lifetimebound]], so `handleFunctionCall` cannot propagate origins.
+  // Handle them directly to keep the origin chain intact (e.g., `return
+  // lambda;` copies the closure).
+  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda() &&
+      CCE->getConstructor()->isCopyOrMoveConstructor() &&
+      CCE->getNumArgs() == 1) {
+    const Expr *Arg = CCE->getArg(0);
+    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+      flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+      return;
+    }
+  }
   handleFunctionCall(CCE, CCE->getConstructor(),
                      {CCE->getArgs(), CCE->getNumArgs()},
                      /*IsGslConstruction=*/false);
@@ -429,6 +443,30 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
     const Loan *L = createLoan(FactMgr, MTE);
     CurrentBlockFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
+  }
+}
+
+void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
+  // The lambda gets a single merged origin that aggregates all captured
+  // pointer-like origins. Currently we only need to detect whether the lambda
+  // outlives any capture.
+  OriginList *LambdaList = getOriginsList(*LE);
+  if (!LambdaList)
+    return;
+  bool Kill = true;
+  for (const Expr *Init : LE->capture_inits()) {
+    if (!Init)
+      continue;
+    OriginList *InitList = getOriginsList(*Init);
+    if (!InitList)
+      continue;
+    // FIXME: Consider flowing all origin levels once lambdas support more than
+    // one origin. Currently only the outermost origin is flowed, so by-ref
+    // captures like `[&p]` (where p is string_view) miss inner-level
+    // invalidation.
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        LambdaList->getOuterOriginID(), InitList->getOuterOriginID(), Kill));
+    Kill = false;
   }
 }
 

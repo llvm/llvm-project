@@ -446,8 +446,7 @@ static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::ZeroOrMore,
-    cl::callback([](const unsigned &AddrSpace) {
+    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
       SrcAddrSpaces.insert(AddrSpace);
     }));
 

@@ -29,7 +29,7 @@ define void @tdmrz(ptr nocapture readonly %vp1, ptr nocapture %resp)  {
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %z = call <1024 x i1> @llvm.ppc.dmsetdmrz()
   store <1024 x i1> %z, ptr %resp, align 32
   ret void
 }
@@ -70,7 +70,7 @@ define void @tdmmr(ptr nocapture readonly %vp1, ptr nocapture %resp)  {
 ; CHECK-BE-NEXT:    blr
 entry:
   %l = load <1024 x i1>, ptr %vp1, align 32
-  %c = call <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1> %l)
+  %c = call <1024 x i1> @llvm.ppc.dmmr(<1024 x i1> %l)
   store <1024 x i1> %c, ptr %resp, align 32
   ret void
 }
@@ -124,7 +124,7 @@ define void @tdmxor(ptr nocapture readonly %vp1, ptr %vp2, ptr nocapture %resp) 
 entry:
   %l = load <1024 x i1>, ptr %vp1, align 32
   %r = load <1024 x i1>, ptr %vp2, align 32
-  %x = call <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1> %l, <1024 x i1> %r)
+  %x = call <1024 x i1> @llvm.ppc.dmxor(<1024 x i1> %l, <1024 x i1> %r)
   store <1024 x i1> %x, ptr %resp, align 32
   ret void
 }
@@ -152,7 +152,7 @@ define void @text512(ptr %vp1, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
 ; CHECK-BE-NEXT:    stxv v2, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %z = call <1024 x i1> @llvm.ppc.dmsetdmrz()
   %x = call { <256 x i1>, <256 x i1> } @llvm.ppc.mma.dmxxextfdmr512(<1024 x i1> %z, i32 0)
   %p = extractvalue { <256 x i1>, <256 x i1 > } %x, 0
   store <256 x i1> %p, ptr %rp1, align 16
@@ -197,7 +197,7 @@ define void @text256(ptr %vp1, ptr %rp1, ptr %rp2, ptr %rp3, ptr %rp4)  {
 ; CHECK-BE-NEXT:    stxv v2, 0(r7)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %z = call <1024 x i1> @llvm.ppc.dmsetdmrz()
   %x = call <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1> %z, i32 0)
   store <256 x i1> %x, ptr %rp1, align 16
   %q = call <256 x i1> @llvm.ppc.mma.dmxxextfdmr256(<1024 x i1> %z, i32 1)
@@ -264,7 +264,7 @@ define void @tins512(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2)
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r8)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %z = call <1024 x i1> @llvm.ppc.dmsetdmrz()
   %l1 = load <256 x i1>, ptr %vp1, align 16
   %r1 = load <256 x i1>, ptr %vp2, align 16
   %a = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr512(<1024 x i1> %z, <256 x i1> %l1, <256 x i1> %r1, i32 0)
@@ -351,7 +351,7 @@ define void @tins256(ptr %vp1, ptr %vp2, ptr %vp3, ptr %vp4, ptr %rp1, ptr %rp2,
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r10)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %z = call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %z = call <1024 x i1> @llvm.ppc.dmsetdmrz()
   %l1 = load <256 x i1>, ptr %vp1, align 16
   %a = call <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1> %z, <256 x i1> %l1, i32 0)
   store <1024 x i1> %a, ptr %rp1, align 16
@@ -421,18 +421,18 @@ define void @tbuild(ptr %p1, ptr %p2, ptr %res1, ptr %res2, ptr %v) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <16 x i8>, ptr %v, align 16
-  %1 = tail call <1024 x i1> @llvm.ppc.mma.build.dmr(<16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0)
+  %1 = tail call <1024 x i1> @llvm.ppc.build.dmr(<16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0, <16 x i8> %0)
   store <1024 x i1> %1, ptr %res2, align 128
   %2 = load <1024 x i1>, ptr %p1, align 128
-  tail call void @llvm.ppc.mma.disassemble.dmr(ptr %res1, <1024 x i1> %2)
+  tail call void @llvm.ppc.disassemble.dmr(ptr %res1, <1024 x i1> %2)
   ret void
 }
 
-declare <1024 x i1> @llvm.ppc.mma.build.dmr(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
-declare void @llvm.ppc.mma.disassemble.dmr(ptr, <1024 x i1>)
-declare <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
-declare <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1>)
-declare <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1>, <1024 x i1>)
+declare <1024 x i1> @llvm.ppc.build.dmr(<16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>)
+declare void @llvm.ppc.disassemble.dmr(ptr, <1024 x i1>)
+declare <1024 x i1> @llvm.ppc.dmsetdmrz()
+declare <1024 x i1> @llvm.ppc.dmmr(<1024 x i1>)
+declare <1024 x i1> @llvm.ppc.dmxor(<1024 x i1>, <1024 x i1>)
 declare <1024 x i1> @llvm.ppc.mma.dmxxinstdmr512(<1024 x i1>, <256 x i1>, <256 x i1>, i32)
 declare <1024 x i1> @llvm.ppc.mma.dmxxinstdmr256(<1024 x i1>, <256 x i1>, i32)
 declare { <256 x i1>, <256 x i1> } @llvm.ppc.mma.dmxxextfdmr512(<1024 x i1>, i32)

@@ -44,7 +44,7 @@ namespace {
 // Command-Line Options
 //===----------------------------------------------------------------------===//
 
-cl::OptionCategory SsafLinkerCategory("ssaf-linker options");
+cl::OptionCategory SsafLinkerCategory("clang-ssaf-linker options");
 
 cl::list<std::string> InputPaths(cl::Positional, cl::desc("<input files>"),
                                  cl::OneOrMore, cl::cat(SsafLinkerCategory));
@@ -297,7 +297,7 @@ int main(int argc, const char **argv) {
   // path::stem strips the .exe extension on Windows so ToolName is consistent.
   ToolName = llvm::sys::path::stem(argv[0]);
 
-  // Hide options unrelated to ssaf-linker from --help output.
+  // Hide options unrelated to clang-ssaf-linker from --help output.
   cl::HideUnrelatedOptions(SsafLinkerCategory);
   // Register a custom version printer for the --version flag.
   cl::SetVersionPrinter(printVersion);
@@ -306,7 +306,7 @@ int main(int argc, const char **argv) {
 
   initializeJSONFormat();
 
-  llvm::TimerGroup LinkerTimers("ssaf-linker", "SSAF Linker");
+  llvm::TimerGroup LinkerTimers(ToolName, "SSAF Linker");
   LinkerInput LI;
 
   {

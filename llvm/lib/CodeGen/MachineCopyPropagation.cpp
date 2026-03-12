@@ -819,7 +819,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
       assert(SubRegIdx &&
              "MI source is not a sub-register of Copy destination");
       ForwardedReg = TRI->getSubReg(CopySrcReg, SubRegIdx);
-      if (!ForwardedReg) {
+      if (!ForwardedReg || TRI->isArtificial(ForwardedReg)) {
         LLVM_DEBUG(dbgs() << "MCP: Copy source does not have sub-register "
                           << TRI->getSubRegIndexName(SubRegIdx) << '\n');
         continue;

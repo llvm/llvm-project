@@ -188,6 +188,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(LoadLevel, resource_load_level)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxCoarse, ddx_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdyCoarse, ddy_coarse)
   GENERATE_HLSL_INTRINSIC_FUNCTION(DdxFine, ddx_fine)

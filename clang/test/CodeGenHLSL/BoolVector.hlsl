@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
-// CHECK: %struct.S = type <{ <2 x i32>, float }>
-// CHECK: [[ConstS:@.*]] = private unnamed_addr constant %struct.S <{ <2 x i32> splat (i32 1), float 1.000000e+00 }>, align 1
+// CHECK: %struct.S = type { <2 x i32>, float }
+// CHECK: [[ConstS:@.*]] = private unnamed_addr constant %struct.S { <2 x i32> splat (i32 1), float 1.000000e+00 }, align 1
 // CHECK: [[ConstArr:.*]] = private unnamed_addr constant [2 x <2 x i32>] [<2 x i32> splat (i32 1), <2 x i32> zeroinitializer], align 8
 
 struct S {

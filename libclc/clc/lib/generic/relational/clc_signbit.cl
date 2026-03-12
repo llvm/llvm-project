@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/relational/relational.h"
+#include <clc/internal/clc.h>
+#include <clc/relational/relational.h>
 
 #define _CLC_DEFINE_RELATIONAL_UNARY_VEC2(RET_TYPE, __CLC_FUNCTION, ARG_TYPE)  \
   _CLC_DEF _CLC_OVERLOAD RET_TYPE __CLC_FUNCTION(ARG_TYPE x) {                 \

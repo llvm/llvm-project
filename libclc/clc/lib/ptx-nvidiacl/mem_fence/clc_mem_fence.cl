@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/mem_fence/clc_mem_fence.h"
+#include <clc/mem_fence/clc_mem_fence.h>
 
 _CLC_OVERLOAD _CLC_DEF void
 __clc_mem_fence(int memory_scope, int memory_order,

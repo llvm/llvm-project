@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/relational/relational.h"
+#include <clc/internal/clc.h>
+#include <clc/relational/relational.h>
 
 _CLC_DEFINE_ISFPCLASS(int, int, __clc_isnan, fcNan, float)
 

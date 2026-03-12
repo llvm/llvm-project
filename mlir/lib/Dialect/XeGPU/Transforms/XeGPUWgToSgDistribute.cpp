@@ -1680,8 +1680,8 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
           // Only convert RankedTensorTypes that carry an XeGPU layout encoding.
           // Plain tensors (e.g. tensor<?xi32>) have no XeGPU encoding and must
           // not be converted: VectorType does not support dynamic dimensions.
-          auto encoding =
-              dyn_cast_if_present<xegpu::LayoutAttr>(type.getEncoding());
+          auto encoding = dyn_cast_if_present<xegpu::DistributeLayoutAttr>(
+              type.getEncoding());
           if (!encoding)
             return std::nullopt;
 

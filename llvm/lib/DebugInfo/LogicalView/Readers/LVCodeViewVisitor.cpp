@@ -906,6 +906,57 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
   return Error::success();
 }
 
+// S_REGREL32_INDIR
+Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
+                                        RegRelativeIndirSym &Local) {
+  LLVM_DEBUG({
+    printTypeIndex("Type", Local.Type);
+    W.printNumber("Offset", Local.Offset);
+    W.printNumber("OffsetInUdt", Local.OffsetInUdt);
+    W.printString("VarName", Local.Name);
+  });
+
+  if (LVSymbol *Symbol = LogicalVisitor->CurrentSymbol) {
+    Symbol->setName(Local.Name);
+
+    // Symbol was created as 'variable'; determine its real kind.
+    Symbol->resetIsVariable();
+
+    // Check for the 'this' symbol.
+    if (Local.Name == "this") {
+      Symbol->setIsArtificial();
+      Symbol->setIsParameter();
+    } else {
+      // Determine symbol kind.
+      determineSymbolKind(Symbol, Local.Register);
+    }
+
+    // Update correct debug information tag.
+    if (Symbol->getIsParameter())
+      Symbol->setTag(dwarf::DW_TAG_formal_parameter);
+
+    LVElement *Element = LogicalVisitor->getElement(StreamTPI, Local.Type);
+    if (Element && Element->getIsScoped()) {
+      // We have a local type. Find its parent function.
+      LVScope *Parent = Symbol->getFunctionParent();
+      // The element representing the type has been already finalized. If
+      // the type is an aggregate type, its members have been already added.
+      // As the type is local, its level will be changed.
+
+      // FIXME: Currently the algorithm used to scope lambda functions is
+      // incorrect. Before we allocate the type at this scope, check if is
+      // already allocated in other scope.
+      if (!Element->getParentScope()) {
+        Parent->addElement(Element);
+        Element->updateLevel(Parent);
+      }
+    }
+    Symbol->setType(Element);
+  }
+
+  return Error::success();
+}
+
 // S_BUILDINFO
 Error LVSymbolVisitor::visitKnownRecord(CVSymbol &CVR,
                                         BuildInfoSym &BuildInfo) {
@@ -3079,6 +3130,7 @@ LVElement *LVLogicalVisitor::createElement(SymbolKind Kind) {
 
   case SymbolKind::S_BPREL32:
   case SymbolKind::S_REGREL32:
+  case SymbolKind::S_REGREL32_INDIR:
   case SymbolKind::S_GDATA32:
   case SymbolKind::S_LDATA32:
   case SymbolKind::S_LOCAL:

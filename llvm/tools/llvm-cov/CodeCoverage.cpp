@@ -24,13 +24,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -690,7 +690,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "debug-file-directory",
       cl::desc("Directories to search for object files by build ID"));
   cl::opt<bool> Debuginfod(
-      "debuginfod", cl::ZeroOrMore,
+      "debuginfod",
       cl::desc("Use debuginfod to look up object files from profile"),
       cl::init(canUseDebuginfod()));
 

@@ -22,8 +22,8 @@ struct S0 {
 // CHECK-SPIRV:  %[[#A01:]] = load <4 x float>, ptr addrspace(7) @A2, align 16
 // CHECK-SPIRV: %[[#TMP1:]] = insertvalue %struct.S0 %[[#TMP0]], <4 x float> %[[#A01]], 1
 
-// CHECK:        %[[#ARG:]] = alloca %struct.S0, align 16
-// CHECK:                     store %struct.S0 %[[#TMP1]], ptr %[[#ARG]], align 16
+// CHECK:        %[[#ARG:]] = alloca %struct.S0
+// CHECK:                     store %struct.S0 %[[#TMP1]], ptr %[[#ARG]]
 // CHECK-DXIL:                call void @{{.*}}main0{{.*}}(ptr %[[#ARG]])
 // CHECK-SPIRV:               call spir_func void @{{.*}}main0{{.*}}(ptr %[[#ARG]])
 [shader("pixel")]

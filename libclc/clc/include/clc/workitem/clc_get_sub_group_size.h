@@ -9,7 +9,7 @@
 #ifndef __CLC_WORKITEM_CLC_GET_SUB_GROUP_SIZE_H__
 #define __CLC_WORKITEM_CLC_GET_SUB_GROUP_SIZE_H__
 
-#include "clc/internal/clc.h"
+#include <clc/internal/clc.h>
 
 _CLC_OVERLOAD _CLC_CONST _CLC_DECL uint __clc_get_sub_group_size();
 

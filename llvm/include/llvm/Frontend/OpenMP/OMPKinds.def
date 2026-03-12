@@ -101,7 +101,7 @@ __OMP_STRUCT_TYPE(DynamicEnvironment, DynamicEnvironmentTy, false, Int16)
 __OMP_STRUCT_TYPE(KernelEnvironment, KernelEnvironmentTy, false,
                   ConfigurationEnvironment, IdentPtr, DynamicEnvironmentPtr)
 __OMP_STRUCT_TYPE(KernelLaunchEnvironment, KernelLaunchEnvironmentTy, false,
-                  Int32, Int32)
+                  VoidPtr, VoidPtr, Int32, Int32, Int32, Int8)
 
 #undef __OMP_STRUCT_TYPE
 #undef OMP_STRUCT_TYPE

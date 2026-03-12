@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/math/clc_native_exp2.h"
+#include <clc/internal/clc.h>
+#include <clc/math/clc_native_exp2.h>
 
 #define __CLC_FUNC exp2
 #define __CLC_FLOAT_ONLY
-#define __CLC_BODY "clc_half_native_unary.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_half_native_unary.inc>
+#include <clc/math/gentype.inc>

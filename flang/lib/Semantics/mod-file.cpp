@@ -1042,10 +1042,6 @@ void ModFileWriter::PutObjectEntity(
     });
     os << ") " << symbol.name() << '\n';
   }
-  if (auto attr{details.cudaDataAttr()}) {
-    PutLower(os << "attributes(", common::EnumToString(*attr))
-        << ") " << symbol.name() << '\n';
-  }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
     for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
       if (pointer == symbol) {
@@ -1168,6 +1164,11 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
   PutAttrs(os, attrs, symbol.GetBindName(), symbol.GetIsExplicitBindName());
+  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (auto attr{details->cudaDataAttr()}) {
+      PutLower(os << ',', common::EnumToString(*attr));
+    }
+  }
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
       context_.IsTempName(symbol.name().ToString())) {
     os << "::%FILL";
