@@ -625,7 +625,7 @@ public:
   /// \returns true if inline constants are not supported for F16 pseudo
   /// scalar transcendentals.
   bool hasNoF16PseudoScalarTransInlineConstants() const {
-    return getGeneration() == GFX12;
+    return getGeneration() == GFX12 || HasGFX11_7Insts;
   }
 
   /// \returns true if the target has packed f32 instructions that only read 32
