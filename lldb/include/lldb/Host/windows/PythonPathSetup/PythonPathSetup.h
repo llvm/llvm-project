@@ -49,4 +49,8 @@ bool AddPythonDLLToSearchPath();
 /// LLDB_PYTHON_DLL_RELATIVE_PATH are not defined, return an empty string.
 llvm::Expected<std::string> SetupPythonRuntimeLibrary();
 
+// BEGIN SWIFT
+extern const std::string g_python_installation_note;
+// END SWIFT
+
 #endif // LLDB_SOURCE_HOST_PYTHONPATHSETUP_H

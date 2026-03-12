@@ -98,3 +98,21 @@ llvm::Expected<std::string> SetupPythonRuntimeLibrary() {
 #endif
   return "";
 }
+
+// BEGIN SWIFT
+const std::string g_python_installation_note =
+    "Ensure Python " LLDB_PYTHON_VERSION " "
+#if defined(_M_ARM64)
+    "(arm64)"
+#elif defined(_M_AMD64)
+    "(x64)"
+#endif
+    " is installed and available in your Path.\n"
+    "Pre-built binaries are available at "
+#if defined(_M_ARM64)
+    "https://nuget.org (search 'python')\n";
+#elif defined(_M_AMD64)
+    "https://python.org\n";
+#endif
+;
+// END SWIFT
