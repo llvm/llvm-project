@@ -338,7 +338,7 @@ static Value *handleInterlockedOr(CodeGenFunction &CGF, const CallExpr *E,
 
     // AtomicBinOp has 3 coordinate params which must be handled differently
     // depending on the resource type being accessed.
-    // Initially undef all the coordinates then fill as required
+    // Initially poison all the coordinates then fill as required
     Value *Poison = PoisonValue::get(CGF.Int32Ty);
     Value *C0 = Poison;
     Value *C1 = Poison;
