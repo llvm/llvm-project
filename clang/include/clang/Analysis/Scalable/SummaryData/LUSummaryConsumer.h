@@ -25,16 +25,6 @@ namespace clang::ssaf {
 
 /// Consumes a LUSummary by dispatching its entity data to registered
 /// SummaryDataBuilders and returning the results in a SummaryDataStore.
-///
-/// Three consumption patterns are supported:
-///   - run()            — processes all registered analyses in the LUSummary,
-///                        silently skipping any with missing data or builders.
-///   - run(names)       — processes a named subset; returns an error if any
-///                        name has no data in the LUSummary or no registered
-///                        builder.
-///   - run<DataTs...>() — type-safe variant of run(names) with the same error
-///                        semantics.
-///
 /// All patterns consume the underlying LUSummary data, so each analysis can
 /// only be retrieved once across all patterns.
 class LUSummaryConsumer final {

@@ -50,7 +50,7 @@ public:
   };
 
   /// Returns true if a builder is registered under \p Name.
-  static bool isRegistered(llvm::StringRef Name);
+  static bool contains(llvm::StringRef Name);
 
   /// Instantiates the builder registered under \p Name, or returns nullptr
   /// if no such builder is registered.

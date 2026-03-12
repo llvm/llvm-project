@@ -24,7 +24,7 @@ SummaryDataBuilderRegistry::instantiate(llvm::StringRef Name) {
   return nullptr;
 }
 
-bool SummaryDataBuilderRegistry::isRegistered(llvm::StringRef Name) {
+bool SummaryDataBuilderRegistry::contains(llvm::StringRef Name) {
   for (const auto &Entry : RegistryT::entries()) {
     if (Entry.getName() == Name) {
       return true;

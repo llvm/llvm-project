@@ -210,10 +210,10 @@ protected:
 // ---------------------------------------------------------------------------
 
 TEST(SummaryDataBuilderRegistryTest, BuilderIsRegistered) {
-  EXPECT_FALSE(SummaryDataBuilderRegistry::isRegistered("Analysis10"));
-  EXPECT_TRUE(SummaryDataBuilderRegistry::isRegistered("Analysis1"));
-  EXPECT_TRUE(SummaryDataBuilderRegistry::isRegistered("Analysis2"));
-  EXPECT_TRUE(SummaryDataBuilderRegistry::isRegistered("Analysis4"));
+  EXPECT_FALSE(SummaryDataBuilderRegistry::contains("Analysis10"));
+  EXPECT_TRUE(SummaryDataBuilderRegistry::contains("Analysis1"));
+  EXPECT_TRUE(SummaryDataBuilderRegistry::contains("Analysis2"));
+  EXPECT_TRUE(SummaryDataBuilderRegistry::contains("Analysis4"));
 }
 
 TEST(SummaryDataBuilderRegistryTest, BuilderCanBeInstantiated) {
