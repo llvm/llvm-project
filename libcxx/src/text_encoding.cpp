@@ -20,10 +20,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if defined(_LIBCPP_WIN32API)
-_LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
-  unsigned int __acp = __codepage == nullptr ? GetACP() : *__codepage;
-
-  switch (__acp) {
+_LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int __codepage) {
+  switch (__codepage) {
   case 0:
     // If no ANSI code page is available, only Unicode can be used for the locale.
     // In this case, the value is CP_ACP (0).
@@ -224,24 +222,28 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int* __codepage) {
   wchar_t __locale_wbuffer[LOCALE_NAME_MAX_LENGTH + 1]{};
   wchar_t __number_buffer[11]{};
 
-  auto __codepage = AreFileApisANSI() ? CP_ACP : CP_OEMCP;
-  auto __lctype   = ::AreFileApisANSI() ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
+  bool __is_ansi  = ::AreFileApisANSI();
+  auto __codepage = __is_ansi ? CP_ACP : CP_OEMCP;
 
   int __ret = ::MultiByteToWideChar(
-      __codepage, MB_ERR_INVALID_CHARS, __name.data(), __name.size(), __locale_wbuffer, LOCALE_MAX_NAME_LENGTH);
+      __codepage, MB_ERR_INVALID_CHARS, __name.data(), __name.size(), __locale_wbuffer, LOCALE_NAME_MAX_LENGTH);
 
   if (__ret <= 0)
     return __te_impl();
 
   // The below function fills the string with the number in text.
+  auto __lctype = __is_ansi ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
   int __result = ::GetLocaleInfoEx(__locale_wbuffer, __lctype, __number_buffer, 10);
+
+  if (__result <= 0)
+    return __te_impl();
 
   unsigned int __acp = std::wcstoul(__number_buffer, nullptr, 10);
 
-  return __get_win32_acp(&__acp);
+  return __get_win32_acp(__acp);
 }
 
-_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(nullptr); }
+_LIBCPP_HIDDEN __te_impl __get_env_encoding() { return __get_win32_acp(::GetACP()); }
 
 #elif !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
 // POSIX
