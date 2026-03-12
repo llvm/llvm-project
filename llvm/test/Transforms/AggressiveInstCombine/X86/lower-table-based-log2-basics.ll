@@ -41,12 +41,12 @@
 
 define i32 @log2_32(i32 %v) !prof !0 {
 ; CHECK-LABEL: @log2_32(
-; CHECK: !prof [[PROF_0:![0-9]+]] {
+; CHECK: !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[V:%.*]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 31, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[V]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF_1:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -166,5 +166,5 @@ define i32 @log2_16(i16 noundef %0) {
 }
 
 !0 = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}
+; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
