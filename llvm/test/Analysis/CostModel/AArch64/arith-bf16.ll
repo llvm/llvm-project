@@ -68,23 +68,27 @@ define void @fneg_idiom_bf16() {
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fsub bfloat 0xR8000, poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fsub <4 x bfloat> splat (bfloat 0xR8000), poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fsub <8 x bfloat> splat (bfloat 0xR8000), poison
+; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fsub <16 x bfloat> splat (bfloat 0xR8000), poison
 ; CHECK-BASE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'fneg_idiom_bf16'
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fsub bfloat 0xR8000, poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fsub <4 x bfloat> splat (bfloat 0xR8000), poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fsub <8 x bfloat> splat (bfloat 0xR8000), poison
+; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fsub <16 x bfloat> splat (bfloat 0xR8000), poison
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE-B16B16-LABEL: 'fneg_idiom_bf16'
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %BF16 = fsub bfloat 0xR8000, poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:3 SizeLat:1 for: %V4BF16 = fsub <4 x bfloat> splat (bfloat 0xR8000), poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:3 SizeLat:1 for: %V8BF16 = fsub <8 x bfloat> splat (bfloat 0xR8000), poison
+; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:1 Lat:3 SizeLat:1 for: %V16BF16 = fsub <16 x bfloat> splat (bfloat 0xR8000), poison
 ; CHECK-SVE-B16B16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %BF16 = fsub bfloat -0.0, poison
-  %V4BF16 = fsub <4 x bfloat> <bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0>, poison
-  %V8BF16 = fsub <8 x bfloat> <bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0, bfloat -0.0>, poison
+  %V4BF16 = fsub <4 x bfloat> splat(bfloat -0.0), poison
+  %V8BF16 = fsub <8 x bfloat> splat(bfloat -0.0), poison
+  %V16BF16 = fsub <16 x bfloat> splat(bfloat -0.0), poison
   ret void
 }
 
