@@ -8,27 +8,27 @@ _Complex float ci;
 float f;
 void test() {
 // CHECK: %ci.real = load float, ptr @ci{{.*}}, !dbg [[G1R2:!.*]]
-// CHECK: %ci.imag = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G1R2]]
+// CHECK: %ci.imag = load float, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4){{.*}}, !dbg [[G1R2]]
 // CHECK: store float %ci.real, ptr %lc.realp{{.*}}, !dbg [[G1R1:!.*]]
 // CHECK: store float %ci.imag, ptr %lc.imagp{{.*}}, !dbg [[G1R1]]
   _Complex float lc = ci;
 
 // CHECK: %ci.real1 = load float, ptr @ci{{.*}}, !dbg [[G2R2:!.*]]
-// CHECK: %ci.imag2 = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G2R2]]
+// CHECK: %ci.imag2 = load float, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4){{.*}}, !dbg [[G2R2]]
 // CHECK: store float %ci.real1, ptr @ci{{.*}}, !dbg [[G2R1:!.*]]
-// CHECK: store float %ci.imag2, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G2R1]]
+// CHECK: store float %ci.imag2, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4){{.*}}, !dbg [[G2R1]]
   ci = ci;
 
 // CHECK: %add.r = fadd float %ci.real5, %ci.real3, !dbg [[G3R2:!.*]]
 // CHECK: %add.i = fadd float %ci.imag6, %ci.imag4, !dbg [[G3R2]]
 // CHECK: store float %add.r, ptr @ci{{.*}}, !dbg [[G3R1:!.*]]
-// CHECK: store float %add.i, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G3R1]]
+// CHECK: store float %add.i, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4){{.*}}, !dbg [[G3R1]]
   ci += ci;
 
 // CHECK: %sub.r = fsub float %ci.real9, %ci.real7, !dbg [[G4R2:!.*]]
 // CHECK: %sub.i = fsub float %ci.imag10, %ci.imag8, !dbg [[G4R2]]
 // CHECK: store float %sub.r, ptr @ci, align 4, !dbg [[G4R1:!.*]]
-// CHECK: store float %sub.i, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G4R1]]
+// CHECK: store float %sub.i, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4){{.*}}, !dbg [[G4R1]]
   ci -= ci;
 
 // There's control flow introduced here to skip around nan and lib calls
@@ -38,18 +38,18 @@ void test() {
 // CHECK: %real_mul_phi = phi float [ %mul_r, %entry ], [ %mul_r, %complex_mul_imag_nan ], [ %coerce.real, %complex_mul_libcall ], !dbg [[G5R2:!.*]]
 // CHECK: %imag_mul_phi = phi float [ %mul_i, %entry ], [ %mul_i, %complex_mul_imag_nan ], [ %coerce.imag, %complex_mul_libcall ], !dbg [[G5R2]]
 // CHECK: store float %real_mul_phi, ptr @ci, align 4, !dbg [[G5R1:!.*]]
-// CHECK: store float %imag_mul_phi, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1), align 4, !dbg [[G5R1]]
+// CHECK: store float %imag_mul_phi, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4), align 4, !dbg [[G5R1]]
   ci *= ci;
 
 // div goes straight to lib call, which gets saved into a temp.
 // CHECK: %coerce21.real = load float, ptr %coerce21.realp, align 4, !dbg [[G6R2:!.*]]
 // CHECK: %coerce21.imag = load float, ptr %coerce21.imagp, align 4, !dbg [[G6R2]]
 // CHECK: store float %coerce21.real, ptr @ci, align 4, !dbg [[G6R1:!.*]]
-// CHECK: store float %coerce21.imag, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1), align 4, !dbg [[G6R1]]
+// CHECK: store float %coerce21.imag, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4), align 4, !dbg [[G6R1]]
   ci /= ci;
 
 // CHECK: %add = fadd float %0, %1, !dbg [[G7R2:!.*]]
-// CHECK: store float %add, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G7R1:!.*]]
+// CHECK: store float %add, ptr getelementptr inbounds nuw (i8, ptr @ci, i64 4){{.*}}, !dbg [[G7R1:!.*]]
   __imag ci = __imag ci + __imag ci;
 
 #ifndef __cplusplus

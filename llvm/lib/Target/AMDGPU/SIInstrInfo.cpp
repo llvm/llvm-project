@@ -5302,7 +5302,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
     if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
-        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO && !isSpill(MI)) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -8318,26 +8318,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
       if (const TargetRegisterClass *CommonRC =
               RI.getCommonSubClass(NewDstRC, SrcRC)) {
-        // Also intersect with VGPR-compatible operand register class
-        // constraints from user instructions. This preserves restricted
-        // register classes (e.g., VGPR_32_Lo256 for WMMA scale operands) that
-        // would otherwise be lost when an SGPR is replaced with a VGPR.
-        // Constraints incompatible with VGPRs (e.g., SALU instructions
-        // requiring SReg_32) are skipped because those users will be converted
-        // to VALU by the worklist.
-        for (const MachineOperand &UseMO : MRI.use_operands(DstReg)) {
-          const MachineInstr *UseMI = UseMO.getParent();
-          if (UseMI == &Inst)
-            continue;
-          unsigned OpIdx = UseMI->getOperandNo(&UseMO);
-          if (const TargetRegisterClass *OpRC =
-                  getRegClass(UseMI->getDesc(), OpIdx)) {
-            if (const TargetRegisterClass *Narrowed =
-                    RI.getCommonSubClass(CommonRC, OpRC))
-              CommonRC = Narrowed;
-          }
-        }
-
         // Instead of creating a copy where src and dst are the same register
         // class, we just replace all uses of dst with src.  These kinds of
         // copies interfere with the heuristics MachineSink uses to decide
@@ -8353,10 +8333,19 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
           llvm_unreachable("failed to constrain register");
 
         Inst.eraseFromParent();
-        // Legalize t16 operand since replaceReg is called after addUsersToVALU
-        for (MachineOperand &MO :
+
+        for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(NewDstReg))) {
-          legalizeOperandsVALUt16(*MO.getParent(), MRI);
+          MachineInstr &UseMI = *UseMO.getParent();
+
+          // Legalize t16 operands since replaceReg is called after
+          // addUsersToVALU.
+          legalizeOperandsVALUt16(UseMI, MRI);
+
+          unsigned OpIdx = UseMI.getOperandNo(&UseMO);
+          if (const TargetRegisterClass *OpRC =
+                  getRegClass(UseMI.getDesc(), OpIdx))
+            MRI.constrainRegClass(NewDstReg, OpRC);
         }
 
         return;
@@ -10279,7 +10268,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX10:
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
-    return SIEncodingFamily::GFX11;
+    return ST.hasGFX11_7Insts() ? SIEncodingFamily::GFX1170
+                                : SIEncodingFamily::GFX11;
   case AMDGPUSubtarget::GFX12:
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
@@ -10378,6 +10368,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX11_7Insts())
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);

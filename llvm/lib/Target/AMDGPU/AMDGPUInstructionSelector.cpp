@@ -7224,12 +7224,11 @@ void AMDGPUInstructionSelector::renderBitcastFPImm(MachineInstrBuilder &MIB,
   MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
 }
 
-void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI,
-                                                int OpIdx) const {
+void AMDGPUInstructionSelector::renderCountTrailingOnesImm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
          "Expected G_CONSTANT");
-  MIB.addImm(MI.getOperand(1).getCImm()->getValue().popcount());
+  MIB.addImm(MI.getOperand(1).getCImm()->getValue().countTrailingOnes());
 }
 
 /// This only really exists to satisfy DAG type checking machinery, so is a

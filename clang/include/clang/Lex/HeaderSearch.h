@@ -755,6 +755,8 @@ public:
   ///
   /// \param File The module map file.
   /// \param IsSystem Whether this file is in a system header directory.
+  /// \param ImplicitlyDiscovered Whether this file was found by module map
+  ///        search.
   /// \param ID If the module map file is already mapped (perhaps as part of
   ///        processing a preprocessed module), the ID of the file.
   /// \param Offset [inout] An offset within ID to start parsing. On exit,
@@ -765,6 +767,7 @@ public:
   ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
   bool parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                                 bool ImplicitlyDiscovered,
                                  FileID ID = FileID(),
                                  unsigned *Offset = nullptr,
                                  StringRef OriginalModuleMapFile = StringRef());
@@ -823,9 +826,12 @@ private:
   /// \param IsSystem Whether the framework directory is part of the system
   /// frameworks.
   ///
+  /// \param ImplicitlyDiscovered Whether the framework was discovered by module
+  ///        map search.
+  ///
   /// \returns The module, if found; otherwise, null.
   Module *loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
-                              bool IsSystem);
+                              bool IsSystem, bool ImplicitlyDiscovered);
 
   /// Load all of the module maps within the immediate subdirectories
   /// of the given search directory.
@@ -983,14 +989,13 @@ private:
     MMR_InvalidModuleMap
   };
 
-  ModuleMapResult parseAndLoadModuleMapFileImpl(FileEntryRef File,
-                                                bool IsSystem,
-                                                DirectoryEntryRef Dir,
-                                                FileID ID = FileID(),
-                                                unsigned *Offset = nullptr,
-                                                bool DiagnosePrivMMap = false);
+  ModuleMapResult parseAndLoadModuleMapFileImpl(
+      FileEntryRef File, bool IsSystem, bool ImplicitlyDiscovered,
+      DirectoryEntryRef Dir, FileID ID = FileID(), unsigned *Offset = nullptr,
+      bool DiagnosePrivMMap = false);
 
   ModuleMapResult parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
+                                         bool ImplicitlyDiscovered,
                                          DirectoryEntryRef Dir,
                                          FileID ID = FileID());
 
@@ -1004,6 +1009,7 @@ private:
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
   ModuleMapResult parseAndLoadModuleMapFile(StringRef DirName, bool IsSystem,
+                                            bool ImplicitlyDiscovered,
                                             bool IsFramework);
 
   /// Try to load the module map file in the given directory.
@@ -1015,11 +1021,15 @@ private:
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
   ModuleMapResult parseAndLoadModuleMapFile(DirectoryEntryRef Dir,
-                                            bool IsSystem, bool IsFramework);
+                                            bool IsSystem,
+                                            bool ImplicitlyDiscovered,
+                                            bool IsFramework);
 
   ModuleMapResult parseModuleMapFile(StringRef DirName, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
                                      bool IsFramework);
   ModuleMapResult parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
                                      bool IsFramework);
 };
 

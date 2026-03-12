@@ -36,9 +36,10 @@ public:
 
   size_t getId() const { return Id; }
 
-  void
+  llvm::Error
   patch(const std::map<EntityId, EntityId> &EntityResolutionTable) override {
     PatchedIds = EntityResolutionTable;
+    return llvm::Error::success();
   }
 
   const std::map<EntityId, EntityId> &getPatchedIds() const {

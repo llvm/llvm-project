@@ -567,11 +567,11 @@ gpu.func @create_memdesc(%laneid: index, %arg0 : memref<2048xi8, 3>) {
 gpu.func @vector_transpose(%laneid: index) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<2x1xf32>) {
     %cst = "some_op"()
-      {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+      {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}
       : () -> (vector<16x2xf32>)
     %transpose = vector.transpose %cst, [1, 0]
       {
-        layout_operand_0 = #xegpu.layout<lane_layout = [16 , 1], lane_data = [1, 1]>,
+        layout_operand_0 = #xegpu.layout<lane_layout = [16 , 1], lane_data = [1, 1], order = [0, 1]>,
         layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
       }
       : vector<16x2xf32> to vector<2x16xf32>

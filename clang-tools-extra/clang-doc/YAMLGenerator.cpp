@@ -28,7 +28,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<CommentInfo>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::SmallString<16>)
 
 namespace llvm {
@@ -167,7 +167,7 @@ static void recordInfoMapping(IO &IO, RecordInfo &I) {
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("VirtualParents", I.VirtualParents,
                  llvm::SmallVector<Reference, 4>());
-  IO.mapOptional("ChildRecords", I.Children.Records, std::vector<Reference>());
+  IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
   IO.mapOptional("ChildFunctions", I.Children.Functions);
   IO.mapOptional("ChildEnums", I.Children.Enums);
   IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -237,9 +237,8 @@ template <> struct MappingTraits<NamespaceInfo> {
   static void mapping(IO &IO, NamespaceInfo &I) {
     infoMapping(IO, I);
     IO.mapOptional("ChildNamespaces", I.Children.Namespaces,
-                   std::vector<Reference>());
-    IO.mapOptional("ChildRecords", I.Children.Records,
-                   std::vector<Reference>());
+                   OwningVec<Reference>());
+    IO.mapOptional("ChildRecords", I.Children.Records, OwningVec<Reference>());
     IO.mapOptional("ChildFunctions", I.Children.Functions);
     IO.mapOptional("ChildEnums", I.Children.Enums);
     IO.mapOptional("ChildTypedefs", I.Children.Typedefs);
@@ -327,8 +326,8 @@ template <> struct MappingTraits<CommentInfo> {
   static void mapping(IO &IO, CommentInfo &I) { commentInfoMapping(IO, I); }
 };
 
-template <> struct MappingTraits<std::unique_ptr<CommentInfo>> {
-  static void mapping(IO &IO, std::unique_ptr<CommentInfo> &I) {
+template <> struct MappingTraits<OwnedPtr<CommentInfo>> {
+  static void mapping(IO &IO, OwnedPtr<CommentInfo> &I) {
     if (I)
       commentInfoMapping(IO, *I);
   }
@@ -346,7 +345,7 @@ public:
   static const char *Format;
 
   llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
       const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -355,10 +354,10 @@ public:
 const char *YAMLGenerator::Format = "yaml";
 
 llvm::Error YAMLGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   for (const auto &Group : Infos) {
-    doc::Info *Info = Group.getValue().get();
+    doc::Info *Info = getPtr(Group.getValue());
 
     // Output file names according to the USR except the global namesapce.
     // Anonymous namespaces are taken care of in serialization, so here we can

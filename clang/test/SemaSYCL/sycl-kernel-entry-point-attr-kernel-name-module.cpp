@@ -17,6 +17,10 @@ module M2 { header "m2.h" }
 #--- common.h
 template<int> struct KN;
 
+// A generic kernel launch function.
+template<typename KN, typename... Ts>
+void sycl_kernel_launch(const char *, Ts...) {}
+
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void common_test1() {}
 

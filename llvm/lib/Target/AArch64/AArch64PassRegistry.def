@@ -26,5 +26,9 @@
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("aarch64-branch-targets", AArch64BranchTargetsPass())
+MACHINE_FUNCTION_PASS("aarch64-collect-loh", AArch64CollectLOHPass())
+MACHINE_FUNCTION_PASS("aarch64-fix-cortex-a53-835769", AArch64A53Fix835769Pass())
 MACHINE_FUNCTION_PASS("aarch64-ldst-opt", AArch64LoadStoreOptPass())
+MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
 #undef MACHINE_FUNCTION_PASS
