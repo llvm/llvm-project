@@ -88,7 +88,7 @@ void initializeAArch64PointerAuthPass(PassRegistry&);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CFIFixupPass(PassRegistry&);
 void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
-void initializeAArch64CompressJumpTablesPass(PassRegistry&);
+void initializeAArch64CompressJumpTablesLegacyPass(PassRegistry &);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerPass(PassRegistry&);
 void initializeAArch64ConditionalComparesPass(PassRegistry &);
@@ -150,6 +150,13 @@ public:
 };
 
 class AArch64CollectLOHPass : public PassInfoMixin<AArch64CollectLOHPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64CompressJumpTablesPass
+    : public PassInfoMixin<AArch64CompressJumpTablesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

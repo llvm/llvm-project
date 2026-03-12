@@ -249,7 +249,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
-  initializeAArch64CompressJumpTablesPass(PR);
+  initializeAArch64CompressJumpTablesLegacyPass(PR);
   initializeAArch64ConditionalComparesPass(PR);
   initializeAArch64ConditionOptimizerPass(PR);
   initializeAArch64DeadRegisterDefinitionsPass(PR);
