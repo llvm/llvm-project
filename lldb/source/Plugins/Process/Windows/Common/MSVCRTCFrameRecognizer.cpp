@@ -8,7 +8,6 @@
 
 #include "MSVCRTCFrameRecognizer.h"
 
-#include "ProcessWindows.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameRecognizer.h"

@@ -9,13 +9,13 @@
 #ifndef LLDB_PLUGINS_PROCESS_WINDOWS_MSVCRTCFRAMERECOGNIZER_H
 #define LLDB_PLUGINS_PROCESS_WINDOWS_MSVCRTCFRAMERECOGNIZER_H
 
-#include "lldb/Target/Process.h"
+#include "ProcessWindows.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 
 namespace lldb_private {
 
 /// Registers the MSVC run-time check failure frame recognizer with the target.
-void RegisterMSVCRTCFrameRecognizer(Process &process);
+void RegisterMSVCRTCFrameRecognizer(ProcessWindows &process);
 
 /// Recognized stack frame for an MSVC _RTC failure. Carries the human-readable
 /// stop description extracted from failwithmessage's \c msg parameter.
