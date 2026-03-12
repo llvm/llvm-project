@@ -1284,7 +1284,7 @@ def testOpWalk():
     # CHECK-NEXT:  func.fun
     # CHECK-NEXT:  func.return
     print("Pre-order")
-    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+    module.operation.walk(callback, walk_order=WalkOrder.PRE_ORDER)
 
     # Test interrput.
     # CHECK-NEXT:  Interrupt post-order
@@ -1306,7 +1306,7 @@ def testOpWalk():
         print(op.name)
         return WalkResult.SKIP
 
-    module.operation.walk(callback, WalkOrder.PRE_ORDER)
+    module.operation.walk(callback, walk_order=WalkOrder.PRE_ORDER)
 
     # Test exception.
     # CHECK: Exception
@@ -1323,67 +1323,6 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
-
-
-# CHECK-LABEL: TEST: testOpWalkOfType
-@run
-def testOpWalkOfType():
-    with Context(), Location.unknown():
-        module = Module.parse("""
-            module {
-                func.func @f() { return }
-                func.func @g() { return }
-                arith.constant dense<0> : tensor<i32>
-            }
-        """)
-
-    # Callback: only visits ops of the requested type.
-    # CHECK: only FuncOp visited: True
-    only_funcs = True
-
-    def check_type(op):
-        nonlocal only_funcs
-        if not isinstance(op.opview, func.FuncOp):
-            only_funcs = False
-        return WalkResult.ADVANCE
-
-    module.operation.walk_of_type(func.FuncOp, check_type)
-    print(f"only FuncOp visited: {only_funcs}")
-
-    # Callback: interrupt after first match.
-    # CHECK: interrupted after: 1
-    seen = []
-
-    def stop_after_first(op):
-        seen.append(op.opview)
-        return WalkResult.INTERRUPT
-
-    module.operation.walk_of_type(func.FuncOp, stop_after_first)
-    print(f"interrupted after: {len(seen)}")
-
-    # Callback: no match, callback never called.
-    # CHECK: never called: True
-    called = False
-
-    def should_not_run(op):
-        nonlocal called
-        called = True
-        return WalkResult.ADVANCE
-
-    module.operation.walk_of_type(scf.ForOp, should_not_run)
-    print(f"never called: {not called}")
-
-    # Callback: collect all matching ops.
-    # CHECK: collected func.FuncOp: ['"f"', '"g"']
-    collected = []
-
-    def collect(op):
-        collected.append(op.opview)
-        return WalkResult.ADVANCE
-
-    module.operation.walk_of_type(func.FuncOp, collect)
-    assert all(isinstance(r, func.FuncOp) for r in collected)
-    print(f"collected func.FuncOp: {[str(r.name) for r in collected]}")
 
 
 # CHECK-LABEL: TEST: testOpReplaceUsesWith

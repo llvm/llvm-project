@@ -1145,20 +1145,6 @@ void PyOperationBase::walk(std::function<PyWalkResult(MlirOperation)> callback,
   }
 }
 
-void PyOperationBase::walkOfType(
-    nb::object opClass, std::function<PyWalkResult(MlirOperation)> callback,
-    PyWalkOrder walkOrder) {
-
-  auto filtered = [&](MlirOperation mlirOp) -> PyWalkResult {
-    nb::object opview = nb::cast(mlirOp).attr("opview");
-    if (nb::isinstance(opview, opClass)) {
-      return callback(mlirOp);
-    };
-    return PyWalkResult::Advance;
-  };
-  walk(filtered, walkOrder);
-}
-
 nb::object PyOperationBase::getAsm(bool binary,
                                    std::optional<int64_t> largeElementsLimit,
                                    std::optional<int64_t> largeResourceLimit,
@@ -3941,32 +3927,39 @@ void populateIRCore(nb::module_ &m) {
 
             Note:
               After erasing, any Python references to the operation become invalid.)")
-      .def("walk", &PyOperationBase::walk, "callback"_a,
-           "walk_order"_a = PyWalkOrder::PostOrder,
-           // clang-format off
-          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = ...) -> None"),
-           // clang-format on
-           R"(
+      .def(
+          "walk",
+          [](PyOperationBase &self,
+             std::function<PyWalkResult(MlirOperation)> callback,
+             std::optional<nb::object> opClass, PyWalkOrder walkOrder) {
+            if (opClass) {
+              self.walk(
+                  [&](MlirOperation mlirOp) -> PyWalkResult {
+                    nb::object opview = nb::cast(mlirOp).attr("opview");
+                    if (nb::isinstance(opview, *opClass))
+                      return callback(mlirOp);
+                    return PyWalkResult::Advance;
+                  },
+                  walkOrder);
+            } else {
+              self.walk(callback, walkOrder);
+            }
+          },
+          "callback"_a, "op_class"_a = nb::none(),
+          "walk_order"_a = PyWalkOrder::PostOrder,
+          // clang-format off
+           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], op_class: type[OpView] | None = None, walk_order: WalkOrder = WalkOrder.POST_ORDER) -> None"),
+          // clang-format on
+          R"(
              Walks the operation tree with a callback function.
+
+             If op_class is provided, the callback is only invoked on operations
+             of that type; all other operations are skipped silently.
 
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
-               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)")
-      .def("walk_of_type", &PyOperationBase::walkOfType, "op_class"_a,
-           "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
-           // clang-format off
-     nb::sig("def walk_of_type(self, op_class: type[OpView], callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None"),
-           // clang-format on
-           R"(
-              Walks the operation tree, invoking the callback only on operations of the specified type.
-
-              Args:
-                op_class: The operation type to match.
-                callback: A callable that takes an Operation and returns a WalkResult.
-                walk_order: The traversal order (PRE_ORDER or POST_ORDER).
-
-              For example, op.walk_of_type(arith.AddIOp, callback) walks the operation tree
-              and invokes callback only on arith.AddIOp operations.)");
+               op_class: If provided, only operations of this type are passed to the callback.
+               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(

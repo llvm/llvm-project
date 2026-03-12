@@ -600,11 +600,6 @@ public:
   void walk(std::function<PyWalkResult(MlirOperation)> callback,
             PyWalkOrder walkOrder);
 
-  // Wrap the walk method with a type filter.
-  void walkOfType(nanobind::object opClass,
-                  std::function<PyWalkResult(MlirOperation)> callback,
-                  PyWalkOrder walkOrder);
-
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
   void moveBefore(PyOperationBase &other);

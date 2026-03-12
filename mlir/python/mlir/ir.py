@@ -64,7 +64,7 @@ def get_ops_of_type(
         ops.append(op.opview)
         return WalkResult.ADVANCE
 
-    op.walk_of_type(op_class, collect_ops)
+    op.walk(collect_ops, op_class=op_class)
     return ops
 
 
