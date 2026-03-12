@@ -2016,14 +2016,8 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   // If this is an instruction which fast-isel has deferred, select it now.
   if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
     Register InReg = FuncInfo.InitializeRegForValue(Inst);
-
-    std::optional<CallingConv::ID> CallConv;
-    auto *CB = dyn_cast<CallBase>(Inst);
-    if (CB && !CB->isInlineAsm())
-      CallConv = CB->getCallingConv();
-
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), CallConv);
+                     Inst->getType(), std::nullopt);
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
@@ -2802,28 +2796,29 @@ SelectionDAGBuilder::ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases) {
   return true;
 }
 
-void SelectionDAGBuilder::visitBr(const BranchInst &I) {
+void SelectionDAGBuilder::visitUncondBr(const UncondBrInst &I) {
   MachineBasicBlock *BrMBB = FuncInfo.MBB;
 
-  // Update machine-CFG edges.
   MachineBasicBlock *Succ0MBB = FuncInfo.getMBB(I.getSuccessor(0));
 
-  if (I.isUnconditional()) {
-    // Update machine-CFG edges.
-    BrMBB->addSuccessor(Succ0MBB);
+  // Update machine-CFG edges.
+  BrMBB->addSuccessor(Succ0MBB);
 
-    // If this is not a fall-through branch or optimizations are switched off,
-    // emit the branch.
-    if (Succ0MBB != NextBlock(BrMBB) ||
-        TM.getOptLevel() == CodeGenOptLevel::None) {
-      auto Br = DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
-                            getControlRoot(), DAG.getBasicBlock(Succ0MBB));
-      setValue(&I, Br);
-      DAG.setRoot(Br);
-    }
-
-    return;
+  // If this is not a fall-through branch or optimizations are switched off,
+  // emit the branch.
+  if (Succ0MBB != NextBlock(BrMBB) ||
+      TM.getOptLevel() == CodeGenOptLevel::None) {
+    auto Br = DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other, getControlRoot(),
+                          DAG.getBasicBlock(Succ0MBB));
+    setValue(&I, Br);
+    DAG.setRoot(Br);
   }
+}
+
+void SelectionDAGBuilder::visitCondBr(const CondBrInst &I) {
+  MachineBasicBlock *BrMBB = FuncInfo.MBB;
+
+  MachineBasicBlock *Succ0MBB = FuncInfo.getMBB(I.getSuccessor(0));
 
   // If this condition is one of the special cases we handle, do special stuff
   // now.
@@ -4791,6 +4786,18 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     if (MemVTs[i] != ValueVTs[i])
       L = DAG.getPtrExtOrTrunc(L, dl, ValueVTs[i]);
 
+    if (MDNode *NoFPClassMD = I.getMetadata(LLVMContext::MD_nofpclass)) {
+      uint64_t FPTestInt =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(NoFPClassMD->getOperand(0))->getValue())
+              ->getZExtValue();
+      if (FPTestInt != fcNone) {
+        SDValue FPTestConst =
+            DAG.getTargetConstant(FPTestInt, SDLoc(), MVT::i32);
+        L = DAG.getNode(ISD::AssertNoFPClass, dl, L.getValueType(), L,
+                        FPTestConst);
+      }
+    }
     Values[i] = L;
   }
 

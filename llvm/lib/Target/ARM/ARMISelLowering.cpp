@@ -1714,10 +1714,10 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
     if (!getTM().isAAPCS_ABI()) {
-      if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() && !isVarArg)
+      if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
-    } else if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() &&
+    } else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
                !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
@@ -3201,11 +3201,10 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
-                    *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
-                    Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-                    Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
-                    Twine(AFI->createPICLabelUId())
-                  );
+        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
+        Twine(DAG.getDataLayout().getInternalSymbolPrefix()) + "CP" +
+            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
+            Twine(AFI->createPICLabelUId()));
     SDValue GA = DAG.getTargetGlobalAddress(dyn_cast<GlobalValue>(GV),
                                             dl, PtrVT);
     return LowerGlobalAddress(GA, DAG);

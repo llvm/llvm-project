@@ -34,7 +34,8 @@ class TensorDescType;
 namespace xegpu {
 
 LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
-                               LayoutKind layoutKind, bool printOnly = false);
+                               LayoutKind layoutKind, unsigned indexBitWidth,
+                               bool printOnly = false);
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 

@@ -124,6 +124,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-std-bit
+  <clang-tidy/checks/modernize/use-std-bit>` check.
+
+  Finds common idioms which can be replaced by standard functions from the
+  ``<bit>`` C++20 header.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
@@ -156,6 +162,12 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- Renamed :doc:`hicpp-exception-baseclass
+  <clang-tidy/checks/hicpp/exception-baseclass>`
+  to :doc:`bugprone-std-exception-baseclass
+  <clang-tidy/checks/bugprone/std-exception-baseclass>`.
+  The `hicpp-exception-baseclass` name is kept as an alias.
 
 - Renamed :doc:`hicpp-ignored-remove-result
   <clang-tidy/checks/hicpp/ignored-remove-result>`
@@ -275,6 +287,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
+  spurious ``missing '(' after '__has_feature'`` errors caused by builtin
+  macros appearing in the return type of a function.
+
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
@@ -287,9 +304,12 @@ Changes in existing checks
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
 - Improved :doc:`performance-faster-string-find
-  <clang-tidy/checks/performance/faster-string-find>` check to
-  analyze calls to the ``starts_with``, ``ends_with``, ``contains``,
-  and ``operator+=`` string member functions.
+  <clang-tidy/checks/performance/faster-string-find>` check:
+
+  - Now analyzes calls to the ``starts_with``, ``ends_with``, ``contains``,
+    and ``operator+=`` string member functions.
+
+  - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
@@ -331,6 +351,12 @@ Changes in existing checks
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
   fix suggestions for C23 and later by not using ``static_cast``.
+
+- Improved :doc:`readability-simplify-subscript-expr
+  <clang-tidy/checks/readability/simplify-subscript-expr>` check by fixing
+  missing warnings when subscripting an object held inside a generic
+  container (e.g. subscripting a ``std::string`` held inside a
+  ``std::vector<std::string>``).
 
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
