@@ -397,9 +397,12 @@ InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
                                  ? OverrideMaxNumRegs
                                  : Ctx.TTI.getNumberOfRegisters(RegClass);
     if (MaxUsers > AvailableRegs) {
+      // Assume that for each register used past what's available we get one
+      // spill and reload.
       unsigned Spills = MaxUsers - AvailableRegs;
       InstructionCost SpillCost =
-          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind);
+          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
+          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
       InstructionCost TotalCost = Spills * SpillCost;
       LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
                         << Spills << " spills of "

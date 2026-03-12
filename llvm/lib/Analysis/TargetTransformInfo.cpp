@@ -820,6 +820,11 @@ InstructionCost TargetTransformInfo::getRegisterClassSpillCost(
   return TTIImpl->getRegisterClassSpillCost(ClassID, CostKind);
 }
 
+InstructionCost TargetTransformInfo::getRegisterClassReloadCost(
+    unsigned ClassID, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getRegisterClassReloadCost(ClassID, CostKind);
+}
+
 TypeSize TargetTransformInfo::getRegisterBitWidth(
     TargetTransformInfo::RegisterKind K) const {
   return TTIImpl->getRegisterBitWidth(K);
