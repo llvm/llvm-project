@@ -8,34 +8,21 @@ name:            test
 body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sgpr0_sgpr1 = S_MOV_B64 $exec
   ; CHECK-NEXT:   V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr0, implicit-def $exec, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr1, $sgpr0_sgpr1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr2_sgpr3 = IMPLICIT_DEF
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.4, implicit $exec
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5 = IMPLICIT_DEF
-  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)

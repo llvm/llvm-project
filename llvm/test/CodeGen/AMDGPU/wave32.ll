@@ -518,7 +518,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GFX1032-NEXT:    s_cbranch_execz .LBB11_6
+; GFX1032-NEXT:    s_cbranch_execz .LBB11_5
 ; GFX1032-NEXT:  ; %bb.1: ; %.preheader
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1032-NEXT:    v_min_u32_e32 v1, 0x100, v0
@@ -541,7 +541,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    s_and_b32 s5, exec_lo, s4
 ; GFX1032-NEXT:    s_or_b32 s2, s5, s2
 ; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
-; GFX1032-NEXT:    s_cbranch_execz .LBB11_6
+; GFX1032-NEXT:    s_cbranch_execz .LBB11_5
 ; GFX1032-NEXT:  .LBB11_4: ; %bb2
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
@@ -550,11 +550,8 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 11, v3
 ; GFX1032-NEXT:    s_cbranch_vccz .LBB11_2
-; GFX1032-NEXT:  ; %bb.5: ; in Loop: Header=BB11_4 Depth=1
-; GFX1032-NEXT:    ; implicit-def: $sgpr3
-; GFX1032-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX1032-NEXT:    s_branch .LBB11_3
-; GFX1032-NEXT:  .LBB11_6: ; %.loopexit
+; GFX1032-NEXT:  .LBB11_5: ; %.loopexit
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_loop_with_if_else_break:
@@ -562,7 +559,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX1064-NEXT:    s_mov_b32 s6, 0
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GFX1064-NEXT:    s_cbranch_execz .LBB11_6
+; GFX1064-NEXT:    s_cbranch_execz .LBB11_5
 ; GFX1064-NEXT:  ; %bb.1: ; %.preheader
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1064-NEXT:    v_min_u32_e32 v1, 0x100, v0
@@ -585,7 +582,7 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
 ; GFX1064-NEXT:    s_or_b64 s[2:3], s[8:9], s[2:3]
 ; GFX1064-NEXT:    s_andn2_b64 exec, exec, s[2:3]
-; GFX1064-NEXT:    s_cbranch_execz .LBB11_6
+; GFX1064-NEXT:    s_cbranch_execz .LBB11_5
 ; GFX1064-NEXT:  .LBB11_4: ; %bb2
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
@@ -594,11 +591,8 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_cmp_gt_i32_e32 vcc, 11, v3
 ; GFX1064-NEXT:    s_cbranch_vccz .LBB11_2
-; GFX1064-NEXT:  ; %bb.5: ; in Loop: Header=BB11_4 Depth=1
-; GFX1064-NEXT:    ; implicit-def: $sgpr6
-; GFX1064-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX1064-NEXT:    s_branch .LBB11_3
-; GFX1064-NEXT:  .LBB11_6: ; %.loopexit
+; GFX1064-NEXT:  .LBB11_5: ; %.loopexit
 ; GFX1064-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -737,7 +731,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_or_b64 s[4:5], s[2:3], s[0:1]
 ; GFX1032-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX1032-NEXT:    s_cbranch_scc0 .LBB15_4
+; GFX1032-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v1, s1
@@ -877,9 +871,6 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1032-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7] offset:16
 ; GFX1032-NEXT:    s_endpgm
-; GFX1032-NEXT:  .LBB15_4:
-; GFX1032-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX1032-NEXT:    s_branch .LBB15_2
 ;
 ; GFX1064-LABEL: test_udiv64:
 ; GFX1064:       ; %bb.0: ; %bb
@@ -889,7 +880,7 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_or_b64 s[4:5], s[2:3], s[0:1]
 ; GFX1064-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX1064-NEXT:    s_cbranch_scc0 .LBB15_4
+; GFX1064-NEXT:    s_cbranch_scc0 .LBB15_2
 ; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v1, s1
@@ -1028,9 +1019,6 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX1064-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7] offset:16
 ; GFX1064-NEXT:    s_endpgm
-; GFX1064-NEXT:  .LBB15_4:
-; GFX1064-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX1064-NEXT:    s_branch .LBB15_2
 bb:
   %tmp = getelementptr inbounds i64, ptr addrspace(1) %arg, i64 1
   %tmp1 = load i64, ptr addrspace(1) %tmp, align 8
@@ -2278,30 +2266,22 @@ define amdgpu_kernel void @test_branch_true() #2 {
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX1032-NEXT:    s_cbranch_execnz .LBB45_2
-; GFX1032-NEXT:  ; %bb.1: ; %for.body.lr.ph
-; GFX1032-NEXT:    s_branch .LBB45_3
-; GFX1032-NEXT:  .LBB45_2: ; %Flow
-; GFX1032-NEXT:    s_branch .LBB45_5
-; GFX1032-NEXT:  .LBB45_3: ; %for.body
+; GFX1032-NEXT:    s_branch .LBB45_1
+; GFX1032-NEXT:  .LBB45_1: ; %for.body
 ; GFX1032-NEXT:    s_mov_b32 vcc_lo, 0
-; GFX1032-NEXT:  ; %bb.4: ; %for.end.loopexit
 ; GFX1032-NEXT:    s_branch .LBB45_2
-; GFX1032-NEXT:  .LBB45_5: ; %for.end
+; GFX1032-NEXT:  .LBB45_2: ; %for.end
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_branch_true:
 ; GFX1064:       ; %bb.0: ; %entry
 ; GFX1064-NEXT:    s_mov_b64 vcc, exec
 ; GFX1064-NEXT:    s_cbranch_execnz .LBB45_2
-; GFX1064-NEXT:  ; %bb.1: ; %for.body.lr.ph
-; GFX1064-NEXT:    s_branch .LBB45_3
-; GFX1064-NEXT:  .LBB45_2: ; %Flow
-; GFX1064-NEXT:    s_branch .LBB45_5
-; GFX1064-NEXT:  .LBB45_3: ; %for.body
+; GFX1064-NEXT:    s_branch .LBB45_1
+; GFX1064-NEXT:  .LBB45_1: ; %for.body
 ; GFX1064-NEXT:    s_mov_b64 vcc, 0
-; GFX1064-NEXT:  ; %bb.4: ; %for.end.loopexit
 ; GFX1064-NEXT:    s_branch .LBB45_2
-; GFX1064-NEXT:  .LBB45_5: ; %for.end
+; GFX1064-NEXT:  .LBB45_2: ; %for.end
 ; GFX1064-NEXT:    s_endpgm
 entry:
   br i1 true, label %for.end, label %for.body.lr.ph

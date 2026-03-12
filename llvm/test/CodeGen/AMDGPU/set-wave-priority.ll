@@ -57,12 +57,9 @@ b:
 ; CHECK:           buffer_load_dwordx2
 ; CHECK-NEXT:      s_setprio 0
 ; CHECK:           s_cbranch_vccnz [[C]]
-; CHECK:       {{.*}}:  ; %b
-; CHECK-NOT:       s_setprio
-; CHECK:           s_branch [[EXIT:.*]]
 ; CHECK:       [[C]]:  ; %c
 ; CHECK-NEXT:      s_setprio 0
-; CHECK:           s_branch [[EXIT]]
+; CHECK:           s_branch [[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 define amdgpu_ps <2 x float> @setprio_follows_setprio(ptr addrspace(8) inreg %p, i32 inreg %i) "amdgpu-wave-priority-threshold"="3" {
 entry:
@@ -164,11 +161,9 @@ another_load:
 ; CHECK:           buffer_load_dwordx2
 ; CHECK-NEXT:      s_setprio 0
 ; CHECK-COUNT-4:   v_add_f32_e32
-; CHECK:           s_cbranch_scc0 [[A:.*]]
+; CHECK:           s_cbranch_scc0 [[END:.*]]
 ; CHECK:       {{.*}}:  ; %b
 ; CHECK-NEXT:      buffer_load_dwordx2
-; CHECK:           s_branch [[END:.*]]
-; CHECK:       [[A]]:  ; %a
 ; CHECK:           s_branch [[END]]
 ; CHECK:       [[END]]:
 define amdgpu_ps <2 x float> @valu_insts_threshold(ptr addrspace(8) inreg %p, i32 inreg %i) "amdgpu-wave-priority-threshold"="4" {

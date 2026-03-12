@@ -22,11 +22,10 @@ define amdgpu_vs float @main(i32 %v) {
 ; GFX6-NEXT:    s_buffer_load_dword s0, s[0:3], 0xf4
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX6-NEXT:    s_cbranch_scc0 .LBB0_6
-; GFX6-NEXT:  ; %bb.5: ; %ENDIF62
-; GFX6-NEXT:    s_branch .LBB0_7
-; GFX6-NEXT:  .LBB0_6: ; %IF63
-; GFX6-NEXT:  .LBB0_7:
+; GFX6-NEXT:    s_cbranch_scc0 .LBB0_5
+; GFX6-NEXT:    s_branch .LBB0_6
+; GFX6-NEXT:  .LBB0_5: ; %IF63
+; GFX6-NEXT:  .LBB0_6:
 ;
 ; GFX8-LABEL: main:
 ; GFX8:       ; %bb.0: ; %main_body
@@ -44,11 +43,10 @@ define amdgpu_vs float @main(i32 %v) {
 ; GFX8-NEXT:    s_buffer_load_dword s0, s[0:3], 0x3d0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_cmp_eq_u32 s0, 0
-; GFX8-NEXT:    s_cbranch_scc0 .LBB0_6
-; GFX8-NEXT:  ; %bb.5: ; %ENDIF62
-; GFX8-NEXT:    s_branch .LBB0_7
-; GFX8-NEXT:  .LBB0_6: ; %IF63
-; GFX8-NEXT:  .LBB0_7:
+; GFX8-NEXT:    s_cbranch_scc0 .LBB0_5
+; GFX8-NEXT:    s_branch .LBB0_6
+; GFX8-NEXT:  .LBB0_5: ; %IF63
+; GFX8-NEXT:  .LBB0_6:
 main_body:
   %d1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 960, i32 0)
   %d2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 976, i32 0)
