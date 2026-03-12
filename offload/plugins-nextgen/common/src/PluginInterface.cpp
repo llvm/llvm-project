@@ -990,9 +990,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
         }
 #endif
 
-        if (!FirstLoadedImage)
-          FirstLoadedImage = LoadedImage;
-
+        FirstLoadedImage = LoadedImage;
+        break;
       } else {
         LoadErrors = joinErrors(std::move(LoadErrors), ImageOrErr.takeError());
       }
