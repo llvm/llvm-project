@@ -486,9 +486,13 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   PP->setPreprocessedOutput(getPreprocessorOutputOpts().ShowCPP);
 
-  if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules)
+  if (PP->getLangOpts().Modules && PP->getLangOpts().ImplicitModules) {
+    // FIXME: We already might've computed the context hash and the specific
+    // module cache path in `FrontendAction::BeginSourceFile()` when turning
+    // "-include-pch <DIR>" into "-include-pch <DIR>/<FILE>". Reuse those here.
     PP->getHeaderSearchInfo().initializeModuleCachePath(
         getInvocation().computeContextHash());
+  }
 
   // Handle generating dependencies, if requested.
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
