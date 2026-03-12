@@ -34,7 +34,6 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
-#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -66,6 +65,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -1644,7 +1644,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
             Targets.insert(Target);
         }
-        MIA->updateState(Inst, Index);
+        MIA->updateState(Inst, STI, Index);
       } else
         MIA->resetState();
     }
@@ -2615,7 +2615,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 *TargetOS << "\n";
             }
 
-            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+            DT->InstrAnalysis->updateState(Inst, DT->SubtargetInfo.get(),
+                                           SectionAddr + Index);
           } else if (!Disassembled && DT->InstrAnalysis) {
             DT->InstrAnalysis->resetState();
           }

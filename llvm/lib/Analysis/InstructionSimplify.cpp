@@ -1950,8 +1950,12 @@ static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
          "Must be and/or");
   CmpPredicate Pred;
   Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
-      !ICmpInst::isEquality(Pred))
+  if (Op0->getType()->isIntOrIntVectorTy(1) &&
+      match(Op0, m_NUWTrunc(m_Value(A)))) {
+    B = ConstantInt::getNullValue(A->getType());
+    Pred = ICmpInst::ICMP_NE;
+  } else if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
+             !ICmpInst::isEquality(Pred))
     return nullptr;
 
   auto Simplify = [&](Value *Res) -> Value * {
