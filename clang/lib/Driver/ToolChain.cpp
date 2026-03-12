@@ -1765,7 +1765,8 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
       // Pass code object version to device toolchain
       // to correctly set metadata in intermediate files.
       if (SameTripleAsHost ||
-          A->getOption().matches(options::OPT_mcode_object_version_EQ))
+          A->getOption().matches(options::OPT_mcode_object_version_EQ) ||
+          A->getOption().matches(options::OPT_mlinker_version_EQ))
         DAL->append(A);
       else
         Modified = true;

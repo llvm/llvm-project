@@ -1,5 +1,3 @@
-// UNSUPPORTED: target={{.*darwin.*}}
-
 ///
 /// Perform several driver tests for OpenMP offloading
 ///
