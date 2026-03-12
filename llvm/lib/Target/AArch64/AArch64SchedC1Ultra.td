@@ -405,6 +405,10 @@ def C1UWrite_6c_1V1_1V01 : SchedWriteRes<[C1UUnitV1, C1UUnitV01]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
+def C1UWrite_5c_1V1_1V01 : SchedWriteRes<[C1UUnitV1, C1UUnitV01]> {
+  let Latency = 5;
+  let NumMicroOps = 2;
+}
 
 def C1UWrite_7c_1M0_V0134 : SchedWriteRes<[C1UUnitM0, C1UUnitV0134]> {
   let Latency = 7;
@@ -444,22 +448,22 @@ def C1UWrite_11c_1V0_4rc : SchedWriteRes<[C1UUnitV0]> {
 }
 
 def C1UWrite_13c_1V0_2rc : SchedWriteRes<[C1UUnitV0]> {
-  let Latency = 12;
+  let Latency = 13;
   let ReleaseAtCycles = [2];
 }
 
-def C1UWrite_12c_1V1_8rc : SchedWriteRes<[C1UUnitV0]> {
+def C1UWrite_12c_1V1_8rc : SchedWriteRes<[C1UUnitV1]> {
   let Latency = 12;
   let ReleaseAtCycles = [8];
 }
 
-def C1UWrite_11c_1V1_4rc : SchedWriteRes<[C1UUnitV0]> {
+def C1UWrite_11c_1V1_4rc : SchedWriteRes<[C1UUnitV1]> {
   let Latency = 11;
   let ReleaseAtCycles = [4];
 }
 
-def C1UWrite_13c_1V1_2rc : SchedWriteRes<[C1UUnitV0]> {
-  let Latency = 12;
+def C1UWrite_13c_1V1_2rc : SchedWriteRes<[C1UUnitV1]> {
+  let Latency = 13;
   let ReleaseAtCycles = [2];
 }
 
@@ -479,7 +483,7 @@ def C1UWrite_9c_1I_1L_1V : SchedWriteRes<[C1UUnitI, C1UUnitL, C1UUnitV]> {
 }
 
 def C1UWrite_10c_1L_1V : SchedWriteRes<[C1UUnitL, C1UUnitV]> {
-  let Latency = 9;
+  let Latency = 10;
   let NumMicroOps = 2;
 }
 
@@ -1862,7 +1866,7 @@ def : InstRW<[C1UWrite_4c_1V], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
 def : InstRW<[C1UWrite_3c_1V1], (instregex "^LAST[AB]_VPZ_[BHSD]")>;
 
 // Extract operation, scalar
-def : InstRW<[C1UWrite_6c_1V1_1V01], (instregex "^LAST[AB]_RPZ_[BHSD]")>;
+def : InstRW<[C1UWrite_5c_1V1_1V01], (instregex "^LAST[AB]_RPZ_[BHSD]")>;
 
 // Histogram operations
 def : InstRW<[C1UWrite_2c_1V], (instregex "^HISTCNT_ZPzZZ_[SD]",
@@ -2087,13 +2091,13 @@ def : InstRW<[C1UWrite_2c_1V], (instregex "^FCPY_ZPmI_[HSD]",
                                          "^FDUP_ZI_[HSD]")>;
 
 // Floating point divide, F16
-def : InstRW<[C1UWrite_12c_1V1_8rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
+def : InstRW<[C1UWrite_12c_1V0_8rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point divide, F32
-def : InstRW<[C1UWrite_11c_1V1_4rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
+def : InstRW<[C1UWrite_11c_1V0_4rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point divide, F64
-def : InstRW<[C1UWrite_13c_1V1_2rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
+def : InstRW<[C1UWrite_13c_1V0_2rc], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point min/max pairwise
 def : InstRW<[C1UWrite_2c_1V], (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
