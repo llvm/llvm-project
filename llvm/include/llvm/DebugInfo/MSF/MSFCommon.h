@@ -114,9 +114,9 @@ inline uint64_t getMaxFileSizeFromBlockSize(uint32_t Size) {
   case 8192:
     return (uint64_t)UINT32_MAX * 2ULL;
   case 16384:
-    return (uint64_t)UINT32_MAX * 3ULL;
-  case 32768:
     return (uint64_t)UINT32_MAX * 4ULL;
+  case 32768:
+    return (uint64_t)UINT32_MAX * 8ULL;
   default:
     return (uint64_t)UINT32_MAX;
   }
