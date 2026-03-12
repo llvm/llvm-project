@@ -99,8 +99,8 @@ llvm.func @host_func(%arg0: i64) {
   omp.parallel {
     // CHECK: llvm.call @foo(%[[ALLOC0]]) : (!llvm.ptr) -> ()
     llvm.call @foo(%0) : (!llvm.ptr) -> ()
-    // CHECK: omp.target
-    omp.target {
+    // CHECK: omp.target kernel_type(generic)
+    omp.target kernel_type(generic) {
       %c0 = llvm.mlir.constant(1 : i64) : i64
       // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem [[ALLOC1_SIZE:.*]] -> !llvm.ptr
       %1 = llvm.alloca %c0 x i32 : (i64) -> !llvm.ptr
@@ -119,7 +119,7 @@ llvm.func @host_func(%arg0: i64) {
 llvm.func @target_spmd() {
   // CHECK-NOT: omp.alloc_shared_mem
   // CHECK-NOT: omp.free_shared_mem
-  omp.target {
+  omp.target kernel_type(spmd) {
     %c = llvm.mlir.constant(1 : i64) : i64
     %0 = llvm.alloca %c x i32 : (i64) -> !llvm.ptr
     omp.teams {

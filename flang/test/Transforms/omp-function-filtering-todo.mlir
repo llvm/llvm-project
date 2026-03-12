@@ -16,7 +16,7 @@ module attributes {omp.is_gpu = true, omp.is_target_device = true} {
   func.func @foo(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
     %ia.map = omp.map.info var_ptr(%ia : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, implicit, to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "ia"}
 
-    omp.target map_entries(%ia.map -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+    omp.target kernel_type(spmd) map_entries(%ia.map -> %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
       omp.parallel {
         %c1_i32 = arith.constant 1 : i32
         omp.wsloop reduction(byref @add_reduction_byref_box_heap_Uxi32 %arg0 -> %arg1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
