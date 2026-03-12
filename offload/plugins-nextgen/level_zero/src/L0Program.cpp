@@ -219,17 +219,17 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   // Use metadata passed during loading if available
   if (Metadata) {
     llvm::object::ImageKind ImageKind = Metadata->ImageKind;
-    std::string CompileOpts = Metadata->StringData.lookup("compile-opts");
-    std::string LinkOpts = Metadata->StringData.lookup("link-opts");
+    StringRef CompileOpts = Metadata->getString("compile-opts");
+    StringRef LinkOpts = Metadata->getString("link-opts");
 
     ODBG(OLDT_Module) << "Using OffloadBinary metadata: kind=" << ImageKind;
 
     std::string Options(BuildOptions);
     if (!CompileOpts.empty() || !LinkOpts.empty()) {
       if (!CompileOpts.empty())
-        Options += " " + CompileOpts;
+        Options += " " + CompileOpts.str();
       if (!LinkOpts.empty())
-        Options += " " + LinkOpts;
+        Options += " " + LinkOpts.str();
       replaceDriverOptsWithBackendOpts(l0Device, Options);
       ODBG(OLDT_Module) << "Using compile options: " << CompileOpts
                         << ", link options: " << LinkOpts;

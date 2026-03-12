@@ -322,6 +322,13 @@ struct OffloadBinMetadataTy {
   std::string Triple;
   std::string Arch;
   llvm::StringMap<std::string> StringData;
+
+  StringRef getString(StringRef Key) const {
+    auto It = StringData.find(Key);
+    if (It != StringData.end())
+      return It->second;
+    return StringRef();
+  }
 };
 
 /// Class wrapping a __tgt_device_image and its offload entry table on a
