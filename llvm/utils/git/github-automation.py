@@ -61,13 +61,14 @@ def escape_description(str):
 
 
 def format_author(user) -> str:
-    # login is the account name, which everyone has. name is a full name for
-    # example "First Last", which not everyone has set.
+    # user.login is the account name, which everyone has. In theory it can be None,
+    # perhaps for closed accounts. user.name is a longer display name for example
+    # "First Last", which not everyone has set.
     author = "Author: "
     if user.name is not None:
         author += f"{user.name} ({user.login})"
     else:
-        author += user.login
+        author += f"{user.login}"
     return author
 
 
