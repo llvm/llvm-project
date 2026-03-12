@@ -436,7 +436,8 @@ struct OpaquePointer {
   unsigned PathLength = 0;
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
-  const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
+  const ValueDecl *getBaseDecl() const { return Base.asValueDecl(); }
+  const VarDecl *getBaseVarDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
 
   OpaquePointer
@@ -730,6 +731,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const ValueDecl *getRootValueDecl() const;
   const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -909,7 +911,7 @@ public:
     }
 
     if (isOpaquePointer()) {
-      if (const VarDecl *BaseDecl = Opaque.getBaseDecl())
+      if (const VarDecl *BaseDecl = Opaque.getBaseVarDecl())
         return BaseDecl->isWeak();
       return false;
     }
