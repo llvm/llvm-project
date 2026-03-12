@@ -927,9 +927,7 @@ bool DiagnoseUnguardedBuiltins::EnterPredicateGuardedContext(CallExpr *P) {
   } else {
     auto *FD = cast<FunctionDecl>(
         cast<DeclRefExpr>(P->getArg(0))->getReferencedDeclOfCallee());
-    unsigned ID = FD->getBuiltinID();
-    StringRef F = SemaRef.getASTContext().BuiltinInfo.getRequiredFeatures(ID);
-    GuardedBuiltins.push_back(ID);
+    GuardedBuiltins.push_back(FD->getBuiltinID());
   }
 
   return IsProcessorCheck;
