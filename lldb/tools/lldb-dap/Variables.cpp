@@ -19,7 +19,6 @@
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
-#include "lldb/lldb-types.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -38,7 +37,7 @@ bool HasInnerVarref(lldb::SBValue &v) {
          v.GetDeclaration().IsValid();
 }
 
-template <typename T> StringMap<uint32_t> distinct_names(T &container) {
+template <typename T> StringMap<uint32_t> DistinctNames(T &container) {
   StringMap<uint32_t> variable_name_counts;
   for (auto variable : container) {
     if (!variable.IsValid())
@@ -49,14 +48,13 @@ template <typename T> StringMap<uint32_t> distinct_names(T &container) {
 }
 
 template <typename T>
-std::vector<Variable> make_variables(
-    VariableReferenceStorage &storage, const Configuration &config,
-    const VariablesArguments &args, T &container, bool is_permanent,
-    const std::map<lldb::user_id_t, std::string> &name_overrides = {}) {
+std::vector<Variable>
+MakeVariables(VariableReferenceStorage &storage, const Configuration &config,
+              const VariablesArguments &args, T &container, bool is_permanent) {
   std::vector<Variable> variables;
 
   // We first find out which variable names are duplicated.
-  StringMap<uint32_t> variable_name_counts = distinct_names(container);
+  StringMap<uint32_t> variable_name_counts = DistinctNames(container);
 
   const bool format_hex = args.format ? args.format->hex : false;
   auto start_it = begin(container) + args.start;
@@ -85,16 +83,10 @@ std::vector<Variable> make_variables(
     if (LLVM_UNLIKELY(var_ref.Kind() == eReferenceKindInvalid))
       break;
 
-    std::optional<std::string> custom_name;
-    auto name_it = name_overrides.find(variable.GetID());
-    if (name_it != name_overrides.end())
-      custom_name = name_it->second;
-
     variables.emplace_back(CreateVariable(
         variable, var_ref, format_hex, config.enableAutoVariableSummaries,
         config.enableSyntheticChildDebugging,
-        variable_name_counts[GetNonNullVariableName(variable)] > 1,
-        custom_name));
+        variable_name_counts[GetNonNullVariableName(variable)] > 1));
   }
 
   return variables;
@@ -113,8 +105,8 @@ public:
     LoadVariables();
     if (m_error.Fail())
       return ToError(m_error);
-    return make_variables(storage, config, args, m_children,
-                          /*is_permanent=*/false, m_names);
+    return MakeVariables(storage, config, args, m_children,
+                         /*is_permanent=*/false);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -160,13 +152,9 @@ private:
       // Show return value if there is any (in the local top frame)
       lldb::SBValue stop_return_value;
       if (m_frame.GetFrameID() == 0 &&
-          ((stop_return_value = m_frame.GetThread().GetStopReturnValue()))) {
-        // FIXME: Cloning this value seems to change the type summary, see
-        // https://github.com/llvm/llvm-project/issues/183578
-        // m_children.Append(stop_return_value.Clone("(Return Value)"));
-        m_names[stop_return_value.GetID()] = "(Return Value)";
-        m_children.Append(stop_return_value);
-      }
+          ((stop_return_value = m_frame.GetThread().GetStopReturnValue())))
+        m_children.Append(stop_return_value.Clone("(Return Value)"));
+
       lldb::SBValueList locals = m_frame.GetVariables(/*arguments=*/true,
                                                       /*locals=*/true,
                                                       /*statics=*/false,
@@ -204,7 +192,6 @@ private:
   lldb::SBFrame m_frame;
   lldb::SBValueList m_children;
   lldb::SBError m_error;
-  std::map<lldb::user_id_t, std::string> m_names;
   ScopeKind m_kind;
   bool m_variables_loaded = false;
 };
@@ -222,7 +209,6 @@ public:
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
-    std::map<lldb::user_id_t, std::string> name_overrides;
     lldb::SBValueList list;
     for (auto inner : m_value)
       list.Append(inner);
@@ -231,18 +217,12 @@ public:
     // of a synthetic member. That eliminates the need for the user to go to the
     // debug console and type `frame var <variable> to get these values.
     if (config.enableSyntheticChildDebugging && m_value.IsSynthetic()) {
-      lldb::SBValue synthetic_value = m_value.GetSyntheticValue();
-      name_overrides[synthetic_value.GetID()] = "[raw]";
-      // FIXME: Cloning the value seems to affect the type summary, see
-      // https://github.com/llvm/llvm-project/issues/183578
-      // m_value.GetSyntheticValue().Clone("[raw]");
-      list.Append(synthetic_value);
+      list.Append(m_value.Clone("[raw]").GetNonSyntheticValue());
     }
 
     const bool is_permanent =
         args.variablesReference.Kind() == eReferenceKindPermanent;
-    return make_variables(storage, config, args, list, is_permanent,
-                          name_overrides);
+    return MakeVariables(storage, config, args, list, is_permanent);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -279,8 +259,8 @@ public:
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
-    return make_variables(storage, config, args, m_value_list,
-                          /*is_permanent=*/true);
+    return MakeVariables(storage, config, args, m_value_list,
+                         /*is_permanent=*/true);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
