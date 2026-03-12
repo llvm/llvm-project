@@ -28,7 +28,7 @@ void loop_all_accesses_in_bounds(int* __counted_by(n) dst, unsigned n) {
 // CHECK-LABEL: @loop_access_by_dereference(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[N]], 0
 // CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.cond.cleanup:
@@ -124,7 +124,7 @@ void loop_all_accesses_in_bounds_variable_start_2_add(int* __counted_by(n) dst,
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP2]], [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[DST:%.*]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 // CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
@@ -177,7 +177,7 @@ void loop_all_accesses_in_bounds_variable_start_4_div(int* __counted_by(n) dst,
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[BUF:%.*]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[BUF:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
@@ -202,7 +202,7 @@ void loop_all_accesses_in_bounds_len_signed(int* __counted_by(len) buf, int len)
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[I_09:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[BUF:%.*]], i64 [[I_09]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[BUF:%.*]], i64 [[I_09]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
@@ -227,14 +227,14 @@ void loop_all_accesses_in_bounds_length_ull(int* __counted_by(len) buf, unsigned
 // CHECK-NEXT:    br i1 [[CMP8_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT2:%.*]] ]
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -259,14 +259,14 @@ void loop_accesses_out_of_bounds_eliminate_lower_check(int* __counted_by(n) dst,
 // CHECK-NEXT:    br i1 [[CMP7]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[LEN]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BUF:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT2:%.*]] ]
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[BUF]], i64 [[INDVARS_IV_NEXT]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[BUF]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -292,14 +292,14 @@ void loop_accesses_out_of_bounds_eliminate_lower_check_len_signed(int* __counted
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[LEN]], -1
 // CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[BUF:%.*]], i64 [[LEN]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BUF:%.*]], i64 [[LEN]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[I_09:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[ADD:%.*]], [[CONT3:%.*]] ]
 // CHECK-NEXT:    [[ADD]] = add nuw i64 [[I_09]], 1
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[BUF]], i64 [[ADD]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[BUF]], i64 [[ADD]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -327,13 +327,13 @@ void loop_accesses_out_of_bounds_eliminate_lower_check_len_ull(int* __counted_by
 // CHECK-NEXT:    br i1 [[CMP8_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT2:%.*]] ]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR]], {{!annotation ![0-9]+}}
@@ -362,13 +362,13 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check(int* __counted_by(n
 // CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT2:%.*]] ]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR]], {{!annotation ![0-9]+}}
@@ -398,13 +398,13 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_signed_len(int* __c
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[N]], -1
 // CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[N]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[N]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[I_010:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[ADD4:%.*]], [[CONT3:%.*]] ]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[I_010]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[I_010]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR]], {{!annotation ![0-9]+}}
@@ -444,14 +444,14 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(int* __coun
 // CHECK-NEXT:    br i1 [[CMP28_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT17:%.*]] ]
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -462,7 +462,7 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(int* __coun
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont2:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 12, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[ADD_PTR]], {{!annotation ![0-9]+}}
@@ -488,13 +488,13 @@ void loop_accesses_eliminate_second_lower_check(int* __counted_by(n) dst, unsign
 // CHECK-LABEL: @loop_accesses_eliminate_later_checks(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT17:%.*]] ]
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 12, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR]], {{!annotation ![0-9]+}}
@@ -509,7 +509,7 @@ void loop_accesses_eliminate_second_lower_check(int* __counted_by(n) dst, unsign
 // CHECK:       cont2:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-// CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+// CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[ARRAYIDX10]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[TMP5]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp ule ptr [[ARRAYIDX10]], [[TMP5]], {{!annotation ![0-9]+}}
@@ -534,7 +534,7 @@ void loop_accesses_eliminate_later_checks(int* __counted_by(n) dst, unsigned n) 
 // CHECK-LABEL: @elim_consecutive_writes(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[DST]], i64 4
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 8, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
@@ -582,9 +582,9 @@ void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[IDX]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [4 x i8], ptr [[DST]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARRAYIDX]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -654,9 +654,9 @@ void elim_consecutive_writes2(int* __counted_by(n) dst, unsigned n, unsigned idx
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont61:
 // CHECK-NEXT:    store i32 0, ptr [[ARG]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[ARRAYIDX54:%.*]] = getelementptr i32, ptr [[ARG]], i64 [[CONV]]
+// CHECK-NEXT:    [[ARRAYIDX54:%.*]] = getelementptr [4 x i8], ptr [[ARG]], i64 [[CONV]]
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX54]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[ADD_PTR64:%.*]] = getelementptr inbounds nuw i32, ptr [[BOUND_PTR_ARITH]], i64 [[CONV]]
+// CHECK-NEXT:    [[ADD_PTR64:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[BOUND_PTR_ARITH]], i64 [[CONV]]
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG]], i64 8, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR64]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH]], [[TMP1]], {{!annotation ![0-9]+}}
@@ -666,7 +666,7 @@ void elim_consecutive_writes2(int* __counted_by(n) dst, unsigned n, unsigned idx
 // CHECK-NEXT:    store i32 1, ptr [[BOUND_PTR_ARITH]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[SUB80:%.*]] = add i32 [[N]], -2, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[IDXPROM81:%.*]] = zext i32 [[SUB80]] to i64
-// CHECK-NEXT:    [[ARRAYIDX82:%.*]] = getelementptr i32, ptr [[BOUND_PTR_ARITH]], i64 [[IDXPROM81]]
+// CHECK-NEXT:    [[ARRAYIDX82:%.*]] = getelementptr [4 x i8], ptr [[BOUND_PTR_ARITH]], i64 [[IDXPROM81]]
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[ARRAYIDX82]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[ADD_PTR64]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[ARRAYIDX82]], [[TMP4]], {{!annotation ![0-9]+}}
@@ -766,7 +766,7 @@ void ptrinc1(char *__counted_by(inLen) buf,
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[RETURN]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ]
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i32, ptr [[TABLE:%.*]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[TABLE:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[BOUND_PTR_ARITH]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP4_NOT:%.*]] = icmp eq i32 [[TMP0]], [[VALUE:%.*]]
 // CHECK-NEXT:    br i1 [[CMP4_NOT]], label [[IF_THEN5:%.*]], label [[FOR_COND]]
@@ -774,9 +774,9 @@ void ptrinc1(char *__counted_by(inLen) buf,
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       if.then5:
-// CHECK-NEXT:    [[BOUND_PTR_ARITH_LE:%.*]] = getelementptr i32, ptr [[TABLE]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH_LE:%.*]] = getelementptr [4 x i8], ptr [[TABLE]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[IDX_EXT_LE:%.*]] = zext i32 [[TABLE_SIZE]] to i64
-// CHECK-NEXT:    [[ADD_PTR_LE:%.*]] = getelementptr inbounds nuw i32, ptr [[TABLE]], i64 [[IDX_EXT_LE]]
+// CHECK-NEXT:    [[ADD_PTR_LE:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TABLE]], i64 [[IDX_EXT_LE]]
 // CHECK-NEXT:    [[DOTNOT33:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH_LE]], [[TABLE]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[DOTNOT33]], label [[TRAP:%.*]], label [[RETURN]], !prof [[PROF30]], {{!annotation ![0-9]+}}
 // CHECK:       return:

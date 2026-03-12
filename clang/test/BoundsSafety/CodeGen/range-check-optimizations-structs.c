@@ -11,8 +11,8 @@ struct struct_1 {
 
 // CHECK-LABEL: @access_struct_1_all_checks_removable(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CMP_NOT24_NOT:%.*]] = icmp eq i32 [[SIZE:%.*]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT24_NOT]], label [[CLEANUP14:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+// CHECK-NEXT:    [[CMP26_NOT:%.*]] = icmp eq i32 [[SIZE:%.*]], 0
+// CHECK-NEXT:    br i1 [[CMP26_NOT]], label [[CLEANUP14:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 // CHECK:       for.body.preheader:
 // CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SIZE]] to i64
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -22,16 +22,16 @@ struct struct_1 {
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[CLEANUP14]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND:%.*]] ]
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [[STRUCT_STRUCT_1:%.*]], ptr [[SRC:%.*]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [8 x i8], ptr [[SRC:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BOUND_PTR_ARITH]], align 8, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP3_NOT:%.*]] = icmp eq ptr [[TMP0]], [[VALUE:%.*]]
 // CHECK-NEXT:    br i1 [[CMP3_NOT]], label [[CLEANUP14_LOOPEXIT_SPLIT_LOOP_EXIT:%.*]], label [[FOR_COND]]
 // CHECK:       cleanup14.loopexit.split.loop.exit:
-// CHECK-NEXT:    [[BOUND_PTR_ARITH_LE:%.*]] = getelementptr [[STRUCT_STRUCT_1]], ptr [[SRC]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH_LE:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    br label [[CLEANUP14]]
 // CHECK:       cleanup14:
-// CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[BOUND_PTR_ARITH_LE]], [[CLEANUP14_LOOPEXIT_SPLIT_LOOP_EXIT]] ], [ null, [[FOR_COND]] ]
-// CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
+// CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[BOUND_PTR_ARITH_LE]], [[CLEANUP14_LOOPEXIT_SPLIT_LOOP_EXIT]] ], [ null, [[FOR_COND]] ]
+// CHECK-NEXT:    ret ptr [[TMP1]]
 //
 struct struct_1 * access_struct_1_all_checks_removable(
     struct struct_1 *__counted_by(size) src, unsigned size, void *value) {
@@ -46,7 +46,7 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-LABEL: @access_struct_1_checks_needed(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[SIZE:%.*]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCT_1:%.*]], ptr [[SRC:%.*]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[SRC:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_COND:%.*]]
 // CHECK:       for.cond:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[CONT1:%.*]] ], [ 0, [[ENTRY:%.*]] ]
@@ -54,10 +54,10 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[CLEANUP14:%.*]], label [[FOR_BODY:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [[STRUCT_STRUCT_1]], ptr [[SRC]], i64 [[INDVARS_IV_NEXT]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [8 x i8], ptr [[SRC]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BOUND_PTR_ARITH]], i64 8
-// CHECK-NEXT:    [[DOTNOT25:%.*]] = icmp ugt ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT25]], label [[TRAP:%.*]], label [[CONT1]], !prof [[PROF10:![0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[DOTNOT27:%.*]] = icmp ugt ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT27]], label [[TRAP:%.*]], label [[CONT1]], !prof [[PROF11:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -67,10 +67,10 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-NEXT:    br i1 [[CMP3_NOT]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[FOR_COND]]
 // CHECK:       boundscheck.notnull:
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CLEANUP14]], !prof [[PROF13:![0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CLEANUP14]], !prof [[PROF14:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cleanup14:
-// CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[BOUND_PTR_ARITH]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[FOR_COND]] ]
-// CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
+// CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[BOUND_PTR_ARITH]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[FOR_COND]] ]
+// CHECK-NEXT:    ret ptr [[TMP2]]
 //
 struct struct_1 * access_struct_1_checks_needed(
     struct struct_1 *__counted_by(size) src, unsigned size, void *value) {
@@ -89,14 +89,14 @@ struct struct_2 {
 
 // CHECK-LABEL: @access_struct_2_all_checks_removable(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CMP_NOT38_NOT:%.*]] = icmp eq i32 [[SIZE:%.*]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT38_NOT]], label [[CLEANUP25:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+// CHECK-NEXT:    [[CMP40_NOT:%.*]] = icmp eq i32 [[SIZE:%.*]], 0
+// CHECK-NEXT:    br i1 [[CMP40_NOT]], label [[CLEANUP25:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 // CHECK:       for.body.preheader:
 // CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SIZE]] to i64
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [[STRUCT_STRUCT_2:%.*]], ptr [[SRC:%.*]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [8 x i8], ptr [[SRC:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[BOUND_PTR_ARITH]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[TMP0]], [[A:%.*]]
 // CHECK-NEXT:    br i1 [[CMP3]], label [[CONT12:%.*]], label [[FOR_INC]]
@@ -110,8 +110,8 @@ struct struct_2 {
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[CLEANUP25]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
 // CHECK:       cleanup25:
-// CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[BOUND_PTR_ARITH]], [[CONT12]] ], [ null, [[FOR_INC]] ]
-// CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
+// CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[BOUND_PTR_ARITH]], [[CONT12]] ], [ null, [[FOR_INC]] ]
+// CHECK-NEXT:    ret ptr [[TMP2]]
 //
 struct struct_2 * access_struct_2_all_checks_removable(
     struct struct_2 *__counted_by(size) src, unsigned size, int a, int b) {
@@ -143,7 +143,7 @@ typedef struct {
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 // CHECK-NEXT:    [[RES_031:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[ADD21]], [[FOR_BODY]] ]
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [[STRUCT_MYSTRUCT:%.*]], ptr [[ITEMS:%.*]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [12 x i8], ptr [[ITEMS:%.*]], i64 [[INDVARS_IV]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[BOUND_PTR_ARITH]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw i8, ptr [[BOUND_PTR_ARITH]], i64 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4, {{!tbaa ![0-9]+}}
