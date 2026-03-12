@@ -585,6 +585,31 @@ mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   return mlir::success();
 }
 
+static cir::StoreOp findDominatingStoreToReturnValue(CIRGenFunction &cgf) {
+  mlir::Block *currentBlock = cgf.getBuilder().getInsertionBlock();
+  if (!currentBlock || currentBlock->empty())
+    return nullptr;
+
+  if (!cgf.fnRetAlloca)
+    return nullptr;
+
+  mlir::Value retAlloca = *cgf.fnRetAlloca;
+
+  for (auto &op : llvm::reverse(*currentBlock)) {
+    if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
+      if (storeOp.getAddr() == retAlloca) {
+        return storeOp;
+      }
+      return nullptr;
+    }
+
+    if (op.hasTrait<mlir::OpTrait::IsTerminator>() || isa<cir::CallOp>(op)) {
+      return nullptr;
+    }
+  }
+  return nullptr;
+}
+
 mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   mlir::Location loc = getLoc(s.getSourceRange());
   const Expr *rv = s.getRetValue();
@@ -677,15 +702,21 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   // a shared return block. Because CIR handles branching through cleanups
   // during the CFG flattening phase, we can just emit the return statement
   // directly.
-  // TODO(cir): Eliminate this redundant load and the store above when we can.
   if (fnRetAlloca) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
-    cir::AllocaOp retAlloca =
-        mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
-    auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
-                                     *fnRetAlloca);
+    mlir::Value returnValue;
+    if (cir::StoreOp storeOp = findDominatingStoreToReturnValue(*this)) {
+      returnValue = storeOp.getValue();
+      storeOp.erase();
+    } else {
+      // Load the value from `__retval` and return it via the `cir.return` op.
+      cir::AllocaOp retAlloca =
+          mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+      auto loadOp = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                        *fnRetAlloca);
+      returnValue = loadOp.getResult();
+    }
 
-    cir::ReturnOp::create(builder, loc, {value});
+    cir::ReturnOp::create(builder, loc, {returnValue});
   } else {
     cir::ReturnOp::create(builder, loc);
   }
