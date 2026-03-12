@@ -144,22 +144,34 @@ int main(int, char**)
       using T64  = unsigned _BitInt(64);
       using T128 = unsigned _BitInt(128);
 
+      // Byte-aligned widths: numeric_limits::digits is correct, so all
+      // values including all-ones are safe to test.
       assert(std::countl_one(T32(0)) == 0);
+      assert(std::countl_one(T32(1)) == 0);
       assert(std::countl_one(T32(~T32(0))) == 32);
+      assert(std::countl_one(T32(~T32(0) - 1)) == 31);
+      assert(std::countl_one(T32(~T32(0) - 2)) == 30);
+      assert(std::countl_one(T32(~T32(0) - 8)) == 28);
+      assert(std::countl_one(T32(~T32(0) - 127)) == 25);
+      assert(std::countl_one(T32(~T32(0) - 128)) == 24);
       assert(std::countl_one(T64(0)) == 0);
       assert(std::countl_one(T64(~T64(0))) == 64);
+      assert(std::countl_one(T64(~T64(0) - 1)) == 63);
       assert(std::countl_one(T128(0)) == 0);
       assert(std::countl_one(T128(~T128(0))) == 128);
+      assert(std::countl_one(T128(~T128(0) - 1)) == 127);
 
-      // Odd (non-byte-aligned) widths: countl_one is safe for values that
-      // are not all-ones (calls countl_zero(~x); digits fallback only
-      // triggers when ~x == 0, i.e. x is all-ones).
+      // Odd (non-byte-aligned) widths: safe for values that are not all-ones
+      // (calls countl_zero(~x); digits fallback triggers when x is all-ones).
       using T13 = unsigned _BitInt(13);
       using T77 = unsigned _BitInt(77);
       assert(std::countl_one(T13(0)) == 0);
       assert(std::countl_one(T13(1)) == 0);
+      assert(std::countl_one(T13(~T13(0) - 1)) == 12);
+      assert(std::countl_one(T13(~T13(0) - 2)) == 11);
       assert(std::countl_one(T77(0)) == 0);
       assert(std::countl_one(T77(1)) == 0);
+      assert(std::countl_one(T77(~T77(0) - 1)) == 76);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

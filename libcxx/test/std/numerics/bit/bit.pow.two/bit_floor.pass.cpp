@@ -148,20 +148,39 @@ int main(int, char**)
 
       assert(std::bit_floor(T32(0)) == T32(0));
       assert(std::bit_floor(T32(1)) == T32(1));
+      assert(std::bit_floor(T32(2)) == T32(2));
       assert(std::bit_floor(T32(3)) == T32(2));
+      assert(std::bit_floor(T32(4)) == T32(4));
+      assert(std::bit_floor(T32(5)) == T32(4));
+      assert(std::bit_floor(T32(7)) == T32(4));
+      assert(std::bit_floor(T32(8)) == T32(8));
+      assert(std::bit_floor(T32(9)) == T32(8));
+      assert(std::bit_floor(T32(127)) == T32(64));
       assert(std::bit_floor(T32(128)) == T32(128));
+      assert(std::bit_floor(T32(129)) == T32(128));
       assert(std::bit_floor(T32(255)) == T32(128));
+      assert(std::bit_floor(T32(~T32(0))) == T32(T32(1) << 31));
       assert(std::bit_floor(T64(0)) == T64(0));
       assert(std::bit_floor(T64(1)) == T64(1));
+      assert(std::bit_floor(T64(127)) == T64(64));
+      assert(std::bit_floor(T64(128)) == T64(128));
+      assert(std::bit_floor(T64(~T64(0))) == T64(T64(1) << 63));
       assert(std::bit_floor(T128(0)) == T128(0));
       assert(std::bit_floor(T128(1)) == T128(1));
+      assert(std::bit_floor(T128(~T128(0))) == T128(T128(1) << 127));
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {
       using T256 = unsigned _BitInt(256);
       assert(std::bit_floor(T256(0)) == T256(0));
       assert(std::bit_floor(T256(1)) == T256(1));
+      assert(std::bit_floor(T256(2)) == T256(2));
       assert(std::bit_floor(T256(3)) == T256(2));
+      assert(std::bit_floor(T256(7)) == T256(4));
+      assert(std::bit_floor(T256(127)) == T256(64));
+      assert(std::bit_floor(T256(128)) == T256(128));
+      assert(std::bit_floor(T256(129)) == T256(128));
+      assert(std::bit_floor(T256(~T256(0))) == T256(T256(1) << 255));
     }
 #  endif
 #endif // __has_extension(bit_int)

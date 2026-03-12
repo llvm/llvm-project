@@ -151,10 +151,21 @@ int main(int, char**)
 
       assert(std::bit_width(T32(0)) == 0);
       assert(std::bit_width(T32(1)) == 1);
-      assert(std::bit_width(T32(~T32(0))) == 32);
+      assert(std::bit_width(T32(2)) == 2);
+      assert(std::bit_width(T32(3)) == 2);
+      assert(std::bit_width(T32(4)) == 3);
+      assert(std::bit_width(T32(7)) == 3);
+      assert(std::bit_width(T32(8)) == 4);
+      assert(std::bit_width(T32(9)) == 4);
+      assert(std::bit_width(T32(127)) == 7);
+      assert(std::bit_width(T32(128)) == 8);
       assert(std::bit_width(T32(1024)) == 11);
+      assert(std::bit_width(T32(~T32(0) - 1)) == 32);
+      assert(std::bit_width(T32(~T32(0))) == 32);
       assert(std::bit_width(T64(0)) == 0);
       assert(std::bit_width(T64(1)) == 1);
+      assert(std::bit_width(T64(127)) == 7);
+      assert(std::bit_width(T64(128)) == 8);
       assert(std::bit_width(T64(~T64(0))) == 64);
       assert(std::bit_width(T128(0)) == 0);
       assert(std::bit_width(T128(1)) == 1);
@@ -165,6 +176,10 @@ int main(int, char**)
       using T256 = unsigned _BitInt(256);
       assert(std::bit_width(T256(0)) == 0);
       assert(std::bit_width(T256(1)) == 1);
+      assert(std::bit_width(T256(127)) == 7);
+      assert(std::bit_width(T256(128)) == 8);
+      assert(std::bit_width(T256(1) << 100) == 101);
+      assert(std::bit_width(T256(1) << 200) == 201);
       assert(std::bit_width(T256(~T256(0))) == 256);
     }
 #  endif

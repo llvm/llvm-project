@@ -158,24 +158,44 @@ int main(int, char**)
 
       assert(std::popcount(T8(0)) == 0);
       assert(std::popcount(T8(1)) == 1);
+      assert(std::popcount(T8(2)) == 1);
+      assert(std::popcount(T8(3)) == 2);
+      assert(std::popcount(T8(7)) == 3);
+      assert(std::popcount(T8(0x55)) == 4);
       assert(std::popcount(T8(0xFF)) == 8);
       assert(std::popcount(T32(0)) == 0);
+      assert(std::popcount(T32(1)) == 1);
+      assert(std::popcount(T32(3)) == 2);
+      assert(std::popcount(T32(127)) == 7);
+      assert(std::popcount(T32(128)) == 1);
+      assert(std::popcount(T32(130)) == 2);
       assert(std::popcount(T32(~T32(0))) == 32);
       assert(std::popcount(T64(0)) == 0);
+      assert(std::popcount(T64(1)) == 1);
+      assert(std::popcount(T64(127)) == 7);
       assert(std::popcount(T64(~T64(0))) == 64);
+      assert(std::popcount(T64(~T64(0) >> 1)) == 63);
       assert(std::popcount(T128(0)) == 0);
+      assert(std::popcount(T128(1)) == 1);
       assert(std::popcount(T128(~T128(0))) == 128);
+      assert(std::popcount(T128(~T128(0) - 1)) == 127);
 
-      // Odd (non-byte-aligned) widths: popcount is safe regardless of
-      // numeric_limits::digits (no digits dependency).
+      // Odd (non-byte-aligned) widths: popcount has no digits dependency.
       using T13 = unsigned _BitInt(13);
       using T77 = unsigned _BitInt(77);
       assert(std::popcount(T13(0)) == 0);
       assert(std::popcount(T13(1)) == 1);
+      assert(std::popcount(T13(3)) == 2);
+      assert(std::popcount(T13(7)) == 3);
+      assert(std::popcount(T13(127)) == 7);
+      assert(std::popcount(T13(128)) == 1);
       assert(std::popcount(T13(~T13(0))) == 13);
       assert(std::popcount(T77(0)) == 0);
       assert(std::popcount(T77(1)) == 1);
+      assert(std::popcount(T77(3)) == 2);
+      assert(std::popcount(T77(127)) == 7);
       assert(std::popcount(T77(~T77(0))) == 77);
+      assert(std::popcount(T77(~T77(0) - 1)) == 76);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

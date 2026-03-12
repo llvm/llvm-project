@@ -149,25 +149,45 @@ int main(int, char**)
 
       assert(!std::has_single_bit(T32(0)));
       assert(std::has_single_bit(T32(1)));
+      assert(std::has_single_bit(T32(2)));
+      assert(!std::has_single_bit(T32(3)));
+      assert(std::has_single_bit(T32(4)));
+      assert(!std::has_single_bit(T32(5)));
+      assert(!std::has_single_bit(T32(6)));
+      assert(!std::has_single_bit(T32(7)));
+      assert(std::has_single_bit(T32(8)));
+      assert(!std::has_single_bit(T32(9)));
       assert(std::has_single_bit(T32(128)));
+      assert(!std::has_single_bit(T32(127)));
       assert(!std::has_single_bit(T32(129)));
+      assert(!std::has_single_bit(T32(~T32(0))));
       assert(!std::has_single_bit(T64(0)));
       assert(std::has_single_bit(T64(1)));
+      assert(std::has_single_bit(T64(T64(1) << 32)));
+      assert(!std::has_single_bit(T64(~T64(0))));
       assert(!std::has_single_bit(T128(0)));
       assert(std::has_single_bit(T128(1)));
+      assert(std::has_single_bit(T128(T128(1) << 64)));
+      assert(!std::has_single_bit(T128(~T128(0))));
 
-      // Odd (non-byte-aligned) widths: has_single_bit is safe regardless of
-      // numeric_limits::digits (no digits dependency).
+      // Odd (non-byte-aligned) widths: has_single_bit has no digits dependency.
       using T13 = unsigned _BitInt(13);
       using T77 = unsigned _BitInt(77);
       assert(!std::has_single_bit(T13(0)));
       assert(std::has_single_bit(T13(1)));
+      assert(std::has_single_bit(T13(2)));
+      assert(!std::has_single_bit(T13(3)));
+      assert(std::has_single_bit(T13(4)));
       assert(std::has_single_bit(T13(64)));
       assert(!std::has_single_bit(T13(65)));
+      assert(!std::has_single_bit(T13(~T13(0))));
       assert(!std::has_single_bit(T77(0)));
       assert(std::has_single_bit(T77(1)));
+      assert(std::has_single_bit(T77(2)));
+      assert(!std::has_single_bit(T77(3)));
       assert(std::has_single_bit(T77(T77(1) << 76)));
       assert(!std::has_single_bit(T77((T77(1) << 76) | T77(1))));
+      assert(!std::has_single_bit(T77(~T77(0))));
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

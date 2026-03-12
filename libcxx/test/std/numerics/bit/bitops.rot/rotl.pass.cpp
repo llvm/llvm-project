@@ -172,12 +172,26 @@ int main(int, char**)
       using T64  = unsigned _BitInt(64);
       using T128 = unsigned _BitInt(128);
 
+      T32 m32 = ~T32(0);
       assert(std::rotl(T32(1), 0) == T32(1));
+      assert(std::rotl(T32(1), 1) == T32(2));
       assert(std::rotl(T32(1), 4) == T32(16));
+      assert(std::rotl(T32(1), 7) == T32(128));
+      assert(std::rotl(T32(128), -1) == T32(64));
+      assert(std::rotl(T32(128), -7) == T32(1));
+      assert(std::rotl(T32(m32 - 1), 0) == T32(m32 - 1));
+      assert(std::rotl(T32(m32 - 1), 1) == T32(m32 - 2));
+      assert(std::rotl(T32(m32 - 1), 4) == T32(m32 - 16));
+      // Full rotation returns original
+      assert(std::rotl(T32(1), 32) == T32(1));
       assert(std::rotl(T64(1), 0) == T64(1));
       assert(std::rotl(T64(1), 4) == T64(16));
+      assert(std::rotl(T64(1), -1) == (T64(1) << 63));
+      assert(std::rotl(T64(1), 64) == T64(1));
       assert(std::rotl(T128(1), 0) == T128(1));
       assert(std::rotl(T128(1), 4) == T128(16));
+      assert(std::rotl(T128(1), -1) == (T128(1) << 127));
+      assert(std::rotl(T128(1), 128) == T128(1));
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {
@@ -185,6 +199,9 @@ int main(int, char**)
       assert(std::rotl(T256(1), 0) == T256(1));
       assert(std::rotl(T256(1), 4) == T256(16));
       assert(std::rotl(T256(1), 200) == (T256(1) << 200));
+      assert(std::rotl(T256(1), -1) == (T256(1) << 255));
+      assert(std::rotl(T256(1), 256) == T256(1));
+      assert(std::rotl(T256(~T256(0) - 1), 1) == T256(~T256(0) - 2));
     }
 #  endif
 #endif // __has_extension(bit_int)

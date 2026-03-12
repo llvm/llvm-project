@@ -148,25 +148,44 @@ int main(int, char**)
       using T64  = unsigned _BitInt(64);
       using T128 = unsigned _BitInt(128);
 
+      // Byte-aligned widths: numeric_limits::digits is correct, so all
+      // values including all-ones are safe to test.
       assert(std::countr_one(T32(0)) == 0);
-      assert(std::countr_one(T32(~T32(0))) == 32);
       assert(std::countr_one(T32(1)) == 1);
+      assert(std::countr_one(T32(2)) == 0);
+      assert(std::countr_one(T32(3)) == 2);
+      assert(std::countr_one(T32(4)) == 0);
+      assert(std::countr_one(T32(5)) == 1);
+      assert(std::countr_one(T32(7)) == 3);
+      assert(std::countr_one(T32(15)) == 4);
+      assert(std::countr_one(T32(127)) == 7);
+      assert(std::countr_one(T32(128)) == 0);
+      assert(std::countr_one(T32(~T32(0) - 1)) == 0);
+      assert(std::countr_one(T32(~T32(0))) == 32);
       assert(std::countr_one(T64(0)) == 0);
+      assert(std::countr_one(T64(1)) == 1);
+      assert(std::countr_one(T64(7)) == 3);
       assert(std::countr_one(T64(~T64(0))) == 64);
       assert(std::countr_one(T128(0)) == 0);
+      assert(std::countr_one(T128(1)) == 1);
       assert(std::countr_one(T128(~T128(0))) == 128);
 
-      // Odd (non-byte-aligned) widths: countr_one is safe for values that
-      // are not all-ones (calls countr_zero(~x); digits fallback only
-      // triggers when ~x == 0, i.e. x is all-ones).
+      // Odd (non-byte-aligned) widths: safe for values that are not all-ones
+      // (calls countr_zero(~x); digits fallback triggers when x is all-ones).
       using T13 = unsigned _BitInt(13);
       using T77 = unsigned _BitInt(77);
       assert(std::countr_one(T13(0)) == 0);
       assert(std::countr_one(T13(1)) == 1);
+      assert(std::countr_one(T13(3)) == 2);
       assert(std::countr_one(T13(7)) == 3);
+      assert(std::countr_one(T13(15)) == 4);
+      assert(std::countr_one(T13(127)) == 7);
+      assert(std::countr_one(T13(128)) == 0);
       assert(std::countr_one(T77(0)) == 0);
       assert(std::countr_one(T77(1)) == 1);
+      assert(std::countr_one(T77(3)) == 2);
       assert(std::countr_one(T77(7)) == 3);
+      assert(std::countr_one(T77(127)) == 7);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

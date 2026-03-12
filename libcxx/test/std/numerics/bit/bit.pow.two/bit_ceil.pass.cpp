@@ -149,20 +149,37 @@ int main(int, char**)
 
       assert(std::bit_ceil(T32(0)) == T32(1));
       assert(std::bit_ceil(T32(1)) == T32(1));
+      assert(std::bit_ceil(T32(2)) == T32(2));
       assert(std::bit_ceil(T32(3)) == T32(4));
+      assert(std::bit_ceil(T32(4)) == T32(4));
+      assert(std::bit_ceil(T32(5)) == T32(8));
+      assert(std::bit_ceil(T32(7)) == T32(8));
+      assert(std::bit_ceil(T32(8)) == T32(8));
+      assert(std::bit_ceil(T32(9)) == T32(16));
+      assert(std::bit_ceil(T32(60)) == T32(64));
+      assert(std::bit_ceil(T32(64)) == T32(64));
+      assert(std::bit_ceil(T32(65)) == T32(128));
       assert(std::bit_ceil(T32(128)) == T32(128));
       assert(std::bit_ceil(T32(129)) == T32(256));
       assert(std::bit_ceil(T64(0)) == T64(1));
       assert(std::bit_ceil(T64(1)) == T64(1));
+      assert(std::bit_ceil(T64(3)) == T64(4));
+      assert(std::bit_ceil(T64(65)) == T64(128));
       assert(std::bit_ceil(T128(0)) == T128(1));
       assert(std::bit_ceil(T128(1)) == T128(1));
+      assert(std::bit_ceil(T128(3)) == T128(4));
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {
       using T256 = unsigned _BitInt(256);
       assert(std::bit_ceil(T256(0)) == T256(1));
       assert(std::bit_ceil(T256(1)) == T256(1));
+      assert(std::bit_ceil(T256(2)) == T256(2));
       assert(std::bit_ceil(T256(3)) == T256(4));
+      assert(std::bit_ceil(T256(7)) == T256(8));
+      assert(std::bit_ceil(T256(127)) == T256(128));
+      assert(std::bit_ceil(T256(128)) == T256(128));
+      assert(std::bit_ceil(T256(129)) == T256(256));
     }
 #  endif
 #endif // __has_extension(bit_int)

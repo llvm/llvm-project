@@ -145,20 +145,42 @@ int main(int, char**)
       using T64  = unsigned _BitInt(64);
       using T128 = unsigned _BitInt(128);
 
+      // Byte-aligned widths: numeric_limits::digits is correct, so all
+      // values including zero are safe to test.
+      using T8 = unsigned _BitInt(8);
+      assert(std::countr_zero(T8(0)) == 8);
+      assert(std::countr_zero(T8(1)) == 0);
+      assert(std::countr_zero(T8(2)) == 1);
+      assert(std::countr_zero(T8(3)) == 0);
+      assert(std::countr_zero(T8(4)) == 2);
+      assert(std::countr_zero(T8(8)) == 3);
+      assert(std::countr_zero(T8(128)) == 7);
+      assert(std::countr_zero(T8(~T8(0))) == 0);
+      assert(std::countr_zero(T32(0)) == 32);
       assert(std::countr_zero(T32(1)) == 0);
+      assert(std::countr_zero(T32(2)) == 1);
+      assert(std::countr_zero(T32(4)) == 2);
+      assert(std::countr_zero(T32(126)) == 1);
+      assert(std::countr_zero(T32(128)) == 7);
       assert(std::countr_zero(T32(1) << 31) == 31);
+      assert(std::countr_zero(T64(0)) == 64);
       assert(std::countr_zero(T64(1)) == 0);
       assert(std::countr_zero(T64(1) << 63) == 63);
+      assert(std::countr_zero(T128(0)) == 128);
       assert(std::countr_zero(T128(1)) == 0);
       assert(std::countr_zero(T128(1) << 127) == 127);
 
-      // Odd (non-byte-aligned) widths: countr_zero is safe for nonzero
-      // inputs (digits is only the fallback for zero via __builtin_ctzg).
+      // Odd (non-byte-aligned) widths: safe for nonzero inputs only
+      // (digits is the fallback for zero via __builtin_ctzg).
       using T13 = unsigned _BitInt(13);
       using T77 = unsigned _BitInt(77);
       assert(std::countr_zero(T13(1)) == 0);
+      assert(std::countr_zero(T13(2)) == 1);
+      assert(std::countr_zero(T13(4)) == 2);
+      assert(std::countr_zero(T13(128)) == 7);
       assert(std::countr_zero(T13(1) << 12) == 12);
       assert(std::countr_zero(T77(1)) == 0);
+      assert(std::countr_zero(T77(2)) == 1);
       assert(std::countr_zero(T77(1) << 76) == 76);
     }
 #  if __BITINT_MAXWIDTH__ >= 256

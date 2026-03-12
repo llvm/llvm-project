@@ -144,23 +144,44 @@ int main(int, char**)
       using T64  = unsigned _BitInt(64);
       using T128 = unsigned _BitInt(128);
 
-      assert(std::countl_zero(T8(~T8(0))) == 0);
+      // Byte-aligned widths: numeric_limits::digits is correct, so all
+      // values including zero are safe to test.
+      assert(std::countl_zero(T8(0)) == 8);
       assert(std::countl_zero(T8(1)) == 7);
-      assert(std::countl_zero(T32(~T32(0))) == 0);
+      assert(std::countl_zero(T8(2)) == 6);
+      assert(std::countl_zero(T8(3)) == 6);
+      assert(std::countl_zero(T8(4)) == 5);
+      assert(std::countl_zero(T8(8)) == 4);
+      assert(std::countl_zero(T8(127)) == 1);
+      assert(std::countl_zero(T8(128)) == 0);
+      assert(std::countl_zero(T8(~T8(0))) == 0);
+      assert(std::countl_zero(T32(0)) == 32);
       assert(std::countl_zero(T32(1)) == 31);
-      assert(std::countl_zero(T64(~T64(0))) == 0);
+      assert(std::countl_zero(T32(2)) == 30);
+      assert(std::countl_zero(T32(3)) == 30);
+      assert(std::countl_zero(T32(127)) == 25);
+      assert(std::countl_zero(T32(128)) == 24);
+      assert(std::countl_zero(T32(~T32(0))) == 0);
+      assert(std::countl_zero(T64(0)) == 64);
       assert(std::countl_zero(T64(1)) == 63);
-      assert(std::countl_zero(T128(~T128(0))) == 0);
+      assert(std::countl_zero(T64(~T64(0))) == 0);
+      assert(std::countl_zero(T128(0)) == 128);
       assert(std::countl_zero(T128(1)) == 127);
+      assert(std::countl_zero(T128(~T128(0))) == 0);
 
-      // Odd (non-byte-aligned) widths: countl_zero is safe for nonzero
-      // inputs (digits is only the fallback for zero via __builtin_clzg).
+      // Odd (non-byte-aligned) widths: safe for nonzero inputs only
+      // (digits is the fallback for zero via __builtin_clzg).
       using T13 = unsigned _BitInt(13);
       using T77 = unsigned _BitInt(77);
-      assert(std::countl_zero(T13(~T13(0))) == 0);
       assert(std::countl_zero(T13(1)) == 12);
-      assert(std::countl_zero(T77(~T77(0))) == 0);
+      assert(std::countl_zero(T13(2)) == 11);
+      assert(std::countl_zero(T13(3)) == 11);
+      assert(std::countl_zero(T13(127)) == 6);
+      assert(std::countl_zero(T13(128)) == 5);
+      assert(std::countl_zero(T13(~T13(0))) == 0);
       assert(std::countl_zero(T77(1)) == 76);
+      assert(std::countl_zero(T77(T77(1) << 76)) == 0);
+      assert(std::countl_zero(T77(~T77(0))) == 0);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {
