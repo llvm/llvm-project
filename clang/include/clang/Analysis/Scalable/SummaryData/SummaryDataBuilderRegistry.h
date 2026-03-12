@@ -1,4 +1,4 @@
-//===- SummaryViewBuilderRegistry.h ---------------------------------------===//
+//===- SummaryDataBuilderRegistry.h ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,36 +6,36 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Registry for SummaryViewBuilders.
+// Registry for SummaryDataBuilders.
 //
 // To register a builder, add a static Add<BuilderT> in the builder's
 // translation unit:
 //
-//   static SummaryViewBuilderRegistry::Add<MyViewBuilder>
-//       Registered("View builder for MyAnalysis");
+//   static SummaryDataBuilderRegistry::Add<MyDataBuilder>
+//       Registered("Data builder for MyAnalysis");
 //
 // The registry entry name is derived automatically from
-// MyViewBuilder::summaryName(), which returns MyView::summaryName().
+// MyDataBuilder::summaryName(), which returns MyData::summaryName().
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDERREGISTRY_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDERREGISTRY_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
 
-#include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilder.h"
+#include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilder.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
 #include <string>
 
 namespace clang::ssaf {
 
-/// Registry for SummaryViewBuilder implementations.
+/// Registry for SummaryDataBuilder implementations.
 ///
 /// Provides an Add helper that derives the registry entry name from
 /// BuilderT::summaryName(), eliminating the possibility of registering a
 /// builder under the wrong name.
-class SummaryViewBuilderRegistry {
-  using RegistryT = llvm::Registry<SummaryViewBuilderBase>;
+class SummaryDataBuilderRegistry {
+  using RegistryT = llvm::Registry<SummaryDataBuilderBase>;
 
 public:
   /// Registers \p BuilderT under the name returned by
@@ -54,10 +54,10 @@ public:
 
   /// Instantiates the builder registered under \p Name, or returns nullptr
   /// if no such builder is registered.
-  static std::unique_ptr<SummaryViewBuilderBase>
+  static std::unique_ptr<SummaryDataBuilderBase>
   instantiate(llvm::StringRef Name);
 };
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWBUILDERREGISTRY_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H

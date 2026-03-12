@@ -1,4 +1,4 @@
-//===- SummaryViewTraits.h ------------------------------------------------===//
+//===- SummaryDataTraits.h ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Type traits for SummaryView subclasses.
+// Type traits for SummaryData subclasses.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWTRAITS_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWTRAITS_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATATRAITS_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATATRAITS_H
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include <type_traits>
@@ -19,7 +19,7 @@
 namespace clang::ssaf {
 
 /// Type trait that checks whether \p T has a static summaryName() method
-/// returning SummaryName. Used to enforce the convention on SummaryView
+/// returning SummaryName. Used to enforce the convention on SummaryData
 /// subclasses at instantiation time.
 template <typename T, typename = void>
 struct HasSummaryName : std::false_type {};
@@ -30,4 +30,4 @@ struct HasSummaryName<T, std::void_t<decltype(T::summaryName())>>
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYVIEW_SUMMARYVIEWTRAITS_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATATRAITS_H

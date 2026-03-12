@@ -6,32 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/SummaryView/LUSummaryConsumer.h"
-#include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilderRegistry.h"
+#include "clang/Analysis/Scalable/SummaryData/LUSummaryConsumer.h"
+#include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilderRegistry.h"
 #include <cassert>
 
 using namespace clang;
 using namespace ssaf;
 
-void LUSummaryConsumer::run(const SummaryName &SN, EntityDataMap &Data) {
-  auto Builder = SummaryViewBuilderRegistry::instantiate(SN.str());
+void LUSummaryConsumer::run(const SummaryName &SN, EntityDataMap &EntityData) {
+  auto Builder = SummaryDataBuilderRegistry::instantiate(SN.str());
   if (!Builder) {
     return;
   }
 
-  for (auto &[Id, Summary] : Data) {
+  for (auto &[Id, Summary] : EntityData) {
     Builder->addSummary(Id, std::move(Summary));
   }
 
   Builder->finalize();
 
-  Views.emplace(SN, std::move(*Builder).getView());
+  Data.emplace(SN, std::move(*Builder).getData());
 }
 
 void LUSummaryConsumer::run() {
   assert(!WasRun && "run() must be called exactly once");
   WasRun = true;
-  for (auto &[SN, Data] : LU->Data) {
-    run(SN, Data);
+  for (auto &[SN, EntityData] : LU->Data) {
+    run(SN, EntityData);
   }
 }

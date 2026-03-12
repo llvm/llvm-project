@@ -1,4 +1,4 @@
-//===- LUSummaryConsumerTest.cpp ------------------------------------------===//
+//===- SummaryDataTest.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,8 @@
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
-#include "clang/Analysis/Scalable/SummaryView/LUSummaryConsumer.h"
-#include "clang/Analysis/Scalable/SummaryView/SummaryViewBuilderRegistry.h"
+#include "clang/Analysis/Scalable/SummaryData/LUSummaryConsumer.h"
+#include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilderRegistry.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -63,17 +63,17 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// Views
+// Data
 // ---------------------------------------------------------------------------
 
-class Analysis1View : public SummaryView {
+class Analysis1Data : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis1"); }
   std::vector<std::pair<EntityId, int>> Entries;
   bool WasFinalized = false;
 };
 
-class Analysis2View : public SummaryView {
+class Analysis2Data : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis2"); }
   std::vector<std::pair<EntityId, int>> Entries;
@@ -82,14 +82,14 @@ public:
 
 // No builder or registration for Analysis3. Data for Analysis3 is inserted
 // into the LUSummary to verify the consumer silently skips it.
-class Analysis3View : public SummaryView {
+class Analysis3Data : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis3"); }
 };
 
 // Analysis4 has a registered builder but no data is inserted into the
-// LUSummary, so the builder is never invoked and getView returns nullptr.
-class Analysis4View : public SummaryView {
+// LUSummary, so the builder is never invoked and getData returns nullptr.
+class Analysis4Data : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis4"); }
   std::vector<std::pair<EntityId, int>> Entries;
@@ -109,51 +109,51 @@ static bool Analysis4BuilderWasDestroyed = false;
 // ---------------------------------------------------------------------------
 
 class Analysis1Builder
-    : public SummaryViewBuilder<Analysis1View, Analysis1EntitySummary> {
+    : public SummaryDataBuilder<Analysis1Data, Analysis1EntitySummary> {
 public:
   ~Analysis1Builder() { Analysis1BuilderWasDestroyed = true; }
 
   void addSummary(EntityId Id,
                   std::unique_ptr<Analysis1EntitySummary> S) override {
-    getView().Entries.push_back({Id, S->InstanceId});
+    getData().Entries.push_back({Id, S->InstanceId});
   }
 
-  void finalize() override { getView().WasFinalized = true; }
+  void finalize() override { getData().WasFinalized = true; }
 };
 
-static SummaryViewBuilderRegistry::Add<Analysis1Builder>
+static SummaryDataBuilderRegistry::Add<Analysis1Builder>
     RegAnalysis1("Builder for Analysis1");
 
 class Analysis2Builder
-    : public SummaryViewBuilder<Analysis2View, Analysis2EntitySummary> {
+    : public SummaryDataBuilder<Analysis2Data, Analysis2EntitySummary> {
 public:
   ~Analysis2Builder() { Analysis2BuilderWasDestroyed = true; }
 
   void addSummary(EntityId Id,
                   std::unique_ptr<Analysis2EntitySummary> S) override {
-    getView().Entries.push_back({Id, S->InstanceId});
+    getData().Entries.push_back({Id, S->InstanceId});
   }
 
-  void finalize() override { getView().WasFinalized = true; }
+  void finalize() override { getData().WasFinalized = true; }
 };
 
-static SummaryViewBuilderRegistry::Add<Analysis2Builder>
+static SummaryDataBuilderRegistry::Add<Analysis2Builder>
     RegAnalysis2("Builder for Analysis2");
 
 class Analysis4Builder
-    : public SummaryViewBuilder<Analysis4View, Analysis4EntitySummary> {
+    : public SummaryDataBuilder<Analysis4Data, Analysis4EntitySummary> {
 public:
   ~Analysis4Builder() { Analysis4BuilderWasDestroyed = true; }
 
   void addSummary(EntityId Id,
                   std::unique_ptr<Analysis4EntitySummary> S) override {
-    getView().Entries.push_back({Id, S->InstanceId});
+    getData().Entries.push_back({Id, S->InstanceId});
   }
 
-  void finalize() override { getView().WasFinalized = true; }
+  void finalize() override { getData().WasFinalized = true; }
 };
 
-static SummaryViewBuilderRegistry::Add<Analysis4Builder>
+static SummaryDataBuilderRegistry::Add<Analysis4Builder>
     RegAnalysis4("Builder for Analysis4");
 
 // ---------------------------------------------------------------------------
@@ -208,18 +208,18 @@ protected:
 // Tests
 // ---------------------------------------------------------------------------
 
-TEST(SummaryViewBuilderRegistryTest, BuilderIsRegistered) {
-  EXPECT_FALSE(SummaryViewBuilderRegistry::isRegistered("Analysis10"));
-  EXPECT_TRUE(SummaryViewBuilderRegistry::isRegistered("Analysis1"));
-  EXPECT_TRUE(SummaryViewBuilderRegistry::isRegistered("Analysis2"));
-  EXPECT_TRUE(SummaryViewBuilderRegistry::isRegistered("Analysis4"));
+TEST(SummaryDataBuilderRegistryTest, BuilderIsRegistered) {
+  EXPECT_FALSE(SummaryDataBuilderRegistry::isRegistered("Analysis10"));
+  EXPECT_TRUE(SummaryDataBuilderRegistry::isRegistered("Analysis1"));
+  EXPECT_TRUE(SummaryDataBuilderRegistry::isRegistered("Analysis2"));
+  EXPECT_TRUE(SummaryDataBuilderRegistry::isRegistered("Analysis4"));
 }
 
-TEST(SummaryViewBuilderRegistryTest, BuilderCanBeInstantiated) {
-  EXPECT_EQ(SummaryViewBuilderRegistry::instantiate("Analysis10"), nullptr);
-  EXPECT_NE(SummaryViewBuilderRegistry::instantiate("Analysis1"), nullptr);
-  EXPECT_NE(SummaryViewBuilderRegistry::instantiate("Analysis2"), nullptr);
-  EXPECT_NE(SummaryViewBuilderRegistry::instantiate("Analysis4"), nullptr);
+TEST(SummaryDataBuilderRegistryTest, BuilderCanBeInstantiated) {
+  EXPECT_EQ(SummaryDataBuilderRegistry::instantiate("Analysis10"), nullptr);
+  EXPECT_NE(SummaryDataBuilderRegistry::instantiate("Analysis1"), nullptr);
+  EXPECT_NE(SummaryDataBuilderRegistry::instantiate("Analysis2"), nullptr);
+  EXPECT_NE(SummaryDataBuilderRegistry::instantiate("Analysis4"), nullptr);
 }
 
 TEST_F(LUSummaryConsumerTest, Run) {
@@ -242,17 +242,17 @@ TEST_F(LUSummaryConsumerTest, Run) {
 
   // Analysis1
   {
-    auto View1 = Consumer.getView<Analysis1View>();
-    ASSERT_NE(View1, nullptr);
+    auto Data1 = Consumer.getData<Analysis1Data>();
+    ASSERT_NE(Data1, nullptr);
 
-    // getView ownership transfer — second call returns nullptr
-    EXPECT_EQ(Consumer.getView<Analysis1View>(), nullptr);
+    // getData ownership transfer — second call returns nullptr
+    EXPECT_EQ(Consumer.getData<Analysis1Data>(), nullptr);
 
-    EXPECT_EQ(View1->Entries.size(), 2u);
-    EXPECT_TRUE(hasEntry(View1->Entries, E1, s1a));
-    EXPECT_TRUE(hasEntry(View1->Entries, E2, s1b));
+    EXPECT_EQ(Data1->Entries.size(), 2u);
+    EXPECT_TRUE(hasEntry(Data1->Entries, E1, s1a));
+    EXPECT_TRUE(hasEntry(Data1->Entries, E2, s1b));
 
-    EXPECT_TRUE(View1->WasFinalized);
+    EXPECT_TRUE(Data1->WasFinalized);
 
     // Builder lifetime
     EXPECT_TRUE(Analysis1BuilderWasDestroyed);
@@ -260,32 +260,32 @@ TEST_F(LUSummaryConsumerTest, Run) {
 
   // Analysis2
   {
-    auto View2 = Consumer.getView<Analysis2View>();
-    ASSERT_NE(View2, nullptr);
+    auto Data2 = Consumer.getData<Analysis2Data>();
+    ASSERT_NE(Data2, nullptr);
 
-    // getView ownership transfer — second call returns nullptr
-    EXPECT_EQ(Consumer.getView<Analysis2View>(), nullptr);
+    // getData ownership transfer — second call returns nullptr
+    EXPECT_EQ(Consumer.getData<Analysis2Data>(), nullptr);
 
-    EXPECT_EQ(View2->Entries.size(), 2u);
-    EXPECT_TRUE(hasEntry(View2->Entries, E2, s2a));
-    EXPECT_TRUE(hasEntry(View2->Entries, E3, s2b));
+    EXPECT_EQ(Data2->Entries.size(), 2u);
+    EXPECT_TRUE(hasEntry(Data2->Entries, E2, s2a));
+    EXPECT_TRUE(hasEntry(Data2->Entries, E3, s2b));
 
-    EXPECT_TRUE(View2->WasFinalized);
+    EXPECT_TRUE(Data2->WasFinalized);
 
     // Builder lifetime
     EXPECT_TRUE(Analysis2BuilderWasDestroyed);
   }
 
-  // Analysis 3
+  // Analysis3
   {
     // Unregistered builder — Analysis3 data silently skipped
-    EXPECT_EQ(Consumer.getView<Analysis3View>(), nullptr);
+    EXPECT_EQ(Consumer.getData<Analysis3Data>(), nullptr);
   }
 
   // Analysis4
   {
     // Registered builder but no data in LUSummary — builder never invoked
-    EXPECT_EQ(Consumer.getView<Analysis4View>(), nullptr);
+    EXPECT_EQ(Consumer.getData<Analysis4Data>(), nullptr);
 
     // Builder lifetime
     EXPECT_FALSE(Analysis4BuilderWasDestroyed);
