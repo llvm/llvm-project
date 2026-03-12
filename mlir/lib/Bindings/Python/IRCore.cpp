@@ -1145,6 +1145,20 @@ void PyOperationBase::walk(std::function<PyWalkResult(MlirOperation)> callback,
   }
 }
 
+void PyOperationBase::walkOfType(
+    nb::object opClass, std::function<PyWalkResult(MlirOperation)> callback,
+    PyWalkOrder walkOrder) {
+
+  auto filtered = [&](MlirOperation mlirOp) -> PyWalkResult {
+    nb::object opview = nb::cast(mlirOp).attr("opview");
+    if (nb::isinstance(opview, opClass)) {
+      return callback(mlirOp);
+    };
+    return PyWalkResult::Advance;
+  };
+  walk(filtered, walkOrder);
+}
+
 nb::object PyOperationBase::getAsm(bool binary,
                                    std::optional<int64_t> largeElementsLimit,
                                    std::optional<int64_t> largeResourceLimit,
@@ -2707,7 +2721,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
-    // co_qualname and PyCode_Addr2Location added in py3.11
+      // co_qualname and PyCode_Addr2Location added in py3.11
 #if PY_VERSION_HEX < 0x030B00F0
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
@@ -3937,7 +3951,22 @@ void populateIRCore(nb::module_ &m) {
 
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
-               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)");
+               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)")
+      .def("walk_of_type", &PyOperationBase::walkOfType, "op_class"_a,
+           "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
+           // clang-format off
+     nb::sig("def walk_of_type(self, op_class: type[OpView], callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None"),
+           // clang-format on
+           R"(
+              Walks the operation tree, invoking the callback only on operations of the specified type.
+
+              Args:
+                op_class: The operation type to match.
+                callback: A callable that takes an Operation and returns a WalkResult.
+                walk_order: The traversal order (PRE_ORDER or POST_ORDER).
+
+              For example, op.walk_of_type(arith.AddIOp, callback) walks the operation tree
+              and invokes callback only on arith.AddIOp operations.)");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
