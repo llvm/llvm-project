@@ -390,7 +390,7 @@ let Predicates = [IsISAFuture, PrefixInstrs] in {
                                            "paddis $RT, $RA, $SI", IIC_LdStLFD>;
 }
 
-let Predicates = [HasVSX, IsISAFuture] in {
+let Predicates = [HasFutureVector] in {
   let mayLoad = 1 in {
     def LXVRL : XX1Form_memOp<31, 525, (outs vsrc:$XT),
                               (ins (memr $RA):$addr, g8rc:$RB),
@@ -571,7 +571,7 @@ let Predicates = [HasVSX, IsISAFuture] in {
                       "xsrebase3t3uqm $XT, $XA, $XB", []>;
 }
 
-let Predicates = [HasVSX, PrefixInstrs, IsISAFuture] in {
+let Predicates = [HasFutureVector, PrefixInstrs] in {
   def XXSSUMUDMCEXT
       : 8RR_XX4Form_XTABC6_P<
             34, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, vsrc:$XC, u1imm:$P),
@@ -607,7 +607,7 @@ let Predicates = [HasFutureVector, PairedVectorMemops] in {
   def : Pat<(store v256i1:$XSp, xoaddr:$dst), (STXVPX $XSp, xoaddr:$dst)>;
 }
 
-let Predicates = [HasVSX, IsISAFuture] in {
+let Predicates = [HasFutureVector] in {
   def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
                                                      v4i32:$vB))>;
 }
@@ -616,7 +616,7 @@ let Predicates = [HasVSX, IsISAFuture] in {
 // Predicate combinations available:
 // [HasVSX, IsISAFuture]
 
-let Predicates = [HasVSX, IsISAFuture] in {
+let Predicates = [HasFutureVector] in {
   def : InstAlias<"xxaes128encp $XTp, $XAp, $XBp",
                   (XXAESENCP vsrprc:$XTp, vsrprc:$XAp, vsrprc:$XBp, 0)>;
   def : InstAlias<"xxaes192encp $XTp, $XAp, $XBp",
