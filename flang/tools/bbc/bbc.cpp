@@ -17,6 +17,7 @@
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
@@ -37,6 +38,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
 #include "flang/Support/OpenMP-features.h"
@@ -292,6 +294,22 @@ static llvm::cl::opt<std::string> complexRange(
                    "multiplication and division [full|improved|basic]"),
     llvm::cl::init(""));
 
+static llvm::cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
+    "ffp-maxmin-behavior",
+    llvm::cl::desc("Control max/min and [max|min][loc|val] lowering "
+                   "[legacy|portable|extremum|extremenum]"),
+    llvm::cl::values(clEnumValN(Fortran::common::FPMaxminBehavior::Legacy,
+                                "legacy", "cmp+select"),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                                "portable",
+                                "cmp+select and arith.max/minnumf when nnan "
+                                "and nsz fast math flags are enabled"),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                                "extremum", "arith.max/minimum"),
+                     clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                                "extremenum", "arith.max/minnum")),
+    llvm::cl::init(Fortran::common::FPMaxminBehavior::Legacy));
+
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -462,6 +480,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     loweringOptions.setCUDARuntimeCheck(true);
   if (complexRange == "improved" || complexRange == "basic")
     loweringOptions.setComplexDivisionToRuntime(false);
+  loweringOptions.setFPMaxminBehavior(fpMaxminBehavior.getValue());
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -534,8 +553,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
       // lower HLFIR to FIR
       fir::EnableOpenMP enableOmp =
           enableOpenMP ? fir::EnableOpenMP::Full : fir::EnableOpenMP::None;
-      fir::createHLFIRToFIRPassPipeline(pm, enableOmp,
-                                        llvm::OptimizationLevel::O2);
+      MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+      config.fpMaxminBehavior = loweringOptions.getFPMaxminBehavior();
+      fir::createHLFIRToFIRPassPipeline(pm, enableOmp, config);
       if (mlir::failed(pm.run(mlirModule))) {
         llvm::errs() << "FATAL: lowering from HLFIR to FIR failed";
         return mlir::failure();
@@ -550,6 +570,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
     // Add O2 optimizer pass pipeline.
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.fpMaxminBehavior = loweringOptions.getFPMaxminBehavior();
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;

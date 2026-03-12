@@ -2547,11 +2547,10 @@ foreach scope = ["sys", "gpu", "cluster", "cta"] in {
 }
 
 // Perform substitution if fma only has one use, and also if instruction has
-// nnan instruction flag or if the TM has NoNaNsFPMath
+// nnan instruction flag
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
                                   (fma node:$a, node:$b, node:$c), [{
-  return N->hasOneUse() &&
-    (N->getFlags().hasNoNaNs() || TM.Options.NoNaNsFPMath);
+  return N->hasOneUse() && N->getFlags().hasNoNaNs();
 }]>;
 // fmaxnum/fmaximumnum differentiate between signed and unsigned zeros, so this
 // PatFrag is for a fmaxnum/fmaximumnum node with nsz

@@ -103,6 +103,10 @@ gentbl_cc_library(
             "include/clang/Basic/DiagnosticAllCompatIDs.inc",
             ["-gen-clang-diags-compat-ids"],
         ),
+        (
+            "include/clang/Basic/DiagnosticStableIDs.inc",
+            ["-gen-clang-diags-stable-ids"],
+        ),
     ]),
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Diagnostic.td",
@@ -686,6 +690,7 @@ cc_library(
         "include/clang/Basic/DiagnosticRefactoringKinds.inc",
         "include/clang/Basic/DiagnosticSemaKinds.inc",
         "include/clang/Basic/DiagnosticSerializationKinds.inc",
+        "include/clang/Basic/DiagnosticStableIDs.inc",
         "include/clang/Basic/arm_fp16.inc",
         "include/clang/Basic/arm_immcheck_types.inc",
         "include/clang/Basic/arm_mve_builtin_aliases.inc",
@@ -991,7 +996,25 @@ cc_library(
         ":rewrite",
         ":sema",
         ":serialization",
+        ":unified_symbol_resolution",
         "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "unified_symbol_resolution",
+    srcs = glob([
+        "lib/UnifiedSymbolResolution/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/UnifiedSymbolResolution/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":lex",
         "//llvm:Support",
     ],
 )
@@ -1304,6 +1327,7 @@ cc_library(
         ":rewrite",
         ":tooling",
         ":tooling_core",
+        ":unified_symbol_resolution",
         "//llvm:Support",
     ],
 )
@@ -1394,6 +1418,7 @@ cc_library(
         ":driver",
         ":frontend",
         ":index",
+        ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -1478,6 +1503,7 @@ cc_library(
         ":static_analyzer_checkers_gen",
         ":tooling",
         ":tooling_core",
+        ":unified_symbol_resolution",
         "//llvm:Support",
     ],
 )
@@ -1871,6 +1897,7 @@ cc_library(
         ":sema",
         ":serialization",
         ":type_nodes_gen",
+        "//llvm:ABI",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
@@ -2085,6 +2112,7 @@ cc_library(
         ":rewrite",
         ":sema",
         ":tooling",
+        ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -2118,6 +2146,7 @@ cc_plugin_library(
         ":rewrite",
         ":sema",
         ":tooling",
+        ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
@@ -2162,6 +2191,7 @@ cc_binary(
         ":lex",
         ":libclang",
         ":serialization",
+        ":unified_symbol_resolution",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -2550,6 +2580,7 @@ cc_library(
         ":index",
         ":install_api",
         ":lex",
+        ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",

@@ -16,6 +16,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
@@ -34,6 +35,12 @@ class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
+using Fortran::parser::omp::BlockRange;
+using Fortran::parser::omp::ExecutionPartIterator;
+using Fortran::parser::omp::is_range_v;
+using Fortran::parser::omp::LoopNestIterator;
+using Fortran::parser::omp::LoopRange;
+
 template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
   return U(t);
 }
@@ -101,6 +108,56 @@ bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+bool IsLoopTransforming(llvm::omp::Directive dir);
+bool IsFullUnroll(const parser::OpenMPLoopConstruct &x);
+
+struct LoopSequence {
+  LoopSequence(
+      const parser::ExecutionPartConstruct &root, bool allowAllLoops = false);
+
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
+  LoopSequence(const R &range, bool allowAllLoops = false)
+      : allowAllLoops_(allowAllLoops) {
+    entry_ = std::make_unique<Construct>(range, nullptr);
+    createChildrenFromRange(entry_->location);
+    length_ = calculateLength();
+  }
+
+  bool isNest() const { return length_ && *length_ == 1; }
+  std::optional<int64_t> length() const { return length_; }
+  const std::vector<LoopSequence> &children() const { return children_; }
+
+private:
+  using Construct = ExecutionPartIterator::Construct;
+
+  LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops);
+
+  template <typename R, typename = std::enable_if_t<is_range_v<R>>>
+  void createChildrenFromRange(const R &range) {
+    createChildrenFromRange(range.begin(), range.end());
+  }
+
+  std::unique_ptr<Construct> createConstructEntry(
+      const parser::ExecutionPartConstruct &code);
+
+  void createChildrenFromRange( //
+      ExecutionPartIterator::IteratorType begin,
+      ExecutionPartIterator::IteratorType end);
+
+  std::optional<int64_t> calculateLength() const;
+  std::optional<int64_t> sumOfChildrenLengths() const;
+
+  // Precalculated length of the sequence. Note that this is different from
+  // the number of children because a child may result in a sequence, for
+  // example a fuse with a reduced loop range. The length of that sequence
+  // adds to the length of the owning LoopSequence.
+  std::optional<int64_t> length_;
+  // The core structure of the class:
+  bool allowAllLoops_;
+  std::unique_ptr<Construct> entry_;
+  std::vector<LoopSequence> children_;
+};
 } // namespace omp
 } // namespace Fortran::semantics
 

@@ -202,12 +202,36 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMemMoveOpLowering::matchAndRewrite(
+    cir::MemMoveOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MemmoveOp>(
+      op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
+      /*isVolatile=*/false);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMMemSetOpLowering::matchAndRewrite(
     cir::MemSetOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MemsetOp>(
+
+  auto memset = rewriter.replaceOpWithNewOp<mlir::LLVM::MemsetOp>(
       op, adaptor.getDst(), adaptor.getVal(), adaptor.getLen(),
       /*isVolatile=*/false);
+
+  if (op.getAlignmentAttr()) {
+    // Construct a list full of empty attributes.
+    llvm::SmallVector<mlir::Attribute> attrs{memset.getNumOperands(),
+                                             rewriter.getDictionaryAttr({})};
+    llvm::SmallVector<mlir::NamedAttribute> destAttrs;
+    destAttrs.push_back(
+        {mlir::LLVM::LLVMDialect::getAlignAttrName(), op.getAlignmentAttr()});
+    attrs[memset.odsIndex_dst] = rewriter.getDictionaryAttr(destAttrs);
+
+    auto arrayAttr = rewriter.getArrayAttr(attrs);
+    memset.setArgAttrsAttr(arrayAttr);
+  }
+
   return mlir::success();
 }
 
@@ -2601,6 +2625,13 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
+
+  // Mark externally_initialized for __device__ and __constant__
+  if (auto extInit =
+          op->getAttr(CUDAExternallyInitializedAttr::getMnemonic())) {
+    attributes.push_back(rewriter.getNamedAttr("externally_initialized",
+                                               rewriter.getUnitAttr()));
+  }
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {

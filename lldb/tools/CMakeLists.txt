@@ -20,6 +20,7 @@ endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   add_lldb_tool_subdirectory(darwin-debug)
+  add_lldb_tool_subdirectory(darwin-mte-launcher)
   if(NOT LLDB_USE_SYSTEM_DEBUGSERVER)
     add_lldb_tool_subdirectory(debugserver)
   endif()
