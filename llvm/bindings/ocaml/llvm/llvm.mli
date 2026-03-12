@@ -206,8 +206,8 @@ module Opcode : sig
   | Invalid (** Not an instruction *)
 
   | Ret (** Terminator Instructions *)
-  | Br
   | Switch
+  | Invalid3
   | IndirectBr
   | Invoke
   | Invalid2
@@ -278,6 +278,9 @@ module Opcode : sig
   | FNeg
   | CallBr
   | Freeze
+  | PtrToAddr
+  | UncondBr
+  | CondBr
 end
 
 (** The type of a clause of a [landingpad] instruction.
