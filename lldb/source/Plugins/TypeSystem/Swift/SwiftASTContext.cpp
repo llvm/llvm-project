@@ -6327,6 +6327,8 @@ bool SwiftASTContext::IsReferenceType(opaque_compiler_type_t type,
                                       CompilerType *pointee_type,
                                       bool *is_rvalue) {
   if (type) {
+    if (is_rvalue)
+      *is_rvalue = false;
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind) {
@@ -6722,11 +6724,24 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::BoundGenericStruct:
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Struct:
-    if (auto *ndecl = swift_can_type.getAnyNominal())
+    if (auto *ndecl = swift_can_type.getAnyNominal()) {
       if (llvm::dyn_cast_or_null<clang::EnumDecl>(ndecl->getClangDecl())) {
         swift_flags |= eTypeHasChildren | eTypeIsEnumeration | eTypeHasValue;
         break;
       }
+      if (auto *module = ndecl->getModuleContext())
+        if (module->getNameStr() == swift::STDLIB_NAME) {
+          // LLDB doesn't yet have a concept of synthetic value
+          // providers. In order to perform arithmetic with the
+          // user-visible numeric types, we declare them to have
+          // values here.
+          StringRef name = ndecl->getNameStr();
+          if (name.starts_with("UInt") || name.starts_with("Int"))
+            swift_flags |= eTypeIsScalar | eTypeIsInteger | eTypeHasValue;
+          else if (name.starts_with("Float"))
+            swift_flags |= eTypeIsScalar | eTypeIsFloat | eTypeHasValue;
+        }
+    }
 
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
     break;

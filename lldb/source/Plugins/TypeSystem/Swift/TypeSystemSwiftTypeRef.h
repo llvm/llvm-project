@@ -218,6 +218,7 @@ public:
   /// Get a function type that returns nothing and take no parameters.
   CompilerType GetVoidFunctionType(swift::Mangle::ManglingFlavor flavor);
 
+  CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) override;
   // Exploring the type
   llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
