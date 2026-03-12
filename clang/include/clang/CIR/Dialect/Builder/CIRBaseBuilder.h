@@ -520,7 +520,7 @@ public:
     return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
   }
 
-  mlir::Value createPtrNotNull(mlir::Value ptr) {
+  mlir::Value createPtrIsNotNull(mlir::Value ptr) {
     mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
     return createCompare(ptr.getLoc(), cir::CmpOpKind::ne, ptr, nullPtr);
   }

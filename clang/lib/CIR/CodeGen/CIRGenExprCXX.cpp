@@ -1198,7 +1198,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // keep the branch. This might be worth revisiting for a -O0 code size win.
   assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
   cir::YieldOp thenYield;
-  mlir::Value notNull = builder.createPtrNotNull(ptr.getPointer());
+  mlir::Value notNull = builder.createPtrIsNotNull(ptr.getPointer());
   cir::IfOp::create(builder, getLoc(e->getExprLoc()), notNull,
                     /*withElseRegion=*/false,
                     /*thenBuilder=*/
