@@ -8970,7 +8970,7 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     ResumePhi->setName("vec.epilog.resume.val");
-    if (&*MainScalarPH->begin() != ResumePhi)
+    if (&MainScalarPH->front() != ResumePhi)
       ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
   }
 
@@ -8990,7 +8990,13 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     ResumeValues.push_back(Resume);
   }
 
-  return ResumeValues;
+  return to_vector(
+      map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
+        assert(isa<VPIRPhi>(&R) &&
+               "only VPIRPhis expected in the scalar preheader");
+        return ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
+                                          R.getOperand(0));
+      }));
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -9710,7 +9716,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VPlan &BestEpiPlan = LVP.getPlanFor(EpilogueVF.Width);
     BestEpiPlan.getMiddleBlock()->setName("vec.epilog.middle.block");
     BestEpiPlan.getVectorPreheader()->setName("vec.epilog.ph");
-    auto ResumeValues =
+    SmallVector<VPInstruction *> ResumeValues =
         preparePlanForMainVectorLoop(*BestMainPlan, BestEpiPlan);
     EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1,
                                       BestEpiPlan);
