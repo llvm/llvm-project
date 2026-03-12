@@ -82,8 +82,7 @@ bool tryReplaceAliasWithAliasee(GlobalAlias &GA) {
   return true;
 }
 
-template <unsigned N>
-inline void removeNameHelpers(const SmallPtrSet<CallInst *, N> &ToRemove,
+inline void removeNameHelpers(const SmallVector<CallInst *> &ToRemove,
                               Function *PredicateName) {
   for (auto &&CI : ToRemove) {
     CI->dropDroppableUses();
@@ -110,7 +109,7 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
   assert(PredicateName && "Feature predicates must be encoded into metadata!");
 
   StringMap<unsigned> IDs;
-  SmallPtrSet<CallInst *, 16> ToRemove;
+  SmallVector<CallInst *> ToRemove;
   for (auto &&U : PredicateName->users()) {
     auto *CI = dyn_cast<CallInst>(U);
     if (!CI)
@@ -139,7 +138,7 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
     SpecID->setArgOperand(
         0, ConstantInt::get(SpecID->getArgOperand(0)->getType(), ID));
 
-    ToRemove.insert(CI);
+    ToRemove.push_back(CI);
   }
 
   if (IDs.empty())
