@@ -8,7 +8,6 @@
 
 #include "ElseAfterReturnCheck.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"

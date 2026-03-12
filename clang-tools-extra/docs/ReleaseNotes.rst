@@ -309,7 +309,7 @@ Changes in existing checks
 
   - Fixed missed diagnostics when ``if`` statements appear in unbraced
     ``switch`` case labels.
- 
+
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 
