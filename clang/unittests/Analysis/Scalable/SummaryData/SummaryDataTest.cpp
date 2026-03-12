@@ -17,9 +17,9 @@
 #include "clang/Analysis/Scalable/SummaryData/LUSummaryConsumer.h"
 #include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilderRegistry.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -39,7 +39,7 @@ static int NextSummaryInstanceId = 0;
 // Entity summaries
 // ---------------------------------------------------------------------------
 
-class Analysis1EntitySummary : public EntitySummary {
+class Analysis1EntitySummary final : public EntitySummary {
 public:
   int InstanceId = NextSummaryInstanceId++;
   SummaryName getSummaryName() const override {
@@ -47,7 +47,7 @@ public:
   }
 };
 
-class Analysis2EntitySummary : public EntitySummary {
+class Analysis2EntitySummary final : public EntitySummary {
 public:
   int InstanceId = NextSummaryInstanceId++;
   SummaryName getSummaryName() const override {
@@ -55,7 +55,15 @@ public:
   }
 };
 
-class Analysis4EntitySummary : public EntitySummary {
+class Analysis3EntitySummary final : public EntitySummary {
+public:
+  int InstanceId = NextSummaryInstanceId++;
+  SummaryName getSummaryName() const override {
+    return SummaryName("Analysis3");
+  }
+};
+
+class Analysis4EntitySummary final : public EntitySummary {
 public:
   int InstanceId = NextSummaryInstanceId++;
   SummaryName getSummaryName() const override {
@@ -67,14 +75,14 @@ public:
 // Data
 // ---------------------------------------------------------------------------
 
-class Analysis1Data : public SummaryData {
+class Analysis1Data final : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis1"); }
   std::vector<std::pair<EntityId, int>> Entries;
   bool WasFinalized = false;
 };
 
-class Analysis2Data : public SummaryData {
+class Analysis2Data final : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis2"); }
   std::vector<std::pair<EntityId, int>> Entries;
@@ -83,14 +91,14 @@ public:
 
 // No builder or registration for Analysis3. Data for Analysis3 is inserted
 // into the LUSummary to verify the consumer silently skips it.
-class Analysis3Data : public SummaryData {
+class Analysis3Data final : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis3"); }
 };
 
 // Analysis4 has a registered builder but no data is inserted into the
 // LUSummary, so the builder is never invoked and getData returns nullptr.
-class Analysis4Data : public SummaryData {
+class Analysis4Data final : public SummaryData {
 public:
   static SummaryName summaryName() { return SummaryName("Analysis4"); }
   std::vector<std::pair<EntityId, int>> Entries;
@@ -109,7 +117,7 @@ static bool Analysis4BuilderWasDestroyed = false;
 // Builders
 // ---------------------------------------------------------------------------
 
-class Analysis1Builder
+class Analysis1Builder final
     : public SummaryDataBuilder<Analysis1Data, Analysis1EntitySummary> {
 public:
   ~Analysis1Builder() { Analysis1BuilderWasDestroyed = true; }
@@ -125,7 +133,7 @@ public:
 static SummaryDataBuilderRegistry::Add<Analysis1Builder>
     RegAnalysis1("Builder for Analysis1");
 
-class Analysis2Builder
+class Analysis2Builder final
     : public SummaryDataBuilder<Analysis2Data, Analysis2EntitySummary> {
 public:
   ~Analysis2Builder() { Analysis2BuilderWasDestroyed = true; }
@@ -141,7 +149,7 @@ public:
 static SummaryDataBuilderRegistry::Add<Analysis2Builder>
     RegAnalysis2("Builder for Analysis2");
 
-class Analysis4Builder
+class Analysis4Builder final
     : public SummaryDataBuilder<Analysis4Data, Analysis4EntitySummary> {
 public:
   ~Analysis4Builder() { Analysis4BuilderWasDestroyed = true; }
@@ -190,8 +198,7 @@ protected:
 
   static bool hasEntry(const std::vector<std::pair<EntityId, int>> &Entries,
                        EntityId Id, int InstanceId) {
-    return std::find(Entries.begin(), Entries.end(),
-                     std::make_pair(Id, InstanceId)) != Entries.end();
+    return llvm::is_contained(Entries, std::make_pair(Id, InstanceId));
   }
 
   /// Inserts a freshly constructed SummaryT for the given entity and returns
@@ -210,14 +217,15 @@ protected:
 // ---------------------------------------------------------------------------
 
 TEST(SummaryDataBuilderRegistryTest, BuilderIsRegistered) {
-  EXPECT_FALSE(SummaryDataBuilderRegistry::contains("Analysis10"));
+  EXPECT_FALSE(SummaryDataBuilderRegistry::contains("AnalysisNonExisting"));
   EXPECT_TRUE(SummaryDataBuilderRegistry::contains("Analysis1"));
   EXPECT_TRUE(SummaryDataBuilderRegistry::contains("Analysis2"));
   EXPECT_TRUE(SummaryDataBuilderRegistry::contains("Analysis4"));
 }
 
 TEST(SummaryDataBuilderRegistryTest, BuilderCanBeInstantiated) {
-  EXPECT_EQ(SummaryDataBuilderRegistry::instantiate("Analysis10"), nullptr);
+  EXPECT_EQ(SummaryDataBuilderRegistry::instantiate("AnalysisNonExisting"),
+            nullptr);
   EXPECT_NE(SummaryDataBuilderRegistry::instantiate("Analysis1"), nullptr);
   EXPECT_NE(SummaryDataBuilderRegistry::instantiate("Analysis2"), nullptr);
   EXPECT_NE(SummaryDataBuilderRegistry::instantiate("Analysis4"), nullptr);
@@ -236,8 +244,7 @@ TEST_F(LUSummaryConsumerTest, RunAll) {
   int s2b = insertSummary<Analysis2EntitySummary>(*LU, "Analysis2", E3);
 
   // No registered builder — Analysis3 data silently skipped.
-  [[maybe_unused]] int s3a =
-      insertSummary<Analysis1EntitySummary>(*LU, "Analysis3", E1);
+  (void)insertSummary<Analysis3EntitySummary>(*LU, "Analysis3", E1);
 
   LUSummaryConsumer Consumer(std::move(LU));
   SummaryDataStore Store = std::move(Consumer).run();
@@ -322,7 +329,7 @@ TEST_F(LUSummaryConsumerTest, RunByNameErrorMissingData) {
 TEST_F(LUSummaryConsumerTest, RunByNameErrorMissingBuilder) {
   auto LU = makeLUSummary();
   const auto E1 = addEntity(*LU, "Entity1");
-  insertSummary<Analysis1EntitySummary>(*LU, "Analysis3", E1);
+  insertSummary<Analysis3EntitySummary>(*LU, "Analysis3", E1);
 
   LUSummaryConsumer Consumer(std::move(LU));
 
@@ -382,7 +389,7 @@ TEST_F(LUSummaryConsumerTest, Contains) {
   EXPECT_FALSE(Store.contains(SummaryName("Analysis2")));
 
   // After take(), contains() returns false.
-  llvm::cantFail(Store.take<Analysis1Data>());
+  ASSERT_THAT_EXPECTED(Store.take<Analysis1Data>(), llvm::Succeeded());
   EXPECT_FALSE(Store.contains<Analysis1Data>());
   EXPECT_FALSE(Store.contains(SummaryName("Analysis1")));
 }

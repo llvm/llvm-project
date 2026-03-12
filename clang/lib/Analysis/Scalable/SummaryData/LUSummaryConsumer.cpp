@@ -65,7 +65,7 @@ SummaryDataStore LUSummaryConsumer::run() && {
   // element, so the pre-advanced iterator remains valid in all cases.
   auto It = LU->Data.begin();
   while (It != LU->Data.end()) {
-    auto Current = It++;
+    auto Current = It++;             // Read the comment above!
     SummaryName SN = Current->first; // copy before build() potentially erases
     auto Result = build(Current);
     if (!Result) {
