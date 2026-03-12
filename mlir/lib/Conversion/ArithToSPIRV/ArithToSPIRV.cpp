@@ -642,17 +642,17 @@ struct IntToFPPattern final : public OpConversionPattern<ArithOp> {
       unsigned shiftAmount = convertedBitwidth - originalBitwidth;
       Value shiftSize =
           getScalarOrVectorConstInt(srcType, shiftAmount, rewriter, loc);
-      Value shifted = rewriter.create<spirv::ShiftLeftLogicalOp>(
-          loc, srcType, adaptor.getIn(), shiftSize);
-      cleaned = rewriter.create<spirv::ShiftRightArithmeticOp>(
-          loc, srcType, shifted, shiftSize);
+      Value shifted = spirv::ShiftLeftLogicalOp::create(
+          rewriter, loc, srcType, adaptor.getIn(), shiftSize);
+      cleaned = spirv::ShiftRightArithmeticOp::create(rewriter, loc, srcType,
+                                                      shifted, shiftSize);
     } else {
       // Zero-extend by masking off the upper bits.
       Value mask = getScalarOrVectorConstInt(
           srcType, llvm::maskTrailingOnes<uint64_t>(originalBitwidth), rewriter,
           loc);
-      cleaned = rewriter.create<spirv::BitwiseAndOp>(loc, srcType,
-                                                     adaptor.getIn(), mask);
+      cleaned = spirv::BitwiseAndOp::create(rewriter, loc, srcType,
+                                            adaptor.getIn(), mask);
     }
     rewriter.replaceOpWithNewOp<SPIRVOp>(op, dstType, cleaned);
     return success();
