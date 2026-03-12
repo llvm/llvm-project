@@ -430,4 +430,85 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqrt(__CLC_EP_PAIR a) {
                            a.hi == __CLC_FP_LIT(0.0) ? __CLC_FP_LIT(0.0) : slo);
 }
 
+#if __CLC_FPSIZE == 32
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_exp(__CLC_EP_PAIR x) {
+  __CLC_GENTYPE d = x.hi == 0x1.62e430p+6f ? 0x1.0p-17f : 0.0f;
+  x.hi -= d;
+  x.lo += d;
+  __CLC_GENTYPE z = __clc_exp(x.hi);
+  __CLC_GENTYPE zz = __clc_fma(z, x.lo, z);
+  return __clc_isinf(z) ? z : zz;
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_GENTYPE a) {
+  __CLC_INTN a_exp;
+  __CLC_GENTYPE m = __clc_frexp(a, &a_exp);
+  __CLC_INTN b = m < (2.0f / 3.0f);
+  m = __clc_ldexp(m, b);
+  __CLC_INTN e = a_exp - b;
+
+  __CLC_EP_PAIR x = __clc_ep_div(m - 1.0f, __clc_ep_fast_add(1.0f, m));
+  __CLC_EP_PAIR s = __clc_ep_sqr(x);
+  __CLC_GENTYPE t = s.hi;
+  __CLC_GENTYPE p = __clc_mad(t, __clc_mad(t, 0x1.ed89c2p-3f, 0x1.23e988p-2f),
+                              0x1.999bdep-2f);
+
+  // ln(2)*e + 2*x + x^3(c3 + x^2*p)
+  __CLC_EP_PAIR r = __clc_ep_add(
+      __clc_ep_mul(__clc_ep_make_pair(__CLC_FP_LIT(0x1.62e430p-1),
+                                      __CLC_FP_LIT(-0x1.05c610p-29)),
+                   __CLC_CONVERT_GENTYPE(e)),
+      __clc_ep_fast_add(
+          __clc_ep_ldexp(x, 1),
+          __clc_ep_mul(__clc_ep_mul(s, x),
+                       __clc_ep_fast_add(
+                           __clc_ep_make_pair(__CLC_FP_LIT(0x1.555554p-1),
+                                              __CLC_FP_LIT(0x1.e72020p-29)),
+                           __clc_ep_mul(s, p)))));
+  return r;
+}
+
+#elif __CLC_FPSIZE == 64
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_exp(__CLC_EP_PAIR x) {
+  __CLC_GENTYPE z = __clc_exp(x.hi);
+  __CLC_GENTYPE zz = __clc_mad(z, x.lo, z);
+  return __clc_isinf(z) ? z : zz;
+}
+
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_DOUBLEN a) {
+  __CLC_INTN a_exp;
+  __CLC_DOUBLEN m = __clc_frexp(a, &a_exp);
+  __CLC_INTN b = __CLC_CONVERT_INTN(m < __CLC_FP_LIT(2.0 / 3.0));
+  m = __clc_ldexp(m, b);
+  __CLC_INTN e = a_exp - b;
+
+  __CLC_EP_PAIR x = __clc_ep_div(m - 1.0, __clc_ep_fast_add(1.0, m));
+  __CLC_EP_PAIR s = __clc_ep_sqr(x);
+  __CLC_DOUBLEN t = s.hi;
+  __CLC_DOUBLEN p = __clc_mad(t, __clc_mad(t, __clc_mad(t, __clc_mad(t,
+             __clc_mad(t, __clc_mad(t, __clc_mad(t, __clc_mad(t,
+                 0x1.dee674222de17p-4, 0x1.a6564968915a9p-4), 0x1.e25e43abe935ap-4), 0x1.110ef47e6c9c2p-3),
+                 0x1.3b13bcfa74449p-3), 0x1.745d171bf3c30p-3), 0x1.c71c71c7792cep-3), 0x1.24924924920dap-2),
+                 0x1.999999999999cp-2);
+
+  // ln(2)*e + 2*x + x^3(c3 + x^2*p)
+  __CLC_EP_PAIR r = __clc_ep_add(
+      __clc_ep_mul(__clc_ep_make_pair(__CLC_FP_LIT(0x1.62e42fefa39efp-1),
+                                      __CLC_FP_LIT(0x1.abc9e3b39803fp-56)),
+                   __CLC_CONVERT_GENTYPE(e)),
+      __clc_ep_fast_add(
+          __clc_ep_ldexp(x, 1),
+          __clc_ep_mul(
+              __clc_ep_mul(s, x),
+              __clc_ep_fast_add(
+                  __clc_ep_make_pair(__CLC_FP_LIT(0x1.5555555555555p-1),
+                                     __CLC_FP_LIT(0x1.543b0d5df274dp-55)),
+                  __clc_ep_mul(s, p)))));
+  return r;
+}
+
+#endif
+
 #undef __CLC_EP_USE_FMA
