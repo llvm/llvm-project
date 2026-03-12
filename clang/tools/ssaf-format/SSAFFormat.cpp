@@ -51,7 +51,7 @@ enum class SummaryType { TU, LU };
 // Command-Line Options
 //===----------------------------------------------------------------------===//
 
-cl::OptionCategory SsafFormatCategory("ssaf-format options");
+cl::OptionCategory SsafFormatCategory("clang-ssaf-format options");
 
 cl::list<std::string> LoadPlugins("load",
                                   cl::desc("Load a plugin shared library"),
