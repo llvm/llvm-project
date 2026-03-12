@@ -6,9 +6,36 @@ import * as path from "node:path";
  * Gives access to elements of the Android NDK.
  */
 export class Ndk {
-  static async getDefaultPath(): Promise<string | undefined> {
+  static async getDefaultSdkPath(): Promise<string | undefined> {
     const home = os.homedir();
-    const ndk = path.join(home, "Library", "Android", "sdk", "ndk");
+    let pathComponents: string[];
+    switch (process.platform) {
+      case "darwin":
+        pathComponents = [home, "Library", "Android", "sdk"];
+        break;
+      case "win32":
+        pathComponents = [home, "AppData", "Local", "Android", "Sdk"];
+        break;
+      case "linux":
+        pathComponents = [home, "Android", "Sdk"];
+        break;
+      default:
+        return undefined;
+    }
+    const sdk = path.join(...pathComponents);
+    try {
+      await fs.access(sdk);
+      return sdk;
+    } catch {}
+    return undefined;
+  }
+
+  static async getDefaultNdkPath(): Promise<string | undefined> {
+    const sdk = await this.getDefaultSdkPath();
+    if (sdk === undefined) {
+      return undefined;
+    }
+    const ndk = path.join(sdk, "ndk");
     let entries: string[] = [];
     try {
       entries = await fs.readdir(ndk);

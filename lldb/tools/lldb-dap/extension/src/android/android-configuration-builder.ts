@@ -9,7 +9,7 @@ import { Ndk } from "./core/ndk";
  */
 export class AndroidConfigurationBuilder {
   static async getDefaultNdkPath(): Promise<string> {
-    const path = await Ndk.getDefaultPath();
+    const path = await Ndk.getDefaultNdkPath();
     if (!path) {
       throw new ErrorWithNotification(
         `Unable to find the Android NDK. Please install it in its default location or define its path in the settings.`,

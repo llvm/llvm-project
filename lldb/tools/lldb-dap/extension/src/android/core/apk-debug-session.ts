@@ -241,7 +241,7 @@ export class ApkDebugSession {
   }
 
   private async createDefaultEnv(targetArch: string): Promise<ApkDebugEnv> {
-    const ndkPath = await Ndk.getDefaultPath();
+    const ndkPath = await Ndk.getDefaultNdkPath();
     if (!ndkPath) {
       throw new Error("NDK not found");
     }
