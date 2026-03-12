@@ -33,3 +33,36 @@ llvm.func @invalid_call_debug_locs() {
   llvm.call @missing_debug_loc() : () -> () loc(#loc)
   llvm.return
 } loc(#loc4)
+
+// -----
+
+// Test the DILocationAttr path of hasSubprogram.
+
+#di_file2 = #llvm.di_file<"file.cpp" in "/folder/">
+#di_compile_unit2 = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C_plus_plus_14,
+  file = #di_file2, isOptimized = true, emissionKind = Full
+>
+#di_sp_callee = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit2, scope = #di_file2,
+  name = "callee_diloc", file = #di_file2,
+  subprogramFlags = "Definition|Optimized"
+>
+#di_sp_caller = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit2, scope = #di_file2,
+  name = "caller_diloc", file = #di_file2,
+  subprogramFlags = "Definition|Optimized"
+>
+#loc_unknown = loc(unknown)
+#loc_callee = #llvm.di_location<loc("file.cpp":10:0) in #di_sp_callee>
+#loc_caller = #llvm.di_location<loc("file.cpp":20:0) in #di_sp_caller>
+
+llvm.func @callee_diloc() {
+  llvm.return
+} loc(#loc_callee)
+
+llvm.func @caller_diloc() {
+// CHECK: <unknown>:0: error: inlinable function call in a function with a DISubprogram location must have a debug location
+  llvm.call @callee_diloc() : () -> () loc(#loc_unknown)
+  llvm.return
+} loc(#loc_caller)

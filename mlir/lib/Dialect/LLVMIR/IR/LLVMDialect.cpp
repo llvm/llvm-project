@@ -1142,6 +1142,8 @@ static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
     return success();
 
   auto hasSubprogram = [](Operation *op) {
+    if (auto diLoc = op->getLoc()->findInstanceOf<LLVM::DILocationAttr>())
+      return isa<LLVM::DISubprogramAttr>(diLoc.getScope());
     return op->getLoc()
                ->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>() !=
            nullptr;

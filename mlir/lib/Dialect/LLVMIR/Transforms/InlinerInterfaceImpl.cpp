@@ -487,16 +487,15 @@ static void handleAccessGroups(Operation *call,
 static void
 handleLoopAnnotations(Operation *call,
                       iterator_range<Region::iterator> inlinedBlocks) {
-  // Attempt to extract a DISubprogram from the callee.
+  // Attempt to extract a DISubprogram from the caller.
   auto func = call->getParentOfType<FunctionOpInterface>();
   if (!func)
     return;
-  LocationAttr funcLoc = func->getLoc();
-  auto fusedLoc = dyn_cast_if_present<FusedLoc>(funcLoc);
-  if (!fusedLoc)
-    return;
-  auto scope =
-      dyn_cast_if_present<LLVM::DISubprogramAttr>(fusedLoc.getMetadata());
+  LLVM::DISubprogramAttr scope;
+  if (auto diLoc = dyn_cast<LLVM::DILocationAttr>(func->getLoc()))
+    scope = dyn_cast<LLVM::DISubprogramAttr>(diLoc.getScope());
+  else if (auto fusedLoc = dyn_cast<FusedLoc>(func->getLoc()))
+    scope = dyn_cast_if_present<LLVM::DISubprogramAttr>(fusedLoc.getMetadata());
   if (!scope)
     return;
 

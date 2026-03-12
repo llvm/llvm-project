@@ -670,6 +670,38 @@ def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_
 }
 
 //===----------------------------------------------------------------------===//
+// DILocationAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DILocationAttr : LocationAttrDef<LLVM_Dialect, "DILocation"> {
+  let description = [{
+    Represents a debug location combining a source position and a debug info
+    scope for instruction-level and function-level debug locations.
+
+    Inlining is represented using `CallSiteLoc` (LLVM proper's `DILocation`
+    uses the `inlinedAt` field for this).
+
+    Note: Older code represents this with a FusedLoc carrying the debug
+    scope as its metadata and a convention on how to interpret it.
+  }];
+  let mnemonic = "di_location";
+
+  let parameters = (ins
+    "FileLineColLoc":$sourceLoc,
+    "DILocalScopeAttr":$scope
+  );
+  let assemblyFormat = "`<` $sourceLoc `in` $scope `>`";
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "FileLineColLoc":$sourceLoc, "DILocalScopeAttr":$scope
+    ), [{
+      return $_get(sourceLoc.getContext(), sourceLoc, scope);
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // DILocalVariableAttr
 //===----------------------------------------------------------------------===//
 

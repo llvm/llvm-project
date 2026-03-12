@@ -63,12 +63,18 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
   if (!debugEmissionIsEnabled)
     return;
 
-  // Look for a sub program attached to the function.
-  auto spLoc =
-      func.getLoc()->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>();
-  if (!spLoc)
+  // Look for a subprogram: check DILocationAttr first, fall back to FusedLoc.
+  LLVM::DISubprogramAttr sp;
+  if (auto diLoc = dyn_cast<LLVM::DILocationAttr>(func.getLoc())) {
+    sp = dyn_cast<LLVM::DISubprogramAttr>(diLoc.getScope());
+  } else if (auto spLoc =
+                 func.getLoc()
+                     ->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>()) {
+    sp = spLoc.getMetadata();
+  }
+  if (!sp)
     return;
-  llvmFunc.setSubprogram(translate(spLoc.getMetadata()));
+  llvmFunc.setSubprogram(translate(sp));
 }
 
 //===----------------------------------------------------------------------===//
@@ -600,6 +606,17 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
     // Fallback: Ignore callee if it has no debug scope.
     if (!llvmLoc)
       llvmLoc = callerLoc;
+
+  } else if (auto diLoc = dyn_cast<LLVM::DILocationAttr>(loc)) {
+    // Translate the scope from the DILocationAttr.
+    llvm::DILocalScope *diScope = translate(diLoc.getScope());
+    if (!diScope)
+      return nullptr;
+
+    auto sourceLoc = diLoc.getSourceLoc();
+    llvmLoc = llvm::DILocation::get(llvmCtx, sourceLoc.getLine(),
+                                    sourceLoc.getColumn(), diScope,
+                                    const_cast<llvm::DILocation *>(inlinedAt));
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
     // A scope of a DILocation cannot be null.
