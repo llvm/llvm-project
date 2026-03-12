@@ -30,14 +30,20 @@ typedef uint16_t uint16x4_t __attribute__((__vector_size__(8), __aligned__(8)));
 typedef int32_t int32x2_t __attribute__((__vector_size__(8), __aligned__(8)));
 typedef uint32_t uint32x2_t __attribute__((__vector_size__(8), __aligned__(8)));
 
-#define __packed_binop(name, retty, ty1, ty2, op)                              \
-  static __inline__ retty __attribute__((__always_inline__, __nodebug__))      \
-  __riscv_##name(ty1 __rs1, ty2 __rs2) {                                       \
+#define __packed_addsub(name, ty, op)                                          \
+  static __inline__ ty __attribute__((__always_inline__, __nodebug__))         \
+  __riscv_##name(ty __rs1, ty __rs2) {                                         \
     return __rs1 op __rs2;                                                     \
   }
 
-#define __packed_addsub(name, ty, op) __packed_binop(name, ty, ty, ty, op)
-#define __packed_shift(name, ty, op) __packed_binop(name, ty, ty, unsigned, op)
+#define __packed_shift(name, ty, op, mask)                                     \
+  static __inline__ ty __attribute__((__always_inline__, __nodebug__))         \
+  __riscv_##name(ty __rs1, unsigned __rs2) {                                   \
+    return __rs1 op (__rs2 & (mask));                                          \
+  }
+#define __packed_shift8(name, ty, op) __packed_shift(name, ty, op, 0x7)
+#define __packed_shift16(name, ty, op) __packed_shift(name, ty, op, 0xf)
+#define __packed_shift32(name, ty, op) __packed_shift(name, ty, op, 0x1f)
 
 /* Packed Addition and Subtraction (32-bit) */
 __packed_addsub(padd_i8x4, int8x4_t, +)
@@ -64,32 +70,34 @@ __packed_addsub(psub_i32x2, int32x2_t, -)
 __packed_addsub(psub_u32x2, uint32x2_t, -)
 
 /* Packed Shifts (32-bit) */
-__packed_shift(psll_s_u8x4, uint8x4_t, <<)
-__packed_shift(psll_s_i8x4, int8x4_t, <<)
-__packed_shift(psll_s_u16x2, uint16x2_t, <<)
-__packed_shift(psll_s_i16x2, int16x2_t, <<)
-__packed_shift(psrl_s_u8x4, uint8x4_t, >>)
-__packed_shift(psrl_s_u16x2, uint16x2_t, >>)
-__packed_shift(psra_s_i8x4, int8x4_t, >>)
-__packed_shift(psra_s_i16x2, int16x2_t, >>)
+__packed_shift8(psll_s_u8x4, uint8x4_t, <<)
+__packed_shift8(psll_s_i8x4, int8x4_t, <<)
+__packed_shift16(psll_s_u16x2, uint16x2_t, <<)
+__packed_shift16(psll_s_i16x2, int16x2_t, <<)
+__packed_shift8(psrl_s_u8x4, uint8x4_t, >>)
+__packed_shift16(psrl_s_u16x2, uint16x2_t, >>)
+__packed_shift8(psra_s_i8x4, int8x4_t, >>)
+__packed_shift16(psra_s_i16x2, int16x2_t, >>)
 
 /* Packed Shifts (64-bit) */
-__packed_shift(psll_s_u8x8, uint8x8_t, <<)
-__packed_shift(psll_s_i8x8, int8x8_t, <<)
-__packed_shift(psll_s_u16x4, uint16x4_t, <<)
-__packed_shift(psll_s_i16x4, int16x4_t, <<)
-__packed_shift(psll_s_u32x2, uint32x2_t, <<)
-__packed_shift(psll_s_i32x2, int32x2_t, <<)
-__packed_shift(psrl_s_u8x8, uint8x8_t, >>)
-__packed_shift(psrl_s_u16x4, uint16x4_t, >>)
-__packed_shift(psrl_s_u32x2, uint32x2_t, >>)
-__packed_shift(psra_s_i8x8, int8x8_t, >>)
-__packed_shift(psra_s_i16x4, int16x4_t, >>)
-__packed_shift(psra_s_i32x2, int32x2_t, >>)
+__packed_shift8(psll_s_u8x8, uint8x8_t, <<)
+__packed_shift8(psll_s_i8x8, int8x8_t, <<)
+__packed_shift16(psll_s_u16x4, uint16x4_t, <<)
+__packed_shift16(psll_s_i16x4, int16x4_t, <<)
+__packed_shift32(psll_s_u32x2, uint32x2_t, <<)
+__packed_shift32(psll_s_i32x2, int32x2_t, <<)
+__packed_shift8(psrl_s_u8x8, uint8x8_t, >>)
+__packed_shift16(psrl_s_u16x4, uint16x4_t, >>)
+__packed_shift32(psrl_s_u32x2, uint32x2_t, >>)
+__packed_shift8(psra_s_i8x8, int8x8_t, >>)
+__packed_shift16(psra_s_i16x4, int16x4_t, >>)
+__packed_shift32(psra_s_i32x2, int32x2_t, >>)
 
 #undef __packed_addsub
 #undef __packed_shift
-#undef __packed_binop
+#undef __packed_shift8
+#undef __packed_shift16
+#undef __packed_shift32
 
 #if defined(__cplusplus)
 }
