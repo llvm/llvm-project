@@ -915,13 +915,13 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
     auto *dpasInst = const_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc *>(
         llvm::dyn_cast_or_null<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
             uArch->getInstruction(
-                xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc)));    
+                xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc)));
     if (!dpasInst)
       return rewriter.notifyMatchFailure(op,
                                          "DPAS not supported by target uArch");
 
     auto checkSupportedTypes = [&](VectorType vecTy,
-                                    xegpu::uArch::MMAOpndKind kind) -> bool {
+                                   xegpu::uArch::MMAOpndKind kind) -> bool {
       auto supported = dpasInst->getSupportedTypes(*ctxt, kind);
       return llvm::find(supported, vecTy.getElementType()) != supported.end();
     };
