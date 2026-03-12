@@ -663,9 +663,9 @@ Download and decompress the FreeBSD 15.0 distset:
 
 ::
 
-  curl -O https://download.freebsd.org/releases/arm64/15.0-RELEASE/base.txz
-  sudo mkdir -p /sysroot/arm64
-  sudo tar -xJf base.txz -C /sysroot/arm64
+  fetch https://download.freebsd.org/releases/arm64/15.0-RELEASE/base.txz
+  sudo mkdir -p /path/to/sysroot/arm64
+  sudo tar -xJf base.txz -C /path/to/sysroot/arm64
 
 Then configure with CMake as follows:
 
@@ -676,10 +676,10 @@ Then configure with CMake as follows:
     -DLLVM_ENABLE_PROJECTS="clang;lldb" \
     -DCMAKE_SYSTEM_NAME=FreeBSD \
     -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
-    -DCMAKE_ASM_FLAGS="-target aarch64-unknown-freebsd15.0 --sysroot /sysroot/arm64" \
-    -DCMAKE_C_FLAGS="-target aarch64-unknown-freebsd15.0 --sysroot /sysroot/arm64" \
-    -DCMAKE_CXX_FLAGS="-target aarch64-unknown-freebsd15.0 --sysroot /sysroot/arm64" \
-    -DCMAKE_FIND_ROOT_PATH="/sysroot/arm64" \
+    -DCMAKE_ASM_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_C_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_CXX_FLAGS_INIT="-target aarch64-unknown-freebsd15.0 --sysroot /path/to/sysroot/arm64" \
+    -DCMAKE_FIND_ROOT_PATH="/path/to/sysroot/arm64" \
     -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
     -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
     -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
