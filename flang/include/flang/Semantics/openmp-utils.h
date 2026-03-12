@@ -121,15 +121,15 @@ struct LoopSequence {
       : allowAllLoops_(allowAllLoops) {
     entry_ = std::make_unique<Construct>(range, nullptr);
     createChildrenFromRange(entry_->location);
-    calculateEverything();
+    precalculate();
   }
 
   struct Depth {
-    // If this sequence is a nest, the depth of the Canonical Loop Nest rooted
-    // at this sequence. Otherwise unspecified.
+    /// If this sequence is a nest, the depth of the Canonical Loop Nest rooted
+    /// at this sequence. Otherwise unspecified.
     std::optional<int64_t> semantic;
-    // If this sequence is a nest, the depth of the perfect Canonical Loop Nest
-    // rooted at this sequence. Otherwise unspecified.
+    /// If this sequence is a nest, the depth of the perfect Canonical Loop Nest
+    /// rooted at this sequence. Otherwise unspecified.
     std::optional<int64_t> perfect;
   };
 
@@ -155,26 +155,27 @@ private:
       ExecutionPartIterator::IteratorType begin,
       ExecutionPartIterator::IteratorType end);
 
-  void calculateEverything();
+  /// Precalculate length and depth.
+  void precalculate();
 
   std::optional<int64_t> calculateLength() const;
   std::optional<int64_t> getNestedLength() const;
   Depth calculateDepths() const;
   Depth getNestedDepths() const;
 
-  // True if the sequence contains any code (besides transformable loops)
-  // that is not a valid intervening code.
+  /// True if the sequence contains any code (besides transformable loops)
+  /// that is not a valid intervening code.
   bool hasInvalidIC_{false};
-  // True if the sequence contains any code (besides transformable loops)
-  // that is not a valid transparent code.
+  /// True if the sequence contains any code (besides transformable loops)
+  /// that is not a valid transparent code.
   bool hasOpaqueIC_{false};
 
-  // Precalculated length of the sequence. Note that this is different from
-  // the number of children because a child may result in a sequence, for
-  // example a fuse with a reduced loop range. The length of that sequence
-  // adds to the length of the owning LoopSequence.
+  /// Precalculated length of the sequence. Note that this is different from
+  /// the number of children because a child may result in a sequence, for
+  /// example a fuse with a reduced loop range. The length of that sequence
+  /// adds to the length of the owning LoopSequence.
   std::optional<int64_t> length_;
-  // Precalculated depths. Only meaningful if the sequence is a nest.
+  /// Precalculated depths. Only meaningful if the sequence is a nest.
   Depth depth_;
 
   // The core structure of the class:

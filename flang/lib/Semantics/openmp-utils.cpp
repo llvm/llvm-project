@@ -727,13 +727,13 @@ LoopSequence::LoopSequence(
   assert(entry_ && "Expecting loop like code");
 
   createChildrenFromRange(entry_->location);
-  calculateEverything();
+  precalculate();
 }
 
 LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops)
     : allowAllLoops_(allowAllLoops), entry_(std::move(entry)) {
   createChildrenFromRange(entry_->location);
-  calculateEverything();
+  precalculate();
 }
 
 std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
@@ -773,7 +773,7 @@ void LoopSequence::createChildrenFromRange(
   }
 }
 
-void LoopSequence::calculateEverything() {
+void LoopSequence::precalculate() {
   // Calculate length before depths.
   length_ = calculateLength();
   depth_ = calculateDepths();
