@@ -58,6 +58,19 @@ constexpr auto endOmpLine = space >> endOfLine;
 constexpr auto logicalConstantExpr{logical(constantExpr)};
 constexpr auto scalarLogicalConstantExpr{scalar(logicalConstantExpr)};
 
+// Prevent accidental use of Parser<OmpClauseList>. Use OmpClauseListParser
+// instead.
+template <>
+auto Parser<OmpClauseList>::Parse(ParseState &state)
+    -> std::optional<OmpClauseList> = delete;
+
+// Prevent accidental use of Parser<OmpDirectiveSpecification>.
+// Use OmpDirectiveSpecificationParser instead.
+template <>
+auto Parser<OmpDirectiveSpecification>::Parse(ParseState &)
+    -> std::optional<OmpDirectiveSpecification> = delete;
+
+
 // Parser that wraps the result of another parser into a Block. If the given
 // parser succeeds, the result is a block containing the ExecutionPartConstruct
 // result of the argument parser. Otherwise the parser fails.
@@ -1682,11 +1695,6 @@ private:
   const bool allowCommas_;
 };
 
-// Prevent accidental use of Parser<OmpClauseList>.
-template <>
-auto Parser<OmpClauseList>::Parse(ParseState &state)
-    -> std::optional<OmpClauseList> = delete;
-
 // 2.1 (variable | /common-block/ | array-sections)
 TYPE_PARSER(construct<OmpObjectList>(nonemptyList(Parser<OmpObject>{})))
 
@@ -1711,12 +1719,6 @@ constexpr auto validEPC{//
 constexpr auto validBlock{many(validEPC)};
 
 TYPE_PARSER(sourced(construct<OmpDirectiveName>(OmpDirectiveNameParser{})))
-
-// Prevent accidental use of Parser<OmpDirectiveSpecification>.
-// Use OmpDirectiveSpecificationParser instead.
-template <>
-auto Parser<OmpDirectiveSpecification>::Parse(ParseState &)
-    -> std::optional<OmpDirectiveSpecification> = delete;
 
 OmpDirectiveSpecification static makeFlushFromOldSyntax(Verbatim &&text,
     std::optional<OmpClauseList> &&clauses,
