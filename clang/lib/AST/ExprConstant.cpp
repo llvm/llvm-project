@@ -14587,7 +14587,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     
     unsigned NumElements = Source.getVectorLength();
 
-    SmallVector<APValue, 64> Result;
+    SmallVector<APValue, 16> Result;
     Result.reserve(NumElements);
 
     for (unsigned I = 0; I < NumElements; ++I) {
