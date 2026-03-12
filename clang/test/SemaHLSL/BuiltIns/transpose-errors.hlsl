@@ -16,17 +16,17 @@ export float3 test_transpose_vector(float3 a) {
 // expected-note@*:* {{candidate template ignored}}
 // expected-note@*:* {{candidate template ignored}}
 
-export void test_transpose_scalar(float a) {
+export void test_transpose_scalar_builtin(float a) {
   __builtin_hlsl_transpose(a);
   // expected-error@-1 {{1st argument must be a matrix type (was 'float')}}
 }
 
-export void test_transpose_vector(float3 a) {
+export void test_transpose_vector_builtin(float3 a) {
   __builtin_hlsl_transpose(a);
   // expected-error@-1 {{1st argument must be a matrix type (was 'float3' (aka 'vector<float, 3>'))}}
 }
 
-export void test_transpose_int(int a) {
+export void test_transpose_int_builtin(int a) {
   __builtin_hlsl_transpose(a);
   // expected-error@-1 {{1st argument must be a matrix type (was 'int')}}
 }
