@@ -169,6 +169,20 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     return get_type(die.GetFirstChild());
   }
 
+  if (die.Tag() == llvm::dwarf::DW_TAG_array_type) {
+    TypeSP elementTy = get_type(die);
+    CompilerType elementCompilerTy = elementTy->GetForwardCompilerType();
+
+    // Detect the special case of the unsubstituted Builtin.FixedArray<A, B>
+    // which is represented as an array type of τ_0_1 ($eq_D or $sq_D).
+    if (auto ts = elementCompilerTy.GetTypeSystem()
+                      .dyn_cast_or_null<TypeSystemSwift>()) {
+      auto flavor = SwiftLanguageRuntime::GetManglingFlavor(die.GetName());
+      if (elementTy->GetName() == "τ_0_1")
+        compiler_type = ts->GetUnsubstitutedFixedArrayType(flavor);
+    }
+  }
+
   if (!mangled_name && name) {
     if (name.GetStringRef() == "$swift.fixedbuffer") {
       if (auto wrapped_type = get_type(die.GetFirstChild())) {
