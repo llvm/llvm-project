@@ -133,7 +133,7 @@ void SKL::operator()() const {
 void sedf() {
   // device-note@+1 {{called by 'sedf'}}
   df();
-  // device-note@+2 {{then called by 'sedf'}}
+  // device-note@+2 {{which is called by 'sedf'}}
   // device-error@+1 {{function 'skep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   skep();
   // device-error@+1 {{function 'mskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}

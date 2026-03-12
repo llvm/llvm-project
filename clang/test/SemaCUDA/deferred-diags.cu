@@ -42,21 +42,21 @@ static __device__ void use0() {
 // Deferred diagnostics are emitted once per function, with all callers
 // listed as notes.
 static __device__ void use1() {
-  use0(); // expected-note 2{{then called by 'use1'}}
+  use0(); // expected-note 2{{which is called by 'use1'}}
   use0();
 }
 
 static __device__ void use2() {
-  use1(); // expected-note 2{{then called by 'use2'}}
+  use1(); // expected-note 2{{which is called by 'use2'}}
   use1();
 }
 
 static __device__ void use3() {
-  use2(); // expected-note 2{{then called by 'use3'}}
+  use2(); // expected-note 2{{which is called by 'use3'}}
   use2();
 }
 
 __global__ void use4() {
-  use3(); // expected-note 2{{then called by 'use4'}}
+  use3(); // expected-note 2{{which is called by 'use4'}}
   use3();
 }

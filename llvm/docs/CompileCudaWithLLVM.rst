@@ -433,13 +433,13 @@ Deferred Diagnostics
 --------------------
 
 In CUDA, a ``__host__ __device__`` function can be called from both host and
-device code. When such a function contains operations not valid on the device
-(e.g., calling a host-only function), clang defers the diagnostics and only
-emits them if the function is actually reachable from device code. This avoids
-false errors in ``__host__ __device__`` functions that are only used on the
-host side.
+device code. When such a function contains operations not valid on one side
+(e.g., calling a host-only function from device code), clang defers the
+diagnostics and only emits them if the function is actually reachable from a
+caller where the operation cannot be emitted. This avoids false errors in
+``__host__ __device__`` functions that are only used on the other side.
 
-For a detailed description of deferred diagnostics, device-promoted functions,
+For a detailed description of deferred diagnostics, HD-promoted functions,
 and call chain notes, see the
 `HIP Support <https://clang.llvm.org/docs/HIPSupport.html#deferred-diagnostics>`_
 documentation. The same mechanism applies to both CUDA and HIP.

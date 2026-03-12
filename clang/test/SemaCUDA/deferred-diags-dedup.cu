@@ -44,7 +44,7 @@ inline __host__ __device__ void mid1() {
 }
 
 __device__ void dev1() {
-  mid1(); // expected-note {{then called by 'dev1'}}
+  mid1(); // expected-note {{which is called by 'dev1'}}
 }
 
 inline __host__ __device__ void mid2() {
@@ -52,5 +52,5 @@ inline __host__ __device__ void mid2() {
 }
 
 __device__ void dev2() {
-  mid2(); // expected-note {{then called by 'dev2'}}
+  mid2(); // expected-note {{which is called by 'dev2'}}
 }
