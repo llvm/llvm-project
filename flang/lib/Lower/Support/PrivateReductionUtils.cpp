@@ -493,25 +493,6 @@ bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack() const {
   return offloadMod && offloadMod.getIsGPU();
 }
 
-/// Create a device-allocated temporary from a mold using cuf.alloc
-static hlfir::Entity
-createCUFTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
-                      hlfir::Entity mold, cuf::DataAttributeAttr dataAttr,
-                      llvm::ArrayRef<mlir::Value> lenParams) {
-  mlir::Type sequenceType =
-      hlfir::getFortranElementOrSequenceType(mold.getType());
-  mlir::Value shape = hlfir::genShape(loc, builder, mold);
-  auto extents = hlfir::getIndexExtents(loc, builder, shape);
-  mlir::Value alloc = Fortran::lower::genCUFAlloc(
-      builder, loc, sequenceType, /*uniqName=*/"", /*bindcName=*/".tmp",
-      dataAttr, lenParams, extents);
-  auto declareOp = hlfir::DeclareOp::create(
-      builder, loc, alloc, ".tmp", shape, lenParams,
-      /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
-      fir::FortranVariableFlagsAttr{}, dataAttr);
-  return hlfir::Entity{declareOp.getBase()};
-}
-
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     fir::BaseBoxType boxTy, bool needsInitialization) {
   bool isAllocatableOrPointer =
@@ -564,8 +545,18 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
       cuf::DataAttributeAttr dataAttr =
           Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
                                                           sym->GetUltimate());
-      hlfir::Entity temp =
-          createCUFTempFromMold(loc, builder, source, dataAttr, lenParams);
+      mlir::Type sequenceType =
+          hlfir::getFortranElementOrSequenceType(source.getType());
+      mlir::Value shape = hlfir::genShape(loc, builder, source);
+      auto extents = hlfir::getIndexExtents(loc, builder, shape);
+      mlir::Value alloc = Fortran::lower::genCUFAlloc(
+          builder, loc, sequenceType, /*uniqName=*/"", /*bindcName=*/".tmp",
+          dataAttr, lenParams, extents);
+      auto declareOp = hlfir::DeclareOp::create(
+          builder, loc, alloc, ".tmp", shape, lenParams,
+          /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
+          fir::FortranVariableFlagsAttr{}, dataAttr);
+      hlfir::Entity temp{declareOp.getBase()};
       mlir::OpBuilder::InsertionGuard guard(builder);
       createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
                           isDoConcurrent, dataAttr);
