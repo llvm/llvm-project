@@ -9,6 +9,7 @@ add_clang_library(clangAnalysis
   BodyFarm.cpp
   CalledOnceCheck.cpp
   CFG.cpp
+  CFGBackEdges.cpp
   CFGReachabilityAnalysis.cpp
   CFGStmtMap.cpp
   CallGraph.cpp

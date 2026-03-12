@@ -628,9 +628,9 @@ static spirv::Dim convertRank(int64_t rank) {
 
 static spirv::ImageFormat getImageFormat(Type elementType) {
   return TypeSwitch<Type, spirv::ImageFormat>(elementType)
-      .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
-      .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
-      .Case<IntegerType>([](IntegerType intType) {
+      .Case([](Float16Type) { return spirv::ImageFormat::R16f; })
+      .Case([](Float32Type) { return spirv::ImageFormat::R32f; })
+      .Case([](IntegerType intType) {
         auto const isSigned = intType.isSigned() || intType.isSignless();
 #define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
   case BIT_WIDTH:                                                              \
@@ -1049,6 +1049,15 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
                  << fnType << " illegal: declarations are unsupported\n");
       return failure();
     }
+
+    // Bail out early for dynamically-shaped argument types: getZeroAttr
+    // requires a statically-shaped type. VectorType is always statically
+    // shaped, so this correctly skips it without a special-case guard.
+    if (llvm::any_of(fnType.getInputs(), [](Type argType) {
+          auto shapedType = dyn_cast<ShapedType>(argType);
+          return shapedType && !shapedType.hasStaticShape();
+        }))
+      return failure();
 
     // Create a new func op with the original type and copy the function body.
     auto newFuncOp = func::FuncOp::create(rewriter, funcOp.getLoc(),

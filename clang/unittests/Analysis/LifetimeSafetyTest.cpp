@@ -63,7 +63,10 @@ public:
     BuildOptions.AddLifetime = true;
 
     // Run the main analysis.
-    Analysis = std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr);
+    LifetimeSafetyOpts LSOpts;
+    LSOpts.MaxCFGBlocks = 0;
+    Analysis =
+        std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, LSOpts);
     Analysis->run();
 
     AnnotationToPointMap = Analysis->getFactManager().getTestPoints();
@@ -1901,5 +1904,52 @@ TEST_F(LifetimeAnalysisTest, DerivedViewWithNoAnnotation) {
   // EXPECT_THAT(Origin("view"), HasLoansTo({"my_obj_or"}, "p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, LambdaCaptureByRef) {
+  SetupTest(R"(
+    void target() {
+      int x;
+      int* p = &x;
+      auto lambda = [&p]() { return p; };
+      POINT(after_lambda);
+    }
+  )");
+  EXPECT_THAT(Origin("lambda"), HasLoansTo({"p"}, "after_lambda"));
+}
+
+TEST_F(LifetimeAnalysisTest, LambdaCaptureViewByValue) {
+  SetupTest(R"(
+    void target() {
+      MyObj obj;
+      View v(obj);
+      auto lambda = [v]() { return v; };
+      POINT(after_lambda);
+    }
+  )");
+  EXPECT_THAT(Origin("lambda"), HasLoansTo({"obj"}, "after_lambda"));
+}
+
+TEST_F(LifetimeAnalysisTest, LambdaInitCaptureRawPointerByValue) {
+  SetupTest(R"(
+    void target() {
+      int x;
+      int* p = &x;
+      auto lambda = [q = p]() { return q; };
+      POINT(after_lambda);
+    }
+  )");
+  EXPECT_THAT(Origin("lambda"), HasLoansTo({"x"}, "after_lambda"));
+}
+
+TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
+  SetupTest(R"(
+    void target() {
+      MyObj obj;
+      View v(obj);
+      auto lambda = [w = v]() { return w; };
+      POINT(after_lambda);
+    }
+  )");
+  EXPECT_THAT(Origin("lambda"), HasLoansTo({"obj"}, "after_lambda"));
+}
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

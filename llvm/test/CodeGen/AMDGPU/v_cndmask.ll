@@ -1047,7 +1047,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; SI-NEXT:    buffer_load_dwordx2 v[4:5], v[0:1], s[4:7], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; SI-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[2:3]
+; SI-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v3, 0, v5, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v2, 2, v4, vcc
 ; SI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
@@ -1069,10 +1069,10 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_load_dwordx2 v[2:3], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v5, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s1
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, s0, v4
-; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
-; VI-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[0:1]
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v0, vcc
+; VI-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
 ; VI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
@@ -1089,7 +1089,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[6:7] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[0:1]
+; GFX10-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
 ; GFX10-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
@@ -1108,7 +1108,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_load_b64 v[2:3], v4, s[4:5] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[0:1]
+; GFX11-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
@@ -1127,7 +1127,7 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(ptr addrspace(1) %o
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_load_b64 v[2:3], v4, s[4:5] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_cmp_lt_i64_e32 vcc, -1, v[0:1]
+; GFX12-NEXT:    v_cmp_lt_i32_e32 vcc, -1, v1
 ; GFX12-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GFX12-NEXT:    v_cndmask_b32_e32 v0, 2, v2, vcc
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[0:1]

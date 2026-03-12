@@ -617,10 +617,13 @@ def CSR_Win_AArch64_RT_AllRegs
     : CalleeSavedRegs<(add CSR_Win_AArch64_RT_MostRegs, (sequence "Q%u", 8, 31))>;
 
 // The Control Flow Guard check call uses a custom calling convention that also
-// preserves X0-X8 and Q0-Q7.
+// preserves X0-X8 and Q0-Q7. On native AArch64, X15 is the target function and
+// is preserved by the checker. On Arm64EC X15 is not used by the checker, but
+// is also guaranteed to be preserved.
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,
                                                (sequence "X%u", 0, 8),
-                                               (sequence "Q%u", 0, 7))>;
+                                               (sequence "Q%u", 0, 7),
+                                               X15)>;
 
 // To match the x64 calling convention, Arm64EC thunks preserve q6-q15.
 def CSR_Win_AArch64_Arm64EC_Thunk : CalleeSavedRegs<(add (sequence "Q%u", 6, 15),

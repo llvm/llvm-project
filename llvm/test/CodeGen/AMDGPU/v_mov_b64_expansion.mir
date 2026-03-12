@@ -93,3 +93,12 @@ body: |
   bb.0:
     $vgpr0_vgpr1 = V_MOV_B64_PSEUDO 4575657222473777152, implicit $exec
 ...
+
+# GCN-LABEL: name: v_mov_b64_misalign
+# GCN: $vgpr5 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr5_vgpr6
+# GCN: $vgpr6 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr5_vgpr6
+name: v_mov_b64_misalign
+body: |
+  bb.0:
+    $vgpr5_vgpr6 = V_MOV_B64_PSEUDO 0, implicit $exec
+...

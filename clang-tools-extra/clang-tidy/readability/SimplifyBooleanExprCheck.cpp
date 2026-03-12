@@ -162,7 +162,8 @@ static std::string replacementExpression(const ASTContext &Context,
   if (const auto *EC = dyn_cast<ExprWithCleanups>(E))
     E = EC->getSubExpr();
 
-  const bool NeedsStaticCast = needsStaticCast(E);
+  const bool NeedsStaticCast =
+      Context.getLangOpts().CPlusPlus && needsStaticCast(E);
   if (Negated) {
     if (const auto *UnOp = dyn_cast<UnaryOperator>(E)) {
       if (UnOp->getOpcode() == UO_LNot) {
@@ -805,7 +806,7 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
 }
 
 /// Swaps a \c BinaryOperator opcode from `&&` to `||` or vice-versa.
-static bool flipDemorganOperator(llvm::SmallVectorImpl<FixItHint> &Output,
+static bool flipDemorganOperator(SmallVectorImpl<FixItHint> &Output,
                                  const BinaryOperator *BO) {
   assert(BO->isLogicalOp());
   if (BO->getOperatorLoc().isMacroID())

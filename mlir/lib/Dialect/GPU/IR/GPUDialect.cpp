@@ -283,10 +283,11 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
-  declarePromisedInterfaces<
-      ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
-      ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
-      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
+  declarePromisedInterfaces<ValueBoundsOpInterface, ClusterDimOp,
+                            ClusterDimBlocksOp, ClusterIdOp, ClusterBlockIdOp,
+                            BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp,
+                            LaneIdOp, SubgroupIdOp, GlobalIdOp, NumSubgroupsOp,
+                            SubgroupSizeOp, LaunchOp, SubgroupBroadcastOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
@@ -368,7 +369,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<SparseSpGEMMOpHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::SpGEMMOp);
       })
-      .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
+      .Case([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();
         for (auto dim = shape.begin(), e = shape.end() - 1; dim != e; ++dim)
@@ -892,10 +893,12 @@ LogicalResult LaunchOp::verifyRegions() {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
-  if (!getBody().empty()) {
-    if (getBody().getNumArguments() <
-        kNumConfigRegionAttributes + getNumWorkgroupAttributions())
-      return emitOpError("unexpected number of region arguments");
+  if (getBody().empty()) {
+    return emitOpError("body region is empty");
+  }
+  if (getBody().getNumArguments() <
+      kNumConfigRegionAttributes + getNumWorkgroupAttributions()) {
+    return emitOpError("unexpected number of region arguments");
   }
 
   // Verify Attributions Address Spaces.
@@ -1000,13 +1003,19 @@ static ParseResult
 parseSizeAssignment(OpAsmParser &parser,
                     MutableArrayRef<OpAsmParser::UnresolvedOperand> sizes,
                     MutableArrayRef<OpAsmParser::UnresolvedOperand> regionSizes,
-                    MutableArrayRef<OpAsmParser::UnresolvedOperand> indices) {
+                    MutableArrayRef<OpAsmParser::UnresolvedOperand> indices,
+                    StringRef keyword) {
   assert(indices.size() == 3 && "space for three indices expected");
   SmallVector<OpAsmParser::UnresolvedOperand, 3> args;
   if (parser.parseOperandList(args, OpAsmParser::Delimiter::Paren,
                               /*allowResultNumber=*/false) ||
       parser.parseKeyword("in") || parser.parseLParen())
     return failure();
+
+  if (args.size() != 3) {
+    return parser.emitError(parser.getNameLoc())
+           << keyword << " expects 3 arguments, but got " << args.size();
+  }
   std::move(args.begin(), args.end(), indices.begin());
 
   for (int i = 0; i < 3; ++i) {
@@ -1057,8 +1066,7 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   bool hasCluster = false;
-  if (succeeded(
-          parser.parseOptionalKeyword(LaunchOp::getClustersKeyword().data()))) {
+  if (succeeded(parser.parseOptionalKeyword(LaunchOp::getClustersKeyword()))) {
     hasCluster = true;
     sizes.resize(9);
     regionArgs.resize(18);
@@ -1069,9 +1077,9 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // Last three segment assigns the cluster size. In the region argument
   // list, this is last 6 arguments.
   if (hasCluster) {
-    if (parseSizeAssignment(parser, sizesRef.drop_front(6),
-                            regionArgsRef.slice(15, 3),
-                            regionArgsRef.slice(12, 3)))
+    if (parseSizeAssignment(
+            parser, sizesRef.drop_front(6), regionArgsRef.slice(15, 3),
+            regionArgsRef.slice(12, 3), LaunchOp::getClustersKeyword()))
       return failure();
   }
   // Parse the size assignment segments: the first segment assigns grid sizes
@@ -1079,14 +1087,14 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // sizes and defines values for thread identifiers.  In the region argument
   // list, identifiers precede sizes, and block-related values precede
   // thread-related values.
-  if (parser.parseKeyword(LaunchOp::getBlocksKeyword().data()) ||
+  if (parser.parseKeyword(LaunchOp::getBlocksKeyword()) ||
       parseSizeAssignment(parser, sizesRef.take_front(3),
-                          regionArgsRef.slice(6, 3),
-                          regionArgsRef.slice(0, 3)) ||
-      parser.parseKeyword(LaunchOp::getThreadsKeyword().data()) ||
+                          regionArgsRef.slice(6, 3), regionArgsRef.slice(0, 3),
+                          LaunchOp::getBlocksKeyword()) ||
+      parser.parseKeyword(LaunchOp::getThreadsKeyword()) ||
       parseSizeAssignment(parser, sizesRef.drop_front(3),
-                          regionArgsRef.slice(9, 3),
-                          regionArgsRef.slice(3, 3)) ||
+                          regionArgsRef.slice(9, 3), regionArgsRef.slice(3, 3),
+                          LaunchOp::getThreadsKeyword()) ||
       parser.resolveOperands(sizes, parser.getBuilder().getIndexType(),
                              result.operands))
     return failure();
@@ -2527,7 +2535,9 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  gpu::YieldOp yield = getTerminator();
+  auto yield = dyn_cast<gpu::YieldOp>(getBody()->getTerminator());
+  if (!yield)
+    return emitOpError("expected body to be terminated with 'gpu.yield'");
   if (yield.getNumOperands() != getNumResults())
     return emitOpError(
         "expected same number of yield operands and return values.");

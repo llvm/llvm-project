@@ -168,8 +168,8 @@ private:
 
   lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
 
-  // Returns the main executable path
-  llvm::StringRef GetMainExecutablePath();
+  // Returns the main executable path.
+  std::string GetMainExecutablePath();
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);

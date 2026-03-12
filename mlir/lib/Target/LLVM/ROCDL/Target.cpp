@@ -55,12 +55,12 @@ namespace {
 class ROCDLTargetAttrImpl
     : public gpu::TargetAttrInterface::FallbackModel<ROCDLTargetAttrImpl> {
 public:
-  std::optional<SmallVector<char, 0>>
+  std::optional<mlir::gpu::SerializedObject>
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
   Attribute createObject(Attribute attribute, Operation *module,
-                         const SmallVector<char, 0> &object,
+                         const mlir::gpu::SerializedObject &object,
                          const gpu::TargetOptions &options) const;
 };
 } // namespace
@@ -336,7 +336,7 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
 }
 
 FailureOr<SmallVector<char, 0>>
-mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
                             function_ref<InFlightDiagnostic()> emitError) {
   // Save the ISA binary to a temp file.
   int tempIsaBinaryFd = -1;
@@ -361,8 +361,6 @@ mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
 
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
 
-  llvm::SmallString<128> lldPath(toolkitPath);
-  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
   int lldResult = llvm::sys::ExecuteAndWait(
       lldPath,
       {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
@@ -392,8 +390,10 @@ SerializeGPUModuleBase::compileToBinary(StringRef serializedISA) {
     return failure();
 
   // Link the object code.
+  llvm::SmallString<128> lldPath(toolkitPath);
+  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
   FailureOr<SmallVector<char, 0>> linkedCode =
-      ROCDL::linkObjectCode(*isaBinary, toolkitPath, errCallback);
+      ROCDL::linkObjectCode(*isaBinary, lldPath, errCallback);
   if (failed(linkedCode))
     return failure();
 
@@ -473,7 +473,8 @@ AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {
 }
 #endif // MLIR_ENABLE_ROCM_CONVERSIONS
 
-std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
+std::optional<mlir::gpu::SerializedObject>
+ROCDLTargetAttrImpl::serializeToObject(
     Attribute attribute, Operation *module,
     const gpu::TargetOptions &options) const {
   assert(module && "The module must be non null.");
@@ -487,7 +488,10 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
   AMDGPUSerializer serializer(*module, cast<ROCDLTargetAttr>(attribute),
                               options);
   serializer.init();
-  return serializer.run();
+  std::optional<SmallVector<char, 0>> binary = serializer.run();
+  if (!binary)
+    return std::nullopt;
+  return gpu::SerializedObject{std::move(*binary)};
 #else
   module->emitError("the `AMDGPU` target was not built. Please enable it when "
                     "building LLVM");
@@ -497,7 +501,7 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
 
 Attribute
 ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
-                                  const SmallVector<char, 0> &object,
+                                  const mlir::gpu::SerializedObject &object,
                                   const gpu::TargetOptions &options) const {
   gpu::CompilationTarget format = options.getCompilationTarget();
   // If format is `fatbin` transform it to binary as `fatbin` is not yet
@@ -505,12 +509,12 @@ ROCDLTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::KernelTableAttr kernels;
   if (format > gpu::CompilationTarget::Binary) {
     format = gpu::CompilationTarget::Binary;
-    kernels = ROCDL::getKernelMetadata(module, object);
+    kernels = ROCDL::getKernelMetadata(module, object.getObject());
   }
   DictionaryAttr properties{};
   Builder builder(attribute.getContext());
-  StringAttr objectStr =
-      builder.getStringAttr(StringRef(object.data(), object.size()));
+  StringAttr objectStr = builder.getStringAttr(
+      StringRef(object.getObject().data(), object.getObject().size()));
   return builder.getAttr<gpu::ObjectAttr>(attribute, format, objectStr,
                                           properties, kernels);
 }

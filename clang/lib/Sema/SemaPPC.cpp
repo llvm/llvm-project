@@ -99,6 +99,10 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_amo_stdat:
   case PPC::BI__builtin_amo_stwat_s:
   case PPC::BI__builtin_amo_stdat_s:
+  case PPC::BI__builtin_amo_lwat_csne:
+  case PPC::BI__builtin_amo_ldat_csne:
+  case PPC::BI__builtin_amo_lwat_csne_s:
+  case PPC::BI__builtin_amo_ldat_csne_s:
     return true;
   }
   return false;
@@ -147,7 +151,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
-  case PPC::BI__builtin_ppc_bcdsetsign:
+  case PPC::BI__builtin_ppc_bcdsetsign: {
+    // Arg0 must be vector unsigned char
+    if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
+      return false;
+
+    // Restrict Arg1 constant range (0–1)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  }
   case PPC::BI__builtin_ppc_national2packed:
   case PPC::BI__builtin_ppc_packed2zoned:
   case PPC::BI__builtin_ppc_zoned2packed:

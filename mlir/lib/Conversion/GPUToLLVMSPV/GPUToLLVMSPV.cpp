@@ -267,10 +267,10 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
   static std::optional<StringRef> getTypeMangling(Type type) {
     return TypeSwitch<Type, std::optional<StringRef>>(type)
-        .Case<Float16Type>([](auto) { return "Dhj"; })
-        .Case<Float32Type>([](auto) { return "fj"; })
-        .Case<Float64Type>([](auto) { return "dj"; })
-        .Case<IntegerType>([](auto intTy) -> std::optional<StringRef> {
+        .Case([](Float16Type) { return "Dhj"; })
+        .Case([](Float32Type) { return "fj"; })
+        .Case([](Float64Type) { return "dj"; })
+        .Case([](IntegerType intTy) -> std::optional<StringRef> {
           switch (intTy.getWidth()) {
           case 8:
             return "cj";
@@ -304,11 +304,10 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     return parentFunc.getIntelReqdSubGroupSize();
   }
 
-  static bool hasValidWidth(gpu::ShuffleOp op) {
+  static bool hasValidWidth(gpu::ShuffleOp op, int subgroupSize) {
     llvm::APInt val;
     Value width = op.getWidth();
-    return matchPattern(width, m_ConstantInt(&val)) &&
-           val == getSubgroupSize(op);
+    return matchPattern(width, m_ConstantInt(&val)) && val == subgroupSize;
   }
 
   static Value bitcastOrExtBeforeShuffle(Value oldVal, Location loc,
@@ -345,7 +344,8 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    if (!hasValidWidth(op))
+    auto maybeSubgroupSize = getSubgroupSize(op);
+    if (maybeSubgroupSize && !hasValidWidth(op, maybeSubgroupSize.value()))
       return rewriter.notifyMatchFailure(
           op, "shuffle width and subgroup size mismatch");
 

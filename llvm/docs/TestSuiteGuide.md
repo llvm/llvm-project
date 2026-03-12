@@ -485,13 +485,3 @@ The LNT tool can run the test-suite. Use this when submitting test results to
 an LNT instance.  See
 [https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite](https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite)
 for details.
-
-Running the test-suite via Makefiles (deprecated)
--------------------------------------------------
-
-**Note**: The test-suite comes with a set of Makefiles that are considered
-deprecated.  They do not support newer testing modes like `Bitcode` or
-`Microbenchmarks` and are harder to use.
-
-Old documentation is available in the
-[test-suite Makefile Guide](TestSuiteMakefileGuide).

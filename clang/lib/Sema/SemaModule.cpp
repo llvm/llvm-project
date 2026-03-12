@@ -943,6 +943,18 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
       D->setInvalidDecl();
       return false;
     }
+
+    if (isa<FunctionDecl>(D)) {
+      FunctionDecl *FD = cast<FunctionDecl>(D);
+      for (const ParmVarDecl *PVD : FD->parameters()) {
+        if (PVD->hasAttr<HLSLGroupSharedAddressSpaceAttr>()) {
+          S.Diag(D->getBeginLoc(), diag::err_hlsl_attr_incompatible)
+              << "'export'" << "'groupshared' parameter";
+          D->setInvalidDecl();
+          return false;
+        }
+      }
+    }
   }
 
   //  C++20 [module.interface]p3:

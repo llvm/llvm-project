@@ -334,7 +334,7 @@ bb201:                                            ; preds = %bb194
   ret void
 }
 
-attributes #0 = { nofree norecurse nounwind uwtable "denormal-fp-math"="preserve-sign" "no-frame-pointer-elim"="false" }
+attributes #0 = { nofree norecurse nounwind uwtable denormal_fpenv(preservesign) "no-frame-pointer-elim"="false" }
 
 !0 = !{}
 !1 = !{i64 800}

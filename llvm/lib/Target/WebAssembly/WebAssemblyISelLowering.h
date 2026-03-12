@@ -61,8 +61,8 @@ private:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
@@ -74,6 +74,12 @@ private:
   getPreferredVectorAction(MVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
+
+  bool isProfitableToCombineMinNumMaxNum(EVT VT) const override {
+    // Prefer leaving cmp + select alone to form pmin/pmax,
+    // or relaxed_fmin/relaxed_fmax with appropriate FMF.
+    return false;
+  }
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;

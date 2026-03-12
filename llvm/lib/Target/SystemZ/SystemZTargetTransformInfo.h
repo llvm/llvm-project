@@ -151,6 +151,10 @@ public:
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
 
+  bool preferEpilogueVectorization(ElementCount Iters) const override {
+    return true;
+  }
+
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
   /// @}
 };

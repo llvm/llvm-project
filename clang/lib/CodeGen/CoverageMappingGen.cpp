@@ -983,21 +983,11 @@ struct CounterCoverageMappingBuilder
   ///
   /// \param S Key to the CounterMap
   /// \param ParentCnt The Counter representing how many times S is evaluated.
-  /// \param SkipCntForOld (To be removed later) Optional fake Counter
-  ///                      to override Skipped for adjustment of
-  ///                      expressions in the old behavior of
-  ///                      EnableSingleByteCoverage that is unaware of
-  ///                      Branch coverage.
   BranchCounterPair
   getBranchCounterPair(const Stmt *S, Counter ParentCnt,
                        std::optional<Counter> SkipCntForOld = std::nullopt) {
     auto &TheMap = CounterMap[S];
     auto ExecCnt = Counter::getCounter(TheMap.Executed);
-
-    // The old behavior of SingleByte is unaware of Branches.
-    // Will be pruned after the migration of SingleByte.
-    if (llvm::EnableSingleByteCoverage && SkipCntForOld)
-      return {ExecCnt, *SkipCntForOld};
 
     BranchCounterPair Counters = {ExecCnt,
                                   Builder.subtract(ParentCnt, ExecCnt)};
@@ -1018,6 +1008,28 @@ struct CounterCoverageMappingBuilder
     MapToExpand[SkipCnt] = Builder.subst(Counters.Skipped, MapToExpand);
     Counters.Skipped = SkipCnt;
     return Counters;
+  }
+
+  /// Returns {TrueCnt,FalseCnt} for "implicit default".
+  /// FalseCnt is considered as the False count on SwitchStmt.
+  std::pair<Counter, Counter>
+  getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
+                                      Counter CaseCountSum) {
+    if (llvm::EnableSingleByteCoverage) {
+      // Allocate the new Counter since `subtract(Parent - Sum)` is unavailable.
+      unsigned Idx = NextCounterNum++;
+      CounterMap[Cond].Skipped = Idx;
+      return {Counter::getZero(), // Folded
+              Counter::getCounter(Idx)};
+    }
+
+    // Simplify is skipped while building the counters above: it can get
+    // really slow on top of switches with thousands of cases. Instead,
+    // trigger simplification by adding zero to the last counter.
+    CaseCountSum =
+        addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
+
+    return {CaseCountSum, Builder.subtract(ParentCount, CaseCountSum)};
   }
 
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
@@ -1653,9 +1665,8 @@ struct CounterCoverageMappingBuilder
 
   void VisitBreakStmt(const BreakStmt *S) {
     assert(!BreakContinueStack.empty() && "break not in a loop or switch!");
-    if (!llvm::EnableSingleByteCoverage)
-      BreakContinueStack.back().BreakCount = addCounters(
-          BreakContinueStack.back().BreakCount, getRegion().getCounter());
+    BreakContinueStack.back().BreakCount = addCounters(
+        BreakContinueStack.back().BreakCount, getRegion().getCounter());
     // FIXME: a break in a switch should terminate regions for all preceding
     // case statements, not just the most recent one.
     terminateRegion(S);
@@ -1663,9 +1674,8 @@ struct CounterCoverageMappingBuilder
 
   void VisitContinueStmt(const ContinueStmt *S) {
     assert(!BreakContinueStack.empty() && "continue stmt not in a loop!");
-    if (!llvm::EnableSingleByteCoverage)
-      BreakContinueStack.back().ContinueCount = addCounters(
-          BreakContinueStack.back().ContinueCount, getRegion().getCounter());
+    BreakContinueStack.back().ContinueCount = addCounters(
+        BreakContinueStack.back().ContinueCount, getRegion().getCounter());
     terminateRegion(S);
   }
 
@@ -1683,9 +1693,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S);
 
     Counter ParentCount = getRegion().getCounter();
-    Counter BodyCount = llvm::EnableSingleByteCoverage
-                            ? getRegionCounter(S->getBody())
-                            : getRegionCounter(S);
+    Counter BodyCount = getRegionCounter(S);
 
     // Handle the body first so that we can get the backedge count.
     BreakContinueStack.push_back(BreakContinue());
@@ -1698,12 +1706,9 @@ struct CounterCoverageMappingBuilder
 
     // Go back to handle the condition.
     Counter CondCount =
-        llvm::EnableSingleByteCoverage
-            ? getRegionCounter(S->getCond())
-            : addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, CondCount, getRegionCounter(S));
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount ||
-           llvm::EnableSingleByteCoverage);
+        addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
+    auto BranchCount = getBranchCounterPair(S, CondCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     propagateCounts(CondCount, S->getCond());
     adjustForOutOfOrderTraversal(getEnd(S));
@@ -1713,9 +1718,6 @@ struct CounterCoverageMappingBuilder
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
-    assert(
-        !llvm::EnableSingleByteCoverage ||
-        (BC.BreakCount.isZero() && BranchCount.Skipped == getRegionCounter(S)));
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
@@ -1725,45 +1727,32 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitDoStmt(const DoStmt *S) {
     extendRegion(S);
 
     Counter ParentCount = getRegion().getCounter();
-    Counter BodyCount = llvm::EnableSingleByteCoverage
-                            ? getRegionCounter(S->getBody())
-                            : getRegionCounter(S);
+    Counter BodyCount = getRegionCounter(S);
 
     BreakContinueStack.push_back(BreakContinue());
     extendRegion(S->getBody());
 
-    Counter BackedgeCount;
-    if (llvm::EnableSingleByteCoverage)
-      propagateCounts(BodyCount, S->getBody());
-    else
-      BackedgeCount =
-          propagateCounts(addCounters(ParentCount, BodyCount), S->getBody());
+    Counter BackedgeCount =
+        propagateCounts(addCounters(ParentCount, BodyCount), S->getBody());
 
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
     bool BodyHasTerminateStmt = HasTerminateStmt;
     HasTerminateStmt = false;
 
-    Counter CondCount = llvm::EnableSingleByteCoverage
-                            ? getRegionCounter(S->getCond())
-                            : addCounters(BackedgeCount, BC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, CondCount, getRegionCounter(S));
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount ||
-           llvm::EnableSingleByteCoverage);
+    Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
+    auto BranchCount = getBranchCounterPair(S, CondCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     propagateCounts(CondCount, S->getCond());
 
-    assert(
-        !llvm::EnableSingleByteCoverage ||
-        (BC.BreakCount.isZero() && BranchCount.Skipped == getRegionCounter(S)));
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
@@ -1773,8 +1762,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitForStmt(const ForStmt *S) {
@@ -1783,9 +1771,7 @@ struct CounterCoverageMappingBuilder
       Visit(S->getInit());
 
     Counter ParentCount = getRegion().getCounter();
-    Counter BodyCount = llvm::EnableSingleByteCoverage
-                            ? getRegionCounter(S->getBody())
-                            : getRegionCounter(S);
+    Counter BodyCount = getRegionCounter(S);
 
     // The loop increment may contain a break or continue.
     if (S->getInc())
@@ -1804,25 +1790,16 @@ struct CounterCoverageMappingBuilder
     // the count for all the continue statements.
     BreakContinue IncrementBC;
     if (const Stmt *Inc = S->getInc()) {
-      Counter IncCount;
-      if (llvm::EnableSingleByteCoverage)
-        IncCount = getRegionCounter(S->getInc());
-      else
-        IncCount = addCounters(BackedgeCount, BodyBC.ContinueCount);
-      propagateCounts(IncCount, Inc);
+      propagateCounts(addCounters(BackedgeCount, BodyBC.ContinueCount), Inc);
       IncrementBC = BreakContinueStack.pop_back_val();
     }
 
     // Go back to handle the condition.
-    Counter CondCount =
-        llvm::EnableSingleByteCoverage
-            ? getRegionCounter(S->getCond())
-            : addCounters(
-                  addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
-                  IncrementBC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, CondCount, getRegionCounter(S));
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount ||
-           llvm::EnableSingleByteCoverage);
+    Counter CondCount = addCounters(
+        addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
+        IncrementBC.ContinueCount);
+    auto BranchCount = getBranchCounterPair(S, CondCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     if (const Expr *Cond = S->getCond()) {
       propagateCounts(CondCount, Cond);
@@ -1834,8 +1811,6 @@ struct CounterCoverageMappingBuilder
     if (Gap)
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), BodyCount);
 
-    assert(!llvm::EnableSingleByteCoverage ||
-           (BodyBC.BreakCount.isZero() && IncrementBC.BreakCount.isZero()));
     Counter OutCount = addCounters(BodyBC.BreakCount, IncrementBC.BreakCount,
                                    BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
@@ -1846,8 +1821,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
@@ -1858,9 +1832,7 @@ struct CounterCoverageMappingBuilder
     Visit(S->getRangeStmt());
 
     Counter ParentCount = getRegion().getCounter();
-    Counter BodyCount = llvm::EnableSingleByteCoverage
-                            ? getRegionCounter(S->getBody())
-                            : getRegionCounter(S);
+    Counter BodyCount = getRegionCounter(S);
 
     BreakContinueStack.push_back(BreakContinue());
     extendRegion(S->getBody());
@@ -1877,12 +1849,8 @@ struct CounterCoverageMappingBuilder
 
     Counter LoopCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, LoopCount, getRegionCounter(S));
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount ||
-           llvm::EnableSingleByteCoverage);
-    assert(
-        !llvm::EnableSingleByteCoverage ||
-        (BC.BreakCount.isZero() && BranchCount.Skipped == getRegionCounter(S)));
+    auto BranchCount = getBranchCounterPair(S, LoopCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
@@ -1893,8 +1861,7 @@ struct CounterCoverageMappingBuilder
     }
 
     // Create Branch Region around condition.
-    if (!llvm::EnableSingleByteCoverage)
-      createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
+    createBranchRegion(S->getCond(), BodyCount, BranchCount.Skipped);
   }
 
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
@@ -1956,7 +1923,7 @@ struct CounterCoverageMappingBuilder
       propagateCounts(Counter::getZero(), Body);
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    if (!BreakContinueStack.empty() && !llvm::EnableSingleByteCoverage)
+    if (!BreakContinueStack.empty())
       BreakContinueStack.back().ContinueCount = addCounters(
           BreakContinueStack.back().ContinueCount, BC.ContinueCount);
 
@@ -1970,11 +1937,6 @@ struct CounterCoverageMappingBuilder
     // in a different file.
     MostRecentLocation = getStart(S);
     handleFileExit(ExitLoc);
-
-    // When single byte coverage mode is enabled, do not create branch region by
-    // early returning.
-    if (llvm::EnableSingleByteCoverage)
-      return;
 
     // Create a Branch Region around each Case. Subtract the case's
     // counter from the Parent counter to track the "False" branch count.
@@ -1990,15 +1952,9 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      // Simplify is skipped while building the counters above: it can get
-      // really slow on top of switches with thousands of cases. Instead,
-      // trigger simplification by adding zero to the last counter.
-      CaseCountSum =
-          addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
-
-      // This is considered as the False count on SwitchStmt.
-      Counter SwitchFalse = subtractCounters(ParentCount, CaseCountSum);
-      createBranchRegion(S->getCond(), CaseCountSum, SwitchFalse);
+      auto Counters = getSwitchImplicitDefaultCounterPair(
+          S->getCond(), ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), Counters.first, Counters.second);
     }
   }
 
@@ -2006,9 +1962,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S);
 
     SourceMappingRegion &Parent = getRegion();
-    Counter Count = llvm::EnableSingleByteCoverage
-                        ? getRegionCounter(S)
-                        : addCounters(Parent.getCounter(), getRegionCounter(S));
+    Counter Count = addCounters(Parent.getCounter(), getRegionCounter(S));
 
     // Reuse the existing region if it starts at our label. This is typical of
     // the first case in a switch.
@@ -2127,12 +2081,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S->getCond());
 
     Counter ParentCount = getRegion().getCounter();
-    auto [ThenCount, ElseCount] =
-        (llvm::EnableSingleByteCoverage
-             ? BranchCounterPair{getRegionCounter(S->getThen()),
-                                 (S->getElse() ? getRegionCounter(S->getElse())
-                                               : Counter::getZero())}
-             : getBranchCounterPair(S, ParentCount));
+    auto [ThenCount, ElseCount] = getBranchCounterPair(S, ParentCount);
 
     // Emitting a counter for the condition makes it easier to interpret the
     // counter for the body when looking at the coverage.
@@ -2157,26 +2106,20 @@ struct CounterCoverageMappingBuilder
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);
       extendRegion(Else);
 
-      Counter ElseOutCount = propagateCounts(ElseCount, Else);
-      if (!llvm::EnableSingleByteCoverage)
-        OutCount = addCounters(OutCount, ElseOutCount);
+      OutCount = addCounters(OutCount, propagateCounts(ElseCount, Else));
 
       if (ThenHasTerminateStmt)
         HasTerminateStmt = true;
-    } else if (!llvm::EnableSingleByteCoverage)
+    } else
       OutCount = addCounters(OutCount, ElseCount);
-
-    if (llvm::EnableSingleByteCoverage)
-      OutCount = getRegionCounter(S);
 
     if (!IsCounterEqual(OutCount, ParentCount)) {
       pushRegion(OutCount);
       GapRegionCounter = OutCount;
     }
 
-    if (!llvm::EnableSingleByteCoverage)
-      // Create Branch Region around condition.
-      createBranchRegion(S->getCond(), ThenCount, ElseCount);
+    // Create Branch Region around condition.
+    createBranchRegion(S->getCond(), ThenCount, ElseCount);
   }
 
   void VisitCXXTryStmt(const CXXTryStmt *S) {
@@ -2375,9 +2318,6 @@ struct CounterCoverageMappingBuilder
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
 
-    if (llvm::EnableSingleByteCoverage)
-      return;
-
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();
 
@@ -2445,9 +2385,6 @@ struct CounterCoverageMappingBuilder
     // Counter tracks the right hand side of a logical or operator.
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
-
-    if (llvm::EnableSingleByteCoverage)
-      return;
 
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();

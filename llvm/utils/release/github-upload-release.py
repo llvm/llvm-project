@@ -102,9 +102,9 @@ release_links = (
             "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-win64.exe",
-                "LLVM-{release}-win64.exe.sig",
+                "LLVM-{release}-win64.exe.jsonl",
                 "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz",
-                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig",
+                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.jsonl",
             ),
         ),
         (
@@ -117,9 +117,9 @@ release_links = (
             "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-woa64.exe",
-                "LLVM-{release}-woa64.exe.sig",
+                "LLVM-{release}-woa64.exe.jsonl",
                 "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz",
-                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig",
+                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.jsonl",
             ),
         ),
     ),
@@ -180,7 +180,7 @@ In addition, source archives are available:
 
 ## Verifying Packages
 
-All packages come with a matching `.sig` or `.jsonl` file. You should use these to verify the integrity of the packages.
+All packages come with a matching `.sig` and/or `.jsonl` file. You should use these to verify the integrity of the packages.
 
 If it has a `.sig` file, it should have been signed by the release managers using GPG. Download the keys from the [LLVM website](https://releases.llvm.org/release-keys.asc), import them into your keyring and use them to verify the file:
 ```
@@ -280,7 +280,7 @@ parser.add_argument("--files", nargs="+", type=str)
 
 args = parser.parse_args()
 
-gh = github.Github(args.token)
+gh = github.Github(auth=github.Auth.Token(args.token))
 llvm_org = gh.get_organization("llvm")
 llvm_repo = llvm_org.get_repo("llvm-project")
 
@@ -291,7 +291,7 @@ if args.user:
     # Validate that this user is allowed to modify releases.
     user = gh.get_user(args.user)
     team = (
-        github.Github(args.user_token)
+        github.Github(auth=github.Auth.Token(args.user_token))
         .get_organization("llvm")
         .get_team_by_slug("llvm-release-managers")
     )

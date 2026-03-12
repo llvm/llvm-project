@@ -9,8 +9,6 @@
 #ifndef __CLC_MATH_TABLES_H__
 #define __CLC_MATH_TABLES_H__
 
-#include <clc/clctypes.h>
-
 #define __CLC_TABLE_SPACE __constant
 
 #define __CLC_TABLE_MANGLE(NAME) __clc_##NAME

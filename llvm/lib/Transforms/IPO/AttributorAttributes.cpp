@@ -3011,11 +3011,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         return true;
 
       // We know we have a branch instruction.
-      auto *BrInst = cast<BranchInst>(&I);
-
-      // Unconditional branches are never considered UB.
-      if (BrInst->isUnconditional())
-        return true;
+      auto *BrInst = cast<CondBrInst>(&I);
 
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
@@ -3129,7 +3125,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
                                Instruction::AtomicRMW},
                               UsedAssumedInformation,
                               /* CheckBBLivenessOnly */ true);
-    A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::Br},
+    A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::CondBr},
                               UsedAssumedInformation,
                               /* CheckBBLivenessOnly */ true);
     A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this,
@@ -3172,13 +3168,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     case Instruction::Store:
     case Instruction::AtomicCmpXchg:
     case Instruction::AtomicRMW:
+    case Instruction::CondBr:
       return !AssumedNoUBInsts.count(I);
-    case Instruction::Br: {
-      auto *BrInst = cast<BranchInst>(I);
-      if (BrInst->isUnconditional())
-        return false;
-      return !AssumedNoUBInsts.count(I);
-    } break;
     default:
       return false;
     }
@@ -4839,7 +4830,8 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
       UsedAssumedInformation = identifyAliveSuccessors(A, cast<InvokeInst>(*I),
                                                        *this, AliveSuccessors);
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
       UsedAssumedInformation = identifyAliveSuccessors(A, cast<BranchInst>(*I),
                                                        *this, AliveSuccessors);
       break;
@@ -9016,15 +9008,9 @@ struct AADenormalFPMathFunction final : AADenormalFPMathImpl {
 
   void initialize(Attributor &A) override {
     const Function *F = getAnchorScope();
-    DenormalMode Mode = F->getDenormalModeRaw();
-    DenormalMode ModeF32 = F->getDenormalModeF32Raw();
+    DenormalFPEnv DenormEnv = F->getDenormalFPEnv();
 
-    // TODO: Handling this here prevents handling the case where a callee has a
-    // fixed denormal-fp-math with dynamic denormal-fp-math-f32, but called from
-    // a function with a fully fixed mode.
-    if (ModeF32 == DenormalMode::getInvalid())
-      ModeF32 = Mode;
-    Known = DenormalState{Mode, ModeF32};
+    Known = DenormalState{DenormEnv.DefaultMode, DenormEnv.F32Mode};
     if (isModeFixed())
       indicateFixpoint();
   }
@@ -9060,19 +9046,17 @@ struct AADenormalFPMathFunction final : AADenormalFPMathImpl {
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
 
     SmallVector<Attribute, 2> AttrToAdd;
-    SmallVector<StringRef, 2> AttrToRemove;
-    if (Known.Mode == DenormalMode::getDefault()) {
-      AttrToRemove.push_back("denormal-fp-math");
-    } else {
-      AttrToAdd.push_back(
-          Attribute::get(Ctx, "denormal-fp-math", Known.Mode.str()));
-    }
+    SmallVector<Attribute::AttrKind, 2> AttrToRemove;
 
-    if (Known.ModeF32 != Known.Mode) {
-      AttrToAdd.push_back(
-          Attribute::get(Ctx, "denormal-fp-math-f32", Known.ModeF32.str()));
+    // TODO: Change to use DenormalFPEnv everywhere.
+    DenormalFPEnv KnownEnv(Known.Mode, Known.ModeF32);
+
+    if (KnownEnv == DenormalFPEnv::getDefault()) {
+      AttrToRemove.push_back(Attribute::DenormalFPEnv);
     } else {
-      AttrToRemove.push_back("denormal-fp-math-f32");
+      AttrToAdd.push_back(Attribute::get(
+          Ctx, Attribute::DenormalFPEnv,
+          DenormalFPEnv(Known.Mode, Known.ModeF32).toIntValue()));
     }
 
     auto &IRP = getIRPosition();
@@ -9083,7 +9067,7 @@ struct AADenormalFPMathFunction final : AADenormalFPMathImpl {
   }
 
   void trackStatistics() const override {
-    STATS_DECLTRACK_FN_ATTR(denormal_fp_math)
+    STATS_DECLTRACK_FN_ATTR(denormal_fpenv)
   }
 };
 } // namespace
@@ -10058,7 +10042,7 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool OnlyLeft = false, OnlyRight = false;
     if (C && *C && (*C)->isOneValue())
       OnlyLeft = true;
-    else if (C && *C && (*C)->isZeroValue())
+    else if (C && *C && (*C)->isNullValue())
       OnlyRight = true;
 
     bool LHSContainsUndef = false, RHSContainsUndef = false;
@@ -10495,7 +10479,7 @@ struct AANoFPClassImpl : AANoFPClass {
       const DominatorTree *DT = nullptr;
       AssumptionCache *AC = nullptr;
       const TargetLibraryInfo *TLI = nullptr;
-      Function *F = getAssociatedFunction();
+      Function *F = getAnchorScope();
       if (F) {
         TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
         if (!F->isDeclaration()) {

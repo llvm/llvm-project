@@ -598,13 +598,14 @@ entry:
 define <8 x i32> @sabd_8h_bv_imm(<8 x i16> %a) {
 ; CHECK-LABEL: sabd_8h_bv_imm:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x9, #549747425280 // =0x7fff800000
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    adrp x8, .LCPI45_0
-; CHECK-NEXT:    adrp x9, .LCPI45_1
+; CHECK-NEXT:    movk x9, #69, lsl #48
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI45_0]
-; CHECK-NEXT:    ldr d3, [x9, :lo12:.LCPI45_1]
-; CHECK-NEXT:    sabdl v0.4s, v0.4h, v3.4h
-; CHECK-NEXT:    sabdl v1.4s, v1.4h, v2.4h
+; CHECK-NEXT:    fmov d3, x9
+; CHECK-NEXT:    sabdl v0.4s, v0.4h, v2.4h
+; CHECK-NEXT:    sabdl v1.4s, v1.4h, v3.4h
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext <8 x i16> %a to <8 x i32>
