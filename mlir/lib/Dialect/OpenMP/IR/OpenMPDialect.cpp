@@ -6001,7 +6001,8 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
       clauses.linearVars, clauses.linearStepVars, clauses.linearVarTypes,
       clauses.linearModifiers, makeArrayAttr(ctx, clauses.linearSyms),
-      clauses.notinbranch, clauses.simdlen, clauses.uniformVars);
+      clauses.notinbranch, clauses.simdlen, clauses.uniformVars,
+      /*arg_types=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
