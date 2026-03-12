@@ -5,14 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// -------------------------- Post RA scheduling ---------------------------- //
-// SystemZPostRASchedStrategy is a scheduling strategy which is plugged into
-// the MachineScheduler. It has a sorted Available set of SUs and a pickNode()
-// implementation that looks to optimize decoder grouping and balance the
-// usage of processor resources. Scheduler states are saved for the end
-// region of each MBB, so that a successor block can learn from it.
-//===----------------------------------------------------------------------===//
 
 #include "SystemZMachineScheduler.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -20,6 +12,188 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
+
+/// Pre-RA scheduling ///
+
+static bool isRegDef(const MachineOperand &MO) {
+  return MO.isReg() && MO.isDef();
+}
+
+static bool isPhysRegDef(const MachineOperand &MO) {
+  return isRegDef(MO) && MO.getReg().isPhysical();
+}
+
+void SystemZPreRASchedStrategy::initializeLatencyReduction() {
+  // Enable latency reduction for a region that has a considerable amount of
+  // data sequences that should be interlaved. These are SUs that only have
+  // one data predecessor / successor edge(s) to their adjacent instruction(s)
+  // in the input order. Disable if region has many SUs relative to the
+  // overall height.
+  unsigned DAGHeight = 0;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+  RegionPolicy.DisableLatencyHeuristic =
+      DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
+  if ((HasDataSequences = !RegionPolicy.DisableLatencyHeuristic)) {
+    unsigned CurrSequence = 0, NumSeqNodes = 0;
+    auto countSequence = [&CurrSequence, &NumSeqNodes]() {
+      if (CurrSequence >= 2)
+        NumSeqNodes += CurrSequence;
+      CurrSequence = 0;
+    };
+    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+      const SUnit *SU = &DAG->SUnits[Idx];
+      bool InDataSequence = true;
+      // One Data pred to MI just above, or no preds.
+      unsigned NumPreds = 0;
+      for (const SDep &Pred : SU->Preds)
+        if (++NumPreds != 1 || Pred.getKind() != SDep::Data ||
+            Pred.getSUnit()->NodeNum != Idx - 1)
+          InDataSequence = false;
+      // One Data succ or no succs (ignoring ExitSU).
+      unsigned NumSuccs = 0;
+      for (const SDep &Succ : SU->Succs)
+        if (Succ.getSUnit() != &DAG->ExitSU &&
+            (++NumSuccs != 1 || Succ.getKind() != SDep::Data))
+          InDataSequence = false;
+      // Another type of node or one that does not have a single data pred
+      // ends any previous sequence.
+      if (!InDataSequence || !NumPreds)
+        countSequence();
+      if (InDataSequence)
+        CurrSequence++;
+    }
+    countSequence();
+    if (NumSeqNodes >= std::max(size_t(4), DAG->SUnits.size() / 4)) {
+      LLVM_DEBUG(dbgs() << "Number of nodes in def-use sequences: "
+                        << NumSeqNodes << ". ";);
+    } else
+      HasDataSequences = false;
+  }
+}
+
+bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
+                                               bool CCDef) const {
+  if (Cmp0SrcReg != SystemZ::NoRegister && MI->getNumOperands() &&
+      (MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC) || !CCDef)) {
+    const MachineOperand &MO0 = MI->getOperand(0);
+    assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
+    if (isRegDef(MO0) && MO0.getReg() == Cmp0SrcReg)
+      return true;
+  }
+  return false;
+}
+
+static int biasPhysRegExtra(const SUnit *SU) {
+  if (int Res = biasPhysReg(SU, /*isTop=*/false))
+    return Res;
+
+  // Also recognize Load Address. Most of these are with an FI operand.
+  const MachineInstr *MI = SU->getInstr();
+  return MI->getNumOperands() && !MI->isCopy() &&
+         isPhysRegDef(MI->getOperand(0));
+}
+
+bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
+                                             SchedCandidate &TryCand,
+                                             SchedBoundary *Zone) const {
+  assert(Zone && !Zone->isTop() && "Bottom-Up scheduling only.");
+
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = FirstValid;
+    return true;
+  }
+
+  // Bias physreg defs and copies to their uses and definitions respectively.
+  int TryCandPRegBias = biasPhysRegExtra(TryCand.SU);
+  int CandPRegBias = biasPhysRegExtra(Cand.SU);
+  if (tryGreater(TryCandPRegBias, CandPRegBias, TryCand, Cand, PhysReg))
+    return TryCand.Reason != NoCand;
+  if (TryCandPRegBias && CandPRegBias) {
+    // Both biased same way.
+    tryGreater(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand, NodeOrder);
+    return TryCand.Reason != NoCand;
+  }
+
+  // Don't extend the scheduled latency in regions with many nodes in data
+  // sequences, or for (single block loop) regions that are acyclically
+  // (within a single loop iteration) latency limited. IsAcyclicLatencyLimited
+  // is set only after initialization in registerRoots(), which is why it is
+  // checked here instead of earlier.
+  if (!RegionPolicy.DisableLatencyHeuristic &&
+      (HasDataSequences || Rem.IsAcyclicLatencyLimited))
+    if (const SUnit *HigherSU =
+            TryCand.SU->getHeight() > Cand.SU->getHeight()   ? TryCand.SU
+            : TryCand.SU->getHeight() < Cand.SU->getHeight() ? Cand.SU
+                                                             : nullptr)
+      if (HigherSU->getHeight() > Zone->getScheduledLatency() &&
+          HigherSU->getDepth() < computeRemLatency(*Zone)) {
+        // One or both SUs increase the scheduled latency.
+        tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
+                GenericSchedulerBase::BotHeightReduce);
+        return TryCand.Reason != NoCand;
+      }
+
+  // Weak edges help copy coalescing.
+  if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft, TryCand, Cand,
+              Weak))
+    return TryCand.Reason != NoCand;
+
+  // Help compare with zero elimination.
+  if (tryGreater(definesCmp0Src(TryCand.SU->getInstr()),
+                 definesCmp0Src(Cand.SU->getInstr()), TryCand, Cand, Weak))
+    return TryCand.Reason != NoCand;
+
+  // Fall through to original instruction order.
+  if (TryCand.SU->NodeNum > Cand.SU->NodeNum) {
+    TryCand.Reason = NodeOrder;
+    return true;
+  }
+
+  return false;
+}
+
+void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
+                                           MachineBasicBlock::iterator End,
+                                           unsigned NumRegionInstrs) {
+  // Avoid setting up the register pressure tracker for small regions to save
+  // compile time. Currently only used for computeCyclicCriticalPath() which
+  // is used for single block loops.
+  MachineBasicBlock *MBB = Begin->getParent();
+  RegionPolicy.ShouldTrackPressure =
+      MBB->isSuccessor(MBB) && NumRegionInstrs >= 8;
+
+  // These heuristics has so far seemed to work better without adding a
+  // top-down boundary.
+  RegionPolicy.OnlyBottomUp = true;
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
+}
+
+void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
+  GenericScheduler::initialize(dag);
+
+  Cmp0SrcReg = SystemZ::NoRegister;
+
+  initializeLatencyReduction();
+  LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
+                    << "enabled for data sequences.\n";);
+}
+
+void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
+  GenericScheduler::schedNode(SU, IsTopNode);
+
+  const SystemZInstrInfo *TII = static_cast<const SystemZInstrInfo *>(DAG->TII);
+  MachineInstr *MI = SU->getInstr();
+  if (TII->isCompareZero(*MI))
+    Cmp0SrcReg = TII->getCompareSourceReg(*MI);
+  else if (MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC) ||
+           definesCmp0Src(MI, /*CCDef=*/false))
+    Cmp0SrcReg = SystemZ::NoRegister;
+}
+
+/// Post-RA scheduling ///
 
 #ifndef NDEBUG
 // Print the set of SUs

@@ -441,7 +441,8 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C))
     return true;
 
-  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+  auto *CI = dyn_cast<ConstantInt>(C);
+  if (CI && CI->getType()->isIntegerTy()) {
     if ((CI->getBitWidth() & 7) != 0)
       return false;
     const APInt &Val = CI->getValue();
@@ -457,7 +458,8 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
     return true;
   }
 
-  if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+  auto *CFP = dyn_cast<ConstantFP>(C);
+  if (CFP && CFP->getType()->isFloatingPointTy()) {
     if (CFP->getType()->isDoubleTy()) {
       C = FoldBitCast(C, Type::getInt64Ty(C->getContext()), DL);
       return ReadDataFromGlobal(C, ByteOffset, CurPtr, BytesLeft, DL);
@@ -511,7 +513,8 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   }
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
-      isa<ConstantDataSequential>(C)) {
+      isa<ConstantDataSequential>(C) || isa<ConstantInt>(C) ||
+      isa<ConstantFP>(C)) {
     uint64_t NumElts, EltSize;
     Type *EltTy;
     if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
@@ -1966,6 +1969,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::experimental_constrained_rint:
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps:
+
+  case Intrinsic::experimental_cttz_elts:
     return true;
   default:
     return false;
@@ -3346,12 +3351,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::copysign:
         return ConstantFP::get(Ty, APFloat::copySign(Op1V, Op2V));
       case Intrinsic::minnum:
-        if (Op1V.isSignaling() || Op2V.isSignaling())
-          return nullptr;
         return ConstantFP::get(Ty, minnum(Op1V, Op2V));
       case Intrinsic::maxnum:
-        if (Op1V.isSignaling() || Op2V.isSignaling())
-          return nullptr;
         return ConstantFP::get(Ty, maxnum(Op1V, Op2V));
       case Intrinsic::minimum:
         return ConstantFP::get(Ty, minimum(Op1V, Op2V));
@@ -3792,6 +3793,27 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                            /*IsSigned*/false);
       break;
     }
+  }
+
+  if (IntrinsicID == Intrinsic::experimental_cttz_elts) {
+    auto *FVTy = dyn_cast<FixedVectorType>(Operands[0]->getType());
+    bool ZeroIsPoison = cast<ConstantInt>(Operands[1])->isOne();
+    if (!FVTy)
+      return nullptr;
+    unsigned Width = Ty->getIntegerBitWidth();
+    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()))
+      return PoisonValue::get(Ty);
+    for (unsigned I = 0; I < FVTy->getNumElements(); ++I) {
+      Constant *Elt = Operands[0]->getAggregateElement(I);
+      if (!Elt)
+        return nullptr;
+      if (isa<UndefValue>(Elt) || Elt->isNullValue())
+        continue;
+      return ConstantInt::get(Ty, I);
+    }
+    if (ZeroIsPoison)
+      return PoisonValue::get(Ty);
+    return ConstantInt::get(Ty, FVTy->getNumElements());
   }
   return nullptr;
 }

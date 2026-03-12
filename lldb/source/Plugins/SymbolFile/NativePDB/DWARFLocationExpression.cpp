@@ -110,7 +110,6 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
   const ArchSpec &architecture = module->GetArchitecture();
   ByteOrder byte_order = architecture.GetByteOrder();
   uint32_t address_size = architecture.GetAddressByteSize();
-  uint32_t byte_size = architecture.GetDataByteSize();
   if (byte_order == eByteOrderInvalid || address_size == 0)
     return DWARFExpression();
 
@@ -122,7 +121,7 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
 
   DataBufferSP buffer =
       std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
-  DataExtractor extractor(buffer, byte_order, address_size, byte_size);
+  DataExtractor extractor(buffer, byte_order, address_size);
   DWARFExpression result(extractor);
   result.SetRegisterKind(register_kind);
 

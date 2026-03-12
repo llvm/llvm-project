@@ -49,12 +49,20 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 ### Flang Biweekly Call
 
 -   Technical discussions as well as general updates on the Flang project.
--   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=mdce13c9bd55202e8071d8128fb953614)
-    - If you prefer to join using a meeting number and password, those can be
-      found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available there.
--   Time: Every other Wednesday, 8:30 a.m. Pacific Time. Please check the [LLVM Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org) for the next scheduled call.
--   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
--   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit).
+-   Join the [Flang Biweekly Call](https://teams.microsoft.com/meet/23836454854154?p=ImtxJRnSgszrn5tSeG). Alternative ways to join the call are provided below.
+    - Join with meeting ID and password
+        - Meeting ID: 238 364 548 541 54
+        - Meeting passcode: zg9Bd3Zp
+    - Join by phone
+        - +1 575-323-9652 USA, Las Cruces
+        - [Global call-in numbers](https://dialin.teams.microsoft.com/729dbcdc-4739-4781-a749-3e4d45b78024?id=717999227)
+    - Join from a video system or application
+        - Enter [1114545259.lanl@m.webex.com](mailto:1114545259.lanl@m.webex.com) on a Cisco Webex Room or other standard video endpoint
+        - Enter [lanl@m.webex.com](mailto:lanl@m.webex.com) and then the Video ID 1114545259 followed by #
+-   Time: Every other Wednesday, 9:30 a.m. Mountain Time. Please check the [LLVM Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org) for the next scheduled call.
+-   Calendar invite: https://drive.google.com/file/d/1-qv5W_SinJi9Wqcg9vUPmYNlN771JOYV/view?usp=drive_link
+-   Working agenda is available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit). The drafted agenda will be posted on Slack the day before the meeting. Edits to the agenda should be made directly in the Google Doc, but if this is not possible any replies to the Slack post will also be incorporated.
+-   Meeting minutes are available in the [MeetingNotes](https://github.com/llvm/llvm-project/blob/main/flang/docs/MeetingNotes) directory.
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
 ### LLVM Alias Analysis Technical Call

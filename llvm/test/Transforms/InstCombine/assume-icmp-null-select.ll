@@ -24,8 +24,7 @@ define ptr @example2(ptr %x) {
 ; CHECK-NEXT:    [[Y:%.*]] = load ptr, ptr [[X:%.*]], align 8
 ; CHECK-NEXT:    [[Y_IS_NULL:%.*]] = icmp eq ptr [[Y]], null
 ; CHECK-NEXT:    [[RES:%.*]] = select i1 [[Y_IS_NULL]], ptr null, ptr [[X]]
-; CHECK-NEXT:    [[NONNULL:%.*]] = icmp ne ptr [[RES]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNULL]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[RES]]) ]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %y = load ptr, ptr %x, align 8

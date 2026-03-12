@@ -6233,12 +6233,14 @@ class GenericSelectionExpr final
   // GenericSelectionExpr is followed by several trailing objects.
   // They are (in order):
   //
-  // * A single Stmt * for the controlling expression or a TypeSourceInfo * for
-  //   the controlling type, depending on the result of isTypePredicate() or
-  //   isExprPredicate().
-  // * An array of getNumAssocs() Stmt * for the association expressions.
-  // * An array of getNumAssocs() TypeSourceInfo *, one for each of the
-  //   association expressions.
+  // * An array of either
+  //   - getNumAssocs() (if what controls the generic is not an expression), or
+  //   - getNumAssocs() + 1 (if what controls the generic is an expression)
+  //   Stmt * for the association expressions.
+  // * An array of
+  //   - getNumAssocs() (if what controls the generic is not a type), or
+  //   - getNumAssocs() + 1 (if what controls the generic is a type)
+  //   TypeSourceInfo * for the association types.
   unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
     // Add one to account for the controlling expression; the remainder
     // are the associated expressions.

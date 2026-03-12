@@ -101,7 +101,7 @@ public:
       // assumption. This assumption may be overridden by setting
       // `rocdl.uniform_work_group_size` on a given function.
       if (!llvmFunc->hasFnAttribute("uniform-work-group-size"))
-        llvmFunc->addFnAttr("uniform-work-group-size", "true");
+        llvmFunc->addFnAttr("uniform-work-group-size");
     }
     // Override flat-work-group-size
     // TODO: update clients to rocdl.flat_work_group_size instead,
@@ -170,8 +170,10 @@ public:
                                " must be a boolean");
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
-      llvmFunc->addFnAttr("uniform-work-group-size",
-                          value.getValue() ? "true" : "false");
+      if (value.getValue())
+        llvmFunc->addFnAttr("uniform-work-group-size");
+      else
+        llvmFunc->removeFnAttr("uniform-work-group-size");
     }
     if (dialect->getUnsafeFpAtomicsAttrHelper().getName() ==
         attribute.getName()) {
