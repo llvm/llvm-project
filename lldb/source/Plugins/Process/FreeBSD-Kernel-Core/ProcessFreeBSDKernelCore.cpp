@@ -338,8 +338,10 @@ void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
     return;
 
   bool changed = false;
-  kernel_module_sp->SetLoadAddress(
-      target, static_cast<lldb::addr_t>(displacement), true, changed);
+  // Set offset (or displacement), not absolute address value.
+  kernel_module_sp->SetLoadAddress(target,
+                                   static_cast<lldb::addr_t>(displacement),
+                                   /*value_is_offset*/ true, changed);
 
   if (changed) {
     ModuleList loaded_module_list;
