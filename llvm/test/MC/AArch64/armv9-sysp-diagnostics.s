@@ -32,7 +32,7 @@ sysp #0, c7, c0, #0, x0, x1
 sysp #0, c10, c0, #0, x0, x1
 // ERRORS: error: expected cN operand where 8 <= N <= 9
 sysp #0, c8, c8, #0, x0, x1
-// ERRORS: error: expected cM operand where 0 <= M <= 7
+// ERRORS: error: expected cN operand where 0 <= N <= 7
 sysp #0, c8, c0, #8, x0, x1
 // ERRORS: error: immediate must be an integer in range [0, 7].
 sysp #0, c8, c0, #0, xzr,
