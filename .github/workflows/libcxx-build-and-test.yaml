@@ -138,7 +138,6 @@ jobs:
           'generic-no-experimental',
           'generic-no-filesystem',
           'generic-no-localization',
-          'generic-no-terminal',
           'generic-no-random_device',
           'generic-no-threads',
           'generic-no-tzdb',
