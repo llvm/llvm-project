@@ -301,6 +301,7 @@ void ScriptInterpreterPython::Initialize() {
 
 void ScriptInterpreterPython::Terminate() {
   ScriptInterpreterPythonInterfaces::Terminate();
+  PluginManager::UnregisterPlugin(ScriptInterpreterPythonImpl::CreateInstance);
 }
 
 ScriptInterpreterPythonImpl::Locker::Locker(

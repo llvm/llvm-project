@@ -708,7 +708,7 @@ bool Neg(InterpState &S, CodePtr OpPC) {
       return true;
     }
 
-    assert(isIntegralType(Name) &&
+    assert(isIntegerType(Name) &&
            "don't expect other types to fail at constexpr negation");
     S.Stk.push<T>(Result);
 

@@ -574,6 +574,23 @@ define <8 x i64> @insertelt_v8i64_0(<8 x i64> %a, ptr %x) {
   ret <8 x i64> %b
 }
 
+define <8 x i64> @insertelt_v8i64_sext_0(<8 x i64> %a, ptr %x, i32 signext %elt) {
+; CHECK-LABEL: insertelt_v8i64_sext_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a1
+; CHECK-NEXT:    ret
+;
+; VISNI-LABEL: insertelt_v8i64_sext_0:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; VISNI-NEXT:    vmv.s.x v8, a1
+; VISNI-NEXT:    ret
+  %sext = sext i32 %elt to i64
+  %b = insertelement <8 x i64> %a, i64 %sext, i32 0
+  ret <8 x i64> %b
+}
+
 define void @insertelt_v8i64_0_store(ptr %x) {
 ; RV32-LABEL: insertelt_v8i64_0_store:
 ; RV32:       # %bb.0:

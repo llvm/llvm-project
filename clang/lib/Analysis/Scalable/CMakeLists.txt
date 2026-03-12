@@ -18,6 +18,8 @@ add_clang_library(clangAnalysisScalable
   Serialization/JSONFormat/TUSummary.cpp
   Serialization/JSONFormat/TUSummaryEncoding.cpp
   Serialization/SerializationFormatRegistry.cpp
+  SummaryData/LUSummaryConsumer.cpp
+  SummaryData/SummaryDataBuilderRegistry.cpp
   Support/ErrorBuilder.cpp
   TUSummary/ExtractorRegistry.cpp
   TUSummary/TUSummaryBuilder.cpp
@@ -26,9 +28,9 @@ add_clang_library(clangAnalysisScalable
   clangAST
   clangASTMatchers
   clangBasic
-  clangIndex
   clangLex
   clangFrontend
+  clangUnifiedSymbolResolution
 
   DEPENDS
   )

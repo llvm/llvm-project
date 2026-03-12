@@ -1,9 +1,7 @@
 // RUN: %check_clang_tidy -std=c++17 %s abseil-string-find-startswith %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:     {abseil-string-find-startswith.StringLikeClasses: \
-// RUN:       '::std::basic_string;::std::basic_string_view;::basic_string'}}" \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN:       '::std::basic_string;::std::basic_string_view;::basic_string'}}"
 #include <string>
 
 using size_t = decltype(sizeof(int));
