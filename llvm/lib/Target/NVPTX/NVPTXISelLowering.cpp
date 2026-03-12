@@ -2439,17 +2439,6 @@ SDValue NVPTXTargetLowering::LowerFROUND64(SDValue Op,
   return DAG.getNode(ISD::SELECT, SL, VT, IsLarge, A, RoundedA);
 }
 
-// Same semantics as FROUND, but with integer return type. If the input is NaN,
-// infinity, or too big for the integer return type, the result is unspecified.
-SDValue NVPTXTargetLowering::LowerLROUND(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-  SDValue A = Op->getOperand(0);
-  EVT VT = Op.getValueType();
-  EVT FVT = A.getValueType();
-  SDValue RoundedA = DAG.getNode(ISD::FROUND, SL, FVT, A);
-  return DAG.getNode(ISD::FP_TO_SINT, SL, VT, RoundedA);
-}
-
 static SDValue PromoteBinOpToF32(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   EVT NVT = MVT::f32;
@@ -3484,9 +3473,6 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerSELECT(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
-  case ISD::LROUND:
-  case ISD::LLROUND:
-    return LowerLROUND(Op, DAG);
   case ISD::FCOPYSIGN:
     return LowerFCOPYSIGN(Op, DAG);
   case ISD::SINT_TO_FP:
