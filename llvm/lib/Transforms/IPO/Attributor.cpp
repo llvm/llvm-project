@@ -3255,7 +3255,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
     case Instruction::CatchSwitch:
     case Instruction::AtomicRMW:
     case Instruction::AtomicCmpXchg:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Resume:
     case Instruction::Ret:
     case Instruction::Load:

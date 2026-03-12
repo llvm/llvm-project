@@ -73,6 +73,8 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_cosh.cl
   math/clc_cospi.cl
   math/clc_div_cr.cl
+  math/clc_div_fast.cl
+  math/clc_ep.cl
   math/clc_ep_log.cl
   math/clc_erf.cl
   math/clc_erfc.cl
@@ -90,6 +92,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_fmod.cl
   math/clc_fract.cl
   math/clc_frexp.cl
+  math/clc_frexp_exp.cl
   math/clc_half_cos.cl
   math/clc_half_divide.cl
   math/clc_half_exp.cl
@@ -134,9 +137,12 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_native_sqrt.cl
   math/clc_native_tan.cl
   math/clc_nextafter.cl
+  math/clc_nextdown.cl
+  math/clc_nextup.cl
   math/clc_pow.cl
   math/clc_pown.cl
   math/clc_powr.cl
+  math/clc_recip_fast.cl
   math/clc_remainder.cl
   math/clc_remquo.cl
   math/clc_rint.cl
@@ -150,6 +156,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_sinpi.cl
   math/clc_sqrt.cl
   math/clc_sqrt_cr.cl
+  math/clc_sqrt_fast.cl
   math/clc_tables.cl
   math/clc_tan.cl
   math/clc_tanh.cl
@@ -207,7 +214,9 @@ libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -fapprox-func
   math/clc_native_sin.cl
   math/clc_native_sqrt.cl
   math/clc_native_tan.cl
-)
+  math/clc_div_fast.cl
+  math/clc_recip_fast.cl
+  math/clc_sqrt_fast.cl)
 
 libclc_configure_source_options(${CMAKE_CURRENT_SOURCE_DIR} -cl-fp32-correctly-rounded-divide-sqrt
   math/clc_div_cr.cl
