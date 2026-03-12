@@ -28817,11 +28817,9 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
   if (Reg)
     return Reg;
 
-  if (Subtarget.is64Bit()) {
-    Reg = MatchRegisterName(RegName);
-    if (!Subtarget.isRegisterReservedByUser(Reg))
-      Reg = Register();
-  }
+  Reg = MatchRegisterName(RegName);
+  if (!Subtarget.isRegisterReservedByUser(Reg))
+    Reg = Register();
 
   return Reg;
 }
