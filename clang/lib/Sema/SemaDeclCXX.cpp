@@ -11248,6 +11248,7 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
 
       if (Context.getTargetInfo().emitVectorDeletingDtors(
               Context.getLangOpts())) {
+        bool DestructorIsExported = Destructor->hasAttr<DLLExportAttr>();
         // Lookup delete[] too in case we have to emit a vector deleting dtor.
         DeclarationName VDeleteName =
             Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
@@ -11261,7 +11262,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
                                                     VDeleteName);
           Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
           if (GlobalArrOperatorDelete &&
-              Context.classNeedsVectorDeletingDestructor(RD))
+              (Context.classMaybeNeedsVectorDeletingDestructor(RD) ||
+               DestructorIsExported))
             MarkFunctionReferenced(Loc, GlobalArrOperatorDelete);
         } else if (!ArrOperatorDelete) {
           ArrOperatorDelete = FindDeallocationFunctionForDestructor(
@@ -11269,7 +11271,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
               /*LookForGlobal*/ true, VDeleteName);
         }
         Destructor->setOperatorArrayDelete(ArrOperatorDelete);
-        if (ArrOperatorDelete && Context.classNeedsVectorDeletingDestructor(RD))
+        if (ArrOperatorDelete &&
+            (Context.classMaybeNeedsVectorDeletingDestructor(RD) ||
+             DestructorIsExported))
           MarkFunctionReferenced(Loc, ArrOperatorDelete);
       }
     }
