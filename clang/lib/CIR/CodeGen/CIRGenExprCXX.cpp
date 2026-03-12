@@ -1182,11 +1182,6 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
     cgf.cgm.errorNYI(de->getSourceRange(), "emitObjectDelete: ObjCLifetime");
   }
 
-  // In traditional LLVM codegen null checks are emitted to save a delete call.
-  // In CIR we optimize for size by default, the null check should be added into
-  // this function callers.
-  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
-
   cgf.popCleanupBlock();
 }
 
@@ -1201,10 +1196,21 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // unconditionally perform the operator delete call in that case. For now, we
   // assume that deleted pointers are null rarely enough that it's better to
   // keep the branch. This might be worth revisiting for a -O0 code size win.
-  //
-  // CIR note: emit the code size friendly by default for now, such as mentioned
-  // in `emitObjectDelete`.
   assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+  cir::YieldOp thenYield;
+  mlir::Value notNull = builder.createPtrIsNotNull(ptr.getPointer());
+  cir::IfOp::create(builder, getLoc(e->getExprLoc()), notNull,
+                    /*withElseRegion=*/false,
+                    /*thenBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      thenYield = builder.createYield(loc);
+                    });
+
+  // Emit the rest of the CIR inside the if-op's then region, but restore the
+  // insertion point to the point after the if when this function returns.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(thenYield);
+
   QualType deleteTy = e->getDestroyedType();
 
   // A destroying operator delete overrides the entire operation of the
