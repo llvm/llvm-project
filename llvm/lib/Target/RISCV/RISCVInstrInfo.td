@@ -149,6 +149,15 @@ def riscv_add_lo : RVSDNode<"ADD_LO", SDTIntBinOp>;
 // Get the Hi 20 bits from an address. Selected to LUI.
 def riscv_hi : RVSDNode<"HI", SDTIntUnaryOp>;
 
+//Define how the node is (1 output with two operands)
+def SDT_RISCVSetTag : SDTypeProfile<1, 2, [
+  SDTCisVT<0, XLenVT>,          // result is integer
+  SDTCisVT<1, XLenVT>,    // operand0 is integer
+  SDTCisVT<2, XLenVT>           // operand1 is XLenVT (i32 on RV32, i64 on RV64)
+]>;
+//Define the tagged node
+def riscv_set_tag : RVSDNode<"SET_TAG", SDT_RISCVSetTag>;
+
 // Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
 def riscv_lla : RVSDNode<"LLA", SDTIntUnaryOp>;
 
@@ -740,6 +749,29 @@ class UnaryW_r<bits<12> imm12, bits<3> funct3, string opcodestr>
     : RVInstIUnary<imm12, funct3, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
                    opcodestr, "$rd, $rs1">;
 
+// Define the structure of the tag instruction
+class TagInst<bits<7> funct7, string asm>
+  : Instruction {
+  let Namespace = "RISCV";
+  let OutOperandList = (outs GPR:$rd);
+  let InOperandList  = (ins);
+
+  let AsmString = asm # "\t$rd";
+
+  bits<5> rd;
+  bits<32> Inst;
+
+  let Inst{6-0}   = 0b1111011;
+  let Inst{11-7}  = rd;
+  let Inst{24-12} = 0;
+  let Inst{31-25} = funct7;
+
+  let Size = 4;
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -836,9 +868,9 @@ def SUB  : ALU_rr<0b0000000, 0b001, "sub">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
 //New Shift instruction
-def SL : ALU_rr<0b0000000, 0b101, "shift">,
+def SL : ALU_rr<0b0000000, 0b101, "sl">,
           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
-def SR : ALU_rr<0b0100000, 0b101, "shift">,
+def SR : ALU_rr<0b0100000, 0b101, "sr">,
           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 
 let IsSignExtendingOpW = 1 in {
@@ -912,6 +944,51 @@ def CSRRC : CSR_ir<0b011, "csrrc">;
 def CSRRWI : CSR_ii<0b101, "csrrwi">;
 def CSRRSI : CSR_ii<0b110, "csrrsi">;
 def CSRRCI : CSR_ii<0b111, "csrrci">;
+
+//Defining tag specific instructions
+def CTUB : TagInst<0b0000000, "ctub">;
+def CTUH : TagInst<0b0000001, "ctuh">;
+def CTUW : TagInst<0b0000010, "ctuw">;
+
+def CTSB : TagInst<0b0000100, "ctsb">;
+def CTSH : TagInst<0b0000101, "ctsh">;
+def CTSW : TagInst<0b0000110, "ctsw">;
+
+// Pseudos that *model* the data dependency (rd tied to rs1)
+// and expand to the real encoding-only-rd instruction.
+let isPseudo = 1, isCodeGenOnly = 1,
+    hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
+
+  def PSEUDO_CTUB : Pseudo<(outs GPR:$rd), (ins GPR:$rs1), []>,
+                   PseudoInstExpansion<(CTUB GPR:$rd)> {
+    let Constraints = "$rd = $rs1";
+  }
+
+  def PSEUDO_CTUH : Pseudo<(outs GPR:$rd), (ins GPR:$rs1), []>,
+                   PseudoInstExpansion<(CTUH GPR:$rd)> {
+    let Constraints = "$rd = $rs1";
+  }
+
+  def PSEUDO_CTUW : Pseudo<(outs GPR:$rd), (ins GPR:$rs1), []>,
+                   PseudoInstExpansion<(CTUW GPR:$rd)> {
+    let Constraints = "$rd = $rs1";
+  }
+
+  def PSEUDO_CTSB : Pseudo<(outs GPR:$rd), (ins GPR:$rs1), []>,
+                   PseudoInstExpansion<(CTSB GPR:$rd)> {
+    let Constraints = "$rd = $rs1";
+  }
+
+  def PSEUDO_CTSH : Pseudo<(outs GPR:$rd), (ins GPR:$rs1), []>,
+                   PseudoInstExpansion<(CTSH GPR:$rd)> {
+    let Constraints = "$rd = $rs1";
+  }
+
+  def PSEUDO_CTSW : Pseudo<(outs GPR:$rd), (ins GPR:$rs1), []>,
+                   PseudoInstExpansion<(CTSW GPR:$rd)> {
+    let Constraints = "$rd = $rs1";
+  }
+}
 
 /// RV64I instructions
 
@@ -1481,7 +1558,7 @@ class immop_oneuse<ImmLeaf leaf> : PatLeaf<(leaf), [{
   }];
 }
 
-/// Simple arithmetic operations
+/// Simple arithmetic operations 
 
 def : PatGprGpr<add, ADD>;
 def : PatGprSimm12<add, ADDI>;
@@ -1495,6 +1572,16 @@ def : PatGprSimm12<xor, XORI>;
 def : PatGprUimmLog2XLen<shl, SLI>;
 def : PatGprUimmLog2XLen<srl, SRI>;
 def : PatGprUimmLog2XLen<sra, SRI>;
+
+
+//Our tag specific set tag pattern
+def : Pat<(riscv_set_tag GPR:$rs1, (XLenVT 0)), (PSEUDO_CTUB GPR:$rs1)>;
+def : Pat<(riscv_set_tag GPR:$rs1, (XLenVT 1)), (PSEUDO_CTUH GPR:$rs1)>;
+def : Pat<(riscv_set_tag GPR:$rs1, (XLenVT 2)), (PSEUDO_CTUW GPR:$rs1)>;
+
+def : Pat<(riscv_set_tag GPR:$rs1, (XLenVT 3)), (PSEUDO_CTSB GPR:$rs1)>;
+def : Pat<(riscv_set_tag GPR:$rs1, (XLenVT 4)), (PSEUDO_CTSH GPR:$rs1)>;
+def : Pat<(riscv_set_tag GPR:$rs1, (XLenVT 5)), (PSEUDO_CTSW GPR:$rs1)>;
 
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.

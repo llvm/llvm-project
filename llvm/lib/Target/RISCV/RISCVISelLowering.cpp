@@ -1853,6 +1853,28 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, MVT::bf16, Custom);
     setOperationAction(ISD::STORE, MVT::bf16, Custom);
   }
+  //We tell the selection dag nodes to be a custom action
+  if(!Subtarget.is64Bit()) {
+    // Tagged ISA: force casts to be custom-lowered so we can emit tag-update ops.
+    setOperationAction(ISD::ZERO_EXTEND, MVT::i32, Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::i8,  Custom);
+
+    setOperationAction(ISD::SIGN_EXTEND, MVT::i32, Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::i16, Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::i8,  Custom);
+
+    // Very important on RV32: many sign-extends show up as SIGN_EXTEND_INREG.
+    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i32, Custom);
+    setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Custom);
+
+    //setOperationAction(ISD::TRUNCATE,    MVT::i16, Custom);
+    //setOperationAction(ISD::TRUNCATE,    MVT::i8,  Custom);
+
+    // Sometimes you’ll see ANY_EXTEND too.
+    setOperationAction(ISD::ANY_EXTEND,  MVT::i32, Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::i16, Custom);
+  }
 
   // Function alignments.
   const Align FunctionAlignment(Subtarget.hasStdExtZca() ? 2 : 4);
@@ -8018,24 +8040,39 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::TRUNCATE_SSAT_S:
   case ISD::TRUNCATE_USAT_U:
     // Only custom-lower vector truncates
-    if (!Op.getSimpleValueType().isVector())
-      return Op;
-    return lowerVectorTruncLike(Op, DAG);
+    if (Op.getSimpleValueType().isVector())
+      return lowerVectorTruncLike(Op, DAG);
+    if(Op.getValueType().isScalarInteger()) {
+      return lowerSetTag(Op, DAG, true);
+    }
+    return SDValue();
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
     if (Op.getOperand(0).getValueType().isVector() &&
         Op.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
       return lowerVectorMaskExt(Op, DAG, /*ExtVal*/ 1);
     if (Op.getValueType().isScalableVector())
-      return Op;
-    return lowerToScalableOp(Op, DAG);
+      return lowerToScalableOp(Op, DAG);
+    if(Op.getValueType().isScalarInteger()) {
+      return lowerSetTag(Op, DAG, false);
+    }
+    return SDValue();
   case ISD::SIGN_EXTEND:
     if (Op.getOperand(0).getValueType().isVector() &&
         Op.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
       return lowerVectorMaskExt(Op, DAG, /*ExtVal*/ -1);
     if (Op.getValueType().isScalableVector())
-      return Op;
-    return lowerToScalableOp(Op, DAG);
+      return lowerToScalableOp(Op, DAG);
+    if (Op.getValueType().isScalarInteger()) {
+      return lowerSetTag(Op, DAG, true);
+    }
+    return SDValue();
+  case ISD::SIGN_EXTEND_INREG: {
+    if(Op.getValueType().isScalarInteger()) {
+      return lowerSetTag(Op, DAG, true);
+    }
+    return SDValue();
+  }
   case ISD::SPLAT_VECTOR_PARTS:
     return lowerSPLAT_VECTOR_PARTS(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
@@ -13982,6 +14019,37 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
   SDValue ScalableRes =
       DAG.getNode(NewOpc, DL, ContainerVT, Ops, Op->getFlags());
   return convertFromScalableVector(VT, ScalableRes, DAG, Subtarget);
+}
+
+// RISCVISelLowering.cpp (static helper)
+static unsigned getTagKind(bool Signed, unsigned WidthBits) {
+  if (!Signed) {
+    if (WidthBits == 8)  return 0;
+    if (WidthBits == 16) return 1;
+    return 2; // 32
+  } else {
+    if (WidthBits == 8)  return 3;
+    if (WidthBits == 16) return 4;
+    return 5; // 32
+  }
+}
+
+//Lower to set tag specific instruction
+SDValue RISCVTargetLowering::lowerSetTag(SDValue Op, SelectionDAG &DAG, bool Signed) const {
+  unsigned W = Op.getValueType().getSizeInBits();
+  unsigned Kind = getTagKind(Signed, W);
+  EVT ResVT = Op.getValueType();
+  EVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+  SDValue K = DAG.getTargetConstant(Kind, DL, XLenVT);
+
+  SDValue V = Op.getOperand(0);
+  if (V.getValueType() != XLenVT) {
+    V = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, V);
+  }
+
+  return DAG.getNode(RISCVISD::SET_TAG, DL, XLenVT,
+                       V, K);
 }
 
 // Lower a VP_* ISD node to the corresponding RISCVISD::*_VL node:

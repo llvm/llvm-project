@@ -15362,7 +15362,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   }
 
   // fold (zext (truncate x)) -> (and x, mask)
-  if (N0.getOpcode() == ISD::TRUNCATE) {
+  /*if (N0.getOpcode() == ISD::TRUNCATE) {
     // fold (zext (truncate (load x))) -> (zext (smaller load x))
     // fold (zext (truncate (srl (load x), c))) -> (zext (smaller load (x+c/n)))
     if (SDValue NarrowLoad = reduceLoadWidth(N0.getNode())) {
@@ -15432,11 +15432,11 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       DAG.transferDbgValues(N0, And);
       return And;
     }
-  }
+  }*/
 
   // Fold (zext (and (trunc x), cst)) -> (and x, cst),
   // if either of the casts is not free.
-  if (N0.getOpcode() == ISD::AND &&
+  /*if (N0.getOpcode() == ISD::AND &&
       N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
       (!TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType()) ||
@@ -15446,7 +15446,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
     APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
     return DAG.getNode(ISD::AND, DL, VT,
                        X, DAG.getConstant(Mask, DL, VT));
-  }
+  }*/
 
   // Try to simplify (zext (load x)).
   if (SDValue foldedExt = tryToFoldExtOfLoad(
@@ -15473,7 +15473,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   //      (and/or/xor (zextload x), (zext cst))
   // Unless (and (load x) cst) will match as a zextload already and has
   // additional users, or the zext is already free.
-  if (ISD::isBitwiseLogicOp(N0.getOpcode()) && !TLI.isZExtFree(N0, VT) &&
+  /*if (ISD::isBitwiseLogicOp(N0.getOpcode()) && !TLI.isZExtFree(N0, VT) &&
       isa<LoadSDNode>(N0.getOperand(0)) &&
       N0.getOperand(1).getOpcode() == ISD::Constant &&
       (!LegalOperations && TLI.isOperationLegal(N0.getOpcode(), VT))) {
@@ -15523,12 +15523,12 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
         return SDValue(N,0); // Return N so it doesn't get rechecked!
       }
     }
-  }
+  }*/
 
   // fold (zext (and/or/xor (shl/shr (load x), cst), cst)) ->
   //      (and/or/xor (shl/shr (zextload x), (zext cst)), (zext cst))
-  if (SDValue ZExtLoad = CombineZExtLogicopShiftLoad(N))
-    return ZExtLoad;
+  /*if (SDValue ZExtLoad = CombineZExtLogicopShiftLoad(N))
+    return ZExtLoad;*/
 
   // Try to simplify (zext (zextload x)).
   if (SDValue foldedExt = tryToFoldExtOfExtload(

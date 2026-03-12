@@ -514,6 +514,10 @@ private:
   SDValue lowerVectorMaskSplat(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
                              int64_t ExtTrueVal) const;
+
+  //Defining our lowering tag instruction
+  SDValue lowerSetTag(SDValue Op, SelectionDAG &DAG, bool Signed) const;
+
   SDValue lowerVectorMaskTruncLike(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorTruncLike(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
