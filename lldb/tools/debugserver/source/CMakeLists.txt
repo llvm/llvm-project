@@ -102,16 +102,29 @@ check_c_source_compiles(
 )
 
 set(default_arm64e_debugserver OFF)
-if (BUILDING_FOR_ARM64_OSX )
-  execute_process(
-      COMMAND sysctl -n hw.optional.ptrauth
-      OUTPUT_VARIABLE SYSCTL_OUTPUT
-      ERROR_QUIET
-      RESULT_VARIABLE SYSCTL_RESULT
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  if(SYSCTL_RESULT EQUAL 0)
-    set(default_arm64e_debugserver ON)
+if (BUILDING_FOR_ARM64_OSX)
+  # As of macOS 26 (Tahoe) you can run arm64e binaries without arm64e_preview_abi.
+  if (CMAKE_OSX_DEPLOYMENT_TARGET VERSION_GREATER_EQUAL "26")
+    set(SUPPORTS_RUNNING_ARM64E ON)
+  elseif (CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL "25")
+    # CMAKE_SYSTEM_VERSION reports the kernel version and not the marketing
+    # version, which for macOS Tahoe is 25.
+    set(SUPPORTS_RUNNING_ARM64E ON)
+  else()
+    set(SUPPORTS_RUNNING_ARM64E OFF)
+  endif()
+
+  if (SUPPORTS_RUNNING_ARM64E)
+    execute_process(
+        COMMAND sysctl -n hw.optional.ptrauth
+        OUTPUT_VARIABLE SYSCTL_OUTPUT
+        ERROR_QUIET
+        RESULT_VARIABLE SYSCTL_RESULT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(SYSCTL_RESULT EQUAL 0)
+      set(default_arm64e_debugserver ON)
+    endif()
   endif()
 endif()
 option(LLDB_ENABLE_ARM64E_DEBUGSERVER "Build debugserver for arm64 and arm64e" ${default_arm64e_debugserver})
