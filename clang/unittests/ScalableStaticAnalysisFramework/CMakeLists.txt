@@ -24,20 +24,15 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   TUSummaryBuilderTest.cpp
 
   CLANG_LIBS
-  clangScalableStaticAnalysisFrameworkCore
   clangAST
   clangASTMatchers
-  clangBasic
   clangFrontend
+  clangScalableStaticAnalysisFrameworkCore
   clangSerialization
   clangTooling
-  clangUnifiedSymbolResolution
 
   LINK_LIBS
-  clangTesting
   LLVMTestingSupport
 
   LLVM_COMPONENTS
-  FrontendOpenMP
-  Support
   )
