@@ -76,19 +76,11 @@ std::string FifoFile::ReadLine() {
   DWORD bytes_read;
 
   while (true) {
-    if (!ReadFile(m_pipe, read_buffer, sizeof(read_buffer), &bytes_read,
-                  NULL) ||
-        bytes_read == 0)
-      break;
-
+    BOOL success =
+        ReadFile(m_pipe, read_buffer, sizeof(read_buffer), &bytes_read, NULL);
     buffer.append(read_buffer, bytes_read);
-
-    if (buffer.back() == '\n') {
-      buffer.pop_back();
-      if (!buffer.empty() && buffer.back() == '\r')
-        buffer.pop_back();
+    if (success || GetLastError() != ERROR_MORE_DATA)
       break;
-    }
   }
 
   return buffer;
@@ -106,7 +98,7 @@ Expected<std::shared_ptr<FifoFile>> CreateFifoFile(StringRef path) {
          "FifoFile path should start with '\\\\.\\pipe\\'");
   HANDLE pipe_handle =
       CreateNamedPipeA(path.data(), PIPE_ACCESS_DUPLEX,
-                       PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                       PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
                        PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL);
 
   if (pipe_handle == INVALID_HANDLE_VALUE) {
