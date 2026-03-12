@@ -1511,12 +1511,16 @@ def testGetParentOfType():
 def test_get_ops_of_type():
     with Context(), Location.unknown():
         module = Module.parse(
-            """
-            module {
-                func.func @f() { return }
-                func.func @g() { return }
-            }
-        """
+            r"""
+    module {
+      func.func @f() {
+        func.return
+      }
+      func.func @g() {
+        func.return
+      }
+    }
+  """
         )
 
         # CHECK: get_ops_of_type func.func count: 2
