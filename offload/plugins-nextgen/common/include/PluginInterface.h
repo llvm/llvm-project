@@ -41,8 +41,10 @@
 #endif
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -301,10 +303,20 @@ private:
   }
 };
 
+/// Metadata extracted from OffloadBinary format
+struct OffloadBinMetadataTy {
+  llvm::object::ImageKind ImageKind;
+  llvm::object::OffloadKind OffloadKind;
+  std::string Triple;
+  std::string Arch;
+  llvm::StringMap<std::string> StringData;
+};
+
 /// Class wrapping a __tgt_device_image and its offload entry table on a
 /// specific device. This class is responsible for storing and managing
 /// the offload entries for an image on a device.
 class DeviceImageTy {
+private:
   /// Image identifier within the corresponding device. Notice that this id is
   /// not unique between different device; they may overlap.
   int32_t ImageId;
@@ -781,7 +793,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
                                        StringRef TgtImage);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 const OffloadBinMetadataTy *Metadata) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);

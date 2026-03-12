@@ -47,6 +47,39 @@ using namespace llvm::offload::debug;
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 namespace llvm::omp::target::plugin {
+
+// Parse OffloadBinary and extract all inner images with metadata
+static Expected<SmallVector<std::pair<OffloadBinMetadataTy, StringRef>>>
+parseOffloadBinary(MemoryBufferRef Buffer) {
+  auto BinariesOrErr = llvm::object::OffloadBinary::create(Buffer);
+  if (!BinariesOrErr)
+    return BinariesOrErr.takeError();
+
+  auto &Binaries = *BinariesOrErr;
+
+  SmallVector<std::pair<OffloadBinMetadataTy, StringRef>> Results;
+  Results.reserve(Binaries.size());
+
+  for (const auto &BinaryPtr : Binaries) {
+    const llvm::object::OffloadBinary *Binary = BinaryPtr.get();
+
+    // Extract metadata for this entry
+    OffloadBinMetadataTy Metadata;
+    Metadata.ImageKind = Binary->getImageKind();
+    Metadata.OffloadKind = Binary->getOffloadKind();
+    Metadata.Triple = Binary->getTriple().str();
+    Metadata.Arch = Binary->getArch().str();
+    for (auto [Key, Value] : Binary->strings())
+      Metadata.StringData[Key] = Value.str();
+
+    StringRef InnerImage = Binary->getImage();
+
+    Results.emplace_back(std::move(Metadata), InnerImage);
+  }
+
+  return Results;
+}
+
 struct RecordReplayTy {
 
   // Describes the state of the record replay mechanism.
@@ -873,12 +906,28 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
+
+// Helper function to finalize image loading after loadBinaryImpl succeeds
+static Error finalizeImageLoad(GenericDeviceTy &Device, GenericPluginTy &Plugin,
+                                DeviceImageTy *Image) {
+  Device.LoadedImages.push_back(Image);
+
+  if (auto Err = Device.setupRPCServer(Plugin, *Image))
+    return Err;
+
+  if (auto Err = Device.callGlobalConstructors(Plugin, *Image))
+    return Err;
+
+  return Error::success();
+}
+
 Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
   ODBG(OLDT_Init) << "Load data from image "
                   << static_cast<const void *>(InputTgtImage.bytes_begin());
 
   std::unique_ptr<MemoryBuffer> Buffer;
+
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
     auto CompiledImageOrErr = Plugin.getJIT().process(InputTgtImage, *this);
     if (!CompiledImageOrErr) {
@@ -887,21 +936,89 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                            "failure to jit IR image");
     }
     Buffer = std::move(*CompiledImageOrErr);
-  } else {
+  }
+  else if (identify_magic(InputTgtImage) == file_magic::offload_binary) {
+    MemoryBufferRef InputBuffer(InputTgtImage, "offload_binary");
+
+    auto ParsedOrErr = parseOffloadBinary(InputBuffer);
+    if (!ParsedOrErr)
+      return ParsedOrErr.takeError();
+
+    auto &InnerImages = *ParsedOrErr;
+
+    DeviceImageTy *FirstLoadedImage = nullptr;
+    Error LoadErrors = Error::success();
+
+    for (auto &[ExtractedMetadata, InnerImage] : InnerImages) {
+      if (identify_magic(InnerImage) == file_magic::offload_binary) {
+        auto ImageOrErr = loadBinary(Plugin, InnerImage);
+        if (ImageOrErr) {
+          if (!FirstLoadedImage)
+            FirstLoadedImage = *ImageOrErr;
+        } else {
+          LoadErrors = joinErrors(std::move(LoadErrors), ImageOrErr.takeError());
+        }
+        continue;
+      }
+
+      int32_t Compatible = Plugin.isDeviceCompatible(DeviceId, InnerImage);
+      if (!Compatible)
+        continue;  // Not compatible, skip
+
+      auto InnerBuffer = MemoryBuffer::getMemBufferCopy(InnerImage);
+      const OffloadBinMetadataTy *MetadataPtr = &ExtractedMetadata;
+
+      auto ImageOrErr = loadBinaryImpl(std::move(InnerBuffer), LoadedImages.size(),
+                                        MetadataPtr);
+      if (ImageOrErr) {
+        DeviceImageTy *LoadedImage = *ImageOrErr;
+
+        if (auto Err = finalizeImageLoad(*this, Plugin, LoadedImage)) {
+          LoadErrors = joinErrors(std::move(LoadErrors), std::move(Err));
+          continue;
+        }
+
+#ifdef OMPT_SUPPORT
+        if (ompt::Initialized) {
+          size_t Bytes = InnerImage.size();
+          performOmptCallback(
+              device_load, Plugin.getUserId(DeviceId),
+              /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+              /*ImgSize=*/Bytes,
+              /*HostAddr=*/const_cast<unsigned char *>(InnerImage.bytes_begin()),
+              /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
+        }
+#endif
+
+        if (!FirstLoadedImage)
+          FirstLoadedImage = LoadedImage;
+
+      } else {
+        LoadErrors = joinErrors(std::move(LoadErrors), ImageOrErr.takeError());
+      }
+    }
+
+    if (!FirstLoadedImage) {
+      if (LoadErrors)
+        return std::move(LoadErrors);
+      return Plugin::error(ErrorCode::UNKNOWN,
+                           "No compatible image found in OffloadBinary");
+    }
+
+    return FirstLoadedImage;
+  }
+  else {
     Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
   }
 
-  // Load the binary and allocate the image object. Use the next available id
-  // for the image id, which is the number of previously loaded images.
-  auto ImageOrErr = loadBinaryImpl(std::move(Buffer), LoadedImages.size());
+  auto ImageOrErr = loadBinaryImpl(std::move(Buffer), LoadedImages.size(),
+                                    nullptr);
   if (!ImageOrErr)
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
 
-  // Add the image to list.
-  LoadedImages.push_back(Image);
-
-  if (auto Err = setupRPCServer(Plugin, *Image))
+  // Finalize image load (track, setup RPC, call constructors)
+  if (auto Err = finalizeImageLoad(*this, Plugin, Image))
     return std::move(Err);
 
 #ifdef OMPT_SUPPORT
@@ -915,10 +1032,6 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
         /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
   }
 #endif
-
-  // Call any global constructors present on the device.
-  if (auto Err = callGlobalConstructors(Plugin, *Image))
-    return std::move(Err);
 
   // Return the pointer to the table of entries.
   return Image;
@@ -1651,6 +1764,21 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
+  case file_magic::offload_binary: {
+    // Unwrap OffloadBinary and check if ANY inner image is compatible
+    auto ParsedOrErr = parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
+    if (Error Err = ParsedOrErr.takeError())
+      return HandleError(std::move(Err));
+
+    auto &InnerImages = *ParsedOrErr;
+
+    for (auto &[Metadata, InnerImage] : InnerImages) {
+      if (isPluginCompatible(InnerImage))
+        return true;
+    }
+
+    return false;
+  }
   default:
     auto MatchOrErr = isImageCompatible(Image);
     if (Error Err = MatchOrErr.takeError())
@@ -1690,6 +1818,20 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     if (Error Err = MatchOrErr.takeError())
       return HandleError(std::move(Err));
     return *MatchOrErr;
+  }
+  case file_magic::offload_binary: {
+    auto ParsedOrErr = parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
+    if (Error Err = ParsedOrErr.takeError())
+      return HandleError(std::move(Err));
+
+    auto &InnerImages = *ParsedOrErr;
+
+    for (auto &[Metadata, InnerImage] : InnerImages) {
+      if (isDeviceCompatible(DeviceId, InnerImage))
+        return true;
+    }
+
+    return false;
   }
   default:
     auto MatchOrErr = isImageCompatible(DeviceId, Image);
