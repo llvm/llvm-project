@@ -13,7 +13,6 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -326,19 +325,49 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::FlatSymbolRefAttr deleteFn = op.getDeleteFnAttr();
   mlir::Location loc = op->getLoc();
   mlir::Value loweredAddress = adaptor.getAddress();
-  auto voidPtrTy =
-      cir::PointerType::get(cir::VoidType::get(rewriter.getContext()));
-  mlir::Value deletePtr = cir::CastOp::create(
-      rewriter, loc, voidPtrTy, cir::CastKind::bitcast, loweredAddress);
 
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
-  if (deleteParams.getSize() || deleteParams.getTypeAwareDelete() ||
-      deleteParams.getDestroyingDelete() || deleteParams.getAlignment())
-    return rewriter.notifyMatchFailure(
-        op,
-        "sized, type-aware, destroying, or aligned delete not yet supported");
+  bool sizeNeeded = deleteParams.getSize();
 
-  llvm::SmallVector<mlir::Value> callArgs{deletePtr};
+  if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
+      deleteParams.getAlignment())
+    return rewriter.notifyMatchFailure(
+        op, "type-aware, destroying, or aligned delete not yet supported");
+
+  const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
+  CIRBaseBuilderTy cirBuilder(rewriter);
+  mlir::Value deletePtr;
+  llvm::SmallVector<mlir::Value> callArgs;
+
+  if (sizeNeeded) {
+    mlir::Value numElements;
+    clang::CharUnits cookieSize;
+    auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
+    mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
+
+    cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
+                           deletePtr, cookieSize);
+    callArgs.push_back(deletePtr);
+    uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+    unsigned ptrWidth =
+        lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+    cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
+
+    mlir::Value eltSizeVal = cir::ConstantOp::create(
+        rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
+    mlir::Value allocSize =
+        cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
+    mlir::Value cookieSizeVal = cir::ConstantOp::create(
+        rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+    allocSize =
+        cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
+    callArgs.push_back(allocSize);
+  } else {
+    deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
+                                    cir::CastKind::bitcast, loweredAddress);
+    callArgs.push_back(deletePtr);
+  }
+
   cir::CallOp::create(rewriter, loc, deleteFn, cir::VoidType(), callArgs);
   rewriter.eraseOp(op);
   return mlir::success();

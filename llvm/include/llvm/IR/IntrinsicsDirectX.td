@@ -120,6 +120,12 @@ def int_dx_resource_samplelevel
                              llvm_float_ty, llvm_any_ty],
                             [IntrReadMem]>;
 
+def int_dx_resource_load_level
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_any_ty,
+                             llvm_any_ty],
+                            [IntrReadMem]>;
+
 def int_dx_resource_samplecmp
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty,
