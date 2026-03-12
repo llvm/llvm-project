@@ -94,7 +94,7 @@ STATISTIC(NumGVNBlocks, "Number of blocks merged");
 STATISTIC(NumGVNSimpl, "Number of instructions simplified");
 STATISTIC(NumGVNEqProp, "Number of equalities propagated");
 STATISTIC(NumGVNScalarMulToExtract,
-          "Number of scalar muls folded to extract of vector mul");
+          "Number of scalar mul/fmuls folded to extract of vector mul/fmul");
 STATISTIC(NumPRELoad, "Number of loads PRE'd");
 STATISTIC(NumPRELoopLoad, "Number of loop loads PRE'd");
 STATISTIC(NumPRELoadMoved2CEPred,
@@ -3355,7 +3355,8 @@ bool GVNPass::foldScalarMulToVectorExtract(Instruction *I) {
     }
 
     // Replace the scalar mul with extractelement from the vector result.
-    auto *Extract = ExtractElementInst::Create(VecBO, Idx, "", I->getIterator());
+    auto *Extract =
+        ExtractElementInst::Create(VecBO, Idx, "", I->getIterator());
     Extract->setDebugLoc(I->getDebugLoc());
 
     ICF->removeUsersOf(I);
