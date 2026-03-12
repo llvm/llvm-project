@@ -1774,6 +1774,13 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
     auto &InnerImages = *ParsedOrErr;
 
     for (auto &[Metadata, InnerImage] : InnerImages) {
+      // First check if metadata is compatible
+      auto MetadataMatchOrErr = isMetadataCompatible(Metadata);
+      if (Error Err = MetadataMatchOrErr.takeError())
+        return HandleError(std::move(Err));
+      if (!*MetadataMatchOrErr)
+        continue;  
+
       if (isPluginCompatible(InnerImage))
         return true;
     }
@@ -1828,6 +1835,14 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     auto &InnerImages = *ParsedOrErr;
 
     for (auto &[Metadata, InnerImage] : InnerImages) {
+      // First check if metadata is compatible
+      auto MetadataMatchOrErr = isMetadataCompatible(Metadata);
+      if (Error Err = MetadataMatchOrErr.takeError())
+        return HandleError(std::move(Err));
+      if (!*MetadataMatchOrErr)
+        continue;  // Metadata not compatible, skip this image
+
+      // Metadata compatible, check inner image recursively
       if (isDeviceCompatible(DeviceId, InnerImage))
         return true;
     }

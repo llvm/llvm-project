@@ -1398,6 +1398,15 @@ struct GenericPluginTy {
     return isImageCompatible(Image);
   }
 
+  /// Validate OffloadBinary metadata for compatibility with the plugin.
+  /// This is called when unwrapping OffloadBinary to check if the metadata
+  /// (triple, arch, ImageKind, etc.) is compatible before checking the inner
+  /// image. Returns true if metadata is compatible, false otherwise.
+  virtual Expected<bool> isMetadataCompatible(
+      const OffloadBinMetadataTy &Metadata) const {
+    return true;
+  }
+
   virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
     return Plugin::success();
   }

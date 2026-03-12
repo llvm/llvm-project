@@ -168,6 +168,26 @@ Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
   return identify_magic(Image) == file_magic::spirv_object;
 }
 
+Expected<bool> LevelZeroPluginTy::isMetadataCompatible(
+    const OffloadBinMetadataTy &Metadata) const {
+
+  llvm::Triple Triple(Metadata.Triple);
+  if (!Triple.isSPIRV() || Triple.getVendor() != llvm::Triple::Intel) {
+    ODBG(OLDT_Init) << "Rejecting image: incompatible triple '"
+                    << Metadata.Triple << "' (expected spirv64-intel)";
+    return false;
+  }
+
+  llvm::object::ImageKind Kind = Metadata.ImageKind;
+  if (Kind != llvm::object::IMG_SPIRV && Kind != llvm::object::IMG_Object) {
+    ODBG(OLDT_Init) << "Rejecting image: incompatible ImageKind " << Kind
+                    << " (expected IMG_SPIRV=" << llvm::object::IMG_SPIRV
+                    << " or IMG_Object=" << llvm::object::IMG_Object << ")";
+    return false;
+  }
+  return true;
+}
+
 Error LevelZeroPluginTy::syncBarrierImpl(omp_interop_val_t *Interop) {
   if (!Interop) {
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
