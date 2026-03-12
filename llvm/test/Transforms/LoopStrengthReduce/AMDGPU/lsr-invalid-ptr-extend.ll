@@ -41,7 +41,7 @@ for.body.1:
   %conv.1 = phi i64 [ %conv.2, %for.body.1 ], [ %conv, %loopexit ]
   %I.1 = phi i32 [ %inc.1, %for.body.1 ], [ %inc, %loopexit ]
   %idxprom = trunc i64 %conv.1 to i32
-  %arrayidx = getelementptr inbounds ptr, ptr addrspace(5) null, i32 %idxprom
+  %arrayidx = getelementptr inbounds ptr, ptr addrspace(5) zeroinitializer, i32 %idxprom
   %0 = load ptr, ptr addrspace(5) %arrayidx, align 8
   %arrayidx.1 = getelementptr inbounds ptr, ptr null, i64 %conv.1
   store ptr %0, ptr %arrayidx.1, align 8
@@ -58,7 +58,7 @@ for.body:
 define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda, i1 %arg) local_unnamed_addr {
 ; CHECK-LABEL: @baseregtest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[EXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 3

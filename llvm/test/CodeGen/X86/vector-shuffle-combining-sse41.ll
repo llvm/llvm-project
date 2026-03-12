@@ -214,3 +214,39 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
   %r = mul <16 x i8> %s1, %s2
   ret <16 x i8> %r
 }
+
+define <4 x float> @PR178538(<4 x float> %a0) {
+; SSE-LABEL: PR178538:
+; SSE:       # %bb.0:
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],mem[2,3]
+; SSE-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR178538:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],xmm1[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR178538:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],xmm1[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR178538:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [17,1,2,0]
+; AVX512-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %shuffle = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float poison>, <4 x float> %a0, <4 x i32> <i32 5, i32 poison, i32 2, i32 poison>
+  %insert1 = insertelement <4 x float> %shuffle, float 1.000000e+00, i64 1
+  %insert3 = insertelement <4 x float> %insert1, float 1.000000e+00, i64 3
+  ret <4 x float> %insert3
+}

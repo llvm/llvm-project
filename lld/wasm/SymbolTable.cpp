@@ -101,7 +101,7 @@ Symbol *SymbolTable::find(StringRef name) {
   return symVector[it->second];
 }
 
-void SymbolTable::replace(StringRef name, Symbol* sym) {
+void SymbolTable::replace(StringRef name, Symbol *sym) {
   auto it = symMap.find(CachedHashStringRef(name));
   symVector[it->second] = sym;
 }
@@ -224,8 +224,8 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
   LLVM_DEBUG(dbgs() << "addSyntheticFunction: " << name << "\n");
   assert(!find(name));
   ctx.syntheticFunctions.emplace_back(function);
-  return replaceSymbol<DefinedFunction>(insertName(name).first, name,
-                                        flags, nullptr, function);
+  return replaceSymbol<DefinedFunction>(insertName(name).first, name, flags,
+                                        nullptr, function);
 }
 
 // Adds an optional, linker generated, data symbol.  The symbol will only be
@@ -268,7 +268,9 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
 DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
                                                     InputGlobal *global) {
   Symbol *s = find(name);
-  if (!s || s->isDefined())
+  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+    s = insertName(name).first;
+  else if (!s || s->isDefined())
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
                     << "\n");
@@ -437,7 +439,8 @@ Symbol *SymbolTable::addDefinedFunction(StringRef name, uint32_t flags,
     // If the new defined function doesn't have signature (i.e. bitcode
     // functions) but the old symbol does, then preserve the old signature
     const WasmSignature *oldSig = s->getSignature();
-    auto* newSym = replaceSymbol<DefinedFunction>(sym, name, flags, file, function);
+    auto *newSym =
+        replaceSymbol<DefinedFunction>(sym, name, flags, file, function);
     if (!newSym->signature)
       newSym->signature = oldSig;
   };
@@ -457,8 +460,9 @@ Symbol *SymbolTable::addDefinedFunction(StringRef name, uint32_t flags,
   if (auto ud = dyn_cast<UndefinedFunction>(existingFunction))
     checkSig = ud->isCalledDirectly;
 
-  if (checkSig && function && !signatureMatches(existingFunction, &function->signature)) {
-    Symbol* variant;
+  if (checkSig && function &&
+      !signatureMatches(existingFunction, &function->signature)) {
+    Symbol *variant;
     if (getFunctionVariant(s, &function->signature, file, &variant))
       // New variant, always replace
       replaceSym(variant);
@@ -582,11 +586,10 @@ Symbol *SymbolTable::addDefinedTable(StringRef name, uint32_t flags,
 // With LTO these attributes are not available when the bitcode is read and only
 // become available when the LTO object is read.  In this case we silently
 // replace the empty attributes with the valid ones.
-template <typename T>
-static void setImportAttributes(T *existing,
-                                std::optional<StringRef> importName,
-                                std::optional<StringRef> importModule,
-                                uint32_t flags, InputFile *file) {
+static void
+updateExistingUndefined(Symbol *existing, uint32_t flags, InputFile *file,
+                        std::optional<StringRef> importName = {},
+                        std::optional<StringRef> importModule = {}) {
   if (importName) {
     if (!existing->importName)
       existing->importName = importName;
@@ -612,6 +615,10 @@ static void setImportAttributes(T *existing,
   if (existing->isWeak() && binding != WASM_SYMBOL_BINDING_WEAK) {
     existing->flags = (existing->flags & ~WASM_SYMBOL_BINDING_MASK) | binding;
   }
+
+  // Certain flags such as NO_STRIP should be maintianed if either old or
+  // new symbol is marked as such.
+  existing->flags |= flags & WASM_SYMBOL_NO_STRIP;
 }
 
 Symbol *SymbolTable::addUndefinedFunction(StringRef name,
@@ -675,12 +682,10 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
         replaceSym();
     }
     if (existingUndefined) {
-      setImportAttributes(existingUndefined, importName, importModule, flags,
-                          file);
+      updateExistingUndefined(existingUndefined, flags, file, importName,
+                              importModule);
       if (isCalledDirectly)
         existingUndefined->isCalledDirectly = true;
-      if (s->isWeak())
-        s->flags = flags;
     }
   }
 
@@ -707,8 +712,8 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
       lazy->extract();
   } else if (s->isDefined()) {
     checkDataType(s, file);
-  } else if (s->isWeak()) {
-    s->flags = flags;
+  } else {
+    updateExistingUndefined(s, flags, file);
   }
   return s;
 }
@@ -734,8 +739,8 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
     lazy->extract();
   else if (s->isDefined())
     checkGlobalType(s, file, type);
-  else if (s->isWeak())
-    s->flags = flags;
+  else
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
@@ -760,8 +765,8 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
     lazy->extract();
   else if (s->isDefined())
     checkTableType(s, file, type);
-  else if (s->isWeak())
-    s->flags = flags;
+  else
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
@@ -786,12 +791,13 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
     lazy->extract();
   else if (s->isDefined())
     checkTagType(s, file, sig);
-  else if (s->isWeak())
-    s->flags = flags;
+  else
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
 TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
+  LLVM_DEBUG(llvm::dbgs() << "createUndefinedIndirectFunctionTable\n");
   WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
   WasmTableType *type = make<WasmTableType>();
   type->ElemType = ValType::FUNCREF;
@@ -806,6 +812,7 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
 }
 
 TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
+  LLVM_DEBUG(llvm::dbgs() << "createDefinedIndirectFunctionTable\n");
   const uint32_t invalidIndex = -1;
   WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
   WasmTableType type{ValType::FUNCREF, limits};
@@ -904,7 +911,7 @@ bool SymbolTable::addComdat(StringRef name) {
 // The new signature doesn't match.  Create a variant to the symbol with the
 // signature encoded in the name and return that instead.  These symbols are
 // then unified later in handleSymbolVariants.
-bool SymbolTable::getFunctionVariant(Symbol* sym, const WasmSignature *sig,
+bool SymbolTable::getFunctionVariant(Symbol *sym, const WasmSignature *sig,
                                      const InputFile *file, Symbol **out) {
   LLVM_DEBUG(dbgs() << "getFunctionVariant: " << sym->getName() << " -> "
                     << " " << toString(*sig) << "\n");
@@ -916,7 +923,7 @@ bool SymbolTable::getFunctionVariant(Symbol* sym, const WasmSignature *sig,
   if (variants.empty())
     variants.push_back(sym);
 
-  for (Symbol* v : variants) {
+  for (Symbol *v : variants) {
     if (*v->getSignature() == *sig) {
       variant = v;
       break;
@@ -935,7 +942,8 @@ bool SymbolTable::getFunctionVariant(Symbol* sym, const WasmSignature *sig,
     variant->forceExport = false;
     variants.push_back(variant);
   } else {
-    LLVM_DEBUG(dbgs() << "variant already exists: " << toString(*variant) << "\n");
+    LLVM_DEBUG(dbgs() << "variant already exists: " << toString(*variant)
+                      << "\n");
     assert(*variant->getSignature() == *sig);
   }
 
@@ -952,7 +960,7 @@ void SymbolTable::trace(StringRef name) {
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Swap symbols as instructed by -wrap.
   int &origIdx = symMap[CachedHashStringRef(sym->getName())];
-  int &realIdx= symMap[CachedHashStringRef(real->getName())];
+  int &realIdx = symMap[CachedHashStringRef(real->getName())];
   int &wrapIdx = symMap[CachedHashStringRef(wrap->getName())];
   LLVM_DEBUG(dbgs() << "wrap: " << sym->getName() << "\n");
 
@@ -1044,7 +1052,7 @@ void SymbolTable::handleSymbolVariants() {
 #ifndef NDEBUG
     LLVM_DEBUG(dbgs() << "symbol with (" << variants.size()
                       << ") variants: " << symName << "\n");
-    for (auto *s: variants) {
+    for (auto *s : variants) {
       auto *f = cast<FunctionSymbol>(s);
       LLVM_DEBUG(dbgs() << " variant: " + f->getName() << " "
                         << toString(*f->signature) << "\n");
@@ -1082,4 +1090,4 @@ void SymbolTable::handleSymbolVariants() {
   }
 }
 
-} // namespace wasm::lld
+} // namespace lld::wasm

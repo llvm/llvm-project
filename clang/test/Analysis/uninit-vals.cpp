@@ -33,3 +33,21 @@ void foo() {
 }
 }
 
+namespace gh_178797 {
+struct SpecialBuffer {
+    SpecialBuffer() : src(defaultBuffer), dst(defaultBuffer) {}
+    int* src;
+    int* dst;
+    int defaultBuffer[2];
+};
+// Not really a swap, but we need an assignment assigning UndefinedVal
+// within a "swap" function to trigger this behavior.
+void swap(int& lhs, int& rhs) {
+    lhs = rhs; // no-crash
+    // Not reporting copying uninitialized data because that is explicitly suppressed in the checker.
+}
+void entry_point() {
+    SpecialBuffer special;
+    swap(*special.dst, *++special.src);
+}
+}  // namespace gh_178797

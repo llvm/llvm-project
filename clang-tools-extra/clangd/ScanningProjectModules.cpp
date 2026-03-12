@@ -35,9 +35,13 @@ public:
   ModuleDependencyScanner(
       std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
       const ThreadsafeFS &TFS)
-      : CDB(CDB), TFS(TFS),
-        Service(dependencies::ScanningMode::CanonicalPreprocessing,
-                dependencies::ScanningOutputFormat::P1689) {}
+      : CDB(CDB), Service([&TFS] {
+          dependencies::DependencyScanningServiceOptions Opts;
+          Opts.MakeVFS = [&] { return TFS.view(std::nullopt); };
+          Opts.Mode = dependencies::ScanningMode::CanonicalPreprocessing;
+          Opts.Format = dependencies::ScanningOutputFormat::P1689;
+          return Opts;
+        }()) {}
 
   /// The scanned modules dependency information for a specific source file.
   struct ModuleDependencyInfo {
@@ -76,7 +80,6 @@ public:
 
 private:
   std::shared_ptr<const clang::tooling::CompilationDatabase> CDB;
-  const ThreadsafeFS &TFS;
 
   // Whether the scanner has scanned the project globally.
   bool GlobalScanned = false;
@@ -106,9 +109,7 @@ ModuleDependencyScanner::scan(PathRef FilePath,
 
   using namespace clang::tooling;
 
-  llvm::SmallString<128> FilePathDir(FilePath);
-  llvm::sys::path::remove_filename(FilePathDir);
-  DependencyScanningTool ScanningTool(Service, TFS.view(FilePathDir));
+  DependencyScanningTool ScanningTool(Service);
 
   std::string S;
   llvm::raw_string_ostream OS(S);

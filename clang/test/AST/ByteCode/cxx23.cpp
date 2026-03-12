@@ -594,3 +594,13 @@ namespace NonCompoundStmtBody {
   }
   static_assert(testS());
 }
+
+namespace LValueConstant {
+  struct D {
+    unsigned y;
+  };
+
+  extern D d;
+  consteval D& c() { return d; }
+  long long f() { return c().y; }
+}

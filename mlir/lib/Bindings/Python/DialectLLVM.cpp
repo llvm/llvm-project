@@ -20,7 +20,6 @@
 namespace nb = nanobind;
 
 using namespace nanobind::literals;
-using namespace llvm;
 using namespace mlir;
 using namespace mlir::python::nanobind_adaptors;
 
@@ -129,14 +128,13 @@ struct StructType : PyConcreteType<StructType> {
         "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
         "context"_a = nb::none());
 
-    c.def_prop_ro(
-        "name", [](const StructType &type) -> std::optional<std::string> {
-          if (mlirLLVMStructTypeIsLiteral(type))
-            return std::nullopt;
+    c.def_prop_ro("name",
+                  [](const StructType &type) -> std::optional<MlirStringRef> {
+                    if (mlirLLVMStructTypeIsLiteral(type))
+                      return std::nullopt;
 
-          MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
-          return StringRef(stringRef.data, stringRef.length).str();
-        });
+                    return mlirLLVMStructTypeGetIdentifier(type);
+                  });
 
     c.def_prop_ro("body", [](const StructType &type) -> nb::object {
       // Don't crash in absence of a body.

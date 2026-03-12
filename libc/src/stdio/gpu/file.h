@@ -63,7 +63,6 @@ LIBC_INLINE uint64_t write_impl(::FILE *file, const void *data, size_t size) {
   port.recv([&](rpc::Buffer *buffer, uint32_t) {
     ret = reinterpret_cast<uint64_t *>(buffer->data)[0];
   });
-  port.close();
   return ret;
 }
 
@@ -86,7 +85,6 @@ LIBC_INLINE uint64_t read_from_stream(::FILE *file, void *buf, size_t size) {
   });
   port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
   port.recv([&](rpc::Buffer *buffer, uint32_t) { ret = buffer->data[0]; });
-  port.close();
   return ret;
 }
 

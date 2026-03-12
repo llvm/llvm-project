@@ -860,7 +860,12 @@ static void EmitGenDwarfAbbrev(MCStreamer *MCOS) {
   if (!DwarfDebugFlags.empty())
     EmitAbbrev(MCOS, dwarf::DW_AT_APPLE_flags, dwarf::DW_FORM_string);
   EmitAbbrev(MCOS, dwarf::DW_AT_producer, dwarf::DW_FORM_string);
-  EmitAbbrev(MCOS, dwarf::DW_AT_language, dwarf::DW_FORM_data2);
+
+  if (context.getDwarfVersion() >= 6)
+    EmitAbbrev(MCOS, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2);
+  else
+    EmitAbbrev(MCOS, dwarf::DW_AT_language, dwarf::DW_FORM_data2);
+
   EmitAbbrev(MCOS, 0, 0);
 
   // DW_TAG_label DIE abbrev (2).
@@ -1092,9 +1097,15 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitBytes(StringRef("llvm-mc (based on LLVM " PACKAGE_VERSION ")"));
   MCOS->emitInt8(0); // NULL byte to terminate the string.
 
-  // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
-  // draft has no standard code for assembler.
-  MCOS->emitInt16(dwarf::DW_LANG_Mips_Assembler);
+  if (context.getDwarfVersion() >= 6) {
+    // AT_language_name, a 4 byte value.
+    MCOS->emitInt16(dwarf::DW_LNAME_Assembly);
+  } else {
+    // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
+    // draft has no standard code for assembler.
+    // FIXME: dwarf4 has DW_LANG_Assembly which we could use instead.
+    MCOS->emitInt16(dwarf::DW_LANG_Mips_Assembler);
+  }
 
   // Third part: the list of label DIEs.
 
@@ -1902,8 +1913,7 @@ struct CIEKey {
 
 } // end anonymous namespace
 
-void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
-                               bool IsEH) {
+void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   MCContext &Context = Streamer.getContext();
   const MCObjectFileInfo *MOFI = Context.getObjectFileInfo();
   const MCAsmInfo *AsmInfo = Context.getAsmInfo();
@@ -1913,7 +1923,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
   if (IsEH && MOFI->getCompactUnwindSection()) {
-    Streamer.generateCompactUnwindEncodings(MAB);
+    Streamer.generateCompactUnwindEncodings();
     bool SectionEmitted = false;
     for (const MCDwarfFrameInfo &Frame : FrameArray) {
       if (Frame.CompactUnwindEncoding == 0) continue;

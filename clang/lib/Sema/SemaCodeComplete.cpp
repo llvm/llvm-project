@@ -2043,7 +2043,8 @@ static bool WantTypesInContext(SemaCodeCompletion::ParserCompletionContext CCC,
 static PrintingPolicy getCompletionPrintingPolicy(const ASTContext &Context,
                                                   const Preprocessor &PP) {
   PrintingPolicy Policy = Sema::getPrintingPolicy(Context, PP);
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   Policy.SuppressStrongLifetime = true;
   Policy.SuppressUnwrittenScope = true;
   Policy.CleanUglifiedParameters = true;
@@ -8442,6 +8443,11 @@ void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
   // If necessary, apply function/array conversion to the receiver.
   // C99 6.7.5.3p[7,8].
   if (RecExpr) {
+    // If the receiver expression has no type (e.g., a parenthesized C-style
+    // cast that hasn't been resolved), bail out to avoid dereferencing a null
+    // type.
+    if (RecExpr->getType().isNull())
+      return;
     ExprResult Conv = SemaRef.DefaultFunctionArrayLvalueConversion(RecExpr);
     if (Conv.isInvalid()) // conversion failed. bail.
       return;
@@ -10366,7 +10372,8 @@ void SemaCodeCompletion::CodeCompleteIncludedFile(llvm::StringRef Dir,
     const StringRef &Dirname = llvm::sys::path::filename(Dir);
     const bool isQt = Dirname.starts_with("Qt") || Dirname == "ActiveQt";
     const bool ExtensionlessHeaders =
-        IsSystem || isQt || Dir.ends_with(".framework/Headers");
+        IsSystem || isQt || Dir.ends_with(".framework/Headers") ||
+        IncludeDir.ends_with("/include") || IncludeDir.ends_with("\\include");
     std::error_code EC;
     unsigned Count = 0;
     for (auto It = FS.dir_begin(Dir, EC);

@@ -17,26 +17,26 @@ define void @memset_32(ptr %a, i8 %value) nounwind {
 define void @memset_x(ptr %a, i8 %value, i64 %x) nounwind !prof !0 {
 ; CHECK-LABEL: define void @memset_x(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] !prof [[PROF0:![0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[LOADSTORELOOP]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY:.*]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i8 [[VALUE]], ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], [[X]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOADSTORELOOP]], label %[[SPLIT]], !prof [[PROF2:![0-9]+]]
-; CHECK:       [[SPLIT]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[SPLIT1:.*]], label %[[LOADSTORELOOP2:.*]], !prof [[PROF3:![0-9]+]]
-; CHECK:       [[LOADSTORELOOP2]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[SPLIT]] ], [ [[TMP9:%.*]], %[[LOADSTORELOOP2]] ]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION]], !prof [[PROF2:![0-9]+]]
+; CHECK:       [[DYNAMIC_MEMSET_POST_LOOP_EXPANSION]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2:.*]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1:.*]], !prof [[PROF1]]
+; CHECK:       [[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION]] ], [ [[TMP9:%.*]], %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    store volatile i8 [[VALUE]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i64 [[TMP9]], [[X]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[LOADSTORELOOP2]], label %[[SPLIT1]], !prof [[PROF3]]
-; CHECK:       [[SPLIT1]]:
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[DYNAMIC_MEMSET_LOOP_EXPANSION_MAIN_BODY2]], label %[[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1]], !prof [[PROF3:![0-9]+]]
+; CHECK:       [[DYNAMIC_MEMSET_POST_LOOP_EXPANSION1]]:
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 %x, i1 0), !prof !1

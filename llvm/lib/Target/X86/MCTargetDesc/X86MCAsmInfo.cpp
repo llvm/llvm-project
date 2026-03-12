@@ -84,8 +84,6 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // wasn't always case preserving or something.
   CommentString = "##";
 
-  AllowDollarAtStartOfIdentifier = false;
-
   SupportsDebugInformation = true;
   UseDataRegionDirectives = MarkedJTDataRegions;
 
@@ -125,7 +123,6 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
 
   AssemblerDialect = X86AsmSyntax;
-  AllowDollarAtStartOfIdentifier = false;
 
   // Debug Information
   SupportsDebugInformation = true;
@@ -150,7 +147,7 @@ void X86MCAsmInfoMicrosoft::anchor() { }
 
 X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   if (Triple.isX86_64()) {
-    PrivateGlobalPrefix = ".L";
+    InternalSymbolPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
@@ -164,7 +161,6 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   ExceptionsType = ExceptionHandling::WinEH;
 
   AssemblerDialect = X86AsmSyntax;
-  AllowDollarAtStartOfIdentifier = false;
 
   AllowAtInName = true;
 
@@ -190,7 +186,7 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   assert((Triple.isOSWindows() || Triple.isUEFI()) &&
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.isX86_64()) {
-    PrivateGlobalPrefix = ".L";
+    InternalSymbolPrefix = ".L";
     PrivateLabelPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
@@ -202,7 +198,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
-  AllowDollarAtStartOfIdentifier = false;
 
   initializeAtSpecifiers(atSpecifiers);
 }

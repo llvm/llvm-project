@@ -8,7 +8,7 @@
 
 #include "LibC.h"
 
-#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+#if !defined(__NVPTX__) && !defined(OMPTARGET_HAS_LIBC)
 extern "C" int vprintf(const char *format, __builtin_va_list) { return -1; }
 #else
 extern "C" int vprintf(const char *format, __builtin_va_list);

@@ -349,7 +349,7 @@ public:
 
   void SetNeedsUpdate();
 
-  CompilerType GetCompilerType() { return MaybeCalculateCompleteType(); }
+  CompilerType GetCompilerType();
 
   // this vends a TypeImpl that is useful at the SB API layer
   virtual TypeImpl GetTypeImpl() { return TypeImpl(GetCompilerType()); }
@@ -1105,7 +1105,6 @@ protected:
   virtual void DoUpdateChildrenAddressType(ValueObject &valobj) {};
 
 private:
-  virtual CompilerType MaybeCalculateCompleteType();
   void UpdateChildrenAddressType() {
     GetRoot()->DoUpdateChildrenAddressType(*this);
   }
@@ -1119,6 +1118,84 @@ private:
 
   ValueObject(const ValueObject &) = delete;
   const ValueObject &operator=(const ValueObject &) = delete;
+};
+
+// The two classes below are used by the public SBValue API implementation. This
+// is useful here because we need them in order to access the underlying
+// ValueObject from SBValue without introducing a back-dependency from the API
+// library to the more core libs.
+
+class ValueImpl {
+public:
+  ValueImpl() = default;
+
+  ValueImpl(lldb::ValueObjectSP in_valobj_sp,
+            lldb::DynamicValueType use_dynamic, bool use_synthetic,
+            const char *name = nullptr);
+
+  ValueImpl(const ValueImpl &rhs) = default;
+
+  ValueImpl &operator=(const ValueImpl &rhs);
+
+  bool IsValid();
+
+  lldb::ValueObjectSP GetRootSP() { return m_valobj_sp; }
+
+  lldb::ValueObjectSP GetSP(Process::StopLocker &stop_locker,
+                            std::unique_lock<std::recursive_mutex> &lock,
+                            Status &error);
+
+  void SetUseDynamic(lldb::DynamicValueType use_dynamic) {
+    m_use_dynamic = use_dynamic;
+  }
+
+  void SetUseSynthetic(bool use_synthetic) { m_use_synthetic = use_synthetic; }
+
+  lldb::DynamicValueType GetUseDynamic() { return m_use_dynamic; }
+
+  bool GetUseSynthetic() { return m_use_synthetic; }
+
+  // All the derived values that we would make from the m_valobj_sp will share
+  // the ExecutionContext with m_valobj_sp, so we don't need to do the
+  // calculations in GetSP to return the Target, Process, Thread or Frame.  It
+  // is convenient to provide simple accessors for these, which I do here.
+  lldb::TargetSP GetTargetSP() {
+    return m_valobj_sp ? m_valobj_sp->GetTargetSP() : lldb::TargetSP{};
+  }
+
+  lldb::ProcessSP GetProcessSP() {
+    return m_valobj_sp ? m_valobj_sp->GetProcessSP() : lldb::ProcessSP{};
+  }
+
+  lldb::ThreadSP GetThreadSP() {
+    return m_valobj_sp ? m_valobj_sp->GetThreadSP() : lldb::ThreadSP{};
+  }
+
+  lldb::StackFrameSP GetFrameSP() {
+    return m_valobj_sp ? m_valobj_sp->GetFrameSP() : lldb::StackFrameSP{};
+  }
+
+private:
+  lldb::ValueObjectSP m_valobj_sp;
+  lldb::DynamicValueType m_use_dynamic;
+  bool m_use_synthetic;
+  ConstString m_name;
+};
+
+class ValueLocker {
+public:
+  ValueLocker() = default;
+
+  lldb::ValueObjectSP GetLockedSP(ValueImpl &in_value) {
+    return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
+  }
+
+  Status &GetError() { return m_lock_error; }
+
+private:
+  Process::StopLocker m_stop_locker;
+  std::unique_lock<std::recursive_mutex> m_lock;
+  Status m_lock_error;
 };
 
 } // namespace lldb_private

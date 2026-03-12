@@ -984,6 +984,11 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// the CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   std::vector<uint64_t> RadixArray;
 
+  /// Map from the module's stack id index to the index in the
+  /// ModuleSummaryIndex's StackIds vector. Populated lazily from the StackIds
+  /// list and used to avoid repeated hash lookups.
+  std::vector<unsigned> StackIdToIndex;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -1012,6 +1017,19 @@ private:
   parseParamAccesses(ArrayRef<uint64_t> Record);
   SmallVector<unsigned> parseAllocInfoContext(ArrayRef<uint64_t> Record,
                                               unsigned &I);
+
+  // Mark uninitialized stack ID mappings for lazy population.
+  static constexpr unsigned UninitializedStackIdIndex =
+      std::numeric_limits<unsigned>::max();
+
+  unsigned getStackIdIndex(unsigned LocalIndex) {
+    unsigned &Index = StackIdToIndex[LocalIndex];
+    // Add the stack id to the ModuleSummaryIndex map only when first requested
+    // and cache the result in the local StackIdToIndex map.
+    if (Index == UninitializedStackIdIndex)
+      Index = TheIndex.addOrGetStackIdIndex(StackIds[LocalIndex]);
+    return Index;
+  }
 
   template <bool AllowNullValueInfo = false>
   std::pair<ValueInfo, GlobalValue::GUID>
@@ -1170,6 +1188,7 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   auto Linkage = GlobalValue::LinkageTypes(RawFlags & 0xF); // 4 bits
   auto Visibility = GlobalValue::VisibilityTypes((RawFlags >> 8) & 3); // 2 bits
   auto IK = GlobalValueSummary::ImportKind((RawFlags >> 10) & 1);      // 1 bit
+  bool NoRenameOnPromotion = ((RawFlags >> 11) & 1);                   // 1 bit
   RawFlags = RawFlags >> 4;
   bool NotEligibleToImport = (RawFlags & 0x1) || Version < 3;
   // The Live flag wasn't introduced until version 3. For dead stripping
@@ -1180,7 +1199,8 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   bool AutoHide = (RawFlags & 0x8);
 
   return GlobalValueSummary::GVFlags(Linkage, Visibility, NotEligibleToImport,
-                                     Live, Local, AutoHide, IK);
+                                     Live, Local, AutoHide, IK,
+                                     NoRenameOnPromotion);
 }
 
 // Decode the flags for GlobalVariable in the summary
@@ -2269,6 +2289,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnReturn;
   case bitc::ATTR_KIND_NO_CREATE_UNDEF_OR_POISON:
     return Attribute::NoCreateUndefOrPoison;
+  case bitc::ATTR_KIND_DENORMAL_FPENV:
+    return Attribute::DenormalFPEnv;
+  case bitc::ATTR_KIND_NOOUTLINE:
+    return Attribute::NoOutline;
   }
 }
 
@@ -2442,6 +2466,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
                 static_cast<FPClassTest>(Record[++i] & fcAllFlags));
+          else if (Kind == Attribute::DenormalFPEnv) {
+            B.addDenormalFPEnvAttr(
+                DenormalFPEnv::createFromIntValue(Record[++i]));
+          }
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;
@@ -4412,6 +4440,13 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 18 && Strtab.data() &&
       Record[17] + Record[18] <= Strtab.size()) {
     Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
+  }
+
+  if (Record.size() > 19) {
+    MaybeAlign PrefAlignment;
+    if (Error Err = parseAlignmentValue(Record[19], PrefAlignment))
+      return Err;
+    Func->setPreferredAlignment(PrefAlignment);
   }
 
   ValueList.push_back(Func, getVirtualTypeID(Func->getType(), FTyID));
@@ -7628,8 +7663,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
     StackIdList.reserve(NumStackEntries);
     for (unsigned J = 0; J < NumStackEntries; J++) {
       assert(Record[I] < StackIds.size());
-      StackIdList.push_back(
-          TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
+      StackIdList.push_back(getStackIdIndex(Record[I++]));
     }
   } else {
     unsigned RadixIndex = Record[I++];
@@ -7652,7 +7686,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
         assert(static_cast<std::make_signed_t<unsigned>>(Elem) >= 0);
       }
       RadixIndex++;
-      StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[Elem]));
+      StackIdList.push_back(getStackIdIndex(Elem));
     }
   }
   return StackIdList;
@@ -7694,6 +7728,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
+  // Starting with bitcode summary version 13, MemProf records follow the
+  // corresponding function summary.
+  const bool MemProfAfterFunctionSummary = Version >= 13;
   if (Version < 1 || Version > ModuleSummaryIndex::BitcodeSummaryVersion)
     return error("Invalid summary version " + Twine(Version) +
                  ". Version should be in the range [1-" +
@@ -7705,6 +7742,15 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   // "OriginalName" attachement.
   GlobalValueSummary *LastSeenSummary = nullptr;
   GlobalValue::GUID LastSeenGUID = 0;
+
+  // Track the most recent function summary if it was prevailing, and while we
+  // are not done processing any subsequent memprof records. Starting with
+  // summary version 13 (tracked by MemProfAfterFunctionSummary), MemProf
+  // records follow the function summary and we skip processing them when the
+  // summary is not prevailing. Note that when reading a combined index we don't
+  // know what is prevailing so this should always be set in the new format when
+  // we encounter MemProf records.
+  FunctionSummary *CurrentPrevailingFS = nullptr;
 
   // We can expect to see any number of type ID information records before
   // each function summary records; these variables store the information
@@ -7748,7 +7794,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
     if (!MaybeBitCode)
       return MaybeBitCode.takeError();
-    switch (unsigned BitCode = MaybeBitCode.get()) {
+    unsigned BitCode = MaybeBitCode.get();
+
+    switch (BitCode) {
     default: // Default behavior: ignore.
       break;
     case bitc::FS_FLAGS: {  // [flags]
@@ -7820,16 +7868,26 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
-      auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
-      // In order to save memory, only record the memprof summaries if this is
-      // the prevailing copy of a symbol. The linker doesn't resolve local
-      // linkage values so don't check whether those are prevailing.
+      auto [VI, GUID] = getValueInfoFromValueId(ValueID);
+
+      // The linker doesn't resolve local linkage values so don't check whether
+      // those are prevailing (set IsPrevailingSym so they are always processed
+      // and kept).
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
-      if (IsPrevailing && !GlobalValue::isLocalLinkage(LT) &&
-          !IsPrevailing(VIAndOriginalGUID.first.getGUID())) {
+      bool IsPrevailingSym = !IsPrevailing || GlobalValue::isLocalLinkage(LT) ||
+                             IsPrevailing(VI.getGUID());
+
+      // If this is not the prevailing copy, and the records are in the "old"
+      // order (preceding), clear them now. They should already be empty in
+      // the new order (following), as they are processed or skipped immediately
+      // when they follow the summary.
+      assert(!MemProfAfterFunctionSummary ||
+             (PendingCallsites.empty() && PendingAllocs.empty()));
+      if (!IsPrevailingSym && !MemProfAfterFunctionSummary) {
         PendingCallsites.clear();
         PendingAllocs.clear();
       }
+
       auto FS = std::make_unique<FunctionSummary>(
           Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
           std::move(Calls), std::move(PendingTypeTests),
@@ -7840,9 +7898,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingParamAccesses), std::move(PendingCallsites),
           std::move(PendingAllocs));
       FS->setModulePath(getThisModule()->first());
-      FS->setOriginalName(std::get<1>(VIAndOriginalGUID));
-      TheIndex.addGlobalValueSummary(std::get<0>(VIAndOriginalGUID),
-                                     std::move(FS));
+      FS->setOriginalName(GUID);
+      // Set CurrentPrevailingFS only if prevailing, so subsequent MemProf
+      // records are attached (new order) or skipped.
+      if (MemProfAfterFunctionSummary) {
+        if (IsPrevailingSym)
+          CurrentPrevailingFS = FS.get();
+        else
+          CurrentPrevailingFS = nullptr;
+      }
+      TheIndex.addGlobalValueSummary(VI, std::move(FS));
       break;
     }
     // FS_ALIAS: [valueid, flags, valueid]
@@ -7984,6 +8049,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingParamAccesses), std::move(PendingCallsites),
           std::move(PendingAllocs));
       LastSeenSummary = FS.get();
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS = FS.get();
       LastSeenGUID = VI.getGUID();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       TheIndex.addGlobalValueSummary(VI, std::move(FS));
@@ -8115,16 +8182,21 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_STACK_IDS: { // [n x stackid]
       // Save stack ids in the reader to consult when adding stack ids from the
       // lists in the stack node and alloc node entries.
+      assert(StackIds.empty());
       if (Version <= 11) {
         StackIds = ArrayRef<uint64_t>(Record);
-        break;
+      } else {
+        // This is an array of 32-bit fixed-width values, holding each 64-bit
+        // context id as a pair of adjacent (most significant first) 32-bit
+        // words.
+        assert(Record.size() % 2 == 0);
+        StackIds.reserve(Record.size() / 2);
+        for (auto R = Record.begin(); R != Record.end(); R += 2)
+          StackIds.push_back(*R << 32 | *(R + 1));
       }
-      // This is an array of 32-bit fixed-width values, holding each 64-bit
-      // context id as a pair of adjacent (most significant first) 32-bit words.
-      assert(Record.size() % 2 == 0);
-      StackIds.reserve(Record.size() / 2);
-      for (auto R = Record.begin(); R != Record.end(); R += 2)
-        StackIds.push_back(*R << 32 | *(R + 1));
+      assert(StackIdToIndex.empty());
+      // Initialize with a marker to support lazy population.
+      StackIdToIndex.resize(StackIds.size(), UninitializedStackIdIndex);
       break;
     }
 
@@ -8134,18 +8206,29 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_PERMODULE_CALLSITE_INFO: {
+      // If they are in the new order (following), they are skipped when they
+      // follow a non-prevailing summary (CurrentPrevailingFS will be null).
+      if (MemProfAfterFunctionSummary && !CurrentPrevailingFS)
+        break;
       unsigned ValueID = Record[0];
       SmallVector<unsigned> StackIdList;
       for (uint64_t R : drop_begin(Record)) {
         assert(R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[R]));
+        StackIdList.push_back(getStackIdIndex(R));
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
-      PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addCallsite(
+            CallsiteInfo({VI, std::move(StackIdList)}));
+      else
+        PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
       break;
     }
 
     case bitc::FS_COMBINED_CALLSITE_INFO: {
+      // In the combined index case we don't have a prevailing check,
+      // so we should always have a CurrentPrevailingFS.
+      assert(!MemProfAfterFunctionSummary || CurrentPrevailingFS);
       auto RecordIter = Record.begin();
       unsigned ValueID = *RecordIter++;
       unsigned NumStackIds = *RecordIter++;
@@ -8154,20 +8237,27 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<unsigned> StackIdList;
       for (unsigned J = 0; J < NumStackIds; J++) {
         assert(*RecordIter < StackIds.size());
-        StackIdList.push_back(
-            TheIndex.addOrGetStackIdIndex(StackIds[*RecordIter++]));
+        StackIdList.push_back(getStackIdIndex(*RecordIter++));
       }
       SmallVector<unsigned> Versions;
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(*RecordIter++);
       ValueInfo VI = std::get<0>(
           getValueInfoFromValueId</*AllowNullValueInfo*/ true>(ValueID));
-      PendingCallsites.push_back(
-          CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addCallsite(
+            CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
+      else
+        PendingCallsites.push_back(
+            CallsiteInfo({VI, std::move(Versions), std::move(StackIdList)}));
       break;
     }
 
     case bitc::FS_ALLOC_CONTEXT_IDS: {
+      // If they are in the new order (following), they are skipped when they
+      // follow a non-prevailing summary (CurrentPrevailingFS will be null).
+      if (MemProfAfterFunctionSummary && !CurrentPrevailingFS)
+        break;
       // This is an array of 32-bit fixed-width values, holding each 64-bit
       // context id as a pair of adjacent (most significant first) 32-bit words.
       assert(Record.size() % 2 == 0);
@@ -8178,6 +8268,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_PERMODULE_ALLOC_INFO: {
+      // If they are in the new order (following), they are skipped when they
+      // follow a non-prevailing summary (CurrentPrevailingFS will be null).
+      if (MemProfAfterFunctionSummary && !CurrentPrevailingFS) {
+        PendingContextIds.clear();
+        break;
+      }
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = 0;
@@ -8230,16 +8326,24 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         }
         PendingContextIds.clear();
       }
-      PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
+      AllocInfo AI(std::move(MIBs));
       if (!AllContextSizes.empty()) {
-        assert(PendingAllocs.back().MIBs.size() == AllContextSizes.size());
-        PendingAllocs.back().ContextSizeInfos = std::move(AllContextSizes);
+        assert(AI.MIBs.size() == AllContextSizes.size());
+        AI.ContextSizeInfos = std::move(AllContextSizes);
       }
+
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addAlloc(std::move(AI));
+      else
+        PendingAllocs.push_back(std::move(AI));
       break;
     }
 
     case bitc::FS_COMBINED_ALLOC_INFO:
     case bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT: {
+      // In the combined index case we don't have a prevailing check,
+      // so we should always have a CurrentPrevailingFS.
+      assert(!MemProfAfterFunctionSummary || CurrentPrevailingFS);
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
       unsigned NumMIBs = Record[I++];
@@ -8258,7 +8362,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       for (unsigned J = 0; J < NumVersions; J++)
         Versions.push_back(Record[I++]);
       assert(I == Record.size());
-      PendingAllocs.push_back(AllocInfo(std::move(Versions), std::move(MIBs)));
+      AllocInfo AI(std::move(Versions), std::move(MIBs));
+      if (MemProfAfterFunctionSummary)
+        CurrentPrevailingFS->addAlloc(std::move(AI));
+      else
+        PendingAllocs.push_back(std::move(AI));
       break;
     }
     }

@@ -184,7 +184,10 @@ compiler-rt:msan:
 compiler-rt:sanitizer:
   - changed-files:
     - any-glob-to-any-file:
+      - llvm/include/llvm/Transforms/Utils/MemoryTaggingSupport.h
+      - llvm/lib/Target/AArch64/AArch64StackTagging.cpp
       - llvm/lib/Transforms/Instrumentation/*Sanitizer*
+      - llvm/lib/Transforms/Utils/MemoryTaggingSupport.cpp
       - compiler-rt/lib/interception/**
       - compiler-rt/lib/*san*/**
       - compiler-rt/include/sanitizer/**

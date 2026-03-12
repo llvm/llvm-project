@@ -357,6 +357,10 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     bool isPacked() const;
     void pack(bool);
 
+    // The presence of SEQUENCE attribute.
+    bool isSequence() const;
+    void setSequence(bool);
+
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
 }

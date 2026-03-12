@@ -852,7 +852,7 @@ func.func @load_mem_desc_invalid_result_size(%arg0: !xegpu.mem_desc<16x64xf16>) 
 
 // -----
 func.func @load_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>) {
-  // expected-error@+1 {{mem_desc must be 2D}}
+  // expected-error@+1 {{mem_desc must be 2D or greater}}
   %data = xegpu.load_matrix %arg0[16]: !xegpu.mem_desc<64xf16> -> vector<16xf16>
   return
 }
@@ -873,7 +873,7 @@ func.func @store_mem_desc_invalid_data_size(%arg0: !xegpu.mem_desc<16x64xf16>, %
 
 // -----
 func.func @store_mem_desc_invalid_rank(%arg0: !xegpu.mem_desc<64xf16>, %arg1: vector<32xf16>) {
-  // expected-error@+1 {{mem_desc must be 2D.}}
+  // expected-error@+1 {{mem_desc must be 2D or greater}}
   xegpu.store_matrix %arg1, %arg0[32] : vector<32xf16>, !xegpu.mem_desc<64xf16>
   return
 }
@@ -899,5 +899,19 @@ func.func @simt_store_matrix_vector_noncoalesced(%arg0: !xegpu.mem_desc<32x32xf3
   // expected-error@+1 {{With subgroup_block_io, the block shape must match the lane layout}}
   xegpu.store_matrix %arg1, %arg0[0, 0] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} :
         vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [32, 1], block = [1, 17]>>
+  return
+}
+
+// -----
+func.func @truncf_invalid_result_size(%a: vector<8x16xf16>) {
+  // expected-error@+1 {{op input type must be wider than result type}}
+  %1 = xegpu.truncf %a : vector<8x16xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @dpas_mx_acc_result_type_mismatch(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xbf16>) {
+  // expected-error@+1 {{Expecting the acc type to be the same as result.}}
+  %1 = xegpu.dpas_mx %a, %b, %acc : vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xbf16> -> vector<8x16xf32>
   return
 }

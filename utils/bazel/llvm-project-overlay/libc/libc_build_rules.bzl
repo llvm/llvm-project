@@ -314,5 +314,9 @@ def libc_math_function(
         name = name,
         srcs = ["src/math/generic/" + name + ".cpp"],
         hdrs = ["src/math/" + name + ".h"],
-        deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
+        deps = [
+            ":__support_common",
+            ":__support_macros_config",
+            ":__support_macros_properties_types",
+        ] + OLD_FPUTIL_DEPS + additional_deps,
     )

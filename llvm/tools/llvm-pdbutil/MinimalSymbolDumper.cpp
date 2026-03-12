@@ -396,12 +396,21 @@ Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
 }
 
 Error MinimalSymbolDumper::visitSymbolEnd(CVSymbol &Record) {
-  if (RecordBytes) {
-    AutoIndent Indent(P, 7);
-    P.formatBinary("bytes", Record.content(), 0);
-  }
+  if (RecordBytes)
+    printSymbolBytes(Record);
   P.Unindent();
   return Error::success();
+}
+
+Error MinimalSymbolDumper::visitUnknownSymbol(CVSymbol &Record) {
+  if (!RecordBytes)
+    printSymbolBytes(Record);
+  return Error::success();
+}
+
+void MinimalSymbolDumper::printSymbolBytes(CVSymbol &Record) const {
+  AutoIndent Indent(P, 7);
+  P.formatBinary("bytes", Record.content(), 0);
 }
 
 std::string MinimalSymbolDumper::typeOrIdIndex(codeview::TypeIndex TI,
@@ -908,6 +917,17 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.formatLine(
       "type = {0}, register = {1}, offset = {2}", typeIndex(RegRel.Type),
       formatRegisterId(RegRel.Register, CompilationCPU), RegRel.Offset);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  P.format(" `{0}`", RegRelIndir.Name);
+  AutoIndent Indent(P, 7);
+  P.formatLine("type = {0}, register = {1}, offset = {2}, offset-in-udt = {3}",
+               typeIndex(RegRelIndir.Type),
+               formatRegisterId(RegRelIndir.Register, CompilationCPU),
+               RegRelIndir.Offset, RegRelIndir.OffsetInUdt);
   return Error::success();
 }
 

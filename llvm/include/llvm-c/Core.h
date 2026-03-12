@@ -61,7 +61,9 @@ LLVM_C_EXTERN_C_BEGIN
 typedef enum {
   /* Terminator Instructions */
   LLVMRet            = 1,
-  LLVMBr             = 2,
+  /* removed 2 due to API changes */
+  LLVMUncondBr       = 70,
+  LLVMCondBr         = 71,
   LLVMSwitch         = 3,
   LLVMIndirectBr     = 4,
   LLVMInvoke         = 5,
@@ -730,6 +732,40 @@ LLVM_C_ABI LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A);
 LLVM_C_ABI LLVMAttributeRef LLVMCreateConstantRangeAttribute(
     LLVMContextRef C, unsigned KindID, unsigned NumBits,
     const uint64_t LowerWords[], const uint64_t UpperWords[]);
+
+/**
+ * Represent different denormal handling kinds for use with
+ * LLVMCreateDenormalFPEnvAttribute.
+ */
+typedef enum {
+  LLVMDenormalModeKindIEEE = 0,
+  LLVMDenormalModeKindPreserveSign = 1,
+  LLVMDenormalModeKindPositiveZero = 2,
+  LLVMDenormalModeKindDynamic = 3
+} LLVMDenormalModeKind;
+
+/**
+ * Create a DenormalFPEnv attribute.
+ *
+ * \p DefaultModeOutput is the assumed denormal handling for the outputs of most
+ *    floating-point types.
+ *
+ * \p DefaultModeInput is the assumed denormal handling for the inputs of most
+ *    floating-point types.
+ *
+ * \p FloatModeOutput is the assumed denormal handling for the outputs of
+ *    float. This should always be the same as as DefaultModeOutput for most
+ *    targets.
+ *
+ * \p FloatModeInput is the assumed denormal handling for the inputs of
+ *    float. This should always be the same as as DefaultModeInput for most
+ *    targets.
+ *
+ */
+LLVM_C_ABI LLVMAttributeRef LLVMCreateDenormalFPEnvAttribute(
+    LLVMContextRef C, LLVMDenormalModeKind DefaultModeOutput,
+    LLVMDenormalModeKind DefaultModeInput, LLVMDenormalModeKind FloatModeOutput,
+    LLVMDenormalModeKind FloatModeInput);
 
 /**
  * Create a string attribute.

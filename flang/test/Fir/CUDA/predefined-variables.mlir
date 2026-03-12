@@ -186,3 +186,51 @@ func.func @_QPsub1(%arg0: !fir.ref<i32> {fir.bindc_name = "i", cuf.data_attr = #
 // CHECK: %{{.*}} = arith.addi %[[BASE_BLOCK_ID_X]], %c1{{.*}} : i32
 // CHECK: %{{.*}} = nvvm.read.ptx.sreg.nctaid.y : i32
 // CHECK: %{{.*}} = nvvm.read.ptx.sreg.ntid.x : i32
+
+// -----
+
+func.func @_QMbarPgfoo(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>, no_inline} {
+  %c100_i32 = arith.constant 100 : i32
+  %cond = arith.cmpi sle, %c100_i32, %c100_i32 : i32
+  fir.if %cond {
+    %0 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %1 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %2 = fir.coordinate_of %1, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+    %3 = fir.load %2 : !fir.ref<i32>
+    fir.store %3 to %arg0 : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QMbarPgfoo
+// CHECK: %[[THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADD:.*]] = arith.addi %[[THREAD_ID_X]], %c1_i32 : i32
+// CHECK: fir.if
+// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+
+// -----
+
+func.func @_QMbarPgfoo2(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "b"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>, no_inline} {
+  %c100_i32 = arith.constant 100 : i32
+  %0 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %1 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %2 = fir.coordinate_of %1, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+  %3 = fir.load %2 : !fir.ref<i32>
+  fir.store %3 to %arg0 : !fir.ref<i32>
+  %cond = arith.cmpi sle, %c100_i32, %c100_i32 : i32
+  fir.if %cond {
+    %4 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %5 = fir.declare %4 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %6 = fir.coordinate_of %5, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+    %7 = fir.load %6 : !fir.ref<i32>
+    fir.store %7 to %arg1 : !fir.ref<i32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @_QMbarPgfoo2
+// CHECK: %[[THREAD_ID_X:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADD:.*]] = arith.addi %[[THREAD_ID_X]], %c1_i32 : i32
+// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+// CHECK: fir.if
+// CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>

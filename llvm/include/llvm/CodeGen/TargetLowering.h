@@ -623,9 +623,6 @@ public:
     return BypassSlowDivWidths;
   }
 
-  /// Return true only if vscale must be a power of two.
-  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
-
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.
   bool isJumpExpensive() const { return JumpIsExpensive; }
@@ -1244,14 +1241,13 @@ public:
   };
 
   /// Given an intrinsic, checks if on the target the intrinsic will need to map
-  /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-  /// true and store the intrinsic information into the IntrinsicInfo that was
-  /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
-                                  MachineFunction &,
-                                  unsigned /*Intrinsic*/) const {
-    return false;
-  }
+  /// to a MemIntrinsicNode (touches memory). If this is the case, it stores
+  /// the intrinsic information into the IntrinsicInfo vector passed to the
+  /// function. The vector may contain multiple entries for intrinsics that
+  /// access multiple memory locations.
+  virtual void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                                  const CallBase &I, MachineFunction &MF,
+                                  unsigned Intrinsic) const {}
 
   /// Returns true if the target can instruction select the specified FP
   /// immediate natively. If false, the legalizer will materialize the FP
@@ -4184,16 +4180,20 @@ public:
     }
   };
 
-  /// Determines the optimal series of memory ops to replace the memset / memcpy.
-  /// Return true if the number of memory ops is below the threshold (Limit).
-  /// Note that this is always the case when Limit is ~0.
-  /// It returns the types of the sequence of memory ops to perform
-  /// memset / memcpy by reference.
-  virtual bool
-  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
-                           unsigned Limit, const MemOp &Op, unsigned DstAS,
-                           unsigned SrcAS,
-                           const AttributeList &FuncAttributes) const;
+  /// Determines the optimal series of memory ops to replace the memset /
+  /// memcpy. Return true if the number of memory ops is below the threshold
+  /// (Limit). Note that this is always the case when Limit is ~0. It returns
+  /// the types of the sequence of memory ops to perform memset / memcpy by
+  /// reference. If LargestVT is non-null, the target may set it to the largest
+  /// EVT that should be used for generating the memset value (e.g., for vector
+  /// splats). If LargestVT is null or left unchanged, the caller will compute
+  /// it from MemOps.
+  virtual bool findOptimalMemOpLowering(LLVMContext &Context,
+                                        std::vector<EVT> &MemOps,
+                                        unsigned Limit, const MemOp &Op,
+                                        unsigned DstAS, unsigned SrcAS,
+                                        const AttributeList &FuncAttributes,
+                                        EVT *LargestVT = nullptr) const;
 
   /// Check to see if the specified operand of the specified instruction is a
   /// constant integer.  If so, check to see if there are any bits set in the
@@ -5421,7 +5421,8 @@ public:
   /// comparison may check if the operand is NAN, INF, zero, normal, etc. The
   /// result should be used as the condition operand for a select or branch.
   virtual SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                                   const DenormalMode &Mode) const;
+                                   const DenormalMode &Mode,
+                                   SDNodeFlags Flags = {}) const;
 
   /// Return a target-dependent result if the input operand is not suitable for
   /// use with a square root estimate calculation.
@@ -5587,6 +5588,12 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand CTLS (count leading sign bits) nodes.
+  /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLS(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand CTTZ via Table Lookup.
   /// \param N Node to expand
@@ -5907,6 +5914,10 @@ public:
                                        EVT InVecVT, SDValue EltNo,
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
+
+protected:
+  void setTypeIdForCallsiteInfo(const CallBase *CB, MachineFunction &MF,
+                                MachineFunction::CallSiteInfo &CSInfo) const;
 
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,

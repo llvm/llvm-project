@@ -152,7 +152,7 @@ bb14:                                             ; preds = %bb13
   br i1 %arg, label %bb15, label %bb6
 
 bb15:                                             ; preds = %bb14
-  store double 0.000000e+00, ptr addrspace(5) null, align 2147483648
+  store double 0.000000e+00, ptr addrspace(5) zeroinitializer, align 2147483648
   br label %bb6
 
 bb16:                                             ; preds = %bb13

@@ -6,9 +6,8 @@ define i64 @bswap(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <8 x i64> [[TMP4]], <i64 56, i64 48, i64 40, i64 32, i64 24, i64 16, i64 8, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i8, ptr %p, i32 1
@@ -87,9 +86,8 @@ define i64 @reorder(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i8> [[TMP3]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <8 x i64> [[TMP4]], <i64 56, i64 16, i64 40, i64 32, i64 24, i64 48, i64 8, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 1, i32 4, i32 3, i32 2, i32 5, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i8, ptr %p, i32 1
@@ -168,9 +166,8 @@ define i64 @swap_i16(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[P1:%.*]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <4 x i64> [[TMP4]], <i64 48, i64 32, i64 16, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i16, ptr %p, i32 1
@@ -216,9 +213,8 @@ define i64 @reorder_i16(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[P1:%.*]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP3]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw <4 x i64> [[TMP4]], <i64 16, i64 32, i64 48, i64 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP5]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP4]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i16, ptr %p, i32 1
@@ -256,6 +252,167 @@ define i64 @reorder_i16(ptr noalias %p, ptr noalias %p1) {
   %or01 = or disjoint i64 %sh0, %sh1
   %or012 = or disjoint i64 %or01, %sh2
   %or0123 = or disjoint i64 %or012, %z3
+  ret i64 %or0123
+}
+
+define i64 @bswap_i32(ptr noalias %p, ptr noalias %p1) {
+; CHECK-LABEL: @bswap_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    ret i64 [[TMP7]]
+;
+  %g1 = getelementptr i8, ptr %p, i32 1
+  %g2 = getelementptr i8, ptr %p, i32 2
+  %g3 = getelementptr i8, ptr %p, i32 3
+
+  %t0 = load i8, ptr %p
+  %t1 = load i8, ptr %g1
+  %t2 = load i8, ptr %g2
+  %t3 = load i8, ptr %g3
+
+  %g11 = getelementptr i8, ptr %p1, i32 1
+  %g12 = getelementptr i8, ptr %p1, i32 2
+  %g13 = getelementptr i8, ptr %p1, i32 3
+
+  %t10 = load i8, ptr %p1
+  %t11 = load i8, ptr %g11
+  %t12 = load i8, ptr %g12
+  %t13 = load i8, ptr %g13
+
+  %a0 = add i8 %t0, %t10
+  %a1 = add i8 %t1, %t11
+  %a2 = add i8 %t2, %t12
+  %a3 = add i8 %t3, %t13
+
+  %z0 = zext i8 %a0 to i64
+  %z1 = zext i8 %a1 to i64
+  %z2 = zext i8 %a2 to i64
+  %z3 = zext i8 %a3 to i64
+
+  %sh0 = shl nuw i64 %z0, 24
+  %sh1 = shl nuw nsw i64 %z1, 16
+  %sh2 = shl nuw nsw i64 %z2, 8
+;  %sh3 = shl nuw nsw i64 %z3, 0 <-- missing phantom shift
+
+  %or01 = or disjoint i64 %sh0, %sh1
+  %or012 = or disjoint i64 %or01, %sh2
+  %or0123 = or disjoint i64 %or012, %z3
+  ret i64 %or0123
+}
+
+define i64 @reorder_i32(ptr noalias %p, ptr noalias %p1) {
+; CHECK-LABEL: @reorder_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i8> [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    ret i64 [[TMP7]]
+;
+  %g1 = getelementptr i8, ptr %p, i32 1
+  %g2 = getelementptr i8, ptr %p, i32 2
+  %g3 = getelementptr i8, ptr %p, i32 3
+
+  %t0 = load i8, ptr %p
+  %t1 = load i8, ptr %g1
+  %t2 = load i8, ptr %g2
+  %t3 = load i8, ptr %g3
+
+  %g11 = getelementptr i8, ptr %p1, i32 1
+  %g12 = getelementptr i8, ptr %p1, i32 2
+  %g13 = getelementptr i8, ptr %p1, i32 3
+
+  %t10 = load i8, ptr %p1
+  %t11 = load i8, ptr %g11
+  %t12 = load i8, ptr %g12
+  %t13 = load i8, ptr %g13
+
+  %a0 = add i8 %t0, %t10
+  %a1 = add i8 %t1, %t11
+  %a2 = add i8 %t2, %t12
+  %a3 = add i8 %t3, %t13
+
+  %z0 = zext i8 %a0 to i64
+  %z1 = zext i8 %a1 to i64
+  %z2 = zext i8 %a2 to i64
+  %z3 = zext i8 %a3 to i64
+
+  %sh0 = shl nuw i64 %z0, 16
+  %sh1 = shl nuw nsw i64 %z1, 24
+  %sh3 = shl nuw nsw i64 %z3, 8
+;  %sh2 = shl nuw nsw i64 %z2, 0 <-- missing phantom shift
+
+  %or01 = or disjoint i64 %sh0, %sh1
+  %or012 = or disjoint i64 %or01, %z2
+  %or0123 = or disjoint i64 %or012, %sh3
+  ret i64 %or0123
+}
+
+define i64 @bswap_loads_i32(ptr noalias %p) {
+; CHECK-LABEL: @bswap_loads_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %g1 = getelementptr i8, ptr %p, i32 1
+  %g2 = getelementptr i8, ptr %p, i32 2
+  %g3 = getelementptr i8, ptr %p, i32 3
+
+  %t0 = load i8, ptr %p
+  %t1 = load i8, ptr %g1
+  %t2 = load i8, ptr %g2
+  %t3 = load i8, ptr %g3
+
+  %z0 = zext i8 %t0 to i64
+  %z1 = zext i8 %t1 to i64
+  %z2 = zext i8 %t2 to i64
+  %z3 = zext i8 %t3 to i64
+
+  %sh0 = shl nuw i64 %z0, 24
+  %sh1 = shl nuw nsw i64 %z1, 16
+  %sh2 = shl nuw nsw i64 %z2, 8
+;  %sh3 = shl nuw nsw i64 %z3, 0 <-- missing phantom shift
+
+  %or01 = or disjoint i64 %sh0, %sh1
+  %or012 = or disjoint i64 %or01, %sh2
+  %or0123 = or disjoint i64 %or012, %z3
+  ret i64 %or0123
+}
+
+define i64 @bitcast_loads_i32(ptr noalias %p, ptr noalias %p1) {
+; CHECK-LABEL: @bitcast_loads_i32(
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    ret i64 [[TMP5]]
+;
+  %g1 = getelementptr i8, ptr %p, i32 1
+  %g2 = getelementptr i8, ptr %p, i32 2
+  %g3 = getelementptr i8, ptr %p, i32 3
+
+  %t0 = load i8, ptr %p
+  %t1 = load i8, ptr %g1
+  %t2 = load i8, ptr %g2
+  %t3 = load i8, ptr %g3
+
+  %z0 = zext i8 %t0 to i64
+  %z1 = zext i8 %t1 to i64
+  %z2 = zext i8 %t2 to i64
+  %z3 = zext i8 %t3 to i64
+
+  %sh1 = shl nuw i64 %z1, 8
+  %sh2 = shl nuw nsw i64 %z2, 16
+  %sh3 = shl nuw nsw i64 %z3, 24
+;  %sh0 = shl nuw nsw i64 %z0, 0 <-- missing phantom shift
+
+  %or01 = or disjoint i64 %z0, %sh1
+  %or012 = or disjoint i64 %or01, %sh2
+  %or0123 = or disjoint i64 %or012, %sh3
   ret i64 %or0123
 }
 

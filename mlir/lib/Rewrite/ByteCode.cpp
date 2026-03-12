@@ -404,7 +404,7 @@ struct ByteCodeWriter {
                 [](Type) { return PDLValue::Kind::Attribute; })
             .Case<pdl::OperationType>(
                 [](Type) { return PDLValue::Kind::Operation; })
-            .Case<pdl::RangeType>([](pdl::RangeType rangeTy) {
+            .Case([](pdl::RangeType rangeTy) {
               if (isa<pdl::TypeType>(rangeTy.getElementType()))
                 return PDLValue::Kind::TypeRange;
               return PDLValue::Kind::ValueRange;
@@ -1737,6 +1737,36 @@ void ByteCodeExecutor::executeForEach() {
     }
 
     LDBG() << "  * Done";
+    index = 0;
+    selectJump(size_t(0));
+    return;
+  }
+  case PDLValue::Kind::Value: {
+    unsigned &index = loopIndex[read()];
+    ValueRange range = valueRangeMemory[rangeIndex];
+    assert(index <= range.size() && "iterated past the end");
+    if (index < range.size()) {
+      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range[index] << "\n");
+      value = range[index].getAsOpaquePointer();
+      break;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
+    index = 0;
+    selectJump(size_t(0));
+    return;
+  }
+  case PDLValue::Kind::Type: {
+    unsigned &index = loopIndex[read()];
+    TypeRange range = typeRangeMemory[rangeIndex];
+    assert(index <= range.size() && "iterated past the end");
+    if (index < range.size()) {
+      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range[index] << "\n");
+      value = range[index].getAsOpaquePointer();
+      break;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
     index = 0;
     selectJump(size_t(0));
     return;

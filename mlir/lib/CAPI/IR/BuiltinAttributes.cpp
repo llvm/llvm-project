@@ -347,7 +347,7 @@ MlirTypeID mlirSymbolRefAttrGetTypeID(void) {
   return wrap(SymbolRefAttr::getTypeID());
 }
 
-MlirAttribute mlirDisctinctAttrCreate(MlirAttribute referencedAttr) {
+MlirAttribute mlirDistinctAttrCreate(MlirAttribute referencedAttr) {
   return wrap(mlir::DistinctAttr::create(unwrap(referencedAttr)));
 }
 
@@ -582,9 +582,7 @@ MlirAttribute mlirDenseElementsAttrRawBufferGet(MlirType shapedType,
   auto shapedTypeCpp = llvm::cast<ShapedType>(unwrap(shapedType));
   ArrayRef<char> rawBufferCpp(static_cast<const char *>(rawBuffer),
                               rawBufferSize);
-  bool isSplat = false;
-  if (!DenseElementsAttr::isValidRawBuffer(shapedTypeCpp, rawBufferCpp,
-                                           isSplat))
+  if (!DenseElementsAttr::isValidRawBuffer(shapedTypeCpp, rawBufferCpp))
     return mlirAttributeGetNull();
   return wrap(DenseElementsAttr::getFromRawBuffer(shapedTypeCpp, rawBufferCpp));
 }

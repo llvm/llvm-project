@@ -31,8 +31,9 @@
 // CHECK-V6M-C-SAME: "--sysroot={{.*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm"
 // CHECK-V6M-C-SAME: "-Bstatic" "-m" "armelf" "-EL"
 // CHECK-V6M-C-SAME: "[[SYSROOT:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}crt0.o"
-// CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
+// CHECK-V6M-C-SAME: "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}lib"
+// CHECK-V6M-C-SAME: "-T" "semihosted.lds"
 // CHECK-V6M-C-SAME: "{{.*}}.o"
 // CHECK-V6M-C-SAME: {{[^"]*}}libclang_rt.builtins.a"
 // CHECK-V6M-C-SAME: "-lc"
@@ -613,3 +614,12 @@
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
 // CHECK-RV64-RELAX-NOT: "--no-relax"
+
+// Check that "-T" follows after "-L" for RISC-V
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:     -T linker_script.lds -Lsearch_path \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-LINKER-SCRIPT %s
+// CHECK-RV64-LINKER-SCRIPT: ld{{(.exe)?}}"
+// CHECK-RV64-LINKER-SCRIPT-SAME: "-Lsearch_path"
+// CHECK-RV64-LINKER-SCRIPT-SAME: "-T" "linker_script.lds"
