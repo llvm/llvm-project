@@ -1000,8 +1000,6 @@ class HandleVectorExtractPattern
         if (!isExtractingContiguousSlice(srcShuffle))
           return failure();
         auto srcMask = srcShuffle.getMask();
-        if (srcMask.size() < mask.size())
-          return failure();
         SmallVector<int32_t> combinedMask;
         for (auto index : mask) {
           combinedMask.push_back(srcMask[index]);
