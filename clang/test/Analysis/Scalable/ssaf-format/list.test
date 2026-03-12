@@ -1,4 +1,4 @@
-// Test ssaf-format --list output without any loaded plugins.
+// Test clang-ssaf-format --list output without any loaded plugins.
 
 // RUN: clang-ssaf-format --list \
 // RUN:   | FileCheck %s
