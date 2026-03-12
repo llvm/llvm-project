@@ -1791,9 +1791,9 @@ static ModuleSource selectModuleSource(
   const HeaderSearchOptions &HSOpts = HS.getHeaderSearchOpts();
   if (!HSOpts.PrebuiltModuleFiles.empty() ||
       !HSOpts.PrebuiltModulePaths.empty()) {
-    ModuleFilename = ModuleFileName(HS.getPrebuiltModuleFileName(ModuleName));
+    ModuleFilename = HS.getPrebuiltModuleFileName(ModuleName);
     if (HSOpts.EnablePrebuiltImplicitModules && ModuleFilename.empty())
-      ModuleFilename = ModuleFileName(HS.getPrebuiltImplicitModuleFileName(M));
+      ModuleFilename = HS.getPrebuiltImplicitModuleFileName(M);
     if (!ModuleFilename.empty())
       return MS_PrebuiltModulePath;
   }
