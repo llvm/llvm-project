@@ -863,9 +863,6 @@ protected:
   llvm::DenseMap<const ObjCMethodDecl *, DirectMethodInfo>
       DirectMethodDefinitions;
 
-  /// MethodSelectorStubs - map of selector stub functions
-  llvm::DenseMap<Selector, llvm::Function *> MethodSelectorStubs;
-
   /// PropertyNames - uniqued method variable names.
   llvm::DenseMap<IdentifierInfo *, llvm::GlobalVariable *> PropertyNames;
 
@@ -1084,10 +1081,6 @@ public:
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
                                     const ObjCContainerDecl *CD) override;
-
-  llvm::Function *
-  GenerateMethodSelectorStub(Selector Sel,
-                             const ObjCCommonTypesHelper &ObjCTypes);
 
   void GenerateProtocol(const ObjCProtocolDecl *PD) override;
 
@@ -2130,15 +2123,8 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
     // must be made for it.
     if (ReceiverCanBeNull && CGM.ReturnTypeUsesSRet(MSI.CallInfo))
       RequiresNullCheck = true;
-    if (!IsSuper && CGM.getCodeGenOpts().ObjCMsgSendSelectorStubs) {
-      // Try to use a selector stub declaration instead of objc_msgSend.
-      Fn = GenerateMethodSelectorStub(Sel, ObjCTypes);
-      // Selector stubs synthesize `_cmd` in the stub, so we don't have to.
-      RequiresSelValue = false;
-    } else {
-      Fn = (ObjCABI == 2) ? ObjCTypes.getSendFn2(IsSuper)
-                          : ObjCTypes.getSendFn(IsSuper);
-    }
+    Fn = (ObjCABI == 2) ? ObjCTypes.getSendFn2(IsSuper)
+                        : ObjCTypes.getSendFn(IsSuper);
   }
 
   // Cast function to proper signature
@@ -4059,24 +4045,6 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     Builder.CreateStore(GetSelector(CGF, OMD),
                         CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
   }
-}
-
-llvm::Function *CGObjCCommonMac::GenerateMethodSelectorStub(
-    Selector Sel, const ObjCCommonTypesHelper &ObjCTypes) {
-  auto I = MethodSelectorStubs.find(Sel);
-
-  if (I != MethodSelectorStubs.end())
-    return I->second;
-
-  auto *FnTy = llvm::FunctionType::get(
-      ObjCTypes.ObjectPtrTy, {ObjCTypes.ObjectPtrTy, ObjCTypes.SelectorPtrTy},
-      /*IsVarArg=*/true);
-  auto *Fn = cast<llvm::Function>(
-      CGM.CreateRuntimeFunction(FnTy, "objc_msgSend$" + Sel.getAsString())
-          .getCallee());
-
-  MethodSelectorStubs.insert(std::make_pair(Sel, Fn));
-  return Fn;
 }
 
 llvm::GlobalVariable *

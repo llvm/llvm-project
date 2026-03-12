@@ -6,7 +6,7 @@
 #endif
 
 __attribute__((used, section(FORMATTER_SECTION)))
-unsigned char _RigidArray_synthetic[] =
+unsigned char _RigidArray_formatter[] =
     // version
     "\x01"
     // remaining record size

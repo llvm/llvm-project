@@ -303,6 +303,18 @@ private:
   }
 };
 
+/// Configuration of dynamic block memory needed for launching a kernel.
+struct DynBlockMemConfTy {
+  /// The size of the dynamic block memory buffer.
+  uint32_t Size = 0;
+  /// The size of dynamic shared memory natively provided by the device.
+  uint32_t NativeSize = 0;
+  /// The fallback that was triggered (if any).
+  DynCGroupMemFallbackType Fallback = DynCGroupMemFallbackType::None;
+  /// The fallback pointer if global memory was used as alternative.
+  void *FallbackPtr = nullptr;
+};
+
 /// Metadata extracted from OffloadBinary format
 struct OffloadBinMetadataTy {
   llvm::object::ImageKind ImageKind;
@@ -375,7 +387,7 @@ struct GenericKernelTy {
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                           KernelArgsTy &KernelArgs,
+                           uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
                            KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
@@ -384,6 +396,9 @@ struct GenericKernelTy {
 
   /// Get the kernel name.
   const char *getName() const { return Name.c_str(); }
+
+  /// Get the size of the static per-block memory consumed by the kernel.
+  uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -398,8 +413,10 @@ struct GenericKernelTy {
 
   /// Return a device pointer to a new kernel launch environment.
   Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
-                             AsyncInfoWrapperTy &AsyncInfo) const;
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+                             const KernelArgsTy &KernelArgs,
+                             const DynBlockMemConfTy &DynBlockMemConf,
+                             AsyncInfoWrapperTy &AsyncInfoWrapper) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -445,6 +462,12 @@ protected:
                                        uint32_t NumBlocks[3]) const;
 
 private:
+  /// Prepare the block memory buffer requested for the kernel and execute the
+  /// specified fallback if necessary.
+  Expected<DynBlockMemConfTy> prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                                                 KernelArgsTy &KernelArgs,
+                                                 uint32_t NumBlocks) const;
+
   /// Prepare the arguments before launching the kernel.
   KernelLaunchParamsTy
   prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
@@ -498,6 +521,9 @@ protected:
 
   /// The maximum number of threads which the kernel could leverage.
   uint32_t MaxNumThreads;
+
+  /// The static memory sized per block.
+  uint32_t StaticBlockMemSize = 0;
 
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
@@ -1519,6 +1545,9 @@ public:
 
   /// Query the current state of an asynchronous queue.
   int32_t query_async(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+
+  /// Obtain information about the given device.
+  InfoTreeNode obtain_device_info(int32_t DeviceId);
 
   /// Prints information about the given devices supported by the plugin.
   void print_device_info(int32_t DeviceId);
