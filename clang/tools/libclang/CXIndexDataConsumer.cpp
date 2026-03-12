@@ -505,7 +505,11 @@ void CXIndexDataConsumer::importedModule(const ImportDecl *ImportD) {
     if (SrcMod->getTopLevelModule() == Mod->getTopLevelModule())
       return;
 
-  OptionalFileEntryRef FE = Mod->getASTFile();
+  OptionalFileEntryRef FE;
+  if (auto ASTFileName = Mod->getASTFileName()) {
+    FileManager &FileMgr = Ctx->getSourceManager().getFileManager();
+    FE = FileMgr.getOptionalFileRef(*ASTFileName);
+  }
   CXIdxImportedASTFileInfo Info = {cxfile::makeCXFile(FE), Mod,
                                    getIndexLoc(ImportD->getLocation()),
                                    ImportD->isImplicit()};
