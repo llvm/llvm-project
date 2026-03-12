@@ -49,6 +49,12 @@ private:
   mlir::Value prepareKernelArgs(CIRGenFunction &cgf, mlir::Location loc,
                                 FunctionArgList &args);
   mlir::Operation *getKernelHandle(cir::FuncOp fn, GlobalDecl gd) override;
+
+  mlir::Operation *getKernelStub(mlir::Operation *handle) override {
+    auto it = kernelStubs.find(handle);
+    assert(it != kernelStubs.end());
+    return it->second;
+  }
   std::string addPrefixToName(StringRef funcName) const;
   std::string addUnderscoredPrefixToName(StringRef funcName) const;
 

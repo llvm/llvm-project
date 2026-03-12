@@ -285,8 +285,12 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
 
     Attribute initialValue = operands.getInitialValueAttr();
     if (opTy.getRank() == 0) {
-      auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
-      initialValue = elementsAttr.getSplatValue<Attribute>();
+      // special case for `variable : memref<i32> = dense<-1>`
+      if (std::optional<Attribute> initValueAttr = op.getInitialValue()) {
+        if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(*initValueAttr)) {
+          initialValue = elementsAttr.getSplatValue<Attribute>();
+        }
+      }
     }
     if (isa_and_present<UnitAttr>(initialValue))
       initialValue = {};

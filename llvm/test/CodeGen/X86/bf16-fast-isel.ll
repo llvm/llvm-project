@@ -6,6 +6,10 @@ define i8 @test_direct_call(ptr %f) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -20,6 +24,10 @@ define i8 @test_fast_direct_call(ptr %f) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq foo_fast@PLT
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -36,6 +44,10 @@ define i8 @test_indirect_all(ptr %fptr, ptr %f) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -45,6 +57,45 @@ entry:
   ret i8 %call2
 }
 
+define i8 @test_indirect_all2(ptr %fptr, ptr %f, i1 %cond) nounwind {
+; CHECK-LABEL: test_indirect_all2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl %edx, %ebp
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    je .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %exit
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
+; CHECK-NEXT:    callq *%rbx
+; CHECK-NEXT:    jmp .LBB3_3
+; CHECK-NEXT:  .LBB3_2: # %exit2
+; CHECK-NEXT:    movb $3, %al
+; CHECK-NEXT:  .LBB3_3: # %exit2
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+entry:
+  %call = call bfloat @foo(ptr %f)
+  br i1 %cond, label %exit, label %exit2
+
+exit:
+  %call2 = call zeroext i8 %fptr(bfloat %call)
+  ret i8 %call2
+
+exit2:
+  ret i8 3
+}
+
+
 define i8 @test_fast_indirect_all(ptr %fptr, ptr %f) nounwind {
 ; CHECK-LABEL: test_fast_indirect_all:
 ; CHECK:       # %bb.0: # %entry
@@ -52,6 +103,10 @@ define i8 @test_fast_indirect_all(ptr %fptr, ptr %f) nounwind {
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    callq __truncsfbf2@PLT
 ; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq

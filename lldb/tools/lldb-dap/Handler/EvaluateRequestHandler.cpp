@@ -133,8 +133,8 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   body.type = desc.display_type_name;
 
   if (value.MightHaveChildren() || ValuePointsToCode(value))
-    body.variablesReference = dap.reference_storage.InsertVariable(
-        value, /*is_permanent=*/is_repl_context);
+    body.variablesReference =
+        dap.reference_storage.Insert(value, /*is_permanent=*/is_repl_context);
 
   if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);

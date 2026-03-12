@@ -86,7 +86,7 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
   return failure();
 }
 
-// This side effect models "program termination". 
+// This side effect models "program termination".
 void AssertOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -166,6 +166,14 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
   if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
     return failure();
 
+  // If any branch operand is itself a block argument of the successor, merging
+  // would call replaceAllUsesWith(arg, arg) — a no-op — leaving dangling uses
+  // of that argument after the successor block is erased.
+  for (Value operand : op.getOperands())
+    if (auto ba = dyn_cast<BlockArgument>(operand))
+      if (ba.getOwner() == succ)
+        return failure();
+
   // Merge the successor into the current block and erase the branch.
   SmallVector<Value> brOperands(op.getOperands());
   rewriter.eraseOp(op);
@@ -196,9 +204,83 @@ static LogicalResult simplifyPassThroughBr(BranchOp op,
   return success();
 }
 
+/// If all incoming values for a block argument from all predecessors are the
+/// same SSA value, replace uses of the block argument with that value. This
+/// allows the block argument to be removed by dead code elimination.
+///
+///   %c = arith.constant 0 : i32
+///   cf.br ^bb1(%c : i32)      // pred 1
+///   cf.br ^bb1(%c : i32)      // pred 2
+/// ^bb1(%arg0: i32):
+///   use(%arg0)
+/// ->
+/// ^bb1(%arg0: i32):
+///   use(%c)                   // %arg0 has no uses and can be removed
+///
+static LogicalResult simplifyUniformBlockArgs(Block *dest,
+                                              PatternRewriter &rewriter) {
+  if (dest->hasNoPredecessors() ||
+      llvm::hasSingleElement(dest->getPredecessors()))
+    return failure();
+
+  bool changed = false;
+  for (BlockArgument arg : dest->getArguments()) {
+    if (arg.use_empty())
+      continue;
+
+    Value commonValue;
+    for (Block *pred : dest->getPredecessors()) {
+      auto branch = dyn_cast<BranchOpInterface>(pred->getTerminator());
+      if (!branch) {
+        commonValue = Value();
+        break;
+      }
+
+      for (auto [i, succ] : llvm::enumerate(branch->getSuccessors())) {
+        if (succ != dest)
+          continue;
+
+        // Produced operands are modeled by BranchOpInterface as null Values.
+        Value val = branch.getSuccessorOperands(i)[arg.getArgNumber()];
+        if (commonValue && commonValue != val) {
+          commonValue = Value();
+          break;
+        }
+        commonValue = val;
+      }
+
+      if (!commonValue)
+        break;
+    }
+
+    if (commonValue && commonValue != arg) {
+      rewriter.replaceAllUsesWith(arg, commonValue);
+      changed = true;
+    }
+  }
+  return success(changed);
+}
+
+namespace {
+/// Replaces block arguments with a uniform incoming value across all
+/// predecessors, for any op implementing BranchOpInterface.
+struct SimplifyUniformBlockArguments
+    : public OpInterfaceRewritePattern<BranchOpInterface> {
+  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  LogicalResult matchAndRewrite(BranchOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (Block *succ : op->getSuccessors())
+      changed |= succeeded(simplifyUniformBlockArgs(succ, rewriter));
+    return success(changed);
+  }
+};
+} // namespace
+
 LogicalResult BranchOp::canonicalize(BranchOp op, PatternRewriter &rewriter) {
   return success(succeeded(simplifyBrToBlockWithSinglePred(op, rewriter)) ||
-                 succeeded(simplifyPassThroughBr(op, rewriter)));
+                 succeeded(simplifyPassThroughBr(op, rewriter)) ||
+                 succeeded(simplifyUniformBlockArgs(op.getDest(), rewriter)));
 }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
@@ -484,7 +566,8 @@ void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
               SimplifyCondBranchIdenticalSuccessors,
               SimplifyCondBranchFromCondBranchOnSameCondition,
-              CondBranchTruthPropagation, DropUnreachableCondBranch>(context);
+              CondBranchTruthPropagation, DropUnreachableCondBranch,
+              SimplifyUniformBlockArguments>(context);
 }
 
 SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
@@ -947,7 +1030,8 @@ void SwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
       .add(&simplifyConstSwitchValue)
       .add(&simplifyPassThroughSwitch)
       .add(&simplifySwitchFromSwitchOnSameCondition)
-      .add(&simplifySwitchFromDefaultSwitchOnSameCondition);
+      .add(&simplifySwitchFromDefaultSwitchOnSameCondition)
+      .add<SimplifyUniformBlockArguments>(context);
 }
 
 //===----------------------------------------------------------------------===//

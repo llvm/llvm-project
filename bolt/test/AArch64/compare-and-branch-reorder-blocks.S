@@ -41,8 +41,10 @@ reorder_blocks:
 
 # CHECK: <reorder_blocks>:
 # CHECK-NEXT:           {{.*}} cbgt x0, #0x0, 0x[[ADDR:[0-9a-f]+]] <{{.*}}>
+# CHECK:      <.hot_exit>:
 # CHECK-NEXT:           {{.*}} mov  x0, #0x2 // =2
 # CHECK-NEXT:           {{.*}} ret
+# CHECK:      <.cold_exit>:
 # CHECK-NEXT: [[ADDR]]: {{.*}} mov  x0, #0x1 // =1
 # CHECK-NEXT:           {{.*}} ret
 

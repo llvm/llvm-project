@@ -31,6 +31,7 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
+class MachineInstr;
 class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
@@ -56,6 +57,7 @@ static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
 static constexpr unsigned GFX12 = 1;
+static constexpr unsigned GFX12_5 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -216,9 +218,18 @@ public:
   void setTargetIDFromFeaturesString(StringRef FS);
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
+  /// Write string representation to \p OS
+  void print(raw_ostream &OS) const;
+
   /// \returns String representation of an object.
   std::string toString() const;
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const AMDGPUTargetID &TargetID) {
+  TargetID.print(OS);
+  return OS;
+}
 
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo *STI);
@@ -255,8 +266,11 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
 /// \returns Minimum flat work group size for given subtarget \p STI.
 unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
 
-/// \returns Maximum flat work group size for given subtarget \p STI.
-unsigned getMaxFlatWorkGroupSize(const MCSubtargetInfo *STI);
+/// \returns Maximum flat work group size
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
@@ -1561,6 +1575,9 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
 LLVM_READNONE
 uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
+/// Returns true if the message does not use the m0 operand.
+bool msgDoesNotUseM0(int64_t MsgId, const MCSubtargetInfo &STI);
+
 } // namespace SendMsg
 
 unsigned getInitialPSInputAddr(const Function &F);
@@ -1639,13 +1656,18 @@ constexpr bool isChainCC(CallingConv::ID CC) {
 // the hardware. Module entry points include all entry functions but also
 // include functions that can be called from other functions inside or outside
 // the current module. Module entry functions are allowed to allocate LDS.
+//
+// AMDGPU_CS_Chain is intended for externally callable chain functions, so it is
+// treated as a module entrypoint. AMDGPU_CS_ChainPreserve is used for internal
+// helper functions (e.g. retry helpers), so it is not a module entrypoint.
 LLVM_READNONE
 constexpr bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_CS_Chain:
     return true;
   default:
-    return isEntryFunctionCC(CC) || isChainCC(CC);
+    return isEntryFunctionCC(CC);
   }
 }
 
@@ -1706,7 +1728,6 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
-bool isGFX1170(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
@@ -1969,6 +1990,18 @@ unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
 /// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
 MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
                            const MCRegisterInfo &MRI);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
+                                                   bool HasSetregVGPRMSBFixup);
+
+/// \returns VGPR MSBs encoded in a S_SETREG_IMM32_B32 \p MI if it sets
+/// it. If \p HasSetregVGPRMSBFixup is true then size of the ID_MODE mask is
+/// ignored.
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
+                                                   bool HasSetregVGPRMSBFixup);
 
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2

@@ -124,7 +124,7 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-BEFORE:   %[[FUNC:.*]] = cir.load{{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   %[[CALLEE:.*]], %[[THIS:.*]] = cir.get_method %[[FUNC]], %[[OBJ]] : (!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.ptr<!rec_Foo>) -> (!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>, !cir.ptr<!void>)
 // CIR-BEFORE:   %[[ARG:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
-// CIR-BEFORE:   cir.call %[[CALLEE]](%[[THIS]], %[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>, !cir.ptr<!void>, !s32i) -> ()
+// CIR-BEFORE:   cir.call %[[CALLEE]](%[[THIS]], %[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>, !cir.ptr<!void> {{.*}}, !s32i {{.*}}) -> ()
 
 // CIR-AFTER: cir.func {{.*}} @_Z4callP3FooMS_FviEi
 // CIR-AFTER:   %[[OBJ:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_Foo>>, !cir.ptr<!rec_Foo>
@@ -134,12 +134,12 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER:   %[[THIS:.*]] = cir.cast bitcast %[[OBJ]] : !cir.ptr<!rec_Foo> -> !cir.ptr<!void>
 // CIR-AFTER:   %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[VIRT_BIT_TEST:.*]] = cir.binop(and, %[[METHOD_PTR]], %[[VIRT_BIT]]) : !s64i
-// CIR-AFTER:   %[[IS_VIRTUAL:.*]] = cir.cmp(eq, %[[VIRT_BIT_TEST]], %[[VIRT_BIT]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[VIRT_BIT_TEST:.*]] = cir.and %[[METHOD_PTR]], %[[VIRT_BIT]] : !s64i
+// CIR-AFTER:   %[[IS_VIRTUAL:.*]] = cir.cmp eq %[[VIRT_BIT_TEST]], %[[VIRT_BIT]] : !s64i
 // CIR-AFTER:   %[[CALLEE:.*]] = cir.ternary(%[[IS_VIRTUAL]], true {
 // CIR-AFTER:     %[[VTABLE_PTR:.*]] = cir.cast bitcast %[[ADJUSTED_THIS]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!s8i>>
 // CIR-AFTER:     %[[VTABLE:.*]] = cir.load %[[VTABLE_PTR]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-// CIR-AFTER:     %[[OFFSET:.*]] = cir.binop(sub, %[[METHOD_PTR]], %[[VIRT_BIT]]) : !s64i
+// CIR-AFTER:     %[[OFFSET:.*]] = cir.sub %[[METHOD_PTR]], %[[VIRT_BIT]] : !s64i
 // CIR-AFTER:     %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[OFFSET]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
 // CIR-AFTER:     %[[VIRTUAL_FN_PTR:.*]] = cir.cast bitcast %[[VTABLE_SLOT]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>>
 // CIR-AFTER:     %[[VIRTUAL_FN_PTR_LOAD:.*]] = cir.load %[[VIRTUAL_FN_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>
@@ -149,7 +149,7 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER:     cir.yield %[[CALLEE_PTR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>
 // CIR-AFTER:   }) : (!cir.bool) -> !cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>
 // CIR-AFTER:   %[[ARG:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!s32i>, !s32i
-// CIR-AFTER:   cir.call %[[CALLEE]](%[[ADJUSTED_THIS]], %[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>, !cir.ptr<!void>, !s32i) -> ()
+// CIR-AFTER:   cir.call %[[CALLEE]](%[[ADJUSTED_THIS]], %[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>, !cir.ptr<!void> {{.*}}, !s32i {{.*}}) -> ()
 
 // LLVM: define {{.*}} @_Z4callP3FooMS_FviEi
 // LLVM:   %[[OBJ:.*]] = load ptr, ptr %{{.*}}
@@ -172,7 +172,7 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // LLVM: [[CONTINUE]]:
 // LLVM:   %[[CALLEE_PTR:.*]] = phi ptr [ %[[FUNC_PTR]], %[[HANDLE_NON_VIRTUAL]] ], [ %[[VIRTUAL_FN_PTR]], %[[HANDLE_VIRTUAL]] ]
 // LLVM:   %[[ARG:.*]] = load i32, ptr %{{.+}}
-// LLVM:   call void %[[CALLEE_PTR]](ptr %[[ADJUSTED_THIS]], i32 %[[ARG]])
+// LLVM:   call void %[[CALLEE_PTR]](ptr {{.*}} %[[ADJUSTED_THIS]], i32 {{.*}} %[[ARG]])
 // LLVM: }
 
 // OGCG: define {{.*}} @_Z4callP3FooMS_FviEi

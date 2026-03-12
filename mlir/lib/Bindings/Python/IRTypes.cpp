@@ -842,35 +842,43 @@ void PyOpaqueType::bindDerived(ClassTy &c) {
       "Returns the data for the Opaque type as a string.");
 }
 
+static MlirDynamicTypeDefinition
+getDynamicTypeDef(const std::string &fullTypeName,
+                  DefaultingPyMlirContext context) {
+  size_t dotPos = fullTypeName.find('.');
+  if (dotPos == std::string::npos) {
+    throw nb::value_error("Expected full type name to be in the format "
+                          "'<dialectName>.<typeName>'.");
+  }
+
+  std::string dialectName = fullTypeName.substr(0, dotPos);
+  std::string typeName = fullTypeName.substr(dotPos + 1);
+  PyDialects dialects(context->getRef());
+  MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
+  if (!mlirDialectIsAExtensibleDialect(dialect))
+    throw nb::value_error(
+        ("Dialect '" + dialectName + "' is not an extensible dialect.")
+            .c_str());
+
+  MlirDynamicTypeDefinition typeDef = mlirExtensibleDialectLookupTypeDefinition(
+      dialect, toMlirStringRef(typeName));
+  if (typeDef.ptr == nullptr) {
+    throw nb::value_error(("Dialect '" + dialectName +
+                           "' does not contain a type named '" + typeName +
+                           "'.")
+                              .c_str());
+  }
+
+  return typeDef;
+}
+
 void PyDynamicType::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
       [](const std::string &fullTypeName, const std::vector<PyAttribute> &attrs,
          DefaultingPyMlirContext context) {
-        size_t dotPos = fullTypeName.find('.');
-        if (dotPos == std::string::npos) {
-          throw nb::value_error("Expected full type name to be in the format "
-                                "'<dialectName>.<typeName>'.");
-        }
-
-        std::string dialectName = fullTypeName.substr(0, dotPos);
-        std::string typeName = fullTypeName.substr(dotPos + 1);
-        PyDialects dialects(context->getRef());
-        MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
-        if (!mlirDialectIsAExtensibleDialect(dialect))
-          throw nb::value_error(
-              ("Dialect '" + dialectName + "' is not an extensible dialect.")
-                  .c_str());
-
         MlirDynamicTypeDefinition typeDef =
-            mlirExtensibleDialectLookupTypeDefinition(
-                dialect, toMlirStringRef(typeName));
-        if (typeDef.ptr == nullptr) {
-          throw nb::value_error(("Dialect '" + dialectName +
-                                 "' does not contain a type named '" +
-                                 typeName + "'.")
-                                    .c_str());
-        }
+            getDynamicTypeDef(fullTypeName, context);
 
         std::vector<MlirAttribute> mlirAttrs;
         mlirAttrs.reserve(attrs.size());
@@ -902,6 +910,15 @@ void PyDynamicType::bindDerived(ClassTy &c) {
     return std::string(dialectNamespace.data, dialectNamespace.length) + "." +
            std::string(name.data, name.length);
   });
+  c.def_static(
+      "lookup_typeid",
+      [](const std::string &fullTypeName, DefaultingPyMlirContext context) {
+        MlirDynamicTypeDefinition typeDef =
+            getDynamicTypeDef(fullTypeName, context);
+        return PyTypeID(mlirDynamicTypeDefinitionGetTypeID(typeDef));
+      },
+      nb::arg("full_type_name"), nb::arg("context") = nb::none(),
+      "Look up the TypeID for the given dynamic type name.");
 }
 
 void populateIRTypes(nb::module_ &m) {

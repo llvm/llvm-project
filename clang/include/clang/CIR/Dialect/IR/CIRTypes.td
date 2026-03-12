@@ -252,19 +252,23 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let parameters = (ins
     "mlir::Type":$pointee,
     OptionalParameter<
-        "cir::TargetAddressSpaceAttr">:$addrSpace
+        "mlir::ptr::MemorySpaceAttrInterface">:$addrSpace
   );
 
   let skipDefaultBuilders = 1;
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "mlir::Type":$pointee,
-       CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
+       CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
       "mlir::Type":$pointee,
-      CArg<"cir::TargetAddressSpaceAttr", "nullptr">:$addrSpace), [{
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
+        // Drop default address space and replace with empty attribute.
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get($_ctxt, pointee, addrSpace);
     }]>
   ];
@@ -272,7 +276,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
   let assemblyFormat = [{
     `<`
       $pointee
-      ( `,` ` ` custom<TargetAddressSpace>($addrSpace)^ )?
+      ( `,` ` ` custom<AddressSpaceValue>($addrSpace)^ )?
     `>`
   }];
 
@@ -303,6 +307,8 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
       return false;
     }
   }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

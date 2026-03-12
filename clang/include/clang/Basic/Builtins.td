@@ -1664,6 +1664,18 @@ def ReduceAdd : Builtin {
   let Prototype = "void(...)";
 }
 
+def ReduceInOrderFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_in_order_fadd"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceAssocFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_assoc_fadd"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ReduceMul : Builtin {
   let Spellings = ["__builtin_reduce_mul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
@@ -5060,6 +5072,18 @@ def HLSLResourceSampleCmpLevelZero : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceGather : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_gather"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceGatherCmp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_gather_cmp"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceUninitializedHandle : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_uninitializedhandle"];
   let Attributes = [NoThrow];
@@ -5132,6 +5156,12 @@ def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveActiveAllEqual : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_all_equal"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWaveActiveAllTrue : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_all_true"];
   let Attributes = [NoThrow, Const];
@@ -5142,6 +5172,12 @@ def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_any_true"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(bool)";
+}
+
+def HLSLWaveActiveBitOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_bit_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
 }
 
 def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
@@ -5170,6 +5206,12 @@ def HLSLWaveActiveMin : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLWaveActiveSum : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
+def HLSLWaveActiveProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_product"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void (...)";
 }
@@ -5296,6 +5338,12 @@ def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLMad : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_mad"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLMul : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_mul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

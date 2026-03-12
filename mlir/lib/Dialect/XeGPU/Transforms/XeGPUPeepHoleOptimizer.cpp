@@ -25,6 +25,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -145,8 +146,9 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
 
   SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
-      tdescType.getContext(),
-      tdescType.getLayoutAttr().getLaneLayout().asArrayRef(), {1, 1});
+      tdescType.getContext(), tdescType.getLayoutAttr().getLaneLayout(),
+      DenseI32ArrayAttr::get(tdescType.getContext(), {1, 1}),
+      tdescType.getLayoutAttr().getOrder());
   // Array length can not be larger than 1 for transpose case.
   return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
                                     tdescType.getBoundaryCheck(),
@@ -582,6 +584,11 @@ struct XeGPUPeepHoleOptimizerPass final
       DBGS() << "Optimize block loads pass failed.\n";
       return signalPassFailure();
     }
+
+    // Apply folding for cleaning up IR.
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet emptyPatterns(ctx);
+    (void)applyPatternsGreedily(getOperation(), std::move(emptyPatterns));
   }
 };
 
