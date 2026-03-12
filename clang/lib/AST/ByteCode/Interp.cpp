@@ -976,7 +976,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;
-  if (Ptr.isConstexprUnknown())
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
   return true;
 }
