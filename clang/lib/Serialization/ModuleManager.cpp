@@ -150,6 +150,7 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     return Missing;
   }
 
+  // Check whether we already loaded this module, before
   if (ModuleFile *ModuleEntry = lookup(*FileKey)) {
     // Check file properties.
     if (checkModuleFile(ModuleEntry->File, ExpectedSize, ExpectedModTime,
