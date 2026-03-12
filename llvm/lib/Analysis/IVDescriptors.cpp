@@ -928,11 +928,8 @@ RecurrenceDescriptor::isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
   //   select(cmp(), phi, value) or
   //   select(cmp(), value, phi)
   // TODO: Match selects with multi-use cmp conditions.
-  Value *NonRdxPhi = nullptr;
-  if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
-                                     m_Specific(OrigPhi)),
-                            m_Select(m_OneUse(m_Cmp()), m_Specific(OrigPhi),
-                                     m_Value(NonRdxPhi)))))
+  if (!match(I, m_CombineOr(m_Select(m_Cmp(), m_Value(), m_Specific(OrigPhi)),
+                            m_Select(m_Cmp(), m_Specific(OrigPhi), m_Value()))))
     return InstDesc(false, I);
 
   return InstDesc(I, RecurKind::FindLast);
