@@ -42,7 +42,7 @@ def MPI_InitOp : MPI_Op<"init", [MemoryEffects<[MemRead, MemWrite]>]> {
 // CommWorldOp
 //===----------------------------------------------------------------------===//
 
-def MPI_CommWorldOp : MPI_Op<"comm_world", [MemoryEffects<[MemRead]>]> {
+def MPI_CommWorldOp : MPI_Op<"comm_world", [MemoryEffects<[]>]> {
   let summary = "Get the World communicator, equivalent to `MPI_COMM_WORLD`";
   let description = [{
     This operation returns the predefined MPI_COMM_WORLD communicator.
@@ -57,7 +57,7 @@ def MPI_CommWorldOp : MPI_Op<"comm_world", [MemoryEffects<[MemRead]>]> {
 // CommRankOp
 //===----------------------------------------------------------------------===//
 
-def MPI_CommRankOp : MPI_Op<"comm_rank", [MemoryEffects<[MemRead]>]> {
+def MPI_CommRankOp : MPI_Op<"comm_rank", [MemoryEffects<[]>]> {
   let summary = "Get the current rank, equivalent to "
                 "`MPI_Comm_rank(comm, &rank)`";
   let description = [{
@@ -80,7 +80,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", [MemoryEffects<[MemRead]>]> {
 // CommSizeOp
 //===----------------------------------------------------------------------===//
 
-def MPI_CommSizeOp : MPI_Op<"comm_size", [MemoryEffects<[MemRead]>]> {
+def MPI_CommSizeOp : MPI_Op<"comm_size", [MemoryEffects<[]>]> {
   let summary = "Get the size of the group associated to the communicator, "
                 "equivalent to `MPI_Comm_size(comm, &size)`";
   let description = [{
@@ -396,7 +396,7 @@ def MPI_Barrier : MPI_Op<"barrier", [MemoryEffects<[MemRead, MemWrite]>]> {
 // WaitOp
 //===----------------------------------------------------------------------===//
 
-def MPI_Wait : MPI_Op<"wait", [MemoryEffects<[MemRead, MemWrite]>]> {
+def MPI_Wait : MPI_Op<"wait", [MemoryEffects<[]>]> {
   let summary = "Equivalent to `MPI_Wait(req, MPI_STATUS_IGNORE)`";
   let description = [{
     MPI_Wait blocks execution until the request has completed.
@@ -439,7 +439,7 @@ def MPI_FinalizeOp : MPI_Op<"finalize", [MemoryEffects<[MemRead, MemWrite]>]> {
 // RetvalCheckOp
 //===----------------------------------------------------------------------===//
 
-def MPI_RetvalCheckOp : MPI_Op<"retval_check", [MemoryEffects<[MemRead]>]> {
+def MPI_RetvalCheckOp : MPI_Op<"retval_check", [MemoryEffects<[]>]> {
   let summary = "Check an MPI return value against an error class";
   let description = [{
     This operation compares MPI status codes to known error class
@@ -462,7 +462,7 @@ def MPI_RetvalCheckOp : MPI_Op<"retval_check", [MemoryEffects<[MemRead]>]> {
 // ErrorClassOp
 //===----------------------------------------------------------------------===//
 
-def MPI_ErrorClassOp : MPI_Op<"error_class", [MemoryEffects<[MemRead]>]> {
+def MPI_ErrorClassOp : MPI_Op<"error_class", [MemoryEffects<[]>]> {
   let summary = "Get the error class from an error code, equivalent to "
                 "the `MPI_Error_class` function";
   let description = [{
