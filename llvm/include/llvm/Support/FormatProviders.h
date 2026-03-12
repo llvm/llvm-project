@@ -306,7 +306,6 @@ struct format_provider<
     : public support::detail::HelperFunctions {
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     FloatStyle S;
-
     if (Style.consume_front("P") || Style.consume_front("p"))
       S = FloatStyle::Percent;
     else if (Style.consume_front("F") || Style.consume_front("f"))
