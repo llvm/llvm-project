@@ -11720,12 +11720,16 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
           ISD::SHL, DL, VT, N0,
           DAG.getConstant(IsFSHL ? ShAmt : BitWidth - ShAmt, DL, ShAmtTy));
 
-    //   fshl(SRL(x, c),        SHL(x, BW-c),    c) -> x
-    //   fshl(FSHR(_, x, c),    FSHL(x, _, BW-c), c) -> x
-    //   fshl(FSHL(_, x, BW-c), FSHR(x, _, c),   c) -> x
-    //   fshr(SRL(x, BW-c),     SHL(x, c),       c) -> x
-    //   fshr(FSHR(_, x, BW-c), FSHL(x, _, c),   c) -> x
-    //   fshr(FSHL(_, x, c),    FSHR(x, _, BW-c),c) -> x
+    // fold fshl(N0, N1, c) -> x  and  fshr(N0, N1, c) -> x
+    // where N0 is any node that contributes "x >> C0" to the result:
+    //   lshr(x, C0)  |  fshr(_, x, C0)  |  fshl(_, x, C1)
+    // and N1 is any node that contributes "x << C1" to the result:
+    //   shl(x, C1)   |  fshl(x, _, C1)  |  fshr(x, _, C0)
+    // with C0 = IsFSHL ? amnt : BW-amnt,  C1 = BW - C0
+
+    // ShAmt == 0 was handled above; uge(BitWidth) was reduced via modulo above.
+    assert(ShAmt >= 1 && ShAmt < BitWidth &&
+           "ShAmt must be in [1, BW-1] for the identity fold to be valid");
     SDValue Val;
     unsigned C0Expected = IsFSHL ? ShAmt : BitWidth - ShAmt;
     unsigned C1Expected = IsFSHL ? BitWidth - ShAmt : ShAmt;
