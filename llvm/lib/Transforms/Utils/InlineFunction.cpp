@@ -3302,7 +3302,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // basic block of the inlined function.
   //
   Instruction *Br = OrigBB->getTerminator();
-  assert(Br && Br->getOpcode() == Instruction::Br &&
+  assert(Br && Br->getOpcode() == Instruction::UncondBr &&
          "splitBasicBlock broken!");
   Br->setOperand(0, &*FirstNewBlock);
 

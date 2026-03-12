@@ -85,9 +85,9 @@ void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
 void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
 void initializeAArch64PointerAuthPass(PassRegistry&);
-void initializeAArch64BranchTargetsPass(PassRegistry&);
+void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CFIFixupPass(PassRegistry&);
-void initializeAArch64CollectLOHPass(PassRegistry &);
+void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
 void initializeAArch64CompressJumpTablesPass(PassRegistry&);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerPass(PassRegistry&);
@@ -135,8 +135,21 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AArch64BranchTargetsPass
+    : public PassInfoMixin<AArch64BranchTargetsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 class AArch64AdvSIMDScalarPass
     : public PassInfoMixin<AArch64AdvSIMDScalarPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64CollectLOHPass : public PassInfoMixin<AArch64CollectLOHPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

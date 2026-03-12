@@ -326,12 +326,12 @@ static std::optional<std::string> getConditionText(const Expr *ConditionExpr,
                            SM, LangOpts) == "//";
 
   bool Invalid = false;
-  const llvm::StringRef ConditionText = Lexer::getSourceText(
+  const StringRef ConditionText = Lexer::getSourceText(
       CharSourceRange::getCharRange(ConditionRange), SM, LangOpts, &Invalid);
   if (Invalid)
     return std::nullopt;
 
-  auto AddParens = [&](llvm::StringRef Text) -> std::string {
+  auto AddParens = [&](StringRef Text) -> std::string {
     if (isPrimaryExpression(ConditionExpr))
       return Text.str();
     return "(" + Text.str() + ")";
