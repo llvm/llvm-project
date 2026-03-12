@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
@@ -698,6 +699,15 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
                              {BranchOnMask->getOperand(0)},
                              BranchOnMask->getDebugLoc());
         BranchOnMask->eraseFromParent();
+      } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
+        VPValue *PredOp = PredPhi->getOperand(0);
+        VPValue *PoisonVal = Plan.getOrAddLiveIn(
+            PoisonValue::get(VPTypeAnalysis(Plan).inferScalarType(PredOp)));
+
+        VPPhi *NewPhi = Builder.createScalarPhi({PoisonVal, PredOp},
+                                                PredPhi->getDebugLoc());
+        PredPhi->replaceAllUsesWith(NewPhi);
+        PredPhi->eraseFromParent();
       } else {
         assert((isa<VPScalarIVStepsRecipe>(OldR) ||
                 (isa<VPInstruction>(OldR) &&
@@ -800,7 +810,8 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     // Skip regions with live-outs as packing scalar results back into vectors
     // is not yet implemented.
-    if (Region->isReplicator() && Region->getExitingBasicBlock()->empty())
+    if (Region->isReplicator() &&
+        (!VF.isScalar() && Region->getExitingBasicBlock()->empty()))
       ReplicateRegions.push_back(Region);
   }
 
@@ -815,11 +826,13 @@ static void replicateReplicateRegionsByVF(VPlan &Plan, ElementCount VF,
 }
 
 void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
-  if (Plan.hasScalarVFOnly())
-    return;
-
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
+
+  if (Plan.hasScalarVFOnly()) {
+    replicateReplicateRegionsByVF(Plan, VF, IdxTy);
+    return;
+  }
 
   // Visit all VPBBs outside the loop region and directly inside the top-level
   // loop region.
