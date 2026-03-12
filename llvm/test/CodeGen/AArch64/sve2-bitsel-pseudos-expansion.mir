@@ -264,3 +264,66 @@ body:             |
     $z2 = NOR_ZZZ killed $z0, $z1
     RET_ReallyLR implicit $z2
 ...
+
+---
+name:            eon_destructive_undef_z0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $z0, $z1
+    ; CHECK-LABEL: name: eon_destructive_undef_z0
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $z0 = BSL2N_ZZZZ killed undef $z0, undef $z0, $z1
+    ; CHECK-NEXT: RET undef $lr, implicit $z0
+    $z0 = EON_ZZZ undef $z0, $z1
+    RET_ReallyLR implicit $z0
+...
+
+---
+name:            eon_destructive_undef_z1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $z0, $z1
+    ; CHECK-LABEL: name: eon_destructive_undef_z1
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $z0 = BSL2N_ZZZZ killed $z0, $z0, undef $z1
+    ; CHECK-NEXT: RET undef $lr, implicit $z0
+    $z0 = EON_ZZZ $z0, undef $z1
+    RET_ReallyLR implicit $z0
+...
+
+---
+name:            eon_commute_undef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $z0, $z1
+    ; CHECK-LABEL: name: eon_commute_undef
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $z0 = BSL2N_ZZZZ killed undef $z0, undef $z0, $z1
+    ; CHECK-NEXT: RET undef $lr, implicit $z0
+    $z0 = EON_ZZZ $z1, undef $z0
+    RET_ReallyLR implicit $z0
+...
+
+---
+name:            eon_movprfx_undef
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $z0, $z1
+    ; CHECK-LABEL: name: eon_movprfx_undef
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: BUNDLE implicit-def $z2, implicit undef $z0, implicit $z1 {
+    ; CHECK-NEXT:   $z2 = MOVPRFX_ZZ undef $z0
+    ; CHECK-NEXT:   $z2 = BSL2N_ZZZZ internal killed $z2, undef $z0, $z1
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: RET undef $lr, implicit $z2
+    $z2 = EON_ZZZ undef $z0, $z1
+    RET_ReallyLR implicit $z2
+...

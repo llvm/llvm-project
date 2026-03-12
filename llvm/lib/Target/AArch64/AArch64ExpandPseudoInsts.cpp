@@ -720,8 +720,6 @@ bool AArch64ExpandPseudo::expandSVEBitwisePseudo(
   const MachineOperand *Op1 = &MI.getOperand(1);
   const MachineOperand *Op2 = &MI.getOperand(2);
   const Register DOPReg = Op0.getReg();
-  const RegState DOPRegState =
-      getRenamableRegState(Op0.isRenamable()) | RegState::Kill;
 
   if (DOPReg == Op2->getReg()) {
     // Commute the operands to allow destroying the second source.
@@ -733,11 +731,16 @@ bool AArch64ExpandPseudo::expandSVEBitwisePseudo(
                .addDef(DOPReg, getRenamableRegState(Op0.isRenamable()))
                .addReg(Op1->getReg(),
                        getRenamableRegState(Op1->isRenamable()) |
+                           getUndefRegState(Op1->isUndef()) |
                            getKillRegState(Op1->isKill() &&
                                            Opcode == AArch64::NAND_ZZZ));
   }
 
   assert((DOPReg == Op1->getReg() || PRFX) && "invalid expansion");
+
+  const RegState DOPRegState = getRenamableRegState(Op0.isRenamable()) |
+                               getUndefRegState(!PRFX && Op1->isUndef()) |
+                               RegState::Kill;
 
   switch (Opcode) {
   default:
