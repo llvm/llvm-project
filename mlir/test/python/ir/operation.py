@@ -1284,7 +1284,7 @@ def testOpWalk():
     # CHECK-NEXT:  func.fun
     # CHECK-NEXT:  func.return
     print("Pre-order")
-    module.operation.walk(callback, walk_order=WalkOrder.PRE_ORDER)
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
 
     # Test interrput.
     # CHECK-NEXT:  Interrupt post-order
@@ -1306,7 +1306,7 @@ def testOpWalk():
         print(op.name)
         return WalkResult.SKIP
 
-    module.operation.walk(callback, walk_order=WalkOrder.PRE_ORDER)
+    module.operation.walk(callback, WalkOrder.PRE_ORDER)
 
     # Test exception.
     # CHECK: Exception
@@ -1379,6 +1379,13 @@ def testOpWalk():
     module.operation.walk(collect, op_class=func.FuncOp)
     assert all(isinstance(r, func.FuncOp) for r in collected)
     print(f"collected func.FuncOp: {[str(r.name) for r in collected]}")
+
+    # Test op_class with walk_order: pre-order visits FuncOps in source order.
+    # CHECK-NEXT: pre-order FuncOp names: ['"f"', '"g"']
+    collected.clear()
+    module.operation.walk(collect, WalkOrder.PRE_ORDER, op_class=func.FuncOp)
+    assert all(isinstance(r, func.FuncOp) for r in collected)
+    print(f"pre-order FuncOp names: {[str(r.name) for r in collected]}")
 
 
 # CHECK-LABEL: TEST: testOpReplaceUsesWith
