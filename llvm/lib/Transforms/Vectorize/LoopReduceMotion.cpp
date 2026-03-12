@@ -19,7 +19,7 @@
 //   sum = add sum, d        |   ...
 //   ...                     |   ...
 // exit:                     | exit:
-//   value = sum             |   d = reduce_add sum
+//   value = sum             |   d = reduce_add vsum
 //   ...                     |   value = d
 //   ...                     |   ...
 //   ret                     |   ret
@@ -47,25 +47,110 @@
 #define DEBUG_TYPE "loop-reduce-motion"
 
 using namespace llvm;
+InstructionCost LoopReduceMotionPass::getReductionPatternCost(
+    Instruction *I, ElementCount VF, Type *Ty, TargetTransformInfo &TTI) {
+  using namespace llvm::PatternMatch;
+  auto *VectorTy = dyn_cast<VectorType>(Ty);
+  if (!VectorTy)
+    return InstructionCost::getInvalid();
+
+  TTI::TargetCostKind CostKind = TargetTransformInfo::TCK_RecipThroughput;
+
+  // Base cost: arithmetic reduction
+  InstructionCost BaseCost = TTI.getArithmeticReductionCost(
+      Instruction::Add, VectorTy, std::nullopt, CostKind);
+
+  Value *RedOpVal = I->getOperand(0);
+  Instruction *RedOp = dyn_cast<Instruction>(RedOpVal);
+  if (!RedOp)
+    return BaseCost;
+
+  // Case 1: reduce(ext(A))
+  if (match(RedOp, m_ZExtOrSExt(m_Value()))) {
+    bool IsUnsigned = isa<ZExtInst>(RedOp);
+    Type *SrcTy = RedOp->getOperand(0)->getType();
+    auto *ExtType = VectorTy;
+
+    InstructionCost ExtCost =
+        TTI.getCastInstrCost(RedOp->getOpcode(), ExtType, SrcTy,
+                             TTI::CastContextHint::None, CostKind, RedOp);
+
+    InstructionCost RedCost = TTI.getExtendedReductionCost(
+        Instruction::Add, IsUnsigned, Ty->getScalarType(),
+        cast<VectorType>(SrcTy), std::nullopt, CostKind);
+
+    if (RedCost.isValid() && RedCost < BaseCost + ExtCost)
+      return RedCost;
+  }
+
+  // Case 2 & 3: reduce(mul(...))
+  Value *Op0Val = nullptr;
+  Value *Op1Val = nullptr;
+  if (match(RedOp, m_Mul(m_Value(Op0Val), m_Value(Op1Val)))) {
+    Instruction *Op0 = dyn_cast<Instruction>(Op0Val);
+    Instruction *Op1 = dyn_cast<Instruction>(Op1Val);
+
+    if (Op0 && Op1) {
+      // Case 2: reduce(mul(ext(A), ext(B)))
+      if (match(Op0, m_ZExtOrSExt(m_Value())) &&
+          match(Op1, m_ZExtOrSExt(m_Value())) &&
+          Op0->getOpcode() == Op1->getOpcode()) {
+        bool IsUnsigned = isa<ZExtInst>(Op0);
+        Type *Op0SrcTy = Op0->getOperand(0)->getType();
+        Type *Op1SrcTy = Op1->getOperand(0)->getType();
+
+        if (Op0SrcTy == Op1SrcTy) {
+          InstructionCost ExtCost0 =
+              TTI.getCastInstrCost(Op0->getOpcode(), VectorTy, Op0SrcTy,
+                                   TTI::CastContextHint::None, CostKind, Op0);
+          InstructionCost ExtCost1 =
+              TTI.getCastInstrCost(Op1->getOpcode(), VectorTy, Op1SrcTy,
+                                   TTI::CastContextHint::None, CostKind, Op1);
+          InstructionCost MulCost =
+              TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
+          InstructionCost RedCost = TTI.getMulAccReductionCost(
+              IsUnsigned, RedOp->getOpcode(), Ty->getScalarType(),
+              cast<VectorType>(Op0SrcTy), CostKind);
+
+          if (RedCost.isValid() &&
+              RedCost < BaseCost + MulCost + ExtCost0 + ExtCost1)
+            return RedCost;
+        }
+      }
+
+      // Case 3: reduce(mul(A, B))
+      InstructionCost MulCost =
+          TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
+      InstructionCost RedCost = TTI.getMulAccReductionCost(
+          true, RedOp->getOpcode(), Ty->getScalarType(), VectorTy, CostKind);
+
+      if (RedCost.isValid() && RedCost < BaseCost + MulCost)
+        return RedCost;
+    }
+  }
+
+  return BaseCost;
+}
+
 bool LoopReduceMotionPass::compareCost(LoopStandardAnalysisResults &AR, Loop &L,
-                                       VectorType *VecTy) {
+                                       VectorType *VecTy,
+                                       Instruction *ReduceInst) {
   auto TTI = &AR.TTI;
   auto SE = &AR.SE;
 
-  IntrinsicCostAttributes ReduceAttrs(Intrinsic::vector_reduce_add, VecTy,
-                                      {VecTy});
   TTI::TargetCostKind CostKind = TargetTransformInfo::TCK_RecipThroughput;
 
   InstructionCost VectorAddCost =
       TTI->getArithmeticInstrCost(Instruction::Add, VecTy, CostKind);
   InstructionCost ScalarAddCost = TTI->getArithmeticInstrCost(
       Instruction::Add, VecTy->getElementType(), CostKind);
-  InstructionCost ReduceAddCost =
-      TTI->getIntrinsicInstrCost(ReduceAttrs, CostKind);
+  InstructionCost ReduceAddCost = getReductionPatternCost(
+      ReduceInst, VecTy->getElementCount(), VecTy, *TTI);
 
   uint64_t FixedTripCount = SE->getSmallConstantTripCount(&L);
   if (FixedTripCount > 0) {
-    InstructionCost beforeCost = FixedTripCount * (ReduceAddCost + ScalarAddCost);
+    InstructionCost beforeCost =
+        FixedTripCount * (ReduceAddCost + ScalarAddCost);
     InstructionCost afterCost = FixedTripCount * VectorAddCost + ReduceAddCost;
 
     return afterCost < beforeCost;
@@ -163,7 +248,11 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
     CallInst *ReduceCall = dyn_cast<CallInst>(RecurrenceValue);
     Instruction *VecIn = dyn_cast<Instruction>(ReduceOperand);
     VectorType *VecTy = cast<VectorType>(VecIn->getType());
-    if (!compareCost(AR, L, VecTy))
+
+    auto TTI = &AR.TTI;
+    if (TTI->preferInLoopReduction(RecurKind::Add, RecDesc.getRecurrenceType()))
+      continue;
+    if (!compareCost(AR, L, VecTy, ReduceCall))
       continue;
     // pattern match success
     LLVM_DEBUG(dbgs() << "Found pattern to optimize in loop "

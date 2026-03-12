@@ -21,7 +21,10 @@
 namespace llvm {
 class LoopReduceMotionPass : public PassInfoMixin<LoopReduceMotionPass> {
 public:
-  bool compareCost(LoopStandardAnalysisResults &AR, Loop &L, VectorType *VecTy);
+  InstructionCost getReductionPatternCost(Instruction *I, ElementCount VF,
+                                          Type *Ty, TargetTransformInfo &TTI);
+  bool compareCost(LoopStandardAnalysisResults &AR, Loop &L, VectorType *VecTy,
+                   Instruction *ReduceInst);
   bool matchAndTransform(LoopStandardAnalysisResults &AR, Loop &L,
                          DominatorTree *DT, LoopInfo *LI);
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
