@@ -1011,6 +1011,8 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
     use that integer value instead of calling MPI_Comm_rank. This allows
     optimizations like constant shape propagation and fusion because
     shard/partition sizes depend on the rank.
+    To support the buffer deallocation pipeline, intermediate memref allocations
+    are only deallocated if the lowered operations return buffers (not tensors).
   }];
   let dependentDialects = [
     "affine::AffineDialect",
