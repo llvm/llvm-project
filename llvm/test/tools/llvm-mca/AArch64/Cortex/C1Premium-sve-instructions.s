@@ -294,156 +294,156 @@
 # CHECK-NEXT:  1      4     0.50                        cmla	z31.h, z31.h, z31.h, #180
 # CHECK-NEXT:  1      4     0.50                        cmla	z31.s, z30.s, z7.s[0], #180
 # CHECK-NEXT:  1      4     0.50                        cmla	z31.s, z31.s, z31.s, #180
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpeq	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmpge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmpgt	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmphi	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmphs	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  1      2     1.00                        cmple	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  1      2     1.00                        cmplo	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  1      2     1.00                        cmpls	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  1      2     1.00                        cmplt	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  1      2     1.00                        cmpne	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpeq	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmpge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmpgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmphi	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmphs	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  1      3     1.00                        cmple	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  1      3     1.00                        cmplo	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  1      3     1.00                        cmpls	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  1      3     1.00                        cmplt	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  1      3     1.00                        cmpne	p0.s, p0/z, z0.s, z0.s
 # CHECK-NEXT:  1      2     0.50                        cnot	z31.b, p7/m, z31.b
 # CHECK-NEXT:  1      2     0.50                        cnot	z31.d, p7/m, z31.d
 # CHECK-NEXT:  1      2     0.50                        cnot	z31.h, p7/m, z31.h
@@ -1531,8 +1531,8 @@
 # CHECK-NEXT:  1      4     0.50                        mad	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      4     0.50                        mad	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  1      4     0.50                        mad	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  1      2     1.00                        match	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        match	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        match	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        match	p0.h, p0/z, z0.h, z0.h
 # CHECK-NEXT:  1      2     1.00                        match	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  1      2     1.00                        match	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT:  1      4     0.50                        mla	z0.b, p7/m, z1.b, z31.b
@@ -1701,8 +1701,8 @@
 # CHECK-NEXT:  1      2     0.50                        neg	z31.d, p7/m, z31.d
 # CHECK-NEXT:  1      2     0.50                        neg	z31.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.50                        neg	z31.s, p7/m, z31.s
-# CHECK-NEXT:  1      2     1.00                        nmatch	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  1      2     1.00                        nmatch	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  1      3     1.00                        nmatch	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  1      3     1.00                        nmatch	p0.h, p0/z, z0.h, z0.h
 # CHECK-NEXT:  1      2     1.00                        nmatch	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  1      2     1.00                        nmatch	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT:  1      2     0.50                        nor	p0.b, p0/z, p0.b, p0.b
@@ -3453,7 +3453,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     144.75 144.75 238.75 238.75 313.63 230.63 15.63  15.63  15.63  15.63  15.63  15.63  1483.50 1325.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     144.75 144.75 238.75 238.75 390.63 307.63 15.63  15.63  15.63  15.63  15.63  15.63  1483.50 1325.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
@@ -3741,156 +3741,156 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmla	z31.h, z31.h, z31.h, #180
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmla	z31.s, z30.s, z7.s[0], #180
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cmla	z31.s, z31.s, z31.s, #180
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z1.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmple	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplo	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.b, p0/z, z0.b, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.b, p0/z, z0.b, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.d, p0/z, z0.d, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.d, p0/z, z0.d, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.h, p0/z, z0.h, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.h, p0/z, z0.h, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.s, p0/z, z0.s, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.s, p0/z, z0.s, #127
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpls	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmplt	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.d, p0/z, z0.d, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.d, p0/z, z0.d, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.d, p0/z, z0.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, #-16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpeq	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphi	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.b, p0/z, z1.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z0.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmphs	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmple	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplo	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.b, p0/z, z0.b, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.b, p0/z, z0.b, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.d, p0/z, z0.d, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.d, p0/z, z0.d, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.h, p0/z, z0.h, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.h, p0/z, z0.h, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.s, p0/z, z0.s, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.s, p0/z, z0.s, #127
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpls	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmplt	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.b, p0/z, z0.b, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.d, p0/z, z0.d, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.d, p0/z, z0.d, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.d, p0/z, z0.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, #-16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     cmpne	p0.s, p0/z, z0.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cnot	z31.b, p7/m, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cnot	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   cnot	z31.h, p7/m, z31.h
@@ -4978,8 +4978,8 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mad	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mad	z0.h, p7/m, z1.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mad	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     match	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     match	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     match	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     match	p0.h, p0/z, z0.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     match	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     match	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   mla	z0.b, p7/m, z1.b, z31.b
@@ -5148,8 +5148,8 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   neg	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   neg	z31.h, p7/m, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   neg	z31.s, p7/m, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     nmatch	p0.b, p0/z, z0.b, z0.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     nmatch	p0.h, p0/z, z0.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     nmatch	p0.b, p0/z, z0.b, z0.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     1.00    -     nmatch	p0.h, p0/z, z0.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     nmatch	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     nmatch	p15.h, p7/z, z30.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     nor	p0.b, p0/z, p0.b, p0.b
