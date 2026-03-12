@@ -1551,9 +1551,8 @@ public:
   bool isTokenEqual(StringRef Str) const {
     return Kind == k_Token && getToken() == Str;
   }
-  bool isSysCR() const { return Kind == k_SysCR; }
   template <unsigned low, unsigned high> bool isSysCRInRange() const {
-    if (!isSysCR())
+    if (Kind != k_SysCR)
       return false;
     unsigned Val = getSysCR();
     return Val >= low && Val <= high;
@@ -6322,7 +6321,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidImmM1_62:
     return Error(Loc, "immediate must be an integer in range [-1, 62].");
   case Match_InvalidSysCR0_7:
-    return Error(Loc, "expected cM operand where 0 <= M <= 7");
+    return Error(Loc, "expected cN operand where 0 <= N <= 7");
   case Match_InvalidSysCR8_9:
     return Error(Loc, "expected cN operand where 8 <= N <= 9");
   case Match_InvalidSysCR0_15:

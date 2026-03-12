@@ -2138,23 +2138,19 @@ def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 16;
 }]> {
   let PrintMethod = "printSysCROperand";
-  let ParserMatchClass = SysCR0_15AsmOperand;
+  let ParserMatchClass = SysCRAsmOperand<0, 15>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def sysp_crn_op : Operand<i32>, ImmLeaf<i32, [{
-  return Imm == 8 || Imm == 9;
-}]> {
+def sysp_crn_op : Operand<i32> {
   let PrintMethod = "printSysCROperand";
-  let ParserMatchClass = SysCRn8_9AsmOperand;
+  let ParserMatchClass = SysCRAsmOperand<8, 9>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def sysp_crm_op : Operand<i32>, ImmLeaf<i32, [{
-  return Imm >= 0 && Imm <= 7;
-}]> {
+def sysp_crm_op : Operand<i32> {
   let PrintMethod = "printSysCROperand";
-  let ParserMatchClass = SysCRm0_7AsmOperand;
+  let ParserMatchClass = SysCRAsmOperand<0, 7>;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 

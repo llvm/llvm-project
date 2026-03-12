@@ -1396,10 +1396,9 @@ static DecodeStatus DecodeSyspInstruction(MCInst &Inst, uint32_t insn,
   unsigned op2 = fieldFromInstruction(insn, 5, 3);
   unsigned Rt = fieldFromInstruction(insn, 0, 5);
 
-  if (op1 > 6 || (CRn != 8 && CRn != 9) || CRm > 7 || op2 > 7)
+  if (op1 > 6 || (CRn != 8 && CRn != 9) || CRm > 7)
     return Fail;
 
-  // SYSP register pairs follow the same encoding constraints as XSeqPairsClass:
   // the first register must be even-numbered, except for the XZR/XZR case.
   if (Rt != 31 && (Rt & 0x1))
     return Fail;
