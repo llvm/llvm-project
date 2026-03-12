@@ -452,6 +452,23 @@ if os.path.exists(os.path.join(config.clang_obj_root, 'TeSt')):
 if config.clang_enable_cir:
     config.available_features.add("cir-enabled")
 
+
+# Tests that rely on chmod to restrict file permissions (e.g. write-permission
+# checks) are unreliable when run as root, since root bypasses file permissions.
+def user_is_root():
+    # os.getuid() is not available on all platforms
+    try:
+        if os.getuid() == 0:
+            return True
+    except:
+        pass
+
+    return False
+
+
+if not user_is_root():
+    config.available_features.add("non-root-user")
+
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The
 # `AIXTHREAD_STK` environment variable provides a non-intrusive way to request
