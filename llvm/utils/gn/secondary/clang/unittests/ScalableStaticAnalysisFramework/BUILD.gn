@@ -5,8 +5,10 @@ unittest("ClangScalableAnalysisTests") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
     "//clang/lib/Frontend",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
+    "//clang/lib/ScalableStaticAnalysisFramework/Frontend",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
     "//llvm/lib/Testing/Support",
@@ -22,6 +24,7 @@ unittest("ClangScalableAnalysisTests") {
     "EntityLinkerTest.cpp",
     "EntityNameTest.cpp",
     "ErrorBuilderTest.cpp",
+    "Frontend/TUSummaryExtractorFrontendActionTest.cpp",
     "ModelStringConversionsTest.cpp",
     "Registries/FancyAnalysisData.cpp",
     "Registries/MockSerializationFormat.cpp",
