@@ -949,6 +949,8 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
   }
 }
 
+STATISTIC(NumSFBILoad, "Number of SFB Fusions for ILoad");
+
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
@@ -995,6 +997,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   NewMI.add({MI.getOperand(MI.getNumExplicitOperands() - 2),
              MI.getOperand(MI.getNumExplicitOperands() - 1)});
   NewMI.cloneMemRefs(LoadMI);
+
+  ++NumSFBILoad;
   return NewMI;
 }
 
@@ -1846,6 +1850,10 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   return RISCV::INSTRUCTION_LIST_END;
 }
 
+STATISTIC(NumSFBIALU, "Number of SFB Fusions for IAlu");
+STATISTIC(NumSFBIMinMax, "Number of SFB Fusions for IMinMax");
+STATISTIC(NumSFBIMul, "Number of SFB Fusions for IMul");
+
 /// Identify instructions that can be folded into a CCMOV instruction, and
 /// return the defining instruction.
 static MachineInstr *canFoldAsPredicatedOp(Register Reg,
@@ -1894,6 +1902,24 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   bool DontMoveAcrossStores = true;
   if (!MI->isSafeToMove(DontMoveAcrossStores))
     return nullptr;
+
+#if LLVM_ENABLE_STATS
+  switch (MI->getOpcode()) {
+  case RISCV::MAX:
+  case RISCV::MIN:
+  case RISCV::MAXU:
+  case RISCV::MINU:
+    ++NumSFBIMinMax;
+    break;
+  case RISCV::MUL:
+    ++NumSFBIMul;
+    break;
+  default:
+    ++NumSFBIALU;
+    break;
+  };
+#endif // LLVM_ENABLE_STATS
+
   return MI;
 }
 

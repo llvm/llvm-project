@@ -16,6 +16,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVTargetMachine.h"
 
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -25,6 +26,8 @@ using namespace llvm;
 
 #define RISCV_EXPAND_PSEUDO_NAME "RISC-V pseudo instruction expansion pass"
 #define RISCV_PRERA_EXPAND_PSEUDO_NAME "RISC-V Pre-RA pseudo instruction expansion pass"
+
+#define DEBUG_TYPE "riscv-expand-pseudo"
 
 namespace {
 
@@ -326,6 +329,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   return true;
 }
 
+STATISTIC(NumSFBToCMov, "Number of SFB Pseudos turned back to CMovs");
+
 bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
@@ -375,6 +380,8 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     CMovIOpcode = RISCV::QC_MVGEUI;
     break;
   }
+
+  ++NumSFBToCMov;
 
   if (MI.getOperand(MI.getNumExplicitOperands() - 1).getReg() == RISCV::X0) {
     // $dst = PseudoCCMOVGPR $lhs, X0, $cc, $falsev (=$dst), $truev
@@ -580,6 +587,9 @@ bool RISCVExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
   MBBI->eraseFromParent();
   return true;
 }
+
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "riscv-pre-ra-expand-pseudo"
 
 class RISCVPreRAExpandPseudo : public MachineFunctionPass {
 public:
