@@ -4173,19 +4173,6 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
           << "-fobjc-direct-precondition-thunk" << Runtime.getAsString();
     }
   }
-
-  if (types::isObjC(Input.getType())) {
-    // Pass down -fobjc-msgsend-selector-stubs if present.
-    if (Args.hasFlag(options::OPT_fobjc_msgsend_selector_stubs,
-                     options::OPT_fno_objc_msgsend_selector_stubs, false))
-      CmdArgs.push_back("-fobjc-msgsend-selector-stubs");
-
-    // Pass down -fobjc-msgsend-class-selector-stubs if present.
-    if (Args.hasFlag(options::OPT_fobjc_msgsend_class_selector_stubs,
-                     options::OPT_fno_objc_msgsend_class_selector_stubs, false))
-      CmdArgs.push_back("-fobjc-msgsend-class-selector-stubs");
-  }
-
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
   // to do Array/Dictionary subscripting by default.
   if (Arch == llvm::Triple::x86 && T.isMacOSX() &&
