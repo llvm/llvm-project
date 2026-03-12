@@ -17,23 +17,6 @@
 
 /// Macros for allocating variables in different address spaces.
 ///{
-
-// Follows the pattern in interface.h
-// Same definitions as in host runtime
-// TODO: move these definitions to a common
-// place between host and device runtimes (e.g. in LLVM)
-typedef enum omp_memspace_handle_t {
-  omp_default_mem_space = 0,
-  omp_large_cap_mem_space = 1,
-  omp_const_mem_space = 2,
-  omp_high_bw_mem_space = 3,
-  omp_low_lat_mem_space = 4,
-  llvm_omp_target_host_mem_space = 100,
-  llvm_omp_target_shared_mem_space = 101,
-  llvm_omp_target_device_mem_space = 102,
-  KMP_MEMSPACE_MAX_HANDLE = ~(0u)
-} omp_memspace_handle_t;
-
 typedef enum {
   omp_atk_sync_hint = 1,
   omp_atk_alignment = 2,
