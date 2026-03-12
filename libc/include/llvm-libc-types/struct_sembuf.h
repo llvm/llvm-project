@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TYPES_STRUCT_SEMBUF_H
 
 struct sembuf {
+  // changed to unsigned short from short since POSIX issue 7
   unsigned short sem_num;
   short sem_op;
   short sem_flg;
