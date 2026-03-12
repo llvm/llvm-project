@@ -1,6 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect -emit-bytecode -emit-bytecode-producer=fixed %s -o %t
 // Verify unchanged.
-// RUN: cmp -s %t %p/builtin_fixed.mlirbc
+// RUN: cmp -s %t %p/builtin_fixed_0.mlirbc
 // Verify can read as expected.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-local-scope %t | FileCheck %s
 
