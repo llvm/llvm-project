@@ -203,6 +203,20 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
+  if (Args.hasFlag(options::OPT_fsafe_trampoline,
+                   options::OPT_fno_safe_trampoline, false)) {
+    const llvm::Triple &T = getToolChain().getTriple();
+    if (T.getArch() == llvm::Triple::x86_64 ||
+        T.getArch() == llvm::Triple::aarch64 ||
+        T.getArch() == llvm::Triple::aarch64_be) {
+      CmdArgs.push_back("-fsafe-trampoline");
+    } else {
+      getToolChain().getDriver().Diag(
+          diag::warn_drv_unsupported_option_for_target)
+          << "-fsafe-trampoline" << T.str();
+    }
+  }
+
   // -fno-protect-parens is the default for -Ofast.
   if (!Args.hasFlag(options::OPT_fprotect_parens,
                     options::OPT_fno_protect_parens,

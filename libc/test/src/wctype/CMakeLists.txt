@@ -8,4 +8,26 @@ add_libc_test(
     iswalpha_test.cpp
   DEPENDS
     libc.src.wctype.iswalpha
+    libc.src.__support.wctype_utils
+)
+
+add_libc_test(
+  iswdigit_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswdigit_test.cpp
+  DEPENDS
+    libc.src.wctype.iswdigit
+    libc.src.__support.wctype_utils
+)
+
+add_libc_test(
+  iswlower_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswlower_test.cpp
+  DEPENDS
+    libc.src.wctype.iswlower
 )

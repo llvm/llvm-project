@@ -139,8 +139,10 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
       if (UndefBehavior == UndefValueBehavior::NonDeterministic &&
           (~LogicalByte.ConcreteMask & Mask)) {
         // This byte contains undef bits.
-        std::uniform_int_distribution<uint32_t> Distrib(0, 255);
-        RandomBits = static_cast<uint8_t>(Distrib(Rng));
+        // We don't use std::uniform_int_distribution here because it produces
+        // different results across different library implementations. Instead,
+        // we directly use the low bits from Rng.
+        RandomBits = static_cast<uint8_t>(Rng());
       }
       uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                             (RandomBits & ~LogicalByte.ConcreteMask)) &

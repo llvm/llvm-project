@@ -1010,17 +1010,10 @@ lldb::ProcessSP Platform::DebugProcess(ProcessLaunchInfo &launch_info,
 
   // Allow any StructuredData process-bound plugins to adjust the launch info
   // if needed
-  size_t i = 0;
-  bool iteration_complete = false;
-  // Note iteration can't simply go until a nullptr callback is returned, as it
-  // is valid for a plugin to not supply a filter.
-  auto get_filter_func = PluginManager::GetStructuredDataFilterCallbackAtIndex;
-  for (auto filter_callback = get_filter_func(i, iteration_complete);
-       !iteration_complete;
-       filter_callback = get_filter_func(++i, iteration_complete)) {
-    if (filter_callback) {
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (cbs.filter_callback) {
       // Give this ProcessLaunchInfo filter a chance to adjust the launch info.
-      error = (*filter_callback)(launch_info, &target);
+      error = (*cbs.filter_callback)(launch_info, &target);
       if (!error.Success()) {
         LLDB_LOGF(log,
                   "Platform::%s() StructuredDataPlugin launch "
@@ -2135,12 +2128,8 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
       return platform_sp;
   }
 
-  PlatformCreateInstance create_callback;
   // First try exact arch matches across all platform plug-ins
-  uint32_t idx;
-  for (idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp &&
         platform_sp->IsCompatibleArchitecture(
@@ -2150,9 +2139,7 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
     }
   }
   // Next try compatible arch matches across all platform plug-ins
-  for (idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp && platform_sp->IsCompatibleArchitecture(
                            arch, process_host_arch, ArchSpec::CompatibleMatch,
@@ -2239,10 +2226,7 @@ bool PlatformList::LoadPlatformBinaryAndSetup(Process *process,
                                               lldb::addr_t addr, bool notify) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  PlatformCreateInstance create_callback;
-  for (int idx = 0;
-       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
-       ++idx) {
+  for (auto create_callback : PluginManager::GetPlatformCreateCallbacks()) {
     ArchSpec arch;
     PlatformSP platform_sp = create_callback(true, &arch);
     if (platform_sp) {

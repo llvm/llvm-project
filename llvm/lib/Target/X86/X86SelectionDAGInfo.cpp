@@ -11,13 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86SelectionDAGInfo.h"
-#include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+
+#define GET_SDNODE_DESC
+#include "X86GenSDNodeInfo.inc"
 
 using namespace llvm;
 
@@ -27,14 +29,72 @@ static cl::opt<bool>
     UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
                      cl::desc("Use fast short rep mov in memcpy lowering"));
 
-bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  return Opcode >= X86ISD::FIRST_MEMORY_OPCODE &&
-         Opcode <= X86ISD::LAST_MEMORY_OPCODE;
+X86SelectionDAGInfo::X86SelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(X86GenSDNodeInfo) {}
+
+const char *X86SelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+#define NODE_NAME_CASE(NODE)                                                   \
+  case X86ISD::NODE:                                                           \
+    return "X86ISD::" #NODE;
+
+  // These nodes don't have corresponding entries in *.td files yet.
+  switch (static_cast<X86ISD::NodeType>(Opcode)) {
+    NODE_NAME_CASE(POP_FROM_X87_REG)
+    NODE_NAME_CASE(GlobalBaseReg)
+    NODE_NAME_CASE(LCMPXCHG16_SAVE_RBX_DAG)
+    NODE_NAME_CASE(PCMPESTR)
+    NODE_NAME_CASE(PCMPISTR)
+    NODE_NAME_CASE(MGATHER)
+    NODE_NAME_CASE(MSCATTER)
+    NODE_NAME_CASE(AESENCWIDE128KL)
+    NODE_NAME_CASE(AESDECWIDE128KL)
+    NODE_NAME_CASE(AESENCWIDE256KL)
+    NODE_NAME_CASE(AESDECWIDE256KL)
+  }
+#undef NODE_NAME_CASE
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
 
-bool X86SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
-  return Opcode >= X86ISD::FIRST_STRICTFP_OPCODE &&
-         Opcode <= X86ISD::LAST_STRICTFP_OPCODE;
+bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  // These nodes don't have corresponding entries in *.td files yet.
+  if (Opcode >= X86ISD::FIRST_MEMORY_OPCODE &&
+      Opcode <= X86ISD::LAST_MEMORY_OPCODE)
+    return true;
+
+  return SelectionDAGGenTargetInfo::isTargetMemoryOpcode(Opcode);
+}
+
+void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
+                                           const SDNode *N) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case X86ISD::VP2INTERSECT:
+    // invalid number of results; expected 1, got 2
+  case X86ISD::VTRUNCSTOREUS:
+  case X86ISD::VTRUNCSTORES:
+  case X86ISD::FSETCCM_SAE:
+    // invalid number of operands; expected 3, got 4
+  case X86ISD::CVTPH2PS:
+  case X86ISD::CVTTP2SI_SAE:
+  case X86ISD::CVTTP2UI_SAE:
+  case X86ISD::CVTTP2IBS_SAE:
+    // invalid number of operands; expected 1, got 2
+  case X86ISD::CMPMM_SAE:
+    // invalid number of operands; expected 4, got 5
+  case X86ISD::CALL:
+  case X86ISD::NT_BRIND:
+    // operand #1 must have type i32 (iPTR), but has type i64
+  case X86ISD::INSERTQI:
+  case X86ISD::EXTRQI:
+    // result #0 must have type v2i64, but has type v16i8/v8i16
+  case X86ISD::CMPCCXADD:
+    // operand #4 must have type i8, but has type i32
+    return;
+  }
+
+  SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 }
 
 /// Returns the best type to use with repmovs/repstos depending on alignment.

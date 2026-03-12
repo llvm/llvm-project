@@ -58,7 +58,7 @@ protected:
   // Helpers providing access to implementation details of basic data structures
   // for efficient serialization/deserialization.
 
-  EntityId makeEntityId(const size_t Index) const { return EntityId(Index); }
+  static EntityId makeEntityId(const size_t Index) { return EntityId(Index); }
 
 #define FIELD(CLASS, FIELD_NAME)                                               \
   static const auto &get##FIELD_NAME(const CLASS &X) { return X.FIELD_NAME; }  \

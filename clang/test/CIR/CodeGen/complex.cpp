@@ -404,7 +404,7 @@ bool foo18(int _Complex a, int _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR: %[[RESULT:.*]] = cir.cmp(eq, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!s32i>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!s32i>
 
 // LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
 // LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
@@ -436,7 +436,7 @@ bool foo19(double _Complex a, double _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[RESULT:.*]] = cir.cmp(eq, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!cir.double>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
 
 // LLVM: %[[COMPLEX_A:.*]] = load { double, double }, ptr {{.*}}, align 8
@@ -478,7 +478,7 @@ bool foo20(int _Complex a, int _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR: %[[RESULT:.*]] = cir.cmp(ne, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!s32i>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!s32i>
 
 // LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
 // LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
@@ -510,7 +510,7 @@ bool foo21(double _Complex a, double _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[RESULT:.*]] = cir.cmp(ne, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!cir.double>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
 
 // LLVM: %[[COMPLEX_A:.*]] = load { double, double }, ptr {{.*}}, align 8
 // LLVM: %[[COMPLEX_B:.*]] = load { double, double }, ptr {{.*}}, align 8
@@ -1689,7 +1689,7 @@ bool eq_float_complex_and_float(float _Complex a, float b) {
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX_B:.*]] = cir.complex.create %[[TMP_B]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
-// CIR: %[[RESULT:.*]] = cir.cmp(eq, %[[TMP_A]], %[[COMPLEX_B]]) : !cir.complex<!cir.float>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp eq %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }
@@ -1737,7 +1737,7 @@ bool eq_float_and_float_complex(float a, float _Complex b) {
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX_A:.*]] = cir.complex.create %[[TMP_A]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
-// CIR: %[[RESULT:.*]] = cir.cmp(eq, %[[COMPLEX_A]], %[[TMP_B]]) : !cir.complex<!cir.float>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // LLVM: %[[A_ADDR:.*]] = alloca float
@@ -1785,7 +1785,7 @@ bool ne_float_complex_and_float(float _Complex a, float b) {
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX_B:.*]] = cir.complex.create %[[TMP_B]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
-// CIR: %[[RESULT:.*]] = cir.cmp(ne, %[[TMP_A]], %[[COMPLEX_B]]) : !cir.complex<!cir.float>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp ne %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }
@@ -1833,7 +1833,7 @@ bool ne_float_and_float_complex(float a, float _Complex b) {
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX_A:.*]] = cir.complex.create %[[TMP_A]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
-// CIR: %[[RESULT:.*]] = cir.cmp(ne, %[[COMPLEX_A]], %[[TMP_B]]) : !cir.complex<!cir.float>, !cir.bool
+// CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // LLVM: %[[A_ADDR:.*]] = alloca float

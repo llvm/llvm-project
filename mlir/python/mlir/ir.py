@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from ._mlir_libs._mlir.ir import *
@@ -22,7 +22,7 @@ from ._mlir_libs import (
 
 
 @contextmanager
-def loc_tracebacks(*, max_depth: int | None = None) -> Iterable[None]:
+def loc_tracebacks(*, max_depth: int | None = None) -> Generator[None]:
     """Enables automatic traceback-based locations for MLIR operations.
 
     Operations created within this context will have their location

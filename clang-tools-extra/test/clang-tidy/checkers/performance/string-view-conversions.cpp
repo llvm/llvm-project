@@ -1,6 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s performance-string-view-conversions %t -- \
-// RUN:   -- -isystem %clang_tidy_headers
-
+// RUN: %check_clang_tidy -std=c++17-or-later %s performance-string-view-conversions %t
 #include <string>
 
 using namespace std::literals::string_literals;

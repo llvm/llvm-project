@@ -1041,7 +1041,7 @@ void RewriteInstance::discoverFileObjects() {
     /// a local if it has a "private global" prefix, e.g. ".L". Thus we have to
     /// change the prefix to enforce global scope of the symbol.
     std::string Name =
-        SymName.starts_with(BC->AsmInfo->getPrivateGlobalPrefix())
+        SymName.starts_with(BC->AsmInfo->getInternalSymbolPrefix())
             ? "PG" + std::string(SymName)
             : std::string(SymName);
 
@@ -3231,7 +3231,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
           Name = SymbolName;
         } else {
           if (StringRef(SymbolName)
-                  .starts_with(BC->AsmInfo->getPrivateGlobalPrefix()))
+                  .starts_with(BC->AsmInfo->getInternalSymbolPrefix()))
             Name = NR.uniquify("PG" + SymbolName);
           else
             Name = NR.uniquify(SymbolName);

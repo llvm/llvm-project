@@ -537,7 +537,6 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
       break;
     std::pair<CharUnits, CharUnits> LastStore = Stores.pop_back_val();
     CharUnits LastStoreOffset = LastStore.first;
-    CharUnits LastStoreSize = LastStore.second;
 
     CharUnits SplitBeforeOffset = LastStoreOffset;
     CharUnits SplitBeforeSize = VBPtrOffset - SplitBeforeOffset;
@@ -546,7 +545,7 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
       Stores.emplace_back(SplitBeforeOffset, SplitBeforeSize);
 
     CharUnits SplitAfterOffset = VBPtrOffset + VBPtrWidth;
-    CharUnits SplitAfterSize = LastStoreSize - SplitAfterOffset;
+    CharUnits SplitAfterSize = NVSize - SplitAfterOffset;
     assert(!SplitAfterSize.isNegative() && "negative store size!");
     if (!SplitAfterSize.isZero())
       Stores.emplace_back(SplitAfterOffset, SplitAfterSize);
