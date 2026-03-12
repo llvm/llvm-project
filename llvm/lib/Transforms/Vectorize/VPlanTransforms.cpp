@@ -6318,10 +6318,9 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       RegularCost += Link.ReductionBinOp->computeCost(VF, CostCtx);
       if (ExtendedOp.BinOp && ExtendedOp.BinOp != Link.ReductionBinOp)
         RegularCost += ExtendedOp.BinOp->computeCost(VF, CostCtx);
-      if (ExtendedOp.CastRecipes[0])
-        RegularCost += ExtendedOp.CastRecipes[0]->computeCost(VF, CostCtx);
-      if (ExtendedOp.CastRecipes[1])
-        RegularCost += ExtendedOp.CastRecipes[1]->computeCost(VF, CostCtx);
+      for (VPWidenCastRecipe *Extend : ExtendedOp.CastRecipes)
+        if (Extend)
+          RegularCost += Extend->computeCost(VF, CostCtx);
     }
     return PartialCost.isValid() && PartialCost <= RegularCost;
   };
