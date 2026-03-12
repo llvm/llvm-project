@@ -694,6 +694,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
     Sharing.Stop = A->getValue();
   if (Arg *A = Args.getLastArg(options::OPT_fdepscan_share_EQ,
                                options::OPT_fdepscan_share_identifier,
+                               options::OPT_fdepscan_share_identifier_EQ,
                                options::OPT_fdepscan_share_parent,
                                options::OPT_fdepscan_share_parent_EQ,
                                options::OPT_fno_depscan_share)) {
@@ -705,7 +706,8 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
     } else if (A->getOption().matches(options::OPT_fdepscan_share_parent)) {
       Sharing.Name = "";
       Sharing.OnlyShareParent = true;
-    } else if (A->getOption().matches(options::OPT_fdepscan_share_identifier)) {
+    } else if (A->getOption().matches(options::OPT_fdepscan_share_identifier) ||
+               A->getOption().matches(options::OPT_fdepscan_share_identifier_EQ)) {
       Sharing.Name = A->getValue();
       Sharing.ShareViaIdentifier = true;
     }
