@@ -2934,8 +2934,7 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 
 // Return true if its cheap to bitcast this to a vector type.
 static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
-                              const X86Subtarget &Subtarget,
-                              bool AssumeSingleUse = false) {
+                              const X86Subtarget &Subtarget) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
@@ -2960,57 +2959,13 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::SUB:
     case ISD::FSHL:
     case ISD::FSHR:
-      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget,
-                               AssumeSingleUse) &&
-             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget,
-                               AssumeSingleUse);
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
+             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
     case ISD::SELECT:
-      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget,
-                               AssumeSingleUse) &&
-             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget,
-                               AssumeSingleUse);
+      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget) &&
+             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget);
     }
   }
-
-  if (!ISD::isNormalLoad(Op.getNode()))
-    return false;
-
-  // Single-use loads just check the load itself
-  if (AssumeSingleUse || Op.hasOneUse())
-    return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
-                            /*IgnoreAlignment=*/true);
-
-  for (SDUse &Use : Op->uses()) {
-    if (Use.getResNo() != 0)
-      continue;
-
-    SDNode *User = Use.getUser();
-    if (ISD::isNormalStore(User))
-      continue;
-
-    if (User->getOpcode() == ISD::SETCC) {
-      ISD::CondCode CC = cast<CondCodeSDNode>(User->getOperand(2))->get();
-      if (CC == ISD::SETEQ || CC == ISD::SETNE)
-        continue;
-      return false;
-    }
-
-    if (User->getOpcode() == ISD::TRUNCATE)
-      continue;
-
-    SDValue Value = SDValue(User, 0);
-
-    if (isa<ConstantSDNode>(Value) || isa<ConstantFPSDNode>(Value))
-      continue;
-
-    if (Value.getValueType().isVector())
-      continue;
-
-    if (!mayFoldIntoVector(Value, DAG, Subtarget,
-                           /*AssumeSingleUse=*/true))
-      return false;
-  }
-
   return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
                           /*IgnoreAlignment=*/true);
 }
