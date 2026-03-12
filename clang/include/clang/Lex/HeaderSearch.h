@@ -474,7 +474,8 @@ public:
   /// Initialize the module cache path.
   void initializeModuleCachePath(std::string ContextHash);
 
-  /// Retrieve the module cache path with the context hash (unless suppressed).
+  /// Retrieve the specific module cache path. This is the normalized module
+  /// cache path plus the context hash (unless suppressed).
   StringRef getSpecificModuleCachePath() const {
     return SpecificModuleCachePath;
   }
@@ -482,7 +483,9 @@ public:
   /// Retrieve the context hash.
   StringRef getContextHash() const { return ContextHash; }
 
-  /// Retrieve the normalized module cache path.
+  /// Retrieve the normalized module cache path. This is the path as provided on
+  /// the command line, but absolute, without './' components, and with
+  /// preferred path separators. Note that this does not have the context hash.
   StringRef getNormalizedModuleCachePath() const {
     return getSpecificModuleCachePath().substr(0, NormalizedModuleCachePathLen);
   }
