@@ -600,8 +600,7 @@ public:
   void walk(std::function<PyWalkResult(MlirOperation)> callback,
             PyWalkOrder walkOrder);
 
-  // Wrap the walk method with a type filter. Works same as op.walk([](OpClass
-  // op) { ... } );
+  // Wrap the walk method with a type filter.
   void walkOfType(nanobind::object opClass,
                   std::function<PyWalkResult(MlirOperation)> callback,
                   PyWalkOrder walkOrder);

@@ -2721,7 +2721,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
-      // co_qualname and PyCode_Addr2Location added in py3.11
+    // co_qualname and PyCode_Addr2Location added in py3.11
 #if PY_VERSION_HEX < 0x030B00F0
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));

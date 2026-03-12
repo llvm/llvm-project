@@ -48,7 +48,6 @@ def get_parent_of_type(op: OpView | Operation, op_class: type[OpView]) -> OpView
 def get_ops_of_type(root: OpView | Operation | Module, op_class: type[OpView]) -> list[OpView]:
     """Return all operations of the given type in the operation tree.
 
-
     Args:
       root: The operation or module to start traversing from.
       op_class: The OpView subclass to visit for (e.g. func.FuncOp).
