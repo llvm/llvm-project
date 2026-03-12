@@ -6929,7 +6929,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // The AVX512 512-bit operand variants have an extra operand (the
       // Rounding mode). The extra operand, if present, will be
       // automatically checked by the handler.
-      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0, 1}, /*WriteThruIndex=*/2,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0, 1},
+                                        /*WriteThruIndex=*/2,
                                         /*MaskIndex=*/3);
       break;
 
