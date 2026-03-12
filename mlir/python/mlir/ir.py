@@ -45,7 +45,9 @@ def get_parent_of_type(op: OpView | Operation, op_class: type[OpView]) -> OpView
     return None
 
 
-def get_ops_of_type(root: OpView | Operation | Module, op_class: type[OpView]) -> list[OpView]:
+def get_ops_of_type(
+    root: OpView | Operation | Module, op_class: type[OpView]
+) -> list[OpView]:
     """Return all operations of the given type in the operation tree.
 
     Args:
@@ -57,9 +59,11 @@ def get_ops_of_type(root: OpView | Operation | Module, op_class: type[OpView]) -
     """
     op = root.operation if isinstance(root, Module) else root
     ops = []
+
     def collect_ops(op: Operation):
         ops.append(op.opview)
         return WalkResult.ADVANCE
+
     op.walk_of_type(op_class, collect_ops)
     return ops
 
