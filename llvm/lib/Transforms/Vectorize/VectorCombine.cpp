@@ -6075,11 +6075,11 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   LoadInst *FirstLI = nullptr;
   SmallPtrSet<LoadInst *, 4> Loads;
   for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
-    InstLane IL = lookThroughShuffles(&*I.use_begin(), Lane);
+    InstLane IL = lookThroughShuffles(&I, Lane);
     if (!IL.first)
       return false;
 
-    auto *LI = dyn_cast<LoadInst>(IL.first->get());
+    auto *LI = dyn_cast<LoadInst>(IL.first);
     if (!LI)
       return false;
 
