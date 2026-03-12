@@ -3,11 +3,14 @@
 // RUN:  [{key: readability-implicit-bool-conversion.AllowIntegerConditions, value: true}, \
 // RUN:   {key: readability-implicit-bool-conversion.AllowPointerConditions, value: true}]}'
 
+namespace std { struct string { string(const char*); }; }
+
 template<typename T>
 void functionTaking(T);
 
 int functionReturningInt();
 int* functionReturningPointer();
+void* functionReturningPointerWithStringArg(const std::string&);
 
 struct Struct {
   int member;
@@ -68,4 +71,9 @@ void implicitConversionPointerToBoolInConditionalsIsAllowed() {
   if (memberPointer) {}
   int value3 = memberPointer ? 1 : 2;
   int value4 = (not memberPointer) ? 1 : 2;
+
+  // Passing a string literal creates a temporary std::string, which causes
+  // Clang to wrap the condition in ExprWithCleanups. This should still be
+  // allowed when AllowPointerConditions is true.
+  if (functionReturningPointerWithStringArg("input")) {}
 }
