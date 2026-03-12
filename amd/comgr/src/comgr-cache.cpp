@@ -20,6 +20,7 @@
 
 #include <llvm/ADT/StringExtras.h>
 #include <llvm/Support/Caching.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/MemoryBuffer.h>
 
 namespace COMGR {
@@ -162,7 +163,18 @@ CommandCache::getPolicyFromEnv(llvm::raw_ostream &LogS) {
   return *PolicyOrErr;
 }
 
-void CommandCache::prune() { pruneCache(CacheDir, Policy); }
+void CommandCache::prune() {
+  // pruneCache calls report_fatal_error when sys::fs::disk_space()
+  // fails and size-based pruning is enabled (MaxSizePercentageOfAvailableSpace
+  // or MaxSizeBytes > 0). Guard against this by probing disk_space before
+  // calling pruneCache; skip pruning entirely if the query fails.
+  if (Policy.MaxSizePercentageOfAvailableSpace > 0 || Policy.MaxSizeBytes > 0) {
+    auto SpaceOrErr = sys::fs::disk_space(CacheDir);
+    if (!SpaceOrErr)
+      return;
+  }
+  pruneCache(CacheDir, Policy);
+}
 
 std::unique_ptr<CommandCache> CommandCache::get(raw_ostream &LogS) {
   StringRef CacheDir = env::getCacheDirectory();
