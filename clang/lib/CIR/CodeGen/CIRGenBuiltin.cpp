@@ -1754,13 +1754,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_fetch_and_nand_8:
   case Builtin::BI__sync_fetch_and_nand_16:
     return emitBinaryAtomic(*this, cir::AtomicFetchKind::Nand, e);
-
   case Builtin::BI__sync_fetch_and_min:
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:
   case Builtin::BI__sync_fetch_and_umax:
     return errorBuiltinNYI(*this, e, builtinID);
-
+    return getUndefRValue(e->getType());
   case Builtin::BI__sync_add_and_fetch_1:
   case Builtin::BI__sync_add_and_fetch_2:
   case Builtin::BI__sync_add_and_fetch_4:
