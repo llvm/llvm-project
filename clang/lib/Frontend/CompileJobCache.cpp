@@ -1119,7 +1119,7 @@ RemoteCachingOutputs::saveOutputs(const llvm::cas::CASID &ResultCacheKey) {
     StringRef Path = OutKind ? getPathForOutputKind(*OutKind) : OutputName;
     assert(!Path.empty());
     SmallString<256> AbsPath{Path};
-    llvm::sys::fs::make_absolute(AbsPath);
+    Clang.getVirtualFileSystem().makeAbsolute(AbsPath);
     SaveQueue.saveFileAsync(AbsPath.str().str(), makeCtx(OutputName));
   }
 
