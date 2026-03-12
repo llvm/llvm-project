@@ -35,13 +35,13 @@ def get_parent_of_type(op: OpView | Operation, op_class: type[OpView]) -> OpView
     if not (isinstance(op_class, type) and issubclass(op_class, OpView)):
         raise TypeError(f"op_class must be an OpView subclass, got {op_class!r}")
     try:
-        op = op.parent
+        parent = op.parent
     except ValueError:
         return None  # No parent chain.
-    while op is not None:
-        if isinstance(op.opview, op_class):
-            return op.opview
-        op = op.parent
+    while parent is not None:
+        if isinstance(parent.opview, op_class):
+            return parent.opview
+        parent = parent.parent
     return None
 
 

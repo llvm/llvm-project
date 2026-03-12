@@ -1137,6 +1137,7 @@ body:             |
 
 ...
 
+---
 name: copy_vgpr32_vgpr64_to_areg96_coalesce_with_av96_shuffle_both_sub
 tracksRegLiveness: true
 body:             |
