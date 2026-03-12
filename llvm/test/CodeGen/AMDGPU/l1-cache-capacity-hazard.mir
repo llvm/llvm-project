@@ -1,0 +1,395 @@
+# Test the L1 data cache capacity hazard recognizer under different
+# configurations of bandwidth, latency, cache size, and load width.
+#
+# l1_cache_hazard: 4 GLOBAL_LOAD_DWORD (4 B each) + 16 independent VALU,
+# varying bandwidth and latency with l1-bytes=8.
+#
+# l1_cache_size: same loads + VALU, varying l1-bytes (8 vs 12 vs 16) to
+# show the effect of cache capacity.
+#
+# l1_wide_loads: 4 GLOBAL_LOAD_DWORDX2 (8 B each) + 16 VALU with
+# l1-bytes=16, contrasted against the DWORD case to show the effect of
+# wider loads filling the cache faster.
+
+# -- Bandwidth / latency tests (l1-bytes=8, DWORD loads) ------------------
+
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=false \
+# RUN:   -o - %s | FileCheck -check-prefix=OFF %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=8 -amdgpu-l1-speed=32 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=FAST %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=8 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=SLOW %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=8 -amdgpu-l1-speed=32 \
+# RUN:   -amdgpu-l1-latency=8 \
+# RUN:   -o - %s | FileCheck -check-prefix=DELAY %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=8 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=8 \
+# RUN:   -o - %s | FileCheck -check-prefix=WORST %s
+
+# -- Fractional bandwidth test (l1-bytes=8, DWORD loads) ------------------
+
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=8 -amdgpu-l1-speed=3/4 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=FRAC %s
+
+# -- Cache size tests (DWORD loads, speed=1, latency=0) -------------------
+
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=2 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=TINY %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=12 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=MED %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=16 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=BIG %s
+
+# -- Load width tests (l1-bytes=16, speed=1, latency=0) -------------------
+
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=16 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=NARROW %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx906 -run-pass=postmisched \
+# RUN:   -amdgpu-l1-hazard=true -amdgpu-l1-bytes=16 -amdgpu-l1-speed=1 \
+# RUN:   -amdgpu-l1-latency=0 \
+# RUN:   -o - %s | FileCheck -check-prefix=WIDE %s
+
+--- |
+  define amdgpu_kernel void @l1_cache_hazard() { ret void }
+  define amdgpu_kernel void @l1_wide_loads() { ret void }
+...
+
+# ===========================================================================
+# l1_cache_hazard: 4 x GLOBAL_LOAD_DWORD (4 B each)
+# ===========================================================================
+---
+name: l1_cache_hazard
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr40_vgpr41
+
+    ; --- Hazard disabled: all loads first, then all VALU. ---
+    ; OFF-LABEL: name: l1_cache_hazard
+    ; OFF:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; OFF-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; OFF-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; OFF-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; OFF-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; OFF-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; OFF-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; OFF-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; OFF-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; OFF-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; OFF-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; OFF-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; OFF-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; OFF-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; OFF-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; OFF-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; OFF-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; OFF-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; OFF-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; OFF-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; OFF-NEXT: S_ENDPGM 0
+
+    ; --- High bandwidth (32 B/cyc), no latency: same as disabled. ---
+    ; FAST-LABEL: name: l1_cache_hazard
+    ; FAST:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; FAST-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; FAST-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; FAST-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; FAST-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; FAST-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; FAST-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; FAST-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; FAST-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; FAST-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; FAST-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; FAST-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; FAST-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; FAST-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; FAST-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; FAST-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; FAST-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; FAST-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; FAST-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; FAST-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; FAST-NEXT: S_ENDPGM 0
+
+    ; --- Low bandwidth (1 B/cyc), no latency: 2 VALU before load3, ---
+    ; --- 3 more before load4. ---
+    ; SLOW-LABEL: name: l1_cache_hazard
+    ; SLOW:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; SLOW-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; SLOW-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; SLOW-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; SLOW-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; SLOW-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; SLOW-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; SLOW-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; SLOW-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; SLOW-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; SLOW-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; SLOW-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; SLOW-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; SLOW-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; SLOW-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; SLOW-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; SLOW-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; SLOW-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; SLOW-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; SLOW-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; SLOW-NEXT: S_ENDPGM 0
+
+    ; --- High bandwidth (32 B/cyc), latency=8: latency forces 7 VALU ---
+    ; --- before load3; once matured, drains instantly so load4 follows. ---
+    ; DELAY-LABEL: name: l1_cache_hazard
+    ; DELAY:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; DELAY-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; DELAY-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; DELAY-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; DELAY-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; DELAY-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; DELAY-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; DELAY-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; DELAY-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; DELAY-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; DELAY-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; DELAY-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; DELAY-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; DELAY-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; DELAY-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; DELAY-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; DELAY-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; DELAY-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; DELAY-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; DELAY-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; DELAY-NEXT: S_ENDPGM 0
+
+    ; --- Low bandwidth (1 B/cyc), latency=8: most constrained; 10 VALU ---
+    ; --- before load3, 3 more before load4. ---
+    ; WORST-LABEL: name: l1_cache_hazard
+    ; WORST:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; WORST-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; WORST-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; WORST-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; WORST-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; WORST-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; WORST-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; WORST-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; WORST-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; WORST-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; WORST-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; WORST-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; WORST-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; WORST-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; WORST-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; WORST-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; WORST-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; WORST-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; WORST-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; WORST-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; WORST-NEXT: S_ENDPGM 0
+
+    ; --- Fractional bandwidth (3/4 B/cyc), no latency: slower drain ---
+    ; --- than integer speed=1; 4 VALU before load3, 4 before load4. ---
+    ; FRAC-LABEL: name: l1_cache_hazard
+    ; FRAC:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; FRAC-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; FRAC-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; FRAC-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; FRAC-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; FRAC-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; FRAC-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; FRAC-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; FRAC-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; FRAC-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; FRAC-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; FRAC-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; FRAC-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; FRAC-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; FRAC-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; FRAC-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; FRAC-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; FRAC-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; FRAC-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; FRAC-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; FRAC-NEXT: S_ENDPGM 0
+
+    ; --- Cache size: l1-bytes=2 with speed=1; cache is smaller than a ---
+    ; --- single DWORD load (4 B). Each load's footprint is clamped ---
+    ; --- to cache size (2 B), so every load is separated by 1 VALU. ---
+    ; TINY-LABEL: name: l1_cache_hazard
+    ; TINY:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; TINY-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; TINY-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; TINY-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; TINY-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; TINY-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; TINY-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; TINY-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; TINY-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; TINY-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; TINY-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; TINY-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; TINY-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; TINY-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; TINY-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; TINY-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; TINY-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; TINY-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; TINY-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; TINY-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; TINY-NEXT: S_ENDPGM 0
+
+    ; --- Cache size: l1-bytes=12 with speed=1; 3 DWORD loads (12 B) ---
+    ; --- fit, only load4 needs 1 VALU gap. ---
+    ; MED-LABEL: name: l1_cache_hazard
+    ; MED:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; MED-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; MED-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; MED-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; MED-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; MED-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; MED-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; MED-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; MED-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; MED-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; MED-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; MED-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; MED-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; MED-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; MED-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; MED-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; MED-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; MED-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; MED-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; MED-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; MED-NEXT: S_ENDPGM 0
+
+    ; --- Cache size: l1-bytes=16 with speed=1; all 4 DWORD loads ---
+    ; --- (16 B) fit in the cache, no interleaving needed. ---
+    ; BIG-LABEL: name: l1_cache_hazard
+    ; BIG:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; BIG-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; BIG-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; BIG-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; BIG-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; BIG-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; BIG-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; BIG-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; BIG-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; BIG-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; BIG-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; BIG-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; BIG-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; BIG-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; BIG-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; BIG-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; BIG-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; BIG-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; BIG-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; BIG-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; BIG-NEXT: S_ENDPGM 0
+
+    ; --- Load width: DWORD (4 B) with l1-bytes=16; all 4 loads fit ---
+    ; --- (same as BIG, checked on the same function for contrast). ---
+    ; NARROW-LABEL: name: l1_cache_hazard
+    ; NARROW:      $vgpr2 = GLOBAL_LOAD_DWORD killed $vgpr0_vgpr1
+    ; NARROW-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD killed $vgpr6_vgpr7
+    ; NARROW-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD killed $vgpr8_vgpr9
+    ; NARROW-NEXT: $vgpr5 = GLOBAL_LOAD_DWORD killed $vgpr40_vgpr41
+    ; NARROW-NEXT: $vgpr10 = V_MOV_B32_e32 1
+
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr6_vgpr7, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr8_vgpr9, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr40_vgpr41, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    $vgpr10 = V_MOV_B32_e32 1, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 2, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 3, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 4, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 5, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 6, implicit $exec
+    $vgpr16 = V_MOV_B32_e32 7, implicit $exec
+    $vgpr17 = V_MOV_B32_e32 8, implicit $exec
+    $vgpr18 = V_MOV_B32_e32 9, implicit $exec
+    $vgpr19 = V_MOV_B32_e32 10, implicit $exec
+    $vgpr20 = V_MOV_B32_e32 11, implicit $exec
+    $vgpr21 = V_MOV_B32_e32 12, implicit $exec
+    $vgpr22 = V_MOV_B32_e32 13, implicit $exec
+    $vgpr23 = V_MOV_B32_e32 14, implicit $exec
+    $vgpr24 = V_MOV_B32_e32 15, implicit $exec
+    $vgpr25 = V_MOV_B32_e32 16, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25
+...
+
+# ===========================================================================
+# l1_wide_loads: 4 x GLOBAL_LOAD_DWORDX2 (8 B each)
+# With l1-bytes=16, speed=1: 2 wide loads (16 B) fill the cache immediately;
+# 6 VALU before load3, 7 more before load4.
+# Contrast with NARROW above where 4 narrow loads all fit in the same cache.
+# ===========================================================================
+---
+name: l1_wide_loads
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr40_vgpr41
+
+    ; WIDE-LABEL: name: l1_wide_loads
+    ; WIDE:      $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 killed $vgpr0_vgpr1
+    ; WIDE-NEXT: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 killed $vgpr6_vgpr7
+    ; WIDE-NEXT: $vgpr10 = V_MOV_B32_e32 1
+    ; WIDE-NEXT: $vgpr11 = V_MOV_B32_e32 2
+    ; WIDE-NEXT: $vgpr12 = V_MOV_B32_e32 3
+    ; WIDE-NEXT: $vgpr13 = V_MOV_B32_e32 4
+    ; WIDE-NEXT: $vgpr14 = V_MOV_B32_e32 5
+    ; WIDE-NEXT: $vgpr15 = V_MOV_B32_e32 6
+    ; WIDE-NEXT: $vgpr26_vgpr27 = GLOBAL_LOAD_DWORDX2 killed $vgpr8_vgpr9
+    ; WIDE-NEXT: $vgpr16 = V_MOV_B32_e32 7
+    ; WIDE-NEXT: $vgpr17 = V_MOV_B32_e32 8
+    ; WIDE-NEXT: $vgpr18 = V_MOV_B32_e32 9
+    ; WIDE-NEXT: $vgpr19 = V_MOV_B32_e32 10
+    ; WIDE-NEXT: $vgpr20 = V_MOV_B32_e32 11
+    ; WIDE-NEXT: $vgpr21 = V_MOV_B32_e32 12
+    ; WIDE-NEXT: $vgpr22 = V_MOV_B32_e32 13
+    ; WIDE-NEXT: $vgpr28_vgpr29 = GLOBAL_LOAD_DWORDX2 killed $vgpr40_vgpr41
+    ; WIDE-NEXT: $vgpr23 = V_MOV_B32_e32 14
+    ; WIDE-NEXT: $vgpr24 = V_MOV_B32_e32 15
+    ; WIDE-NEXT: $vgpr25 = V_MOV_B32_e32 16
+    ; WIDE-NEXT: S_ENDPGM 0
+
+    $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr6_vgpr7, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    $vgpr26_vgpr27 = GLOBAL_LOAD_DWORDX2 $vgpr8_vgpr9, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    $vgpr28_vgpr29 = GLOBAL_LOAD_DWORDX2 $vgpr40_vgpr41, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    $vgpr10 = V_MOV_B32_e32 1, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 2, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 3, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 4, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 5, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 6, implicit $exec
+    $vgpr16 = V_MOV_B32_e32 7, implicit $exec
+    $vgpr17 = V_MOV_B32_e32 8, implicit $exec
+    $vgpr18 = V_MOV_B32_e32 9, implicit $exec
+    $vgpr19 = V_MOV_B32_e32 10, implicit $exec
+    $vgpr20 = V_MOV_B32_e32 11, implicit $exec
+    $vgpr21 = V_MOV_B32_e32 12, implicit $exec
+    $vgpr22 = V_MOV_B32_e32 13, implicit $exec
+    $vgpr23 = V_MOV_B32_e32 14, implicit $exec
+    $vgpr24 = V_MOV_B32_e32 15, implicit $exec
+    $vgpr25 = V_MOV_B32_e32 16, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2_vgpr3, implicit $vgpr4_vgpr5, implicit $vgpr26_vgpr27, implicit $vgpr28_vgpr29, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25
+...

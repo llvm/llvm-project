@@ -13,6 +13,7 @@
 
 #include "SIInstrInfo.h"
 #include "AMDGPU.h"
+#include "AMDGPUCacheCapacityHazardRecognizer.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNHazardRecognizer.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/MultiHazardRecognizer.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -62,6 +64,48 @@ static cl::opt<bool> Fix16BitCopies(
   cl::desc("Fix copies between 32 and 16 bit registers by extending to 32 bit"),
   cl::init(true),
   cl::ReallyHidden);
+
+static cl::opt<bool>
+    L1Hazard("amdgpu-l1-hazard", cl::init(false),
+             cl::desc("Enable hazard recognizer for L1 data cache."));
+
+static cl::opt<unsigned>
+    L1Bytes("amdgpu-l1-bytes", cl::init(32),
+            cl::desc("Per thread effective byte size of L1 data cache."));
+namespace {
+
+struct L1SpeedParser : public cl::parser<std::pair<unsigned, unsigned>> {
+  L1SpeedParser(cl::Option &O) : cl::parser<std::pair<unsigned, unsigned>>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg,
+             std::pair<unsigned, unsigned> &Val) {
+    auto [NumStr, DenStr] = Arg.split('/');
+    unsigned Num;
+    if (NumStr.getAsInteger(0, Num))
+      return O.error("'" + Arg + "' invalid for L1 speed (expected N or N/D)");
+    if (DenStr.empty()) {
+      Val = {Num, 1};
+      return false;
+    }
+    unsigned Den;
+    if (DenStr.getAsInteger(0, Den) || Den == 0)
+      return O.error("'" + Arg +
+                     "' invalid for L1 speed (expected N or N/D with D > 0)");
+    Val = {Num, Den};
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static cl::opt<std::pair<unsigned, unsigned>, false, L1SpeedParser>
+    L1Speed("amdgpu-l1-speed", cl::init(std::pair<unsigned, unsigned>{1, 1}),
+            cl::desc("Per thread effective bytes per cycle of L1 data cache "
+                     "(integer N or fraction N/D)."));
+static cl::opt<unsigned>
+    L1Latency("amdgpu-l1-latency", cl::init(0),
+              cl::desc("Minimum cycles before an instruction's L1 data cache "
+                       "space can be freed."));
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
@@ -10039,12 +10083,30 @@ SIInstrInfo::getSerializableTargetIndices() const {
   return ArrayRef(TargetIndices);
 }
 
+static std::unique_ptr<ScheduleHazardRecognizer>
+maybeCombineL1Hazard(std::unique_ptr<ScheduleHazardRecognizer> HazRec,
+                     const GCNSubtarget &ST) {
+  if (!L1Hazard)
+    return HazRec;
+  auto Res = std::make_unique<MultiHazardRecognizer>();
+  Res->AddHazardRecognizer(std::move(HazRec));
+  Res->AddHazardRecognizer(
+      std::make_unique<AMDGPU::CacheCapacityHazardRecognizer>(
+          L1Bytes,
+          AMDGPU::BytesPerCycle{L1Speed.getValue().first,
+                                L1Speed.getValue().second},
+          L1Latency, AMDGPU::getIsaVersion(ST.getCPU())));
+  return Res;
+}
+
 /// This is used by the post-RA scheduler (SchedulePostRAList.cpp).  The
 /// post-RA version of misched uses CreateTargetMIHazardRecognizer.
 ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                             const ScheduleDAG *DAG) const {
-  return new GCNHazardRecognizer(DAG->MF);
+  return maybeCombineL1Hazard(std::make_unique<GCNHazardRecognizer>(DAG->MF),
+                              ST)
+      .release();
 }
 
 /// This is the hazard recognizer used at -O0 by the PostRAHazardRecognizer
@@ -10052,7 +10114,9 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 ScheduleHazardRecognizer *
 SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
                                                 MachineLoopInfo *MLI) const {
-  return new GCNHazardRecognizer(MF, MLI);
+  return maybeCombineL1Hazard(std::make_unique<GCNHazardRecognizer>(MF, MLI),
+                              ST)
+      .release();
 }
 
 // Called during:
@@ -10065,8 +10129,14 @@ SIInstrInfo::CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
   // post-RA scheduling; we can tell that we're post-RA because we don't
   // track VRegLiveness.
   if (!DAG->hasVRegLiveness())
-    return new GCNHazardRecognizer(DAG->MF);
-  return TargetInstrInfo::CreateTargetMIHazardRecognizer(II, DAG);
+    return maybeCombineL1Hazard(std::make_unique<GCNHazardRecognizer>(DAG->MF),
+                                ST)
+        .release();
+  return maybeCombineL1Hazard(
+             std::unique_ptr<ScheduleHazardRecognizer>(
+                 TargetInstrInfo::CreateTargetMIHazardRecognizer(II, DAG)),
+             ST)
+      .release();
 }
 
 std::pair<unsigned, unsigned>
