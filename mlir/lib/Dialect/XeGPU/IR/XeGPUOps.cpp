@@ -1062,7 +1062,7 @@ LogicalResult DpasOp::verify() {
   if (lhsElemTy.getIntOrFloatBitWidth() >= 32 ||
       rhsElemTy.getIntOrFloatBitWidth() >= 32) {
     return emitOpError(
-        "Expecting lhs and rhs element types to be at most 32 bits.");
+        "Expecting lhs and rhs element types to be less than 32 bits.");
   }
 
   // SIMT code: the size of the B operand has to be a multiple of 32 bits.
