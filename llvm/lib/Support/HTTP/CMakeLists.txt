@@ -8,7 +8,7 @@ if (LLVM_ENABLE_HTTPLIB)
   set(imported_libs ${imported_libs} httplib::httplib)
 endif()
 
-add_llvm_library(LLVMSupportHTTP
+add_llvm_component_library(LLVMSupportHTTP
   HTTPClient.cpp
   HTTPServer.cpp
 
