@@ -161,8 +161,7 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithInputArgsToMap) {
   // Source function: one block with one index arg, body uses it (addi), then
   // return (terminator is not cloned).
   auto funcTy = b.getFunctionType({b.getIndexType()}, {});
-  auto sourceFunc =
-      func::FuncOp::create(rewriter, loc, "source", funcTy);
+  auto sourceFunc = func::FuncOp::create(rewriter, loc, "source", funcTy);
   Block *sourceBlock = sourceFunc.addEntryBlock();
   rewriter.setInsertionPointToStart(sourceBlock);
   auto c1 = arith::ConstantIndexOp::create(rewriter, loc, 1);
@@ -175,9 +174,9 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithInputArgsToMap) {
   rewriter.setInsertionPointToEnd(module->getBody());
 
   // Current function: we have a "device" block with one index arg. We will
-  // clone sourceFunc's body into a compute_region, with inputArgs = [device arg]
-  // and inputArgsToMap = [source block arg], so the clone maps source arg ->
-  // compute region block arg.
+  // clone sourceFunc's body into a compute_region, with inputArgs = [device
+  // arg] and inputArgsToMap = [source block arg], so the clone maps source arg
+  // -> compute region block arg.
   auto hostFuncTy = b.getFunctionType({b.getIndexType()}, {});
   auto hostFunc = func::FuncOp::create(rewriter, loc, "host", hostFuncTy);
   Block *deviceBlock = hostFunc.addEntryBlock();

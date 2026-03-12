@@ -101,21 +101,21 @@ static void getReturnValues(func::FuncOp func, SmallVectorImpl<Value> &result) {
 /// Create the device function with the same signature as the host, set
 /// specialized_routine, and add a single block with the same block arguments.
 static func::FuncOp createFunctionForDeviceStaging(func::FuncOp hostFunc,
-                                         RoutineOp routineOp,
-                                         ParLevel parLevel, MLIRContext *ctx,
-                                         IRRewriter &rewriter) {
+                                                   RoutineOp routineOp,
+                                                   ParLevel parLevel,
+                                                   MLIRContext *ctx,
+                                                   IRRewriter &rewriter) {
   Location loc = hostFunc.getLoc();
   FunctionType funcType = hostFunc.getFunctionType();
   func::FuncOp deviceFunc =
       func::FuncOp::create(rewriter, loc, hostFunc.getName(), funcType);
   deviceFunc->setAttrs(hostFunc->getAttrs());
   deviceFunc->removeAttr(getRoutineInfoAttrName());
-  deviceFunc->setAttr(
-      getSpecializedRoutineAttrName(),
-      SpecializedRoutineAttr::get(
-          ctx, SymbolRefAttr::get(ctx, routineOp.getSymName()),
-          ParLevelAttr::get(ctx, parLevel),
-          StringAttr::get(ctx, hostFunc.getName())));
+  deviceFunc->setAttr(getSpecializedRoutineAttrName(),
+                      SpecializedRoutineAttr::get(
+                          ctx, SymbolRefAttr::get(ctx, routineOp.getSymName()),
+                          ParLevelAttr::get(ctx, parLevel),
+                          StringAttr::get(ctx, hostFunc.getName())));
 
   Block *sourceBlock = &hostFunc.getBody().front();
   Block *newBlock = rewriter.createBlock(&deviceFunc.getRegion());
@@ -127,12 +127,10 @@ static func::FuncOp createFunctionForDeviceStaging(func::FuncOp hostFunc,
 
 /// Fill the device function body: one acc.par_width, one acc.compute_region
 /// (cloning the host body with inputArgsToMap), then func.return.
-static LogicalResult buildRoutineBody(func::FuncOp deviceFunc,
-                                     func::FuncOp hostFunc,
-                                     ArrayRef<Value> funcReturnVals,
-                                     ParLevel parLevel,
-                                     DefaultACCToGPUMappingPolicy &policy,
-                                     IRRewriter &rewriter) {
+static LogicalResult
+buildRoutineBody(func::FuncOp deviceFunc, func::FuncOp hostFunc,
+                 ArrayRef<Value> funcReturnVals, ParLevel parLevel,
+                 DefaultACCToGPUMappingPolicy &policy, IRRewriter &rewriter) {
   Block *newBlock = &deviceFunc.getBody().front();
   Block *sourceBlock = &hostFunc.getBody().front();
   Location loc = hostFunc.getLoc();
@@ -142,8 +140,8 @@ static LogicalResult buildRoutineBody(func::FuncOp deviceFunc,
   GPUParallelDimAttr parDim = policy.map(ctx, parLevel);
   Value parWidthVal = ParWidthOp::create(rewriter, loc, Value(), parDim);
   SmallVector<Value, 4> inputArgs(newBlock->getArguments().begin(),
-                                newBlock->getArguments().end());
-  
+                                  newBlock->getArguments().end());
+
   // Normally the region passed to buildComputeRegion is something in the
   // current function. Here we pass the body of the original (host) function as
   // an optimization to avoid cloning twice (once for a staged device copy and
@@ -151,7 +149,7 @@ static LogicalResult buildRoutineBody(func::FuncOp deviceFunc,
   // also provide the original function's arguments so the mapping is correct
   // when cloning the body.
   ValueRange sourceArgsToMap = sourceBlock->getArguments();
-  
+
   IRMapping mapping;
   rewriter.setInsertionPointAfter(parWidthVal.getDefiningOp());
   ComputeRegionOp computeRegion = buildComputeRegion(
@@ -172,12 +170,12 @@ static LogicalResult buildRoutineBody(func::FuncOp deviceFunc,
 }
 
 /// Update acc.routine refs and optionally erase host for nohost routines.
-static LogicalResult
-finalizeRoutines(SmallVectorImpl<std::tuple<func::FuncOp, func::FuncOp, RoutineOp>> &accRoutineInfo,
-                 ModuleOp mod, MLIRContext *ctx) {
+static LogicalResult finalizeRoutines(
+    SmallVectorImpl<std::tuple<func::FuncOp, func::FuncOp, RoutineOp>>
+        &accRoutineInfo,
+    ModuleOp mod, MLIRContext *ctx) {
   for (auto &[hostFunc, deviceFunc, routineOp] : accRoutineInfo) {
-    routineOp.setFuncNameAttr(
-        SymbolRefAttr::get(ctx, deviceFunc.getName()));
+    routineOp.setFuncNameAttr(SymbolRefAttr::get(ctx, deviceFunc.getName()));
     routineOp->moveBefore(deviceFunc);
 
     if (routineOp.getNohost()) {
@@ -234,10 +232,10 @@ public:
 
       OpBuilder::InsertionGuard guard(rewriter);
       ParLevel parLevel = computeParLevel(routineOp, deviceType);
-      func::FuncOp deviceFunc =
-          createFunctionForDeviceStaging(hostFunc, routineOp, parLevel, ctx, rewriter);
+      func::FuncOp deviceFunc = createFunctionForDeviceStaging(
+          hostFunc, routineOp, parLevel, ctx, rewriter);
       if (failed(buildRoutineBody(deviceFunc, hostFunc, funcReturnVals,
-                                 parLevel, policy, rewriter)))
+                                  parLevel, policy, rewriter)))
         return signalPassFailure();
 
       accRoutineInfo.push_back({hostFunc, deviceFunc, routineOp});

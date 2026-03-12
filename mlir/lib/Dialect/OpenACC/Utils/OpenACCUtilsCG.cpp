@@ -55,13 +55,14 @@ std::optional<DataLayout> getDataLayout(Operation *op, bool allowDefault) {
   return std::nullopt;
 }
 
-ComputeRegionOp
-buildComputeRegion(Location loc, ValueRange launchArgs, ValueRange inputArgs,
-                   llvm::StringRef origin, Region &regionToClone,
-                   RewriterBase &rewriter, IRMapping &mapping,
-                   ValueRange output, FlatSymbolRefAttr kernelFuncName,
-                   FlatSymbolRefAttr kernelModuleName, Value stream,
-                   ValueRange inputArgsToMap) {
+ComputeRegionOp buildComputeRegion(Location loc, ValueRange launchArgs,
+                                   ValueRange inputArgs, llvm::StringRef origin,
+                                   Region &regionToClone,
+                                   RewriterBase &rewriter, IRMapping &mapping,
+                                   ValueRange output,
+                                   FlatSymbolRefAttr kernelFuncName,
+                                   FlatSymbolRefAttr kernelModuleName,
+                                   Value stream, ValueRange inputArgsToMap) {
   SmallVector<Type> resultTypes;
   for (auto val : output)
     resultTypes.push_back(val.getType());
