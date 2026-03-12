@@ -15,11 +15,13 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -165,6 +167,7 @@ public:
     Return, /// Escapes via return statement.
     Field,  /// Escapes via assignment to a field.
     Global, /// Escapes via assignment to global storage.
+    Call,   /// Escapes as argument to a function call.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -230,6 +233,40 @@ public:
                EscapeKind::Global;
   }
   const VarDecl *getGlobal() const { return Global; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Represents escape of an origin through a function call.
+/// Example:
+/// void f(int *i);
+/// void g(int *j[[clang::noescape]]) {f(j)};
+/// This fact enables us to catch that the noescape parameter j escapes through
+/// the call to function f
+class CallEscapeFact : public OriginEscapesFact {
+  // Currently the analysis handles the following call-like expressions:
+  // - VisitCXXOperatorCallExpr to handle CXXOperatorCallExpr, a sub-class of
+  // CallExpr.
+  // - VisitCXXMemberCallExpr to handle CXXMemberCallExpr, a sub-class of
+  // CallExpr.
+  // - VisitCXXConstructExpr and handleGSLPointerConstruction deal with
+  // CXXConstructExpr. Whilst call like, it is not a sub-class of CallExpr.
+  // Therefore, this type is taken to be the union of CallExpr * and
+  // CXXConstructExpr *:
+  using CallLikeExprPtr = llvm::PointerUnion<CallExpr *, CXXConstructExpr *>;
+  const CallLikeExprPtr Call;
+  const unsigned ArgumentIndex;
+
+public:
+  CallEscapeFact(OriginID OID, const CallLikeExprPtr Call, const unsigned Index)
+      : OriginEscapesFact(OID, EscapeKind::Call), Call(Call),
+        ArgumentIndex(Index) {}
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Call;
+  }
+  const CallLikeExprPtr getCall() const { return Call; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
