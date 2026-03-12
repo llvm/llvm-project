@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/internal/clc.h"
-#include "clc/math/tables.h"
+#include <clc/internal/clc.h>
+#include <clc/math/tables.h>
 
 __CLC_DECLARE_TABLE(float, LOG_INV_TBL_EP_HEAD, 129) = {
     0x1.000000p+1f, 0x1.fc0000p+0f, 0x1.f80000p+0f, 0x1.f40000p+0f,

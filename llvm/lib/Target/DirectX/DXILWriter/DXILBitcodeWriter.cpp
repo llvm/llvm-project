@@ -2335,7 +2335,8 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
         pushValueAndType(I.getOperand(i), InstID, Vals);
     }
   } break;
-  case Instruction::Br: {
+  case Instruction::UncondBr:
+  case Instruction::CondBr: {
     Code = bitc::FUNC_CODE_INST_BR;
     const BranchInst &II = cast<BranchInst>(I);
     Vals.push_back(VE.getValueID(II.getSuccessor(0)));

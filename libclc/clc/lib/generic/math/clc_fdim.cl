@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fmax.h"
-#include "clc/math/math.h"
-#include "clc/relational/clc_isnan.h"
-#include "clc/relational/clc_select.h"
+#include <clc/clc_convert.h>
+#include <clc/float/definitions.h>
+#include <clc/internal/clc.h>
+#include <clc/math/clc_fmax.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
-#define __CLC_BODY "clc_fdim.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc_fdim.inc>
+#include <clc/math/gentype.inc>

@@ -9,7 +9,7 @@
 #ifndef __CLC_ADDRESS_SPACE_CLC_QUALIFIER_H__
 #define __CLC_ADDRESS_SPACE_CLC_QUALIFIER_H__
 
-#include "clc/clcfunc.h"
+#include <clc/clcfunc.h>
 
 #if _CLC_GENERIC_AS_SUPPORTED
 
