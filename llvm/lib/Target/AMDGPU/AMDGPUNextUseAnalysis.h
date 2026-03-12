@@ -476,6 +476,9 @@ public:
 
   /// Dump complete next-use analysis results for testing
   LLVM_DUMP_METHOD void dumpAllNextUseDistances(const MachineFunction &MF);
+
+  /// Exercise all getNextUseDistance queries for timer profiling.
+  void exerciseQueries(const MachineFunction &MF);
 };
 
 class AMDGPUNextUseAnalysis : public AnalysisInfoMixin<AMDGPUNextUseAnalysis> {

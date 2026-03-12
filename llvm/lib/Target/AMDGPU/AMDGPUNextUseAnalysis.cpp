@@ -193,6 +193,11 @@ static cl::opt<bool>
                  cl::desc("Enable timing for Next Use Analysis"),
                  cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    PerFunctionTimers("amdgpu-next-use-per-function-timers",
+                      cl::desc("Print per-function timer breakdown"),
+                      cl::init(false), cl::Hidden);
+
 // Command-line option to force analysis and dump all distances.
 // When set, ensureAnalyzed() is triggered and all distances are printed.
 // Used by lit tests; analogous to the competitor's -dump-distance flag.
@@ -443,8 +448,6 @@ void NextUseResult::analyze(const MachineFunction &MF) {
     // Dump complete analysis results for testing
     LLVM_DEBUG(dumpAllNextUseDistances(MF));
   }
-  if (EnableTimers)
-    TG.print(llvm::errs());
 }
 
 void NextUseResult::getFromSortedRecords(
@@ -524,7 +527,6 @@ SmallVector<VRegMaskPair>
 NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
                                   const VRegMaskPair VMP) {
   ensureAnalyzed();
-  llvm::TimeRegion TR(EnableTimers ? &GetSortedSubregUsesTimer : nullptr);
   SmallVector<VRegMaskPair> Result;
   const MachineBasicBlock *MBB = I->getParent();
   unsigned MBBNum = MBB->getNumber();
@@ -544,7 +546,6 @@ SmallVector<VRegMaskPair>
 NextUseResult::getSortedSubregUses(const MachineBasicBlock &MBB,
                                   const VRegMaskPair VMP) {
   ensureAnalyzed();
-  llvm::TimeRegion TR(EnableTimers ? &GetSortedSubregUsesTimer : nullptr);
   SmallVector<VRegMaskPair> Result;
   unsigned MBBNum = MBB.getNumber();
   DenseMap<unsigned, NextUseInfo>::iterator MBBIt = NextUseMap.find(MBBNum);
@@ -570,7 +571,6 @@ void NextUseResult::dumpUsedInBlock() {
 unsigned NextUseResult::getNextUseDistance(MachineBasicBlock::const_iterator I,
                                           const VRegMaskPair VMP) {
   ensureAnalyzed();
-  llvm::TimeRegion TR(EnableTimers ? &GetDistanceTimer : nullptr);
   unsigned Dist = DeadDistance;
   const MachineBasicBlock *MBB = I->getParent();
   unsigned MBBNum = MBB->getNumber();
@@ -589,7 +589,6 @@ unsigned NextUseResult::getNextUseDistance(MachineBasicBlock::const_iterator I,
 unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
                                           const VRegMaskPair VMP) {
   ensureAnalyzed();
-  llvm::TimeRegion TR(EnableTimers ? &GetDistanceTimer : nullptr);
   unsigned Dist = DeadDistance;
   unsigned MBBNum = MBB.getNumber();
   DenseMap<unsigned, NextUseInfo>::iterator MBBIt = NextUseMap.find(MBBNum);
@@ -633,6 +632,18 @@ bool AMDGPUNextUseAnalysisWrapper::runOnMachineFunction(MachineFunction &MF) {
   NU.Analyzed = false;
   if (DumpDistances)
     NU.dumpAllNextUseDistances(MF);
+  if (EnableTimers) {
+    NU.ensureAnalyzed();
+    {
+      llvm::TimeRegion TR(GetDistanceTimer);
+      NU.exerciseQueries(MF);
+    }
+    if (PerFunctionTimers) {
+      llvm::errs() << "=== " << MF.getName()
+                    << " (" << MF.size() << " BBs) ===\n";
+      TG.print(llvm::errs(), /*ResetAfterPrint=*/true);
+    }
+  }
   return false;
 }
 
@@ -695,24 +706,12 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
       const unsigned SnapOff = Info.InstrOffset.lookup(&MI);
       const unsigned Seq = Info.InstrSeq.lookup(&MI);
       bool Any = false;
-      if (EnableTimers) {
-        for (unsigned VReg : AllVRegs) {
-          unsigned D = getNextUseDistance(II, VRegMaskPair(VReg,
-              MRI->getMaxLaneMaskForVReg(VReg)));
-          if (D != DeadDistance) {
-            dbgs() << "      Vreg: " << printReg(VReg, TRI) << "[ " << D
-                   << " ]\n";
-            Any = true;
-          }
-        }
-      } else {
-        for (unsigned VReg : AllVRegs) {
-          const VRegDistances::SortedRecords *Records =
-              resolveVReg(Info, VReg, Seq);
-          if (Records)
-            Any |= printSortedRecords(*Records, VReg, SnapOff, 0, dbgs(),
-                                      "      ");
-        }
+      for (unsigned VReg : AllVRegs) {
+        const VRegDistances::SortedRecords *Records =
+            resolveVReg(Info, VReg, Seq);
+        if (Records)
+          Any |= printSortedRecords(*Records, VReg, SnapOff, 0, dbgs(),
+                                    "      ");
       }
       if (!Any)
         dbgs() << "      (no register uses)\n";
@@ -728,4 +727,29 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
   }
 
   dbgs() << "\n=== End NextUseAnalysis Results ===\n";
+}
+
+void NextUseResult::exerciseQueries(const MachineFunction &MF) {
+  for (const MachineBasicBlock &MBB : MF) {
+    unsigned MBBNum = MBB.getNumber();
+    auto MBBIt = NextUseMap.find(MBBNum);
+    if (MBBIt == NextUseMap.end())
+      continue;
+
+    const NextUseInfo &Info = MBBIt->second;
+    SmallVector<unsigned, 32> AllVRegs;
+    for (const auto &[VReg, Recs] : Info.Bottom)
+      AllVRegs.push_back(VReg);
+    for (const auto &[VReg, Events] : Info.VRegEvents)
+      AllVRegs.push_back(VReg);
+    llvm::sort(AllVRegs);
+    AllVRegs.erase(llvm::unique(AllVRegs), AllVRegs.end());
+
+    for (MachineBasicBlock::const_iterator II = MBB.begin(), IE = MBB.end();
+         II != IE; ++II) {
+      for (unsigned VReg : AllVRegs)
+        (void)getNextUseDistance(
+            II, VRegMaskPair(VReg, MRI->getMaxLaneMaskForVReg(VReg)));
+    }
+  }
 }
