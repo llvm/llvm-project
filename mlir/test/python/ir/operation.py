@@ -1499,12 +1499,14 @@ def testGetParentOfType():
 @run
 def test_get_ops_of_type():
     with Context(), Location.unknown():
-        module = Module.parse("""
+        module = Module.parse(
+            """
             module {
                 func.func @f() { return }
                 func.func @g() { return }
             }
-        """)
+        """
+        )
 
         # CHECK: get_ops_of_type func.func count: 2
         results = get_ops_of_type(module, func.FuncOp)
