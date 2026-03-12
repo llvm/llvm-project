@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
-#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
-#include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
-#include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/EntityLinker/TUSummaryEncoding.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
