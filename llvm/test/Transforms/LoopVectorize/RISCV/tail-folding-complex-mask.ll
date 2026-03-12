@@ -73,31 +73,27 @@ define void @test(i64 %n, ptr noalias %src0, ptr noalias %src1, ptr noalias %src
 ; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
-; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C1]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP6:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
 ; NO-VP-NEXT:    [[TMP4:%.*]] = xor i1 [[C2]], true
 ; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[TMP4]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-; NO-VP-NEXT:    [[TMP5:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT4]]
-; NO-VP-NEXT:    [[TMP7:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP5]], <vscale x 4 x i1> zeroinitializer
-; NO-VP-NEXT:    [[TMP8:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT2]], [[TMP7]]
-; NO-VP-NEXT:    [[TMP9:%.*]] = xor <vscale x 4 x i1> [[TMP5]], splat (i1 true)
+; NO-VP-NEXT:    [[TMP9:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT4]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> zeroinitializer
-; NO-VP-NEXT:    [[TMP11:%.*]] = or <vscale x 4 x i1> [[TMP8]], [[TMP10]]
-; NO-VP-NEXT:    [[TMP12:%.*]] = select <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[BROADCAST_SPLAT]], <vscale x 4 x i1> zeroinitializer
+; NO-VP-NEXT:    [[TMP8:%.*]] = or <vscale x 4 x i1> [[BROADCAST_SPLAT2]], [[TMP10]]
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
+; NO-VP-NEXT:    [[TMP12:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[SRC0]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> [[BROADCAST_SPLAT2]], <vscale x 4 x i32> poison)
-; NO-VP-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_LOAD]]
+; NO-VP-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[WIDE_MASKED_LOAD]]
 ; NO-VP-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[SRC1]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP14]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
 ; NO-VP-NEXT:    [[TMP15:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD5]], [[PREDPHI]]
-; NO-VP-NEXT:    [[PREDPHI6:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> [[TMP15]]
+; NO-VP-NEXT:    [[PREDPHI6:%.*]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> zeroinitializer
 ; NO-VP-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[SRC2]], i64 [[INDEX]]
 ; NO-VP-NEXT:    [[WIDE_MASKED_LOAD7:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i32> poison)
 ; NO-VP-NEXT:    [[TMP17:%.*]] = add <vscale x 4 x i32> [[WIDE_MASKED_LOAD7]], [[PREDPHI6]]

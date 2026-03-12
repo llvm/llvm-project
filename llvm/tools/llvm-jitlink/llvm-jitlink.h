@@ -46,7 +46,7 @@ struct Session {
 
       if (EC)
         return createFileError(Path, EC);
-      return Instance;
+      return std::move(Instance);
     }
 
   private:

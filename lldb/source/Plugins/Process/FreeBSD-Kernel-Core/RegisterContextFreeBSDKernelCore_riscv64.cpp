@@ -13,6 +13,11 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
+#if defined(__FreeBSD__) && defined(__riscv) && __riscv_xlen == 64
+#include <cstddef>
+#include <machine/pcb.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -51,6 +56,14 @@ bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
     llvm::support::ulittle64_t tp;
     llvm::support::ulittle64_t s[12];
   } pcb;
+
+#if defined(__FreeBSD__) && defined(__riscv) && __riscv_xlen == 64
+  static_assert(offsetof(struct pcb, pcb_ra) == offsetof(decltype(pcb), ra));
+  static_assert(offsetof(struct pcb, pcb_sp) == offsetof(decltype(pcb), sp));
+  static_assert(offsetof(struct pcb, pcb_gp) == offsetof(decltype(pcb), gp));
+  static_assert(offsetof(struct pcb, pcb_tp) == offsetof(decltype(pcb), tp));
+  static_assert(offsetof(struct pcb, pcb_s) == offsetof(decltype(pcb), s));
+#endif
 
   Status error;
   size_t rd =
