@@ -70,7 +70,6 @@ template <>
 auto Parser<OmpDirectiveSpecification>::Parse(ParseState &)
     -> std::optional<OmpDirectiveSpecification> = delete;
 
-
 // Parser that wraps the result of another parser into a Block. If the given
 // parser succeeds, the result is a block containing the ExecutionPartConstruct
 // result of the argument parser. Otherwise the parser fails.
