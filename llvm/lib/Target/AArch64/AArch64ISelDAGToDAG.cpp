@@ -605,16 +605,12 @@ static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
 }
 #endif
 
-static APInt DecodeFMOVImm(SDValue N) {
-  unsigned RegWidth = N.getScalarValueSizeInBits();
-  assert(N->getOpcode() == AArch64ISD::FMOV);
+static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
   assert(RegWidth == 32 || RegWidth == 64);
   if (RegWidth == 32)
-    return APInt(RegWidth, (uint32_t)AArch64_AM::decodeAdvSIMDModImmType11(
-                               N.getConstantOperandVal(0)));
-
-  return APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(
-                             N.getConstantOperandVal(0)));
+    return APInt(RegWidth,
+                 uint32_t(AArch64_AM::decodeAdvSIMDModImmType11(Imm)));
+  return APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(Imm));
 }
 
 // Decodes the integer splat value from a NEON splat operation.
@@ -626,7 +622,7 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
     if (Op.getOpcode() != AArch64ISD::FMOV ||
         Op.getScalarValueSizeInBits() != N.getScalarValueSizeInBits())
       return std::nullopt;
-    return DecodeFMOVImm(Op);
+    return DecodeFMOVImm(Op.getConstantOperandVal(0), SplatWidth);
   }
   if (N->getOpcode() == AArch64ISD::MOVI)
     return APInt(SplatWidth, N.getConstantOperandVal(0));
@@ -636,10 +632,9 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
   if (N->getOpcode() == AArch64ISD::MVNIshift)
     return ~APInt(SplatWidth, N.getConstantOperandVal(0)
                                   << N.getConstantOperandVal(1));
-  if (N->getOpcode() == AArch64ISD::DUP) {
+  if (N->getOpcode() == AArch64ISD::DUP)
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
-      return Const->getAPIntValue();
-  }
+      return Const->getAPIntValue().trunc(SplatWidth);
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
   // in AArch64ISelLowering. AArch64ISD::MOVIedit support will allow more folds.
   return std::nullopt;
@@ -4172,7 +4167,7 @@ bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
                                           << N.getConstantOperandVal(1)));
     break;
   case AArch64ISD::FMOV:
-    FVal = ImmToFloat(DecodeFMOVImm(N));
+    FVal = ImmToFloat(DecodeFMOVImm(N.getConstantOperandVal(0), RegWidth));
     break;
   case AArch64ISD::DUP:
     if (isa<ConstantSDNode>(N.getOperand(0)))
