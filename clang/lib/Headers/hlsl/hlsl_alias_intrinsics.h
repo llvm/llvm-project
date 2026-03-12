@@ -30,15 +30,16 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_STAGE(platform, version, stage)               \
   __attribute__((                                                              \
       availability(platform, introduced = version, environment = stage)))
-#define _HLSL_16BIT_AVAILABILITY_DEFAULT(shadermodel) \
+#define _HLSL_16BIT_AVAILABILITY_DEFAULT(shadermodel)                          \
   _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 #else
 #define _HLSL_16BIT_AVAILABILITY(environment, version)
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
-#define _HLSL_16BIT_AVAILABILITY_DEFAULT(shadermodel) 
+#define _HLSL_16BIT_AVAILABILITY_DEFAULT(shadermodel)
 #endif
 
-#define _HLSL_AVAILABILITY_6_2_DEFAULT(shadermodel) _HLSL_AVAILABILITY(shadermodel, 6.2)
+#define _HLSL_AVAILABILITY_6_2_DEFAULT(shadermodel)                            \
+  _HLSL_AVAILABILITY(shadermodel, 6.2)
 
 //===----------------------------------------------------------------------===//
 // abs builtins
