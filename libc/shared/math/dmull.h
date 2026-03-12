@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_DMULL_H
 #define LLVM_LIBC_SHARED_MATH_DMULL_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/dmull.h"
 
 namespace LIBC_NAMESPACE_DECL {
