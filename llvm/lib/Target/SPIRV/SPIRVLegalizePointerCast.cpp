@@ -192,13 +192,13 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     unsigned ScalarsPerArrayElement = ArrElemVecTy->getNumElements();
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
+    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
       unsigned ArrayIndex = I / ScalarsPerArrayElement;
       unsigned ElementIndexInArrayElem = I % ScalarsPerArrayElement;
       // Create a GEP to access the i-th element of the array.
-      SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
       SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(false));
+      Args.push_back(B.getInt1(/*Inbounds=*/false));
       Args.push_back(Source);
       Args.push_back(B.getInt32(0));
       Args.push_back(ConstantInt::get(B.getInt32Ty(), ArrayIndex));
@@ -216,11 +216,11 @@ class SPIRVLegalizePointerCast : public FunctionPass {
                              Value *Source) {
     // Load each element of the array.
     SmallVector<Value *, 4> LoadedElements;
+    SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I) {
       // Create a GEP to access the i-th element of the array.
-      SmallVector<Type *, 2> Types = {Source->getType(), Source->getType()};
       SmallVector<Value *, 4> Args;
-      Args.push_back(B.getInt1(false));
+      Args.push_back(B.getInt1(/*Inbounds=*/false));
       Args.push_back(Source);
       Args.push_back(B.getInt32(0));
       Args.push_back(ConstantInt::get(B.getInt32Ty(), I));
