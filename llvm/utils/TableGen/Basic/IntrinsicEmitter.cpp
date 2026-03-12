@@ -341,10 +341,16 @@ static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
 /// Check the MSB of the IIT_Table entry to determine the following:
 ///   Fixed (MSB=0): all IIT codes < 16 and nibble-packed value fits in
 ///     FixedEncodingTy with MSB clear. Stored directly in IIT_Table[].
-///   Long (MSB=1): any IIT code >= 16, or packed value would set the MSB.
+///   Long (MSB=1): any IIT code >= 16, or packed value would set the MSB i.e.,
+///     (the highest nibble's value is >= 8, which would be misread as a
+///     long-table offset at runtime).
 ///     Byte sequence (0-terminated) appended to IIT_LongEncodingTable[], a
-///     SequenceToOffsetTable that deduplicates shared suffixes. IIT_Table[]
-///     stores (offset | MSB_sentinel).
+///     SequenceToOffsetTable<> that lays all sequences contiguously in one
+///     byte array and assigns each a start offset.
+///     Sequences sharing a common suffix - for example, two intrinsics both
+///     ending in [..., IIT_I32(4), IIT_I32(4), 0] - overlap in the buffer,
+///     so the shared trailing bytes are stored only once, reducing table size.
+///     IIT_Table[] stores (offset | MSB_sentinel).
 void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
                                      raw_ostream &OS) {
   // Note: the code below can be switched to use 32-bit fixed encoding by

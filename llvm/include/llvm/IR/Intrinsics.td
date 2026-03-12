@@ -232,20 +232,37 @@ def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 // IIT constants and utils
 //===----------------------------------------------------------------------===//
 // IIT (Intrinsic Information Table) Encoding
-// Each intrinsic's type signature is encoded at build time and decoded at
-// runtime via three cooperating components:
-// Token definitions: IIT_* records below assign a numeric code to each type or 
-// type modifier.
+// Each intrinsic's type signature is encoded at build time (when tblgen
+// converts .td files to .inc) and decoded at runtime (when LLVM compiles IR)
+// via 3 cooperating components:
+//
+// 1. Token definitions: IIT_* records below assign a numeric code to each type 
+// or type modifier. (e.g. IIT_I32 = 4, IIT_I64 = 5; see defs below)
 // TypeInfoGen<> walks each Intrinsic<> record and builds a flat byte
 // sequence 'TypeSig' of IIT_* codes: return types first, then params.
-// Encoding: For each intrinsic ComputeTypeSignature() in IntrinsicEmitter.cpp 
-// gets TypeSig and encodePacked() encodes TypeSig into packed nibbles. 
-// The encodings are stored in two generated tables inside IntrinsicImpl.inc 
-// by EmitGenerator(). 
-// Decoding: getIntrinsicInfoTableEntries() in Intrinsics.cpp reads IIT_Table[id-1], 
-// checks the MSB to choose the path, unpacks the byte stream, and calls 
-// DecodeIITType() to build the IITDescriptor vector consumed by getType() and 
-// matchIntrinsicSignature().
+// For example, an intrinsic returning i64 and taking (i32, i32, i8) as
+// input params gives:
+// TypeSig = [IIT_I64, IIT_I32, IIT_I32, IIT_I8, IIT_Done]
+// TypeSig = [5, 4, 4, 2, 0]
+// 
+// 2. Encoding: For each intrinsic ComputeTypeSignature() in IntrinsicEmitter.cpp
+// gets TypeSig and encodePacked() encodes TypeSig into packed nibbles.
+// The encodings are stored in 2 generated tables inside IntrinsicImpl.inc
+// by EmitGenerator(): (Refer IntrinsicEmitter.cpp for more details).
+//  IIT_Table[]             – one entry per intrinsic ID (uint16_t or uint32_t)
+//  IIT_LongEncodingTable[] – shared byte array for signatures that don't fit
+//                            in a single IIT_Table word.
+// The example above packs LSB-first to 0x2445 (bit 15 = 0) in uint16_t and
+// stores in IIT_Table[].
+// 
+// 3. Decoding: getIntrinsicInfoTableEntries() in Intrinsics.cpp reads
+// IIT_Table[id-1]. 
+// The MSB selects one of the tables accordingly, unpacks the byte stream, and
+// calls DecodeIITType() to build the IITDescriptor vector. Each IITDescriptor
+// entry describes one type position in the signature. For the example above,
+// the result is [Integer(64), Integer(32), Integer(32), Integer(8)], 
+// which is used by getType() to reconstruct the intrinsic's FunctionType and
+// by matchIntrinsicSignature() to verify call sites at runtime.  
 
 // llvm::Intrinsic::IITDescriptor::ArgKind::AK_%
 def ArgKind {
@@ -699,13 +716,13 @@ class TypeInfoGen<
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
-  // TypeSig layout:
-  //   - If the intrinsic returns multiple values (struct return), the first code
-  //     is IIT_STRUCT followed by a count byte, then the element types.
+  // TypeSig layout (See an example in comments above):
+  //   - If the intrinsic returns multiple values (struct return), the first 
+  //     code is IIT_STRUCT followed by a count byte, then the element types.
   //   - If it returns a single void, the first code is IIT_Done (0).
   //   - Otherwise the first code(s) describe the single return type.
   //   - Parameter type codes follow in order.
-  //   - The sequence is implicitly terminated: in LongEncodingTable by a 0 byte
+  //   - The sequence is implicitly terminated: in LongEncodingTable by 0 byte
   //     (IIT_Done), and in the fixed encoding by the natural end of nibbles.
   list<int> TypeSig = !listflatten(!listconcat(
     [!cond(
