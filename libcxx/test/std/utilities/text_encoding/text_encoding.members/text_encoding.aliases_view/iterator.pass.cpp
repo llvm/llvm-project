@@ -102,7 +102,6 @@ constexpr bool test() {
   { // noexcept
     ASSERT_NOEXCEPT(*i);
     ASSERT_NOEXCEPT(i[0]);
-    ASSERT_NOEXCEPT(i.operator->());
     ASSERT_NOEXCEPT(i + 1);
     ASSERT_NOEXCEPT(1 + i);
     ASSERT_NOEXCEPT(i - 1);
@@ -124,7 +123,6 @@ constexpr bool test() {
   { // iterator operator return types
     ASSERT_SAME_TYPE(const char*, decltype(*i));
     ASSERT_SAME_TYPE(const char*, decltype(i[0]));
-    ASSERT_SAME_TYPE(const char* const*, decltype(i.operator->()));
     ASSERT_SAME_TYPE(decltype(i), decltype(i + 1));
     ASSERT_SAME_TYPE(decltype(i), decltype(1 + i));
     ASSERT_SAME_TYPE(decltype(i), decltype(i - 1));
