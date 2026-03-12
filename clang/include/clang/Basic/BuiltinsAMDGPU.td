@@ -281,6 +281,13 @@ def __builtin_amdgcn_struct_ptr_buffer_load_lds : AMDGPUBuiltin<"void(__amdgpu_b
 def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__amdgpu_buffer_rsrc_t, void address_space<3> *, _Constant unsigned int, int, int, int, _Constant int, _Constant int)", [], "vmem-to-lds-load-insts">;
 
 //===----------------------------------------------------------------------===//
+// Global Available/Visible memory accesses.
+//===----------------------------------------------------------------------===//
+
+def __builtin_amdgcn_av_load_b128: AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int> *, int)", [], "gfx9-insts">;
+def __builtin_amdgcn_av_store_b128: AMDGPUBuiltin<"void(_ExtVector<4, unsigned int> *, _ExtVector<4, unsigned int>, int)", [], "gfx9-insts">;
+
+//===----------------------------------------------------------------------===//
 // Async mark builtins.
 //===----------------------------------------------------------------------===//
 
