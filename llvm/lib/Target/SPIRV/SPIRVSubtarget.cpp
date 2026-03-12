@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVSubtarget.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVCommandLine.h"
 #include "SPIRVGlobalRegistry.h"
@@ -204,6 +205,30 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     if (F.hasFnAttribute("hlsl.shader")) {
       HasShaderAttr = true;
       break;
+    }
+  }
+
+  if (!HasShaderAttr) {
+    if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
+      assert(MemModel->getNumOperands() > 0 && "Invalid spirv.MemoryModel");
+      auto *MemMD = MemModel->getOperand(0);
+      assert(MemMD->getNumOperands() > 1 &&
+             "Invalid spirv.MemoryModel operand");
+      unsigned MemModelVal =
+          mdconst::extract<ConstantInt>(MemMD->getOperand(1))->getZExtValue();
+      switch (MemModelVal) {
+      case SPIRV::MemoryModel::Simple:
+      case SPIRV::MemoryModel::GLSL450:
+        HasShaderAttr = true;
+        break;
+      case SPIRV::MemoryModel::VulkanKHR:
+        HasShaderAttr = true;
+        AvailableExtensions.insert(
+            SPIRV::Extension::SPV_KHR_vulkan_memory_model);
+        break;
+      case SPIRV::MemoryModel::OpenCL:
+        break;
+      }
     }
   }
 
