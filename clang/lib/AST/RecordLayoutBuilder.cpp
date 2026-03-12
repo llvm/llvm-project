@@ -1676,7 +1676,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   unsigned UnpackedFieldAlign = FieldAlign;
 
   // Ignore the field alignment if the field is packed unless it has zero-size.
-  if (!IsMsStruct && FieldPacked && FieldSize != 0)
+  if (FieldPacked && FieldSize != 0)
     FieldAlign = 1;
 
   // But, if there's an 'aligned' attribute on the field, honor that.
