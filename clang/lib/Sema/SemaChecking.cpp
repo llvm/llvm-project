@@ -2356,13 +2356,8 @@ static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
-/// Checks stdc bit-utility builtins (__builtin_stdc_*):
-/// bit_ceil, bit_floor, bit_width, count_ones, count_zeros,
-/// first_leading_one, first_leading_zero, first_trailing_one,
-/// first_trailing_zero, has_single_bit, leading_ones, leading_zeros,
-/// trailing_ones, trailing_zeros. They all take a single unsigned integer
-/// argument and return either int, bool, or the argument type depending on the
-/// specific builtin.
+/// Checks the __builtin_stdc_* builtins that take a single unsigned integer
+/// argument and return either int, bool, or the argument type.
 static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 1))
     return true;
