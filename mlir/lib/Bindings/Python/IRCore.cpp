@@ -3931,27 +3931,25 @@ void populateIRCore(nb::module_ &m) {
           "walk",
           [](PyOperationBase &self,
              std::function<PyWalkResult(MlirOperation)> callback,
-             std::optional<nb::object> opClass, PyWalkOrder walkOrder) {
-            if (opClass) {
-              self.walk(
-                  [&](MlirOperation mlirOp) -> PyWalkResult {
-                    nb::object opview =
-                        PyOperation::forOperation(
-                            self.getOperation().getContext(), mlirOp)
-                            ->createOpView();
-                    if (nb::isinstance(opview, *opClass))
-                      return callback(mlirOp);
-                    return PyWalkResult::Advance;
-                  },
-                  walkOrder);
-            } else {
-              self.walk(callback, walkOrder);
-            }
+             PyWalkOrder walkOrder, std::optional<nb::object> opClass) {
+            if (!opClass)
+              return self.walk(callback, walkOrder);
+            self.walk(
+                [&](MlirOperation mlirOp) -> PyWalkResult {
+                  nb::object opview =
+                      PyOperation::forOperation(
+                          self.getOperation().getContext(), mlirOp)
+                          ->createOpView();
+                  if (nb::isinstance(opview, *opClass))
+                    return callback(mlirOp);
+                  return PyWalkResult::Advance;
+                },
+                walkOrder);
           },
-          "callback"_a, "op_class"_a = nb::none(),
-          "walk_order"_a = PyWalkOrder::PostOrder,
+          "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
+          "op_class"_a = nb::none(),
           // clang-format off
-           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], op_class: type[OpView] | None = None, walk_order: WalkOrder = WalkOrder.POST_ORDER) -> None"),
+           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = WalkOrder.POST_ORDER, op_class: type[OpView] | None = None) -> None"),
           // clang-format on
           R"(
              Walks the operation tree with a callback function.
@@ -3961,8 +3959,8 @@ void populateIRCore(nb::module_ &m) {
 
              Args:
                callback: A callable that takes an Operation and returns a WalkResult.
-               op_class: If provided, only operations of this type are passed to the callback.
-               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).)");
+               walk_order: The order of traversal (PRE_ORDER or POST_ORDER).
+               op_class: If provided, only operations of this type are passed to the callback.)");
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
       .def_static(
