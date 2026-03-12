@@ -990,6 +990,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
         }
 #endif
 
+        ODBG(OLDT_Init) << "Found compatible image from OffloadBinary: "
+                        << static_cast<const void *>(InnerImage.bytes_begin());
         FirstLoadedImage = LoadedImage;
         break;
       } else {
