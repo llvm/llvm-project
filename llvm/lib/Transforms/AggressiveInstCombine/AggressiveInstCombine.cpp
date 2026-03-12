@@ -407,7 +407,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
   APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
   APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
   APInt Mask00FF;
-  if (Len <= 16) {
+  if (Len == 16) {
     Mask00FF = APInt(16, 0x00FF);
   } else {
     Mask00FF = APInt::getSplat(Len, APInt(16, 0x00FF));
@@ -426,7 +426,7 @@ static bool tryToRecognizePopCount1(Instruction &I) {
   // 0x00000000FFFFFFFF)".
   Value *ShiftOp;
   Value *Start = &I;
-  bool is64 = false;
+  bool Is64 = false;
   if (match(Start,
             m_c_Add(m_And(m_LShr(m_Value(ShiftOp), m_SpecificInt(32)),
                           m_SpecificInt(Mask64)),
@@ -435,64 +435,55 @@ static bool tryToRecognizePopCount1(Instruction &I) {
             m_c_Add(m_LShr(m_Value(ShiftOp), m_SpecificInt(32)),
                     m_And(m_Deferred(ShiftOp), m_SpecificInt(Mask64))))) {
     Start = ShiftOp;
-    is64 = true;
+    Is64 = true;
   }
   Value *LShrOp0;
   // Matching "(uWord & 0x0000FFFF) + (uWord>>16)".
   // Matching "(uWord & 0x0000FFFF) + ((uWord>>16) & 0x0000FFFF)".
-  bool test16 = match(
+  bool Test16 = match(
       Start, m_c_Add(m_And(m_LShr(m_Value(LShrOp0), m_SpecificInt(16)),
                            m_SpecificInt(Mask0000FFFF)),
                      m_And(m_Deferred(LShrOp0), m_SpecificInt(Mask0000FFFF))));
 
-  bool is32 = false;
-  if ((is64 && test16) ||
-      (!is64 && Len == 32 &&
-       (test16 ||
+  bool Is32 = false;
+  if ((Is64 && Test16) ||
+      (!Is64 && Len == 32 &&
+       (Test16 ||
         match(Start, m_c_Add(m_LShr(m_Value(LShrOp0), m_SpecificInt(16)),
                              m_And(m_Deferred(LShrOp0),
                                    m_SpecificInt(Mask0000FFFF))))))) {
     Start = LShrOp0;
-
-    is32 = true;
+    Is32 = true;
   }
   Value *ShiftOp0;
   // Matching "uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);".
   // OR
   // Matching "uWord = (uWord & 0x00FF00FF) + (uWord>>8) ;".
-  bool test8 = match(
+  bool Test8 = match(
       Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
                            m_SpecificInt(Mask00FF)),
                      m_And(m_Deferred(ShiftOp0), m_SpecificInt(Mask00FF))));
-
-  bool is16 = false;
-  if ((is32 && test8) ||
-      (!is32 && Len == 16 &&
-       (test8 ||
-        match(Start, m_c_Add(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
-                             m_And(m_Deferred(ShiftOp0),
-                                   m_SpecificInt(Mask00FF))))))) {
-    Start = ShiftOp0;
-    is16 = true;
+  if (!((Is32 && Test8) ||
+        (!Is32 && Len == 16 &&
+         (Test8 ||
+          match(Start, m_c_Add(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
+                               m_And(m_Deferred(ShiftOp0),
+                                     m_SpecificInt(Mask00FF)))))))) {
+    return false;
   }
 
   Value *ShiftOp1;
   // Matching "uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F)".
-  bool test4 =
-      match(Start, m_c_Add(m_And(m_LShr(m_Value(ShiftOp1), m_SpecificInt(4)),
-                                 m_SpecificInt(Mask0F)),
-                           m_And(m_Deferred(ShiftOp1), m_SpecificInt(Mask0F))));
-
-  bool is8 = false;
-  if ((is16 && test4)) {
-    Start = ShiftOp1;
-    is8 = true;
+  if (!match(ShiftOp0,
+             m_c_Add(m_And(m_LShr(m_Value(ShiftOp1), m_SpecificInt(4)),
+                           m_SpecificInt(Mask0F)),
+                     m_And(m_Deferred(ShiftOp1), m_SpecificInt(Mask0F))))) {
+    return false;
   }
 
   Value *ShiftOp2;
   // Matching "uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333)".
-  if (is8 &&
-      match(Start,
+  if (match(ShiftOp1,
             m_c_Add(m_And(m_LShr(m_Value(ShiftOp2), m_SpecificInt(2)),
                           m_SpecificInt(Mask33)),
                     m_And(m_Deferred(ShiftOp2), m_SpecificInt(Mask33))))) {
