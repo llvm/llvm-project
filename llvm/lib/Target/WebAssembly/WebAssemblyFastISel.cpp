@@ -1375,7 +1375,7 @@ static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
                                    MachineInstr *&UserMI) {
   unsigned Opc = MI->getOpcode();
   unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
-  if (Opc != WebAssembly::SHL_I32 && Opc != WebAssembly::SHL_I64)
+  if (Opc != WebAssembly::SHL_I32)
     return NewOpc;
 
   Register DestReg = MI->getOperand(0).getReg();
@@ -1384,7 +1384,7 @@ static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
 
   UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
   unsigned UserOpc = UserMI->getOpcode();
-  if (UserOpc != WebAssembly::SHR_S_I32 && UserOpc != WebAssembly::SHR_S_I64)
+  if (UserOpc != WebAssembly::SHR_S_I32)
     return NewOpc;
 
   Type *LoadTy = LI->getType();
