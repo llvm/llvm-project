@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            test_use_vector_truncate_reversed_order
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_use_vector_truncate_reversed_order
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s16)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s16)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[UV2]](s16)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s8) = G_TRUNC [[UV3]](s16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR [[TRUNC3]](s8), [[TRUNC2]](s8), [[TRUNC1]](s8), [[TRUNC]](s8)
+    ; CHECK-NEXT: $w0 = COPY [[BUILD_VECTOR]](<4 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(s16), %2:_(s16), %3:_(s16), %4:_(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %5:_(s8) = G_TRUNC %1(s16)
+    %6:_(s8) = G_TRUNC %2(s16)
+    %7:_(s8) = G_TRUNC %3(s16)
+    %8:_(s8) = G_TRUNC %4(s16)
+    ; Reversed operand order
+    %9:_(<4 x s8>) = G_BUILD_VECTOR %8(s8), %7(s8), %6(s8), %5(s8)
+    $w0 = COPY %9(<4 x s8>)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            test_use_vector_truncate_normal_order
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    ; CHECK-LABEL: name: test_use_vector_truncate_normal_order
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](<4 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(s16), %2:_(s16), %3:_(s16), %4:_(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %5:_(s8) = G_TRUNC %1(s16)
+    %6:_(s8) = G_TRUNC %2(s16)
+    %7:_(s8) = G_TRUNC %3(s16)
+    %8:_(s8) = G_TRUNC %4(s16)
+    ; Normal operand order
+    %9:_(<4 x s8>) = G_BUILD_VECTOR %5(s8), %6(s8), %7(s8), %8(s8)
+    $w0 = COPY %9(<4 x s8>)
+    RET_ReallyLR implicit $w0
+...

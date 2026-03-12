@@ -52,16 +52,16 @@ private:
 // CHECK-NEXT:      "BriefComments": [
 // CHECK-NEXT:        [
 // CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": " This is a brief description."
+// CHECK-NEXT:            "TextComment": "This is a brief description."
 // CHECK:           "HasBriefComments": true,
 // CHECK-NEXT:      "HasParagraphComments": true,
 // CHECK-NEXT:      "ParagraphComments": [
 // CHECK-NEXT:        [
 // CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": " This is a nice class."
+// CHECK-NEXT:            "TextComment": "This is a nice class."
 // CHECK-NEXT:          },
 // CHECK-NEXT:          {
-// CHECK-NEXT:            "TextComment": " It has some nice methods and fields."
+// CHECK-NEXT:            "TextComment": "It has some nice methods and fields."
 // CHECK-NEXT:          }
 // CHECK:         "DocumentationFileName": "_ZTV7MyClass",
 // CHECK:         "Enums": [
@@ -103,7 +103,7 @@ private:
 // CHECK-NEXT:          "ParagraphComments": [
 // CHECK-NEXT:            [
 // CHECK-NEXT:              {
-// CHECK-NEXT:                "TextComment": " This is a function template friend."
+// CHECK-NEXT:                "TextComment": "This is a function template friend."
 // CHECK-NEXT:              }
 // CHECK-NEXT:            ]
 // CHECK-NEXT:          ]
@@ -149,7 +149,7 @@ private:
 // CHECK-NEXT:          "ParagraphComments": [
 // CHECK-NEXT:            [
 // CHECK-NEXT:              {
-// CHECK-NEXT:                "TextComment": " This is a struct friend."
+// CHECK-NEXT:                "TextComment": "This is a struct friend."
 // CHECK-NEXT:              }
 // CHECK-NEXT:            ]
 // CHECK-NEXT:          ]

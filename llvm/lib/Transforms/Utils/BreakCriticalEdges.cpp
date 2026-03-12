@@ -334,7 +334,8 @@ findIBRPredecessor(BasicBlock *BB, SmallVectorImpl<BasicBlock *> &OtherPreds) {
         return nullptr;
       IBB = PredBB;
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
       OtherPreds.push_back(PredBB);
       continue;

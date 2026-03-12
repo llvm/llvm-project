@@ -1340,7 +1340,7 @@ TEST_F(JSONFormatLUSummaryTest,
             "entity_summary": {
               "pairs": [
                 {
-                  "second": 1
+                  "second": {"@": 1}
                 }
               ]
             }
@@ -1383,7 +1383,7 @@ TEST_F(JSONFormatLUSummaryTest,
               "pairs": [
                 {
                   "first": "not_a_number",
-                  "second": 1
+                  "second": {"@": 1}
                 }
               ]
             }
@@ -1425,7 +1425,7 @@ TEST_F(JSONFormatLUSummaryTest,
             "entity_summary": {
               "pairs": [
                 {
-                  "first": 0
+                  "first": {"@": 0}
                 }
               ]
             }
@@ -1467,7 +1467,7 @@ TEST_F(JSONFormatLUSummaryTest,
             "entity_summary": {
               "pairs": [
                 {
-                  "first": 0,
+                  "first": {"@": 0},
                   "second": "not_a_number"
                 }
               ]
@@ -2309,7 +2309,7 @@ TEST_P(LUSummaryTest, RoundTripWithTwoSummaryTypes) {
             "entity_id": 1,
             "entity_summary": {
               "pairs": [
-                { "first": 1, "second": 3 }
+                { "first": {"@": 1}, "second": {"@": 3} }
               ]
             }
           },
@@ -2317,8 +2317,8 @@ TEST_P(LUSummaryTest, RoundTripWithTwoSummaryTypes) {
             "entity_id": 4,
             "entity_summary": {
               "pairs": [
-                { "first": 4, "second": 0 },
-                { "first": 4, "second": 2 }
+                { "first": {"@": 4}, "second": {"@": 0} },
+                { "first": {"@": 4}, "second": {"@": 2} }
               ]
             }
           },
@@ -2332,7 +2332,7 @@ TEST_P(LUSummaryTest, RoundTripWithTwoSummaryTypes) {
             "entity_id": 3,
             "entity_summary": {
               "pairs": [
-                { "first": 3, "second": 1 }
+                { "first": {"@": 3}, "second": {"@": 1} }
               ]
             }
           },
@@ -2340,8 +2340,8 @@ TEST_P(LUSummaryTest, RoundTripWithTwoSummaryTypes) {
             "entity_id": 2,
             "entity_summary": {
               "pairs": [
-                { "first": 2, "second": 4 },
-                { "first": 2, "second": 3 }
+                { "first": {"@": 2}, "second": {"@": 4} },
+                { "first": {"@": 2}, "second": {"@": 3} }
               ]
             }
           }
