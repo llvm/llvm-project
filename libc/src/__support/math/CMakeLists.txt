@@ -864,7 +864,6 @@ add_header_library(
   HDRS
     erff.h
   DEPENDS
-    .common_constants
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.multiply_add
