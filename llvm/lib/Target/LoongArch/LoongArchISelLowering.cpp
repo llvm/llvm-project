@@ -5259,25 +5259,23 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     // scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp
     // cast since type legalization will try to use an i64 load.
     MVT VT = N->getSimpleValueType(0);
-    assert(VT == MVT::v2f32 && "Unexpected VT");
+    assert(VT == MVT::v2f32 && Subtarget.hasExtLSX() &&
+           "Unexpected custom legalisation");
     assert(getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
            "Unexpected type action!");
     if (!ISD::isNON_EXTLoad(N))
       return;
     auto *Ld = cast<LoadSDNode>(N);
-    if (Subtarget.hasExtLSX()) {
-      MVT LdVT = MVT::f64;
-      SDValue Res = DAG.getLoad(LdVT, DL, Ld->getChain(), Ld->getBasePtr(),
-                                Ld->getPointerInfo(), Ld->getBaseAlign(),
-                                Ld->getMemOperand()->getFlags());
-      SDValue Chain = Res.getValue(1);
-      MVT VecVT = MVT::getVectorVT(LdVT, 2);
-      Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Res);
-      EVT WideVT = getTypeToTransformTo(*DAG.getContext(), VT);
-      Res = DAG.getBitcast(WideVT, Res);
-      Results.push_back(Res);
-      Results.push_back(Chain);
-    }
+    SDValue Res = DAG.getLoad(MVT::f64, DL, Ld->getChain(), Ld->getBasePtr(),
+                              Ld->getPointerInfo(), Ld->getBaseAlign(),
+                              Ld->getMemOperand()->getFlags());
+    SDValue Chain = Res.getValue(1);
+    MVT VecVT = MVT::getVectorVT(MVT::f64, 2);
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Res);
+    EVT WideVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    Res = DAG.getBitcast(WideVT, Res);
+    Results.push_back(Res);
+    Results.push_back(Chain);
     break;
   }
   case ISD::FP_TO_SINT: {
