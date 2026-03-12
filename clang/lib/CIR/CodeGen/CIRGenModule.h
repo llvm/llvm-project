@@ -778,6 +778,9 @@ public:
   /// Print out an error that codegen doesn't support the specified decl yet.
   void errorUnsupported(const Decl *d, llvm::StringRef type);
 
+  /// Emits AMDGPU specific Metadata.
+  void emitAMDGPUMetadata();
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;

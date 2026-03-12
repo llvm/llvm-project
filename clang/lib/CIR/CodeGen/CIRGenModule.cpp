@@ -2878,6 +2878,9 @@ void CIRGenModule::release() {
   theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
                      builder.getArrayAttr(globalScopeAsm));
 
+  if (getTriple().isAMDGPU())
+    emitAMDGPUMetadata();
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
 }
