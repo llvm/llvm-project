@@ -1767,8 +1767,7 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
   EXPECT_TRUE(Plan.getVF().isMaterialized());
 }
 
-#if GTEST_HAS_DEATH_TEST
-#ifndef NDEBUG
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   VPlan &Plan = getPlan();
@@ -1785,7 +1784,6 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   VPBB.appendRecipe(I);
   EXPECT_DEATH(I->addOperand(VF), "accessing materialized symbolic value");
 }
-#endif
 #endif
 
 } // namespace
