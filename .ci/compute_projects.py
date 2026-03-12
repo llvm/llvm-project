@@ -108,7 +108,6 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
-    "libclc",  # Tests don't work on Windows (check_external_funcs.sh).
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -165,6 +164,10 @@ RUNTIMES = {
     "libc",
     "flang-rt",
     "libclc",
+}
+
+LIBCLC_TARGETS = {
+    "amdgcn-amd-amdhsa-llvm",
 }
 
 # Meta projects are projects that need explicit handling but do not reside
@@ -340,7 +343,6 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
     # passed to ninja.
-    libclc_targets = "amdgcn-amd-amdhsa-llvm" if "libclc" in runtimes_to_build else ""
     return {
         "projects_to_build": ";".join(sorted(projects_to_build)),
         "project_check_targets": " ".join(sorted(projects_check_targets)),
@@ -350,7 +352,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
             sorted(runtimes_check_targets_needs_reconfig)
         ),
         "enable_cir": enable_cir,
-        "libclc_targets": libclc_targets,
+        "libclc_targets": ";".join(LIBCLC_TARGETS),
     }
 
 
