@@ -43058,6 +43058,12 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         }
       }
     }
+
+    // Attempt to convert to VZEXT_MOVL if all upper elements are known zero.
+    if (32 <= EltBits &&
+        DAG.MaskedVectorIsZero(N, APInt::getHighBitsSet(NumElts, NumElts - 1)))
+      return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT,
+                         N.getConstantOperandVal(2) & 1 ? N1 : N0);
     return SDValue();
   }
   case X86ISD::SHUFP: {
