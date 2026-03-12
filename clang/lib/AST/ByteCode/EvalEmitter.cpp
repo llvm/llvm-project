@@ -18,8 +18,9 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+                         InterpStack &Stk, ConstantExprKind ConstexprKind)
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(Ctx),
+      ConstexprKind(ConstexprKind) {}
 
 EvalEmitter::~EvalEmitter() {
   for (auto &V : Locals) {
@@ -244,6 +245,18 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
   return true;
 }
 
+template <> bool EvalEmitter::emitRet<PT_MemberPtr>(SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  const MemberPointer &MP = S.Stk.pop<MemberPointer>();
+  if (!EvalResult.checkMemberPointer(S, MP, Info, ConstexprKind))
+    return false;
+
+  EvalResult.takeValue(MP.toAPValue(Ctx.getASTContext()));
+  return true;
+}
+
 template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   // llvm::errs()<< __PRETTY_FUNCTION__ << "Ret\n";
   if (!isActive())
@@ -256,11 +269,15 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
+
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
   // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
+    if (!EvalResult.checkFunctionPointer(S, Ptr, Info, ConstexprKind))
+      return false;
+
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }
@@ -282,37 +299,41 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
         Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
+    if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
+      return false;
+
     if (std::optional<APValue> V =
             Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
       EvalResult.takeValue(std::move(*V));
-    } else {
-      return false;
-    }
-  } else {
-    // If this is pointing to a local variable, just return
-    // the result, even if the pointer is dead.
-    // This will later be diagnosed by CheckLValueConstantExpression.
-    if (Ptr.isBlockPointer() && !Ptr.block()->isStatic()) {
-      EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
       return true;
     }
-
-    if (!Ptr.isLive() && !Ptr.isTemporary())
-      return false;
-
-    // If the variable of this pointer is being evaluated when returning
-    // its value, mark it as constexpr-unknown.
-    APValue V = Ptr.toAPValue(Ctx.getASTContext());
-    if (const Descriptor *DeclDesc = Ptr.getDeclDesc();
-        DeclDesc && S.EvaluatingDecl &&
-        DeclDesc->asVarDecl() == S.EvaluatingDecl &&
-        S.getLangOpts().CPlusPlus23 &&
-        S.EvaluatingDecl->getType()->isReferenceType()) {
-      V.setConstexprUnknown(true);
-    }
-    EvalResult.takeValue(std::move(V));
+    return false;
   }
 
+  // Return as lvalue.
+  if (!EvalResult.checkLValue(S, Ptr, Info, ConstexprKind))
+    return false;
+
+  if (!Ptr.isLive() && !Ptr.isTemporary())
+    return false;
+
+  // If the variable of this pointer is being evaluated when returning
+  // its value, mark it as constexpr-unknown.
+  if (const Descriptor *DeclDesc = Ptr.getDeclDesc();
+      DeclDesc && S.EvaluatingDecl &&
+      ((DeclDesc->asVarDecl() == S.EvaluatingDecl &&
+        S.getLangOpts().CPlusPlus23 &&
+        S.EvaluatingDecl->getType()->isReferenceType()) ||
+       Ptr.getDeclDesc()->IsConstexprUnknown)) {
+    S.FFDiag(Info, diag::note_constexpr_var_init_non_constant, 1)
+        << DeclDesc->asVarDecl();
+    S.Note(DeclDesc->asVarDecl()->getLocation(), diag::note_declared_at);
+
+    return false;
+  }
+
+  APValue V = Ptr.toAPValue(Ctx.getASTContext());
+  EvalResult.takeValue(std::move(V));
   return true;
 }
 
@@ -327,6 +348,8 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
   if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+  if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
     return false;
 
   if (std::optional<APValue> APV =
