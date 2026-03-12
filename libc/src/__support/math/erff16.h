@@ -97,23 +97,21 @@ LIBC_INLINE float16 erff16(float16 x) {
       {0x1.983ceep-1f, -0x1.eacc78p-4f, 0x1.c74418p-7f, -0x1.1756ap-10f,
        0x1.bff366p-15f, -0x1.c56c02p-20f, 0x1.07b492p-25f, -0x1.0d4be8p-32f},
   };
-  static constexpr size_t N_ERFF16_EXCEPTS = 13;
-  static constexpr fputil::ExceptValues<float16, N_ERFF16_EXCEPTS>
-      ERFF16_EXCEPTS{{
-          {0x1612, 0x16D9, 1, 0, 0},
-          {0x165C, 0x172C, 1, 0, 1},
-          {0x16F0, 0x17D3, 1, 0, 1},
-          {0x3BF2, 0x3AB7, 1, 0, 1},
-          {0x42A9, 0x3BFF, 1, 0, 1},
-          {0x42BD, 0x3BFF, 1, 0, 1},
-          {0x42F0, 0x3BFF, 1, 0, 1},
-          {0x4344, 0x3BFF, 1, 0, 1},
-          {0x43D3, 0x3BFF, 1, 0, 1},
-          {0x43D4, 0x3BFF, 1, 0, 1},
-          {0x43D6, 0x3BFF, 1, 0, 1},
-          {0x43D8, 0x3BFF, 1, 0, 1},
-          {0x43F7, 0x3BFF, 1, 0, 1},
-      }};
+#ifndef LIBC_TARGET_CPU_HAS_FMA
+  constexpr size_t N_ERFF16_EXCEPTS = 5;
+#else
+  constexpr size_t N_ERFF16_EXCEPTS = 4;
+#endif
+
+  constexpr fputil::ExceptValues<float16, N_ERFF16_EXCEPTS> ERFF16_EXCEPTS{{
+      {0x1612, 0x16D9, 1, 0, 0},
+      {0x165C, 0x172C, 1, 0, 1},
+      {0x16F0, 0x17D3, 1, 0, 1},
+      {0x3BF2, 0x3AB7, 1, 0, 1},
+#ifndef LIBC_TARGET_CPU_HAS_FMA
+      {0x3FF6, 0x3BF5, 1, 0, 1},
+#endif
+  }};
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
   uint16_t x_abs = xbits.abs().uintval();
@@ -125,7 +123,7 @@ LIBC_INLINE float16 erff16(float16 x) {
     return r.value();
 
   // |x| >= 4.0
-  if (LIBC_UNLIKELY(x_abs >= 0x4400U)) {
+  if (LIBC_UNLIKELY(x_abs >= 0x4200U)) {
     // Check for NaN or Inf
     if (LIBC_UNLIKELY(x_abs >= 0x7c00U)) {
       if (x_abs > 0x7c00U) {
