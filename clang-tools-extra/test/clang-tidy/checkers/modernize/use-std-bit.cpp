@@ -168,6 +168,14 @@ unsigned popcount_bitset_cast(unsigned x) {
   return std::bitset<8>(static_cast<unsigned char>(x)).count();
 }
 
+#define POPCOUNT std::bitset<sizeof(v) * 8>(static_cast<unsigned>(v)).count()
+unsigned popcount_bitset_macro(unsigned v) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::popcount' instead [modernize-use-std-bit]
+  // No fixes, it comes from macro expansion.
+  return POPCOUNT;
+}
+
+
 /*
  * Invalid has_one_bit patterns
  */
