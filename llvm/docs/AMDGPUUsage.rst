@@ -1716,8 +1716,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Available starting GFX12.
 
   llvm.amdgcn.s.barrier.signal.isfirst             Performs a barrier *arrive* operation on the barrier *object* determined by the ``i32`` immediate argument.
-                                                   Additionally ensures that the result value is valid even when the intrinsic is used from a wave
-                                                   that is not running in a workgroup.
+                                                   Sets ``SCC=1`` if this was the first wave to *arrive* at the barrier *object*, otherwise sets ``SCC=0``.
+                                                   ``SCC=0`` is also set if the wave is not running in a workgroup.
                                                    See :ref:`amdgpu-amdhsa-execution-barriers`.
                                                    Available starting GFX12.
 
@@ -6818,6 +6818,9 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     * Resets the *arrive count* of the *barrier object* to zero.
 
   * Barrier *join*.
+
+    * Allow the thread that executes the operation to *wait* on a barrier *object*.
+
   * Barrier *drop*.
 
     * Decrements *expected count* of the barrier *object* by one.
@@ -6825,12 +6828,15 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   * Barrier *arrive*.
 
     * Increments the *arrive count* of the barrier *object* by one.
-    * Depending on the implementation, *arrive* can also update the *expected count* of the
+    * If supported, an additional argument to  *arrive* can also update the *expected count* of the
       barrier *object* before the *arrive count* is incremented;
-      the new *expected count* can never be less than or equal to the *arrive count*,
+      the new *expected count* cannot be less than or equal to the *arrive count*,
       otherwise the behavior is undefined.
 
   * Barrier *wait*.
+
+    * Introduces execution dependencies between threads; this operation depends on
+      other barrier operations to complete.
 
 * Barrier modification operations are barrier operations that modify the barrier *object* state:
 
@@ -6838,40 +6844,36 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   * Barrier *drop*.
   * Barrier *arrive*.
 
-* For a given barrier *object* ``BO``, the following relations exist in any
-  valid program execution:
+* *Thread-barrier-order<BO>* is the subset of *program-order* that only
+  relates barrier operations performed on a barrier *object* ``BO``.
+* All barrier modification operations on a barrier *object* ``BO`` occur in a strict total order called
+  *barrier-modification-order<BO>*; It is the order in which ``BO`` observes barrier
+  operations that change its state. For any valid *barrier-modification-order<BO>*, the
+  following must be true:
 
-  * *Thread-barrier-order<BO>* is the subset of *program-order* that only
-    relates barrier operations performed on ``BO``.
-  * All barrier modification operations on ``BO`` occur in a strict total order called
-    *barrier-modification-order<BO>*; It is the order in which ``BO`` observes barrier
-    operations that change its state. For any valid *barrier-modification-order<BO>*, the
-    following must be true:
+  * Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
+    *thread-barrier-order<BO>*, then ``A -> B`` is also in *barrier-modification-order<BO>*.
+  * The first element in *barrier-modification-order<BO>* is always a barrier *init*, otherwise
+    the behavior is undefined.
 
-    * Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
-      *thread-barrier-order<BO>*, then ``A -> B`` is also in *barrier-modification-order<BO>*.
-    * The first element in *barrier-modification-order<BO>* is always a barrier *init*, otherwise
-      the behavior is undefined.
+* *barrier-participates-in* relates barrier operations to the barrier *waits* that depend on them
+  to complete. A barrier operation ``X`` may *barrier-participates-in* a barrier *wait* ``W``
+  if and only if all of the following is true:
 
-  * *Barrier-participates-in<BO>* relates barrier operations to the barrier *waits* that depend on them
-    to complete. A barrier operation ``X`` may *barrier-participates-in<BO>* a barrier *wait* ``W``
-    if and only if all of the following is true:
+  * ``X`` and ``W`` are both performed on the same barrier *object* ``BO``.
+  * ``X`` is a barrier *arrive* or *drop* operation.
+  * ``X`` does not *barrier-participate-in<BO>* another distinct barrier *wait* ``W'`` in the same thread as ``W``.
+  * ``W -> X`` not in *thread-barrier-order<BO>*.
+  * All dependent constraint and relations are satisfied as well. [0]_
 
-    * ``X`` and ``W`` are both performed on ``BO``.
-    * ``X`` is a barrier *arrive* or *drop* operation.
-    * ``X`` does not *barrier-participate-in<BO>* a distinct barrier *wait* ``W'`` in the same thread as ``W``.
-    * ``W -> X`` not in *thread-barrier-order<BO>*.
-    * All dependent constraint and relations are satisfied as well. [0]_
+* For the set ``S`` consisting of all barrier operations that *barrier-participate-in<BO>* a barrier *wait* ``W`` for some
+  barrier *object* ``BO``:
 
-* Let ``S`` be the set of barrier operations that *barrier-participate-in<BO>* a barrier *wait* ``W`` for some
-  barrier *object* ``BO``, then all of the following is true.
-
-  * The elements of ``S`` all exist in a continuous interval of *barrier-modification-order<BO>*.
-  * Let ``A`` be the first operation of ``S`` in *barrier-modification-order<BO>*, then the *arrive count* of ``BO``
-    is zero before ``A`` is performed.
-  * Let ``B`` be the last operation of ``S`` in *barrier-modification-order<BO>*, then the *arrive count* and
-    *expected count* of ``BO`` are equal after ``B`` is performed. ``B`` is the only barrier operation in ``S``
-    that causes the *arrive count* and *expected count* of ``BO`` to be equal.
+  * The elements of ``S`` all exist in a continuous, uninterrupted interval of *barrier-modification-order<BO>*.
+  * The *arrive count* of ``BO`` is zero before the first operation of ``S`` in *barrier-modification-order<BO>*.
+  * The *arrive count* and *expected count* of ``BO`` are equal after the last operation of ``S`` in
+    *barrier-modification-order<BO>*. The *arrive count* and *expected count* of ``BO`` can never be
+    equal at any point point in ``S``.
 
 * A barrier *join* ``J`` is *barrier-joined-before* a barrier operation ``X`` if and only if all
   of the following is true:
@@ -6886,7 +6888,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   following is true:
 
   * ``A -> B`` in *program-order*.
-  * For some barrier *object* ``BO``, ``A-> B`` in *barrier-participates-in<BO>*.
+  * ``A-> B`` in *barrier-participates-in*.
   * ``A`` *barrier-executes-before* some barrier operation ``X``, and ``X``
     *barrier-executes-before* ``B``.
 
@@ -6901,33 +6903,27 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 * For every pair of barrier *arrive* ``A`` and barrier *drop* ``D`` performed on a barrier *object*
   ``BO``, such that ``A -> D`` in *thread-barrier-ordered<BO>*, one of the following must be true:
 
-  * If ``A`` does not *barrier-participates-in<BO>* any barrier *wait*.
-  * ``A`` *barrier-participates-in<BO>* at least one barrier *wait* ``W``
+  * ``A`` does not *barrier-participates-in* any barrier *wait*.
+  * ``A`` *barrier-participates-in at least one barrier *wait* ``W``
     such that  ``W -> D`` in *barrier-executes-before*.
 
 * For every barrier *wait* ``W`` performed on a barrier *object* ``BO``:
 
-  * There is at least one barrier operation that *barrier-participates-in<BO>* ``W``.
+  * There is at least one barrier operation that *barrier-participates-in* ``W``.
   * There is a barrier *join* ``J`` such that ``J -> W`` in *barrier-joined-before*.
-  * ``J`` must *barrier-executes-before<BO>* at least one operation ``X`` that
-    *barrier-participates-in<BO>* ``W``; otherwise, the behavior is undefined.
+  * ``J`` must *barrier-executes-before* at least one operation ``X`` that
+    *barrier-participates-in* ``W``; otherwise, the behavior is undefined.
 
-* For every barrier *join* ``J`` performed on a barrier *object* ``BO``:
-
-  * ``J`` is not *barrier-joined-before* another barrier *join*.
-
-* A barrier operation ``A`` is *barrier-phase-with* another barrier operation ``B`` if and only if:
-
-  * There exist some barrier *wait* ``W`` such that both ``A -> W`` and ``B -> W`` in
-    *barrier-participates-in<BO>* for some barrier *object* ``BO``.
-
+* *barrier-phase-with* is a symmetric relation over barrier operations defined as the
+  transitive closure of: *barrier-participates-in* and its inverse relation.
 * For every barrier operation ``A`` that *barrier-executes-before* another barrier operation ``B``,
   at least one of the following statements is true; otherwise, the behavior is undefined:
 
-  * ``A`` and ``B`` are performed on different barrier *objects*, or
-  * ``A`` *barrier-phase-with* ``B``, or
+  * ``A`` and ``B`` are performed on different barrier *objects*.
+  * ``A`` *barrier-phase-with* ``B``.
+  * Either ``A`` or ``B`` are not *barrier-phase-with* another barrier operation.
   * There is no barrier operation ``X`` such that ``B -> X`` in *barrier-executes-before* and
-    ``A -> X`` in *barrier-phase<BO>*.
+    ``A -> X`` in *barrier-phase-with*.
 
 .. note::
 
@@ -6936,10 +6932,10 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   to determine how to synchronize memory operations through *barrier-executes-before*.
 
 
-.. [0] The definition of *barrier-participates-in<BO>* (in its current state) is non-deterministic and
+.. [0] The definition of *barrier-participates-in* (in its current state) is non-deterministic and
        will be improved in the future: Within a valid execution, there may be multiple ways
-       to build *barrier-participates-in<BO>*, however there is only one way to build it that also satisfies all
-       other relations and constraints that depend on *barrier-participates-in<BO>* and relations derived from it.
+       to build *barrier-participates-in*, however there is only one way to build it that also satisfies all
+       other relations and constraints that depend on *barrier-participates-in* and relations derived from it.
 
 Target-Specific Properties
 ++++++++++++++++++++++++++
