@@ -1671,6 +1671,9 @@ public:
     enum class HookKind : uint32_t { CommandBased = 0, ScriptBased };
 
     /// Event mask bits controlling when this hook fires.
+    // FIXME: Add more event types as needed, e.g.:
+    //  kProcessExited (fires when the process exits).
+    //  kProcessDetached (fires when the debugger detaches).
     enum EventMask : uint32_t {
       kModulesLoaded = (1u << 0),
       kModulesUnloaded = (1u << 1),
@@ -1688,17 +1691,19 @@ public:
     void RemoveEvent(uint32_t event) { m_event_mask &= ~event; }
     bool FiresOn(uint32_t event) const { return m_event_mask & event; }
 
-    // Stop-hook features (only relevant when kProcessStop is set)
+    // Filter fields
 
-    /// Set the specifier. The hook will own the specifier.
-    void SetSpecifier(SymbolContextSpecifier *specifier);
-    SymbolContextSpecifier *GetSpecifier() { return m_specifier_sp.get(); }
+    /// Set the symbol context specifier. The hook takes ownership.
+    void SetSCSpecifier(SymbolContextSpecifier *specifier);
+    SymbolContextSpecifier *GetSCSpecifier() {
+      return m_sc_specifier_sp.get();
+    }
 
     /// Check if the execution context passes the specifier and thread spec
     /// filters. Always returns true if no filters are set.
     bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
 
-    /// Set the thread specifier. The hook will own the thread specifier.
+    /// Set the thread specifier. The hook takes ownership.
     void SetThreadSpecifier(ThreadSpec *specifier);
     ThreadSpec *GetThreadSpecifier() { return m_thread_spec_up.get(); }
 
@@ -1727,17 +1732,15 @@ public:
     virtual StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
                                                 lldb::StreamSP output) = 0;
 
-    void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
-    virtual void GetSubclassDescription(Stream &s,
-                                        lldb::DescriptionLevel level) const = 0;
+    virtual void GetDescription(Stream &s,
+                                lldb::DescriptionLevel level) const;
 
   protected:
     lldb::TargetSP m_target_sp;
     bool m_active = true;
     uint32_t m_event_mask = kModulesLoaded; // Default: fire on load only
 
-    // Stop-hook filter fields (only used when kProcessStop is set)
-    lldb::SymbolContextSpecifierSP m_specifier_sp;
+    lldb::SymbolContextSpecifierSP m_sc_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_auto_continue = false;
     bool m_at_initial_stop = true;
@@ -1751,11 +1754,15 @@ public:
     ~HookCommandLine() override = default;
 
     StringList &GetCommands() { return m_commands; }
+
+    /// Populate the command list by splitting a single string on newlines.
     void SetActionFromString(const std::string &string);
+
+    /// Populate the command list from a vector of individual command strings.
     void SetActionFromStrings(const std::vector<std::string> &strings);
 
-    void GetSubclassDescription(Stream &s,
-                                lldb::DescriptionLevel level) const override;
+    void GetDescription(Stream &s,
+                        lldb::DescriptionLevel level) const override;
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;
     StopHook::StopHookResult HandleStop(ExecutionContext &exe_ctx,
@@ -1773,8 +1780,8 @@ public:
   public:
     ~HookScripted() override = default;
 
-    void GetSubclassDescription(Stream &s,
-                                lldb::DescriptionLevel level) const override;
+    void GetDescription(Stream &s,
+                        lldb::DescriptionLevel level) const override;
 
     void HandleModuleLoaded(lldb::StreamSP output) override;
     void HandleModuleUnloaded(lldb::StreamSP output) override;

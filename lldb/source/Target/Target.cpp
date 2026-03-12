@@ -4319,7 +4319,8 @@ Target::Hook::Hook(lldb::TargetSP target_sp, lldb::user_id_t uid)
 
 Target::Hook::Hook(const Hook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp), m_active(rhs.m_active),
-      m_event_mask(rhs.m_event_mask), m_specifier_sp(rhs.m_specifier_sp),
+      m_event_mask(rhs.m_event_mask),
+      m_sc_specifier_sp(rhs.m_sc_specifier_sp),
       m_auto_continue(rhs.m_auto_continue),
       m_at_initial_stop(rhs.m_at_initial_stop),
       m_suppress_output(rhs.m_suppress_output) {
@@ -4327,8 +4328,8 @@ Target::Hook::Hook(const Hook &rhs)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
 }
 
-void Target::Hook::SetSpecifier(SymbolContextSpecifier *specifier) {
-  m_specifier_sp.reset(specifier);
+void Target::Hook::SetSCSpecifier(SymbolContextSpecifier *specifier) {
+  m_sc_specifier_sp.reset(specifier);
 }
 
 void Target::Hook::SetThreadSpecifier(ThreadSpec *specifier) {
@@ -4336,13 +4337,13 @@ void Target::Hook::SetThreadSpecifier(ThreadSpec *specifier) {
 }
 
 bool Target::Hook::ExecutionContextPasses(const ExecutionContext &exc_ctx) {
-  SymbolContextSpecifier *specifier = GetSpecifier();
+  SymbolContextSpecifier *specifier = GetSCSpecifier();
   if (!specifier)
     return true;
 
   bool will_run = true;
   if (exc_ctx.GetFramePtr())
-    will_run = GetSpecifier()->SymbolContextMatches(
+    will_run = specifier->SymbolContextMatches(
         exc_ctx.GetFramePtr()->GetSymbolContext(eSymbolContextEverything));
   if (will_run && GetThreadSpecifier() != nullptr)
     will_run =
@@ -4360,7 +4361,6 @@ void Target::Hook::GetDescription(Stream &s,
   s.Indent();
   s.Printf("State: %s\n", m_active ? "enabled" : "disabled");
 
-  // Show which events this hook fires on (only if not the default: load only)
   if (m_event_mask != kModulesLoaded) {
     std::string fires_on;
     if (m_event_mask & kModulesLoaded)
@@ -4382,11 +4382,11 @@ void Target::Hook::GetDescription(Stream &s,
   if (m_auto_continue)
     s.Indent("AutoContinue on\n");
 
-  if (m_specifier_sp) {
+  if (m_sc_specifier_sp) {
     s.Indent();
     s.PutCString("Specifier:\n");
     s.IndentMore();
-    m_specifier_sp->GetDescription(&s, level);
+    m_sc_specifier_sp->GetDescription(&s, level);
     s.IndentLess();
   }
 
@@ -4400,7 +4400,28 @@ void Target::Hook::GetDescription(Stream &s,
     s.IndentLess();
   }
 
-  GetSubclassDescription(s, level);
+  s.IndentLess();
+}
+
+void Target::HookCommandLine::GetDescription(
+    Stream &s, lldb::DescriptionLevel level) const {
+  Hook::GetDescription(s, level);
+  if (level == eDescriptionLevelBrief) {
+    if (m_commands.GetSize() == 1)
+      s.PutCString(m_commands.GetStringAtIndex(0));
+    else
+      s.Printf("%" PRIu64 " commands", (uint64_t)m_commands.GetSize());
+    return;
+  }
+
+  s.IndentMore();
+  s.Indent("Commands: \n");
+  s.IndentMore();
+  for (uint32_t i = 0; i < m_commands.GetSize(); i++) {
+    s.Indent(m_commands.GetStringAtIndex(i));
+    s.PutCString("\n");
+  }
+  s.IndentLess();
   s.IndentLess();
 }
 
@@ -4414,25 +4435,6 @@ void Target::HookCommandLine::SetActionFromStrings(
     const std::vector<std::string> &strings) {
   for (const auto &string : strings)
     GetCommands().AppendString(string.c_str());
-}
-
-void Target::HookCommandLine::GetSubclassDescription(
-    Stream &s, lldb::DescriptionLevel level) const {
-  if (level == eDescriptionLevelBrief) {
-    if (m_commands.GetSize() == 1)
-      s.PutCString(m_commands.GetStringAtIndex(0));
-    else
-      s.Printf("%" PRIu64 " commands", (uint64_t)m_commands.GetSize());
-    return;
-  }
-
-  s.Indent("Commands: \n");
-  s.IndentMore();
-  for (uint32_t i = 0; i < m_commands.GetSize(); i++) {
-    s.Indent(m_commands.GetStringAtIndex(i));
-    s.PutCString("\n");
-  }
-  s.IndentLess();
 }
 
 void Target::HookCommandLine::HandleModuleLoaded(StreamSP output_sp) {
@@ -4579,28 +4581,39 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
                              : StopHook::StopHookResult::RequestContinue;
 }
 
-void Target::HookScripted::GetSubclassDescription(
+void Target::HookScripted::GetDescription(
     Stream &s, lldb::DescriptionLevel level) const {
+  Hook::GetDescription(s, level);
   if (level == eDescriptionLevelBrief) {
     s.PutCString(m_class_name);
     return;
   }
+
+  s.IndentMore();
   s.Indent("Class:");
   s.Printf("%s\n", m_class_name.c_str());
 
-  if (!m_extra_args.IsValid())
+  if (!m_extra_args.IsValid()) {
+    s.IndentLess();
     return;
+  }
   StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
-  if (!object_sp || !object_sp->IsValid())
+  if (!object_sp || !object_sp->IsValid()) {
+    s.IndentLess();
     return;
+  }
 
   StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
-  if (!as_dict || !as_dict->IsValid())
+  if (!as_dict || !as_dict->IsValid()) {
+    s.IndentLess();
     return;
+  }
 
   uint32_t num_keys = as_dict->GetSize();
-  if (num_keys == 0)
+  if (num_keys == 0) {
+    s.IndentLess();
     return;
+  }
 
   s.Indent("Args:\n");
   s.IndentMore();
@@ -4613,6 +4626,7 @@ void Target::HookScripted::GetSubclassDescription(
   };
 
   as_dict->ForEach(print_one_element);
+  s.IndentLess();
   s.IndentLess();
 }
 

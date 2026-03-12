@@ -5726,7 +5726,7 @@ protected:
             m_options.m_function_name.c_str(),
             SymbolContextSpecifier::eFunctionSpecified);
 
-      hook_sp->SetSpecifier(specifier_up.release());
+      hook_sp->SetSCSpecifier(specifier_up.release());
     }
 
     // Set up thread specifier.
