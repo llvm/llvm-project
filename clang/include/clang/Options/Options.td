@@ -1035,7 +1035,7 @@ def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
-  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA">,
+  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA || (LangOpts->OpenCL && LangOpts->OpenCLVersion <= 120)">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
@@ -5688,6 +5688,8 @@ def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Fea
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
 def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mrelaxed_atomics : Flag<["-"], "mrelaxed-atomics">, Group<m_wasm_Features_Group>;
+def mno_relaxed_atomics : Flag<["-"], "mno-relaxed-atomics">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
@@ -7607,6 +7609,11 @@ defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], [ClangOption], "Allocate array temporaries on the heap (default)">>;
+
+defm safe_trampoline : BoolOptionWithoutMarshalling<"f",
+  "safe-trampoline",
+  PosFlag<SetTrue, [], [FlangOption], "Use W^X compliant runtime trampoline pool for internal procedures">,
+  NegFlag<SetFalse, [], [FlangOption], "Use stack-based trampolines for internal procedures (default, may require executable stack)">>;
 
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
@@ -9835,6 +9842,8 @@ def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
+def dxc_Fre : DXCJoinedOrSeparate<"Fre">,
+              HelpText<"Set output file name for reflection files">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,

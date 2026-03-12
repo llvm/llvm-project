@@ -28,6 +28,14 @@
 #include <type_traits>
 #include <utility>
 
+namespace Fortran::parser::omp {
+struct ExecutionPartIterator;
+struct LoopNestIterator;
+template <typename T> struct ExecutionPartRange;
+using BlockRange = ExecutionPartRange<ExecutionPartIterator>;
+using LoopRange = ExecutionPartRange<LoopNestIterator>;
+} // namespace Fortran::parser::omp
+
 namespace Fortran::semantics {
 class Scope;
 class SemanticsContext;

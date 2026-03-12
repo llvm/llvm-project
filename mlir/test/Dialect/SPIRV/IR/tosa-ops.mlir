@@ -529,3 +529,91 @@ spirv.ARM.Graph @table_int(%arg0: !spirv.arm.tensor<3x2x15x7xi8>) -> (!spirv.arm
   // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<3x2x15x7xi8>
   spirv.ARM.GraphOutputs %1 : !spirv.arm.tensor<3x2x15x7xi8>
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Abs - PRO-INT
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @abs_int(%arg0: !spirv.arm.tensor<5x1x4x4xi32>) -> (!spirv.arm.tensor<5x1x4x4xi32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Abs %arg0 : !spirv.arm.tensor<5x1x4x4xi32> -> !spirv.arm.tensor<5x1x4x4xi32>
+  %0 = spirv.Tosa.Abs %arg0 : !spirv.arm.tensor<5x1x4x4xi32> -> !spirv.arm.tensor<5x1x4x4xi32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<5x1x4x4xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<5x1x4x4xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Abs - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @abs_fp(%arg0: !spirv.arm.tensor<3x6x14x8xf16>) -> (!spirv.arm.tensor<3x6x14x8xf16>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Abs %arg0 : !spirv.arm.tensor<3x6x14x8xf16> -> !spirv.arm.tensor<3x6x14x8xf16>
+  %0 = spirv.Tosa.Abs %arg0 : !spirv.arm.tensor<3x6x14x8xf16> -> !spirv.arm.tensor<3x6x14x8xf16>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<3x6x14x8xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<3x6x14x8xf16>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.BitwiseNot - PRO-INT
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @bitwisenot_int(%arg0: !spirv.arm.tensor<12x56x50xi32>) -> (!spirv.arm.tensor<12x56x50xi32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.BitwiseNot %arg0 : !spirv.arm.tensor<12x56x50xi32> -> !spirv.arm.tensor<12x56x50xi32>
+  %0 = spirv.Tosa.BitwiseNot %arg0 : !spirv.arm.tensor<12x56x50xi32> -> !spirv.arm.tensor<12x56x50xi32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<12x56x50xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<12x56x50xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Ceil - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @ceil_fp(%arg0: !spirv.arm.tensor<46x55x53xf16>) -> (!spirv.arm.tensor<46x55x53xf16>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Ceil %arg0 : !spirv.arm.tensor<46x55x53xf16> -> !spirv.arm.tensor<46x55x53xf16>
+  %0 = spirv.Tosa.Ceil %arg0 : !spirv.arm.tensor<46x55x53xf16> -> !spirv.arm.tensor<46x55x53xf16>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<46x55x53xf16>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<46x55x53xf16>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Clz - PRO-INT
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @clz_int(%arg0: !spirv.arm.tensor<14x10x7x5xi32>) -> (!spirv.arm.tensor<14x10x7x5xi32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Clz %arg0 : !spirv.arm.tensor<14x10x7x5xi32> -> !spirv.arm.tensor<14x10x7x5xi32>
+  %0 = spirv.Tosa.Clz %arg0 : !spirv.arm.tensor<14x10x7x5xi32> -> !spirv.arm.tensor<14x10x7x5xi32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<14x10x7x5xi32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<14x10x7x5xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Cos - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @cos_fp(%arg0: !spirv.arm.tensor<44x49x51xf32>) -> (!spirv.arm.tensor<44x49x51xf32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Cos %arg0 : !spirv.arm.tensor<44x49x51xf32> -> !spirv.arm.tensor<44x49x51xf32>
+  %0 = spirv.Tosa.Cos %arg0 : !spirv.arm.tensor<44x49x51xf32> -> !spirv.arm.tensor<44x49x51xf32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<44x49x51xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<44x49x51xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Exp - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @exp_fp(%arg0: !spirv.arm.tensor<37x53x47xf32>) -> (!spirv.arm.tensor<37x53x47xf32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Exp %arg0 : !spirv.arm.tensor<37x53x47xf32> -> !spirv.arm.tensor<37x53x47xf32>
+  %0 = spirv.Tosa.Exp %arg0 : !spirv.arm.tensor<37x53x47xf32> -> !spirv.arm.tensor<37x53x47xf32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<37x53x47xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<37x53x47xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Floor - PRO-FP
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @floor_fp(%arg0: !spirv.arm.tensor<40x52x42xf32>) -> (!spirv.arm.tensor<40x52x42xf32>) {
+  // CHECK: {{%.*}} = spirv.Tosa.Floor %arg0 : !spirv.arm.tensor<40x52x42xf32> -> !spirv.arm.tensor<40x52x42xf32>
+  %0 = spirv.Tosa.Floor %arg0 : !spirv.arm.tensor<40x52x42xf32> -> !spirv.arm.tensor<40x52x42xf32>
+  // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<40x52x42xf32>
+  spirv.ARM.GraphOutputs %0 : !spirv.arm.tensor<40x52x42xf32>
+}
