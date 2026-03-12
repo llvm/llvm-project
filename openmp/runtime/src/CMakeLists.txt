@@ -433,7 +433,6 @@ else()
             DESTINATION "${OPENMP_INSTALL_LIBDIR}")
     install(EXPORT openmpTargets FILE openmpTargets.cmake NAMESPACE OpenMP::
             DESTINATION ${OPENMP_INSTALL_CFGDIR}/openmp)
-    target_include_directories(omp PUBLIC $<INSTALL_INTERFACE:${LIBOMP_HEADERS_INSTALL_PATH}>)
   endif()
 
   # Create cmake configuration files
