@@ -16966,7 +16966,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   }
 
   // Ensure Op is a binary operation before accessing its operands.
-  if (Op.getNumOperands() < 2)
+  if (Op.getNumOperands() != 2)
     return SDValue();
 
   SDValue LHS = Op.getOperand(0);
