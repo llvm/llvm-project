@@ -1381,12 +1381,15 @@ bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
-  // If C++ prohibits us from making a copy, return by address.
+  // If C++ prohibits us from making a copy, return by address using the
+  // language default AS.  The alloca AS would force callers to provide a
+  // stack pointer, which is invalid when the destination is a default AS
+  // and prohibited for types with deleted copy/move constructors.
   if (!RD->canPassInRegisters()) {
     auto Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(
-        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/false);
+    auto DefaultAS = CGM.getContext().getTargetAddressSpace(LangAS::Default);
+    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*AddrSpace=*/DefaultAS,
+                                                 /*ByVal=*/false);
     return true;
   }
   return false;

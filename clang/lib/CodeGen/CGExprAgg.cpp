@@ -309,13 +309,6 @@ void AggExprEmitter::withReturnValueSlot(
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
-    if (RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
-      llvm::Type *SRetPtrTy =
-          llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
-      RetAddr = RetAddr.withPointer(
-          CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
-          RetAddr.isKnownNonNull());
-    }
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
     if (CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
