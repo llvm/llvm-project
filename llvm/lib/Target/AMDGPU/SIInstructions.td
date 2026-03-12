@@ -4046,12 +4046,12 @@ def : GCNPat <
 
 def : GCNPat <
   (v4i16 (scalar_to_vector i16:$src0)),
-  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
-  (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
+  (REG_SEQUENCE VReg_64, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
 }
 
