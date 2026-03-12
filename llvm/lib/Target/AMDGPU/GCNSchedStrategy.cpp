@@ -102,7 +102,7 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
+    cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
@@ -1280,6 +1280,99 @@ bool GCNSchedStage::initGCNSchedStage() {
   return true;
 }
 
+bool RewriteMFMAFormStage::getDefsFromLiveInterval(
+    LiveInterval &LI, SlotIndex Idx, LaneBitmask UseLanes,
+    SmallVectorImpl<SlotIndex> &DefIdxs) {
+
+  if (!LI.hasSubRanges()) {
+    // No subranges - use main interval
+    VNInfo *VNI = LI.getVNInfoAt(Idx);
+    if (!VNI)
+      return false;
+
+    if (!VNI->isPHIDef()) {
+      DefIdxs.push_back(VNI->def);
+      return false;
+    }
+    return true; // Has PHI, need traversal
+  }
+
+  bool NeedsPredTraversal = false;
+  for (LiveInterval::SubRange &SR : LI.subranges()) {
+    // Only check subranges that cover lanes we're using
+    if ((SR.LaneMask & UseLanes).none())
+      continue;
+
+    VNInfo *SubVNI = SR.getVNInfoAt(Idx);
+    if (!SubVNI)
+      continue;
+
+    // Need to look for duplicates before adding to vector as there may
+    // be multiple subregs assigned by the same def.
+    if (!SubVNI->isPHIDef() && !llvm::is_contained(DefIdxs, SubVNI->def)) {
+      // Direct def - this def writes to these lanes.
+      DefIdxs.push_back(SubVNI->def);
+    } else {
+      // PHI def - will need to traverse predecessors.
+      NeedsPredTraversal = true;
+    }
+  }
+
+  return NeedsPredTraversal;
+}
+
+// TODO:  if appropriate, replace findReachingDefs with this implementation
+// when all of RewriteMFMFormStage is subreg aware.  If it is no longer
+// needed in that implementation, then delete it.
+void RewriteMFMAFormStage::findReachingDefsSubRegAware(
+    MachineOperand &UseMO, LiveIntervals *LIS,
+    SmallVectorImpl<SlotIndex> &DefIdxs) {
+  MachineInstr *UseMI = UseMO.getParent();
+  LiveInterval &UseLI = LIS->getInterval(UseMO.getReg());
+  SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
+
+  // Determine which lanes the use reads.
+  LaneBitmask UseLanes = LaneBitmask::getAll();
+  if (UseMO.getSubReg() != 0) {
+    UseLanes = DAG.TRI->getSubRegIndexLaneMask(UseMO.getSubReg());
+  }
+
+  // Get the definitions that reach this use by looking at the LiveInterval
+  // for the register and looking at subranges (if any).  Continue traversal
+  // if any PHI nodes are encountered.
+  if (!getDefsFromLiveInterval(UseLI, UseIdx, UseLanes, DefIdxs))
+    return;
+
+  SmallPtrSet<MachineBasicBlock *, 8> Visited = {UseMI->getParent()};
+  SmallVector<MachineBasicBlock *, 8> Worklist;
+
+  // Mark the predecessor blocks for traversal
+  for (MachineBasicBlock *PredMBB : UseMI->getParent()->predecessors()) {
+    Worklist.push_back(PredMBB);
+    Visited.insert(PredMBB);
+  }
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *CurrMBB = Worklist.pop_back_val();
+    SlotIndex CurrMBBEnd = LIS->getMBBEndIdx(CurrMBB);
+    SlotIndex CurrIdx = CurrMBBEnd.getPrevSlot();
+
+    // If there is a def in this block, then add it to the list. This is the
+    // reaching def of this path.  We will travese predecessors if any of the
+    // subregs of UseMO are defined by a PHI.
+    if (!getDefsFromLiveInterval(UseLI, CurrIdx, UseLanes, DefIdxs))
+      continue;
+
+    VNInfo *VNI = UseLI.getVNInfoAt(CurrIdx);
+    MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(VNI->def);
+
+    for (MachineBasicBlock *PredMBB : DefMBB->predecessors()) {
+      if (Visited.insert(PredMBB).second)
+        Worklist.push_back(PredMBB);
+    }
+  }
+}
+
 void RewriteMFMAFormStage::findReachingDefs(
     MachineOperand &UseMO, LiveIntervals *LIS,
     SmallVectorImpl<SlotIndex> &DefIdxs) {
@@ -2232,11 +2325,131 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   return AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) != -1;
 }
 
+bool RewriteMFMAFormStage::canSafelyConvertToAGPR(Register Reg) {
+  if (!Reg.isVirtual())
+    return true;
+
+  for (MachineOperand &UseOp : DAG.MRI.use_nodbg_operands(Reg)) {
+    MachineInstr *UseMI = UseOp.getParent();
+
+    // Rewrite candidates can use the source as an AGPR.
+    if (isRewriteCandidate(UseMI))
+      continue;
+
+    // If the use is a COPY, the source of the COPY can be converted
+    // to an AGPR if the destination is a VGPR.
+    if (UseMI->isCopy()) {
+      Register DstReg = UseMI->getOperand(0).getReg();
+      const TargetRegisterClass *RC = DAG.MRI.getRegClass(DstReg);
+      if (SRI->hasVGPRs(RC))
+        continue;
+    }
+
+    // Non-MAI use.  Check reaching defs using subreg-aware analysis.
+    SmallVector<SlotIndex, 8> ReachingDefIndexes;
+    findReachingDefsSubRegAware(UseOp, DAG.LIS, ReachingDefIndexes);
+
+    // Check if at least one MAI def reaches this use.
+    bool HasMAIDef = false;
+    SmallVector<MachineInstr *, 4> PartialRedefs;
+
+    for (SlotIndex DefIdx : ReachingDefIndexes) {
+      MachineInstr *DefMI = DAG.LIS->getInstructionFromIndex(DefIdx);
+      if (!DefMI)
+        continue;
+
+      // If the destination of the definition isn't a register, this is
+      // likely an inline asm or other special instruction. In such cases,
+      // we conservatively bail since we can't analyze the definition.
+      MachineOperand &DefMO = DefMI->getOperand(0);
+      if (!DefMO.isReg())
+        return false;
+
+      if (isRewriteCandidate(DefMI)) {
+        HasMAIDef = true;
+        continue;
+      }
+
+      // Check for partial redef.
+      if (DefMO.getReg() == Reg && DefMO.getSubReg() != 0) {
+        PartialRedefs.push_back(DefMI);
+      }
+    }
+
+    if (!HasMAIDef)
+      return false;
+
+    // For each partial redef that reaches this use, check if it merges with
+    // an MFMA def. A partial write like "%reg.sub2 = COPY ..." implicitly uses
+    // the existing value of %reg (for the other subregs). If an MFMA value
+    // reaches the point of the partial write, then the partial write creates a
+    // merged value combining AGPR lanes from the MFMA with the new value which
+    // rewrite() cannot handle correctly.
+    for (MachineInstr *PartialRedef : PartialRedefs) {
+      SlotIndex PartialRedefIdx = DAG.LIS->getInstructionIndex(*PartialRedef);
+      LiveInterval &LI = DAG.LIS->getInterval(Reg);
+
+      // Get what's live just before the partial write.
+      VNInfo *VNI = LI.getVNInfoBefore(PartialRedefIdx);
+      // If there's no prior def, then this is an initialization and is safe.
+      if (!VNI)
+        continue;
+
+      // If it's a PHI def, conservatively bail if there's any MFMA def
+      // in the live interval (the MFMA might flow through the PHI).
+      if (VNI->isPHIDef()) {
+        for (const VNInfo *CheckVNI : LI.valnos) {
+          if (!CheckVNI || CheckVNI->isPHIDef())
+            continue;
+          MachineInstr *Def = DAG.LIS->getInstructionFromIndex(CheckVNI->def);
+          if (Def && isRewriteCandidate(Def)) {
+            return false;
+          }
+        }
+        continue;
+      }
+
+      // Not a PHI, so check the single reaching def. If it's an MFMA, the
+      // partial rewrite is definitely something that rewrite() cannot handle.
+      MachineInstr *ReachingDef = DAG.LIS->getInstructionFromIndex(VNI->def);
+      if (ReachingDef && isRewriteCandidate(ReachingDef)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 bool RewriteMFMAFormStage::initHeuristics(
     std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   bool Changed = false;
+
+  // This is a workaround for a bug.  If we have a redefinition of all
+  // or part of a candidate for rewrite, the current implementation of
+  // rewrite() won't see this definition and the need for a copy in the
+  // case of a partial def or a new temp for a full def.  More than that,
+  // it's not accounted for in the cost analysis either.  A new
+  // implementation of rewrite() is in the works and it will handle this
+  // type of code.
+  // TODO: this code should be removed and getRewriteCost()when rewrite()
+  // is reimplemented.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isRewriteCandidate(&MI))
+        continue;
+      Register DstReg = MI.getOperand(0).getReg();
+      if (!canSafelyConvertToAGPR(DstReg))
+        return false;
+
+      MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+      if (Src2 && Src2->isReg() && Src2->getReg() != DstReg &&
+          !canSafelyConvertToAGPR(Src2->getReg()))
+          return false;
+    }
+  }
 
   // Prepare for the heuristics
   for (MachineBasicBlock &MBB : MF) {
@@ -2758,7 +2971,6 @@ bool RewriteMFMAFormStage::rewrite(
 
     const TargetRegisterClass *CurrRC = DAG.MRI.getRegClass(RegToRewrite);
     const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(CurrRC);
-
     DAG.MRI.setRegClass(RegToRewrite, AGPRRC);
   }
 

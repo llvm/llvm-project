@@ -473,13 +473,28 @@ private:
   /// \returns true if this MI is a rewrite candidate.
   bool isRewriteCandidate(MachineInstr *MI) const;
 
+  /// \returns true if this register can safely be converted to AGPR.
+  bool canSafelyConvertToAGPR(Register Reg);
+
+  /// Finds all the defs from SubRanges (if any) that define lanes found in
+  /// UseLanes.  Returns false if any of the SubRanges defining any of those
+  /// lanes is a PHI.
+  bool getDefsFromLiveInterval(LiveInterval &LI, SlotIndex Idx,
+                               LaneBitmask UseLanes,
+                               SmallVectorImpl<SlotIndex> &DefIdxs);
+
+  /// Finds all the reaching defs of \p UseMO and stores the SlotIndexes into \p
+  /// DefIdxs. Tracks subregs.
+  void findReachingDefsSubRegAware(MachineOperand &UseMO, LiveIntervals *LIS,
+                                   SmallVectorImpl<SlotIndex> &DefIdxs);
+
   /// Finds all the reaching defs of \p UseMO and stores the SlotIndexes into \p
   /// DefIdxs
   void findReachingDefs(MachineOperand &UseMO, LiveIntervals *LIS,
                         SmallVectorImpl<SlotIndex> &DefIdxs);
 
   /// Finds all the reaching uses of \p DefMI and stores the use operands in \p
-  /// ReachingUses
+  /// ReachingUses.
   void findReachingUses(MachineInstr *DefMI, LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
