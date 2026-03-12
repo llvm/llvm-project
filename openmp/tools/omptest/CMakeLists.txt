@@ -87,6 +87,10 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
   # available to dependant targets, e.g. for unit tests.
   target_link_libraries(omptest PUBLIC default_gtest)
 
+  # Link against Threads (recommended for GTest).
+  find_package(Threads REQUIRED)
+  target_link_libraries(omptest PUBLIC Threads::Threads)
+
   # Ensure that embedded GTest symbols are exported from libomptest.so even in
   # builds that default to hidden.
   set_target_properties(omptest PROPERTIES
