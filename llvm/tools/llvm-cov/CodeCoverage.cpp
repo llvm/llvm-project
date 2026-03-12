@@ -690,7 +690,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "debug-file-directory",
       cl::desc("Directories to search for object files by build ID"));
   cl::opt<bool> Debuginfod(
-      "debuginfod", cl::ZeroOrMore,
+      "debuginfod",
       cl::desc("Use debuginfod to look up object files from profile"),
       cl::init(canUseDebuginfod()));
 
