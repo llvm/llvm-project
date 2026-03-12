@@ -1489,3 +1489,32 @@ def testGetParentOfType():
             assert False, "expected TypeError"
         except TypeError:
             pass
+
+
+# CHECK-LABEL: TEST: test_get_ops_of_type
+@run
+def test_get_ops_of_type():
+    with Context(), Location.unknown():
+        module = Module.parse("""
+            module {
+                func.func @f() { return }
+                func.func @g() { return }
+            }
+        """)
+
+        # CHECK: get_ops_of_type func.func count: 2
+        results = get_ops_of_type(module, func.FuncOp)
+        print(f"get_ops_of_type func.func count: {len(results)}")
+        assert len(results) == 2
+        assert all(isinstance(r, func.FuncOp) for r in results)
+
+        # CHECK: get_ops_of_type scf.for count: 0
+        results = get_ops_of_type(module, scf.ForOp)
+        print(f"get_ops_of_type scf.for count: {len(results)}")
+        assert len(results) == 0
+
+        # Accepts OpView as root.
+        func_op = get_ops_of_type(module, func.FuncOp)[0]
+        results = get_ops_of_type(func_op, func.ReturnOp)
+        assert len(results) == 1
+        assert isinstance(results[0], func.ReturnOp)
