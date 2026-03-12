@@ -1,4 +1,4 @@
-//===-- HTTPServerTests.cpp - unit tests ----------------------------------===//
+//===-- llvm/unittest/Support/HTTPServer.cpp - unit tests -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/Debuginfod/HTTPServer.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
-#include "llvm/Support/HTTP/HTTPServer.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -237,15 +237,15 @@ TEST_F(HTTPClientServerTest, ClientTimeout) {
 TEST_F(HTTPClientServerTest, PathMatching) {
   HTTPServer Server;
 
-  EXPECT_THAT_ERROR(Server.get(R"(/abc/(.*)/(.*))",
-                               [&](HTTPServerRequest &Request) {
-                                 EXPECT_EQ(Request.UrlPath, "/abc/1/2");
-                                 ASSERT_THAT(Request.UrlPathMatches,
-                                             testing::ElementsAre("1", "2"));
-                                 Request.setResponse(
-                                     {200u, "text/plain", Request.UrlPath});
-                               }),
-                    Succeeded());
+  EXPECT_THAT_ERROR(
+      Server.get(R"(/abc/(.*)/(.*))",
+                 [&](HTTPServerRequest &Request) {
+                   EXPECT_EQ(Request.UrlPath, "/abc/1/2");
+                   ASSERT_THAT(Request.UrlPathMatches,
+                               testing::ElementsAre("1", "2"));
+                   Request.setResponse({200u, "text/plain", Request.UrlPath});
+                 }),
+      Succeeded());
   EXPECT_THAT_ERROR(Server.get(UrlPathPattern,
                                [&](HTTPServerRequest &Request) {
                                  llvm_unreachable(
