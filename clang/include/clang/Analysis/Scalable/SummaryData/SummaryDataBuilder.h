@@ -74,10 +74,10 @@ public:
   /// Used by SummaryDataBuilderRegistry::Add to derive the registry entry name.
   static SummaryName summaryName() { return DataT::summaryName(); }
 
+protected:
   /// Typed customization point — concrete builders override this.
   virtual void addSummary(EntityId Id, std::unique_ptr<SummaryT> Summary) = 0;
 
-protected:
   DataT &getData() & { return *Data; }
 
 private:
