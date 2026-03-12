@@ -694,7 +694,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
 
   if (langOpts.SYCLIsDevice &&
       (!d || d->getType().getAddressSpace() == LangAS::Default))
-    llvm_unreachable("NYI");
+    errorNYI("SYCL global address space");
 
   if (langOpts.CUDA && langOpts.CUDAIsDevice) {
     if (d) {
@@ -711,7 +711,7 @@ LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
   }
 
   if (langOpts.OpenMP)
-    llvm_unreachable("NYI");
+    errorNYI("OpenMP global address space");
 
   return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
@@ -801,7 +801,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     assert(!cir::MissingFeatures::setDLLStorageClass());
     assert(!cir::MissingFeatures::openMP());
 
-    if (entry.getSymType() == ty)
+    if (entry.getSymType() == ty &&
+        (cir::isMatchingAddressSpace(entry.getAddrSpaceAttr(), langAS)))
       return entry;
 
     // If there are two attempts to define the same mangled name, issue an
