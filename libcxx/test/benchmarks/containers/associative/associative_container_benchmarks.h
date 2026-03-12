@@ -89,7 +89,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Constructors
   /////////////////////////
-  bench("ctor(const&)", [=](auto& st) {
+  bench("ctor(const Self&)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -110,7 +110,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(const&, alloc)", [=](auto& st) {
+  bench("ctor(const Self&, const allocator_type&)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -131,7 +131,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("ctor(&&, different allocs)", [=](auto& st) {
+  bench("ctor(Self&&, const allocator_type&) (different allocs)", [=](auto& st) {
     using PMRContainer = adapt_operations<Container>::template rebind_alloc<
         std::pmr::polymorphic_allocator<typename Container::value_type>>;
 
@@ -213,7 +213,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Assignment
   /////////////////////////
-  bench("operator=(const&) (into cleared Container)", [=](auto& st) {
+  bench("operator=(const Self&) (into cleared Container)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -234,7 +234,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("operator=(const&) (into partially populated Container)", [=](auto& st) {
+  bench("operator=(const Self&) (into partially populated Container)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -255,7 +255,7 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("operator=(const&) (into populated Container)", [=](auto& st) {
+  bench("operator=(const Self&) (into populated Container)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -273,7 +273,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Insertion
   /////////////////////////
-  bench_non_empty("insert(value) (already present)", [=](auto& st) {
+  bench_non_empty("insert(const value_type&) (already present)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Value to_insert        = in[in.size() / 2]; // pick any existing value

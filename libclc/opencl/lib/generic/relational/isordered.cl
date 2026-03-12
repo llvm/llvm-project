@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/relational/clc_isordered.h"
+#include <clc/relational/clc_isordered.h>
 
 #define __CLC_FUNCTION isordered
 #define __CLC_BODY "binary_def.inc"
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>

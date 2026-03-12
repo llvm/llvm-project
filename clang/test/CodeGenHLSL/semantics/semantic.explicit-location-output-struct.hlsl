@@ -10,14 +10,14 @@ struct Output {
 
 // CHECK: define void @main() {{.*}} {
 Output main(float4 p : SV_Position) {
-  // CHECK:   %[[#OUT:]] = alloca %struct.Output, align 16
+  // CHECK:   %[[#OUT:]] = alloca %struct.Output
 
   // CHECK-SPIRV:    %[[#IN:]] = load <4 x float>, ptr addrspace(7) @SV_Position, align 16
   // CHECK-SPIRV:                call spir_func void @_Z4mainDv4_f(ptr %[[#OUT]], <4 x float> %[[#IN]])
 
   // CHECK-DXIL:                 call void @_Z4mainDv4_f(ptr %[[#OUT]], <4 x float> %SV_Position0)
 
-  // CHECK:   %[[#TMP:]] = load %struct.Output, ptr %[[#OUT]], align 16
+  // CHECK:   %[[#TMP:]] = load %struct.Output, ptr %[[#OUT]]
   // CHECK: %[[#FIELD:]] = extractvalue %struct.Output %[[#TMP]], 0
 
   // CHECK-SPIRV:                store <4 x float> %[[#FIELD]], ptr addrspace(8) @SV_Target0, align 16

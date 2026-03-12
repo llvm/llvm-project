@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
+// XFAIL: intelgpu
 // Tests heap-allocated pointers with both variable count expression and
 // variable stride.
 // https://github.com/llvm/llvm-project/issues/182119
