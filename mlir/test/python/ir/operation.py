@@ -1326,13 +1326,17 @@ def testOpWalk():
 
     # Test op_class filter: only visits ops of the requested type.
     module = Module.parse(
-        """
-        module {
-            func.func @f() { return }
-            func.func @g() { return }
-            arith.constant dense<0> : tensor<i32>
-        }
-    """,
+        r"""
+    module {
+      func.func @f() {
+        func.return
+      }
+      func.func @g() {
+        func.return
+      }
+      arith.constant dense<0> : tensor<i32>
+    }
+  """,
         ctx,
     )
 
