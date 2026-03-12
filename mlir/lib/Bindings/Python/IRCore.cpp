@@ -3949,7 +3949,7 @@ void populateIRCore(nb::module_ &m) {
           "callback"_a, "walk_order"_a = PyWalkOrder::PostOrder,
           "op_class"_a = nb::none(),
           // clang-format off
-           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = WalkOrder.POST_ORDER, op_class: type[OpView] | None = None) -> None"),
+           nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = ..., op_class: type[OpView] | None = None) -> None"),
           // clang-format on
           R"(
              Walks the operation tree with a callback function.
