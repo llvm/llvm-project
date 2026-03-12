@@ -11,7 +11,6 @@
 #include "DAPLog.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
-#include "SBTestingSupport/SBTestUtilities.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/MainLoop.h"

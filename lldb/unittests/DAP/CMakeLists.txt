@@ -26,7 +26,6 @@ add_lldb_unittest(DAPTests
     liblldb
     lldbDAP
     lldbUtilityHelpers
-    lldbSBUtilityHelpers
     LLVMTestingSupport
   )
 
