@@ -233,6 +233,16 @@ class APIDefaultConstructorTestCase(TestBase):
 
         sb_module.fuzz_obj(obj)
 
+    def test_SBModuleSpec(self):
+        obj = lldb.SBModuleSpec()
+        if self.TraceOn():
+            print(obj)
+        self.assertFalse(obj)
+        # Do fuzz testing on the invalid obj, it should not crash lldb.
+        import sb_modulespec
+
+        sb_modulespec.fuzz_obj(obj)
+
     def test_SBProcess(self):
         obj = lldb.SBProcess()
         if self.TraceOn():

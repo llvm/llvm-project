@@ -177,6 +177,16 @@ const uint8_t *SBModule::GetUUIDBytes() const {
   return uuid_bytes;
 }
 
+size_t SBModule::GetUUIDLength() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  const ModuleSP module_sp(GetSP());
+  if (module_sp)
+    return module_sp->GetUUID().GetBytes().size();
+
+  return 0;
+}
+
 const char *SBModule::GetUUIDString() const {
   LLDB_INSTRUMENT_VA(this);
 

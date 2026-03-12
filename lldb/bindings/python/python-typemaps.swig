@@ -734,3 +734,32 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }
+
+%typemap(in) UUIDSpan {
+  if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1.data = (uint8_t *)bytearray.GetBytes().data();
+    $1.length = bytearray.GetSize();
+  } else if (PythonBytes::Check($input)) {
+    PythonBytes bytes(PyRefType::Borrowed, $input);
+    $1.data = (uint8_t *)bytes.GetBytes().data();
+    $1.length = bytes.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "expecting bytes or bytearray object");
+    SWIG_fail;
+  }
+}
+
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) UUIDSpan ""
+
+%typemap(out) UUIDSpan {
+  const uint8_t* data = $1.data;
+  const auto length = static_cast<Py_ssize_t>($1.length);
+  if (data == nullptr || length == 0){
+    $result = Py_None;
+    Py_INCREF($result);
+  } else {
+    $result = PyBytes_FromStringAndSize(
+      reinterpret_cast<const char*>(data), length);
+  }
+}

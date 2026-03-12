@@ -332,3 +332,31 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
 }
 
 //===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// Typemap for extension SBModuleSpec::SetUUIDBytes()
+%typemap(in) UUIDSpan {
+  if (lua_isnil(L, $input)) {
+    $1.data = NULL;
+    $1.length = 0;
+  } else {
+    $1.data = reinterpret_cast<const uint8_t *>(luaL_checklstring(L, $input, (size_t *)&$1.length));
+  }
+}
+
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) UUIDSpan {
+  $1 = (lua_isstring(L, $input) || lua_isnil(L, $input));
+}
+
+%typemap(out) UUIDSpan {
+  const char* data = (const char*)$1.data;
+  const size_t length = (size_t)$1.length;
+
+  if (data != nullptr && length != 0) { 
+    lua_pushlstring(L, data, length);
+  } else { 
+    lua_pushnil(L);
+  }
+  SWIG_arg++;
+}
+//===----------------------------------------------------------------------===//
