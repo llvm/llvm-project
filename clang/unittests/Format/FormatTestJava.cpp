@@ -846,6 +846,13 @@ TEST_F(FormatTestJava, TextBlock) {
 
   verifyNoChange("String name = \"\"\"\n"
                  "              Pat Q. Smith");
+
+  verifyFormat("String foo = \"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\";",
+               "String foo=\"\"\"\n"
+               "    bar\n"
+               "    \\\\\"\"\" ;");
 }
 
 TEST_F(FormatTestJava, BreakAfterRecord) {

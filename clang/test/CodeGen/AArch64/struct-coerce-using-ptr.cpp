@@ -82,7 +82,7 @@ struct Sppp {
     int *x, *y, *z;
 };
 // CHECK-A64-LABEL: define dso_local void @_Z4Tppp4Sppp(
-// CHECK-A64-SAME: ptr dead_on_return noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-A64-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
@@ -490,7 +490,7 @@ struct Spa3 {
     int* xs[3];
 };
 // CHECK-A64-LABEL: define dso_local void @_Z4Tpa34Spa3(
-// CHECK-A64-SAME: ptr dead_on_return noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-A64-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8

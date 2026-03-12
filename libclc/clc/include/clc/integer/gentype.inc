@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clcfunc.h>
-#include <clc/clctypes.h>
 #include <clc/utils.h>
 
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)

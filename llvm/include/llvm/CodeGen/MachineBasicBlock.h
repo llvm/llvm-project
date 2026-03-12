@@ -231,12 +231,6 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Contains the callsite indices in this block that are targets of code
-  /// prefetching. The index `i` specifies the `i`th call, with zero
-  /// representing the beginning of the block and 1 representing the first call.
-  /// Must be in ascending order and without duplicates.
-  SmallVector<unsigned> PrefetchTargetCallsiteIndexes;
-
   /// Cached MCSymbol for this block (used if IsEHContTarget).
   mutable MCSymbol *CachedEHContMCSymbol = nullptr;
 
@@ -717,14 +711,6 @@ public:
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
   std::optional<UniqueBBID> getBBID() const { return BBID; }
-
-  const SmallVector<unsigned> &getPrefetchTargetCallsiteIndexes() const {
-    return PrefetchTargetCallsiteIndexes;
-  }
-
-  void setPrefetchTargetCallsiteIndexes(const SmallVector<unsigned> &V) {
-    PrefetchTargetCallsiteIndexes = V;
-  }
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }

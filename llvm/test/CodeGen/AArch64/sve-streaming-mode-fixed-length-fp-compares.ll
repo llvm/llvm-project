@@ -451,8 +451,7 @@ define <1 x i64> @fcmp_oeq_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fcmp d0, d1
 ; NONEON-NOSVE-NEXT:    csetm x8, eq
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %cmp = fcmp oeq <1 x double> %op1, %op2

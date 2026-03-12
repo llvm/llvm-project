@@ -108,12 +108,12 @@ define <2 x i64> @saturating_2xi32_2xi64(<2 x i32> %a, <2 x i32> %b) {
 define <6 x i16> @saturating_6xi16(<6 x i16> %a, <6 x i16> %b) {
 ; CHECK-LABEL: saturating_6xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v3.4s, v1.8h, v0.8h
-; CHECK-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-NEXT:    smull2 v2.4s, v1.8h, v0.8h
+; CHECK-NEXT:    movi v3.4s, #127, msl #8
 ; CHECK-NEXT:    sqdmulh v0.4h, v1.4h, v0.4h
-; CHECK-NEXT:    sshr v3.4s, v3.4s, #15
-; CHECK-NEXT:    smin v2.4s, v3.4s, v2.4s
-; CHECK-NEXT:    xtn2 v0.8h, v2.4s
+; CHECK-NEXT:    sshr v2.4s, v2.4s, #15
+; CHECK-NEXT:    smin v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    xtn2 v0.8h, v1.4s
 ; CHECK-NEXT:    ret
   %as = sext <6 x i16> %a to <6 x i32>
   %bs = sext <6 x i16> %b to <6 x i32>

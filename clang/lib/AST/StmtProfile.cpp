@@ -1410,6 +1410,11 @@ void StmtProfiler::VisitSYCLUniqueStableNameExpr(
   VisitType(S->getTypeSourceInfo()->getType());
 }
 
+void StmtProfiler::VisitUnresolvedSYCLKernelCallStmt(
+    const UnresolvedSYCLKernelCallStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
   ID.AddInteger(llvm::to_underlying(S->getIdentKind()));
@@ -1676,6 +1681,11 @@ void StmtProfiler::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *S) {
 }
 
 void StmtProfiler::VisitExtVectorElementExpr(const ExtVectorElementExpr *S) {
+  VisitExpr(S);
+  VisitName(&S->getAccessor());
+}
+
+void StmtProfiler::VisitMatrixElementExpr(const MatrixElementExpr *S) {
   VisitExpr(S);
   VisitName(&S->getAccessor());
 }
@@ -2186,6 +2196,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
     Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);
   }
   ID.AddInteger(Hasher.CalculateHash());
+}
+
+void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
 }
 
 void

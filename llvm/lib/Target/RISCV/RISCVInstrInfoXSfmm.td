@@ -30,6 +30,10 @@ def XSfmmVTypeOp : RISCVOp {
   }];
 }
 
+// TWiden operand should be named $twiden for getNamedOperandIdx.
+// ATK operand should be named $atk for getNamedOperandIdx.
+// ATM operand should be named $atm for getNamedOperandIdx.
+// ATN operand should be named $atn for getNamedOperandIdx.
 def twiden : RISCVOp {
   let OperandType = "OPERAND_XSFMM_TWIDEN";
 }
@@ -37,18 +41,12 @@ def twiden : RISCVOp {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class SFInstSetSingle<dag outs, dag ins, bits<5> rs2, string opcodestr,
                       string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
-  bits<5> rs1;
-  bits<5> rd;
+    : RVInstIBase<OPCFG.Value, OPC_OP_V, outs, ins, opcodestr, argstr> {
 
   let Inst{31-25} = 0b1000010;
   let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = OPCFG.Value;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_V.Value;
 
-  let Defs = [VTYPE, VL];
+  let Defs = [VL, VTYPE];
 }
 
 class SFInstTileMemOp<dag outs, dag ins, bits<3> nf, RISCVOpcode opcode,
@@ -67,7 +65,7 @@ class SFInstTileMemOp<dag outs, dag ins, bits<3> nf, RISCVOpcode opcode,
   let Inst{11-7} = 0b00000;
   let Inst{6-0} = opcode.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -97,7 +95,7 @@ class SFInstTileMoveOp<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -117,7 +115,7 @@ class SFInstMatmulF<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{8-7} = 0b00;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -140,7 +138,7 @@ class SFInstMatmulF8<bit a, bit b, dag outs, dag ins,
   let Inst{7} = b;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -173,7 +171,7 @@ class SFInstMatmulI8<bit funct6_1, bit a, bit b, dag outs, dag ins,
   let Inst{7} = b;
   let Inst{6-0} = OPC_OP_VE.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let ReadsPastVL = 1;
 }
 
@@ -201,7 +199,7 @@ class SFInstSetZero<dag outs, dag ins, string opcodestr, string argstr>
   let Inst{7} = 0;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
 }
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in

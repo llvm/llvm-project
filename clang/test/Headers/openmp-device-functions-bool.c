@@ -18,12 +18,10 @@ typedef _Bool ockl_bool;
 // CHECK-LABEL: define hidden float @test_fdot2
 // CHECK-SAME: (<2 x half> noundef [[A:%.*]], <2 x half> noundef [[B:%.*]], float noundef [[C:%.*]], i1 noundef zeroext [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[S_ADDR:%.*]] = alloca i8, align 1, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
 // CHECK-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
 // CHECK-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
@@ -31,14 +29,14 @@ typedef _Bool ockl_bool;
 // CHECK-NEXT:    store <2 x half> [[A]], ptr [[A_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store <2 x half> [[B]], ptr [[B_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store float [[C]], ptr [[C_ADDR_ASCAST]], align 4
-// CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[S]] to i8
-// CHECK-NEXT:    store i8 [[FROMBOOL]], ptr [[S_ADDR_ASCAST]], align 1
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[S]] to i8
+// CHECK-NEXT:    store i8 [[STOREDV]], ptr [[S_ADDR_ASCAST]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr [[A_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr [[B_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[C_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[S_ADDR_ASCAST]], align 1
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP3]] to i1
-// CHECK-NEXT:    [[CALL:%.*]] = call float @__ockl_fdot2(<2 x half> noundef [[TMP0]], <2 x half> noundef [[TMP1]], float noundef [[TMP2]], i1 noundef zeroext [[TOBOOL]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// CHECK-NEXT:    [[CALL:%.*]] = call float @__ockl_fdot2(<2 x half> noundef [[TMP0]], <2 x half> noundef [[TMP1]], float noundef [[TMP2]], i1 noundef zeroext [[LOADEDV]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret float [[CALL]]
 //
 EXTERN_C float test_fdot2(__2f16 a, __2f16 b, float c, ockl_bool s) {
@@ -56,11 +54,9 @@ enum my_bool {
 // CHECK-C-LABEL: define hidden i32 @use_my_bool
 // CHECK-C-SAME: (i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-C-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-C-NEXT:    [[T:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-C-NEXT:    [[F:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-C-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-C-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
 // CHECK-C-NEXT:    [[T_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[T]] to ptr
 // CHECK-C-NEXT:    [[F_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F]] to ptr

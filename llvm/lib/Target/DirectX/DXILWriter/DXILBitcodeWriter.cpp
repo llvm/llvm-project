@@ -2016,7 +2016,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
       }
     } else if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
       Code = bitc::CST_CODE_FLOAT;
-      Type *Ty = CFP->getType();
+      Type *Ty = CFP->getType()->getScalarType();
       if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy()) {
         Record.push_back(CFP->getValueAPF().bitcastToAPInt().getZExtValue());
       } else if (Ty->isX86_FP80Ty()) {
@@ -2335,7 +2335,8 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
         pushValueAndType(I.getOperand(i), InstID, Vals);
     }
   } break;
-  case Instruction::Br: {
+  case Instruction::UncondBr:
+  case Instruction::CondBr: {
     Code = bitc::FUNC_CODE_INST_BR;
     const BranchInst &II = cast<BranchInst>(I);
     Vals.push_back(VE.getValueID(II.getSuccessor(0)));

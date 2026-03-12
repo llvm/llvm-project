@@ -584,3 +584,31 @@ define <vscale x 2 x i64> @zext_inreg_i64_from_i32(<vscale x 4 x i32> %a) {
   %zext = zext <vscale x 2 x i32> %subvec to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %zext
 }
+
+; Sign-extend-inreg from i8 -> i1 -> i16
+define <vscale x 16 x i16> @sext_inreg_i1_to_i16_from_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sext_inreg_i1_to_i16_from_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.b, z0.b, #7
+; CHECK-NEXT:    asr z1.b, z0.b, #7
+; CHECK-NEXT:    sunpklo z0.h, z1.b
+; CHECK-NEXT:    sunpkhi z1.h, z1.b
+; CHECK-NEXT:    ret
+  %a.trunc = trunc <vscale x 16 x i8> %a to <vscale x 16 x i1>
+  %a.sextinreg = sext <vscale x 16 x i1> %a.trunc to <vscale x 16 x i16>
+  ret <vscale x 16 x i16> %a.sextinreg
+}
+
+; Sign-extend-inreg from i8 -> i2 -> i16
+define <vscale x 16 x i16> @sext_inreg_i2_to_i16_from_i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: sext_inreg_i2_to_i16_from_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl z0.b, z0.b, #6
+; CHECK-NEXT:    asr z1.b, z0.b, #6
+; CHECK-NEXT:    sunpklo z0.h, z1.b
+; CHECK-NEXT:    sunpkhi z1.h, z1.b
+; CHECK-NEXT:    ret
+  %a.trunc = trunc <vscale x 16 x i8> %a to <vscale x 16 x i2>
+  %a.sextinreg = sext <vscale x 16 x i2> %a.trunc to <vscale x 16 x i16>
+  ret <vscale x 16 x i16> %a.sextinreg
+}

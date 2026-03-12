@@ -1,0 +1,62 @@
+# Test that LLDB displays indirect virtual bases correctly
+
+# REQUIRES: lld, x86, system-windows
+
+# RUN: split-file %s %t
+
+# RUN: %clang_cl --target=x86_64-windows-msvc -Z7 -c /Fo%t.cv.obj -- %t/main.cpp
+# RUN: %clang_cl --target=x86_64-windows-msvc -Z7 -gdwarf -c /Fo%t.dwarf.obj -- %t/main.cpp
+
+# RUN: lld-link -debug %t.cv.obj -out:%t.cv.exe
+# RUN: lld-link -debug %t.dwarf.obj -out:%t.dwarf.exe
+
+# RUN: %lldb -f %t.cv.exe -s %t/commands.input 2>&1 | FileCheck %s
+# RUN: %lldb -f %t.dwarf.exe -s %t/commands.input 2>&1 | FileCheck %s
+
+#--- main.cpp
+
+struct VBase1 {
+  short member = 1;
+};
+struct VBase2 {
+  short member = 2;
+};
+struct Base1 {
+  short member = 3;
+};
+struct Base2 {
+  short member = 4;
+};
+
+struct User : public virtual VBase1, public virtual VBase2 {
+  short member = 5;
+};
+
+struct UserUser : public Base1, public User, public Base2 {
+  short member = 6;
+};
+
+int main() {
+  UserUser useruser;
+
+  return 0; // break here
+}
+
+#--- commands.input
+
+br set -p "break here"
+r
+v useruser
+exit
+
+# CHECK:      (lldb) v useruser
+# CHECK-NEXT: (UserUser) useruser = {
+# CHECK-NEXT:   Base1 = (member = 3)
+# CHECK-NEXT:   User = {
+# CHECK-NEXT:     VBase1 = (member = 1)
+# CHECK-NEXT:     VBase2 = (member = 2)
+# CHECK-NEXT:     member = 5
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Base2 = (member = 4)
+# CHECK-NEXT:   member = 6
+# CHECK-NEXT: }

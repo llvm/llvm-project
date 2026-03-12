@@ -726,6 +726,17 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
 }
 
+SCUDO_TYPED_TEST(ScudoCombinedTest, ForceFast) {
+  auto *Allocator = this->Allocator.get();
+
+  // Simple smoke test to verify that ForceFast does crash.
+  void *P = Allocator->allocate(2048, Origin);
+  memset(P, 0xff, 2048);
+  Allocator->deallocate(P, Origin);
+
+  Allocator->releaseToOS(scudo::ReleaseToOS::ForceFast);
+}
+
 // Test that multiple instantiations of the allocator have not messed up the
 // process's signal handlers (GWP-ASan used to do this).
 TEST(ScudoCombinedDeathTest, SKIP_ON_FUCHSIA(testSEGV)) {

@@ -361,7 +361,7 @@ func.func private @use_i64(i64)
 // CHECK-LABEL: func.func @loop_with_iter_arg
 func.func @loop_with_iter_arg() {
   %c0 = arith.constant 0 : index
-  %c1 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
 
   %cst = arith.constant dense<0.000000e+00> : vector<4xf32>
@@ -414,6 +414,20 @@ func.func @narrow_loop_bounds() {
   scf.for %iv = %lb to %ub step %step : i64 {
     %add = arith.addi %iv, %c1_i64 : i64
     func.call @use_i64(%add) : (i64) -> ()
+  }
+  return
+}
+
+// Ensure affine.for with a non-constant (dynamic) upper bound doesn't crash.
+// affine.for implements LoopLikeOpInterface but getLoopUpperBounds() returns
+// nullopt for non-constant bounds, which must be handled gracefully.
+func.func private @use_index(index) -> ()
+// CHECK-LABEL: func @affine_for_dynamic_bound
+func.func @affine_for_dynamic_bound(%n: index) {
+  // CHECK: affine.for %[[IV:.*]] = 0 to %{{.*}} {
+  affine.for %i = 0 to %n {
+    // CHECK: func.call @use_index(%[[IV]])
+    func.call @use_index(%i) : (index) -> ()
   }
   return
 }

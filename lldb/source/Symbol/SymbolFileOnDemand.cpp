@@ -337,7 +337,7 @@ void SymbolFileOnDemand::FindGlobalVariables(
                GetSymbolFileName(), __FUNCTION__);
       return;
     }
-    Symbol *sym = symtab->FindFirstSymbolWithNameAndType(
+    const Symbol *sym = symtab->FindFirstSymbolWithNameAndType(
         name, eSymbolTypeData, Symtab::eDebugAny, Symtab::eVisibilityAny);
     if (!sym) {
       LLDB_LOG(log, "[{0}] {1} is skipped - fail to find match in symtab",

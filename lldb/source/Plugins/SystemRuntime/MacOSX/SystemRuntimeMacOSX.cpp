@@ -425,24 +425,19 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
       CompilerType uint16 =
           scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
       CompilerType dispatch_tsd_indexes_s = scratch_ts_sp->CreateRecordType(
-          nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-          "__lldb_dispatch_tsd_indexes_s",
+          nullptr, OptionalClangModuleID(), "__lldb_dispatch_tsd_indexes_s",
           llvm::to_underlying(clang::TagTypeKind::Struct),
           lldb::eLanguageTypeC);
 
       TypeSystemClang::StartTagDeclarationDefinition(dispatch_tsd_indexes_s);
       TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
-                                            "dti_version", uint16,
-                                            lldb::eAccessPublic, 0);
+                                            "dti_version", uint16, 0);
       TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
-                                            "dti_queue_index", uint16,
-                                            lldb::eAccessPublic, 0);
+                                            "dti_queue_index", uint16, 0);
       TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
-                                            "dti_voucher_index", uint16,
-                                            lldb::eAccessPublic, 0);
+                                            "dti_voucher_index", uint16, 0);
       TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
-                                            "dti_qos_class_index", uint16,
-                                            lldb::eAccessPublic, 0);
+                                            "dti_qos_class_index", uint16, 0);
       TypeSystemClang::CompleteTagDeclarationDefinition(dispatch_tsd_indexes_s);
 
       ProcessStructReader struct_reader(m_process, m_dispatch_tsd_indexes_addr,

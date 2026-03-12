@@ -30,8 +30,10 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+
 #include <optional>
 
 #define DEBUG_TYPE "linalg-utils"
@@ -496,11 +498,11 @@ static bool convLayoutMatches(ArrayRef<ArrayRef<AffineExpr>> mapListExpected,
   SmallVector<AffineMap, 4> expectedIndexingMaps =
       AffineMap::inferFromExprList(mapListExpected, context);
   return indexingMaps ==
-         ArrayAttr::get(
-             context, llvm::to_vector<4>(llvm::map_range(
-                          expectedIndexingMaps, [&](AffineMap m) -> Attribute {
-                            return AffineMapAttr::get(m);
-                          })));
+         ArrayAttr::get(context,
+                        llvm::map_to_vector<4>(expectedIndexingMaps,
+                                               [&](AffineMap m) -> Attribute {
+                                                 return AffineMapAttr::get(m);
+                                               }));
 }
 
 /// Enum representing pooling operation types used by ConvMatcherBuilder.
@@ -2704,10 +2706,10 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
                                  {ArrayRef<AffineExpr>{dim0 + 1}}, context)
                                  .front();
       SmallVector<OpFoldResult> maxIndices =
-          llvm::to_vector(llvm::map_range(ubs, [&](OpFoldResult ub) {
+          llvm::map_to_vector(ubs, [&](OpFoldResult ub) {
             return makeComposedFoldedAffineApply(rewriter, loc, minusOneMap,
                                                  {ub});
-          }));
+          });
       OpFoldResult maxIndex =
           makeComposedFoldedAffineApply(rewriter, loc, m, maxIndices);
       OpFoldResult d =
@@ -2759,10 +2761,10 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
 SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands) {
   if (op.hasPureBufferSemantics())
     return {};
-  return llvm::to_vector(
-      llvm::map_range(op.getDpsInitsMutable(), [&](OpOperand &opOperand) {
+  return llvm::map_to_vector(
+      op.getDpsInitsMutable(), [&](OpOperand &opOperand) {
         return operands[opOperand.getOperandNumber()].getType();
-      }));
+      });
 }
 
 SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,

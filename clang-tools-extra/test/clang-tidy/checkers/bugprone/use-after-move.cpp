@@ -1,20 +1,21 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection", \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 
+#include <utility>
+
 typedef decltype(nullptr) nullptr_t;
 
 namespace std {
-typedef unsigned size_t;
 
 template <typename T>
 struct unique_ptr {
@@ -111,41 +112,6 @@ DECLARE_STANDARD_CONTAINER(unordered_multiset);
 DECLARE_STANDARD_CONTAINER(unordered_multimap);
 
 typedef basic_string<char> string;
-
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) noexcept {
-  return static_cast<typename remove_reference<_Tp>::type &&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
-
-template <class _Tp>
-constexpr _Tp&&
-forward(typename std::remove_reference<_Tp>::type&& __t) noexcept {
-  return static_cast<_Tp&&>(__t);
-}
 
 } // namespace std
 
@@ -1670,37 +1636,45 @@ struct Database {
   void Query();
 };
 
+void FreeCloseConnection(Database<int>&) {}
+
 void Run() {
   using DB = Database<>;
 
   DB db1;
   db1.CloseConnection();
   db1.Query();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db1' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db1' used after it was invalidated by 'CloseConnection<>'
   // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
 
   DB db2;
   DB::StaticCloseConnection(db2);
   db2.Query();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db2' used after it was invalidated by 'StaticCloseConnection<>'
   // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
 
   DB db3;
   DB().StaticCloseConnection(db3);
   db3.Query();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db3' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db3' used after it was invalidated by 'StaticCloseConnection<>'
   // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
 
   DB db4;
   FriendCloseConnection(db4);
   db4.Query();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db4' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db4' used after it was invalidated by 'FriendCloseConnection<>'
   // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
 
   DB db5;
   FriendCloseConnection(db5, /*disconnect timeout*/ 5);
   db5.Query();
-  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db5' used after it was invalidated
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db5' used after it was invalidated by 'FriendCloseConnection<>'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+
+  DB db6;
+  FreeCloseConnection(db6);
+  db6.Query();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'db6' used after it was invalidated by 'FreeCloseConnection'
   // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
 }
 

@@ -410,7 +410,7 @@ public:
 /// This is useful for adding attrs to bitcode modules that you want to link
 /// with but don't control, such as CUDA's libdevice.  When linking with such
 /// a bitcode library, you might want to set e.g. its functions'
-/// "denormal-fp-math" attribute to match the attr of the functions you're
+/// denormal_fp_math attribute to match the attr of the functions you're
 /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
 /// denormal-fp-math attrs as tantamount to denormal-fp-math=ieee, and then LLVM
 /// will propagate denormal-fp-math=ieee up to every transitive caller of a

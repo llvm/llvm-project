@@ -167,9 +167,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
 
 char StackProtector::ID = 0;
 
-StackProtector::StackProtector() : FunctionPass(ID) {
-  initializeStackProtectorPass(*PassRegistry::getPassRegistry());
-}
+StackProtector::StackProtector() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE,
                       "Insert stack protectors", false, true)

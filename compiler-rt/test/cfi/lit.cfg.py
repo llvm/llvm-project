@@ -37,8 +37,18 @@ elif config.lto_supported:
     dso = "-fsanitize-cfi-cross-dso -fvisibility=default "
     if config.android:
         dso += "-include " + config.test_source_root + "/cross-dso/util/cfi_stubs.h "
-    config.substitutions.append((r"%clang_cfi ", clang_cfi + non_dso))
-    config.substitutions.append((r"%clangxx_cfi ", clang_cfi + cxx + non_dso))
+    maybe_trap_loop = ""
+    if config.use_trap_loop:
+        maybe_trap_loop = (
+            "-fsanitize-trap-loop "
+            + "-include "
+            + config.test_source_root
+            + "/trap_loop_signal_handler.inc "
+        )
+    config.substitutions.append((r"%clang_cfi ", clang_cfi + non_dso + maybe_trap_loop))
+    config.substitutions.append(
+        (r"%clangxx_cfi ", clang_cfi + cxx + non_dso + maybe_trap_loop)
+    )
     config.substitutions.append((r"%clang_cfi_diag ", clang_cfi + non_dso + diag))
     config.substitutions.append(
         (r"%clangxx_cfi_diag ", clang_cfi + cxx + non_dso + diag)

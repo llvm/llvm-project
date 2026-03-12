@@ -661,6 +661,26 @@ func.func @remove_zero_iteration_loop() {
 
 // -----
 
+// CHECK-LABEL: @remove_while_zero_iteration_loop
+//  CHECK-NEXT:   %[[init:.*]] = "test.init"
+//  CHECK-NEXT:   %[[inner1:.*]] = "test.before"(%[[init]])
+//  CHECK-NEXT:   return %[[inner1]]
+func.func @remove_while_zero_iteration_loop() -> i64 {
+  %init = "test.init"() : () -> i32
+  %false = arith.constant false
+  %0 = scf.while (%arg0 = %init) : (i32) -> (i64) {
+    %inner1 = "test.before"(%arg0) : (i32) -> i64
+    scf.condition(%false) %inner1 : i64
+  } do {
+  ^bb0(%arg1: i64):
+    %inner2 = "test.before"(%arg1) : (i64) -> i32
+    scf.yield %inner2 : i32
+  }
+  return %0 : i64
+}
+
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop_vals
 func.func @remove_zero_iteration_loop_vals(%arg0: index) {
   %c2 = arith.constant 2 : index
@@ -2187,13 +2207,14 @@ func.func @index_switch_fold_no_res() {
 
 // -----
 
-// Step 0 is invalid, the loop is eliminated.
+// Step size 0: The loop has an infinite number of iterations.
 // CHECK-LABEL: func @scf_for_all_step_size_0()
-//       CHECK-NOT:   scf.forall
+//       CHECK:   scf.forall (%[[arg0:.*]]) = (0) to (1) step (0)
+//       CHECK:     vector.print %[[arg0]]
 func.func @scf_for_all_step_size_0()  {
   %x = arith.constant 0 : index
   scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
-    vector.print %x : index
+    vector.print %i : index
     scf.forall.in_parallel {}
   }
   return

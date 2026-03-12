@@ -6,6 +6,8 @@
 ; Test that Control Flow Guard checks are not added in modules with the
 ; cfguard=1 flag (emit tables but no checks).
 
+; If no checks were inserted then the GuardCF bit shouldn't be set in @feat.00.
+; CHECK: "@feat.00" = 0
 
 declare void @target_func()
 

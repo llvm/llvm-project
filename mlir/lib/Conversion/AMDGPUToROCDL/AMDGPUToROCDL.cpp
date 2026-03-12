@@ -680,10 +680,11 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts sparse MFMA (smfmac) operands to the expected ROCDL types.
-static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
-                                            Location loc, Value input,
-                                            bool allowBf16 = true) {
+/// Converts sparse MFMA/WMMA (smfmac/swmmac) operands to the expected ROCDL
+/// types.
+static Value convertSparseVectorOperand(ConversionPatternRewriter &rewriter,
+                                        Location loc, Value input,
+                                        bool allowBf16 = true) {
   Type inputType = input.getType();
   auto vectorType = cast<VectorType>(inputType);
   // bf16 -> i16 when not allowed (pre-gfx950).
@@ -695,8 +696,10 @@ static Value convertSparseMFMAVectorOperand(ConversionPatternRewriter &rewriter,
       vectorType.getElementTypeBitWidth() <= 8) {
     int64_t numWords = llvm::divideCeil(
         vectorType.getNumElements() * vectorType.getElementTypeBitWidth(), 32);
-    return LLVM::BitcastOp::create(
-        rewriter, loc, VectorType::get(numWords, rewriter.getI32Type()), input);
+    Type castType = (numWords > 1)
+                        ? Type{VectorType::get(numWords, rewriter.getI32Type())}
+                        : rewriter.getI32Type();
+    return LLVM::BitcastOp::create(rewriter, loc, castType, input);
   }
   return input;
 }
@@ -1339,6 +1342,161 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
   return std::nullopt;
 }
 
+/// Returns the `rocdl` intrinsic corresponding to a SparseWMMA operation
+/// `swmmac` if one exists. This includes checking to ensure the intrinsic is
+/// supported on the architecture you are compiling for.
+struct SparseWMMAOpInfo {
+  StringRef name;
+  bool useSign;
+  bool useReuse;
+  bool useClamp;
+};
+
+static std::optional<SparseWMMAOpInfo>
+sparseWMMAOpToIntrinsic(SparseWMMAOp swmmac, Chipset chipset) {
+  Type sourceAElem = getElementTypeOrSelf(swmmac.getSourceA().getType());
+  Type sourceBElem = getElementTypeOrSelf(swmmac.getSourceB().getType());
+  Type destElem = getElementTypeOrSelf(swmmac.getDestC().getType());
+
+  uint32_t m = swmmac.getM(), n = swmmac.getN(), k = swmmac.getK();
+
+  if ((m != 16) || (n != 16))
+    return std::nullopt;
+
+  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
+  if (isRDNA4) {
+    if (k == 32) {
+      if (destElem.isF32() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_f16::getOperationName(), false, false,
+            false};
+      if (destElem.isF32() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_bf16::getOperationName(), false, false,
+            false};
+      if (destElem.isF16() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x32_f16::getOperationName(), false, false,
+            false};
+      if (destElem.isBF16() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_bf16_16x16x32_bf16::getOperationName(), false, false,
+            false};
+      if (destElem.isInteger(32) && sourceAElem.isInteger(8) &&
+          sourceBElem.isInteger(8))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x32_iu8::getOperationName(), true, false,
+            true};
+      if (destElem.isInteger(32) && sourceAElem.isInteger(4) &&
+          sourceBElem.isInteger(4))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x32_iu4::getOperationName(), true, false,
+            true};
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_fp8_fp8::getOperationName(), false,
+            false, false};
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_fp8_bf8::getOperationName(), false,
+            false, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_bf8_fp8::getOperationName(), false,
+            false, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() && sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x32_bf8_bf8::getOperationName(), false,
+            false, false};
+    }
+    if (k == 64) {
+      if (destElem.isInteger(32) && sourceAElem.isInteger(4) &&
+          sourceBElem.isInteger(4))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x64_iu4::getOperationName(), true, false,
+            true};
+    }
+  }
+
+  const bool isGFX1250 = chipset == kGfx1250;
+  const bool isWavesize64 = swmmac.getWave64();
+  if (isGFX1250 && !isWavesize64) {
+    if (k == 64) {
+      if (destElem.isF32() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x64_f16::getOperationName(), true, true,
+            false};
+      if (destElem.isF32() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x64_bf16::getOperationName(), true, true,
+            false};
+      if (destElem.isF16() && sourceAElem.isF16() && sourceBElem.isF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x64_f16::getOperationName(), true, true,
+            false};
+      if (destElem.isBF16() && sourceAElem.isBF16() && sourceBElem.isBF16())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_bf16_16x16x64_bf16::getOperationName(), true, true,
+            false};
+    }
+    if (k == 128) {
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_fp8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF32() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_fp8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_bf8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF32() && sourceAElem.isF8E5M2() && sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f32_16x16x128_bf8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_fp8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E4M3FN() &&
+          sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_fp8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E5M2() &&
+          sourceBElem.isF8E4M3FN())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_bf8_fp8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isF8E5M2() && sourceBElem.isF8E5M2())
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_bf8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isF16() && sourceAElem.isInteger(8) &&
+          sourceBElem.isInteger(8))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_f16_16x16x128_bf8_bf8::getOperationName(), false,
+            true, false};
+      if (destElem.isInteger(32) && sourceAElem.isInteger(8) &&
+          sourceBElem.isInteger(8))
+        return SparseWMMAOpInfo{
+            ROCDL::swmmac_i32_16x16x128_iu8::getOperationName(), true, true,
+            true};
+    }
+  }
+
+  return std::nullopt;
+}
+
 namespace {
 struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
   MFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
@@ -1402,14 +1560,16 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     if (isScaled) {
       Value zero = createI32Constant(rewriter, loc, 0);
       auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
-      loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
-                             createI32Constant(rewriter, loc, bTypeCode),
-                             /*scale A byte=*/zero, /*scale A=*/zero,
-                             /*scale B byte=*/zero, /*scale B=*/zero});
+      loweredOp.addOperands({/*scale A=*/zero, /*scale B=*/zero});
+      loweredOp.addAttributes({{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
+                               {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+                               {"opselA", rewriter.getI32IntegerAttr(0)},
+                               {"opselB", rewriter.getI32IntegerAttr(0)}});
     } else {
-      loweredOp.addOperands({createI32Constant(rewriter, loc, op.getCbsz()),
-                             createI32Constant(rewriter, loc, op.getAbid()),
-                             createI32Constant(rewriter, loc, getBlgpField)});
+      loweredOp.addAttributes(
+          {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
+           {"abid", rewriter.getI32IntegerAttr(op.getAbid())},
+           {"blgp", rewriter.getI32IntegerAttr(getBlgpField)}});
     };
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     if (outType != intrinsicOutType)
@@ -1446,19 +1606,17 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
         {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA()),
          packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
-    Value scalesIdxA =
-        createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
-    Value scalesIdxB =
-        createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
     loweredOp.addOperands(
-        {createI32Constant(rewriter, loc, aTypeCode),
-         createI32Constant(rewriter, loc, bTypeCode),
-         /*scales idx A=*/scalesIdxA,
-         /*scales A*/
+        {/*scales A*/
          castScaleOperand(rewriter, loc, adaptor.getScalesA()),
-         /*scales idx B=*/scalesIdxB,
          /*scales B*/
          castScaleOperand(rewriter, loc, adaptor.getScalesB())});
+    loweredOp.addAttributes(
+        {{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
+         {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+         {"opselA", rewriter.getI32IntegerAttr(adaptor.getScalesIdxA())},
+         {"opselB", rewriter.getI32IntegerAttr(adaptor.getScalesIdxB())}});
+
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1485,10 +1643,10 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
     bool isGfx950 = chipset >= kGfx950;
 
-    Value a = convertSparseMFMAVectorOperand(rewriter, loc,
-                                             adaptor.getSourceA(), isGfx950);
-    Value b = convertSparseMFMAVectorOperand(rewriter, loc,
-                                             adaptor.getSourceB(), isGfx950);
+    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+                                         isGfx950);
+    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+                                         isGfx950);
     Value c = adaptor.getDestC();
 
     std::optional<StringRef> maybeIntrinsic = smfmacOpToIntrinsic(op, chipset);
@@ -1502,9 +1660,10 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
-    loweredOp.addOperands({a, b, c, sparseIdx,
-                           createI32Constant(rewriter, loc, op.getCbsz()),
-                           createI32Constant(rewriter, loc, op.getAbid())});
+    loweredOp.addOperands({a, b, c, sparseIdx});
+    loweredOp.addAttributes(
+        {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
+         {"abid", rewriter.getI32IntegerAttr(op.getAbid())}});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1578,6 +1737,87 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
     OperationState loweredOp(loc, *maybeIntrinsic);
     loweredOp.addTypes(rawOutType);
     loweredOp.addOperands(operands);
+    loweredOp.addAttributes(attrs);
+    Operation *lowered = rewriter.create(loweredOp);
+
+    Operation *maybeCastBack = lowered;
+    if (rawOutType != outType)
+      maybeCastBack = LLVM::BitcastOp::create(rewriter, loc, outType,
+                                              lowered->getResult(0));
+    rewriter.replaceOp(op, maybeCastBack->getResults());
+
+    return success();
+  }
+};
+
+struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
+  SparseWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<SparseWMMAOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SparseWMMAOp op, SparseWMMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    std::optional<SparseWMMAOpInfo> maybeIntrinsic =
+        sparseWMMAOpToIntrinsic(op, chipset);
+
+    if (!maybeIntrinsic.has_value())
+      return op.emitOpError(
+          "no intrinsic matching Sparse WMMA on the given chipset");
+    SparseWMMAOpInfo intrinsic = maybeIntrinsic.value();
+
+    SmallVector<NamedAttribute> attrs;
+
+    if ((op.getUnsignedA() || op.getUnsignedB()) && !intrinsic.useSign)
+      return op->emitOpError("intrinsic doesn't support unsign");
+    if (intrinsic.useSign) {
+      if (auto attr = op.getUnsignedAAttr())
+        attrs.push_back({"signA", attr});
+      if (auto attr = op.getUnsignedBAttr())
+        attrs.push_back({"signB", attr});
+    }
+
+    if ((op.getReuseA() || op.getReuseB()) && !intrinsic.useReuse)
+      return op->emitOpError("intrinsic doesn't support reuse");
+    if (intrinsic.useReuse) {
+      if (auto attr = op.getReuseAAttr())
+        attrs.push_back({"reuseA", attr});
+      if (auto attr = op.getReuseBAttr())
+        attrs.push_back({"reuseB", attr});
+    }
+
+    if (op.getClamp() && !intrinsic.useClamp)
+      return op->emitOpError("intrinsic doesn't support clamp");
+    if (intrinsic.useClamp && op.getClampAttr())
+      attrs.push_back({"clamp", op.getClampAttr()});
+
+    const bool isGFX1250orHigher =
+        chipset.majorVersion == 12 && chipset.minorVersion >= 5;
+    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+                                         isGFX1250orHigher);
+    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+                                         isGFX1250orHigher);
+    Value c = adaptor.getDestC();
+    VectorType rawOutType = outType;
+    if (!isGFX1250orHigher) {
+      c = convertSparseVectorOperand(rewriter, loc, adaptor.getDestC(), false);
+      rawOutType = cast<VectorType>(c.getType());
+    }
+
+    // Bitcast sparse indices from vector<4xi8> to i32.
+    Value sparseIdx = LLVM::BitcastOp::create(
+        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+
+    OperationState loweredOp(loc, intrinsic.name);
+    loweredOp.addTypes(rawOutType);
+    loweredOp.addOperands({a, b, c, sparseIdx});
     loweredOp.addAttributes(attrs);
     Operation *lowered = rewriter.create(loweredOp);
 
@@ -1816,11 +2056,19 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
         getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
                              (adaptor.getDstIndices()));
 
-    rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
-        op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
-        /*offset=*/rewriter.getI32IntegerAttr(0),
-        /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
-        ArrayAttr{});
+    if (op.getAsync()) {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadAsyncToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    } else {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    }
 
     return success();
   }
@@ -2521,8 +2769,10 @@ struct AMDGPUSwizzleBitModeLowering
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
     unsigned andMask = op.getAndMask();
     unsigned orMask = op.getOrMask();
     unsigned xorMask = op.getXorMask();
@@ -2564,8 +2814,10 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     bool fi = op.getFetchInactive();
     bool boundctrl = op.getBoundCtrl();
 
-    SmallVector<Value> decomposed =
-        LLVM::decomposeValue(rewriter, loc, src, i32);
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
 
     SmallVector<Value> permuted;
     for (Value v : decomposed) {
@@ -2600,6 +2852,257 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// In-LDS Barrier Operations
+//===----------------------------------------------------------------------===//
+
+// Bit layout of ds_barrier_state (as i64):
+// [63:32] init count (32 bits)
+// [31:29] phase (3 bits)
+// [28:0] pending count (29 bits)
+constexpr int32_t kDsBarrierPendingCountBitWidth = 29;
+constexpr int32_t kDsBarrierPhasePos = kDsBarrierPendingCountBitWidth;
+constexpr int32_t kDsBarrierInitCountPos = 32;
+constexpr int32_t kDsBarrierPendingCountMask =
+    (1 << kDsBarrierPendingCountBitWidth) - 1;
+
+struct DsBarrierInitOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierInitOp> {
+  Chipset chipset;
+
+  DsBarrierInitOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DsBarrierInitOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(DsBarrierInitOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    Type i64 = rewriter.getI64Type();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    // Note: We give participants as the number of arrivals that have to occur
+    // before the phase changes. Hardware changes the phase when updating the
+    // pending count would underflow, so we subtract 1 to get the behavior we're
+    // looking for.
+    Value initCount =
+        LLVM::SubOp::create(rewriter, loc, adaptor.getParticipants(),
+                            createI32Constant(rewriter, loc, 1));
+
+    // Just a bit of paranoia, but this also allows for configurable width if
+    // that becomes a thing.
+    Value countMask =
+        createI32Constant(rewriter, loc, kDsBarrierPendingCountMask);
+    Value maskedCount32 =
+        LLVM::AndOp::create(rewriter, loc, initCount, countMask);
+    Value maskedCount = LLVM::ZExtOp::create(rewriter, loc, i64, maskedCount32);
+
+    Value initCountShifted = LLVM::ShlOp::create(
+        rewriter, loc, maskedCount,
+        createI64Constant(rewriter, loc, kDsBarrierInitCountPos));
+    Value barrierState =
+        LLVM::OrOp::create(rewriter, loc, initCountShifted, maskedCount);
+
+    LLVM::StoreOp::create(
+        rewriter, loc, barrierState, ptr, /*alignment=*/8, /*isVolatile=*/false,
+        /*isNonTemporal=*/false,
+        /*isInvariantGroup=*/false, LLVM::AtomicOrdering::release,
+        /*syncscope=*/"workgroup");
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct DsBarrierPollStateOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierPollStateOp> {
+  Chipset chipset;
+
+  DsBarrierPollStateOpLowering(const LLVMTypeConverter &converter,
+                               Chipset chipset)
+      : ConvertOpToLLVMPattern<DsBarrierPollStateOp>(converter),
+        chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(DsBarrierPollStateOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    Type i64 = rewriter.getI64Type();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    // Atomic load with workgroup scope and acquire ordering should be what
+    // we're looking for.
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        op, i64, ptr, /*alignment=*/8, /*volatile_=*/false,
+        /*nontemporal=*/false, /*invariant=*/false,
+        /*invariantGroup=*/false, LLVM::AtomicOrdering::acquire,
+        /*syncscope=*/"workgroup");
+    return success();
+  }
+};
+
+struct DsAsyncBarrierArriveOpLowering
+    : public ConvertOpToLLVMPattern<DsAsyncBarrierArriveOp> {
+  Chipset chipset;
+
+  DsAsyncBarrierArriveOpLowering(const LLVMTypeConverter &converter,
+                                 Chipset chipset)
+      : ConvertOpToLLVMPattern<DsAsyncBarrierArriveOp>(converter),
+        chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(DsAsyncBarrierArriveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    rewriter.replaceOpWithNewOp<ROCDL::DsAtomicAsyncBarrierArriveOp>(
+        op, ptr, /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
+        /*tbaa=*/nullptr);
+    return success();
+  }
+};
+
+struct DsBarrierArriveOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierArriveOp> {
+  Chipset chipset;
+
+  DsBarrierArriveOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DsBarrierArriveOp>(converter), chipset(chipset) {
+  }
+
+  LogicalResult
+  matchAndRewrite(DsBarrierArriveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    Type i64 = rewriter.getI64Type();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    rewriter.replaceOpWithNewOp<ROCDL::DsAtomicBarrierArriveRtnOp>(
+        op, i64, ptr, adaptor.getCount(), /*alias_scopes=*/nullptr,
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    return success();
+  }
+};
+
+struct DsBarrierStatePhaseOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStatePhaseOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStatePhaseOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+
+    Value state = adaptor.getState();
+
+    Value noInitCount = LLVM::TruncOp::create(rewriter, loc, i32, state);
+    Value phase = LLVM::LShrOp::create(
+        rewriter, loc, noInitCount,
+        createI32Constant(rewriter, loc, kDsBarrierPhasePos));
+
+    rewriter.replaceOp(op, phase);
+    return success();
+  }
+};
+
+struct DsBarrierStatePendingCountOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStatePendingCountOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStatePendingCountOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+
+    Value state = adaptor.getState();
+
+    Value noInitCount = LLVM::TruncOp::create(rewriter, loc, i32, state);
+    Value pendingCount = LLVM::AndOp::create(
+        rewriter, loc, noInitCount,
+        createI32Constant(rewriter, loc,
+                          static_cast<uint32_t>(kDsBarrierPendingCountMask)));
+
+    rewriter.replaceOp(op, pendingCount);
+    return success();
+  }
+};
+
+struct DsBarrierStateInitCountOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStateInitCountOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStateInitCountOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+
+    Value state = adaptor.getState();
+
+    Value initCountI64 = LLVM::LShrOp::create(
+        rewriter, loc, state,
+        createI64Constant(rewriter, loc, kDsBarrierInitCountPos));
+    Value initCount = LLVM::TruncOp::create(rewriter, loc, i32, initCountI64);
+
+    rewriter.replaceOp(op, initCount);
+    return success();
+  }
+};
+
+struct DsBarrierStatePhaseParityLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStatePhaseParity> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStatePhaseParity op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i1 = rewriter.getI1Type();
+
+    Value state = adaptor.getState();
+
+    Value noInitCount =
+        LLVM::TruncOp::create(rewriter, loc, rewriter.getI32Type(), state);
+    Value phase = LLVM::LShrOp::create(
+        rewriter, loc, noInitCount,
+        createI32Constant(rewriter, loc, kDsBarrierPhasePos));
+    Value parity = LLVM::TruncOp::create(rewriter, loc, i1, phase);
+
+    rewriter.replaceOp(op, parity);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Tensor Data Mover (TDM)
+//===----------------------------------------------------------------------===//
 
 static Value setValueAtOffset(ConversionPatternRewriter &rewriter, Location loc,
                               Value accumulator, Value value, int64_t shift) {
@@ -3434,8 +3937,12 @@ struct AMDGPUTensorLoadStoreOpLowering
       return op->emitOpError("is only supported on gfx1250");
 
     ValueRange desc = adaptor.getDesc();
+    // Create a <v8 x i32> 0 as the fifth argument to match llvm intrinsic. It
+    // will move into the TDM descriptor once it becomes relevant for future use
+    auto v8i32 = VectorType::get(8, rewriter.getI32Type());
+    Value dgroup4 = LLVM::ZeroOp::create(rewriter, op.getLoc(), v8i32);
     rewriter.replaceOpWithNewOp<TargetOp>(op, desc[0], desc[1], desc[2],
-                                          desc[3], /*cachePolicy=*/0,
+                                          desc[3], dgroup4, /*cachePolicy=*/0,
                                           /*alias_scopes=*/nullptr,
                                           /*noalias_scopes=*/nullptr,
                                           /*tbaa=*/nullptr);
@@ -3504,6 +4011,9 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
         }
         return TypeConverter::AttributeConversionResult::abort();
       });
+  typeConverter.addConversion([&](DsBarrierStateType type) -> Type {
+    return IntegerType::get(type.getContext(), 64);
+  });
   typeConverter.addConversion([&](TDMBaseType type) -> Type {
     Type i32 = IntegerType::get(type.getContext(), 32);
     return typeConverter.convertType(VectorType::get(4, i32));
@@ -3562,18 +4072,24 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
-           ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,
-           ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
-           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-           GatherToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           SparseWMMAOpLowering, ExtPackedFp8OpLowering,
+           ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
+           PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
+           PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
+           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,
            AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
                                            ROCDL::TensorLoadToLDSOp>,
            AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
-                                           ROCDL::TensorStoreFromLDSOp>>(
-          converter, chipset);
-  patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
+                                           ROCDL::TensorStoreFromLDSOp>,
+           DsBarrierInitOpLowering, DsBarrierPollStateOpLowering,
+           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering>(converter,
+                                                                      chipset);
+  patterns.add<AMDGPUSwizzleBitModeLowering, DsBarrierStatePhaseOpLowering,
+               DsBarrierStatePendingCountOpLowering,
+               DsBarrierStateInitCountOpLowering,
+               DsBarrierStatePhaseParityLowering>(converter);
 }

@@ -123,9 +123,18 @@ static types::ID foldType(types::ID Lang) {
   }
 }
 
+// Return the language standard that's activated by the /std:clatest
+// flag in clang-CL mode.
+static LangStandard::Kind latestLangStandardC() {
+  // FIXME: Have a single source of truth for the mapping from
+  // clatest --> c23 that's shared by the driver code
+  // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
+  return LangStandard::lang_c23;
+}
+
 // Return the language standard that's activated by the /std:c++latest
 // flag in clang-CL mode.
-static LangStandard::Kind latestLangStandard() {
+static LangStandard::Kind latestLangStandardCXX() {
   // FIXME: Have a single source of truth for the mapping from
   // c++latest --> c++26 that's shared by the driver code
   // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
@@ -243,20 +252,29 @@ struct TransferableCommand {
         Result.CommandLine.push_back(types::getTypeName(TargetType));
       }
     }
+
     // --std flag may only be transferred if the language is the same.
     // We may consider "translating" these, e.g. c++11 -> c11.
     if (Std != LangStandard::lang_unspecified && foldType(TargetType) == Type) {
       const char *Spelling =
           LangStandard::getLangStandardForKind(Std).getName();
-      // In clang-cl mode, the latest standard is spelled 'c++latest' rather
-      // than e.g. 'c++26', and the driver does not accept the latter, so emit
+
+      // In clang-cl mode, some standards have different spellings, so emit
       // the spelling that the driver does accept.
-      if (ClangCLMode && Std == latestLangStandard()) {
-        Spelling = "c++latest";
+      // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
+      if (ClangCLMode) {
+        if (Std == LangStandard::lang_cxx23)
+          Spelling = "c++23preview";
+        else if (Std == latestLangStandardC())
+          Spelling = "clatest";
+        else if (Std == latestLangStandardCXX())
+          Spelling = "c++latest";
       }
+
       Result.CommandLine.emplace_back(
           (llvm::Twine(ClangCLMode ? "/std:" : "-std=") + Spelling).str());
     }
+
     Result.CommandLine.push_back("--");
     Result.CommandLine.push_back(std::string(Filename));
     return Result;
@@ -313,10 +331,15 @@ private:
   std::optional<LangStandard::Kind> tryParseStdArg(const llvm::opt::Arg &Arg) {
     using namespace options;
     if (Arg.getOption().matches(ClangCLMode ? OPT__SLASH_std : OPT_std_EQ)) {
-      // "c++latest" is not a recognized LangStandard, but it's accepted by
-      // the clang driver in CL mode.
-      if (ClangCLMode && StringRef(Arg.getValue()) == "c++latest") {
-        return latestLangStandard();
+      if (ClangCLMode) {
+        // Handle clang-cl spellings not in LangStandards.def.
+        // Keep in sync with OPT__SLASH_std handling in Clang::ConstructJob().
+        if (StringRef(Arg.getValue()) == "c++23preview")
+          return LangStandard::lang_cxx23;
+        if (StringRef(Arg.getValue()) == "clatest")
+          return latestLangStandardC();
+        if (StringRef(Arg.getValue()) == "c++latest")
+          return latestLangStandardCXX();
       }
       return LangStandard::getLangKind(Arg.getValue());
     }

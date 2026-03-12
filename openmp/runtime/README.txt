@@ -23,25 +23,9 @@ www.doxygen.org.
 
 How to Build the LLVM* OpenMP* Runtime Library
 ==============================================
-In-tree build:
 
-$ cd where-you-want-to-live
-Check out openmp into llvm/projects
-$ cd where-you-want-to-build
-$ mkdir build && cd build
-$ cmake path/to/llvm -DCMAKE_C_COMPILER=<C compiler> -DCMAKE_CXX_COMPILER=<C++ compiler>
-$ make omp
+For build instructions, please see https://openmp.llvm.org/Building.html.
 
-Out-of-tree build:
-
-$ cd where-you-want-to-live
-Check out openmp
-$ cd where-you-want-to-live/openmp/runtime
-$ mkdir build && cd build
-$ cmake path/to/openmp -DCMAKE_C_COMPILER=<C compiler> -DCMAKE_CXX_COMPILER=<C++ compiler>
-$ make
-
-For details about building, please look at README.rst in the parent directory.
 
 Architectures Supported
 =======================

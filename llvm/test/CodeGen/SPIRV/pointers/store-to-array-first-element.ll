@@ -12,9 +12,11 @@
 ; CHECK: %[[#GEP:]] = OpInBoundsAccessChain %[[#IntPtr]] %[[#Var]] %[[#Zero]]
 ; CHECK: OpStore %[[#GEP]] %[[#Const]]
 
-define spir_func void @test_array_store() {
+define spir_func void @test_array_store() #0 {
 entry:
   %var = alloca [4 x i32]
   store i32 123, ptr %var
   ret void
 }
+
+attributes #0 = { optnone noinline }

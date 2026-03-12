@@ -38,7 +38,7 @@ void setMatrix(out float4x4 M, int index, float4 V) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <3 x float> @_Z9getMatrixu11matrix_typeILm4ELm4EfEi(
 // CHECK-SAME: <16 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [16 x float], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
@@ -62,7 +62,7 @@ float3 getMatrix(float4x4 M, int index) {
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z9getMatrixu11matrix_typeILm3ELm3EfEi(
 // CHECK-SAME: <9 x float> noundef nofpclass(nan inf) [[M:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [9 x float], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [3 x <3 x float>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <9 x float> [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
@@ -115,7 +115,7 @@ int3 getMatrixSwizzle2x3(out int2x3 M, int index) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <6 x i32> [[N]], ptr [[N_ADDR]], align 4

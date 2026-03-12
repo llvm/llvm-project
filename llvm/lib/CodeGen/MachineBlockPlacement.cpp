@@ -638,9 +638,7 @@ class MachineBlockPlacementLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -3600,10 +3598,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   bool UseExtTspForPerf = false;
   bool UseExtTspForSize = false;
   if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    UseExtTspForPerf =
-        EnableExtTspBlockPlacement &&
-        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
     UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+    UseExtTspForPerf =
+        !UseExtTspForSize && EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
   }
 
   // Apply tail duplication.
@@ -3871,10 +3869,7 @@ class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementStatsLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
     auto *MBPI =

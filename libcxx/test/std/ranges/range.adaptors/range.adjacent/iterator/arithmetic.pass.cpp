@@ -21,6 +21,7 @@
 // friend constexpr difference_type operator-(const iterator& x, const iterator& y)
 //   requires sized_sentinel_for<iterator_t<Base>, iterator_t<Base>>;
 
+#include <cassert>
 #include <iterator>
 #include <ranges>
 

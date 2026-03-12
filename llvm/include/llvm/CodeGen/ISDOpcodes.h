@@ -648,11 +648,12 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// left by IMM elements and returns the lower half.
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by OFFSET elements and returns the lower half.
   VECTOR_SPLICE_LEFT,
-  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, IMM) - Shifts CONCAT_VECTORS(VEC1, VEC2)
-  /// right by IMM elements and returns the upper half.
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1,
+  /// VEC2)
+  /// right by OFFSET elements and returns the upper half.
   VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
@@ -1012,6 +1013,12 @@ enum NodeType {
   FP_TO_BF16,
   STRICT_BF16_TO_FP,
   STRICT_FP_TO_BF16,
+
+  /// CONVERT_FROM_ARBITRARY_FP - This operator converts from an arbitrary
+  /// floating-point represented as an integer to a native FP type.
+  /// The first operand is the integer containing the source FP bits.
+  /// The second operand is a constant indicating the source FP semantics.
+  CONVERT_FROM_ARBITRARY_FP,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
@@ -1439,6 +1446,10 @@ enum NodeType {
   /// Its purpose is the extension of the operand's lifetime mainly for
   /// debugging purposes.
   FAKE_USE,
+
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
 
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary

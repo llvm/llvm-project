@@ -29,9 +29,11 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -55,10 +57,25 @@ BlockInstrLimit("early-ifcvt-limit", cl::init(30), cl::Hidden,
 static cl::opt<bool> Stress("stress-early-ifcvt", cl::Hidden,
   cl::desc("Turn all knobs to 11"));
 
+// Enable analysis of data dependent branches (conditions derived from loads).
+static cl::opt<bool> EnableDataDependentBranchAnalysis(
+    "enable-early-ifcvt-data-dependent", cl::Hidden, cl::init(false),
+    cl::desc("Enable hard-to-predict branch analysis for if-conversion"));
+
+// Limit the number steps we take when searching conditions that depend on
+// values recently loaded from memory.
+static cl::opt<unsigned>
+    MaxNumSteps("early-ifcvt-max-steps", cl::Hidden, cl::init(16),
+                cl::desc("Limit the number of steps taken when searching for a "
+                         "recently loaded value"));
+
 STATISTIC(NumDiamondsSeen,  "Number of diamonds");
 STATISTIC(NumDiamondsConv,  "Number of diamonds converted");
 STATISTIC(NumTrianglesSeen, "Number of triangles");
 STATISTIC(NumTrianglesConv, "Number of triangles converted");
+STATISTIC(NumDataDependant,
+          "Number of data dependent conditional branches encountered");
+STATISTIC(NumLikelyBiased, "Number of branches with a hot path encountered");
 
 //===----------------------------------------------------------------------===//
 //                                 SSAIfConv
@@ -809,12 +826,13 @@ class EarlyIfConverter {
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
+  MachineBranchProbabilityInfo *MBPI = nullptr;
   SSAIfConv IfConv;
 
 public:
   EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
-                   MachineTraceMetrics &MTM)
-      : DomTree(&DT), Loops(&LI), Traces(&MTM) {}
+                   MachineTraceMetrics &MTM, MachineBranchProbabilityInfo *MBPI)
+      : DomTree(&DT), Loops(&LI), Traces(&MTM), MBPI(MBPI) {}
   EarlyIfConverter() = delete;
 
   bool run(MachineFunction &MF);
@@ -823,6 +841,8 @@ private:
   bool tryConvertIf(MachineBasicBlock *);
   void invalidateTraces();
   bool shouldConvertIf();
+  bool isConditionDataDependent();
+  bool doOperandsComeFromMemory(Register Reg);
 };
 
 class EarlyIfConverterLegacy : public MachineFunctionPass {
@@ -896,6 +916,115 @@ void EarlyIfConverter::invalidateTraces() {
   Traces->verifyAnalysis();
 }
 
+static bool isConstantPoolLoad(const MachineInstr *MI) {
+  return MI->mayLoad() && any_of(MI->memoperands(), [](MachineMemOperand *MOp) {
+           const PseudoSourceValue *PSV = MOp->getPseudoValue();
+           return PSV && PSV->isConstantPool();
+         });
+}
+
+/// Check if there are any calls in the range (From, To].
+static bool callInRange(const MachineInstr *From, const MachineInstr *To) {
+  constexpr int MaxInstructionsToCheck = 64;
+  int Count = 0;
+  auto InstrRange =
+      make_range(std::next(From->getIterator()), To->getIterator());
+  return any_of(InstrRange, [&](const MachineInstr &MI) {
+    return ++Count > MaxInstructionsToCheck || MI.isCall();
+  });
+}
+
+/// Check if a register's value comes from a memory load by walking the
+/// def-use chain. We want to prioritize converting branches which
+/// depend on values loaded from memory (unless they are loop invariant,
+/// or come from a constant pool). Only consider loads that are in the
+/// same basic block as the branch to ensure the load is "immediately"
+/// before the branch in program time.
+bool EarlyIfConverter::doOperandsComeFromMemory(Register Reg) {
+  if (!Reg.isVirtual())
+    return false;
+
+  // Walk the def-use chain.
+  SmallPtrSet<const MachineInstr *, 8> VisitedInstrs;
+  SmallVector<const MachineInstr *> Worklist;
+  SmallVector<Register, 16> VisitedRegs;
+
+  MachineInstr *DefMI = MRI->getVRegDef(Reg);
+  // The operand is defined outside of the function - it does not
+  // come from memory access.
+  if (!DefMI)
+    return false;
+
+  Worklist.push_back(DefMI);
+  VisitedRegs.push_back(Reg);
+
+  while (!Worklist.empty() && VisitedInstrs.size() < MaxNumSteps) {
+    const MachineInstr *MI = Worklist.pop_back_val();
+    if (!VisitedInstrs.insert(MI).second)
+      continue;
+
+    // Stop walking if we encounter an instruction outside the head block.
+    if (MI->getParent() != IfConv.Head)
+      break;
+
+    // Check if this instruction is a load, and there are no calls between
+    // the load and the branch (which would break the "close in time"
+    // assumption).
+    if (MI->mayLoad() && !isConstantPoolLoad(MI) &&
+        !MI->isDereferenceableInvariantLoad() &&
+        !callInRange(MI, &*IfConv.Head->getFirstTerminator()))
+      return true;
+
+    // Walk through all register use operands and find their definitions.
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg() || !MO.isUse())
+        continue;
+      Register UseReg = MO.getReg();
+      if (!UseReg.isVirtual())
+        continue;
+
+      if (MachineInstr *UseDef = MRI->getVRegDef(UseReg)) {
+        if (!VisitedInstrs.count(UseDef)) {
+          Worklist.push_back(UseDef);
+          VisitedRegs.push_back(UseReg);
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/// Check if the branch condition is data-dependent (comes from memory loads).
+bool EarlyIfConverter::isConditionDataDependent() {
+  TargetInstrInfo::MachineBranchPredicate MBP;
+  if (TII->analyzeBranchPredicate(*IfConv.Head, MBP, /*AllowModify=*/false))
+    return false;
+
+  if (!MBP.ConditionDef)
+    return false;
+
+  // If the branch is biased (not 50/50), don't consider it data dependent.
+  // This is to prevent converting unprofitable checks such as
+  // `x[i] != 0;`
+  auto TBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
+  auto FBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB);
+  if (TBBProb != FBBProb) {
+    ++NumLikelyBiased;
+    return false;
+  }
+
+  // Check if operands used to compute the branch condition were loaded recently
+  // from memory, starting by the ConditionDef itself and walking up the use-def
+  // chain.
+  if (doOperandsComeFromMemory(MBP.ConditionDef->getOperand(0).getReg())) {
+    ++NumDataDependant;
+    return true;
+  }
+
+  return false;
+}
+
 // Adjust cycles with downward saturation.
 static unsigned adjCycles(unsigned Cyc, int Delta) {
   if (Delta < 0 && Cyc + Delta > Cyc)
@@ -964,10 +1093,29 @@ bool EarlyIfConverter::shouldConvertIf() {
                               FBBTrace.getCriticalPath());
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
-  unsigned CritLimit = SchedModel.MispredictPenalty/2;
+  // When hard-to-predict analysis is enabled, use full MispredictPenalty for
+  // hard-to-predict branches, half for others. Otherwise use half for all.
+  bool DataDependent = false;
+  if (EnableDataDependentBranchAnalysis)
+    DataDependent = isConditionDataDependent();
+
+  unsigned CritLimit = DataDependent ? SchedModel.MispredictPenalty
+                                     : SchedModel.MispredictPenalty / 2;
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
+
+  // Emit analysis remark about data-dependent condition.
+  if (DataDependent) {
+    MORE.emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE,
+                                               "DataDependentCondition",
+                                               MBB.back().getDebugLoc(), &MBB)
+             << "branch condition is data-dependent (from memory load), "
+             << "using higher CritLimit of " << ore::NV("CritLimit", CritLimit)
+             << " cycles";
+    });
+  }
 
   // If-conversion only makes sense when there is unexploited ILP. Compute the
   // maximum-ILP resource length of the trace after if-conversion. Compare it
@@ -1161,8 +1309,11 @@ EarlyIfConverterPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+  MachineBranchProbabilityInfo *MBPI = nullptr;
+  if (EnableDataDependentBranchAnalysis)
+    MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
 
-  EarlyIfConverter Impl(MDT, LI, MTM);
+  EarlyIfConverter Impl(MDT, LI, MTM, MBPI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -1183,8 +1334,11 @@ bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MachineTraceMetrics &MTM =
       getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+  MachineBranchProbabilityInfo *MBPI = nullptr;
+  if (EnableDataDependentBranchAnalysis)
+    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
-  return EarlyIfConverter(MDT, LI, MTM).run(MF);
+  return EarlyIfConverter(MDT, LI, MTM, MBPI).run(MF);
 }
 
 //===----------------------------------------------------------------------===//
