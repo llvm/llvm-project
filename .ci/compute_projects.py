@@ -81,6 +81,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
+    "libclc": {"libclc"},
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
@@ -107,6 +108,7 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
+    "libclc",  # Tests don't work on Windows (check_external_funcs.sh).
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -146,6 +148,7 @@ PROJECT_CHECK_TARGETS = {
     "flang": "check-flang",
     "flang-rt": "check-flang-rt",
     "libc": "check-libc",
+    "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
@@ -154,7 +157,7 @@ PROJECT_CHECK_TARGETS = {
     "lit": "check-lit",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt", "libclc"}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path
@@ -329,6 +332,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
     # passed to ninja.
+    libclc_targets = "amdgcn-amd-amdhsa-llvm" if "libclc" in runtimes_to_build else ""
     return {
         "projects_to_build": ";".join(sorted(projects_to_build)),
         "project_check_targets": " ".join(sorted(projects_check_targets)),
@@ -338,6 +342,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
             sorted(runtimes_check_targets_needs_reconfig)
         ),
         "enable_cir": enable_cir,
+        "libclc_targets": libclc_targets,
     }
 
 

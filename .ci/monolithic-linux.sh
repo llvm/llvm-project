@@ -28,6 +28,7 @@ runtimes="${3}"
 runtime_targets="${4}"
 runtime_targets_needs_reconfig="${5}"
 enable_cir="${6}"
+libclc_targets="${7}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
@@ -56,6 +57,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D LIBCXX_CXX_ABI=libcxxabi \
+      -D LIBCLC_TARGETS_TO_BUILD="${libclc_targets}" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
