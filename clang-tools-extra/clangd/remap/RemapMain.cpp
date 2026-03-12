@@ -79,6 +79,7 @@ std::optional<std::string> remapString(llvm::StringRef S,
 
   // For non-URI strings (compilation flags, directory paths, etc.) only match
   // at the first '/' (where an absolute path begins)
+  // FIXME: This does not handle Windows paths; only POSIX paths are supported.
   size_t FirstSlash = S.find('/');
   if (FirstSlash == llvm::StringRef::npos)
     return std::nullopt;
@@ -262,13 +263,13 @@ int main(int Argc, const char **Argv) {
   // Gather all shard files from the index directory.
   auto AllShards = collectShards(IndexDir);
   if (AllShards.empty()) {
-    llvm::errs() << "No .idx files found in the specified directories.\n";
+    log("No .idx files found in the specified directories.");
     return 0;
   }
 
-  llvm::errs() << "Found " << AllShards.size() << " shard(s) to process.\n";
+  log("Found {0} shard(s) to process.", AllShards.size());
   for (const auto &M : *Mappings)
-    llvm::errs() << "  Path mapping: " << M << "\n";
+    log("  Path mapping: {0}", M);
 
   if (NumThreads.getValue() != 0)
     llvm::parallel::strategy = llvm::hardware_concurrency(NumThreads);
@@ -333,8 +334,7 @@ int main(int Argc, const char **Argv) {
 
   unsigned Renamed = FilesRenamed.load();
   unsigned Unchanged = FilesUnchanged.load();
-  llvm::errs() << "Processed: " << (Renamed + Unchanged) << " shard(s), "
-               << Renamed << " renamed, " << Unchanged << " unchanged, "
-               << Errors.load() << " error(s).\n";
+  log("Processed: {0} shard(s), {1} renamed, {2} unchanged, {3} error(s).",
+      Renamed + Unchanged, Renamed, Unchanged, Errors.load());
   return Errors.load() > 0 ? 1 : 0;
 }

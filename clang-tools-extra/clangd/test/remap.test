@@ -1,6 +1,5 @@
 # Paths are not constructed correctly for the test to run on Windows
 # UNSUPPORTED: system-windows
-# REQUIRES: zlib
 #
 # RUN: rm -rf %t && mkdir -p %t/src %t/index
 # RUN: echo 'void hello();' > %t/src/test.h
