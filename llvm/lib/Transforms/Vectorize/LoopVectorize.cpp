@@ -8981,15 +8981,6 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
 
   // Collect resume values for epilogue bypass fixup. Create
   // ResumeForEpilogue for scalar preheader phis to keep them alive.
-  SmallVector<VPInstruction *> ResumeValues;
-  for (VPRecipeBase &R : MainPlan.getScalarHeader()->phis()) {
-    auto *VPIRInst = cast<VPIRPhi>(&R);
-    VPValue *ResumeOp = VPIRInst->getOperand(0);
-    auto *Resume =
-        ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue, ResumeOp);
-    ResumeValues.push_back(Resume);
-  }
-
   return to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
         assert(isa<VPIRPhi>(&R) &&
