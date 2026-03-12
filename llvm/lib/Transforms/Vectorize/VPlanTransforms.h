@@ -248,9 +248,8 @@ struct VPlanTransforms {
   /// block merging.
   LLVM_ABI_FOR_TEST static void optimize(VPlan &Plan);
 
-  /// Merge replicate regions in their successor region, if a replicate region
-  /// is connected to a successor replicate region with the same predicate by a
-  /// single, empty VPBasicBlock.
+  /// Remove redundant VPBasicBlocks by merging them into their predecessor if
+  /// the predecessor has a single successor.
   static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then

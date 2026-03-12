@@ -370,6 +370,9 @@ static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
   return nullptr;
 }
 
+// Merge replicate regions in their successor region, if a replicate region
+// is connected to a successor replicate region with the same predicate by a
+// single, empty VPBasicBlock.
 static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
   SmallPtrSet<VPRegionBlock *, 4> TransformedRegions;
 
@@ -532,8 +535,6 @@ static void addReplicateRegions(VPlan &Plan) {
   }
 }
 
-/// Remove redundant VPBasicBlocks by merging them into their predecessor if
-/// the predecessor has a single successor.
 bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
   SmallVector<VPBasicBlock *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
