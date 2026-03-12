@@ -97,11 +97,6 @@ class IssueSubscriber:
             self.issue.create_comment(comment)
 
         body = escape_description(self.issue.body)
-        if self.issue.user.name is not None:
-            author = f"{self.issue.user.name} ({self.issue.user.login})"
-        else:
-            author = f"{self.issue.user.login}"
-
         comment = f"""
 @llvm/{team.slug}
 
