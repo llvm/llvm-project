@@ -233,7 +233,7 @@ _LIBCPP_HIDDEN __te_impl __get_win32_acp(unsigned int __codepage) {
 
   // The below function fills the string with the number in text.
   auto __lctype = __is_ansi ? LOCALE_IDEFAULTANSICODEPAGE : LOCALE_IDEFAULTCODEPAGE;
-  int __result = ::GetLocaleInfoEx(__locale_wbuffer, __lctype, __number_buffer, 10);
+  int __result  = ::GetLocaleInfoEx(__locale_wbuffer, __lctype, __number_buffer, 10);
 
   if (__result <= 0)
     return __te_impl();
