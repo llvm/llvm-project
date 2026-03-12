@@ -1908,8 +1908,8 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
     return parseImmediateOperand(Dest);
 
   // Parse symbolic form: kind[:constraint].
-  if (Token.isNot(MIToken::Identifier))
-    return error("expected inline asm operand kind or integer literal");
+  assert(Token.is(MIToken::Identifier) &&
+         "expected inline asm operand kind or integer literal");
 
   StringRef KindStr = Token.stringValue();
   constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
@@ -1922,9 +1922,7 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
           .Case("imm", InlineAsm::Kind::Imm)
           .Case("mem", InlineAsm::Kind::Mem)
           .Default(InvalidKind);
-
-  if (K == InvalidKind)
-    return error("unknown inline asm operand kind '" + KindStr + "'");
+  assert(K != InvalidKind && "unknown inline asm operand kind");
 
   lex();
 
