@@ -205,23 +205,12 @@ const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
 } // namespace
 
 StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
-  switch (AK) {
-  case AMDGPU::GK_GFX9_GENERIC:
-  case AMDGPU::GK_GFX9_4_GENERIC:
-    return "gfx9";
-  case AMDGPU::GK_GFX10_1_GENERIC:
-  case AMDGPU::GK_GFX10_3_GENERIC:
-    return "gfx10";
-  case AMDGPU::GK_GFX11_GENERIC:
-    return "gfx11";
-  case AMDGPU::GK_GFX12_GENERIC:
-  case AMDGPU::GK_GFX12_5_GENERIC:
-    return "gfx12";
-  default: {
-    StringRef ArchName = getArchNameAMDGCN(AK);
-    return ArchName.empty() ? "" : ArchName.drop_back(2);
+  StringRef ArchName = getArchNameAMDGCN(AK);
+  if (ArchName.ends_with("-generic")) {
+    // Return the part before the first '-', e.g. "gfx9-4-generic" -> "gfx9".
+    return ArchName.take_front(ArchName.find('-'));
   }
-  }
+  return ArchName.empty() ? "" : ArchName.drop_back(2);
 }
 
 StringRef llvm::AMDGPU::getArchNameAMDGCN(GPUKind AK) {
