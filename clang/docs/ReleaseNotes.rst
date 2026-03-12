@@ -207,6 +207,12 @@ Attribute Changes in Clang
   type-level control over overflow behavior. There is also an accompanying type
   specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
+- Introduced a new function attribute ``__attribute__((__personality__(...)))``
+  to explicitly specify the personality routine for exception handling. THis is
+  meant to be a low level tool for language runtime authors to associate a
+  foreign language personality with a given function. Note that this does not
+  perform any ABI validation for the personality routine.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
@@ -282,9 +288,6 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
-- ``-Wunsafe-buffer-usage`` now warns about unsafe two-parameter constructors of
-  ``std::string_view`` (pointer and size), consistent with the existing warning for ``std::span``.
-
 - Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
   header and umbrella directory paths that use ``..`` to refer outside the module
   directory in module maps found via implicit search
@@ -318,6 +321,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 - Fixed a crash when parsing ``#pragma clang attribute`` arguments for attributes that forbid arguments. (#GH182122)
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
+- Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -340,7 +344,10 @@ Bug Fixes to C++ Support
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
+- Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
+- Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
+
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
   and produce a warning. (#GH162640)
@@ -351,6 +358,7 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -409,6 +417,7 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
+- Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

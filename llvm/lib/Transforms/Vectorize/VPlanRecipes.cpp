@@ -128,7 +128,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
-  case VPCurrentIterationPHISC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
   case VPPredInstPHISC:
@@ -166,7 +165,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPActiveLaneMaskPHISC:
   case VPDerivedIVSC:
-  case VPCurrentIterationPHISC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
   case VPPredInstPHISC:
@@ -2250,6 +2248,9 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     case RecurKind::AnyOf:
       O << "any-of";
       break;
+    case RecurKind::FindLast:
+      O << "find-last";
+      break;
     case RecurKind::SMax:
       O << "smax";
       break;
@@ -2303,7 +2304,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   switch (Opcode) {
   case Instruction::Call:
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::PHI:
   case Instruction::GetElementPtr:
     llvm_unreachable("This instruction is handled by a different recipe.");
@@ -3585,7 +3587,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       if (!PtrSCEV || Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
         break;
       Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
-      Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
+      Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(
           IntegerType::getInt1Ty(Ctx.L->getHeader()->getContext()), VF);

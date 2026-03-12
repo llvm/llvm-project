@@ -108,6 +108,12 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
+    libc.src.wctype.iswgraph
+    libc.src.wctype.iswcntrl
+    libc.src.wctype.iswlower
+    libc.src.wctype.iswspace
+    libc.src.wctype.iswblank
+    libc.src.wctype.iswxdigit
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -145,6 +151,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanhf
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.copysign
     libc.src.math.copysignf
     libc.src.math.copysignl

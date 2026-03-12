@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "utils/SBDebuggerContextManager.h"
+
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -15,13 +17,11 @@
 #include "lldb/API/SBTarget.h"
 
 using namespace lldb;
-
-extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
-  SBDebugger::Initialize();
-  return 0;
-}
+using namespace lldb_fuzzer;
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
+  static SBDebuggerContextManager ctx_manager = SBDebuggerContextManager();
+
   // Convert the data into a null-terminated string
   std::string str((char *)data, size);
 

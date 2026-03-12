@@ -4142,8 +4142,13 @@ void Value::print(raw_ostream &os, AsmState &state) const {
      << "' at index: " << arg.getArgNumber();
 }
 
+raw_ostream &mlir::operator<<(raw_ostream &os, Value value) {
+  value.print(os, OpPrintingFlags().useLocalScope());
+  return os;
+}
+
 void Value::dump() const {
-  print(llvm::errs());
+  print(llvm::errs(), OpPrintingFlags().useLocalScope());
   llvm::errs() << "\n";
 }
 

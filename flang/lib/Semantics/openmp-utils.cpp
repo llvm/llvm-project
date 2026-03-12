@@ -595,8 +595,8 @@ struct ArrayExpressionRecognizer {
   }
 };
 
-// Helper class to check if a given evaluate::Expr contains a subexpression
-// (not necessarily proper) that is an array expression.
+/// Helper class to check if a given evaluate::Expr contains a subexpression
+/// (not necessarily proper) that is an array expression.
 struct ArrayExpressionFinder
     : public evaluate::AnyTraverse<ArrayExpressionFinder> {
   using Base = evaluate::AnyTraverse<ArrayExpressionFinder>;
@@ -609,8 +609,8 @@ struct ArrayExpressionFinder
   }
 };
 
-// Helper class to check if any array expressions contained in the given
-// evaluate::Expr satisfy the criteria for being in "intervening code".
+/// Helper class to check if any array expressions contained in the given
+/// evaluate::Expr satisfy the criteria for being in "intervening code".
 struct ArrayExpressionChecker {
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
@@ -637,6 +637,9 @@ static bool ContainsInvalidArrayExpression(
   return checker.rejected;
 }
 
+/// Checks if the given construct `x` satisfied OpenMP requirements for
+/// intervening-code. Excludes CYCLE/EXIT statements as well as constructs
+/// likely to result in a runtime loop, e.g. FORALL, WHERE, etc.
 bool IsValidInterveningCode(const parser::ExecutionPartConstruct &x) {
   static auto isScalar = [](const parser::Variable &variable) {
     if (auto expr{GetEvaluateExprFromTyped(variable.typedExpr)}) {
@@ -688,6 +691,11 @@ bool IsValidInterveningCode(const parser::ExecutionPartConstruct &x) {
   return true;
 }
 
+/// Checks if the given construct `x` preserves perfect nesting of a loop,
+/// when placed adjacent to the loop in the enclosing (parent) loop.
+/// CONTINUE statements are no-ops, and thus are considered transparent.
+/// Non-OpenMP compiler directives are also considered transparent to
+/// allow legacy applications to pass the semantic checks.
 bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
   // Tolerate compiler directives in perfect nests.
   return parser::Unwrap<parser::CompilerDirective>(x) ||
@@ -710,64 +718,6 @@ bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
     return IsTransformableLoop(*omp);
   }
   return false;
-}
-
-std::optional<int64_t> GetNumGeneratedNestsFrom(
-    const parser::ExecutionPartConstruct &epc,
-    std::optional<int64_t> nestedCount) {
-  if (parser::Unwrap<parser::DoConstruct>(epc)) {
-    return 1;
-  }
-
-  auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(epc))};
-  const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
-  llvm::omp::Directive dir{beginSpec.DirId()};
-  if (!IsLoopTransforming(dir)) {
-    return 0;
-  }
-
-  // TODO: Handle split, apply.
-  if (IsFullUnroll(omp)) {
-    return std::nullopt;
-  }
-
-  if (dir == llvm::omp::Directive::OMPD_fuse) {
-    // If there are no loops nested inside of FUSE, then the construct is
-    // invalid. This case will be diagnosed when analyzing the body of the FUSE
-    // construct itself, not when checking a construct in which the FUSE is
-    // nested.
-    // Returning std::nullopt prevents error messages caused by the same
-    // problem from being emitted for every enclosing loop construct, for
-    // example:
-    //   !$omp do         ! error: this should contain a loop (superfluous)
-    //   !$omp fuse       ! error: this should contain a loop
-    //   !$omp end fuse
-    if (!nestedCount || *nestedCount == 0) {
-      return std::nullopt;
-    }
-    auto *clause{
-        parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_looprange)};
-    if (!clause) {
-      return 1;
-    }
-
-    auto *loopRange{parser::Unwrap<parser::OmpLooprangeClause>(*clause)};
-    std::optional<int64_t> count{GetIntValue(std::get<1>(loopRange->t))};
-    if (!count || *count <= 0) {
-      return std::nullopt;
-    }
-    if (*count <= *nestedCount) {
-      return 1 + *nestedCount - *count;
-    }
-    return std::nullopt;
-  }
-
-  if (dir == llvm::omp::Directive::OMPD_nothing) {
-    return nestedCount;
-  }
-
-  // For every other loop construct return 1.
-  return 1;
 }
 
 LoopSequence::LoopSequence(
