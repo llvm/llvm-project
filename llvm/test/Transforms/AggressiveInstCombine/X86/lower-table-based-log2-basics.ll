@@ -77,7 +77,7 @@ define i32 @log2_32_nusw(i32 %v) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[V:%.*]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 31, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[V]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]], !prof [[PROF1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -110,7 +110,7 @@ define i32 @log2_64(i64 noundef %v) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V:%.*]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 63, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[V]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 0, i64 [[TMP1]], !prof [[PROF1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -134,6 +134,35 @@ entry:
   %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
   ret i32 %conv
+}
+
+@log2_16.table = internal unnamed_addr constant [16 x i8] c"\00\07\01\0D\08\0A\02\0E\06\0C\09\05\0B\04\03\0F", align 1
+
+define i32 @log2_16(i16 noundef %0) {
+; CHECK-LABEL: @log2_16(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ctlz.i16(i16 [[TMP0:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i16 15, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i16 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i16 0, i16 [[TMP3]], !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i16 [[TMP5]] to i8
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP14]] to i32
+; CHECK-NEXT:    ret i32 [[TMP15]]
+;
+  %2 = lshr i16 %0, 1
+  %3 = or i16 %2, %0
+  %4 = lshr i16 %3, 2
+  %5 = or i16 %4, %3
+  %6 = lshr i16 %5, 4
+  %7 = or i16 %6, %5
+  %8 = lshr i16 %7, 8
+  %9 = or i16 %8, %7
+  %10 = mul i16 %9, 3885
+  %11 = lshr i16 %10, 12
+  %12 = zext nneg i16 %11 to i64
+  %13 = getelementptr inbounds nuw i8, ptr @log2_16.table, i64 %12
+  %14 = load i8, ptr %13, align 1
+  %15 = zext i8 %14 to i32
+  ret i32 %15
 }
 
 !0 = !{!"function_entry_count", i64 1000}
