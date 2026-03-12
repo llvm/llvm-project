@@ -332,31 +332,39 @@ emitUseStatementsFromFunit(Fortran::lower::AbstractConverter &converter,
         if (const auto *modUnit = findModuleLikeUnit(*pft, moduleName)) {
           // Get the module's scope for symbol lookup
           const Fortran::semantics::Scope &modScope = modUnit->getScope();
-          // For each USE statement in this module, first recursively emit
-          // transitive USE statements for the used module (depth-first),
-          // then emit this module's USE statement.
-          for (const auto &modUseStmt : modUnit->preservedUseStmts) {
-            emitTransitiveUses(modUseStmt.moduleName);
 
+          // First pass: Emit all USE statements from this module
+          for (const auto &modUseStmt : modUnit->preservedUseStmts) {
             if (!emittedModules.contains(modUseStmt.moduleName)) {
               emitUseStmt(modUseStmt, modScope);
               emittedModules.insert(modUseStmt.moduleName);
             }
           }
+
+          // Second pass: Emit transitive USE statements
+          for (const auto &modUseStmt : modUnit->preservedUseStmts) {
+            // If this USE statement has an ONLY clause, skip transitive
+            // emission
+            if (modUseStmt.onlyNames.empty())
+              emitTransitiveUses(modUseStmt.moduleName);
+          }
         }
       };
 
-  // Emit direct USE statements from the function
+  // First pass: Emit all direct USE statements from the function
   for (const auto &preservedStmt : funit.preservedUseStmts) {
     if (emittedModules.contains(preservedStmt.moduleName))
       continue;
 
-    // First, recursively emit transitive USE statements (depth-first)
-    emitTransitiveUses(preservedStmt.moduleName);
-
-    // Then emit this function's direct USE statement
     emitUseStmt(preservedStmt, scope);
     emittedModules.insert(preservedStmt.moduleName);
+  }
+
+  // Second pass: Emit transitive USE statements
+  for (const auto &preservedStmt : funit.preservedUseStmts) {
+    // If the USE statement has an ONLY clause, skip transitive emission
+    if (preservedStmt.onlyNames.empty())
+      emitTransitiveUses(preservedStmt.moduleName);
   }
 }
 
