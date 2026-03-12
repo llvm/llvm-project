@@ -7682,17 +7682,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     unsigned MeaningfulDMask = PassedDMask & 0xf;
     Check(
         PassedDMask == MeaningfulDMask,
-        "DMask is a 4 bit value and therefore at most 4 least significant "
-        "bits of an llvm.amdgcn.image.* intrinsic's dmask argument can be set",
+        "Only 4 least significant bits of the dmask argument (1st) can be set",
         &Call);
     if (!T->isVoidTy()) {
       // We don't know the destination for no-return intrinsics and therefore
       // cannot perform this check
       unsigned NumActiveBits = popcount(MeaningfulDMask);
       Check(NumActiveBits <= VWidth,
-            "The llvm.amdgcn.image.[load|sample] intrinsic's dmask argument "
-            "cannot have more active bits than there are elements in the "
-            "return type",
+            "The dmask argument (1st) cannot have more active bits than there "
+            "are elements in the return type",
             &Call);
     }
     break;
@@ -7717,8 +7715,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     unsigned MeaningfulDMask = PassedDMask & 0xf;
     Check(
         PassedDMask == MeaningfulDMask,
-        "DMask is a 4 bit value and therefore at most 4 least significant "
-        "bits of an llvm.amdgcn.image.* intrinsic's dmask argument can be set",
+        "Only 4 least significant bits of the dmask argument (2nd) can be set",
         &Call);
     // Store instructions can attempt to store more components than there are
     // in an image: missing components will receive the value of X component.
