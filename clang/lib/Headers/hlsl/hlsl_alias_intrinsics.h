@@ -3509,16 +3509,16 @@ __attribute__((convergent)) double4 WavePrefixProduct(double4);
 // QuadReadAcrossX builtins
 //===----------------------------------------------------------------------===//
 
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) half QuadReadAcrossX(half);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) half2 QuadReadAcrossX(half2);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) half3 QuadReadAcrossX(half3);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) half4 QuadReadAcrossX(half4);
 
