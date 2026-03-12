@@ -20,13 +20,27 @@
 #include <clocale>
 #include <text_encoding>
 
+#include "../test_text_encoding.h"
 #include "platform_support.h"
 
 int main(int, char**) {
 #if !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
   std::text_encoding te = std::text_encoding::environment();
+  // 1. Depending on the platform's default, verify that environment() returns the corresponding text encoding.
+  {
+#  if defined(__ANDROID__)
+    assert(te.mib() == std::text_encoding::UTF8);
+    assert(std::text_encoding::environment_is<std::text_encoding::UTF8>());
+#  elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+    assert(te.mib() == std::text_encoding::ASCII);
+    assert(std::text_encoding::environment_is<std::text_encoding::ASCII>());
+#  elif defined(_WIN32)
+    assert(te.mib() == std::text_encoding::windows1252);
+    assert(std::text_encoding::environment_is<std::text_encoding::windows1252>());
+#  endif
+  }
 
-  // 1. text_encoding::environment() still returns the default system encoding when the "LC_ALL" locale is changed.
+  // 2. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
   {
     std::setlocale(LC_ALL, LOCALE_en_US_UTF_8);
 
@@ -35,7 +49,6 @@ int main(int, char**) {
     assert(te == te2);
   }
 
-  // 2. text_encoding::environment() still returns the default system encoding when the "LC_CTYPE" locale is changed.
   {
     std::setlocale(LC_CTYPE, LOCALE_en_US_UTF_8);
 
