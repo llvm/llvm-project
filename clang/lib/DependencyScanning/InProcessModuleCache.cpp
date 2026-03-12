@@ -131,6 +131,13 @@ public:
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
   }
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // FIXME: This only needs to go to disk once per build, not in every
+    // compilation. Introduce in-memory cache.
+    return readImpl(FileName, Size, ModTime);
+  }
 };
 } // namespace
 

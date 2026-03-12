@@ -101,6 +101,24 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   }
 }
 
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
+  std::error_code EC;
+  int FD;
+  if ((EC = llvm::sys::fs::openFileForRead(FileName, FD)))
+    return EC;
+  llvm::sys::fs::file_status Status;
+  if ((EC = llvm::sys::fs::status(FD, Status)))
+    return EC;
+  auto BufOrErr = llvm::MemoryBuffer::getOpenFile(
+      FD, FileName, Status.getSize(), /*RequiresNullTerminator=*/false);
+  if (!BufOrErr)
+    return BufOrErr.getError();
+  Size = Status.getSize();
+  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  return std::move(*BufOrErr);
+}
+
 namespace {
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
@@ -160,6 +178,14 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace

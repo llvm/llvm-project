@@ -188,33 +188,34 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     // import it earlier.
     return OutOfDate;
   } else {
-    OptionalFileEntryRef Entry =
-        expectedToOptional(FileName == StringRef("-")
-                               ? FileMgr.getSTDIN()
-                               : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
-                                                    /*CacheFailure=*/false));
-    if (!Entry) {
-      ErrorStr = "module file not found";
-      return Missing;
-    }
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf = nullptr;
+    if (FileName.getImplicitModuleSuffixLength()) {
+      Buf = ModCache.read(FileName, Size, ModTime);
+    } else {
+      OptionalFileEntryRef Entry = expectedToOptional(
+          FileName == StringRef("-")
+              ? FileMgr.getSTDIN()
+              : FileMgr.getFileRef(FileName, /*OpenFile=*/true,
+                                   /*CacheFailure=*/false));
+      if (!Entry) {
+        ErrorStr = "module file not found";
+        return Missing;
+      }
 
-    // Get a buffer of the file and close the file descriptor when done.
-    // The file is volatile because in a parallel build we expect multiple
-    // compiler processes to use the same module file rebuilding it if needed.
-    //
-    // RequiresNullTerminator is false because module files don't need it, and
-    // this allows the file to still be mmapped.
-    auto Buf = FileMgr.getBufferForFile(*Entry,
-                                        /*IsVolatile=*/true,
-                                        /*RequiresNullTerminator=*/false);
+      Size = Entry->getSize();
+      ModTime = Entry->getModificationTime();
+
+      // RequiresNullTerminator is false because module files don't need it, and
+      // this allows the file to still be mmapped.
+      Buf = FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/false,
+                                     /*RequiresNullTerminator=*/false);
+    }
 
     if (!Buf) {
       ErrorStr = Buf.getError().message();
       return Missing;
     }
 
-    Size = Entry->getSize();
-    ModTime = Entry->getModificationTime();
     NewFileBuffer = std::move(*Buf);
     ModuleBuffer = NewFileBuffer.get();
   }
