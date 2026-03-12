@@ -207,7 +207,7 @@
 # CHECK-NEXT:  1      3     0.25                        fcvtau	v0.4h, v0.4h
 # CHECK-NEXT:  1      3     0.25                        fcvtau	v0.4s, v0.4s
 # CHECK-NEXT:  1      3     0.25                        fcvtau	v0.8h, v0.8h
-# CHECK-NEXT:  1      2     0.17                        fcvtl	v0.2d, v0.2s
+# CHECK-NEXT:  1      3     0.25                        fcvtl	v0.2d, v0.2s
 # CHECK-NEXT:  1      3     0.25                        fcvtl	v0.4s, v0.4h
 # CHECK-NEXT:  1      3     0.25                        fcvtl2	v0.2d, v0.4s
 # CHECK-NEXT:  1      3     0.25                        fcvtl2	v0.4s, v0.8h
@@ -450,7 +450,7 @@
 # CHECK-NEXT:  1      3     0.25                        frsqrte	h23, h26
 # CHECK-NEXT:  1      3     0.25                        frsqrte	d21, d12
 # CHECK-NEXT:  1      3     0.25                        frsqrte	s22, s13
-# CHECK-NEXT:  1      2     0.17                        frsqrte	v0.2d, v0.2d
+# CHECK-NEXT:  1      3     0.25                        frsqrte	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.25                        frsqrte	v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.50                        frsqrte	v0.4h, v0.4h
 # CHECK-NEXT:  1      4     0.50                        frsqrte	v0.4s, v0.4s
@@ -811,10 +811,10 @@
 # CHECK-NEXT:  1      2     0.17                        smaxp	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      2     0.17                        smaxp	v21.8h, v16.8h, v7.8h
 # CHECK-NEXT:  1      2     0.17                        smaxp	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  1      4     0.50                        smaxv	b0, v0.8b
+# CHECK-NEXT:  1      4     0.33                        smaxv	b0, v0.8b
 # CHECK-NEXT:  1      4     0.50                        smaxv	b0, v0.16b
 # CHECK-NEXT:  1      2     0.25                        smaxv	h0, v0.4h
-# CHECK-NEXT:  1      4     0.50                        smaxv	h0, v0.8h
+# CHECK-NEXT:  1      4     0.33                        smaxv	h0, v0.8h
 # CHECK-NEXT:  1      2     0.25                        smaxv	s0, v0.4s
 # CHECK-NEXT:  1      2     0.17                        smin	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.17                        smin	v0.4s, v0.4s, v0.4s
@@ -822,10 +822,10 @@
 # CHECK-NEXT:  1      2     0.17                        sminp	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.17                        sminp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      2     0.17                        sminp	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.50                        sminv	b0, v0.8b
+# CHECK-NEXT:  1      4     0.33                        sminv	b0, v0.8b
 # CHECK-NEXT:  1      4     0.50                        sminv	b0, v0.16b
 # CHECK-NEXT:  1      2     0.25                        sminv	h0, v0.4h
-# CHECK-NEXT:  1      4     0.50                        sminv	h0, v0.8h
+# CHECK-NEXT:  1      4     0.33                        sminv	h0, v0.8h
 # CHECK-NEXT:  1      2     0.25                        sminv	s0, v0.4s
 # CHECK-NEXT:  1      4     0.25                        smlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.25                        smlal	v0.2d, v25.2s, v1.s[1]
@@ -847,16 +847,16 @@
 # CHECK-NEXT:  1      4     0.25                        smlsl2	v11.2d, v28.4s, v7.s[2]
 # CHECK-NEXT:  1      4     0.25                        smlsl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      4     0.25                        smlsl2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      4     0.25                        smull	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      4     0.25                        smull	v31.2d, v23.2s, v6.s[2]
-# CHECK-NEXT:  1      4     0.25                        smull	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      4     0.25                        smull	v3.4s, v26.4h, v1.h[5]
-# CHECK-NEXT:  1      4     0.25                        smull	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      4     0.25                        smull2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      4     0.25                        smull2	v11.2d, v1.4s, v7.s[0]
-# CHECK-NEXT:  1      4     0.25                        smull2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.25                        smull2	v13.4s, v18.8h, v0.h[3]
-# CHECK-NEXT:  1      4     0.25                        smull2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.25                        smull	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        smull	v31.2d, v23.2s, v6.s[2]
+# CHECK-NEXT:  1      3     0.25                        smull	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      3     0.25                        smull	v3.4s, v26.4h, v1.h[5]
+# CHECK-NEXT:  1      3     0.25                        smull	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      3     0.25                        smull2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        smull2	v11.2d, v1.4s, v7.s[0]
+# CHECK-NEXT:  1      3     0.25                        smull2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      3     0.25                        smull2	v13.4s, v18.8h, v0.h[3]
+# CHECK-NEXT:  1      3     0.25                        smull2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.17                        sqabs	b19, b14
 # CHECK-NEXT:  1      2     0.17                        sqabs	d18, d12
 # CHECK-NEXT:  1      2     0.17                        sqabs	h21, h15
@@ -886,10 +886,10 @@
 # CHECK-NEXT:  1      4     0.25                        sqdmlal2	v2.4s, v17.8h, v5.h[6]
 # CHECK-NEXT:  1      4     0.25                        sqdmulh	v8.4h, v16.4h, v5.h[4]
 # CHECK-NEXT:  1      4     0.25                        sqdmulh	v16.2s, v24.2s, v7.s[2]
-# CHECK-NEXT:  1      4     0.25                        sqdmull	v8.4s, v19.4h, v1.h[2]
-# CHECK-NEXT:  1      4     0.25                        sqdmull	v20.2d, v10.2s, v6.s[2]
-# CHECK-NEXT:  1      4     0.25                        sqdmull2	v10.4s, v25.8h, v0.h[7]
-# CHECK-NEXT:  1      4     0.25                        sqdmull2	v4.2d, v29.4s, v2.s[3]
+# CHECK-NEXT:  1      3     0.25                        sqdmull	v8.4s, v19.4h, v1.h[2]
+# CHECK-NEXT:  1      3     0.25                        sqdmull	v20.2d, v10.2s, v6.s[2]
+# CHECK-NEXT:  1      3     0.25                        sqdmull2	v10.4s, v25.8h, v0.h[7]
+# CHECK-NEXT:  1      3     0.25                        sqdmull2	v4.2d, v29.4s, v2.s[3]
 # CHECK-NEXT:  1      4     0.25                        sqrdmulh	v0.8h, v15.8h, v0.h[5]
 # CHECK-NEXT:  1      4     0.25                        sqrdmulh	v6.2s, v29.2s, v4.s[2]
 # CHECK-NEXT:  1      4     0.25                        sqrdmulh	v31.2s, v17.2s, v4.2s
@@ -911,14 +911,14 @@
 # CHECK-NEXT:  1      4     0.25                        sqdmulh	s20, s21, s2
 # CHECK-NEXT:  1      4     0.25                        sqdmulh	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.25                        sqdmulh	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      4     0.25                        sqdmull	d1, s1, v0.s[1]
-# CHECK-NEXT:  1      4     0.25                        sqdmull	d15, s22, s12
-# CHECK-NEXT:  1      4     0.25                        sqdmull	s1, h1, v0.h[3]
-# CHECK-NEXT:  1      4     0.25                        sqdmull	s12, h22, h12
-# CHECK-NEXT:  1      4     0.25                        sqdmull	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      4     0.25                        sqdmull	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      4     0.25                        sqdmull2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      4     0.25                        sqdmull2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      3     0.25                        sqdmull	d1, s1, v0.s[1]
+# CHECK-NEXT:  1      3     0.25                        sqdmull	d15, s22, s12
+# CHECK-NEXT:  1      3     0.25                        sqdmull	s1, h1, v0.h[3]
+# CHECK-NEXT:  1      3     0.25                        sqdmull	s12, h22, h12
+# CHECK-NEXT:  1      3     0.25                        sqdmull	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        sqdmull	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      3     0.25                        sqdmull2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        sqdmull2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  1      2     0.17                        sqneg	b19, b14
 # CHECK-NEXT:  1      2     0.17                        sqneg	d18, d12
 # CHECK-NEXT:  1      2     0.17                        sqneg	h21, h15
@@ -1332,10 +1332,10 @@
 # CHECK-NEXT:  1      2     0.17                        umaxp	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.17                        umaxp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  1      2     0.17                        umaxp	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.50                        umaxv	b0, v0.8b
+# CHECK-NEXT:  1      4     0.33                        umaxv	b0, v0.8b
 # CHECK-NEXT:  1      4     0.50                        umaxv	b0, v0.16b
 # CHECK-NEXT:  1      2     0.25                        umaxv	h0, v0.4h
-# CHECK-NEXT:  1      4     0.50                        umaxv	h0, v0.8h
+# CHECK-NEXT:  1      4     0.33                        umaxv	h0, v0.8h
 # CHECK-NEXT:  1      2     0.25                        umaxv	s0, v0.4s
 # CHECK-NEXT:  1      2     0.17                        umin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      2     0.17                        umin	v0.4h, v0.4h, v0.4h
@@ -1345,10 +1345,10 @@
 # CHECK-NEXT:  1      2     0.17                        uminp	v28.4s, v16.4s, v15.4s
 # CHECK-NEXT:  1      2     0.17                        uminp	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      2     0.17                        uminp	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  1      4     0.50                        uminv	b0, v0.8b
+# CHECK-NEXT:  1      4     0.33                        uminv	b0, v0.8b
 # CHECK-NEXT:  1      4     0.50                        uminv	b0, v0.16b
 # CHECK-NEXT:  1      2     0.25                        uminv	h0, v0.4h
-# CHECK-NEXT:  1      4     0.50                        uminv	h0, v0.8h
+# CHECK-NEXT:  1      4     0.33                        uminv	h0, v0.8h
 # CHECK-NEXT:  1      2     0.25                        uminv	s0, v0.4s
 # CHECK-NEXT:  1      4     0.25                        umlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     0.25                        umlal	v28.2d, v31.2s, v0.s[1]
@@ -1376,16 +1376,16 @@
 # CHECK-NEXT:  1      2     0.17                        umov	w0, v0.h[1]
 # CHECK-NEXT:  1      2     0.17                        mov	w0, v0.s[1]
 # CHECK-NEXT:  1      2     0.17                        mov	x0, v0.d[1]
-# CHECK-NEXT:  1      4     0.25                        umull	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      4     0.25                        umull	v22.2d, v28.2s, v6.s[1]
-# CHECK-NEXT:  1      4     0.25                        umull	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      4     0.25                        umull	v27.4s, v1.4h, v8.h[6]
-# CHECK-NEXT:  1      4     0.25                        umull	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      4     0.25                        umull2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      4     0.25                        umull2	v28.2d, v21.4s, v1.s[0]
-# CHECK-NEXT:  1      4     0.25                        umull2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      4     0.25                        umull2	v18.4s, v26.8h, v10.h[1]
-# CHECK-NEXT:  1      4     0.25                        umull2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      3     0.25                        umull	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      3     0.25                        umull	v22.2d, v28.2s, v6.s[1]
+# CHECK-NEXT:  1      3     0.25                        umull	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      3     0.25                        umull	v27.4s, v1.4h, v8.h[6]
+# CHECK-NEXT:  1      3     0.25                        umull	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      3     0.25                        umull2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      3     0.25                        umull2	v28.2d, v21.4s, v1.s[0]
+# CHECK-NEXT:  1      3     0.25                        umull2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      3     0.25                        umull2	v18.4s, v26.8h, v10.h[1]
+# CHECK-NEXT:  1      3     0.25                        umull2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      2     0.17                        uqadd	h0, h1, h5
 # CHECK-NEXT:  1      2     0.17                        uqadd	s0, s24, s30
 # CHECK-NEXT:  1      2     0.17                        uqadd	v0.8h, v0.8h, v0.8h
@@ -1602,7 +1602,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     79.50  79.50  187.00 187.00 19.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   436.25 476.25 224.50 328.75 328.75 224.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     79.50  79.50  187.00 187.00 19.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   434.42 474.42 224.17 326.92 326.92 224.17
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
@@ -1803,7 +1803,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtau	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtau	v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtau	v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fcvtl	v0.2d, v0.2s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtl	v0.2d, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtl	v0.4s, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtl2	v0.2d, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     fcvtl2	v0.4s, v0.8h
@@ -2046,7 +2046,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frsqrte	h23, h26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frsqrte	d21, d12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frsqrte	s22, s13
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   frsqrte	v0.2d, v0.2d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frsqrte	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     frsqrte	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     frsqrte	v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     frsqrte	v0.4s, v0.4s
@@ -2407,10 +2407,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smaxp	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smaxp	v21.8h, v16.8h, v7.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smaxp	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   smaxv	b0, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   smaxv	b0, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     smaxv	b0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     smaxv	h0, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   smaxv	h0, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   smaxv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     smaxv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smin	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smin	v0.4s, v0.4s, v0.4s
@@ -2418,10 +2418,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sminp	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sminp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sminp	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   sminv	b0, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   sminv	b0, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     sminv	b0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     sminv	h0, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   sminv	h0, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   sminv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     sminv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     smlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     smlal	v0.2d, v25.2s, v1.s[1]
@@ -2928,10 +2928,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umaxp	v0.16b, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umaxp	v0.4s, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umaxp	v0.8h, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   umaxv	b0, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   umaxv	b0, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     umaxv	b0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     umaxv	h0, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   umaxv	h0, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   umaxv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     umaxv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umin	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umin	v0.4h, v0.4h, v0.4h
@@ -2941,10 +2941,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uminp	v28.4s, v16.4s, v15.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uminp	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uminp	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   uminv	b0, v0.8b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   uminv	b0, v0.8b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     0.50   0.50    -     uminv	b0, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     uminv	h0, v0.4h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.17   0.67   0.67   0.17   uminv	h0, v0.8h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.42   0.42   0.17   0.42   0.42   0.17   uminv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     uminv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     umlal	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25    -     0.25   0.25    -     umlal	v28.2d, v31.2s, v0.s[1]
