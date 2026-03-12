@@ -366,7 +366,7 @@ static Value *handleInterlockedOr(CodeGenFunction &CGF, const CallExpr *E,
       C1 = StructuredBufIndexOp;
     }
     assert(C0 != Poison && "Failed to identify coordinates for Interlocked");
-    // TODO: Add coordinate logic for texture and groupshared
+    // TODO: Add coordinate logic for texture and groupshared (#186154)
 
     // atomicBinOp
     // opcode, handle, binary operation code, coordinates c0, c1, c2, new val

@@ -4065,6 +4065,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
             (IsIntElem || IsLongElem)) || // RWBuffer<int/uint/long/ulong>
            (!IsRaw && HasElemTy && IsTexture &&
             (IsIntElem || IsLongElem))); // RWTexture<int/uint/long/ulong>
+      // TODO: Add resource checks logic for textures (#186154)
 
       return !IsValid;
     };
@@ -4132,6 +4133,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
             (IsIntElem || IsLongElem)) || // RWBuffer<int/uint/long/ulong>
            (!IsRaw && HasElemTy && IsTexture &&
             (IsIntElem || IsLongElem))); // RWTexture<int/uint/long/ulong>
+      // TODO: Add resource checks logic for textures (#186154)
 
       return !IsValid;
     };
