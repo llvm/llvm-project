@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/EntityLinker.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntitySummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/FormatProviders.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/EntitySummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/TUSummaryEncoding.h"
 #include <cassert>
 
 using namespace clang::ssaf;

@@ -1,4 +1,4 @@
-//===- SummaryData.h ------------------------------------------------------===//
+//===- SummaryData.h --------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATA_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATA_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATA_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATA_H
 
 namespace clang::ssaf {
 
@@ -25,4 +25,4 @@ public:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATA_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATA_H

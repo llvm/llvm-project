@@ -14,12 +14,12 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_SERIALIZATIONFORMAT_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_SERIALIZATIONFORMAT_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/TUSummaryEncoding.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"

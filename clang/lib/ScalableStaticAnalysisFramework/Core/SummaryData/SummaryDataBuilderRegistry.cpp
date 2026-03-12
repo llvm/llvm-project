@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilderRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SummaryData/SummaryDataBuilderRegistry.h"
 
 using namespace clang;
 using namespace ssaf;

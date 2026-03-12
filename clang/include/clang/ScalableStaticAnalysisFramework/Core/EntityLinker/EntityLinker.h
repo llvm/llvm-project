@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ENTITYLINKER_ENTITYLINKER_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ENTITYLINKER_ENTITYLINKER_H
 
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <memory>

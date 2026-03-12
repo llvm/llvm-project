@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/SummaryData/LUSummaryConsumer.h"
-#include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilderRegistry.h"
-#include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SummaryData/LUSummaryConsumer.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SummaryData/SummaryDataBuilderRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 
 using namespace clang;
 using namespace ssaf;

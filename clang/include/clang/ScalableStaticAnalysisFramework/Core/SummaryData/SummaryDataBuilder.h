@@ -1,4 +1,4 @@
-//===- SummaryDataBuilder.h -----------------------------------------------===//
+//===- SummaryDataBuilder.h -------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,14 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDER_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDER_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATABUILDER_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATABUILDER_H
 
-#include "clang/Analysis/Scalable/Model/EntityId.h"
-#include "clang/Analysis/Scalable/Model/SummaryName.h"
-#include "clang/Analysis/Scalable/SummaryData/SummaryData.h"
-#include "clang/Analysis/Scalable/SummaryData/SummaryDataTraits.h"
-#include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SummaryData/SummaryData.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SummaryData/SummaryDataTraits.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
 #include <memory>
 
 namespace clang::ssaf {
@@ -92,4 +92,4 @@ private:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDER_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATABUILDER_H

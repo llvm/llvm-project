@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Registries/MockSerializationFormat.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/TUSummaryEncoding.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

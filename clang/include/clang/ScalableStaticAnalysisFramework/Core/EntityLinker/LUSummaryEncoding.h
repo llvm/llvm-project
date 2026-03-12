@@ -14,12 +14,12 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ENTITYLINKER_LUSUMMARYENCODING_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ENTITYLINKER_LUSUMMARYENCODING_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/EntitySummaryEncoding.h"
 #include <map>
 #include <memory>
 

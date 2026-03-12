@@ -15,8 +15,8 @@
 #ifndef CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
 #define CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/EntitySummaryEncoding.h"
 #include "llvm/Support/JSON.h"
 
 #include <map>

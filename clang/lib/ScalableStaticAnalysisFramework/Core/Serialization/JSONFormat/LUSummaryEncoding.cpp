@@ -8,7 +8,7 @@
 
 #include "JSONFormatImpl.h"
 
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
 
 #include <set>
 

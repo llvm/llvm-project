@@ -1,4 +1,4 @@
-//===- SummaryDataTraits.h ------------------------------------------------===//
+//===- SummaryDataTraits.h --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATATRAITS_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATATRAITS_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATATRAITS_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATATRAITS_H
 
-#include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include <type_traits>
 
 namespace clang::ssaf {
@@ -35,4 +35,4 @@ struct HasSummaryName<T, std::void_t<decltype(T::summaryName())>>
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATATRAITS_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATATRAITS_H

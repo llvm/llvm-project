@@ -9,6 +9,9 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
@@ -16,9 +19,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/LUSummaryEncoding.h"
-#include "clang/ScalableStaticAnalysisFramework/EntityLinker/TUSummaryEncoding.h"
 #include "gtest/gtest.h"
 #include <iosfwd>
 

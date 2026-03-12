@@ -1,4 +1,4 @@
-//===- SummaryDataBuilderRegistry.h ---------------------------------------===//
+//===- SummaryDataBuilderRegistry.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,10 +19,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
 
-#include "clang/Analysis/Scalable/SummaryData/SummaryDataBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/SummaryData/SummaryDataBuilder.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
 #include <string>
@@ -69,4 +69,4 @@ public:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATABUILDERREGISTRY_H
