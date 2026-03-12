@@ -1337,7 +1337,8 @@ private:
 
   /// Parse all attributes in LAs, and attach them to Decl D.
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
-                               bool EnterScope, bool OnDefinition);
+                               bool EnterScope, bool OnDefinition,
+                               ParsedAttributes *OutAttrs = nullptr);
 
   /// Finish parsing an attribute for which parsing was delayed.
   /// This will be called at the end of parsing a class declaration
@@ -1345,7 +1346,8 @@ private:
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
   void ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
-                           bool OnDefinition);
+                           bool OnDefinition,
+                           ParsedAttributes *OutAttrs = nullptr);
 
   /// ParseLexedMethodDeclarations - We finished parsing the member
   /// specification of a top (non-nested) C++ class. Now go over the
@@ -1477,17 +1479,6 @@ private:
   bool TryAltiVecTokenOutOfLine(DeclSpec &DS, SourceLocation Loc,
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
-
-  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
-                                ParsedAttributes *OutAttrs = nullptr);
-
-  /// Finish parsing an attribute for which parsing was delayed.
-  /// This will be called at the end of parsing a class declaration
-  /// for each LateParsedAttribute. We consume the saved tokens and
-  /// create an attribute with the arguments filled in. We add this
-  /// to the Attribute list for the decl.
-  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
-                            ParsedAttributes *OutAttrs = nullptr);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
