@@ -25,7 +25,6 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -1391,10 +1390,6 @@ void BitcodeFile::parse() {
     // FIXME: Check nodeduplicate
     comdat[i] =
         symtab.addComdat(this, saver.save(obj->getComdatTable()[i].first));
-  Triple tt(obj->getTargetTriple());
-  TargetLibraryInfoImpl tlii(tt);
-  TargetLibraryInfo tli(tlii);
-  RTLIB::RuntimeLibcallsInfo libcalls(tt);
   for (const lto::InputFile::Symbol &objSym : obj->symbols()) {
     StringRef symName = saver.save(objSym.getName());
     int comdatIndex = objSym.getComdatIndex();
