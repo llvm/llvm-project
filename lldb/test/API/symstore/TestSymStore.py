@@ -1,5 +1,9 @@
+import http.server
 import os
 import shutil
+import socketserver
+import threading
+from functools import partial
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -62,7 +66,31 @@ class MockedSymStore:
         self._test.runCmd("settings clear plugin.symbol-locator.symstore")
 
 
-class SymStoreLocalTests(TestBase):
+class HTTPServer:
+    """
+    Context Manager to serve a local directory tree via HTTP.
+    """
+
+    def __init__(self, dir):
+        address = ("localhost", 0)  # auto-select free port
+        handler = partial(http.server.SimpleHTTPRequestHandler, directory=dir)
+        self._server = socketserver.ThreadingTCPServer(address, handler)
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self._thread.start()
+        host, port = self._server.server_address
+        return f"http://{host}:{port}"
+
+    def __exit__(self, *exc_info):
+        if self._server:
+            self._server.shutdown()
+            self._server.server_close()
+        if self._thread:
+            self._thread.join()
+
+
+class SymStoreTests(TestBase):
     SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
@@ -115,3 +143,15 @@ class SymStoreLocalTests(TestBase):
                 f"settings set plugin.symbol-locator.symstore.urls {symstore_dir}"
             )
             self.try_breakpoint(exe, should_have_loc=True)
+
+    def test_http(self):
+        """
+        Check that breakpoint hits with remote SymStore.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as symstore_dir:
+            with HTTPServer(symstore_dir) as url:
+                self.runCmd(
+                    f"settings set plugin.symbol-locator.symstore.urls {url}"
+                )
+                self.try_breakpoint(exe, should_have_loc=True)

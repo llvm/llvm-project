@@ -20,6 +20,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/Path.h"
 
 using namespace lldb;
@@ -65,11 +67,15 @@ static PluginProperties &GetGlobalPluginProperties() {
 SymbolLocatorSymStore::SymbolLocatorSymStore() : SymbolLocator() {}
 
 void SymbolLocatorSymStore::Initialize() {
-  // First version can only locate PDB in local SymStore (no download yet).
-  PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-      nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
-      SymbolLocatorSymStore::DebuggerInitialize);
+  static llvm::once_flag g_once_flag;
+
+  llvm::call_once(g_once_flag, []() {
+    PluginManager::RegisterPlugin(
+        GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
+        nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
+        SymbolLocatorSymStore::DebuggerInitialize);
+    llvm::HTTPClient::initialize();
+  });
 }
 
 void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
@@ -85,6 +91,7 @@ void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
 
 void SymbolLocatorSymStore::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
+  llvm::HTTPClient::cleanup();
 }
 
 llvm::StringRef SymbolLocatorSymStore::GetPluginDescriptionStatic() {
@@ -95,6 +102,8 @@ SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
   return new SymbolLocatorSymStore();
 }
 
+namespace {
+
 // RSDS entries store identity as a 20-byte UUID composed of 16-byte GUID and
 // 4-byte age:
 //   12345678-1234-5678-9ABC-DEF012345678-00000001
@@ -102,12 +111,114 @@ SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
 // SymStore key is a string with no separators and age as decimal:
 //   12345678123456789ABCDEF0123456781
 //
-static std::string formatSymStoreKey(const UUID &uuid) {
+std::string formatSymStoreKey(const UUID &uuid) {
   llvm::ArrayRef<uint8_t> bytes = uuid.GetBytes();
   uint32_t age = llvm::support::endian::read32be(bytes.data() + 16);
   constexpr bool LowerCase = false;
   return llvm::toHex(bytes.slice(0, 16), LowerCase) + std::to_string(age);
 }
+
+// This is a simple version of Debuginfod's StreamedHTTPResponseHandler. We
+// should consider reusing that once we introduce caching.
+class FileDownloadHandler : public llvm::HTTPResponseHandler {
+private:
+  std::error_code m_ec;
+  llvm::raw_fd_ostream m_stream;
+
+public:
+  FileDownloadHandler(llvm::StringRef file) : m_stream(file.str(), m_ec) {}
+  virtual ~FileDownloadHandler() = default;
+
+  llvm::Error handleBodyChunk(llvm::StringRef data) override {
+    // Propagate error from ctor
+    if (m_ec)
+      return llvm::createStringError(m_ec, "Failed to open file for writing");
+    m_stream.write(data.data(), data.size());
+    if (std::error_code ec = m_stream.error())
+      return llvm::createStringError(ec, "Error writing to file");
+
+    return llvm::Error::success();
+  }
+};
+
+llvm::Error downloadFileHTTP(llvm::StringRef url, FileDownloadHandler dest) {
+  if (!llvm::HTTPClient::isAvailable())
+    return llvm::createStringError(
+        std::make_error_code(std::errc::not_supported),
+        "HTTP client is not available");
+  llvm::HTTPRequest Request(url);
+  Request.FollowRedirects = true;
+
+  llvm::HTTPClient Client;
+  Client.setTimeout(std::chrono::seconds(60));
+
+  if (llvm::Error Err = Client.perform(Request, dest))
+    return Err;
+
+  unsigned ResponseCode = Client.responseCode();
+  if (ResponseCode != 200) {
+    return llvm::createStringError(std::make_error_code(std::errc::io_error),
+                                   "HTTP request failed with status code " +
+                                       std::to_string(ResponseCode));
+  }
+
+  return llvm::Error::success();
+}
+
+std::optional<FileSpec>
+requestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
+                                  llvm::StringRef pdb_name) {
+  using namespace llvm::sys;
+  Log *log = GetLog(LLDBLog::Symbols);
+
+  // Construct the path for local storage. Configurable cache coming soon.
+  llvm::SmallString<128> cache_file;
+  if (!path::cache_directory(cache_file)) {
+    LLDB_LOGV(log, "Failed to determine cache directory for SymStore");
+    return {};
+  }
+  path::append(cache_file, "lldb", "SymStore", pdb_name, key);
+  if (std::error_code ec = fs::create_directories(cache_file)) {
+    LLDB_LOG(log, "Failed to create temporary folder '{0}': {1}", cache_file,
+             ec.message());
+    return {};
+  }
+  path::append(cache_file, pdb_name);
+
+  // Server has same directory structure with forward slashes as separators.
+  std::string source_url =
+      llvm::formatv("{0}/{1}/{2}/{1}", base_url, pdb_name, key);
+  if (llvm::Error err = downloadFileHTTP(source_url, cache_file.str())) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "  Failed to download from SymStore '{1}': {0}", source_url);
+    return {};
+  }
+
+  return FileSpec(cache_file.str());
+}
+
+std::optional<FileSpec> findFileInLocalSymStore(llvm::StringRef root_dir,
+                                                llvm::StringRef key,
+                                                llvm::StringRef pdb_name) {
+  llvm::SmallString<256> path;
+  llvm::sys::path::append(path, root_dir, pdb_name, key, pdb_name);
+  FileSpec spec(path);
+  if (!FileSystem::Instance().Exists(spec))
+    return {};
+
+  return spec;
+}
+
+std::optional<FileSpec> locateSymStoreEntry(llvm::StringRef base_url,
+                                            llvm::StringRef key,
+                                            llvm::StringRef pdb_name) {
+  if (base_url.starts_with("http://") || base_url.starts_with("https://"))
+    return requestFileFromSymStoreServerHTTP(base_url, key, pdb_name);
+
+  return findFileInLocalSymStore(base_url, key, pdb_name);
+}
+
+} // namespace
 
 std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
@@ -134,12 +245,9 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
   std::string key = formatSymStoreKey(uuid);
   Args sym_store_urls = GetGlobalPluginProperties().GetURLs();
   for (const Args::ArgEntry &url : sym_store_urls) {
-    llvm::SmallString<256> path;
-    llvm::sys::path::append(path, url.ref(), pdb_name, key, pdb_name);
-    FileSpec spec(path);
-    if (FileSystem::Instance().Exists(spec)) {
-      LLDB_LOGV(log, "Found {0} in SymStore {1}", pdb_name, url.ref());
-      return spec;
+    if (auto spec = locateSymStoreEntry(url.ref(), key, pdb_name)) {
+      LLDB_LOGV(log, "  Found {0} in SymStore {1}", pdb_name, url.ref());
+      return *spec;
     }
   }
 
