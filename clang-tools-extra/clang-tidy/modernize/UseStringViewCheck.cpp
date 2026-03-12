@@ -100,8 +100,8 @@ void UseStringViewCheck::check(const MatchFinder::MatchResult &Result) {
   assert(MatchedDecl);
   bool ShouldAKA = false;
   const std::string DesugaredTypeStr =
-      clang::desugarForDiagnostic(
-          *Result.Context, QualType(MatchedDecl->getReturnType()), ShouldAKA)
+      desugarForDiagnostic(*Result.Context,
+                           QualType(MatchedDecl->getReturnType()), ShouldAKA)
           .getAsString();
   const StringRef DestReturnTypeStr = toStringViewTypeStr(DesugaredTypeStr);
 

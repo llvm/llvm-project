@@ -1,5 +1,6 @@
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
@@ -375,6 +376,32 @@ void JSONGenerator::generateContext(const Info &I, Object &Obj) {
   Obj["HasContexts"] = true;
 }
 
+static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
+                                 json::Object &Obj, StringRef Key = "") {
+  if (Description.empty())
+    return;
+
+  // Skip straight to the FullComment's children
+  auto &Comments = Description.front().Children;
+  Object DescriptionObj = Object();
+  for (const auto &CommentInfo : Comments) {
+    json::Value Comment = serializeComment(*CommentInfo, DescriptionObj);
+    // if a ParagraphComment is returned, then it is a top-level comment that
+    // needs to be inserted manually.
+    if (auto *ParagraphComment = Comment.getAsObject();
+        ParagraphComment->get("ParagraphComment")) {
+      auto TextCommentsArray = extractTextComments(ParagraphComment);
+      if (TextCommentsArray.kind() == json::Value::Null ||
+          TextCommentsArray.getAsArray()->empty())
+        continue;
+      insertComment(DescriptionObj, TextCommentsArray, "ParagraphComments");
+    }
+  }
+  Obj["Description"] = std::move(DescriptionObj);
+  if (!Key.empty())
+    Obj[Key] = true;
+}
+
 void JSONGenerator::serializeCommonAttributes(const Info &I,
                                               json::Object &Obj) {
   insertNonEmpty("Name", I.Name, Obj);
@@ -393,25 +420,7 @@ void JSONGenerator::serializeCommonAttributes(const Info &I,
       Obj["Namespace"].getAsArray()->push_back(NS.Name);
   }
 
-  if (!I.Description.empty()) {
-    Object Description = Object();
-    // Skip straight to the FullComment's children
-    auto &Comments = I.Description.at(0).Children;
-    for (const auto &CommentInfo : Comments) {
-      json::Value Comment = serializeComment(*CommentInfo, Description);
-      // if a ParagraphComment is returned, then it is a top-level comment that
-      // needs to be inserted manually.
-      if (auto *ParagraphComment = Comment.getAsObject();
-          ParagraphComment->get("ParagraphComment")) {
-        auto TextCommentsArray = extractTextComments(ParagraphComment);
-        if (TextCommentsArray.kind() == json::Value::Null ||
-            TextCommentsArray.getAsArray()->empty())
-          continue;
-        insertComment(Description, TextCommentsArray, "ParagraphComments");
-      }
-    }
-    Obj["Description"] = std::move(Description);
-  }
+  serializeDescription(I.Description, Obj);
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
   if (I.IT != InfoType::IT_namespace) {
@@ -592,6 +601,8 @@ void JSONGenerator::serializeInfo(const EnumValueInfo &I, Object &Obj) {
     Obj["ValueExpr"] = I.ValueExpr;
   else
     Obj["Value"] = I.Value;
+
+  serializeDescription(I.Description, Obj, "HasEnumMemberComments");
 }
 
 void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
@@ -607,8 +618,15 @@ void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
     Obj["BaseType"] = BaseTypeVal;
   }
 
-  if (!I.Members.empty())
+  if (!I.Members.empty()) {
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        Obj["HasComments"] = true;
+        break;
+      }
+    }
     serializeArray(I.Members, Obj, "Members", serializeInfoLambda());
+  }
 }
 
 void JSONGenerator::serializeInfo(const TypedefInfo &I, json::Object &Obj) {
