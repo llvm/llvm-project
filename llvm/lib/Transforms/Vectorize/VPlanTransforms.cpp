@@ -5692,18 +5692,17 @@ static VPWidenIntOrFpInductionRecipe *getExpressionIV(VPValue *V) {
 
 /// Create a scalar version of the binary op \p V and sink before \p InsertPt,
 /// replacing \p WidenIV with \p ScalarIV.
-static VPValue *sinkBinOpToMiddleBlock(VPValue *V, VPValue *ScalarIV,
-                                       VPWidenIntOrFpInductionRecipe *WidenIV,
-                                       VPBasicBlock::iterator InsertPt) {
-  auto *BinOp = V->getDefiningRecipe()->clone();
-  if (BinOp->getOperand(0) == WidenIV)
-    BinOp->setOperand(0, ScalarIV);
+static VPValue *sinkBinOpToMiddleBlock(VPWidenRecipe *BinOp, VPValue *ScalarIV,
+                                       VPWidenIntOrFpInductionRecipe *WidenIV) {
+  auto *ClonedOp = BinOp->clone();
+  if (ClonedOp->getOperand(0) == WidenIV)
+    ClonedOp->setOperand(0, ScalarIV);
   else {
-    assert(BinOp->getOperand(1) == WidenIV && "one operand must be WideIV");
-    BinOp->setOperand(1, ScalarIV);
+    assert(ClonedOp->getOperand(1) == WidenIV && "one operand must be WideIV");
+    ClonedOp->setOperand(1, ScalarIV);
   }
-  BinOp->insertBefore(*InsertPt->getParent(), InsertPt);
-  return cast<VPWidenRecipe>(BinOp);
+  ClonedOp->insertAfter(ScalarIV->getDefiningRecipe());
+  return ClonedOp;
 }
 
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
@@ -5798,7 +5797,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
           vputils::getSCEVExprForVPValue(ExprOfIV, PSE, &L);
       if (match(ExprOfIVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
         TryToGetSentinel(ExprOfIVSCEV, Step);
-        IVSCEV = ExprOfIVSCEV;
+        if (SentinelVal) {
+          // We can use the sentinel value with the original expression, reset
+          // IVSCEV and clear ExpressionIV.
+          IVSCEV = ExprOfIVSCEV;
+          ExpressionIV = nullptr;
+        }
       }
     }
 
@@ -5845,8 +5849,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // If IV was an expression, sink the expression to the middle block.
     VPValue *LoopExitingVal = ReducedIV;
     if (ExpressionIV)
-      LoopExitingVal = sinkBinOpToMiddleBlock(ExprOfIV, ReducedIV, ExpressionIV,
-                                              MiddleBuilder.getInsertPoint());
+      LoopExitingVal = sinkBinOpToMiddleBlock(cast<VPWidenRecipe>(ExprOfIV),
+                                              ReducedIV, ExpressionIV);
 
     VPValue *NewRdxResult;
     VPValue *StartVPV = PhiR->getStartValue();

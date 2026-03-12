@@ -989,10 +989,10 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC1VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1VF4:       [[VECTOR_BODY]]:
 ; IC1VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 -1, i64 -2, i64 -3, i64 -4>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1VF4-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i64> [ <i64 -1, i64 -2, i64 -3, i64 -4>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; IC1VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -1), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; IC1VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 -1, [[INDEX]]
-; IC1VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
+; IC1VF4-NEXT:    [[VEC_IND:%.*]] = add <4 x i64> [[VEC_IND1]], splat (i64 -1)
+; IC1VF4-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 0
 ; IC1VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
 ; IC1VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -3
 ; IC1VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
@@ -1004,14 +1004,13 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC1VF4-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i8> [[REVERSE]], [[REVERSE2]]
 ; IC1VF4-NEXT:    [[TMP6]] = select <4 x i1> [[TMP8]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; IC1VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
+; IC1VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND1]], splat (i64 -4)
 ; IC1VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], -4
 ; IC1VF4-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IC1VF4:       [[MIDDLE_BLOCK]]:
 ; IC1VF4-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[TMP6]])
-; IC1VF4-NEXT:    [[TMP9:%.*]] = add i64 [[TMP12]], -1
 ; IC1VF4-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP12]], -1
-; IC1VF4-NEXT:    [[TMP11:%.*]] = select i1 [[TMP13]], i64 [[TMP9]], i64 [[RDX_START]]
+; IC1VF4-NEXT:    [[TMP11:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[RDX_START]]
 ; IC1VF4-NEXT:    br label %[[SCALAR_PH:.*]]
 ; IC1VF4:       [[SCALAR_PH]]:
 ; IC1VF4-NEXT:    br label %[[LOOP:.*]]
@@ -1047,8 +1046,11 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 -4)
-; IC4VF4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 -1, [[INDEX]]
-; IC4VF4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
+; IC4VF4-NEXT:    [[TMP0:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 -1)
+; IC4VF4-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i32 0
+; IC4VF4-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 -1)
+; IC4VF4-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 -1)
+; IC4VF4-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 -1)
 ; IC4VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
 ; IC4VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -3
 ; IC4VF4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -7
@@ -1079,10 +1081,10 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF4-NEXT:    [[TMP24:%.*]] = icmp sgt <4 x i8> [[REVERSE7]], [[REVERSE15]]
 ; IC4VF4-NEXT:    [[TMP25:%.*]] = icmp sgt <4 x i8> [[REVERSE8]], [[REVERSE16]]
 ; IC4VF4-NEXT:    [[TMP26:%.*]] = icmp sgt <4 x i8> [[REVERSE9]], [[REVERSE17]]
-; IC4VF4-NEXT:    [[TMP27]] = select <4 x i1> [[TMP23]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; IC4VF4-NEXT:    [[TMP28]] = select <4 x i1> [[TMP24]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
-; IC4VF4-NEXT:    [[TMP29]] = select <4 x i1> [[TMP25]], <4 x i64> [[STEP_ADD_2]], <4 x i64> [[VEC_PHI2]]
-; IC4VF4-NEXT:    [[TMP30]] = select <4 x i1> [[TMP26]], <4 x i64> [[STEP_ADD_3]], <4 x i64> [[VEC_PHI3]]
+; IC4VF4-NEXT:    [[TMP27]] = select <4 x i1> [[TMP23]], <4 x i64> [[TMP0]], <4 x i64> [[VEC_PHI]]
+; IC4VF4-NEXT:    [[TMP28]] = select <4 x i1> [[TMP24]], <4 x i64> [[TMP2]], <4 x i64> [[VEC_PHI1]]
+; IC4VF4-NEXT:    [[TMP29]] = select <4 x i1> [[TMP25]], <4 x i64> [[TMP3]], <4 x i64> [[VEC_PHI2]]
+; IC4VF4-NEXT:    [[TMP30]] = select <4 x i1> [[TMP26]], <4 x i64> [[TMP4]], <4 x i64> [[VEC_PHI3]]
 ; IC4VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; IC4VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 -4)
 ; IC4VF4-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], -16
@@ -1092,15 +1094,14 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF4-NEXT:    [[RDX_MINMAX18:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[RDX_MINMAX]], <4 x i64> [[TMP29]])
 ; IC4VF4-NEXT:    [[RDX_MINMAX19:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[RDX_MINMAX18]], <4 x i64> [[TMP30]])
 ; IC4VF4-NEXT:    [[TMP32:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX19]])
-; IC4VF4-NEXT:    [[SUB:%.+]] = add i64 [[TMP32]], -1
 ; IC4VF4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP32]], -1
-; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[SUB]], i64 [[RDX_START]]
+; IC4VF4-NEXT:    [[TMP33:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP32]], i64 [[RDX_START]]
 ; IC4VF4-NEXT:    br label %[[SCALAR_PH:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
 ; IC4VF4-NEXT:    [[IV:%.*]] = phi i64 [ 15, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[LOOP]] ]
+; IC4VF4-NEXT:    [[RDX:%.*]] = phi i64 [ [[TMP33]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[LOOP]] ]
 ; IC4VF4-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; IC4VF4-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV_NEXT]]
 ; IC4VF4-NEXT:    [[LD_A:%.*]] = load i8, ptr [[GEP_A_IV]], align 1
@@ -1113,7 +1114,7 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF4:       [[EXIT]]:
 ; IC4VF4-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[LOOP]] ]
 ; IC4VF4-NEXT:    ret i64 [[COND_LCSSA]]
-;;
+;
 ; IC4VF1-LABEL: define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(
 ; IC4VF1-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
 ; IC4VF1-NEXT:  [[ENTRY:.*:]]
@@ -1186,6 +1187,7 @@ define i64 @select_decreasing_induction_icmp_iv_just_within_bounds(ptr %a, ptr %
 ; IC4VF1-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[LOOP]] ]
 ; IC4VF1-NEXT:    ret i64 [[COND_LCSSA]]
 ;
+;;
 entry:
   br label %loop
 
