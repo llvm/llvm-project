@@ -456,20 +456,18 @@ struct SysAliasOptionalReg : SysAlias {
 };
 
 struct TLBIPSysAlias : SysAliasOptionalReg {
-  bool d128orTLBID;
-  inline static const FeatureBitset D128OrTLBIDMask =
-      FeatureBitset({llvm::AArch64::FeatureD128, llvm::AArch64::FeatureTLBID});
+  bool AllowWithTLBID;
 
   constexpr TLBIPSysAlias(const char *N, uint16_t E, bool R, bool O,
-                          FeatureBitset F, bool D128OrTLBID)
-      : SysAliasOptionalReg(N, E, R, O, F), d128orTLBID(D128OrTLBID) {}
-
-  bool allowTLBID() const { return d128orTLBID; }
+                          FeatureBitset F, bool AllowWithTLBID)
+      : SysAliasOptionalReg(N, E, R, O, F),
+        AllowWithTLBID(AllowWithTLBID) {}
 
   bool haveFeatures(FeatureBitset ActiveFeatures) const {
     return SysAliasOptionalReg::haveFeatures(ActiveFeatures) &&
-           (!d128orTLBID || ActiveFeatures[llvm::AArch64::FeatureD128] ||
-            ActiveFeatures[llvm::AArch64::FeatureTLBID]);
+           (ActiveFeatures[llvm::AArch64::FeatureD128] ||
+            (AllowWithTLBID &&
+             ActiveFeatures[llvm::AArch64::FeatureTLBID]));
   }
 };
 
