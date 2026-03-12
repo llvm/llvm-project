@@ -34479,16 +34479,21 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     AmtLane = DAG.getZExtOrTrunc(AmtLane, dl, MVT::i8);
 
     if (auto *SrcC = dyn_cast<ConstantSDNode>(Src)) {
-      // Special case: SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
-      if (Opc == ISD::SHL && SrcC->getAPIntValue() == 1) {
-        SDValue Bit = DAG.getConstant(1, dl, MVT::i64);
+      // SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
+      // SRL(MSB,Amt) --> SELECT(MSB8>>u(Amt/64), SPLAT(MSB64>>u(Amt%64)), 0)
+      if ((Opc == ISD::SHL && SrcC->getAPIntValue() == 1) ||
+          (Opc == ISD::SRL && SrcC->getAPIntValue().isSignMask())) {
+        APInt EltBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
+        APInt LaneBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 7);
+        SDValue EltBit = DAG.getConstant(EltBitVal, dl, MVT::i64);
+        SDValue LaneBit = DAG.getConstant(LaneBitVal, dl, MVT::i64);
         SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
                                      DAG.getZExtOrTrunc(Amt, dl, MVT::i64),
                                      DAG.getConstant(63, dl, MVT::i64));
-        SDValue LaneMask = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtLane);
+        SDValue LaneMask = DAG.getNode(Opc, dl, MVT::i64, LaneBit, AmtLane);
         LaneMask =
             DAG.getBitcast(BoolVT, DAG.getZExtOrTrunc(LaneMask, dl, MVT::i8));
-        SDValue Elt = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtMod);
+        SDValue Elt = DAG.getNode(Opc, dl, MVT::i64, EltBit, AmtMod);
         SDValue Res =
             DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
                           DAG.getConstant(0, dl, VecVT));
