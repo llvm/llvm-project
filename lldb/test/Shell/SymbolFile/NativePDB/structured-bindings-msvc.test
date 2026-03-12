@@ -1,4 +1,4 @@
-# REQUIRES: lld
+# REQUIRES: lld, msvc
 
 # Test that LLDB can show variables introduced in C++ 17 structured bindings
 # when compiled with MSVC.
