@@ -32,7 +32,7 @@ endif()
 # potential mis-aligned atomic ops detected by clang
 set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-error=atomic-alignment -x cl -Xclang
   -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=hidden -fomit-frame-pointer
-  -Xclang -finclude-default-header -Xclang -fexperimental-strict-floating-point
+  -Xclang -finclude-default-header -nostdlibinc -Xclang -fexperimental-strict-floating-point
   -Xclang -fdenormal-fp-math=dynamic
   -nogpulib -cl-no-stdinc "${CLANG_OPTIONS_APPEND}")
 
