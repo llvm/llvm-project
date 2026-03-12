@@ -116,7 +116,8 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 /// and the expression node.
 static mlir::Value makeBinaryAtomicValue(
     CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
-    mlir::Type *originalArgType = nullptr, mlir::Value *emittedArgValue = nullptr,
+    mlir::Type *originalArgType = nullptr,
+    mlir::Value *emittedArgValue = nullptr,
     cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
 
   QualType type = expr->getType();
@@ -169,7 +170,8 @@ static mlir::Value makeBinaryAtomicValue(
   return rmwi->getResult(0);
 }
 
-static RValue emitBinaryAtomic(CIRGenFunction &cgf, cir::AtomicFetchKind atomicOpkind,
+static RValue emitBinaryAtomic(CIRGenFunction &cgf,
+                               cir::AtomicFetchKind atomicOpkind,
                                const CallExpr *e) {
   return RValue::get(makeBinaryAtomicValue(cgf, atomicOpkind, e));
 }
@@ -1752,7 +1754,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_fetch_and_nand_8:
   case Builtin::BI__sync_fetch_and_nand_16:
     return emitBinaryAtomic(*this, cir::AtomicFetchKind::Nand, e);
-  
+
   case Builtin::BI__sync_fetch_and_min:
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:
