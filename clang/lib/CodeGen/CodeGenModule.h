@@ -400,10 +400,6 @@ private:
   /// This is a list of deferred decls which we have seen that *are* actually
   /// referenced. These get code generated when the module is done.
   std::vector<GlobalDecl> DeferredDeclsToEmit;
-  void addDeferredDeclToEmit(GlobalDecl GD) {
-    DeferredDeclsToEmit.emplace_back(GD);
-    addEmittedDeferredDecl(GD);
-  }
 
   /// Decls that were DeferredDecls and have now been emitted.
   llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
@@ -528,6 +524,11 @@ private:
   /// order. Once the decl is emitted, the index is replaced with ~0U to ensure
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
+
+  /// To remember which types did require a vector deleting destructor body.
+  /// This set basically contains classes that have virtual destructor and new[]
+  /// was emitted for the class.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
 
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
@@ -1578,6 +1579,18 @@ public:
   /// are emitted lazily.
   void EmitGlobal(GlobalDecl D);
 
+  void addDeferredDeclToEmit(GlobalDecl GD) {
+    DeferredDeclsToEmit.emplace_back(GD);
+    addEmittedDeferredDecl(GD);
+  }
+
+  /// Record that new[] was called for the class, transform vector deleting
+  /// destructor definition in a form of alias to the actual definition.
+  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Check that class need vector deleting destructor body.
+  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
+
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
   void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
@@ -2092,6 +2105,7 @@ private:
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
+
 };
 
 }  // end namespace CodeGen

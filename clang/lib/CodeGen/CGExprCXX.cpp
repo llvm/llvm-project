@@ -1201,9 +1201,13 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/ true,
                                CCE->requiresZeroInitialization());
-    if (getContext().classNeedsVectorDeletingDestructor(Ctor->getParent())) {
+    if (getContext().getTargetInfo().emitVectorDeletingDtors(
+            getContext().getLangOpts())) {
       CXXDestructorDecl *Dtor = Ctor->getParent()->getDestructor();
-      CGM.EmitGlobal(GlobalDecl(Dtor, Dtor_VectorDeleting));
+      if (Dtor && Dtor->isVirtual()) {
+        CGM.addDeferredDeclToEmit(GlobalDecl(Dtor, Dtor_VectorDeleting));
+        CGM.requireVectorDestructorDefinition(Ctor->getParent());
+      }
     }
     return;
   }
