@@ -333,6 +333,9 @@ Changes in existing checks
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 
+  - Diagnose and remove redundant ``else`` branches after calls to
+    ``[[noreturn]]`` functions.
+    
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
