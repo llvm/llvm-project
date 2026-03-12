@@ -1,8 +1,5 @@
 # Try to detect in the system several dependencies required by the different
 # components of libomptarget. These are the dependencies we have:
-#
-# libffi : required to launch target kernels given function and argument
-#          pointers.
 
 include (FindPackageHandleStandardArgs)
 
@@ -35,12 +32,6 @@ else()
   message(STATUS
     "Using LLVM include directories: ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
 endif()
-
-################################################################################
-# Looking for libffi...
-################################################################################
-find_package(FFI QUIET)
-set(LIBOMPTARGET_DEP_LIBFFI_FOUND ${FFI_FOUND})
 
 ################################################################################
 # Looking for offload-arch...
