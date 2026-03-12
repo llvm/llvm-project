@@ -52,6 +52,32 @@ TosaSpecificationVersion getMinVersion(const Extension &extension) {
   llvm_unreachable("Unknown TOSA extension");
 }
 
+SmallVector<Profile, 2> getCooperativeProfiles(Extension ext) {
+  switch (ext) {
+  case Extension::int16:
+  case Extension::int4:
+  case Extension::doubleround:
+  case Extension::inexactround:
+    return {Profile::pro_int};
+  case Extension::bf16:
+  case Extension::fp8e4m3:
+  case Extension::fp8e5m2:
+  case Extension::fft:
+  case Extension::mxfp:
+  case Extension::mxfp_conv:
+    return {Profile::pro_fp};
+  case Extension::variable:
+  case Extension::controlflow:
+  case Extension::dynamic:
+  case Extension::int64:
+  case Extension::shape:
+    return {Profile::pro_fp, Profile::pro_int};
+  case Extension::none:
+    return {};
+  };
+  llvm_unreachable("bad Extension type");
+}
+
 TosaSpecificationVersion getMinVersion(const Level &level) {
   switch (level) {
   case Level::eightK:
@@ -90,14 +116,34 @@ LogicalResult TargetEnv::verifyTargetInformation(TargetEnvAttr targetAttr,
     return success();
   };
 
+  const auto isExtensionCooperativeWithProfile =
+      [&](Extension ext) -> LogicalResult {
+    const auto cooperativeProfiles = getCooperativeProfiles(ext);
+
+    const ArrayRef<Profile> targetProfiles = targetAttr.getProfiles();
+    if (!llvm::any_of(cooperativeProfiles,
+                      [&targetProfiles](const auto &profile) {
+                        return llvm::is_contained(targetProfiles, profile);
+                      }))
+      return emitError(targetAttrLoc)
+             << "use of extension '" << stringifyEnum(ext)
+             << "' requires any of profiles: [" << cooperativeProfiles
+             << "] to be enabled in the target";
+
+    return success();
+  };
+
   for (const auto &profile : targetAttr.getProfiles())
     if (failed(
             isCompatibleWithTargetVersion(profile, targetAttrLoc, "profile")))
       return failure();
-  for (const auto &extension : targetAttr.getExtensions())
+  for (const auto &extension : targetAttr.getExtensions()) {
     if (failed(isCompatibleWithTargetVersion(extension, targetAttrLoc,
                                              "extension")))
       return failure();
+    if (failed(isExtensionCooperativeWithProfile(extension)))
+      return failure();
+  }
   if (failed(isCompatibleWithTargetVersion(targetAttr.getLevel(), targetAttrLoc,
                                            "level")))
     return failure();

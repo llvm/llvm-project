@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -27,24 +29,6 @@ TEST(BuildNamespaceTest, DifferentKinds) {
   BuildNamespace LU(BuildNamespaceKind::LinkUnit, "test");
 
   EXPECT_NE(CU, LU);
-}
-
-TEST(BuildNamespaceTest, ToStringRoundtripCompilationUnit) {
-  auto Kind = BuildNamespaceKind::CompilationUnit;
-  auto Str = toString(Kind);
-  auto Parsed = parseBuildNamespaceKind(Str);
-
-  ASSERT_TRUE(Parsed.has_value());
-  EXPECT_EQ(Kind, *Parsed);
-}
-
-TEST(BuildNamespaceTest, ToStringRoundtripLinkUnit) {
-  auto Kind = BuildNamespaceKind::LinkUnit;
-  auto Str = toString(Kind);
-  auto Parsed = parseBuildNamespaceKind(Str);
-
-  ASSERT_TRUE(Parsed.has_value());
-  EXPECT_EQ(Kind, *Parsed);
 }
 
 // NestedBuildNamespace Tests
@@ -94,18 +78,53 @@ TEST(NestedBuildNamespaceTest, EmptyQualified) {
   EXPECT_EQ(Qualified, NBN);
 }
 
+TEST(BuildNamespaceKindTest, FormatProvider) {
+  EXPECT_EQ(llvm::formatv("{0}", BuildNamespaceKind::CompilationUnit).str(),
+            "CompilationUnit");
+  EXPECT_EQ(llvm::formatv("{0}", BuildNamespaceKind::LinkUnit).str(),
+            "LinkUnit");
+}
+
+TEST(BuildNamespaceKindTest, StreamOutputCompilationUnit) {
+  std::string S;
+  llvm::raw_string_ostream(S) << BuildNamespaceKind::CompilationUnit;
+  EXPECT_EQ(S, "CompilationUnit");
+}
+
+TEST(BuildNamespaceKindTest, StreamOutputLinkUnit) {
+  std::string S;
+  llvm::raw_string_ostream(S) << BuildNamespaceKind::LinkUnit;
+  EXPECT_EQ(S, "LinkUnit");
+}
+
+TEST(BuildNamespaceTest, FormatProvider) {
+  EXPECT_EQ(
+      llvm::formatv("{0}", BuildNamespace(BuildNamespaceKind::CompilationUnit,
+                                          "test.cpp"))
+          .str(),
+      "BuildNamespace(CompilationUnit, test.cpp)");
+}
+
+TEST(NestedBuildNamespaceTest, FormatProvider) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  EXPECT_EQ(
+      llvm::formatv("{0}", NBN).str(),
+      "NestedBuildNamespace([BuildNamespace(CompilationUnit, test.cpp)])");
+}
+
 TEST(BuildNamespaceTest, StreamOutputCompilationUnit) {
   BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
   std::string S;
   llvm::raw_string_ostream(S) << BN;
-  EXPECT_EQ(S, "BuildNamespace(compilation_unit, test.cpp)");
+  EXPECT_EQ(S, "BuildNamespace(CompilationUnit, test.cpp)");
 }
 
 TEST(BuildNamespaceTest, StreamOutputLinkUnit) {
   BuildNamespace BN(BuildNamespaceKind::LinkUnit, "app");
   std::string S;
   llvm::raw_string_ostream(S) << BN;
-  EXPECT_EQ(S, "BuildNamespace(link_unit, app)");
+  EXPECT_EQ(S, "BuildNamespace(LinkUnit, app)");
 }
 
 TEST(NestedBuildNamespaceTest, StreamOutputEmpty) {
@@ -121,7 +140,7 @@ TEST(NestedBuildNamespaceTest, StreamOutputSingle) {
   std::string S;
   llvm::raw_string_ostream(S) << NBN;
   EXPECT_EQ(
-      S, "NestedBuildNamespace([BuildNamespace(compilation_unit, test.cpp)])");
+      S, "NestedBuildNamespace([BuildNamespace(CompilationUnit, test.cpp)])");
 }
 
 TEST(NestedBuildNamespaceTest, StreamOutputMultiple) {
@@ -131,8 +150,8 @@ TEST(NestedBuildNamespaceTest, StreamOutputMultiple) {
       BuildNamespace(BuildNamespaceKind::LinkUnit, "app")));
   std::string S;
   llvm::raw_string_ostream(S) << NBN;
-  EXPECT_EQ(S, "NestedBuildNamespace([BuildNamespace(compilation_unit, "
-               "test.cpp), BuildNamespace(link_unit, app)])");
+  EXPECT_EQ(S, "NestedBuildNamespace([BuildNamespace(CompilationUnit, "
+               "test.cpp), BuildNamespace(LinkUnit, app)])");
 }
 
 } // namespace

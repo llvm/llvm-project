@@ -16,6 +16,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+LLVM_ABI extern cl::opt<bool> VerifyEachVPlan;
+} // namespace llvm
+
 using VPVerifierTest = VPlanTestBase;
 
 namespace {
@@ -340,6 +344,28 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
 #endif
 
   delete PHINode;
+}
+
+TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {
+  VPlan &Plan = getPlan();
+  VPIRValue *Zero = Plan.getConstantInt(32, 0);
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *UseI =
+      new VPInstruction(Instruction::Sub, {DefI, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBB1->appendRecipe(UseI);
+  VPBB1->appendRecipe(DefI);
+
+  bool OrigVerifyEachVPlan = VerifyEachVPlan;
+  VerifyEachVPlan = true;
+  llvm::scope_exit _([&]() { VerifyEachVPlan = OrigVerifyEachVPlan; });
+  auto NopPass = [](VPlan &Plan) {};
+  EXPECT_DEATH(
+      { VPlanTransforms::runPass("simplifyRecipes", NopPass, Plan); },
+      "Broken VPlan found, compilation aborted!");
 }
 
 class VPIRVerifierTest : public VPlanTestIRBase {};

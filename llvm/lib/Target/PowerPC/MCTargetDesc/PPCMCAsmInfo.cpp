@@ -192,7 +192,6 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   SupportsDebugInformation = true;
 
   DollarIsPC = true;
-  AllowDollarAtStartOfIdentifier = false;
 
   // Set up DWARF directives
   MinInstAlignment = 4;
@@ -236,7 +235,6 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   // Support $ as PC in inline asm
   DollarIsPC = true;
-  AllowDollarAtStartOfIdentifier = false;
 
   UsesSetToEquateSymbol = true;
 

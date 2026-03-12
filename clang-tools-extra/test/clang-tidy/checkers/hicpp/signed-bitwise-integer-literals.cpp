@@ -1,6 +1,5 @@
-// RUN: %check_clang_tidy %s hicpp-signed-bitwise %t -- \
-// RUN:   -config="{CheckOptions: {hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true}}" \
-// RUN: -- -std=c++11
+// RUN: %check_clang_tidy -std=c++11-or-later %s hicpp-signed-bitwise %t -- \
+// RUN:   -config="{CheckOptions: {hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true}}"
 
 void examples() {
   unsigned UValue = 40u;

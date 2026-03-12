@@ -4,7 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRCORE_H
@@ -279,7 +278,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyMlirContext
     : public Defaulting<DefaultingPyMlirContext, PyMlirContext> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Context";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Context";
   static PyMlirContext &resolve();
 };
 
@@ -525,7 +524,7 @@ class MLIR_PYTHON_API_EXPORTED DefaultingPyLocation
     : public Defaulting<DefaultingPyLocation, PyLocation> {
 public:
   using Defaulting::Defaulting;
-  static constexpr const char kTypeDescription[] = "Location";
+  static constexpr const char kTypeDescription[] = "_mlir.ir.Location";
   static PyLocation &resolve();
 
   operator MlirLocation() const { return *get(); }
@@ -958,16 +957,12 @@ public:
     auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyType &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1101,16 +1096,12 @@ public:
           return PyType(attr.getContext(), mlirAttributeGetType(attr))
               .maybeDownCast();
         });
-    cls.def_prop_ro_static(
-        "static_typeid",
-        [](nanobind::object & /*class*/) -> PyTypeID {
-          if (DerivedTy::getTypeIdFunction)
-            return PyTypeID(DerivedTy::getTypeIdFunction());
-          throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + std::string(" has no typeid."))
-                  .c_str());
-        },
-        nanobind::sig("def static_typeid(/) -> TypeID"));
+    cls.def_prop_ro_static("static_typeid", [](nanobind::object & /*class*/) {
+      if (DerivedTy::getTypeIdFunction)
+        return PyTypeID(DerivedTy::getTypeIdFunction());
+      throw nanobind::attribute_error(
+          (DerivedTy::pyClassName + std::string(" has no typeid.")).c_str());
+    });
     cls.def_prop_ro("typeid", [](PyAttribute &self) {
       return nanobind::cast<PyTypeID>(nanobind::cast(self).attr("typeid"));
     });
@@ -1877,7 +1868,11 @@ MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 template <class Func, typename... Args>
 inline nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
-  return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
+  static SafeInit<nanobind::object> classmethodFn([]() {
+    return std::make_unique<nanobind::object>(
+        nanobind::module_::import_("builtins").attr("classmethod"));
+  });
+  return classmethodFn.get()(cf);
 }
 
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

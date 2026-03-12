@@ -141,6 +141,25 @@ func.func @vector_index_castui(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
 
 // -----
 
+// CHECK-LABEL: @index_castui_nneg
+func.func @index_castui_nneg(%arg0: i1) {
+// CHECK: llvm.zext nneg %{{.*}} : i1 to i{{.*}}
+  %0 = arith.index_castui %arg0 nneg : i1 to index
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @index_castui_nneg_not_set
+func.func @index_castui_nneg_not_set(%arg0: i1) {
+// CHECK: llvm.zext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nneg
+  %0 = arith.index_castui %arg0 : i1 to index
+  return
+}
+
+// -----
+
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func.func @sitofp(%arg0 : i32, %arg1 : i64) {
@@ -749,6 +768,30 @@ func.func @ops_supporting_exact(i32, i32) {
   %2 = arith.divsi %arg0, %arg1 exact : i32
 // CHECK: = llvm.udiv exact %arg0, %arg1 : i32
   %3 = arith.divui %arg0, %arg1 exact : i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_supporting_nneg
+func.func @ops_supporting_nneg(%arg0: i32) {
+  // CHECK: llvm.zext nneg %{{.*}} : i32 to i64
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  // CHECK: llvm.uitofp nneg %{{.*}} : i32 to f32
+  %1 = arith.uitofp %arg0 nneg : i32 to f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_nneg_not_set
+func.func @ops_nneg_not_set(%arg0: i32) {
+  // CHECK: llvm.zext %{{.*}} : i32 to i64
+  // CHECK-NOT: nneg
+  %0 = arith.extui %arg0 : i32 to i64
+  // CHECK: llvm.uitofp %{{.*}} : i32 to f32
+  // CHECK-NOT: nneg
+  %1 = arith.uitofp %arg0 : i32 to f32
   return
 }
 

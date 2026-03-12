@@ -9,6 +9,8 @@
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <cctype>
@@ -66,6 +68,18 @@ TEST(EntityIdTest, Transitivity) {
   std::sort(Ids, Ids + 3);
 
   EXPECT_TRUE(Ids[0] < Ids[1] && Ids[1] < Ids[2]);
+}
+
+TEST(EntityIdTest, FormatProvider) {
+  EntityIdTable Table;
+  EntityName Entity("c:@F@foo", "", {});
+  EntityId Id = Table.getId(Entity);
+
+  std::string S = llvm::formatv("{0}", Id).str();
+  llvm::StringRef Ref(S);
+  ASSERT_TRUE(Ref.consume_front("EntityId("));
+  ASSERT_TRUE(Ref.consume_back(")"));
+  EXPECT_TRUE(isNonNegativeInteger(Ref));
 }
 
 TEST(EntityIdTest, StreamOutput) {

@@ -53,7 +53,6 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  AllowDollarAtStartOfIdentifier = false;
   UseDataRegionDirectives = true;
 
   SupportsDebugInformation = true;
@@ -81,7 +80,6 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  AllowDollarAtStartOfIdentifier = false;
 
   SupportsDebugInformation = true;
 
@@ -121,7 +119,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  PrivateGlobalPrefix = "$M";
+  InternalSymbolPrefix = "$M";
   PrivateLabelPrefix = "$M";
   CommentString = "@";
 
@@ -138,8 +136,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  AllowDollarAtStartOfIdentifier = false;
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;

@@ -153,7 +153,7 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
     if (!Record && AggressiveTemplateLookup) {
       if (const auto *TST =
               Base.getType()->getAs<TemplateSpecializationType>()) {
-        if (const auto *TD = llvm::dyn_cast_or_null<ClassTemplateDecl>(
+        if (const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(
                 TST->getTemplateName().getAsTemplateDecl()))
           Record = TD->getTemplatedDecl();
       }

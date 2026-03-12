@@ -135,19 +135,16 @@
 // cancel the addrspacecast pair this pass emits.
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -157,12 +154,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include <numeric>
 #include <queue>
 
 #define DEBUG_TYPE "nvptx-lower-args"
 
 using namespace llvm;
+using namespace NVPTXAS;
 
 namespace {
 class NVPTXLowerArgsLegacyPass : public FunctionPass {
@@ -288,13 +285,12 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
     I->eraseFromParent();
 }
 
-static Align setByValParamAlign(Argument *Arg, const NVPTXTargetLowering *TLI) {
+static Align setByValParamAlign(Argument *Arg) {
   Function *F = Arg->getParent();
   Type *ByValType = Arg->getParamByValType();
   const DataLayout &DL = F->getDataLayout();
 
-  const Align OptimizedAlign =
-      TLI->getFunctionParamOptimizedAlign(F, ByValType, DL);
+  const Align OptimizedAlign = getFunctionParamOptimizedAlign(F, ByValType, DL);
   const Align CurrentAlign = Arg->getParamAlign().valueOrOne();
 
   if (CurrentAlign >= OptimizedAlign)
@@ -496,18 +492,17 @@ static bool argIsProcessed(Argument *Arg) {
   return false;
 }
 
-static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
-  Function *F = Arg->getParent();
-  assert(isKernelFunction(*F));
-  const NVPTXSubtarget *ST = TM.getSubtargetImpl(*F);
+static void lowerKernelByValParam(Argument *Arg, Function &F,
+                                  const bool HasCvtaParam) {
+  assert(isKernelFunction(F));
 
-  const DataLayout &DL = F->getDataLayout();
-  IRBuilder<> IRB(&F->getEntryBlock().front());
+  const DataLayout &DL = F.getDataLayout();
+  IRBuilder<> IRB(&F.getEntryBlock().front());
 
   if (argIsProcessed(Arg))
     return;
 
-  const Align NewArgAlign = setByValParamAlign(Arg, ST->getTargetLowering());
+  const Align NewArgAlign = setByValParamAlign(Arg);
 
   // (1) First check the easy case, if were able to trace through all the uses
   // and we can convert them all to param AS, then we'll do this.
@@ -527,7 +522,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   }
 
   // (2) If the argument is grid constant, we get to use the pointer directly.
-  if (ST->hasCvtaParam() && (ArgUseIsReadOnly || isParamGridConstant(*Arg))) {
+  if (HasCvtaParam && (ArgUseIsReadOnly || isParamGridConstant(*Arg))) {
     LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
 
     // Cast argument to param address space. Because the backend will emit the
@@ -549,114 +544,54 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   }
 
   // (3) Otherwise we have to create a copy of the argument in local memory.
-  copyByValParam(*F, *Arg);
-}
-
-static void markPointerAsAS(Value *Ptr, const unsigned AS) {
-  if (Ptr->getType()->getPointerAddressSpace() != ADDRESS_SPACE_GENERIC)
-    return;
-
-  // Deciding where to emit the addrspacecast pair.
-  BasicBlock::iterator InsertPt;
-  if (Argument *Arg = dyn_cast<Argument>(Ptr)) {
-    // Insert at the functon entry if Ptr is an argument.
-    InsertPt = Arg->getParent()->getEntryBlock().begin();
-  } else {
-    // Insert right after Ptr if Ptr is an instruction.
-    InsertPt = ++cast<Instruction>(Ptr)->getIterator();
-    assert(InsertPt != InsertPt->getParent()->end() &&
-           "We don't call this function with Ptr being a terminator.");
-  }
-
-  Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr, PointerType::get(Ptr->getContext(), AS), Ptr->getName(), InsertPt);
-  Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
-                                              Ptr->getName(), InsertPt);
-  // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
-  Ptr->replaceAllUsesWith(PtrInGeneric);
-  PtrInGlobal->setOperand(0, Ptr);
-}
-
-static void markPointerAsGlobal(Value *Ptr) {
-  markPointerAsAS(Ptr, ADDRESS_SPACE_GLOBAL);
-}
-
-static void handleIntToPtr(Value &V) {
-  if (!all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); }))
-    return;
-
-  SmallVector<User *, 16> UsersToUpdate(V.users());
-  for (User *U : UsersToUpdate)
-    markPointerAsGlobal(U);
+  copyByValParam(F, *Arg);
 }
 
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
 static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
-  // Copying of byval aggregates + SROA may result in pointers being loaded as
-  // integers, followed by intotoptr. We may want to mark those as global, too,
-  // but only if the loaded integer is used exclusively for conversion to a
-  // pointer with inttoptr.
-  if (TM.getDrvInterface() == NVPTX::CUDA) {
-    // Mark pointers in byval structs as global.
-    for (auto &I : instructions(F)) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      if (!LI)
-        continue;
-
-      if (LI->getType()->isPointerTy() || LI->getType()->isIntegerTy()) {
-        Value *UO = getUnderlyingObject(LI->getPointerOperand());
-        if (Argument *Arg = dyn_cast<Argument>(UO)) {
-          if (Arg->hasByValAttr()) {
-            // LI is a load from a pointer within a byval kernel parameter.
-            if (LI->getType()->isPointerTy())
-              markPointerAsGlobal(LI);
-            else
-              handleIntToPtr(*LI);
-          }
-        }
-      }
-    }
-
-    for (Argument &Arg : F.args())
-      if (Arg.getType()->isIntegerTy())
-        handleIntToPtr(Arg);
-  }
+  const NVPTXSubtarget *ST = TM.getSubtargetImpl(F);
+  const bool HasCvtaParam = ST->hasCvtaParam();
 
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
+  bool Changed = false;
   for (Argument &Arg : F.args())
-    if (Arg.hasByValAttr())
-      handleByValParam(TM, &Arg);
+    if (Arg.hasByValAttr()) {
+      lowerKernelByValParam(&Arg, F, HasCvtaParam);
+      Changed = true;
+    }
 
-  return true;
+  return Changed;
 }
 
 // Device functions only need to copy byval args into local memory.
-static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
+static bool runOnDeviceFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
 
-  const NVPTXTargetLowering *TLI = TM.getSubtargetImpl()->getTargetLowering();
   const DataLayout &DL = F.getDataLayout();
 
+  bool Changed = false;
   for (Argument &Arg : F.args())
     if (Arg.hasByValAttr()) {
-      const Align NewArgAlign = setByValParamAlign(&Arg, TLI);
+      const Align NewArgAlign = setByValParamAlign(&Arg);
       propagateAlignmentToLoads(&Arg, NewArgAlign, DL);
+      Changed = true;
     }
 
-  return true;
+  return Changed;
 }
 
 static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
   return isKernelFunction(F) ? runOnKernelFunction(TM, F)
-                             : runOnDeviceFunction(TM, F);
+                             : runOnDeviceFunction(F);
 }
 
 bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {
   auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
   return processFunction(F, TM);
 }
+
 FunctionPass *llvm::createNVPTXLowerArgsPass() {
   return new NVPTXLowerArgsLegacyPass();
 }
