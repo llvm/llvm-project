@@ -469,12 +469,11 @@ public:
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
 
-  VPWidenMemIntrinsicRecipe *
-  createWidenMemIntrinsic(LoadInst &LI, Intrinsic::ID VectorIntrinsicID,
-                          ArrayRef<VPValue *> CallArguments,
-                          const VPIRMetadata &MD, DebugLoc DL) {
+  VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
+      Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
+      Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
     return tryInsertInstruction(new VPWidenMemIntrinsicRecipe(
-        LI, VectorIntrinsicID, CallArguments, MD, DL));
+        VectorIntrinsicID, CallArguments, Ty, Alignment, MD, DL));
   }
 
   //===--------------------------------------------------------------------===//

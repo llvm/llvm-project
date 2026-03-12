@@ -1976,7 +1976,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
-  auto *CI = dyn_cast_or_null<CallInst>(getUnderlyingValue());
+  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
     CI->getOperandBundlesAsDefs(OpBundles);
@@ -2090,12 +2090,9 @@ InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
   Type *Ty = toVectorTy(getScalarType(), VF);
-  const Instruction *Ingredient = getUnderlyingInstr();
-  const Value *Ptr = getLoadStorePointerOperand(Ingredient);
   return Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, Ptr,
-                                 match(getOperand(2), m_True()), Alignment,
-                                 Ingredient),
+      MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, /*Ptr=*/nullptr,
+                                 !match(getOperand(2), m_True()), Alignment),
       Ctx.CostKind);
 }
 

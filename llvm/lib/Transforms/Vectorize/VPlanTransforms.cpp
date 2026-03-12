@@ -2982,13 +2982,12 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                             m_VPValue(Addr), m_VPValue(Stride),
                             m_RemoveMask(HeaderMask, Mask),
                             m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
-    auto *I = cast<VPWidenIntrinsicRecipe>(&CurRecipe);
     if (!Mask)
       Mask = Plan->getTrue();
-    return new VPWidenMemIntrinsicRecipe(
-        *cast<LoadInst>(I->getUnderlyingInstr()),
-        Intrinsic::experimental_vp_strided_load, {Addr, Stride, Mask, &EVL}, *I,
-        I->getDebugLoc());
+    auto *NewLoad = cast<VPWidenMemIntrinsicRecipe>(&CurRecipe)->clone();
+    NewLoad->setOperand(2, Mask);
+    NewLoad->setOperand(3, &EVL);
+    return NewLoad;
   }
 
   VPValue *StoredVal;
@@ -6811,10 +6810,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!Ptr)
         continue;
 
-      Instruction &Ingredient = LoadR->getIngredient();
+      Type *LoadTy = TypeInfo.inferScalarType(LoadR);
+      Align Alignment = LoadR->getAlign();
       auto IsProfitable = [&](ElementCount VF) -> bool {
-        Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
-        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        Type *DataTy = toVectorTy(LoadTy, VF);
         if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
           return false;
         const InstructionCost CurrentCost = LoadR->computeCost(VF, Ctx);
@@ -6822,8 +6821,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
             Ctx.TTI.getMemIntrinsicInstrCost(
                 MemIntrinsicCostAttributes(
                     Intrinsic::experimental_vp_strided_load, DataTy,
-                    Ptr->getUnderlyingValue(), LoadR->isMasked(), Alignment,
-                    &Ingredient),
+                    /*Ptr=*/nullptr, LoadR->isMasked(), Alignment),
                 Ctx.CostKind);
         return StridedLoadStoreCost < CurrentCost;
       };
@@ -6876,8 +6874,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!Mask)
         Mask = Plan.getTrue();
       auto *StridedLoad = Builder.createWidenMemIntrinsic(
-          *cast<LoadInst>(&Ingredient), Intrinsic::experimental_vp_strided_load,
-          {NewPtr, StrideInBytes, Mask, I32VF}, *LoadR, LoadR->getDebugLoc());
+          Intrinsic::experimental_vp_strided_load,
+          {NewPtr, StrideInBytes, Mask, I32VF}, LoadTy, Alignment, *LoadR,
+          LoadR->getDebugLoc());
       LoadR->replaceAllUsesWith(StridedLoad);
 
       ToErase.push_back(LoadR);

@@ -2022,25 +2022,24 @@ class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
 
 public:
   // TODO: support StoreInst for strided store
-  VPWidenMemIntrinsicRecipe(LoadInst &LI, Intrinsic::ID VectorIntrinsicID,
-                            ArrayRef<VPValue *> CallArguments,
-                            const VPIRMetadata &MD = {},
+  VPWidenMemIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
+                            ArrayRef<VPValue *> CallArguments, Type *Ty,
+                            Align Alignment, const VPIRMetadata &MD = {},
                             DebugLoc DL = DebugLoc::getUnknown())
       : VPWidenIntrinsicRecipe(VPRecipeBase::VPWidenMemIntrinsicSC,
-                               VectorIntrinsicID, CallArguments, LI.getType(),
-                               {}, MD, DL),
-        Alignment(LI.getAlign()) {
+                               VectorIntrinsicID, CallArguments, Ty, {}, MD,
+                               DL),
+        Alignment(Alignment) {
     assert(VectorIntrinsicID == Intrinsic::experimental_vp_strided_load &&
            "Unexpected intrinsic");
-    setUnderlyingValue(&LI);
   }
 
   ~VPWidenMemIntrinsicRecipe() override = default;
 
   VPWidenMemIntrinsicRecipe *clone() override {
-    return new VPWidenMemIntrinsicRecipe(*cast<LoadInst>(getUnderlyingInstr()),
-                                         getVectorIntrinsicID(), operands(),
-                                         *this, getDebugLoc());
+    return new VPWidenMemIntrinsicRecipe(getVectorIntrinsicID(), operands(),
+                                         getScalarType(), Alignment, *this,
+                                         getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenMemIntrinsicSC)
