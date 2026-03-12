@@ -32,28 +32,17 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
 class NVVMRequiresSM<int minVersion> :
   ParamNativeOpTrait<"NVVMRequiresSM", !cast<string>(minVersion)>;
 
-class StrJoin<string sep, list<string> str_list> {
-  string ret = !foldl("", str_list, a, b,
-               !if(!eq(a, ""), b, !if(!eq(b, ""), a, !strconcat(a, sep, b))));
-}
-
 // Op requires an exact SM match along with architecture acceleration.
 class NVVMRequiresSMa<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMa",
-                      StrJoin<",", !foreach(vers, smVersions,
-                                            !cast<string>(vers))>.ret>;
+  ParamNativeOpTrait<"NVVMRequiresSMa", !interleave(smVersions, ",")>;
 
 // Op requires an SM version belonging to the family.
 class NVVMRequiresSMf<list<int> smVersions> :
-  ParamNativeOpTrait<"NVVMRequiresSMf",
-                      StrJoin<",", !foreach(vers, smVersions,
-                                            !cast<string>(vers))>.ret>;
+  ParamNativeOpTrait<"NVVMRequiresSMf", !interleave(smVersions, ",")>;
 
 // Op supported on some combination of architecture acceleration and family-specific SM versions.
 class NVVMRequiresSMaOrf<list<int> smVersionsA, list<int> smVersionsF> :
   ParamNativeOpTrait<"NVVMRequiresSMaOrf",
-    "mlir::OpTrait::NVVMRequiresSMa<" # StrJoin<",",
-      !foreach(vers, smVersionsA, !cast<string>(vers))>.ret # ">" # "," #
-    "mlir::OpTrait::NVVMRequiresSMf<" # StrJoin<",",
-      !foreach(vers, smVersionsF, !cast<string>(vers))>.ret # ">">;
+    "mlir::OpTrait::NVVMRequiresSMa<" # !interleave(smVersionsA, ",") # ">" # "," #
+    "mlir::OpTrait::NVVMRequiresSMf<" # !interleave(smVersionsF, ",") # ">">;
 #endif //NVVM_REQUIRES_SM_TRAITS
