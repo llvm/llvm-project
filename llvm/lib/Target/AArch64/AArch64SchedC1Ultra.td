@@ -416,9 +416,7 @@ def C1UWrite_5c_1V_1M0 : SchedWriteRes<[C1UUnitV, C1UUnitM0]> {
   let NumMicroOps = 2;
 }
 
-def C1UWrite_8c_2V_2V0134 : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV0134, C1UUnitV0134]> {
-  let Latency = 8;
-}
+def C1UWrite_8c_1V_3V0134 : SchedWriteRes<[C1UUnitV, C1UUnitV0134, C1UUnitV0134, C1UUnitV0134]> { let Latency = 8; }
 
 def C1UWrite_6c_1V_2V0134 : SchedWriteRes<[C1UUnitV, C1UUnitV0134, C1UUnitV0134]> {
   let Latency = 6;
@@ -1972,7 +1970,7 @@ def : InstRW<[C1UWrite_2c_1V], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
 def : InstRW<[C1UWrite_4c_V0134], (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
-def : InstRW<[C1UWrite_8c_2V_2V0134], (instregex "^[SU]ADDV_VPZ_B")>;
+def : InstRW<[C1UWrite_8c_1V_3V0134], (instregex "^[SU]ADDV_VPZ_B")>;
 def : InstRW<[C1UWrite_6c_1V_2V0134], (instregex "^[SU](MAX|MIN)V_VPZ_B")>;
 
 // // Reduction, arithmetic, H form
