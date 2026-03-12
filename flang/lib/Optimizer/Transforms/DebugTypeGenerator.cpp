@@ -686,9 +686,7 @@ static mlir::StringAttr getBasicTypeName(mlir::MLIRContext *context,
                                          llvm::StringRef baseName,
                                          unsigned bitSize) {
   std::ostringstream oss;
-  oss << baseName.str();
-  if (bitSize != 32)
-    oss << "(kind=" << (bitSize / 8) << ")";
+  oss << baseName.str() << "(kind=" << (bitSize / 8) << ")";
   return mlir::StringAttr::get(context, oss.str());
 }
 
