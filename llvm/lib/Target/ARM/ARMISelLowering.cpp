@@ -5406,6 +5406,13 @@ SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
+static SDValue getInvertedARMCondCode(SDValue ARMcc, SelectionDAG &DAG) {
+  ARMCC::CondCodes CondCode =
+      (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  CondCode = ARMCC::getOppositeCondition(CondCode);
+  return DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+}
+
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -5430,10 +5437,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Value, OverflowCmp) = getARMXALUOOp(Cond, DAG, ARMcc);
 
     // Reverse the condition code.
-    ARMCC::CondCodes CondCode =
-        (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-    CondCode = ARMCC::getOppositeCondition(CondCode);
-    ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+    ARMcc = getInvertedARMCondCode(ARMcc, DAG);
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
                        OverflowCmp);
@@ -5481,10 +5485,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
     if ((CC == ISD::SETNE) != isOneConstant(RHS)) {
       // Reverse the condition code.
-      ARMCC::CondCodes CondCode =
-          (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-      CondCode = ARMCC::getOppositeCondition(CondCode);
-      ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+      ARMcc = getInvertedARMCondCode(ARMcc, DAG);
     }
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
