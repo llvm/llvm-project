@@ -101,9 +101,27 @@ check_c_source_compiles(
     BUILDING_FOR_ARM64_OSX
 )
 
+set(default_arm64e_debugserver OFF)
+if (BUILDING_FOR_ARM64_OSX )
+  execute_process(
+      COMMAND sysctl -n hw.optional.ptrauth
+      OUTPUT_VARIABLE SYSCTL_OUTPUT
+      ERROR_QUIET
+      RESULT_VARIABLE SYSCTL_RESULT
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(SYSCTL_RESULT EQUAL 0)
+    set(default_arm64e_debugserver ON)
+  endif()
+endif()
+option(LLDB_ENABLE_ARM64E_DEBUGSERVER "Build debugserver for arm64 and arm64e" ${default_arm64e_debugserver})
+
 # You can only debug arm64e processes using an arm64e debugserver.
-option(LLDB_ENABLE_ARM64E_DEBUGSERVER "Build debugserver for arm64 and arm64e" OFF)
+# While on older versions of macOS, you may not be able to run arm64e binaries
+# without arm64e_preview_abi, building it should be harmless which is why we
+# default to ON on capable hardware.
 if (BUILDING_FOR_ARM64_OSX AND LLDB_ENABLE_ARM64E_DEBUGSERVER)
+  message(STATUS "Building debugserver for arm64 and arm64e")
   set(CMAKE_OSX_ARCHITECTURES "arm64;arm64e")
 endif ()
 
