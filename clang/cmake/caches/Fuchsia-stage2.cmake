@@ -454,6 +454,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-ar
   llvm-cov
   llvm-cxxfilt
+  llc
   llvm-debuginfod
   llvm-debuginfod-find
   llvm-dlltool
