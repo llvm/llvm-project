@@ -39,6 +39,9 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax", [NoMemoryEffect]> {
     This returns the index with the largest value across the given axis of the
     input tensor. If multiple locations have equal values, returns the first
     match along the search axis.
+
+    This operation is not pure. Undefined behaviour may occur if the max index
+    is out of bounds for the output data type.
   }];
 
   let arguments = (ins
@@ -79,6 +82,9 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
     the mean value being placed in the output tensor. When calculating the
     average, only the number of valid input tensor values, but not padding, are
     used to calculate the divisor.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -118,13 +124,16 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d", [NoMemoryEffect]> {
+def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
   let summary = "2D Convolution operator.";
 
   let description = [{
     Performs a 2D convolution over the given tensor input, using the weight
     tensor. Implementations may choose to skip calculation of multiplies in
     the padding area.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -173,6 +182,9 @@ def Tosa_Conv2DBlockScaledOp : Tosa_InferShapedTypeOp<"conv2d_block_scaled", [No
     Performs a 2D convolution over the given input data and scales, using
     the weight data and scales. Implementations may choose to skip calculation
     of multiplies in the padding area.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -203,12 +215,15 @@ def Tosa_Conv2DBlockScaledOp : Tosa_InferShapedTypeOp<"conv2d_block_scaled", [No
 //===----------------------------------------------------------------------===//
 // Operator: conv3d
 //===----------------------------------------------------------------------===//
-def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d", [NoMemoryEffect]> {
+def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
   let summary = "3D Convolution operator.";
 
   let description = [{
     Performs a 3D convolution over the given input tensor. Implementations
     may choose to skip calculation of multiplies in the padding area.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -248,13 +263,16 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d", [NoMemoryEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: depthwise_conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d", [NoMemoryEffect]> {
+def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   let summary = "Depthwise 2D Convolution operator.";
 
   let description = [{
     Performs 2D convolutions separately over each channel of the given tensor
     input, using the weight tensor. Implementations may choose to skip
     calculation of multiplies in the padding area.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -354,6 +372,9 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul", [NoMemoryEffect]> {
 
   let description = [{
     Performs two dimensional matrix multiplications.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -397,6 +418,9 @@ def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", 
     dimension is always the the last dimension of the tensor, so the result is effectively
     a matrix multiply of A by the transposed B matrix. If the N dimension of input B is of
     size 1, the B matrix will be broadcast.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -510,13 +534,16 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
 //===----------------------------------------------------------------------===//
 // Operator: transpose_conv2d
 //===----------------------------------------------------------------------===//
-def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d", [NoMemoryEffect]> {
+def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
   let summary = "Transpose 2D Convolution operator.";
 
   let description = [{
     Performs a 2D transposed convolution over the given tensor input, using the
     weights tensor. Implementations may choose to skip calculation of multiplies
     by zero at fractional input positions.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -692,13 +719,15 @@ def Tosa_TanhOp : Tosa_ElementwiseUnaryOp<"tanh", [Pure]> {
 //===----------------------------------------------------------------------===//
 def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
     Commutative,
-    SameOperandsAndResultElementType,
-    NoMemoryEffect]> {
+    SameOperandsAndResultElementType]> {
   let summary = "Elementwise addition operator.";
 
   let description = [{
     Elementwise addition of input1 and input2. Axis of size 1 will be broadcast,
     as necessary. Rank of input tensors must match.
+
+    This operation is not pure. Undefined behaviour may occur if the calculated
+    result overflows.
 
     Example:
 
@@ -734,13 +763,16 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 // Operator: arithmetic_right_shift
 //===----------------------------------------------------------------------===//
 def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
-    [SameOperandsAndResultElementType, NoMemoryEffect]> {
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise Arithmetic Right Shift.";
 
   let description = [{
     Elementwise arithmetic right shift of input1 by the amount specified in
     input2. Axis of size 1 will be broadcast, as necessary. Rank of input tensors
     must match.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    shift is out of range.
   }];
 
   let arguments = (ins
@@ -857,8 +889,7 @@ def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
 //===----------------------------------------------------------------------===//
 // Operator: intdiv
 //===----------------------------------------------------------------------===//
-def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementType,
-    NoMemoryEffect]> {
+def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementType]> {
   let summary = "Integer divide operator.";
 
   let description = [{
@@ -867,6 +898,8 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
     divide is truncated towards zero. Expected use is for operations on
     non-scaled integers. Floating point divide should use RECIPROCAL and MUL.
     Quantized integer divide should use TABLE (for 1/x) and MUL.
+
+    This operation is not pure. Undefined behaviour may occur on division by zero.
   }];
 
   let arguments = (ins
@@ -923,13 +956,16 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
 // Operator: logical_left_shift
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
-    [SameOperandsAndResultElementType, NoMemoryEffect]> {
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise Logical Left Shift.";
 
   let description = [{
     Elementwise logical left-shift of input1 by the amount specified in input2.
     Axis of size 1 will be broadcast, as necessary.
     Rank of input tensors must match.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    shift is out of range.
   }];
 
   let arguments = (ins
@@ -953,13 +989,16 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
 // Operator: logical_right_shift
 //===----------------------------------------------------------------------===//
 def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
-    [SameOperandsAndResultElementType, NoMemoryEffect]> {
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise Logical Right Shift.";
 
   let description = [{
     Elementwise logical right shift of input1 by the amount specified in input2.
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    shift is out of range.
   }];
 
   let arguments = (ins
@@ -1117,6 +1156,9 @@ def Tosa_MulOp : Tosa_Op<"mul", [
     Elementwise multiplication (Hadamard product) of input1 and input2.
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
+
+    This operation is not pure. Undefined behaviour may occur if the specifed
+    shift is out of range or the result overflows.
   }];
 
   let arguments = (ins
@@ -1145,14 +1187,16 @@ def Tosa_MulOp : Tosa_Op<"mul", [
 //===----------------------------------------------------------------------===//
 // Operator: pow
 //===----------------------------------------------------------------------===//
-def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType,
-    NoMemoryEffect]> {
+def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
   let summary = "Computes the power of one value to another.";
 
   let description = [{
     Elementwise input1 value raised to the power of input2.
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
+
+    This operation is not pure. Undefined behaviour may occur if specified
+    exponent is negative.
   }];
 
   let arguments = (ins
@@ -1175,13 +1219,15 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType,
 //===----------------------------------------------------------------------===//
 // Operator: sub
 //===----------------------------------------------------------------------===//
-def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType,
-    NoMemoryEffect]> {
+def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise subtraction operator.";
 
   let description = [{
     Elementwise subtraction of input1 and input2. Axis of size 1 will be
     broadcast as necessary. Rank of input tensors must match.
+
+    This operation is not pure. Undefined behaviour may occur if the calculated
+    result underflows.
   }];
 
   let arguments = (ins
@@ -1224,6 +1270,9 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table", [NoMemoryEffect]> {
     * Use the TABLE operator to produce a fixed point 16.7 interpolated result
     * Use RESCALE (in_t=int32_t, out_t=int16_t, scale=1<<14, shift=21) to
       scale the output to int16_t range (or alternate scale as required)
+
+    This operation is not pure. Undefined behaviour may occur if the calculated
+    slope is out of range.
   }];
 
   let arguments = (ins
@@ -1262,6 +1311,9 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs", [NoMemoryEffect]> {
 
   let description = [{
     Elementwise absolute value operation.
+
+    This operation is not pure. Undefined behaviour may occur if the
+    calculated result underflows.
 
     Example:
 
@@ -1506,6 +1558,9 @@ def Tosa_NegateOp : Tosa_InferShapedTypeOp<"negate", [
 
   let description = [{
     Elementwise negation operation.
+
+    This operation is not pure. Undefined behaviour may occur if the calculated
+    result underflows or overflows.
   }];
 
   let arguments = (ins
@@ -1952,13 +2007,16 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: reduce_prod
+// Operator: reduce_product
 //===----------------------------------------------------------------------===//
 def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product", [NoMemoryEffect]> {
   let summary = "Reduce Product operator.";
 
   let description = [{
     Reduce a tensor along the given axis by computing the product of the axis.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -2000,6 +2058,9 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum", [NoMemoryEffect]> {
 
   let description = [{
     Reduce a tensor along the given axis by computing the sum of the axis.
+
+    This operation is not pure. Undefined behaviour may occur if the accumulated
+    result overflows.
   }];
 
   let arguments = (ins
@@ -2321,6 +2382,9 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather", [NoMemoryEffect]> {
     values tensor based on the indices. N is the number of batches, W the number
     of indices in each batch, K the range of each index and C the number data
     channels for each index.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    indices are out of range.
   }];
 
   let arguments = (ins
@@ -2358,6 +2422,9 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter", [NoMemoryEffect]> {
     single SCATTER operation and so each output index occurs at most once. It
     follows that K >= W. In use cases that require multiple updates to the same
     output position, these must be decomposed into multiple SCATTER operations.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    indices are out of range or duplicate indices are provided.
   }];
 
   let arguments = (ins
@@ -2608,6 +2675,9 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale", [NoMemoryEffect]> {
 
     The shift and value range are limited to allow a variety of implementations. The limit
     of 62 on shift allows the shift to be decomposed as two right shifts of 31.
+
+    This operation is not pure. Undefined behaviour may occur if the calculated
+    result underflows or overflows.
 
     Supported rescalings:
     * This table is showing the supported conversions from the TOSA Specification.

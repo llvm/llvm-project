@@ -548,7 +548,8 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
                                         ["inferReturnTypeComponents"]>,
               ResultsBroadcastableShape,
               TosaElementwiseOperator,
-              SameOperandsAndResultRank])> {}
+              SameOperandsAndResultRank,
+              NoMemoryEffect])> {}
 
 class Tosa_ElementwiseUnaryOp<string mnemonic, list<Trait> traits = []> :
     Tosa_ElementwiseOp<mnemonic, !listconcat(traits, [
@@ -565,7 +566,7 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
 // for multiple zero points in convolution ops.
 class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
     : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
-      [SameVariadicOperandSize])> {
+      [SameVariadicOperandSize, NoMemoryEffect])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
 }
