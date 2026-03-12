@@ -6,15 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/integer/clc_clz.h"
-#include "clc/internal/clc.h"
-#include "clc/math/clc_fabs.h"
-#include "clc/math/clc_frexp_exp.h"
-#include "clc/math/math.h"
-#include "clc/relational/clc_isfinite.h"
-#include "clc/relational/clc_select.h"
-
-#define __CLC_BODY <clc_logb.inc>
-#include <clc/math/gentype.inc>
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_INTN __CLC_FUNCTION(__CLC_GENTYPE x);
