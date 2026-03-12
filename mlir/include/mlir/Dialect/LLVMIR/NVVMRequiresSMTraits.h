@@ -30,10 +30,8 @@ struct NVVMCheckSMVersion {
     // Set to true if the SM version is family-specific (e.g., sm_100f).
     bool familySpecific;
 
-    unsigned getSmFamilyVersion() const {
-      return version / 10;
-    }
-    
+    unsigned getSmFamilyVersion() const { return version / 10; }
+
     bool hasFamilySpecificFeatures() const {
       return familySpecific || archAccelerated;
     }
@@ -92,7 +90,7 @@ struct NVVMCheckSMVersion {
 
     return NVVMCheckSMVersion(isAA, isFS, smVersionInt);
   }
-  
+
   NVVMCheckSMVersion &append(const NVVMCheckSMVersion &other) {
     smVersionList.append(other.smVersionList);
     return *this;
