@@ -2986,8 +2986,9 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     if (!Mask)
       Mask = Plan->getTrue();
     return new VPWidenMemIntrinsicRecipe(
-        *cast<LoadInst>(I->getUnderlyingInstr()), {Addr, Stride, Mask, &EVL},
-        *I, I->getDebugLoc());
+        *cast<LoadInst>(I->getUnderlyingInstr()),
+        Intrinsic::experimental_vp_strided_load, {Addr, Stride, Mask, &EVL}, *I,
+        I->getDebugLoc());
   }
 
   VPValue *StoredVal;
@@ -6875,8 +6876,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!Mask)
         Mask = Plan.getTrue();
       auto *StridedLoad = Builder.createWidenMemIntrinsic(
-          *cast<LoadInst>(&Ingredient), {NewPtr, StrideInBytes, Mask, I32VF},
-          *LoadR, LoadR->getDebugLoc());
+          *cast<LoadInst>(&Ingredient), Intrinsic::experimental_vp_strided_load,
+          {NewPtr, StrideInBytes, Mask, I32VF}, *LoadR, LoadR->getDebugLoc());
       LoadR->replaceAllUsesWith(StridedLoad);
 
       ToErase.push_back(LoadR);

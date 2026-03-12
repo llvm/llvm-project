@@ -470,10 +470,11 @@ public:
   }
 
   VPWidenMemIntrinsicRecipe *
-  createWidenMemIntrinsic(LoadInst &LI, ArrayRef<VPValue *> CallArguments,
+  createWidenMemIntrinsic(LoadInst &LI, Intrinsic::ID VectorIntrinsicID,
+                          ArrayRef<VPValue *> CallArguments,
                           const VPIRMetadata &MD, DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPWidenMemIntrinsicRecipe(LI, CallArguments, MD, DL));
+    return tryInsertInstruction(new VPWidenMemIntrinsicRecipe(
+        LI, VectorIntrinsicID, CallArguments, MD, DL));
   }
 
   //===--------------------------------------------------------------------===//
