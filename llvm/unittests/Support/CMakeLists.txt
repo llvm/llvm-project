@@ -129,6 +129,7 @@ add_llvm_unittest(SupportTests
   intrinsics_gen
   )
 
+add_subdirectory(HTTP)
 add_subdirectory(LSP)
 
 target_link_libraries(SupportTests PRIVATE LLVMTestingSupport)

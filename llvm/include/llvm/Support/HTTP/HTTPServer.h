@@ -1,4 +1,4 @@
-//===-- llvm/Debuginfod/HTTPServer.h - HTTP server library ------*- C++ -*-===//
+//===--- HTTPServer.h - HTTP server library ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFOD_HTTPSERVER_H
-#define LLVM_DEBUGINFOD_HTTPSERVER_H
+#ifndef LLVM_SUPPORT_HTTP_HTTPSERVER_H
+#define LLVM_SUPPORT_HTTP_HTTPSERVER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -130,4 +130,4 @@ public:
 };
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFOD_HTTPSERVER_H
+#endif // LLVM_SUPPORT_HTTP_HTTPSERVER_H
