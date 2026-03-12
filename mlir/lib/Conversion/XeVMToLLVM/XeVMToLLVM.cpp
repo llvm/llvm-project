@@ -270,7 +270,8 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
 // Cache control annotation utilities
 //
 // Instead of attaching cache control as MLIR attributes and handling them
-// during LLVM translation, we directly emit llvm.intr.ptr.annotation op MLIR.
+// during LLVM translation, we directly emit llvm.intr.ptr.annotation op in
+// MLIR.
 //===----------------------------------------------------------------------===//
 
 /// Build one cache-control payload string per attribute.
