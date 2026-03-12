@@ -502,18 +502,11 @@ createCUFTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
       hlfir::getFortranElementOrSequenceType(mold.getType());
   mlir::Value shape = hlfir::genShape(loc, builder, mold);
   auto extents = hlfir::getIndexExtents(loc, builder, shape);
-  llvm::SmallVector<mlir::Value> elidedExtents =
-      fir::factory::elideExtentsAlreadyInType(sequenceType, extents);
-  llvm::SmallVector<mlir::Value> elidedLenParams =
-      fir::factory::elideLengthsAlreadyInType(sequenceType, lenParams);
-  auto idxTy = builder.getIndexType();
-  for (mlir::Value &ext : elidedExtents)
-    ext = builder.createConvert(loc, idxTy, ext);
-  auto allocOp = cuf::AllocOp::create(builder, loc, sequenceType,
-                                      /*uniqName=*/"", /*bindcName=*/".tmp",
-                                      dataAttr, elidedLenParams, elidedExtents);
+  mlir::Value alloc = Fortran::lower::genCUFAlloc(
+      builder, loc, sequenceType, /*uniqName=*/"", /*bindcName=*/".tmp",
+      dataAttr, lenParams, extents);
   auto declareOp = hlfir::DeclareOp::create(
-      builder, loc, allocOp.getResult(), ".tmp", shape, lenParams,
+      builder, loc, alloc, ".tmp", shape, lenParams,
       /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
       fir::FortranVariableFlagsAttr{}, dataAttr);
   return hlfir::Entity{declareOp.getBase()};
