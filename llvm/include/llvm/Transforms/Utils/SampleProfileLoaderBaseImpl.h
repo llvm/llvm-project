@@ -99,11 +99,7 @@ public:
                         ->getZExtValue();
         auto Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))
                         ->getZExtValue();
-        auto Name = cast<MDString>(MD->getOperand(2))->getString();
         GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
-        if (auto *Func = M.getFunction(Name))
-          if (Func->hasWeakLinkage() || Func->hasExternalWeakLinkage())
-            GUIDIsWeakSymbol.insert(GUID);
       }
       for (const auto &Func : M) {
         if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
