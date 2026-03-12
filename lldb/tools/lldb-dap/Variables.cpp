@@ -48,9 +48,10 @@ template <typename T> StringMap<uint32_t> DistinctNames(T &container) {
 }
 
 template <typename T>
-std::vector<Variable>
-MakeVariables(VariableReferenceStorage &storage, const Configuration &config,
-              const VariablesArguments &args, T &container, bool is_permanent) {
+std::vector<Variable> MakeVariables(
+    VariableReferenceStorage &storage, const Configuration &config,
+    const VariablesArguments &args, T &container, bool is_permanent,
+    const std::map<lldb::user_id_t, std::string> &name_overrides = {}) {
   std::vector<Variable> variables;
 
   // We first find out which variable names are duplicated.
@@ -83,10 +84,16 @@ MakeVariables(VariableReferenceStorage &storage, const Configuration &config,
     if (LLVM_UNLIKELY(var_ref.Kind() == eReferenceKindInvalid))
       break;
 
+    std::optional<std::string> custom_name;
+    auto name_it = name_overrides.find(variable.GetID());
+    if (name_it != name_overrides.end())
+      custom_name = name_it->second;
+
     variables.emplace_back(CreateVariable(
         variable, var_ref, format_hex, config.enableAutoVariableSummaries,
         config.enableSyntheticChildDebugging,
-        variable_name_counts[GetNonNullVariableName(variable)] > 1));
+        variable_name_counts[GetNonNullVariableName(variable)] > 1,
+        custom_name));
   }
 
   return variables;
@@ -106,7 +113,7 @@ public:
     if (m_error.Fail())
       return ToError(m_error);
     return MakeVariables(storage, config, args, m_children,
-                         /*is_permanent=*/false);
+                         /*is_permanent=*/false, m_names);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -152,8 +159,13 @@ private:
       // Show return value if there is any (in the local top frame)
       lldb::SBValue stop_return_value;
       if (m_frame.GetFrameID() == 0 &&
-          ((stop_return_value = m_frame.GetThread().GetStopReturnValue())))
-        m_children.Append(stop_return_value.Clone("(Return Value)"));
+          ((stop_return_value = m_frame.GetThread().GetStopReturnValue()))) {
+        // FIXME: Cloning this value seems to change the type summary, see
+        // https://github.com/llvm/llvm-project/issues/183578
+        // m_children.Append(stop_return_value.Clone("(Return Value)"));
+        m_names[stop_return_value.GetID()] = "(Return Value)";
+        m_children.Append(stop_return_value);
+      }
 
       lldb::SBValueList locals = m_frame.GetVariables(/*arguments=*/true,
                                                       /*locals=*/true,
@@ -192,6 +204,7 @@ private:
   lldb::SBFrame m_frame;
   lldb::SBValueList m_children;
   lldb::SBError m_error;
+  std::map<lldb::user_id_t, std::string> m_names;
   ScopeKind m_kind;
   bool m_variables_loaded = false;
 };
@@ -209,6 +222,7 @@ public:
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
+    std::map<lldb::user_id_t, std::string> name_overrides;
     lldb::SBValueList list;
     for (auto inner : m_value)
       list.Append(inner);
@@ -217,17 +231,23 @@ public:
     // of a synthetic member. That eliminates the need for the user to go to the
     // debug console and type `frame var <variable> to get these values.
     if (config.enableSyntheticChildDebugging && m_value.IsSynthetic()) {
-      list.Append(m_value.Clone("[raw]").GetNonSyntheticValue());
+      lldb::SBValue synthetic_value = m_value.GetNonSyntheticValue();
+      name_overrides[synthetic_value.GetID()] = "[raw]";
+      // FIXME: Cloning the value seems to affect the type summary, see
+      // https://github.com/llvm/llvm-project/issues/183578
+      // m_value.GetSyntheticValue().Clone("[raw]");
+      list.Append(synthetic_value);
     }
 
     const bool is_permanent =
         args.variablesReference.Kind() == eReferenceKindPermanent;
-    return MakeVariables(storage, config, args, list, is_permanent);
+    return MakeVariables(storage, config, args, list, is_permanent,
+                         name_overrides);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
     if (name == "[raw]" && m_value.IsSynthetic())
-      return m_value.GetSyntheticValue();
+      return m_value.GetNonSyntheticValue();
 
     // Handle mapped index
     lldb::SBValue variable = m_value.GetChildMemberWithName(name.data());
