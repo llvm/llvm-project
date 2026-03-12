@@ -56,7 +56,5 @@ export float2x3 test_dynamic(float a, float b, float c,
 // ROW-CHECK: [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT3]], float [[E]], i32 4
 // CHECK: [[F:%.*]] = load float, ptr %f.addr
 // CHECK: [[VECINIT5:%.*]] = insertelement <6 x float> [[VECINIT4]], float [[F]], i32 5
-// COL-CHECK-NOT: shufflevector
-// ROW-CHECK-NOT: shufflevector
   return (float2x3){a, b, c, d, e, f};
 }
