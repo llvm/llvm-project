@@ -165,5 +165,29 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests
+#if defined(__has_extension) && __has_extension(bit_int)
+    {
+      using T32  = unsigned _BitInt(32);
+      using T64  = unsigned _BitInt(64);
+      using T128 = unsigned _BitInt(128);
+
+      assert(std::rotr(T32(1), 0) == T32(1));
+      assert(std::rotr(T32(16), 4) == T32(1));
+      assert(std::rotr(T64(1), 0) == T64(1));
+      assert(std::rotr(T64(16), 4) == T64(1));
+      assert(std::rotr(T128(1), 0) == T128(1));
+      assert(std::rotr(T128(16), 4) == T128(1));
+    }
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::rotr(T256(1), 0) == T256(1));
+      assert(std::rotr(T256(16), 4) == T256(1));
+      assert(std::rotr(T256(1) << 200, 200) == T256(1));
+    }
+#  endif
+#endif // __has_extension(bit_int)
+
     return 0;
 }

@@ -138,5 +138,28 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests
+#if defined(__has_extension) && __has_extension(bit_int)
+    {
+      using T32  = unsigned _BitInt(32);
+      using T64  = unsigned _BitInt(64);
+      using T128 = unsigned _BitInt(128);
+
+      assert(std::countr_zero(T32(1)) == 0);
+      assert(std::countr_zero(T32(1) << 31) == 31);
+      assert(std::countr_zero(T64(1)) == 0);
+      assert(std::countr_zero(T64(1) << 63) == 63);
+      assert(std::countr_zero(T128(1)) == 0);
+      assert(std::countr_zero(T128(1) << 127) == 127);
+    }
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::countr_zero(T256(1)) == 0);
+      assert(std::countr_zero(T256(1) << 255) == 255);
+    }
+#  endif
+#endif // __has_extension(bit_int)
+
     return 0;
 }

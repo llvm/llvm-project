@@ -136,5 +136,33 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests
+#if defined(__has_extension) && __has_extension(bit_int)
+    {
+      using T8   = unsigned _BitInt(8);
+      using T32  = unsigned _BitInt(32);
+      using T64  = unsigned _BitInt(64);
+      using T128 = unsigned _BitInt(128);
+
+      assert(std::countl_zero(T8(~T8(0))) == 0);
+      assert(std::countl_zero(T8(1)) == 7);
+      assert(std::countl_zero(T32(~T32(0))) == 0);
+      assert(std::countl_zero(T32(1)) == 31);
+      assert(std::countl_zero(T64(~T64(0))) == 0);
+      assert(std::countl_zero(T64(1)) == 63);
+      assert(std::countl_zero(T128(~T128(0))) == 0);
+      assert(std::countl_zero(T128(1)) == 127);
+    }
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::countl_zero(T256(~T256(0))) == 0);
+      assert(std::countl_zero(T256(1)) == 255);
+      // Bit set at position 200: 55 leading zeros
+      assert(std::countl_zero(T256(1) << 200) == 55);
+    }
+#  endif
+#endif // __has_extension(bit_int)
+
     return 0;
 }

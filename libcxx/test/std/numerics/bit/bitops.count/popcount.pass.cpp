@@ -148,5 +148,39 @@ int main(int, char**)
     test<std::uintptr_t>();
     test<std::size_t>();
 
+    // _BitInt tests
+#if defined(__has_extension) && __has_extension(bit_int)
+    {
+      using T8   = unsigned _BitInt(8);
+      using T32  = unsigned _BitInt(32);
+      using T64  = unsigned _BitInt(64);
+      using T128 = unsigned _BitInt(128);
+
+      assert(std::popcount(T8(0)) == 0);
+      assert(std::popcount(T8(1)) == 1);
+      assert(std::popcount(T8(0xFF)) == 8);
+      assert(std::popcount(T32(0)) == 0);
+      assert(std::popcount(T32(~T32(0))) == 32);
+      assert(std::popcount(T64(0)) == 0);
+      assert(std::popcount(T64(~T64(0))) == 64);
+      assert(std::popcount(T128(0)) == 0);
+      assert(std::popcount(T128(~T128(0))) == 128);
+    }
+#  if __BITINT_MAXWIDTH__ >= 256
+    {
+      using T256 = unsigned _BitInt(256);
+      assert(std::popcount(T256(0)) == 0);
+      assert(std::popcount(T256(~T256(0))) == 256);
+      // (1 << 200) - 1 has exactly 200 bits set
+      T256 v = T256(1) << 200;
+      v -= 1;
+      assert(std::popcount(v) == 200);
+      // Exactly 4 bits at positions 0, 64, 128, 255
+      T256 w = T256(1) | (T256(1) << 64) | (T256(1) << 128) | (T256(1) << 255);
+      assert(std::popcount(w) == 4);
+    }
+#  endif
+#endif // __has_extension(bit_int)
+
     return 0;
 }
