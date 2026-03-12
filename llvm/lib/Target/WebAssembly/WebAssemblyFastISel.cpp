@@ -1370,9 +1370,8 @@ static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
   }
 }
 
-/// Matches a sign-extension pattern (shl + shr_s) to fold it into a signed load.
-///
-/// FastISel assumes that 'sext' from i8 or i16 will first be lowered to a
+/// Matches a sign-extension pattern (shl + shr_s) to fold it into a signed
+/// load. FastISel assumes that 'sext' from i8 or i16 will first be lowered to a
 /// 32-bit zero-extending load (i32.load8_u / i32.load16_u) followed by 32-bit
 /// shifts, even when extending to i64. Therefore, this function only matches
 /// 32-bit shifts (SHL_I32 / SHR_S_I32) and specifically checks if both shift
