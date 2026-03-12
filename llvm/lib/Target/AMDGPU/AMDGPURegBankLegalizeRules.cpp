@@ -1540,4 +1540,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
+  addRulesForIOpcs({amdgcn_ds_swizzle}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
+
 } // end initialize rules
