@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-generic -fopenmp-extensions
 // RUN: %libomptarget-run-generic | %fcheck-generic -strict-whitespace
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

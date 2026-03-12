@@ -6,7 +6,8 @@
 // - Works whether it's specified directly or as the default device.
 
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

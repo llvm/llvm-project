@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 // This test checks that #pragma omp target update to(s1.data[0:6:2],
 // s2.data[0:4:3]) correctly updates strided sections covering the full arrays
 // from host to device.

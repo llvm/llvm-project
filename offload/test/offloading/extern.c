@@ -1,7 +1,8 @@
 // clang-format off
 // RUN: %libomptarget-compile-generic -DVAR -c -o %t.o
 // RUN: %libomptarget-compile-generic %t.o && %libomptarget-run-generic | %fcheck-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 // clang-format on
 #ifdef VAR
 int x = 1;

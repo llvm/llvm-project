@@ -1,6 +1,8 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // Tests non-contiguous array sections with variable stride on heap-allocated
 // pointers.
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

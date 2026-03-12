@@ -1,6 +1,7 @@
 // clang-format off
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic | %fcheck-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 // clang-format on
 
 #include <cstdio>

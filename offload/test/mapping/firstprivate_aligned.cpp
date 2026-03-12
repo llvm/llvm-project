@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
+// https://github.com/llvm/llvm-project/issues/182119
 // UNSUPPORTED: intelgpu
 
 #include <stdio.h>

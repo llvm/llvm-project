@@ -7,6 +7,7 @@
 // UNSUPPORTED: nvidiagpu
 //
 // REQUIRES: gpu
+// https://github.com/llvm/llvm-project/issues/182119
 // UNSUPPORTED: intelgpu
 
 // If offload memory pooling is enabled for a large allocation, reuse error is

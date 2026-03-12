@@ -3,7 +3,8 @@
 // Clang 6.0 doesn't use the new map interface, undefined behavior when
 // the compiler emits "old" interface code for structures.
 // UNSUPPORTED: clang-6
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-run-and-check-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 // This test checks that "update to" with struct member arrays supports strided
 // sections using fixed-size arrays in structs.
 

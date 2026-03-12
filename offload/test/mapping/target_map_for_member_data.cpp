@@ -1,7 +1,8 @@
 // RUN: %libomptarget-compile-generic -fopenmp-version=51
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 extern "C" int printf(const char *, ...);
 template <typename T> class A {
