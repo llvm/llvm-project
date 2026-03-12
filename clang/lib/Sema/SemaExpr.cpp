@@ -17558,7 +17558,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     // fallthrough
   }
   case AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior:
-    // Perform decay if necessary.
     if (SrcType->isArrayType())
       SrcType = Context.getArrayDecayedType(SrcType);
 
@@ -17651,9 +17650,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::CompatibleOBTDiscards:
     return false;
   case AssignConvertType::IncompatibleOBTKinds: {
-    if (SrcType->isArrayType()) {
+    if (SrcType->isArrayType())
       SrcType = Context.getDecayedType(SrcType);
-    }
+
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
         Ty = Ty->getPointeeType();
