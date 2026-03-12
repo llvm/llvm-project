@@ -1765,9 +1765,9 @@ public:
   /// If this is the closure type of a lambda expression, retrieve the
   /// number to be used for name mangling in the Itanium C++ ABI.
   ///
-  /// Zero indicates that this closure type has internal linkage, so the
-  /// mangling number does not matter, while a non-zero value indicates which
-  /// lambda expression this is in this particular context.
+  /// Zero indicates that this closure type was not assigned a mangling number,
+  /// while a non-zero value indicates which lambda expression this is in this
+  /// particular context.
   unsigned getLambdaManglingNumber() const {
     assert(isLambda() && "Not a lambda closure type!");
     return getLambdaData().ManglingNumber;

@@ -279,8 +279,8 @@ public:
   unsigned getLambdaId(const CXXRecordDecl *RD) {
     assert(RD->isLambda() && "RD must be a lambda!");
     assert(!RD->isExternallyVisible() && "RD must not be visible!");
-    assert(RD->getLambdaManglingNumber() == 0 &&
-           "RD must not have a mangling number!");
+    assert(RD->hasKnownLambdaInternalLinkage() &&
+           "RD should have known internal linkage!");
     std::pair<llvm::DenseMap<const CXXRecordDecl *, unsigned>::iterator, bool>
         Result = LambdaIds.insert(std::make_pair(RD, LambdaIds.size()));
     return Result.first->second;
@@ -289,8 +289,8 @@ public:
   unsigned getLambdaIdForDebugInfo(const CXXRecordDecl *RD) {
     assert(RD->isLambda() && "RD must be a lambda!");
     assert(!RD->isExternallyVisible() && "RD must not be visible!");
-    assert(RD->getLambdaManglingNumber() == 0 &&
-           "RD must not have a mangling number!");
+    assert(RD->hasKnownLambdaInternalLinkage() &&
+           "RD should have known internal linkage!");
     // The lambda should exist, but return 0 in case it doesn't.
     return LambdaIds.lookup(RD);
   }

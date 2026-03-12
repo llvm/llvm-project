@@ -1517,9 +1517,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
     case Decl::CXXRecord: {
       const auto *Record = cast<CXXRecordDecl>(D);
       if (Record->isLambda()) {
-        if (Record->hasKnownLambdaInternalLinkage() ||
-            !Record->getLambdaManglingNumber()) {
-          // This lambda has no mangling number, so it's internal.
+        if (Record->hasKnownLambdaInternalLinkage()) {
           return LinkageInfo::internal();
         }
 

@@ -526,15 +526,10 @@ void Sema::handleLambdaNumbering(
   }
 
   CXXRecordDecl::LambdaNumbering Numbering;
-  if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
-                getLangOpts().SYCLIsHost)) {
-    // Force lambda numbering in CUDA/HIP as we need to name lambdas following
-    // ODR. Both device- and host-compilation need to have a consistent naming
-    // on kernel functions. As lambdas are potential part of these `__global__`
-    // function names, they needs numbering following ODR.
-    // Also force for SYCL, since we need this for the
-    // __builtin_sycl_unique_stable_name implementation, which depends on lambda
-    // mangling.
+  if (!MCtx) {
+    // Force lambda numbering even for lambdas with internal linkage so that
+    // we can use the mangling number for canonical debug-info names and
+    // consistent mangling (using <lambda-sig> instead of $_N).
     MCtx = getMangleNumberingContext(Class, ContextDecl);
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
