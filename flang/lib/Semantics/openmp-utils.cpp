@@ -702,6 +702,24 @@ bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
       parser::Unwrap<parser::ContinueStmt>(x);
 }
 
+bool IsTransformableLoop(const parser::DoConstruct &loop) {
+  return loop.IsDoNormal();
+}
+
+bool IsTransformableLoop(const parser::OpenMPLoopConstruct &omp) {
+  return IsLoopTransforming(omp.BeginDir().DirId());
+}
+
+bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(epc)}) {
+    return IsTransformableLoop(*loop);
+  }
+  if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(epc)}) {
+    return IsTransformableLoop(*omp);
+  }
+  return false;
+}
+
 std::optional<int64_t> GetNumGeneratedNestsFrom(
     const parser::ExecutionPartConstruct &epc,
     std::optional<int64_t> nestedCount) {
@@ -758,5 +776,70 @@ std::optional<int64_t> GetNumGeneratedNestsFrom(
 
   // For every other loop construct return 1.
   return 1;
+}
+
+LoopSequence::LoopSequence(
+    const parser::ExecutionPartConstruct &root, bool allowAllLoops)
+    : allowAllLoops_(allowAllLoops) {
+  entry_ = createConstructEntry(root);
+  assert(entry_ && "Expecting loop like code");
+
+  createChildrenFromRange(entry_->location);
+  length_ = calculateLength();
+}
+
+LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops)
+    : allowAllLoops_(allowAllLoops), entry_(std::move(entry)) {
+  createChildrenFromRange(entry_->location);
+  length_ = calculateLength();
+}
+
+std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
+    const parser::ExecutionPartConstruct &code) {
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(code)}) {
+    if (allowAllLoops_ || IsTransformableLoop(*loop)) {
+      auto &body{std::get<parser::Block>(loop->t)};
+      return std::make_unique<Construct>(body, &code);
+    }
+  } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(code)}) {
+    if (IsTransformableLoop(*omp)) {
+      auto &body{std::get<parser::Block>(omp->t)};
+      return std::make_unique<Construct>(body, &code);
+    }
+  }
+
+  return nullptr;
+}
+
+void LoopSequence::createChildrenFromRange(
+    ExecutionPartIterator::IteratorType begin,
+    ExecutionPartIterator::IteratorType end) {
+  for (auto &code : BlockRange(begin, end, BlockRange::Step::Over)) {
+    if (auto entry{createConstructEntry(code)}) {
+      children_.push_back(LoopSequence(std::move(entry), allowAllLoops_));
+    }
+  }
+}
+
+std::optional<int64_t> LoopSequence::calculateLength() const {
+  if (!entry_->owner) {
+    return sumOfChildrenLengths();
+  }
+  if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
+    return 1;
+  }
+  return GetNumGeneratedNestsFrom(*entry_->owner, sumOfChildrenLengths());
+}
+
+std::optional<int64_t> LoopSequence::sumOfChildrenLengths() const {
+  int64_t sum{0};
+  for (auto &seq : children_) {
+    if (auto len{seq.length()}) {
+      sum += *len;
+    } else {
+      return std::nullopt;
+    }
+  }
+  return sum;
 }
 } // namespace Fortran::semantics::omp
