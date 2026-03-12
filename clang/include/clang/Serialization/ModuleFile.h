@@ -159,6 +159,9 @@ public:
   /// The file name of the module file.
   std::string FileName;
 
+  /// All keys ModuleManager used for the module file.
+  llvm::DenseSet<ModuleFileKey> Keys;
+
   /// The name of the module.
   std::string ModuleName;
 

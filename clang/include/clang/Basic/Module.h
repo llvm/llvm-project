@@ -54,6 +54,101 @@ class TargetInfo;
 /// Describes the name of a module.
 using ModuleId = SmallVector<std::pair<std::string, SourceLocation>, 2>;
 
+namespace serialization {
+class ModuleManager;
+} // namespace serialization
+
+/// Deduplication key for a loaded module file in \c ModuleManager.
+///
+/// For implicitly-built modules, this is the \c DirectoryEntry of the module
+/// cache and the module file name with the (optional) context hash.
+/// This enables using \c FileManager's inode-based canonicalization of the
+/// user-provided module cache path without hitting issues on file systems that
+/// recycle inodes for recompiled module files.
+///
+/// For explicitly-built modules, this is \c FileEntry.
+/// This uses \c FileManager's inode-based canonicalization of the user-provided
+/// module file path. Because input explicitly-built modules do not change
+/// during the lifetime of the compiler, inode recycling is not of concern here.
+class ModuleFileKey {
+  /// The FileManager entity used for deduplication.
+  const void *Ptr;
+  /// The path relative to the module cache path for implicit module file, empty
+  /// for other kinds of module files.
+  std::string PathSuffix;
+
+  friend class serialization::ModuleManager;
+  friend class ModuleFileName;
+  friend llvm::DenseMapInfo<ModuleFileKey>;
+
+  ModuleFileKey(const void *Ptr) : Ptr(Ptr) {}
+
+  ModuleFileKey(const FileEntry *ModuleFile) : Ptr(ModuleFile) {}
+
+  ModuleFileKey(const DirectoryEntry *ModuleCacheDir, StringRef PathSuffix)
+      : Ptr(ModuleCacheDir), PathSuffix(PathSuffix) {}
+
+public:
+  bool operator==(const ModuleFileKey &Other) const {
+    return Ptr == Other.Ptr && PathSuffix == Other.PathSuffix;
+  }
+
+  bool operator!=(const ModuleFileKey &Other) const {
+    return !operator==(Other);
+  }
+};
+
+/// Identifies a module file to be loaded.
+///
+/// For implicitly-built module files, the path is split into the module cache
+/// path and the module file name with the (optional) context hash. For all
+/// other types of module files, this is just the file system path.
+class ModuleFileName {
+  std::string Path;
+  std::optional<uint32_t> Separator;
+
+public:
+  /// Creates an empty module file name.
+  ModuleFileName() = default;
+
+  /// Creates a file name for an explicit module.
+  static ModuleFileName make_explicit(std::string Name) {
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    return File;
+  }
+
+  /// Creates a file name for an explicit module.
+  static ModuleFileName make_explicit(StringRef Name) {
+    return make_explicit(Name.str());
+  }
+
+  /// Creates a file name for an implicit module.
+  static ModuleFileName make_implicit(std::string Name, uint32_t Separator) {
+    ModuleFileName File;
+    File.Path = std::move(Name);
+    File.Separator = Separator;
+    return File;
+  }
+
+  /// Creates a file name for an implicit module.
+  static ModuleFileName make_implicit(StringRef Name, uint32_t Separator) {
+    return make_implicit(Name.str(), Separator);
+  }
+
+  /// Returns the plain module file name.
+  StringRef str() const { return Path; }
+
+  /// Converts to StringRef representing the plain module file name.
+  operator StringRef() const { return Path; }
+
+  /// Checks whether the module file name is empty.
+  bool empty() const { return Path.empty(); }
+
+  /// Creates the deduplication key for use in \c ModuleManager.
+  std::optional<ModuleFileKey> makeKey(FileManager &FileMgr) const;
+};
+
 /// The signature of a module, which is a hash of the AST content.
 struct ASTFileSignature : std::array<uint8_t, 20> {
   using BaseT = std::array<uint8_t, 20>;
@@ -925,5 +1020,24 @@ private:
 };
 
 } // namespace clang
+
+template <> struct llvm::DenseMapInfo<clang::ModuleFileKey> {
+  static clang::ModuleFileKey getEmptyKey() {
+    return DenseMapInfo<const void *>::getEmptyKey();
+  }
+
+  static clang::ModuleFileKey getTombstoneKey() {
+    return DenseMapInfo<const void *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const clang::ModuleFileKey &Val) {
+    return hash_combine(Val.Ptr, Val.PathSuffix);
+  }
+
+  static bool isEqual(const clang::ModuleFileKey &LHS,
+                      const clang::ModuleFileKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 #endif // LLVM_CLANG_BASIC_MODULE_H

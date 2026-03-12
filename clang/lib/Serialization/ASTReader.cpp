@@ -3477,8 +3477,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
+      unsigned ModuleCacheLen = 0;
       ASTFileSignature StoredSignature;
-      std::string ImportedFile;
+      ModuleFileName ImportedFile;
       std::string StoredFile;
       bool IgnoreImportedByNote = false;
 
@@ -3500,17 +3501,23 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
+        ModuleCacheLen = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
                                                    SignatureBytes.end());
         Blob = Blob.substr(ASTFileSignature::size);
 
-        // Use BaseDirectoryAsWritten to ensure we use the same path in the
-        // ModuleCache as when writing.
-        StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
+        StoredFile = ReadStringBlob(Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = StoredFile;
+          if (ImportedKind == MK_ImplicitModule) {
+            assert(ModuleCacheLen != 0);
+            ImportedFile =
+                ModuleFileName::make_implicit(StoredFile, ModuleCacheLen);
+          } else {
+            assert(ModuleCacheLen == 0);
+            ImportedFile = ModuleFileName::make_explicit(StoredFile);
+          }
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -4913,7 +4920,8 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
+                                            ModuleKind Type,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             ModuleFile **NewLoadedModuleFile) {
@@ -5189,15 +5197,11 @@ static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
   llvm_unreachable("unknown module kind");
 }
 
-ASTReader::ASTReadResult
-ASTReader::ReadASTCore(StringRef FileName,
-                       ModuleKind Type,
-                       SourceLocation ImportLoc,
-                       ModuleFile *ImportedBy,
-                       SmallVectorImpl<ImportedModule> &Loaded,
-                       off_t ExpectedSize, time_t ExpectedModTime,
-                       ASTFileSignature ExpectedSignature,
-                       unsigned ClientLoadCapabilities) {
+ASTReader::ASTReadResult ASTReader::ReadASTCore(
+    ModuleFileName FileName, ModuleKind Type, SourceLocation ImportLoc,
+    ModuleFile *ImportedBy, SmallVectorImpl<ImportedModule> &Loaded,
+    off_t ExpectedSize, time_t ExpectedModTime,
+    ASTFileSignature ExpectedSignature, unsigned ClientLoadCapabilities) {
   ModuleFile *M;
   std::string ErrorStr;
   ModuleManager::AddModuleResult AddResult
@@ -6142,14 +6146,13 @@ bool ASTReader::readASTFileControlBlock(
         continue;
       }
 
-      // Skip Size and ModTime.
-      Idx += 1 + 1;
+      // Skip Size, ModTime and ModuleCacheLen.
+      Idx += 1 + 1 + 1;
       // Skip signature.
       Blob = Blob.substr(ASTFileSignature::size);
 
-      StringRef FilenameStr = ReadStringBlob(Record, Idx, Blob);
-      auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
-      Listener.visitImport(ModuleName, *Filename);
+      StringRef Filename = ReadStringBlob(Record, Idx, Blob);
+      Listener.visitImport(ModuleName, Filename);
       break;
     }
 

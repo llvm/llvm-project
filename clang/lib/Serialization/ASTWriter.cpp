@@ -1567,6 +1567,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Module cache len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1593,6 +1594,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
+        Record.push_back(0);
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
@@ -1601,7 +1603,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
         llvm::append_range(Blob, M.Signature);
 
-        AddPathBlob(M.FileName, Record, Blob);
+        StringRef NormalizedModuleCache =
+            PP.getHeaderSearchInfo().getNormalizedModuleCachePath();
+        unsigned ModuleCacheLen = 0;
+        if (M.Kind == MK_ImplicitModule &&
+            StringRef(M.FileName).starts_with(NormalizedModuleCache))
+          ModuleCacheLen = NormalizedModuleCache.size();
+        Record.push_back(ModuleCacheLen);
+
+        AddStringBlob(M.FileName, Record, Blob);
       }
 
       Stream.EmitRecordWithBlob(AbbrevCode, Record, Blob);
