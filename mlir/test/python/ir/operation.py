@@ -1519,8 +1519,18 @@ def test_get_ops_of_type():
         print(f"get_ops_of_type scf.for count: {len(results)}")
         assert len(results) == 0
 
+        # CHECK: get_ops_of_type func_op->func.ReturnOp count: 1
         # Accepts OpView as root.
         func_op = get_ops_of_type(module, func.FuncOp)[0]
         results = get_ops_of_type(func_op, func.ReturnOp)
+        print(f"get_ops_of_type func_op->func.ReturnOp count: {len(results)}")
         assert len(results) == 1
         assert isinstance(results[0], func.ReturnOp)
+
+        # CHECK: get_ops_of_type no filter count: 5
+        # No op_class collects all ops.
+        results = get_ops_of_type(module)
+        print(f"get_ops_of_type no filter count: {len(results)}")
+        assert len(results) == 5
+        assert any(isinstance(r, func.FuncOp) for r in results)
+        assert any(isinstance(r, func.ReturnOp) for r in results)
