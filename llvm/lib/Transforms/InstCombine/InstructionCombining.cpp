@@ -4197,7 +4197,8 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
     return nullptr;
 
   KnownFPClass KnownClass;
-  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass))
+  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass,
+                              SQ.getWithInstruction(&RI)))
     return &RI;
 
   return nullptr;

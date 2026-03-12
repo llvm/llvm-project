@@ -532,6 +532,11 @@ defm GFX10_3Insts : AMDGPUSubtargetFeature<"gfx10-3-insts",
   /*GenPredicate=*/0
 >;
 
+defm GFX11_7Insts : AMDGPUSubtargetFeature<"gfx11-7-insts",
+  "Additional instructions for GFX11.7",
+  /*GenPredicate=*/0
+>;
+
 defm GFX7GFX8GFX9Insts : AMDGPUSubtargetFeature<"gfx7-gfx8-gfx9-insts",
   "Instructions shared in GFX7, GFX8, GFX9",
   /*GenPredicate=*/0
@@ -1933,7 +1938,8 @@ def FeatureISAVersion11_5_3 : FeatureSet<
 
 def FeatureISAVersion11_7_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureSALUFloatInsts,
+    [FeatureGFX11_7Insts,
+     FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
      FeatureDot11Insts,
@@ -2449,18 +2455,13 @@ def isGFX11Only :
 
 def isGFX11Not11_70 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
-            "!Subtarget->hasIEEEMinimumMaximumInsts()">,
-  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureIEEEMinimumMaximumInsts))>;
+            "!Subtarget->hasGFX11_7Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX12Insts), (not FeatureGFX11_7Insts))>;
 
 def isGFX1170Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
-            "Subtarget->hasIEEEMinimumMaximumInsts()">,
-  AssemblerPredicate<(all_of FeatureIEEEMinimumMaximumInsts, (not FeatureGFX12Insts))>;
-
-def isNotGFX1170Plus :
-  Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::GFX11 &&"
-            "!Subtarget->hasIEEEMinimumMaximumInsts()">,
-  AssemblerPredicate<(all_of (not FeatureGFX12Insts), (not FeatureIEEEMinimumMaximumInsts))>;
+            "Subtarget->hasGFX11_7Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX11_7Insts, (not FeatureGFX12Insts))>;
 
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
@@ -2676,6 +2677,8 @@ def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
+def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
 
 def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 

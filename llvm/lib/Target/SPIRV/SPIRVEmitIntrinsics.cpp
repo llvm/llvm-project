@@ -1911,7 +1911,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     } else if (isTodoType(Pointer)) {
       eraseTodoType(Pointer);
-      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer)) {
+      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer) &&
+          !isa<AllocaInst>(Pointer)) {
         //  If this wouldn't be the first spv_ptrcast but existing type info is
         //  uncomplete, update spv_assign_ptr_type arguments.
         if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer)) {
@@ -2710,7 +2711,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       continue;
     unsigned OpNo = Op.getOperandNo();
     if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+               (!II->isBundleOperand(OpNo) &&
+                II->paramHasAttr(OpNo, Attribute::ImmArg))))
       continue;
 
     if (!BPrepared) {

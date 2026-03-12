@@ -84,7 +84,7 @@ __gpu_kernel void foo() {
 // AMDGPU-LABEL: define internal i32 @__gpu_num_blocks_x(
 // AMDGPU-SAME: ) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
-// AMDGPU-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// AMDGPU-NEXT:    [[TMP0:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // AMDGPU-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 12
 // AMDGPU-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG2:![0-9]+]], !invariant.load [[META3:![0-9]+]]
 // AMDGPU-NEXT:    [[TMP3:%.*]] = call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -103,7 +103,7 @@ __gpu_kernel void foo() {
 // AMDGPU-LABEL: define internal i32 @__gpu_num_blocks_y(
 // AMDGPU-SAME: ) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
-// AMDGPU-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// AMDGPU-NEXT:    [[TMP0:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // AMDGPU-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 16
 // AMDGPU-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG2]], !invariant.load [[META3]]
 // AMDGPU-NEXT:    [[TMP3:%.*]] = call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -122,7 +122,7 @@ __gpu_kernel void foo() {
 // AMDGPU-LABEL: define internal i32 @__gpu_num_blocks_z(
 // AMDGPU-SAME: ) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
-// AMDGPU-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// AMDGPU-NEXT:    [[TMP0:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // AMDGPU-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 20
 // AMDGPU-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG2]], !invariant.load [[META3]]
 // AMDGPU-NEXT:    [[TMP3:%.*]] = call align 8 dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()

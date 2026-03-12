@@ -667,7 +667,12 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   ///   to a replaceable global allocation function.
   ///
   /// We model such elidable calls with the 'builtin' attribute.
-  assert(!cir::MissingFeatures::attributeBuiltin());
+  if (calleeDecl->isReplaceableGlobalAllocationFunction() && calleePtr &&
+      calleePtr->hasAttr(cir::CIRDialect::getNoBuiltinAttrName())) {
+    callOrTryCall->setAttr(cir::CIRDialect::getBuiltinAttrName(),
+                           mlir::UnitAttr::get(callOrTryCall->getContext()));
+  }
+
   return rv;
 }
 
@@ -1222,12 +1227,11 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    // To handle this for cases that require array cookie, we will need to
-    // add target-specific handling during the lowering of delete_array in
-    // CXXABILowering, but we can emit a better diagnostic here.
-    if (e->doesUsualArrayDeleteWantSize() || deleteTy.isDestructedType()) {
+    // This will be handled in CXXABILowering, but we can emit a better
+    // diagnostic here.
+    if (deleteTy.isDestructedType()) {
       cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXDeleteExpr: array delete requires cookies");
+                   "emitCXXDeleteExpr: array delete of destructed type");
     }
     const FunctionDecl *operatorDelete = e->getOperatorDelete();
     cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
