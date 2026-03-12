@@ -151,8 +151,6 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   }
 
   if (ModuleFile *ModuleEntry = lookup(*FileKey)) {
-    ModuleEntry->Keys.insert(*FileKey);
-
     // Check file properties.
     if (checkModuleFile(ModuleEntry->File, ExpectedSize, ExpectedModTime,
                         ErrorStr))
@@ -229,7 +227,8 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   }
 
   // Allocate a new module.
-  auto NewModule = std::make_unique<ModuleFile>(Type, *Entry, Generation);
+  auto NewModule =
+      std::make_unique<ModuleFile>(Type, *FileKey, *Entry, Generation);
   NewModule->Index = Chain.size();
   NewModule->FileName = FileName.str();
   NewModule->ImportLoc = ImportLoc;
@@ -237,7 +236,6 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   NewModule->Buffer = ModuleBuffer;
   // Initialize the stream.
   NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
-  NewModule->Keys.insert(*FileKey);
 
   // Read the signature eagerly now so that we can check it.  Avoid calling
   // ReadSignature unless there's something to check though.
@@ -302,8 +300,7 @@ void ModuleManager::removeModules(ModuleIterator First) {
   // Delete the modules.
   for (ModuleIterator victim = First; victim != Last; ++victim) {
     Modules.erase(ModuleFileKey(victim->File));
-    for (ModuleFileKey Key : victim->Keys)
-      Modules.erase(Key);
+    Modules.erase(victim->FileKey);
   }
 
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
