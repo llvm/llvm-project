@@ -150,25 +150,9 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
     return Missing;
   }
 
-  ModuleFile *ModuleEntry = lookup(*FileKey);
-  if (ModuleEntry)
+  if (ModuleFile *ModuleEntry = lookup(*FileKey)) {
     ModuleEntry->Keys.insert(*FileKey);
 
-  // TODO: Remove this.
-  if (!ModuleEntry) {
-    // Try looking up with the plain file name.
-    auto FileName2 = ModuleFileName::make_explicit(FileName);
-    std::optional<ModuleFileKey> FileKey2 = FileName2.makeKey(FileMgr);
-    if (!FileKey2) {
-      ErrorStr = "module file not found";
-      return Missing;
-    }
-    ModuleEntry = lookup(*FileKey2);
-    if (ModuleEntry)
-      ModuleEntry->Keys.insert(*FileKey2);
-  }
-
-  if (ModuleEntry) {
     // Check file properties.
     if (checkModuleFile(ModuleEntry->File, ExpectedSize, ExpectedModTime,
                         ErrorStr))
