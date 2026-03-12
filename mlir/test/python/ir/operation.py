@@ -1324,6 +1324,62 @@ def testOpWalk():
     except RuntimeError:
         print("Exception raised")
 
+    # Test op_class filter: only visits ops of the requested type.
+    module = Module.parse(
+        """
+        module {
+            func.func @f() { return }
+            func.func @g() { return }
+            arith.constant dense<0> : tensor<i32>
+        }
+    """,
+        ctx,
+    )
+
+    # CHECK-NEXT: only FuncOp visited: True
+    only_funcs = True
+
+    def check_type(op):
+        nonlocal only_funcs
+        if not isinstance(op.opview, func.FuncOp):
+            only_funcs = False
+        return WalkResult.ADVANCE
+
+    module.operation.walk(check_type, op_class=func.FuncOp)
+    print(f"only FuncOp visited: {only_funcs}")
+
+    # CHECK-NEXT: interrupted after: 1
+    seen = []
+
+    def stop_after_first(op):
+        seen.append(op.opview)
+        return WalkResult.INTERRUPT
+
+    module.operation.walk(stop_after_first, op_class=func.FuncOp)
+    print(f"interrupted after: {len(seen)}")
+
+    # CHECK-NEXT: never called: True
+    called = False
+
+    def should_not_run(op):
+        nonlocal called
+        called = True
+        return WalkResult.ADVANCE
+
+    module.operation.walk(should_not_run, op_class=scf.ForOp)
+    print(f"never called: {not called}")
+
+    # CHECK-NEXT: collected func.FuncOp: ['"f"', '"g"']
+    collected = []
+
+    def collect(op):
+        collected.append(op.opview)
+        return WalkResult.ADVANCE
+
+    module.operation.walk(collect, op_class=func.FuncOp)
+    assert all(isinstance(r, func.FuncOp) for r in collected)
+    print(f"collected func.FuncOp: {[str(r.name) for r in collected]}")
+
 
 # CHECK-LABEL: TEST: testOpReplaceUsesWith
 @run
