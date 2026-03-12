@@ -127,17 +127,17 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
     const uint64_t MatchedVarSize = Context.getTypeSize(MatchedArg->getType());
     if (BitsetSize < MatchedVarSize)
       return;
-    auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
-    Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-                MatchedArg->getEndLoc().getLocWithOffset(1),
-                MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
-         << FixItHint::CreateReplacement(
-                CharSourceRange::getTokenRange(
-                    MatchedExpr->getBeginLoc(),
-                    MatchedArg->getBeginLoc().getLocWithOffset(-1)),
-                "std::popcount(")
-         << IncludeInserter.createIncludeInsertion(
-                Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+    diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead")
+        << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+               MatchedArg->getEndLoc().getLocWithOffset(1),
+               MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
+        << FixItHint::CreateReplacement(
+               CharSourceRange::getTokenRange(
+                   MatchedExpr->getBeginLoc(),
+                   MatchedArg->getBeginLoc().getLocWithOffset(-1)),
+               "std::popcount(")
+        << IncludeInserter.createIncludeInsertion(
+               Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
   } else {
     llvm_unreachable("unexpected match");
   }
