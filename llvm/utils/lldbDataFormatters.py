@@ -7,11 +7,11 @@ Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 from __future__ import annotations
 
 import collections
-from typing import Literal
+from typing import Literal, Optional
 import lldb
 
 
-def __lldb_init_module(debugger, internal_dict):
+def __lldb_init_module(debugger: lldb.SBDebugger, internal_dict) -> None:
     debugger.HandleCommand("type category define -e llvm -l c++")
     debugger.HandleCommand(
         "type synthetic add -w llvm "
@@ -98,11 +98,17 @@ def __lldb_init_module(debugger, internal_dict):
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl
 class SmallVectorSynthProvider:
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    begin: lldb.SBValue
+    size: lldb.SBValue
+    data_type: lldb.SBType
+    type_size: int
+
+    def __init__(self, valobj, internal_dict) -> None:
         self.valobj = valobj
         self.update()  # initialize this provider
 
-    def num_children(self):
+    def num_children(self) -> int:
         return self.size.GetValueAsUnsigned(0)
 
     def get_child_index(self, name):
@@ -111,7 +117,7 @@ class SmallVectorSynthProvider:
         except:
             return -1
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index) -> Optional[lldb.SBValue]:
         # Do bounds checking.
         if index < 0:
             return None
@@ -143,11 +149,17 @@ class SmallVectorSynthProvider:
 class ArrayRefSynthProvider:
     """Provider for llvm::ArrayRef"""
 
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    data: lldb.SBValue
+    length: int
+    data_type: lldb.SBType
+    type_size: int
+
+    def __init__(self, valobj: lldb.SBValue, internal_dict) -> None:
         self.valobj = valobj
         self.update()  # initialize this provider
 
-    def num_children(self):
+    def num_children(self) -> int:
         return self.length
 
     def get_child_index(self, name):
@@ -156,7 +168,7 @@ class ArrayRefSynthProvider:
         except:
             return -1
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index) -> Optional[lldb.SBValue]:
         if index < 0 or index >= self.num_children():
             return None
         offset = index * self.type_size
@@ -173,7 +185,7 @@ class ArrayRefSynthProvider:
         assert self.type_size != 0
 
 
-def SmallStringSummaryProvider(valobj, internal_dict):
+def SmallStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     # The underlying SmallVector base class is the first child.
     vector = valobj.GetChildAtIndex(0)
     num_elements = vector.GetNumChildren()
@@ -186,7 +198,7 @@ def SmallStringSummaryProvider(valobj, internal_dict):
     return res
 
 
-def StringRefSummaryProvider(valobj, internal_dict):
+def StringRefSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     data_pointer = valobj.GetChildMemberWithName("Data")
     length = valobj.GetChildMemberWithName("Length").unsigned
     if data_pointer.unsigned == 0 or length == 0:
@@ -207,28 +219,35 @@ def StringRefSummaryProvider(valobj, internal_dict):
     return char_array.summary
 
 
-def ConstStringSummaryProvider(valobj, internal_dict):
+def ConstStringSummaryProvider(valobj: lldb.SBValue, internal_dict) -> str:
     if valobj.GetNumChildren() == 1:
         return valobj.GetChildAtIndex(0).GetSummary()
     return ""
 
 
 class PointerIntPairSynthProvider:
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    byteorder: Literal["big", "little"]
+    ptr_size: int
+    value: lldb.SBValue
+    pointer_valobj: Optional[lldb.SBValue]
+    int_valobj: Optional[lldb.SBValue]
+
+    def __init__(self, valobj: lldb.SBValue, internal_dict) -> None:
         self.valobj = valobj
         self.update()
 
-    def num_children(self):
+    def num_children(self) -> int:
         return 2
 
-    def get_child_index(self, name):
+    def get_child_index(self, name: str) -> int:
         if name == "Pointer":
             return 0
         if name == "Int":
             return 1
-        return None
+        return -1
 
-    def _get_raw_value(self):
+    def _get_raw_value(self) -> Optional[bytes]:
         data: lldb.SBData = self.value.GetData()
         error = lldb.SBError()
         raw_bytes = data.ReadRawData(error, 0, self.ptr_size)
@@ -237,7 +256,9 @@ class PointerIntPairSynthProvider:
 
         return raw_bytes
 
-    def _get_pointer(self, pointer_bit_mask: int, pointer_ty: lldb.SBType):
+    def _get_pointer(
+        self, pointer_bit_mask: int, pointer_ty: lldb.SBType
+    ) -> Optional[lldb.SBValue]:
         raw_bytes = self._get_raw_value()
         if raw_bytes is None:
             return
@@ -249,7 +270,9 @@ class PointerIntPairSynthProvider:
         data.SetDataFromUInt64Array([pointer_value])
         return self.valobj.CreateValueFromData("Pointer", data, pointer_ty)
 
-    def _get_int(self, int_shift: int, int_mask: int, int_ty: lldb.SBType):
+    def _get_int(
+        self, int_shift: int, int_mask: int, int_ty: lldb.SBType
+    ) -> Optional[lldb.SBValue]:
         raw_bytes = self._get_raw_value()
         if raw_bytes is None:
             return
@@ -261,7 +284,7 @@ class PointerIntPairSynthProvider:
         data.SetDataFromUInt64Array([int_value])
         return self.valobj.CreateValueFromData("Int", data, int_ty)
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index) -> Optional[lldb.SBValue]:
         if index == 0:
             return self.pointer_valobj
         if index == 1:
@@ -269,7 +292,7 @@ class PointerIntPairSynthProvider:
         return None
 
     def update(self):
-        self.byteorder: Literal["big", "little"] = (
+        self.byteorder = (
             "big"
             if self.valobj.target.GetByteOrder() == lldb.eByteOrderBig
             else "little"
@@ -326,19 +349,22 @@ class PointerIntPairSynthProvider:
 
 
 class PointerUnionSynthProvider:
-    def __init__(self, valobj, internal_dict):
+    valobj: lldb.SBValue
+    pointer_valobj: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, internal_dict) -> None:
         self.valobj = valobj
         self.update()
 
-    def num_children(self):
+    def num_children(self) -> int:
         return 1
 
-    def get_child_index(self, name):
+    def get_child_index(self, name: str) -> int:
         if name == "Pointer":
             return 0
-        return None
+        return -1
 
-    def get_child_at_index(self, index):
+    def get_child_at_index(self, index: int) -> Optional[lldb.SBValue]:
         if index != 0:
             return None
 
@@ -522,7 +548,7 @@ class ExpectedSynthetic:
         return lldb.SBValue()
 
 
-def SmallBitVectorSummary(valobj, _):
+def SmallBitVectorSummary(valobj, _) -> str:
     underlyingValue = valobj.GetChildMemberWithName("X").unsigned
     numBaseBits = valobj.target.addr_size * 8
     smallNumRawBits = numBaseBits - 1

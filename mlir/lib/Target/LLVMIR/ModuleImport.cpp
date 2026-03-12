@@ -3053,6 +3053,7 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
 

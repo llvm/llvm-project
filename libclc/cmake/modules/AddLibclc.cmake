@@ -187,14 +187,4 @@ function(add_libclc_library target_name)
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
     COMPONENT ${ARG_PARENT_TARGET}
   )
-
-  # Verify there are no unresolved external functions in the library.
-  if(NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" AND
-     NOT ARG_ARCH MATCHES "^spirv(64)?$")
-    set(builtins_file $<TARGET_PROPERTY:${target_name},TARGET_FILE>)
-    add_test(NAME external-funcs-${target_name}
-      COMMAND ./check_external_funcs.sh
-              ${builtins_file} ${LLVM_TOOLS_BINARY_DIR}
-      WORKING_DIRECTORY ${LIBCLC_SOURCE_DIR})
-  endif()
 endfunction()

@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s performance-move-constructor-init,modernize-pass-by-value %t -- \
 // RUN: -config='{CheckOptions: \
-// RUN:  {modernize-pass-by-value.ValuesOnly: true}}'
-
+// RUN:  {modernize-pass-by-value.ValuesOnly: true}}' -- -isystem %S/../Inputs/Headers
 #include <s.h>
 
 // CHECK-FIXES: #include <utility>

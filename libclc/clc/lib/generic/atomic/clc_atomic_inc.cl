@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/atomic/clc_atomic_inc.h"
+#include <clc/atomic/clc_atomic_inc.h>
 
 #define __CLC_FUNCTION __clc_atomic_inc
 #define __CLC_IMPL_FUNCTION __scoped_atomic_fetch_uinc
 #define __CLC_INC_DEC
 
-#define __CLC_BODY "clc_atomic_def.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <clc_atomic_def.inc>
+#include <clc/integer/gentype.inc>
