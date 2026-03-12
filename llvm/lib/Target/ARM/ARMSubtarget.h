@@ -431,6 +431,7 @@ public:
 
   /// Check whether this subtarget wants to use subregister liveness.
   bool enableSubRegLiveness() const override;
+  bool enableSpillageCopyElimination() const override { return true; }
 
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
