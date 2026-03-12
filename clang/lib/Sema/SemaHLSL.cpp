@@ -821,6 +821,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return (ST == llvm::Triple::Vertex && !IsInput) ||
            (ST == llvm::Triple::Pixel && IsInput);
   }
+  if (SemanticName == "SV_VERTEXID")
+    return true;
 
   return false;
 }
@@ -1040,6 +1042,11 @@ void SemaHLSL::checkSemanticAnnotation(
     diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Vertex, IOType::InOut},
                                    {llvm::Triple::Pixel, IOType::In}});
+    return;
+  }
+  if (SemanticName == "SV_VERTEXID") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Vertex, IOType::In}});
     return;
   }
 
@@ -1922,6 +1929,14 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_VERTEXID") {
+    uint64_t SizeInBits = SemaRef.Context.getTypeSize(ValueType);
+    if (!ValueType->isUnsignedIntegerType() || SizeInBits != 32)
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type) << AL << "uint";
     D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
     return;
   }
