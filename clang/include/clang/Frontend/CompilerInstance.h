@@ -790,12 +790,6 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ContextHash);
-  std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(
-        getInvocation().computeContextHash(getDiagnostics()));
-  }
-
   CompilerInvocation getCacheCanonicalInvocation() {
     if (!CAS)
       return *Invocation;
