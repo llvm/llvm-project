@@ -90,10 +90,10 @@ struct VectorizerParams {
 ///
 class MemoryDepChecker {
 public:
-  typedef PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>
-      MemAccessInfo;
+  using MemAccessInfo =
+      PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
   /// Set of potential dependent memory accesses.
-  typedef EquivalenceClasses<MemAccessInfo> DepCandidates;
+  using DepCandidates = EquivalenceClasses<MemAccessInfo>;
 
   /// Type to keep track of the status of the dependence check. The order of
   /// the elements is important and has to be from most permissive to least
@@ -482,9 +482,8 @@ struct RuntimeCheckingPtrGroup {
 };
 
 /// A memcheck which made up of a pair of grouped pointers.
-typedef std::pair<const RuntimeCheckingPtrGroup *,
-                  const RuntimeCheckingPtrGroup *>
-    RuntimePointerCheck;
+using RuntimePointerCheck =
+    std::pair<const RuntimeCheckingPtrGroup *, const RuntimeCheckingPtrGroup *>;
 
 struct PointerDiffInfo {
   const SCEV *SrcStart;
@@ -995,7 +994,7 @@ class LoopAccessAnalysis
   LLVM_ABI static AnalysisKey Key;
 
 public:
-  typedef LoopAccessInfoManager Result;
+  using Result = LoopAccessInfoManager;
 
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &AM);
 };

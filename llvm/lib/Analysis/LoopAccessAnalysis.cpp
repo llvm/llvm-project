@@ -813,8 +813,8 @@ namespace {
 /// dependence checking.
 class AccessAnalysis {
 public:
-  typedef PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>
-      MemAccessInfo;
+  using MemAccessInfo =
+      PointerIntPair<Value * /* AccessPtr */, 1, bool /* IsWrite */>;
 
   AccessAnalysis(const Loop *TheLoop, AAResults *AA, const LoopInfo *LI,
                  DominatorTree &DT, MemoryDepChecker::DepCandidates &DA,
@@ -890,7 +890,7 @@ public:
   ArrayRef<MemAccessInfo> getDependenciesToCheck() const { return CheckDeps; }
 
 private:
-  typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
+  using PtrAccessMap = MapVector<MemAccessInfo, SmallSetVector<Type *, 1>>;
 
   /// Adjust the MemoryLocation so that it represents accesses to this
   /// location across all iterations, rather than a single one.
@@ -1547,8 +1547,8 @@ void AccessAnalysis::buildDependenceSets() {
 
     // Map of (pointer to underlying objects, accessed address space) to last
     // access encountered.
-    typedef DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>
-        UnderlyingObjToAccessMap;
+    using UnderlyingObjToAccessMap =
+        DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>;
     UnderlyingObjToAccessMap ObjToLastAccess;
 
     // Set of access to check after all writes have been processed.
