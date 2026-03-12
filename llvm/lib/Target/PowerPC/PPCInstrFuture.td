@@ -598,7 +598,7 @@ def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
 
 // Regular load/store patterns for v256i1 (for ISA Future)
-let Predicates = [PairedVectorMemops, IsISAFuture] in {
+let Predicates = [HasFutureVector, PairedVectorMemops] in {
   def : Pat<(v256i1 (load iaddrX16:$src)), (LXVP iaddrX16:$src)>;
   def : Pat<(v256i1 (load PDForm:$src)), (PLXVP memri34:$src)>;
   def : Pat<(v256i1 (load xoaddr:$src)), (LXVPX xoaddr:$src)>;

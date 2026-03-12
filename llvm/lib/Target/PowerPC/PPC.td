@@ -314,7 +314,7 @@ def FeaturePCRelativeMemops :
 def FeaturePairedVectorMemops:
   SubtargetFeature<"paired-vector-memops", "PairedVectorMemops", "true",
                    "32Byte load and store instructions",
-                   [FeatureISA3_0]>;
+                   [FeatureISA3_0, FeatureVSX]>;
 def FeatureMMA : SubtargetFeature<"mma", "HasMMA", "true",
                                   "Enable MMA instructions",
                                   [FeatureP8Vector, FeatureP9Altivec,
@@ -404,6 +404,7 @@ def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
 def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
 def NoP10Vector : Predicate<"!Subtarget->hasP10Vector()">;
 def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
+def HasFutureVector : Predicate<"Subtarget->hasFutureVector()">;
 
 // Predicates used to differenciate between different ISAs.
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
