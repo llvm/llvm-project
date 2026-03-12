@@ -69,12 +69,14 @@ namespace {
 using UseDistancePair = AMDGPUNextUseAnalysis::UseDistancePair;
 struct LiveRegUse : public UseDistancePair {
   using Base = UseDistancePair;
-  LiveRegUse() = default;
+
+  // 'nullptr' indicates an unset/invalid state.
+  LiveRegUse() : UseDistancePair(nullptr, 0.0) {}
   LiveRegUse(const MachineOperand *Use, double Dist)
       : UseDistancePair(Use, Dist) {}
   LiveRegUse(const UseDistancePair &P) : UseDistancePair(P) {}
 
-  bool valid() const { return Use; }
+  bool unset() const { return Use == nullptr; }
 
   Register getReg() const { return Use->getReg(); }
   unsigned getSubReg() const { return Use->getSubReg(); }
@@ -86,7 +88,7 @@ struct LiveRegUse : public UseDistancePair {
     if (Dist < X.Dist)
       return true;
 
-    if (Dist != X.Dist)
+    if (Dist > X.Dist)
       return false;
 
     if (Use == X.Use)
@@ -222,10 +224,10 @@ class llvm::AMDGPUNextUseAnalysisImpl {
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 private:
   void calcInstrIds(const MachineBasicBlock *BB,
-                    InstrToIdMap &InstrToId) const {
+                    InstrToIdMap &MutableInstrToId) const {
     InstrIdTy Id = 0;
     for (auto &MI : BB->instrs()) {
-      InstrToId[&MI] = Id;
+      MutableInstrToId[&MI] = Id;
       if (!computeMode() || !MI.isPHI())
         ++Id;
     }
@@ -240,7 +242,7 @@ private:
 
     // Renumber the MBB.
     // TODO: Renumber from MI onwards.
-    auto MutableInstrToId = const_cast<InstrToIdMap &>(InstrToId);
+    auto &MutableInstrToId = const_cast<InstrToIdMap &>(InstrToId);
     calcInstrIds(MI->getParent(), MutableInstrToId);
     return InstrToId.find(MI)->second;
   }
@@ -444,6 +446,9 @@ private:
     }
   }
 
+  // Follow the control flow graph starting at the entry block until all blocks
+  // have been visited. Along the way, initialize the PathInfo for each edge
+  // traversed.
   void initializeCfgPaths() {
     Paths.clear();
 
@@ -1698,7 +1703,7 @@ public:
                            DenseMap<const MachineOperand *, UseDistancePair>
                                *RelevantUses = nullptr) {
 
-    const SmallSet<unsigned, 4> MIDefs(std::move(collectDefinedRegisters(MI)));
+    const SmallSet<unsigned, 4> MIDefs(collectDefinedRegisters(MI));
 
     SmallVector<const MachineOperand *> Uses;
     SmallVector<std::pair<double, bool>> Distances;
@@ -1727,7 +1732,7 @@ public:
         if (MIDependent)
           U.Dist -= LastDelta;
       }
-      if (!U.valid()) {
+      if (U.unset()) {
         this->getUses(Reg, LaneMask, MI, Uses);
         if (Uses.empty())
           continue;
@@ -2122,6 +2127,9 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  // We don't actually care about register pressure here - just using
+  // GCNDownwardRPTracker as a convenient way of getting the set of live
+  // registers at a given instruction.
   GCNDownwardRPTracker RPTracker(LIS);
   ModuleSlotTracker MST(M);
   MST.incorporateFunction(F);
