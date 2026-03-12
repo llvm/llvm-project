@@ -3935,7 +3935,9 @@ void populateIRCore(nb::module_ &m) {
             if (opClass) {
               self.walk(
                   [&](MlirOperation mlirOp) -> PyWalkResult {
-                    nb::object opview = nb::cast(mlirOp).attr("opview");
+                     nb::object opview = PyOperation::forOperation(
+                         self.getOperation().getContext(), mlirOp)
+                         ->createOpView();
                     if (nb::isinstance(opview, *opClass))
                       return callback(mlirOp);
                     return PyWalkResult::Advance;
