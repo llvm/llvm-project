@@ -6,8 +6,10 @@ add_lldb_library(lldbUtilityHelpers
   LINK_COMPONENTS
     Support
     ObjectYAML
+    TestingSupport
   LINK_LIBS
     lldbUtility
+    liblldb
     llvm_gtest
   )
 
