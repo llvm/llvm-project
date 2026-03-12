@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple powerpc64-unknown -fsyntax-only -verify -ffreestanding %s
+// RUN: %clang_cc1 -triple powerpc64-unknown -fsyntax-only -verify -xc++ -ffreestanding %s
+// RUN: %clang_cc1 -triple ppc64le-unknown -fsyntax-only -verify -ffreestanding %s
 // RUN: %clang_cc1 -triple ppc64le-unknown -fsyntax-only -verify -xc++ -ffreestanding %s
 // expected-no-diagnostics
 
