@@ -176,7 +176,6 @@ public:
     std::string Name("<lambda");
     Decl *LambdaContextDecl = Lambda->getLambdaContextDecl();
     unsigned LambdaManglingNumber = Lambda->getLambdaManglingNumber();
-    unsigned LambdaId;
     const ParmVarDecl *Parm = dyn_cast_or_null<ParmVarDecl>(LambdaContextDecl);
     const FunctionDecl *Func =
         Parm ? dyn_cast<FunctionDecl>(Parm->getDeclContext()) : nullptr;
@@ -188,10 +187,7 @@ public:
       Name += "_";
     }
 
-    if (LambdaManglingNumber)
-      LambdaId = LambdaManglingNumber;
-    else
-      LambdaId = getAnonymousStructIdForDebugInfo(Lambda);
+    unsigned LambdaId = LambdaManglingNumber;
 
     Name += llvm::utostr(LambdaId);
     Name += '>';
@@ -1676,11 +1672,11 @@ void CXXNameMangler::mangleUnqualifiedName(
       break;
     }
 
-    // Get a unique id for the anonymous struct. If it is not a real output
-    // ID doesn't matter so use fake one.
+    // Use the mangling number assigned by Sema (1-based), adjusted to 0-based
+    // for the $_<id> encoding.
     unsigned AnonStructId =
         NullOut ? 0
-                : Context.getAnonymousStructId(TD, dyn_cast<FunctionDecl>(DC));
+                : getASTContext().getManglingNumber(TD, Context.isAux()) - 1;
 
     // Mangle it as a source name in the form
     // [n] $_<id>
