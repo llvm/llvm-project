@@ -1921,7 +1921,7 @@ struct DarwinPlatform {
     DarwinPlatform Result(TargetArg, getPlatformFromOS(TT.getOS()),
                           TT.getOSVersion(), A);
     VersionTuple OsVersion = TT.getOSVersion();
-    Result.TargetVariantTriple = TargetVariantTriple;
+    Result.TargetVariantTriple = std::move(TargetVariantTriple);
     Result.setEnvironment(TT.getEnvironment(), OsVersion, SDKInfo);
     return Result;
   }
@@ -3382,6 +3382,23 @@ void Darwin::addClangTargetOptions(
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Enable objc_msgSend selector stubs by default if the linker supports it.
+  // ld64-811.2+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fobjc_msgsend_selector_stubs,
+                                options::OPT_fno_objc_msgsend_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(811, 2)))
+    CC1Args.push_back("-fobjc-msgsend-selector-stubs");
+
+  // Enable objc_msgSend class selector stubs by default if the linker supports
+  // it. ld64-1250+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(
+          options::OPT_fobjc_msgsend_class_selector_stubs,
+          options::OPT_fno_objc_msgsend_class_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(1250, 0)))
+    CC1Args.push_back("-fobjc-msgsend-class-selector-stubs");
 
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.

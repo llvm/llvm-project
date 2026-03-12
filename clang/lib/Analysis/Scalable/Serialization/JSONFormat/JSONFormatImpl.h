@@ -15,6 +15,8 @@
 #define CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONFORMATIMPL_H
 
 #include "../../ModelStringConversions.h"
+#include "JSONEntitySummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
@@ -107,7 +109,21 @@ inline constexpr const char *FailedToDeserializeLinkageTableExtraId =
 inline constexpr const char *FailedToDeserializeLinkageTableMissingId =
     "failed to deserialize LinkageTable: missing '{0}' present in IdTable";
 
+inline constexpr const char *FailedToReadEntityIdObject =
+    "failed to read EntityId: expected JSON object with a single '{0}' key "
+    "mapped to a number (unsigned 64-bit integer)";
+
+inline constexpr const char *FailedToPatchEntityIdNotInTable =
+    "failed to patch EntityId: '{0}' not found in entity resolution table";
+
 } // namespace ErrorMessages
+
+//----------------------------------------------------------------------------
+// Entity Id JSON Representation
+//----------------------------------------------------------------------------
+
+/// An entity ID is encoded as the single-key object {"@": <index>}.
+inline constexpr const char *JSONEntityIdKey = "@";
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer

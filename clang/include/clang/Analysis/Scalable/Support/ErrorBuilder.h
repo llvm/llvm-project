@@ -199,8 +199,9 @@ public:
   /// \endcode
   template <typename... Args>
   [[noreturn]] static void fatal(const char *Fmt, Args &&...ArgVals) {
-    llvm::report_fatal_error(llvm::StringRef(
-        formatErrorMessage(Fmt, std::forward<Args>(ArgVals)...)));
+    llvm::report_fatal_error(llvm::StringRef(formatErrorMessage(
+                                 Fmt, std::forward<Args>(ArgVals)...)),
+                             false);
   }
 };
 

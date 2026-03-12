@@ -102,17 +102,15 @@ static bool ShouldUseLLDBServer() {
 
 void ProcessWindows::Initialize() {
   if (!ShouldUseLLDBServer()) {
-    static llvm::once_flag g_once_flag;
-
-    llvm::call_once(g_once_flag, []() {
-      PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                    GetPluginDescriptionStatic(),
-                                    CreateInstance);
-    });
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(), CreateInstance);
   }
 }
 
-void ProcessWindows::Terminate() {}
+void ProcessWindows::Terminate() {
+  if (!ShouldUseLLDBServer())
+    PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef ProcessWindows::GetPluginDescriptionStatic() {
   return "Process plugin for Windows";

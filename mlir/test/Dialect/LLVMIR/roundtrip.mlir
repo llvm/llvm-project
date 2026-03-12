@@ -167,6 +167,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {optsize} : () -> ()
   llvm.call @baz() {optsize} : () -> ()
 
+// CHECK: llvm.call @baz() {builtin} : () -> ()
+  llvm.call @baz() {builtin} : () -> ()
+
 // CHECK: llvm.call @baz() {nobuiltin} : () -> ()
   llvm.call @baz() {nobuiltin} : () -> ()
 

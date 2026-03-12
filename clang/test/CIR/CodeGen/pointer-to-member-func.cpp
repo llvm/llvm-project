@@ -134,12 +134,12 @@ void call(Foo *obj, void (Foo::*func)(int), int arg) {
 // CIR-AFTER:   %[[THIS:.*]] = cir.cast bitcast %[[OBJ]] : !cir.ptr<!rec_Foo> -> !cir.ptr<!void>
 // CIR-AFTER:   %[[ADJUSTED_THIS:.*]] = cir.ptr_stride %[[THIS]], %[[ADJ]] : (!cir.ptr<!void>, !s64i) -> !cir.ptr<!void>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.extract_member %[[FUNC]][0] : !rec_anon_struct -> !s64i
-// CIR-AFTER:   %[[VIRT_BIT_TEST:.*]] = cir.binop(and, %[[METHOD_PTR]], %[[VIRT_BIT]]) : !s64i
-// CIR-AFTER:   %[[IS_VIRTUAL:.*]] = cir.cmp(eq, %[[VIRT_BIT_TEST]], %[[VIRT_BIT]]) : !s64i, !cir.bool
+// CIR-AFTER:   %[[VIRT_BIT_TEST:.*]] = cir.and %[[METHOD_PTR]], %[[VIRT_BIT]] : !s64i
+// CIR-AFTER:   %[[IS_VIRTUAL:.*]] = cir.cmp eq %[[VIRT_BIT_TEST]], %[[VIRT_BIT]] : !s64i
 // CIR-AFTER:   %[[CALLEE:.*]] = cir.ternary(%[[IS_VIRTUAL]], true {
 // CIR-AFTER:     %[[VTABLE_PTR:.*]] = cir.cast bitcast %[[ADJUSTED_THIS]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!s8i>>
 // CIR-AFTER:     %[[VTABLE:.*]] = cir.load %[[VTABLE_PTR]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-// CIR-AFTER:     %[[OFFSET:.*]] = cir.binop(sub, %[[METHOD_PTR]], %[[VIRT_BIT]]) : !s64i
+// CIR-AFTER:     %[[OFFSET:.*]] = cir.sub %[[METHOD_PTR]], %[[VIRT_BIT]] : !s64i
 // CIR-AFTER:     %[[VTABLE_SLOT:.*]] = cir.ptr_stride %[[VTABLE]], %[[OFFSET]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
 // CIR-AFTER:     %[[VIRTUAL_FN_PTR:.*]] = cir.cast bitcast %[[VTABLE_SLOT]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>>
 // CIR-AFTER:     %[[VIRTUAL_FN_PTR_LOAD:.*]] = cir.load %[[VIRTUAL_FN_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!void>, !cir.ptr<!rec_Foo>, !s32i)>>

@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
@@ -235,9 +236,11 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case Builtin::BIaddressof:
     case Builtin::BI__addressof:
     case Builtin::BI__builtin_addressof: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: builtin addressof");
-      return Address::invalid();
+      LValue lv = emitLValue(call->getArg(0));
+      if (baseInfo)
+        *baseInfo = lv.getBaseInfo();
+      assert(!cir::MissingFeatures::opTBAA());
+      return lv.getAddress();
     }
     }
   }
@@ -383,9 +386,9 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                      dst.isVolatileQualified() &&
                      info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
 
-  mlir::Value dstAddr = dst.getAddress().getPointer();
+  assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
+  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -899,8 +902,17 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           addr = addr.withElementType(builder, varTy);
         }
       } else {
-        cgm.errorNYI(e->getSourceRange(),
-                     "emitDeclRefLValue: non-odr reference type");
+        // Should we be using the alignment of the constant pointer we emitted?
+        CharUnits alignment =
+            cgm.getNaturalTypeAlignment(e->getType(),
+                                        /*BaseInfo=*/nullptr,
+                                        /*forPointeeType=*/true);
+        // Classic codegen passes TBAA as null-ptr to the above function, so it
+        // probably needs to deal with that.
+        assert(!cir::MissingFeatures::opTBAA());
+        mlir::Value ptrVal = getBuilder().getConstant(
+            getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(val));
+        addr = makeNaturalAddressForPointer(ptrVal, ty, alignment);
       }
       return makeAddrLValue(addr, ty, AlignmentSource::Decl);
     }
@@ -1455,9 +1467,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     QualType destTy = getContext().getPointerType(e->getType());
 
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    cir::TargetAddressSpaceAttr srcAS;
+    mlir::ptr::MemorySpaceAttrInterface srcAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
     else
       cgm.errorNYI(
           e->getSourceRange(),
@@ -1489,8 +1501,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     LValue lv = emitLValue(e->getSubExpr());
     // Propagate the volatile qualifier to LValue, if exists in e.
     if (e->changesVolatileQualification())
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCastLValue: NoOp changes volatile qual");
+      lv.getQuals() = e->getType().getQualifiers();
     if (lv.isSimple()) {
       Address v = lv.getAddress();
       if (v.isValid()) {
@@ -2819,4 +2830,8 @@ bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
 
   cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
   return false;
+}
+
+LValue CIRGenFunction::emitCXXTypeidLValue(const CXXTypeidExpr *e) {
+  return makeNaturalAlignAddrLValue(emitCXXTypeidExpr(e), e->getType());
 }

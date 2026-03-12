@@ -13,7 +13,6 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -58,7 +57,7 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
     if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
-                  cir::CastOp, cir::CmpOp, cir::ConstantOp,
+                  cir::CastOp, cir::CmpOp, cir::ConstantOp, cir::DeleteArrayOp,
                   cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
                   cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
@@ -320,6 +319,60 @@ mlir::LogicalResult CIRBaseMethodOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
+    cir::DeleteArrayOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::FlatSymbolRefAttr deleteFn = op.getDeleteFnAttr();
+  mlir::Location loc = op->getLoc();
+  mlir::Value loweredAddress = adaptor.getAddress();
+
+  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
+  bool sizeNeeded = deleteParams.getSize();
+
+  if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
+      deleteParams.getAlignment())
+    return rewriter.notifyMatchFailure(
+        op, "type-aware, destroying, or aligned delete not yet supported");
+
+  const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
+  CIRBaseBuilderTy cirBuilder(rewriter);
+  mlir::Value deletePtr;
+  llvm::SmallVector<mlir::Value> callArgs;
+
+  if (sizeNeeded) {
+    mlir::Value numElements;
+    clang::CharUnits cookieSize;
+    auto ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
+    mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
+
+    cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
+                           deletePtr, cookieSize);
+    callArgs.push_back(deletePtr);
+    uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+    unsigned ptrWidth =
+        lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+    cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
+
+    mlir::Value eltSizeVal = cir::ConstantOp::create(
+        rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
+    mlir::Value allocSize =
+        cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
+    mlir::Value cookieSizeVal = cir::ConstantOp::create(
+        rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+    allocSize =
+        cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
+    callArgs.push_back(allocSize);
+  } else {
+    deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
+                                    cir::CastKind::bitcast, loweredAddress);
+    callArgs.push_back(deletePtr);
+  }
+
+  cir::CallOp::create(rewriter, loc, deleteFn, cir::VoidType(), callArgs);
+  rewriter.eraseOp(op);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
     cir::DerivedDataMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -365,6 +418,15 @@ mlir::LogicalResult CIRGetRuntimeMemberOpABILowering::matchAndRewrite(
   mlir::Operation *newOp = lowerModule->getCXXABI().lowerGetRuntimeMember(
       op, resTy, adaptor.getAddr(), adaptor.getMember(), rewriter);
   rewriter.replaceOp(op, newOp);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRVTableGetTypeInfoOpABILowering::matchAndRewrite(
+    cir::VTableGetTypeInfoOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerVTableGetTypeInfo(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
   return mlir::success();
 }
 
@@ -445,7 +507,11 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  // Operations that do not use any special types must be explicitly marked as
+  // illegal to trigger processing here.
+  target.addIllegalOp<cir::DeleteArrayOp>();
   target.addIllegalOp<cir::DynamicCastOp>();
+  target.addIllegalOp<cir::VTableGetTypeInfoOp>();
 }
 
 //===----------------------------------------------------------------------===//

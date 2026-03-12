@@ -36,5 +36,17 @@ def CIR_CUDAKernelNameAttr : CIR_Attr<"CUDAKernelName", "cu.kernel_name"> {
   let assemblyFormat = "`<` $kernel_name `>`";
 }
 
+def CUDAExternallyInitializedAttr : CIR_Attr<"CUDAExternallyInitialized",
+                                             "cu.externally_initialized"> {
+  let summary = "The marked variable is externally initialized.";
+  let description =
+  [{
+    CUDA __device__ and __constant__ variables, along with surface and
+    textures, might be initialized by host, hence "externally initialized".
+    Therefore they must be emitted even if they are not referenced.
+
+    The attribute corresponds to the attribute on LLVM with the same name.
+  }];
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIRCUDAATTRS_TD

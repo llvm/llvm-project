@@ -503,6 +503,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acospif_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    acospif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.acospif
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   asinhf_test
   NO_RUN_POSTBUILD
   NEED_MPFR

@@ -193,7 +193,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentExportBlock);
-  CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
@@ -938,6 +937,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::IEBS_Indent);
   CHECK_PARSE("IndentExternBlock: false", IndentExternBlock,
               FormatStyle::IEBS_NoIndent);
+
+  Style.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
+  CHECK_PARSE("IndentGotoLabels: NoIndent", IndentGotoLabels,
+              FormatStyle::IGLS_NoIndent);
+  CHECK_PARSE("IndentGotoLabels: OuterIndent", IndentGotoLabels,
+              FormatStyle::IGLS_OuterIndent);
+  CHECK_PARSE("IndentGotoLabels: InnerIndent", IndentGotoLabels,
+              FormatStyle::IGLS_InnerIndent);
+  CHECK_PARSE("IndentGotoLabels: HalfIndent", IndentGotoLabels,
+              FormatStyle::IGLS_HalfIndent);
+  CHECK_PARSE("IndentGotoLabels: false", IndentGotoLabels,
+              FormatStyle::IGLS_NoIndent);
+  CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
+              FormatStyle::IGLS_OuterIndent);
 
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,
@@ -1748,6 +1761,63 @@ TEST(ConfigParseTest, GetStyleOutput) {
   Output = testing::internal::GetCapturedStderr();
   ASSERT_TRUE((bool)Style);
   ASSERT_TRUE(Output.empty());
+}
+
+TEST(ConfigParseTest, RedirectInheritance) {
+  llvm::vfs::InMemoryFileSystem FS;
+  constexpr StringRef Config("BasedOnStyle: InheritParentConfig\n"
+                             "ColumnLimit: 20");
+  constexpr StringRef Code("int *f(int i, int j);");
+
+  ASSERT_TRUE(
+      FS.addFile("/a/.clang-format", 0,
+                 llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: GNU")));
+  ASSERT_TRUE(FS.addFile("/a/proj/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: InheritParentConfig=/a/config")));
+  ASSERT_TRUE(
+      FS.addFile("/a/proj/test.cc", 0, llvm::MemoryBuffer::getMemBuffer(Code)));
+  auto Style = getStyle("file", "/a/proj/test.cc", "none", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style));
+  ASSERT_EQ(toString(Style.takeError()),
+            "Failed to inherit configuration directory /a/config");
+
+  ASSERT_TRUE(FS.addFile("/a/config/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(Config)));
+  Style = getStyle("file", "/a/proj/test.cc", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style));
+  ASSERT_EQ(*Style, [] {
+    auto Style = getGNUStyle();
+    Style.ColumnLimit = 20;
+    return Style;
+  }());
+
+  ASSERT_TRUE(FS.addFile(
+      "/a/proj/src/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer("BasedOnStyle: InheritParentConfig\n"
+                                       "PointerAlignment: Left")));
+  ASSERT_TRUE(FS.addFile("/a/proj/src/test.cc", 0,
+                         llvm::MemoryBuffer::getMemBuffer(Code)));
+  Style = getStyle("file", "/a/proj/src/test.cc", "none", "", &FS);
+  ASSERT_TRUE(static_cast<bool>(Style));
+  ASSERT_EQ(*Style, [] {
+    auto Style = getGNUStyle();
+    Style.ColumnLimit = 20;
+    Style.PointerAlignment = FormatStyle::PAS_Left;
+    return Style;
+  }());
+
+  ASSERT_TRUE(FS.addFile("/a/loop/.clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(
+                             "BasedOnStyle: InheritParentConfig=config/")));
+  ASSERT_TRUE(
+      FS.addFile("/a/loop/test.cc", 0, llvm::MemoryBuffer::getMemBuffer(Code)));
+  ASSERT_TRUE(FS.addFile("/a/loop/config/_clang-format", 0,
+                         llvm::MemoryBuffer::getMemBuffer(Config)));
+  Style = getStyle("file", "/a/loop/test.cc", "none", "", &FS);
+  ASSERT_FALSE(static_cast<bool>(Style));
+  ASSERT_EQ(toString(Style.takeError()),
+            "Loop detected when inheriting configuration file in /a/loop");
 }
 
 } // namespace
