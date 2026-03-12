@@ -23,17 +23,14 @@ class TestSwiftAddressOf(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        lldbtest.TestBase.setUp(self)
-
     def check_variable(self, name, is_reference, contents = 0):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid(), "Couldn't find %s var: %s"%(name, var.GetError().GetCString()))
         if is_reference:
-            self.assertTrue(var.GetType().IsReferenceType(), name + "was not supposed to be a reference.")
+            self.assertTrue(var.GetType().IsReferenceType(), name + " was supposed to be a reference.")
             addr_value = var.GetValueAsUnsigned()
         else:
-            self.assertFalse(var.GetType().IsReferenceType(), name + "was supposed to be a reference.")
+            self.assertFalse(var.GetType().IsReferenceType(), name + " was not supposed to be a reference.")
             addr_val = var.AddressOf()
             self.assertSuccess(addr_val.GetError(), "AddressOf didn't return a good variable")
             addr_value = addr_val.GetValueAsUnsigned()
@@ -49,8 +46,7 @@ class TestSwiftAddressOf(lldbtest.TestBase):
         
     @swiftTest
     @expectedFailureWindows
-    def test_any_type(self):
-        """Test the Any type"""
+    def test(self):
         self.build()
 
         # Create the target

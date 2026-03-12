@@ -19,8 +19,8 @@
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
-#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/Language/Swift/LogChannelSwift.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 #include "Plugins/SymbolFile/NativePDB/PdbAstBuilderSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -35,6 +35,7 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -2205,35 +2206,36 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
     // Bug-for-bug compatibility.
     if (!ContainsGenericTypeParameter(node->getChild(1)))
       swift_flags |= eTypeHasValue | eTypeHasChildren;
-    auto module = node->getChild(0);
+    NodePointer module = node->getChild(0);
     if (module->hasText() && module->getText() == swift::MANGLING_MODULE_OBJC) {
       swift_flags |= eTypeHasValue /*| eTypeIsObjC*/;
     }
     break;
-    }
-    case Node::Kind::BoundGenericStructure:
-    case Node::Kind::Structure: {
+  }
+  case Node::Kind::BoundGenericStructure:
+  case Node::Kind::Structure: {
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
-    if (node->getNumChildren() != 2)
-      break;
-    if (node->getKind() == Node::Kind::Structure) {
-      auto module = node->getChild(0);
-      auto ident = node->getChild(1);
-      // Builtin types.
-      if (module->hasText() && module->getText() == swift::STDLIB_NAME) {
-        if (ident->hasText() &&
-            ident->getText().starts_with(swift::BUILTIN_TYPE_NAME_INT))
-          swift_flags |= eTypeIsScalar | eTypeIsInteger;
-        else if (ident->hasText() &&
-                 ident->getText().starts_with(swift::BUILTIN_TYPE_NAME_FLOAT))
-          swift_flags |= eTypeIsScalar | eTypeIsFloat;
+    if (swift_demangle::IsScalar(node)) {
+      // LLDB doesn't yet have a concept of synthetic value
+      // providers. In order to perform arithmetic with the
+      // user-visible numeric types, we declare them to have
+      // values here.
+      swift_flags |= eTypeIsScalar | eTypeIsInteger | eTypeHasValue;
+      return swift_flags;
+    }
+    if (swift_demangle::IsFloat(node)) {
+      swift_flags |= eTypeIsScalar | eTypeIsFloat | eTypeHasValue;
+      return swift_flags;
+    }
+    if (node->getKind() == Node::Kind::BoundGenericStructure) {
+      NodePointer typelist = node->getChild(1);
+      if (ChildAtPath(typelist, {Node::Kind::Type, Node::Kind::Pack})) {
+        // Variadic generic types.
+        bool ignore;
+        auto param_flags = CollectTypeInfo(dem, typelist, flavor, ignore);
+        swift_flags |= param_flags & eTypeIsPack;
+        return swift_flags;
       }
-    } else {
-      // Variadic generic types.
-      auto typelist = node->getChild(1);
-      bool ignore;
-      auto param_flags = CollectTypeInfo(dem, typelist, flavor, ignore);
-      swift_flags |= param_flags & eTypeIsPack;
     }
 
     // Clang-imported types.
@@ -2255,7 +2257,7 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
         LookupClangForwardType(mangling.result(), decl_context, ignore_modules);
     collect_clang_type(clang_type.GetCanonicalType());
     return swift_flags;
-    }
+  }
     case Node::Kind::BoundGenericClass:
     case Node::Kind::Class:
       swift_flags |= eTypeHasChildren | eTypeIsClass | eTypeHasValue |
@@ -3773,7 +3775,6 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
     const char *mangled_name = AsMangledName(type);
     NodePointer node = dem.demangleSymbol(mangled_name);
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
-
     bool unresolved_typealias = false;
     uint32_t flags = CollectTypeInfo(dem, node, flavor, unresolved_typealias);
     if (unresolved_typealias)
@@ -3790,11 +3791,16 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
   VALIDATE_AND_RETURN(impl, GetTypeInfo, type, g_no_exe_ctx,
                       (ReconstructType(type), nullptr));
 }
+
 lldb::TypeClass
 TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
   auto impl = [&]() {
     uint32_t flags = GetTypeInfo(type, nullptr);
     // The ordering is significant since GetTypeInfo() returns many flags.
+    if ((flags & eTypeIsProtocol))
+      return eTypeClassOther;
+    if ((flags & eTypeIsStructUnion))
+      return eTypeClassStruct;
     if ((flags & eTypeIsGenericTypeParam))
       return eTypeClassOther;
     if ((flags & eTypeIsScalar))
@@ -3805,10 +3811,6 @@ TypeSystemSwiftTypeRef::GetTypeClass(opaque_compiler_type_t type) {
       return eTypeClassArray;
     if ((flags & eTypeIsEnumeration))
       return eTypeClassUnion;
-    if ((flags & eTypeIsProtocol))
-      return eTypeClassOther;
-    if ((flags & eTypeIsStructUnion))
-      return eTypeClassStruct;
     if ((flags & eTypeIsClass))
       return eTypeClassClass;
     if ((flags & eTypeIsReference))
@@ -3991,6 +3993,89 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
   };
   VALIDATE_AND_RETURN(impl, GetPointerType, type, g_no_exe_ctx,
                       (ReconstructType(type)));
+}
+
+CompilerType
+TypeSystemSwiftTypeRef::GetBasicTypeFromAST(lldb::BasicType basic_type) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  NodePointer n = nullptr;
+  auto createBuiltin = [&](StringRef name) {
+    return b.GlobalType(b.Node(Node::Kind::Structure,
+                               b.Node(Node::Kind::Module, swift::STDLIB_NAME),
+                               b.Node(Node::Kind::Identifier, name)));
+  };
+  switch (basic_type) {
+  case eBasicTypeVoid:
+    n = b.GlobalType(b.Node(Node::Kind::Tuple));
+    break;
+  case eBasicTypeChar:
+  case eBasicTypeSignedChar:
+  case eBasicTypeUnsignedChar:
+  case eBasicTypeWChar:
+  case eBasicTypeSignedWChar:
+  case eBasicTypeUnsignedWChar:
+  case eBasicTypeChar16:
+  case eBasicTypeChar32:
+  case eBasicTypeChar8:
+  case eBasicTypeShort:
+  case eBasicTypeUnsignedShort:
+    // FIXME: Not yet implemented.
+    return {};
+  case eBasicTypeInt:
+    n = createBuiltin("Int64");
+    break;
+  case eBasicTypeUnsignedInt:
+    n = createBuiltin("UInt64");
+    break;
+  case eBasicTypeLong:
+    n = createBuiltin("Int32");
+    break;
+  case eBasicTypeUnsignedLong:
+    n = createBuiltin("UInt32");
+    break;
+  case eBasicTypeLongLong:
+    n = createBuiltin("Int64");
+    break;
+  case eBasicTypeUnsignedLongLong:
+    n = createBuiltin("UInt64");
+    break;
+  case eBasicTypeInt128:
+    n = createBuiltin("Int128");
+    break;
+  case eBasicTypeUnsignedInt128:
+    n = createBuiltin("UInt128");
+    break;
+  case eBasicTypeBool:
+    n = createBuiltin("Bool");
+    break;
+  case eBasicTypeHalf:
+    return {};
+  case eBasicTypeFloat:
+    n = createBuiltin(swift::BUILTIN_TYPE_NAME_FLOAT);
+    break;
+  case eBasicTypeDouble:
+  case eBasicTypeLongDouble:
+  case eBasicTypeFloatComplex:
+  case eBasicTypeDoubleComplex:
+  case eBasicTypeLongDoubleComplex:
+  case eBasicTypeObjCID:
+  case eBasicTypeObjCClass:
+  case eBasicTypeObjCSel:
+  case eBasicTypeNullPtr:
+    // FIXME: Not yet implemented.
+    break;
+  case eBasicTypeOther:
+  case eBasicTypeInvalid:
+    return {};
+  }
+  if (!n)
+    return {};
+  std::string mangled = b.Mangle(n);
+  if (!mangled.size())
+    return {};
+  return GetTypeFromMangledTypename(ConstString(mangled));
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetVoidFunctionType(
@@ -5292,6 +5377,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     bool is_base_class) {
   if (!type)
     return false;
+
+  uint32_t item_count = 1;
   const char *mangled_name = AsMangledName(type);
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
@@ -5321,7 +5408,6 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::NoEscapeFunctionType:
     case Node::Kind::CFunctionPointer:
     case Node::Kind::ImplFunctionType: {
-      uint32_t item_count = 1;
       // A few formats, we might need to modify our size and count for
       // depending on how we are trying to display the value.
       switch (format) {
@@ -5368,9 +5454,16 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           &s, format, data, data_offset, data_byte_size, bitfield_bit_size,
           bitfield_bit_offset, exe_scope, is_base_class);
     }
+    case Node::Kind::BuiltinFixedArray:
     case Node::Kind::BoundGenericStructure:
       return false;
     case Node::Kind::Structure: {
+      if (swift_demangle::IsScalar(node)) {
+        return DumpDataExtractor(data, &s, data_offset, format, data_byte_size,
+                                 item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
+                                 bitfield_bit_size, bitfield_bit_offset,
+                                 exe_scope);
+      }
       // In some instances, a swift `structure` wraps an objc enum. The enum
       // case needs to be handled, but structs are no-ops.
       auto resolved = ResolveTypeAlias(dem, node, flavor, true);
@@ -5758,6 +5851,9 @@ bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
     const auto *mangled_name = AsMangledName(type);
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
 
+    if (is_rvalue)
+      *is_rvalue = false;
+
     Demangler dem;
     NodePointer node = DemangleCanonicalOutermostType(dem, type);
     if (!node || node->getNumChildren() != 1 ||
@@ -5770,9 +5866,6 @@ bool TypeSystemSwiftTypeRef::IsReferenceType(opaque_compiler_type_t type,
       type->addChild(referenced, dem);
       *pointee_type = RemangleAsType(dem, type, flavor);
     }
-
-    if (is_rvalue)
-      *is_rvalue = false;
 
     return true;
   };
