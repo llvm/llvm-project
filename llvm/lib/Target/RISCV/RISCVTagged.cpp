@@ -35,56 +35,58 @@ public:
 } // end anonymous namespace
 
 char RISCVTagged::ID = 0;
-INITIALIZE_PASS(RISCVTagged, DEBUG_TYPE,
-                RISCV_TAGGED_NAME, false, false)
+INITIALIZE_PASS(RISCVTagged, DEBUG_TYPE, RISCV_TAGGED_NAME, false, false)
 
-FunctionPass *llvm::createRISCVTaggedPass() {
-  return new RISCVTagged();
-}
+FunctionPass *llvm::createRISCVTaggedPass() { return new RISCVTagged(); }
 
 bool RISCVTagged::runOnMachineFunction(MachineFunction &MF) {
-    bool MadeChange = false;
-    //Gets the list of targetInstructionInfos
-    const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-    //For every MachineFunction there is a list of MachineBasicBlocks which has a list of MachineInstr. We loop through that
-    for (MachineBasicBlock &MBB : MF) {
-        for (MachineInstr &MI : MBB) {
-            switch (MI.getOpcode())
-            {
-            case RISCV::SLLI:
-                MI.setDesc(TII->get(RISCV::SLI));
-                MadeChange = true;
-                break;
-            case RISCV::SRLI:
-            case RISCV::SRAI:
-                MI.setDesc(TII->get(RISCV::SRI));
-                MadeChange = true;
-                break;
-            case RISCV::SLL:
-                MI.setDesc(TII->get(RISCV::SL));
-                MadeChange = true;
-                break;
-            case RISCV::SRL:
-            case RISCV::SRA:
-                MI.setDesc(TII->get(RISCV::SR));
-                MadeChange = true;
-                break;
-            default:
-                break;
-            }
-        }
+  bool MadeChange = false;
+  // Gets the list of targetInstructionInfos
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  // For every MachineFunction there is a list of MachineBasicBlocks which has a
+  // list of MachineInstr. We loop through that
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      switch (MI.getOpcode()) {
+      case RISCV::SLLI:
+        MI.setDesc(TII->get(RISCV::SLI));
+        MadeChange = true;
+        break;
+      case RISCV::SRLI:
+      case RISCV::SRAI:
+        MI.setDesc(TII->get(RISCV::SRI));
+        MadeChange = true;
+        break;
+      case RISCV::SLL:
+        MI.setDesc(TII->get(RISCV::SL));
+        MadeChange = true;
+        break;
+      case RISCV::SRL:
+      case RISCV::SRA:
+        MI.setDesc(TII->get(RISCV::SR));
+        MadeChange = true;
+        break;
+      case RISCV::SLT:
+      case RISCV::SLTU:
+        MI.setDesc(TII->get(RISCV::SLTH));
+        MadeChange = true;
+        break;
+      default:
+        break;
+      }
     }
+  }
 
-    #ifndef NDEBUG
-        // Safety check: ensure no pseudos remain (helps catch missed cases).
-        for (MachineBasicBlock &MBB : MF) {
-        for (MachineInstr &MI : MBB) {
-            unsigned Opc = MI.getOpcode();
-            if (Opc == RISCV::SLLI || Opc == RISCV::SRLI || Opc == RISCV::SRAI) {
-            report_fatal_error("Tagged collapse: found unlowered SLLI/SRLI/SRAI");
-            }
-        }
-        }
-    #endif
-    return MadeChange;
+#ifndef NDEBUG
+  // Safety check: ensure no pseudos remain (helps catch missed cases).
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      unsigned Opc = MI.getOpcode();
+      if (Opc == RISCV::SLLI || Opc == RISCV::SRLI || Opc == RISCV::SRAI) {
+        report_fatal_error("Tagged collapse: found unlowered SLLI/SRLI/SRAI");
+      }
+    }
+  }
+#endif
+  return MadeChange;
 }

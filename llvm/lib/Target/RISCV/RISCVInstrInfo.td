@@ -873,12 +873,26 @@ def SL : ALU_rr<0b0000000, 0b101, "sl">,
 def SR : ALU_rr<0b0100000, 0b101, "sr">,
           Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 
-let IsSignExtendingOpW = 1 in {
+// Old implementation
+/* let IsSignExtendingOpW = 1 in {
 def SLT  : ALU_rr<0b0000000, 0b010, "slt">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def SLTU : ALU_rr<0b0000000, 0b011, "sltu">,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+} */
+
+// Defining pseudo commands
+let isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def SLT : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), []>;
+  def SLTU : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), []>;
 }
+
+// New set less than instruction
+let IsSignExtendingOpW = 1 in {
+  def SLTH  : ALU_rr<0b0000000, 0b010, "slt">,
+             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+}
+
 def XOR  : ALU_rr<0b0000000, 0b100, "xor", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def OR   : ALU_rr<0b0000000, 0b110, "or", Commutable=1>,
