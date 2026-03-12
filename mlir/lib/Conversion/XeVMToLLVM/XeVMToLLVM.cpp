@@ -895,10 +895,16 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   if (op.getV1() != op.getV2())
     return false;
   auto maskAttr = op.getMask();
+  int64_t maskSize = static_cast<int64_t>(maskAttr.size());
+  int64_t sourceSize = op.getV1().getType().getNumElements();
+  if (maskSize > sourceSize)
+    return false;
   int64_t firstIndex = maskAttr[0];
-  for (int64_t i = 1; i < static_cast<int64_t>(maskAttr.size()); ++i) {
+  for (int64_t i = 1; i < maskSize; ++i) {
     int64_t index = maskAttr[i];
     if (index != firstIndex + i)
+      return false;
+    if (index >= sourceSize)
       return false;
   }
   return true;
@@ -984,9 +990,18 @@ class HandleVectorExtractPattern
             LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
         rewriter.replaceOp(op, newBitcast);
       } else if (isa<LLVM::ShuffleVectorOp>(srcOp)) {
-        // 2. Merge with another shuffle vector op
+        // 2. Merge with source shuffle vector op if,
+        //  - the source op is also extracting a contigous slice.
+        //  - the source op mask size is not smaller than the current
+        //    op mask size.
+        // And create a new shuffle vector op directly from the source
+        // of the first shuffle.
         auto srcShuffle = cast<LLVM::ShuffleVectorOp>(srcOp);
+        if (!isExtractingContiguousSlice(srcShuffle))
+          return failure();
         auto srcMask = srcShuffle.getMask();
+        if (srcMask.size() < mask.size())
+          return failure();
         SmallVector<int32_t> combinedMask;
         for (auto index : mask) {
           combinedMask.push_back(srcMask[index]);
