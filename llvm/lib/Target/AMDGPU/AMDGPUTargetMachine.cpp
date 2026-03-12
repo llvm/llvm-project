@@ -1201,12 +1201,19 @@ GCNTargetMachine::GCNTargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOptLevel OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
-/// Returns the value of the "amdgpu.oob.mode" module flag, or 0 if absent.
-/// See AMDGPUOOBMode for the bit definitions.
-static unsigned getOOBModeFromModule(const Module &M) {
-  const auto *Flag = mdconst::dyn_extract_or_null<ConstantInt>(
-      M.getModuleFlag("amdgpu.oob.mode"));
-  return Flag ? static_cast<unsigned>(Flag->getZExtValue()) : 0u;
+enum class OOBFlagValue {
+  Strict = 0,
+  Relaxed = 1,
+};
+
+/// Returns the OOB relaxation mode encoded by a module flag.
+/// An absent flag defaults to Strict.
+static OOBFlagValue getOOBRelaxedFlag(const Module &M, StringRef FlagName) {
+  const auto *Flag =
+      mdconst::dyn_extract_or_null<ConstantInt>(M.getModuleFlag(FlagName));
+  if (!Flag)
+    return OOBFlagValue::Strict;
+  return static_cast<OOBFlagValue>(Flag->getZExtValue());
 }
 
 const TargetSubtargetInfo *
@@ -1214,10 +1221,15 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef GPU = getGPUName(F);
   StringRef FS = getFeatureString(F);
 
-  unsigned OOBMode = getOOBModeFromModule(*F.getParent());
+  const Module &M = *F.getParent();
+  OOBFlagValue BufOOB = getOOBRelaxedFlag(M, AMDGPUOOBMode::BufferFlag);
+  OOBFlagValue TBufOOB = getOOBRelaxedFlag(M, AMDGPUOOBMode::TBufferFlag);
+  bool BufRelaxed = BufOOB == OOBFlagValue::Relaxed;
+  bool TBufRelaxed = TBufOOB == OOBFlagValue::Relaxed;
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
-  SubtargetKey.append((",oob=" + Twine(OOBMode)).str());
+  SubtargetKey.append(BufRelaxed ? ",buf-oob=1" : ",buf-oob=0");
+  SubtargetKey.append(TBufRelaxed ? ",tbuf-oob=1" : ",tbuf-oob=0");
 
   auto &I = SubtargetMap[SubtargetKey];
   if (!I) {
@@ -1226,7 +1238,8 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<GCNSubtarget>(TargetTriple, GPU, FS, *this);
-    I->setOOBMode(OOBMode);
+    I->setBufferOOBRelaxed(BufRelaxed);
+    I->setTBufferOOBRelaxed(TBufRelaxed);
   }
 
   I->setScalarizeGlobalBehavior(ScalarizeGlobal);

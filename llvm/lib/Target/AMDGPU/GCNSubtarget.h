@@ -30,20 +30,13 @@ namespace llvm {
 
 class GCNTargetMachine;
 
-/// Bit flags for the "amdgpu.oob.mode" LLVM module flag.
-/// These control per-module relaxation of out-of-bounds (OOB) buffer access
-/// semantics. Using Module::Min merge behaviour, a stricter module always
-/// overrides a more relaxed one at link time.
+/// Module flag names controlling relaxation of out-of-bounds (OOB) buffer
+/// access semantics. Each flag is an i32 with Module::Min merge behaviour:
+/// 0 = strict, 1 = relaxed. In a single module, an absent flag is treated as
+/// strict by default.
 namespace AMDGPUOOBMode {
-enum : unsigned {
-  /// Relax OOB handling for untyped buffer instructions (buffer_load /
-  /// buffer_store). When set, the backend may merge misaligned accesses across
-  /// an OOB boundary, which would be incorrect under strict Vulkan robustness.
-  UntypedBuffer = 0x1,
-  /// Relax OOB handling for typed buffer instructions (tbuffer_load /
-  /// tbuffer_store).
-  TypedBuffer = 0x2,
-};
+inline constexpr StringLiteral BufferFlag("amdgpu.buffer.oob.relaxed");
+inline constexpr StringLiteral TBufferFlag("amdgpu.tbuffer.oob.relaxed");
 } // namespace AMDGPUOOBMode
 
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
@@ -86,7 +79,8 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
-  unsigned OOBMode = 0;
+  bool BufferOOBRelaxed = false;
+  bool TBufferOOBRelaxed = false;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -335,10 +329,10 @@ public:
 
   bool isTgSplitEnabled() const { return EnableTgSplit; }
 
-  bool hasRelaxedBufferOOBMode() const {
-    return OOBMode & AMDGPUOOBMode::UntypedBuffer;
-  }
-  void setOOBMode(unsigned Val) { OOBMode = Val; }
+  bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
+  bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
+  void setBufferOOBRelaxed(bool V) { BufferOOBRelaxed = V; }
+  void setTBufferOOBRelaxed(bool V) { TBufferOOBRelaxed = V; }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 

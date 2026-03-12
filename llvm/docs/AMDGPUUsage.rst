@@ -823,48 +823,41 @@ AMDGPU-specific behaviour can be controlled via LLVM module flags (see
 reference). These flags are set by frontends and are
 consumed by the AMDGPU backend during code generation.
 
-.. table:: AMDGPU Module Flags
+.. list-table:: AMDGPU Module Flags
    :name: amdgpu-module-flags-table
+   :header-rows: 1
 
-   =================== =========== ===== ================================================
-   Flag Name           Type        Merge Description
-   =================== =========== ===== ================================================
-   ``amdgpu.oob.mode`` ``i32``     Min   Bitmask controlling relaxation of out-of-bounds
-                                         (OOB) buffer access semantics.  When a bit is
-                                         **cleared** (strict mode, the default), the
-                                         backend ensures that misaligned buffer accesses
-                                         that straddle an OOB boundary are not merged,
-                                         preserving correct per-byte robustness guarantees
-                                         (e.g. required by Vulkan ``robustBufferAccess2``).
-                                         When a bit is **set** (relaxed mode), the backend
-                                         may merge such accesses for performance, which
-                                         is safe for workloads that do not
-                                         require strict OOB byte-level isolation.
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.relaxed``
+     - ``i32``
+     - Min
+     - Controls relaxation of out-of-bounds (OOB) semantics for untyped
+       buffer instructions (``buffer_load`` / ``buffer_store``).
 
-                                         Bits:
+       - ``0`` (or absent): **strict** (default). The backend preserves
+         per-byte OOB guarantees by preventing merging of misaligned buffer
+         accesses that could straddle an OOB boundary (e.g. as required by
+         Vulkan ``robustBufferAccess2``).
+       - ``1``: **relaxed**. The backend may merge such accesses for
+         performance.
 
-                                         * ``0x1`` — relax OOB handling for **untyped**
-                                           buffer instructions (``buffer_load`` /
-                                           ``buffer_store``).
-                                         * ``0x2`` — relax OOB handling for **typed**
-                                           buffer instructions (``tbuffer_load`` /
-                                           ``tbuffer_store``).
+       ``Min`` merge means the strictest (smallest) value wins at link time
+       when both modules define the flag.
+   * - ``amdgpu.tbuffer.oob.relaxed``
+     - ``i32``
+     - Min
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
 
-                                         The ``Min`` merge behaviour means that when
-                                         modules are linked, the strictest (smallest)
-                                         value wins: a strict module (value ``0``) linked
-                                         with a relaxed module always produces strict
-                                         semantics.
+.. note::
 
-                                         .. note::
-
-                                           Frontends that require misaligned-access
-                                           merging for performance must set this flag
-                                           (bits ``0x3``). Frontends that require strict
-                                           per-byte OOB guarantees (e.g. Vulkan
-                                           ``robustBufferAccess2``) should leave the
-                                           flag absent or set to ``0``.
-   =================== =========== ===== ================================================
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1``.  Frontends that require strict per-byte OOB
+   guarantees (e.g. Vulkan ``robustBufferAccess2``) should leave the flags
+   absent or set to ``0``.
 
 .. _amdgpu-target-id:
 

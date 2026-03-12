@@ -2070,17 +2070,18 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "SemanticInterposition metadata requires constant integer argument");
   }
 
-  if (ID->getString() == "amdgpu.oob.mode") {
+  if (ID->getString() == "amdgpu.buffer.oob.relaxed" ||
+      ID->getString() == "amdgpu.tbuffer.oob.relaxed") {
     Check(MFB == Module::Min,
-          "'amdgpu.oob.mode' module flag must use 'min' merge behaviour");
+          "'" + ID->getString() +
+              "' module flag must use 'min' merge behaviour");
     ConstantInt *Value =
         mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
-    Check(Value,
-          "'amdgpu.oob.mode' module flag must have a constant integer value");
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
     if (Value) {
-      constexpr uint32_t KnownBits = 0x3; // UntypedBuffer | TypedBuffer
-      Check((Value->getZExtValue() & ~KnownBits) == 0,
-            "'amdgpu.oob.mode' module flag has unknown bits set");
+      Check(Value->getZExtValue() <= 1,
+            "'" + ID->getString() + "' module flag must be 0 or 1");
     }
   }
 
