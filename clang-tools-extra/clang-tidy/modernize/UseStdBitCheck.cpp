@@ -8,6 +8,7 @@
 
 #include "UseStdBitCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::ast_matchers;
 
@@ -37,7 +38,10 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto LogicalAnd = MakeCommutativeBinaryOperatorMatcher("&&");
   const auto Sub = MakeBinaryOperatorMatcher("-");
+  const auto ShiftLeft = MakeBinaryOperatorMatcher("<<");
+  const auto ShiftRight = MakeBinaryOperatorMatcher(">>");
   const auto BitwiseAnd = MakeCommutativeBinaryOperatorMatcher("&");
+  const auto BitwiseOr = MakeCommutativeBinaryOperatorMatcher("|");
   const auto CmpNot = MakeCommutativeBinaryOperatorMatcher("!=");
   const auto CmpGt = MakeBinaryOperatorMatcher(">");
   const auto CmpGte = MakeBinaryOperatorMatcher(">=");
@@ -86,6 +90,15 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
           on(cxxConstructExpr(
               hasArgument(0, expr(hasType(isUnsignedInteger())).bind("v")))))
           .bind("popcount_expr"),
+      this);
+
+  // Rotating an integer by a fixed amount
+  Finder->addMatcher(
+      BitwiseOr(ShiftLeft(BindDeclRef("v"),
+                          integerLiteral().bind("shift_left_amount")),
+                ShiftRight(BoundDeclRef("v"),
+                           integerLiteral().bind("shift_right_amount")))
+          .bind("rotate_expr"),
       this);
 }
 
@@ -141,6 +154,48 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
            << IncludeInserter.createIncludeInsertion(
                   Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
     }
+  } else if (const auto *MatchedExpr =
+                 Result.Nodes.getNodeAs<BinaryOperator>("rotate_expr")) {
+    const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
+    const auto ShiftLeftAmount =
+        Result.Nodes.getNodeAs<IntegerLiteral>("shift_left_amount")->getValue();
+    const auto ShiftRightAmount =
+        Result.Nodes.getNodeAs<IntegerLiteral>("shift_right_amount")
+            ->getValue();
+    const uint64_t MatchedVarSize =
+        Context.getTypeSize(MatchedVarDecl->getType());
+
+    // Overflowing shifts
+    if (ShiftLeftAmount.sge(MatchedVarSize))
+      return;
+    if (ShiftRightAmount.sge(MatchedVarSize))
+      return;
+    // Not a rotation.
+    if (MatchedVarSize != (ShiftLeftAmount + ShiftRightAmount))
+      return;
+
+    const bool NeedsIntCast =
+        MatchedExpr->getType() != MatchedVarDecl->getType();
+    const bool IsRotl = ShiftRightAmount.sge(ShiftLeftAmount);
+
+    const StringRef ReplacementFuncName = IsRotl ? "rotl" : "rotr";
+    const uint64_t ReplacementShiftAmount =
+        (IsRotl ? ShiftLeftAmount : ShiftRightAmount).getZExtValue();
+    auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::%0' instead")
+                << ReplacementFuncName;
+    if (auto R = MatchedExpr->getSourceRange();
+        !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
+      Diag << FixItHint::CreateReplacement(
+                  MatchedExpr->getSourceRange(),
+                  llvm::formatv("{3}std::{0}({1}, {2})", ReplacementFuncName,
+                                MatchedVarDecl->getName(),
+                                ReplacementShiftAmount,
+                                NeedsIntCast ? "(int)" : "")
+                      .str())
+           << IncludeInserter.createIncludeInsertion(
+                  Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+    }
+
   } else {
     llvm_unreachable("unexpected match");
   }

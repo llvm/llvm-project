@@ -195,3 +195,59 @@ unsigned invalid_popcount_bitset(unsigned x, signed y) {
   };
 }
 
+
+/*
+ * rotate patterns
+ */
+unsigned char rotate_left_pattern(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return (int)std::rotl(x, 3);
+  return x << 3 | x >> 5;
+}
+unsigned char rotate_left_pattern_perm(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return (int)std::rotl(x, 3);
+  return x >> 5 | x << 3;
+}
+unsigned char rotate_swap_pattern(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotl' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return (int)std::rotl(x, 4);
+  return x << 4 | x >> 4;
+}
+unsigned char rotate_right_pattern(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return (int)std::rotr(x, 3);
+  return x << 5 | x >> 3;
+}
+unsigned char rotate_right_pattern_perm(unsigned char x) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
+  // CHECK-FIXES: return (int)std::rotr(x, 3);
+  return x >> 3 | x << 5;
+}
+
+#define ROTR v >> 3 | v << 5
+unsigned char rotate_macro(unsigned char v) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:10: warning: use 'std::rotr' instead [modernize-use-std-bit]
+  // No fixes, it comes from macro expansion.
+  return ROTR;
+}
+
+/*
+ * Invalid rotate patterns
+ */
+void invalid_rotate_patterns(unsigned char x, signed char y, unsigned char z) {
+  int patterns[] = {
+    // non-matching references
+    x >> 3 | z << 5,
+    // bad shift combination
+    x >> 3 | x << 6,
+    x >> 4 | x << 3,
+    // bad operator combination
+    x << 3 | x << 6,
+    x + 3 | x << 6,
+    x >> 3 & x << 5,
+    x >> 5 ^ x << 3,
+    // unsupported types
+    y >> 4 | y << 4,
+  };
+}
