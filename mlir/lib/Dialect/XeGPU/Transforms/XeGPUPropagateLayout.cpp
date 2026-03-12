@@ -1135,6 +1135,7 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   if (!hasParamsOfLayoutKind(anchorLayout)) {
     VectorType resVecTy =
         llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
+    assert(resVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     const uArch *uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
     if (!uArch)
       return;
@@ -1155,6 +1156,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
   } else {
     VectorType srcVecTy =
         llvm::cast<VectorType>(storeMatrix.getData().getType());
+    assert(srcVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
     if (!uArch)
       return;

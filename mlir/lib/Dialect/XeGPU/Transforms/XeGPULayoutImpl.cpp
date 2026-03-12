@@ -489,15 +489,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     SmallVector<int64_t> instData(srcRank, 1);
     instData[srcRank - 2] =
         std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
-    instData[srcRank - 1] =
-        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+    instData[srcRank - 1] = subgroupSize;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
 
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
 
     SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
-    laneLayout[srcRank - 1] =
-        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
+    laneLayout[srcRank - 1] = subgroupSize;
     laneData[srcRank - 2] =
         std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
