@@ -5957,6 +5957,14 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     bool IsWave32 = ST.isWave32();
     unsigned MovOpcForExec = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    if (Stratergy == WAVE_REDUCE_STRATEGY::DPP && !ST.hasDPP()) {
+      MachineFunction *MF = BB.getParent();
+      LLVMContext &Ctx = MF->getFunction().getContext();
+      Ctx.diagnose(DiagnosticInfoUnsupported(
+          MF->getFunction(),
+          "Target does not support DPP; falling back to iterative reduction",
+          MI.getDebugLoc(), DS_Warning));
+    }
     if (Stratergy == WAVE_REDUCE_STRATEGY::ITERATIVE ||
         !ST.hasDPP()) { // If target doesn't support DPP operations, default to
                         // iterative stratergy
@@ -5995,7 +6003,10 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                 IdentityValReg)
             .addImm(IdentityValue);
       }
-      BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH)).addMBB(ComputeLoop);
+      // clang-format off
+      BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
+          .addMBB(ComputeLoop);
+      // clang-format on
 
       // Start constructing ComputeLoop
       I = ComputeLoop->begin();
@@ -6225,9 +6236,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       Register ReducedValSGPR = MRI.createVirtualRegister(DstRegClass);
       Register NegatedReducedVal = MRI.createVirtualRegister(DstRegClass);
       Register RowBcast31 = MRI.createVirtualRegister(SrcRegClass);
+      Register UndefExec = MRI.createVirtualRegister(WaveMaskRegClass);
       Register FinalDPPResult;
-      Register UndefExec =
-          MRI.createVirtualRegister(TRI->getWaveMaskRegClass());
       BuildMI(BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), UndefExec);
 
       uint32_t IdentityValue = getIdentityValueFor32BitWaveReduction(Opc);
