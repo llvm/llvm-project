@@ -1363,8 +1363,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     mlir::Value endOffsetVal =
         builder.getUnsignedInt(loc, endOffset, sizeTypeSize);
     begin = cir::CastOp::create(builder, loc, eltTy,
-                                            cir::CastKind::array_to_ptrdecay,
-                                            addr);
+                                cir::CastKind::array_to_ptrdecay, addr);
     end = cir::PtrStrideOp::create(builder, loc, eltTy, begin, endOffsetVal);
   }
 
@@ -1375,9 +1374,8 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   // This places the destructor loop emitted below inside the if block.
   cir::IfOp ifOp;
   if (isDynamic) {
-    mlir::Value isEmpty = cir::CmpOp::create(builder, loc,
-                                             cir::CmpOpKind::ne,
-                                             start, stop);
+    mlir::Value isEmpty =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, start, stop);
     ifOp = cir::IfOp::create(builder, loc, isEmpty,
                              /*withElseRegion=*/false,
                              [&](mlir::OpBuilder &, mlir::Location) {});
