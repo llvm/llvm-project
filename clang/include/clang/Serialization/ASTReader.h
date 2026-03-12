@@ -185,8 +185,7 @@ public:
   /// otherwise.
   virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                        StringRef ModuleFilename,
-                                       StringRef SpecificModuleCachePath,
-                                       bool Complain) {
+                                       StringRef ContextHash, bool Complain) {
     return false;
   }
 
@@ -332,8 +331,7 @@ public:
                              bool Complain) override;
 
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
@@ -383,8 +381,7 @@ public:
                                bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                               StringRef ModuleFilename,
-                               StringRef SpecificModuleCachePath,
+                               StringRef ModuleFilename, StringRef ContextHash,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, uint32_t Value) override;
 };
