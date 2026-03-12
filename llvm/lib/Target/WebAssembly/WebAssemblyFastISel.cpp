@@ -1396,6 +1396,21 @@ static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
     return NewOpc;
 
   Type *LoadTy = LI->getType();
+  if (!LoadTy->isIntegerTy(8) && !LoadTy->isIntegerTy(16))
+    return NewOpc;
+
+  int64_t ExpectedShiftAmt = 32 - LoadTy->getIntegerBitWidth();
+  Register ShlAmtReg = MI->getOperand(2).getReg();
+  Register ShrAmtReg = UserMI->getOperand(2).getReg();
+  MachineInstr *ShlAmtDef = MRI.getUniqueVRegDef(ShlAmtReg);
+  MachineInstr *ShrAmtDef = MRI.getUniqueVRegDef(ShrAmtReg);
+  auto IsExpectedConst = [ExpectedShiftAmt](MachineInstr *MI) {
+    return MI && MI->getOpcode() == WebAssembly::CONST_I32 &&
+           MI->getOperand(1).getImm() == ExpectedShiftAmt;
+  };
+  if (!IsExpectedConst(ShlAmtDef) || !IsExpectedConst(ShrAmtDef))
+    return NewOpc;
+
   if (LoadTy->isIntegerTy(8))
     NewOpc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
   else if (LoadTy->isIntegerTy(16))
