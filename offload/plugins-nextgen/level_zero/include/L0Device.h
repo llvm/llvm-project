@@ -549,8 +549,7 @@ public:
 
   // Generic device interface implementation.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId,
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
                  const OffloadBinMetadataTy *Metadata) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
   Expected<void *> allocate(size_t Size, void *HstPtr,

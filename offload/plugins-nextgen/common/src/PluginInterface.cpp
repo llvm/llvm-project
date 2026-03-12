@@ -974,7 +974,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
 // Helper function to finalize image loading after loadBinaryImpl succeeds
 static Error finalizeImageLoad(GenericDeviceTy &Device, GenericPluginTy &Plugin,
-                                DeviceImageTy *Image) {
+                               DeviceImageTy *Image) {
   Device.LoadedImages.push_back(Image);
 
   if (auto Err = Device.setupRPCServer(Plugin, *Image))
@@ -1001,8 +1001,7 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                            "failure to jit IR image");
     }
     Buffer = std::move(*CompiledImageOrErr);
-  }
-  else if (identify_magic(InputTgtImage) == file_magic::offload_binary) {
+  } else if (identify_magic(InputTgtImage) == file_magic::offload_binary) {
     MemoryBufferRef InputBuffer(InputTgtImage, "offload_binary");
 
     auto ParsedOrErr = parseOffloadBinary(InputBuffer);
@@ -1021,20 +1020,21 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
           if (!FirstLoadedImage)
             FirstLoadedImage = *ImageOrErr;
         } else {
-          LoadErrors = joinErrors(std::move(LoadErrors), ImageOrErr.takeError());
+          LoadErrors =
+              joinErrors(std::move(LoadErrors), ImageOrErr.takeError());
         }
         continue;
       }
 
       int32_t Compatible = Plugin.isDeviceCompatible(DeviceId, InnerImage);
       if (!Compatible)
-        continue;  // Not compatible, skip
+        continue; // Not compatible, skip
 
       auto InnerBuffer = MemoryBuffer::getMemBufferCopy(InnerImage);
       const OffloadBinMetadataTy *MetadataPtr = &ExtractedMetadata;
 
-      auto ImageOrErr = loadBinaryImpl(std::move(InnerBuffer), LoadedImages.size(),
-                                        MetadataPtr);
+      auto ImageOrErr = loadBinaryImpl(std::move(InnerBuffer),
+                                       LoadedImages.size(), MetadataPtr);
       if (ImageOrErr) {
         DeviceImageTy *LoadedImage = *ImageOrErr;
 
@@ -1050,7 +1050,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
               device_load, Plugin.getUserId(DeviceId),
               /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
               /*ImgSize=*/Bytes,
-              /*HostAddr=*/const_cast<unsigned char *>(InnerImage.bytes_begin()),
+              /*HostAddr=*/
+              const_cast<unsigned char *>(InnerImage.bytes_begin()),
               /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
         }
 #endif
@@ -1072,13 +1073,12 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     }
 
     return FirstLoadedImage;
-  }
-  else {
+  } else {
     Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
   }
 
-  auto ImageOrErr = loadBinaryImpl(std::move(Buffer), LoadedImages.size(),
-                                    nullptr);
+  auto ImageOrErr =
+      loadBinaryImpl(std::move(Buffer), LoadedImages.size(), nullptr);
   if (!ImageOrErr)
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
@@ -1832,7 +1832,8 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   }
   case file_magic::offload_binary: {
     // Unwrap OffloadBinary and check if ANY inner image is compatible
-    auto ParsedOrErr = parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
+    auto ParsedOrErr =
+        parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
     if (Error Err = ParsedOrErr.takeError())
       return HandleError(std::move(Err));
 
@@ -1844,7 +1845,7 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
       if (Error Err = MetadataMatchOrErr.takeError())
         return HandleError(std::move(Err));
       if (!*MetadataMatchOrErr)
-        continue;  
+        continue;
 
       if (isPluginCompatible(InnerImage))
         return true;
@@ -1893,7 +1894,8 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     return *MatchOrErr;
   }
   case file_magic::offload_binary: {
-    auto ParsedOrErr = parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
+    auto ParsedOrErr =
+        parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
     if (Error Err = ParsedOrErr.takeError())
       return HandleError(std::move(Err));
 
@@ -1905,7 +1907,7 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
       if (Error Err = MetadataMatchOrErr.takeError())
         return HandleError(std::move(Err));
       if (!*MetadataMatchOrErr)
-        continue;  // Metadata not compatible, skip this image
+        continue; // Metadata not compatible, skip this image
 
       // Metadata compatible, check inner image recursively
       if (isDeviceCompatible(DeviceId, InnerImage))

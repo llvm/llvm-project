@@ -200,8 +200,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId,
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
                  const OffloadBinMetadataTy *Metadata) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();

@@ -42,8 +42,7 @@ class L0ProgramBuilderTy {
 
 public:
   L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image,
-                     int32_t ImageId,
-                     const OffloadBinMetadataTy *Metadata)
+                     int32_t ImageId, const OffloadBinMetadataTy *Metadata)
       : Device(Device), Image(std::move(Image)), Metadata(Metadata) {
     (void)ImageId; // Unused parameter
   }

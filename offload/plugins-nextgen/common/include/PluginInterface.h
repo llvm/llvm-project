@@ -1428,8 +1428,8 @@ struct GenericPluginTy {
   /// This is called when unwrapping OffloadBinary to check if the metadata
   /// (triple, arch, ImageKind, etc.) is compatible before checking the inner
   /// image. Returns true if metadata is compatible, false otherwise.
-  virtual Expected<bool> isMetadataCompatible(
-      const OffloadBinMetadataTy &Metadata) const {
+  virtual Expected<bool>
+  isMetadataCompatible(const OffloadBinMetadataTy &Metadata) const {
     return true;
   }
 

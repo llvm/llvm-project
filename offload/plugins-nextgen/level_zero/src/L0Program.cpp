@@ -243,12 +243,13 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       ODBG(OLDT_Module) << "Loading native binary module";
       ModuleFormat = ZE_MODULE_FORMAT_NATIVE;
     } else {
-      return Plugin::error(ErrorCode::UNKNOWN,
-                           "Unsupported image kind %d in OffloadBinary metadata",
-                           static_cast<int>(ImageKind));
+      return Plugin::error(
+          ErrorCode::UNKNOWN,
+          "Unsupported image kind %d in OffloadBinary metadata",
+          static_cast<int>(ImageKind));
     }
 
-    const uint8_t *ImgBegin = (const uint8_t*)Image.getBufferStart();
+    const uint8_t *ImgBegin = (const uint8_t *)Image.getBufferStart();
     return addModule(Image.getBufferSize(), ImgBegin, Options, ModuleFormat);
   }
 
