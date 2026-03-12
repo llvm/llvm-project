@@ -30,6 +30,59 @@ define <2 x double> @extract_subvector_middle(ptr %arg0) {
   ret <2 x double> %v2
 }
 
+define <3 x i32> @test_odd_number_elements(ptr align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: define <3 x i32> @test_odd_number_elements(
+; CHECK-SAME: ptr align 16 dereferenceable(16) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = load <3 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    ret <3 x i32> [[RES]]
+;
+  %L0 = load <2 x i32>, ptr %p, align 8
+  %p1 = getelementptr i8, ptr %p, i64 8
+  %L1 = load <2 x i32>, ptr %p1, align 8
+  %res = shufflevector <2 x i32> %L0, <2 x i32> %L1, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x i32> %res
+}
+
+define <4 x i32> @test_odd_number_load_to_even_svi(ptr align 16 dereferenceable(32) %p) {
+; CHECK-LABEL: define <4 x i32> @test_odd_number_load_to_even_svi(
+; CHECK-SAME: ptr align 16 dereferenceable(32) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = load <4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    ret <4 x i32> [[RES]]
+;
+  %L0 = load <3 x i32>, ptr %p, align 16
+  %p1 = getelementptr i8, ptr %p, i64 12
+  %L1 = load <3 x i32>, ptr %p1, align 4
+  %res = shufflevector <3 x i32> %L0, <3 x i32> %L1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %res
+}
+
+define <11 x i32> @test_odd_to_odd_large_mask(ptr align 64 dereferenceable(64) %p) {
+; CHECK-LABEL: define <11 x i32> @test_odd_to_odd_large_mask(
+; CHECK-SAME: ptr align 64 dereferenceable(64) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = load <11 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    ret <11 x i32> [[RES]]
+;
+  %L0 = load <7 x i32>, ptr %p, align 16
+  %p1 = getelementptr i8, ptr %p, i64 28
+  %L1 = load <7 x i32>, ptr %p1, align 4
+  %res = shufflevector <7 x i32> %L0, <7 x i32> %L1, <11 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10>
+  ret <11 x i32> %res
+}
+
+define <5 x i16> @test_load_17_mask_5_mid_offset_i16(ptr align 16 dereferenceable(68) %p) {
+; CHECK-LABEL: define <5 x i16> @test_load_17_mask_5_mid_offset_i16(
+; CHECK-SAME: ptr align 16 dereferenceable(68) [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 30
+; CHECK-NEXT:    [[RES:%.*]] = load <5 x i16>, ptr [[TMP1]], align 2
+; CHECK-NEXT:    ret <5 x i16> [[RES]]
+;
+  %L0 = load <17 x i16>, ptr %p, align 16
+  %p1 = getelementptr i8, ptr %p, i64 34
+  %L1 = load <17 x i16>, ptr %p1, align 2
+  %res = shufflevector <17 x i16> %L0, <17 x i16> %L1, <5 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19>
+  ret <5 x i16> %res
+}
+
 ; 3. Negative test: Load instruction has multiple uses (!hasOneUse)
 ; Added a store instruction using the load result to the success case.
 define <2 x float> @negative_multi_use(ptr %arg0, ptr %out) {
