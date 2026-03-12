@@ -64,6 +64,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
@@ -17652,6 +17653,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::IncompatibleOBTKinds: {
     if (SrcType->isArrayType())
       SrcType = Context.getDecayedType(SrcType);
+
+    assert(!SrcType->isFunctionType() &&
+           "Unexpected function type found in IncompatibleOBTKinds assignment");
 
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
