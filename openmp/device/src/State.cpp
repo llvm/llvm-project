@@ -142,8 +142,12 @@ void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
   memory::freeGlobal(Ptr, "Slow path shared memory deallocation");
 }
 
+/// Manager of the dynamic cgroup memory buffer.
 struct DynCGroupMemTy {
+  /// Initialize the manager with the information from the kernel launch
+  /// enviornment and the pointer to the native shared memory buffer.
   void init(KernelLaunchEnvironmentTy *KLE, SharedMemPtrTy NativePtr) {
+    // Initialize default values.
     NativeOrNullPtr = nullptr;
     FallbackPtr = nullptr;
     Size = 0;
@@ -151,6 +155,7 @@ struct DynCGroupMemTy {
     if (!KLE)
       return;
 
+    // Initialize values using the kernel launch environment.
     Size = KLE->DynCGroupMemSize;
     Fallback = KLE->DynCGroupMemFb;
     if (Size && Fallback == DynCGroupMemFallbackType::None)
@@ -160,6 +165,7 @@ struct DynCGroupMemTy {
                     Size * mapping::getBlockIdInKernel();
   }
 
+  /// Get the memory space of the buffer.
   omp_memspace_handle_t getMemSpace() const {
     if (Size == 0)
       return omp_null_mem_space;
@@ -168,10 +174,13 @@ struct DynCGroupMemTy {
     return omp_default_mem_space;
   }
 
+  /// Get the size of the buffer.
   size_t getSize() const { return Size; }
 
+  /// Get the native pointer or null if it was a fallback.
   SharedMemPtrTy getNativeOrNullPtr() const { return NativeOrNullPtr; }
 
+  /// Get the native pointer or the fallback pointer.
   unsigned char *getNativeOrFallbackPtr() const {
     return (Fallback == DynCGroupMemFallbackType::DefaultMem)
                ? FallbackPtr

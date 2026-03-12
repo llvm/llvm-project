@@ -71,7 +71,7 @@ struct KernelEnvironmentTy {
 };
 
 /// The fallback types for the dynamic cgroup memory.
-enum class DynCGroupMemFallbackType : unsigned char {
+enum class DynCGroupMemFallbackType : uint8_t {
   /// None. Used for indicating that no fallback was triggered.
   None = 0,
   /// Abort the execution.

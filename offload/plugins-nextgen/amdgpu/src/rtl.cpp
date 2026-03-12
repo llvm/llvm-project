@@ -3805,10 +3805,13 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   DynBlockMemSize =
       std::max(DynBlockMemSize, GenericDevice.getDynamicMemorySize());
 
+  // HSA requires the group segment size to include both static and dynamic.
+  uint32_t TotalBlockMemSize = getStaticBlockMemSize() + DynBlockMemSize;
+
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
-                                  getStaticBlockMemSize() + DynBlockMemSize,
-                                  StackSize, ArgsMemoryManager);
+                                  TotalBlockMemSize, StackSize,
+                                  ArgsMemoryManager);
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,

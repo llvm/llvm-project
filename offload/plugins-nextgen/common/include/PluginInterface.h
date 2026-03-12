@@ -788,9 +788,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// kernel.
   size_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
 
-  /// Indicate whether the device supports block shared memory natively.
-  bool hasNativeBlockSharedMem() const { return MaxBlockSharedMemSize > 0; }
-
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
   virtual Error setContext() = 0;
