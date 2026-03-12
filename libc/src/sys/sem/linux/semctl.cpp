@@ -22,9 +22,19 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
+  // used to parse the fourth varargs argument
+  // its expected to be explicitly declared by application as an union type:
+  // union semun {
+  //  int val;
+  //  struct semid_ds *buf;
+  //  unsigned short  *array;
+  //  struct seminfo  *__buf; (* linux specific *)
+  // } arg;
   unsigned long cmd_arg = 0;
 
+  // parse cmd_arg based on the flags
   switch (cmd) {
+    // does not use the vargs
   case IPC_RMID:
   case GETVAL:
   case GETPID:
@@ -32,6 +42,7 @@ LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
   case GETZCNT:
     break;
 
+    // use vargs as int, semun->val
   case SETVAL: {
     va_list vargs;
     va_start(vargs, cmd);
@@ -40,6 +51,7 @@ LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
     break;
   }
 
+    // use vargs as semid_ds*, semun->buf
   case IPC_SET:
   case IPC_STAT:
   case SEM_STAT:
@@ -51,6 +63,7 @@ LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
     break;
   }
 
+    // use vargs as short*, semun->array
   case GETALL:
   case SETALL: {
     va_list vargs;
@@ -60,6 +73,7 @@ LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
     break;
   }
 
+    // linux specific, use vargs as seminfo*, semun->__buf
   case IPC_INFO:
   case SEM_INFO: {
     va_list vargs;
@@ -69,6 +83,7 @@ LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
     break;
   }
 
+    // unrecognized flags
   default:
     libc_errno = EINVAL;
     return -1;
