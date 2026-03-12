@@ -145,7 +145,7 @@ tools = [
         unresolved="ignore",
     ),
     "clang-ssaf-linker",
-    "ssaf-format",
+    "clang-ssaf-format",
 ]
 
 if config.clang_examples:
