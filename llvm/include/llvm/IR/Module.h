@@ -577,21 +577,28 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
-  std::optional<GlobalValue::GUID> getGUID(const Value* V) const {
+  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
     const auto It = ValueToGUIDMap.find(V);
     if (It == ValueToGUIDMap.end()) {
-      return {};
+      return std::nullopt;
     }
 
     return It->getSecond();
   }
 
-  void insertGUID(const Value* V, GlobalValue::GUID GUID) {
-    ValueToGUIDMap[V] = GUID;
+  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
+    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
+    
+    (void)It, (void)WasInserted;
+  #ifndef NDEBUG
+    if (!WasInserted) {
+      assert((It->second == GUID) && "insertGUID called with different value");
+    }
+  #endif
   }
 
 private:
-  DenseMap<const Value*, GlobalValue::GUID> ValueToGUIDMap;
+  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
 
 /// @}
 /// @name Direct access to the globals list, functions list, and symbol table

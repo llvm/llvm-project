@@ -978,6 +978,8 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// Callback to ask whether a symbol is the prevailing copy when invoked
   /// during combined index building.
   std::function<bool(StringRef)> IsPrevailing = nullptr;
+  
+  /// Callback invoked whenever a new ValueInfo is generated.
   std::function<void(ValueInfo)> OnValueInfo = nullptr;
 
   /// Saves the stack ids from the STACK_IDS record to consult when adding
@@ -993,9 +995,9 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// list and used to avoid repeated hash lookups.
   std::vector<unsigned> StackIdToIndex;
 
-   /// A list of GUIDs defined by this module. Indexed by ValueID.
-   std::vector<uint64_t> DefinedGUIDs;
- 
+  /// A list of GUIDs defined by this module. Indexed by ValueID.
+  std::vector<uint64_t> DefinedGUIDs;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -4106,9 +4108,10 @@ Error BitcodeReader::globalCleanup() {
 
   for (size_t ValueID = 0; ValueID < GUIDList.size(); ValueID++) {
     const auto GUID = GUIDList[ValueID];
-    if (GUID == 0) continue;
+    if (GUID == 0)
+      continue;
 
-    const auto* Value = ValueList[ValueID];
+    const auto *Value = ValueList[ValueID];
     TheModule->insertGUID(Value, GUID);
   }
 
@@ -7338,13 +7341,14 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
     ValueGUID = DefinedGUIDs[ValueID];
   if (ValueGUID == 0)
     ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
-      GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
+        GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
 
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
     OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
   if (PrintSummaryGUIDs)
-    dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is " << ValueName << "\n";
+    dbgs() << "GUID " << ValueGUID << "(" << OriginalNameID << ") is "
+           << ValueName << "\n";
 
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
@@ -8776,10 +8780,10 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 // We don't use ModuleIdentifier here because the client may need to control the
 // module path used in the combined summary (e.g. when reading summaries for
 // regular LTO modules).
-Error BitcodeModule::readSummary(
-    ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-    std::function<bool(StringRef)> IsPrevailing,
-    std::function<void(ValueInfo)> OnValueInfo) {
+Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
+                                 StringRef ModulePath,
+                                 std::function<bool(StringRef)> IsPrevailing,
+                                 std::function<void(ValueInfo)> OnValueInfo) {
   BitstreamCursor Stream(Buffer);
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return JumpFailed;

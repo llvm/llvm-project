@@ -1221,8 +1221,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         // Find the summary in the module for this very GV and record the new
         // linkage so that we can switch it when we import the GV.
         if (R.LinkerRedefined)
-          if (auto *S = ThinLTO.CombinedIndex.findSummaryInModule(
-                  GUID, BMID))
+          if (auto *S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID))
             S->setLinkage(GlobalValue::WeakAnyLinkage);
       }
 

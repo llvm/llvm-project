@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides a pass which assigns a a GUID (globally unique identifier)
-// to every GlobalValue in the module, according to its current name, linkage,
-// and originating file.
+// This file provides a pass which assigns GUID (globally unique identifier)
+// metadata to every GlobalValue in the module, according to its current name,
+// linkage, and originating file. It is idempotent -- if GUID metadata is
+// already present, it does nothing.
 //
 //===----------------------------------------------------------------------===//
 

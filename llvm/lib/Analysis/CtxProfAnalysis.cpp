@@ -50,7 +50,7 @@ static cl::opt<bool> ForceIsInSpecializedModule(
     "ctx-profile-force-is-specialized", cl::init(false),
     cl::desc("Treat the given module as-if it were containing the "
              "post-thinlink module containing the root"));
- 
+
 class ProfileAnnotatorImpl final {
   friend class ProfileAnnotator;
   class BBInfo;

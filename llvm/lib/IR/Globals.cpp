@@ -105,19 +105,23 @@ std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   auto *MD = getMetadata(LLVMContext::MD_unique_id);
   if (MD != nullptr)
     return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
-                                ->getValue()
-                                ->stripPointerCasts())
+                                 ->getValue()
+                                 ->stripPointerCasts())
         ->getZExtValue();
 
   // Handle a few special cases where we just want to compute it based on the
   // current properties.
-  if (isDeclaration() || isa<GlobalAlias>(this) || getName().starts_with("llvm.")) {
+  // TODO: Maybe we should use a more robust check for intrinsics than just
+  // matching on the name?
+  if (isDeclaration() || isa<GlobalAlias>(this) ||
+      getName().starts_with("llvm.")) {
     return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
   }
-  
+
   // Otherwise we try to look it up in the module, for cases where we've read
   // the GUID table but not the metadata.
-  if (getParent() == nullptr) return {};
+  if (getParent() == nullptr)
+    return {};
   const Module &M = *getParent();
 
   return M.getGUID(this);

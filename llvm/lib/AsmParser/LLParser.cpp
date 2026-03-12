@@ -9880,7 +9880,9 @@ bool LLParser::addGlobalValueToIndex(
       // Be a little lenient here, to accomodate older files without GUIDs
       // already computed and assigned as metadata.
       auto MaybeGUID = GV->getGUIDIfAssigned();
-      GUID = MaybeGUID ? *MaybeGUID : GlobalValue::getGUIDAssumingExternalLinkage(GV->getName());
+      GUID = MaybeGUID
+                 ? *MaybeGUID
+                 : GlobalValue::getGUIDAssumingExternalLinkage(GV->getName());
 
       VI = Index->getOrInsertValueInfo(GV, GUID);
     } else {

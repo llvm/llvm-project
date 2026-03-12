@@ -615,6 +615,10 @@ public:
   /// Return a 64-bit global unique ID for this value. It is based on the
   /// "original" name and linkage of this value (i.e. whenever its GUID was
   /// assigned). This might not match the current name and linkage.
+  ///
+  /// The \c AssignGUIDPass must be run before this is called, otherwise
+  /// GUIDs won't be available. This pass can be run multiple times as it does
+  /// nothing if GUID metadata is already present.
   GUID getGUID() const;
 
   /// Return the GUID for this value if it has been assigned, nullopt

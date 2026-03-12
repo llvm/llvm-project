@@ -4623,7 +4623,8 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
 
 static GlobalValue::GUID getOrComputeGUID(const GlobalValue& V) {
   auto MaybeGUID = V.getGUIDIfAssigned();
-  return MaybeGUID ? *MaybeGUID : GlobalValue::getGUIDAssumingExternalLinkage(V.getName());
+  return MaybeGUID ? *MaybeGUID
+                   : GlobalValue::getGUIDAssumingExternalLinkage(V.getName());
 }
 
 // Collect the global value references in the given variable's initializer,
@@ -4950,7 +4951,8 @@ void ModuleBitcodeWriterBase::writeGUIDList() {
     } else {
       GUID = 0;
     }
-    if (GUID == 0) continue;
+    if (GUID == 0)
+      continue;
 
     const auto ValueID = VE.getValueID(&GV);
     GUIDs[ValueID] = GUID;

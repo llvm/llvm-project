@@ -628,7 +628,8 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
 
   for (auto &GV : Mod.global_values()) {
     auto GUID = Mod.getGUID(&GV);
-    if (!GUID) continue;
+    if (!GUID)
+      continue;
 
     if (GlobalValueSummary *GVS = DefinedGlobals.lookup(*GUID))
       if (!Index.isGlobalValueLive(GVS)) {

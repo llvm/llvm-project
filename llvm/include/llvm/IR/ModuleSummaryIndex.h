@@ -1770,8 +1770,10 @@ public:
     return ValueInfo(HaveGVs, VP);
   }
 
-  /// Return a ValueInfo for \p GV with GUID \p GUID and mark it as belonging to GV.
-  ValueInfo getOrInsertValueInfo(const GlobalValue *GV, GlobalValue::GUID GUID) {
+  /// Return a ValueInfo for \p GV with GUID \p GUID and mark it as belonging to
+  /// GV.
+  ValueInfo getOrInsertValueInfo(const GlobalValue *GV,
+                                 GlobalValue::GUID GUID) {
     assert(HaveGVs);
     auto VP = getOrInsertValuePtr(GUID);
     VP->second.U.GV = GV;
