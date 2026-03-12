@@ -1746,7 +1746,6 @@ TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
 }
 
 TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
-  IntegerType *Int64 = IntegerType::get(C, 64);
   VPlan &Plan = getPlan();
 
   // Initially, VF is not materialized.
@@ -1760,8 +1759,7 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
   I->addOperand(VF);
 
   // Replace VF with a constant.
-  VPValue *Const1 = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 1));
-  VF->replaceAllUsesWith(Const1);
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
 
   // Now VF should be materialized.
   EXPECT_TRUE(Plan.getVF().isMaterialized());
@@ -1769,13 +1767,11 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
-  IntegerType *Int64 = IntegerType::get(C, 64);
   VPlan &Plan = getPlan();
 
   // Materialize VF by replacing all uses.
   VPValue *VF = &Plan.getVF();
-  VPValue *Const1 = Plan.getOrAddLiveIn(ConstantInt::get(Int64, 1));
-  VF->replaceAllUsesWith(Const1);
+  VF->replaceAllUsesWith(Plan.getConstantInt(64, 1));
   EXPECT_TRUE(Plan.getVF().isMaterialized());
 
   // Adding a new user to a materialized value should crash.

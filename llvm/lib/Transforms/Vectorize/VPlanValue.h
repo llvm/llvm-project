@@ -256,7 +256,10 @@ struct VPSymbolicValue : public VPValue {
   bool isMaterialized() const { return Materialized; }
 
   /// Mark this symbolic value as materialized.
-  void markMaterialized() { Materialized = true; }
+  void markMaterialized() {
+    assert(!Materialized && "VPSymbolicValue already materialized");
+    Materialized = true;
+  }
 
 private:
   /// Track whether this symbolic value has been materialized (replaced).
