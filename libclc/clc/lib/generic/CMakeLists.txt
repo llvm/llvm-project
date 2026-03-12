@@ -74,6 +74,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_cospi.cl
   math/clc_div_cr.cl
   math/clc_div_fast.cl
+  math/clc_ep.cl
   math/clc_ep_log.cl
   math/clc_erf.cl
   math/clc_erfc.cl
