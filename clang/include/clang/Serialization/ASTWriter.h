@@ -929,8 +929,6 @@ public:
 
   void handleVTable(CXXRecordDecl *RD);
 
-  void addTouchedModuleFile(serialization::ModuleFile *);
-
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
