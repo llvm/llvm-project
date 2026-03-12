@@ -39,7 +39,7 @@ reorder_blocks:
 
 # CHECK: Disassembly of section .text:
 
-# CHECK: <reorder_blocks>:
+# CHECK:      <reorder_blocks>:
 # CHECK-NEXT:           {{.*}} cbgt x0, #0x0, 0x[[ADDR:[0-9a-f]+]] <{{.*}}>
 # CHECK:      <.hot_exit>:
 # CHECK-NEXT:           {{.*}} mov  x0, #0x2 // =2
@@ -50,11 +50,13 @@ reorder_blocks:
 
 # BEYOND-1KB: Disassembly of section .text:
 
-# BEYOND-1KB: <reorder_blocks>:
+# BEYOND-1KB:      <reorder_blocks>:
 # BEYOND-1KB-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # BEYOND-1KB-NEXT:            {{.*}} b              0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
-# BEYOND-1KB:      [[ADDR0]]: {{.*}} nop
+# BEYOND-1KB:      <.hot_exit>:
+# BEYOND-1KB-NEXT: [[ADDR0]]: {{.*}} nop
 # BEYOND-1KB:                 {{.*}} mov  x0, #0x2 // =2
 # BEYOND-1KB-NEXT:            {{.*}} ret
-# BEYOND-1KB:      [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
+# BEYOND-1KB:      <.cold_exit>:
+# BEYOND-1KB-NEXT: [[ADDR1]]: {{.*}} mov  x0, #0x1 // =1
 # BEYOND-1KB-NEXT:            {{.*}} ret
