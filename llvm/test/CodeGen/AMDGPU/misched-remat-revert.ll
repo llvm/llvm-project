@@ -38,21 +38,21 @@ define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrsp
   ; CHECK-NEXT:   [[V_SUB_U32_e32_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e32 0, [[V_XOR_B32_e32_1]], implicit $exec
   ; CHECK-NEXT:   [[V_LSHLREV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 1, [[V_SUB_U32_e32_]], implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_2:%[0-9]+]].sub1:vreg_64_align2 = V_MOV_B32_e32 0, implicit $exec, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_3:%[0-9]+]].sub1:vreg_64_align2 = V_MOV_B32_e32 0, implicit $exec, implicit $exec
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub2:sgpr_128 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub3:sgpr_128 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:av_128_align2 = COPY [[S_MOV_B32_]]
   ; CHECK-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12288, implicit $exec
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 12288, implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[S_LOAD_DWORD_IMM2]], [[V_XOR_B32_e32_]], implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[S_LOAD_DWORD_IMM2]], [[V_LSHLREV_B32_e32_1]], implicit $exec
   ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_CSELECT_B64_]], -1, implicit-def dead $scc
   ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_XOR_B64_]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_]], implicit $exec
-  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_3:%[0-9]+]].sub1:vreg_64_align2 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_4:%[0-9]+]].sub1:vreg_64_align2 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop:
   ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
@@ -60,20 +60,20 @@ define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrsp
   ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[S_LOAD_DWORDX4_IMM]].sub3, [[V_MOV_B32_e32_1]], implicit $exec
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFSET:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFSET [[S_MOV_B32_]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFSET1:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFSET [[S_MOV_B32_]], 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[V_MOV_B32_e32_2]], [[S_MOV_B32_]], 0, 2048, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN1:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[V_MOV_B32_e32_2]], [[S_MOV_B32_]], 0, 3072, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[V_MOV_B32_e32_4]], [[S_MOV_B32_]], 0, 2048, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN1:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[V_MOV_B32_e32_4]], [[S_MOV_B32_]], 0, 3072, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   DS_WRITE_B128_gfx9 [[V_ADD_U32_e32_2]], [[COPY2]], 0, 0, implicit $exec :: (store (s128) into %ir.p19, addrspace 3)
   ; CHECK-NEXT:   S_WAITCNT 0
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFSET2:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFSET [[S_MOV_B32_]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFSET3:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFSET [[S_MOV_B32_]], 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN2:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY3]], [[S_MOV_B32_]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_4:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_]].sub0
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_4]], [[V_MOV_B]], 0, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_]].sub0
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_3]], [[V_MOV_B]], 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   undef [[DS_READ_B32_gfx9_:%[0-9]+]].sub0:vreg_64_align2 = DS_READ_B32_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) null`, align 8, addrspace 3)
-  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_4:%[0-9]+]].sub1:vreg_64_align2 = DS_READ_B32_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec :: (load (s32) from %ir.sunkaddr, addrspace 3)
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_1:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_3]], [[V_MOV_B]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_3:%[0-9]+]].sub1:vreg_64_align2 = DS_READ_B32_gfx9 [[V_ADD_U32_e32_1]], 0, 0, implicit $exec :: (load (s32) from %ir.sunkaddr2, addrspace 3)
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_3:%[0-9]+]].sub1:vreg_64_align2 = DS_READ_B32_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec :: (load (s32) from %ir.sunkaddr, addrspace 3)
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_1:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_2]], [[V_MOV_B]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_2:%[0-9]+]].sub1:vreg_64_align2 = DS_READ_B32_gfx9 [[V_ADD_U32_e32_1]], 0, 0, implicit $exec :: (load (s32) from %ir.sunkaddr2, addrspace 3)
   ; CHECK-NEXT:   SCHED_GROUP_BARRIER 0, 0, 0
   ; CHECK-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = COPY [[V_AND_B32_e32_2]]
@@ -84,10 +84,10 @@ define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrsp
   ; CHECK-NEXT:   [[V_MOV_B1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; CHECK-NEXT:   undef [[S_MOV_B32_1:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_2:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B1]], [[V_MOV_B1]], 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_4:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_1]].sub0
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_1]].sub0
   ; CHECK-NEXT:   undef [[S_MOV_B32_2:%[0-9]+]].sub0:sreg_64 = S_MOV_B32 16843009
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]].sub1:sreg_64 = COPY [[S_MOV_B32_2]].sub0
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_3:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_4]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_3:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_3]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:av_64_align2 = COPY [[S_MOV_B32_2]]
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_4:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[COPY4]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_3]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B32_gfx9_:%[0-9]+]].sub1:vreg_64_align2 = V_MOV_B32_e32 0, implicit $exec
@@ -157,7 +157,7 @@ define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrsp
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_18:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B1]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_17]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN15:%[0-9]+]]:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY13]], [[S_MOV_B32_1]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, align 1, addrspace 8)
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_3:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_1]].sub0
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]].sub0:vreg_64_align2 = COPY [[S_MOV_B32_1]].sub0
   ; CHECK-NEXT:   [[V_OR_B32_e32_2:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[S_LOAD_DWORDX4_IMM]].sub0, [[COPY1]](s32), implicit $exec
   ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_19:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B1]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_18]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_OR_B32_e32_3:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 1, [[COPY1]](s32), implicit $exec
@@ -167,7 +167,7 @@ define amdgpu_kernel void @test_revert_schedule(i32 %arg0, i32 %arg1, ptr addrsp
   ; CHECK-NEXT:   [[V_OR_B32_e32_5:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[V_XOR_B32_e32_2]], [[V_XOR_B32_e32_1]], implicit $exec
   ; CHECK-NEXT:   [[V_LSHLREV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e32 1, [[V_OR_B32_e32_5]], implicit $exec
   ; CHECK-NEXT:   [[V_XOR_B32_e32_3:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 1, [[V_OR_B32_e32_]], implicit $exec
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_21:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_3]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_20]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_21:%[0-9]+]]:vreg_128_align2 = V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64 [[V_MOV_B32_e32_2]], [[V_MOV_B1]], [[V_MFMA_F32_16X16X32_FP8_FP8_vgprcd_e64_20]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_OR_B32_e32_6:%[0-9]+]]:vgpr_32 = V_OR_B32_e32 [[S_LOAD_DWORDX4_IMM]].sub0, [[V_XOR_B32_e32_3]], implicit $exec
   ; CHECK-NEXT:   [[V_XOR_B32_e32_4:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 1, [[V_OR_B32_e32_4]], implicit $exec
   ; CHECK-NEXT:   [[V_LSHRREV_B32_e32_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e32 3, [[COPY1]](s32), implicit $exec
