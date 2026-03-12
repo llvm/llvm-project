@@ -19,6 +19,7 @@
 ; CHECK-DAG: %[[#c4:]] = OpConstant %[[#int]] 4
 ; CHECK-DAG: %[[#c5:]] = OpConstant %[[#int]] 5
 ; CHECK-DAG: %[[#undef:]] = OpUndef %[[#int]]
+; CHECK-DAG: %[[#zero_val:]] = OpConstant %[[#int]] 0
 
 ; CHECK-DAG: %[[#out:]] = OpVariable %[[#ptr_p_int]] Private
 
@@ -142,17 +143,17 @@ define void @test_zero() #0 {
   ; CHECK-DAG:  %[[#val_val:]] = OpLoad %[[#int]] %[[#val]]
   ; CHECK:      %[[#idx64:]] = OpUConvert %[[#long]] %[[#idx_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c0]]
-  ; CHECK:      OpStore %[[#ac]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#zero_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c1]]
-  ; CHECK:      OpStore %[[#ac]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#zero_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c2]]
-  ; CHECK:      OpStore %[[#ac]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#zero_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c3]]
-  ; CHECK:      OpStore %[[#ac]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#zero_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c4]]
-  ; CHECK:      OpStore %[[#ac]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#zero_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c5]]
-  ; CHECK:      OpStore %[[#ac]] %[[#c0]]
+  ; CHECK:      OpStore %[[#ac]] %[[#zero_val]]
   ; CHECK:      %[[#ac:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#idx64]]
   ; CHECK:      OpStore %[[#ac]] %[[#val_val]]
   ; CHECK:      %[[#ptr0:]] = OpInBoundsAccessChain %[[#ptr_f_int]] %[[#v_zero]] %[[#c0]]
