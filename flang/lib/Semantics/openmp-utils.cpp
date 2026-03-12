@@ -727,13 +727,13 @@ LoopSequence::LoopSequence(
   assert(entry_ && "Expecting loop like code");
 
   createChildrenFromRange(entry_->location);
-  length_ = calculateLength();
+  precalculate();
 }
 
 LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops)
     : allowAllLoops_(allowAllLoops), entry_(std::move(entry)) {
   createChildrenFromRange(entry_->location);
-  length_ = calculateLength();
+  precalculate();
 }
 
 std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
@@ -756,16 +756,32 @@ std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
 void LoopSequence::createChildrenFromRange(
     ExecutionPartIterator::IteratorType begin,
     ExecutionPartIterator::IteratorType end) {
+  // Create children. If there is zero or one, this LoopSequence could be
+  // a nest. If there are more, it could be a proper sequence. In the latter
+  // case any code between consecutive children must be "transparent".
   for (auto &code : BlockRange(begin, end, BlockRange::Step::Over)) {
     if (auto entry{createConstructEntry(code)}) {
       children_.push_back(LoopSequence(std::move(entry), allowAllLoops_));
+      if (!IsTransformableLoop(code)) {
+        hasInvalidIC_ = true;
+        hasOpaqueIC_ = true;
+      }
+    } else {
+      hasInvalidIC_ = hasInvalidIC_ || !IsValidInterveningCode(code);
+      hasOpaqueIC_ = hasOpaqueIC_ || !IsTransparentInterveningCode(code);
     }
   }
 }
 
+void LoopSequence::precalculate() {
+  // Calculate length before depths.
+  length_ = calculateLength();
+  depth_ = calculateDepths();
+}
+
 std::optional<int64_t> LoopSequence::calculateLength() const {
   if (!entry_->owner) {
-    return sumOfChildrenLengths();
+    return getNestedLength();
   }
   if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
     return 1;
@@ -783,7 +799,7 @@ std::optional<int64_t> LoopSequence::calculateLength() const {
     return std::nullopt;
   }
 
-  auto nestedCount{sumOfChildrenLengths()};
+  auto nestedLength{getNestedLength()};
 
   if (dir == llvm::omp::Directive::OMPD_fuse) {
     // If there are no loops nested inside of FUSE, then the construct is
@@ -796,7 +812,7 @@ std::optional<int64_t> LoopSequence::calculateLength() const {
     //   !$omp do         ! error: this should contain a loop (superfluous)
     //   !$omp fuse       ! error: this should contain a loop
     //   !$omp end fuse
-    if (!nestedCount || *nestedCount == 0) {
+    if (!nestedLength || *nestedLength == 0) {
       return std::nullopt;
     }
     auto *clause{
@@ -810,21 +826,21 @@ std::optional<int64_t> LoopSequence::calculateLength() const {
     if (!count || *count <= 0) {
       return std::nullopt;
     }
-    if (*count <= *nestedCount) {
-      return 1 + *nestedCount - *count;
+    if (*count <= *nestedLength) {
+      return 1 + *nestedLength - *count;
     }
     return std::nullopt;
   }
 
   if (dir == llvm::omp::Directive::OMPD_nothing) {
-    return nestedCount;
+    return nestedLength;
   }
 
   // For every other loop construct return 1.
   return 1;
 }
 
-std::optional<int64_t> LoopSequence::sumOfChildrenLengths() const {
+std::optional<int64_t> LoopSequence::getNestedLength() const {
   int64_t sum{0};
   for (auto &seq : children_) {
     if (auto len{seq.length()}) {
@@ -834,5 +850,115 @@ std::optional<int64_t> LoopSequence::sumOfChildrenLengths() const {
     }
   }
   return sum;
+}
+
+LoopSequence::Depth LoopSequence::calculateDepths() const {
+  auto plus{[](std::optional<int64_t> a,
+                std::optional<int64_t> b) -> std::optional<int64_t> {
+    if (a && b) {
+      return *a + *b;
+    }
+    return std::nullopt;
+  }};
+
+  // The sequence length is calculated first, so we already know if this
+  // sequence is a nest or not.
+  if (!isNest()) {
+    return Depth{0, 0};
+  }
+
+  // Get the length of the nested sequence. The hasInvalidIC_ and hasOpaqueIC_
+  // flags do not count canonical loop nests, but there can only be one for
+  // depth to make sense.
+  std::optional<int64_t> length{getNestedLength()};
+  // Get the depths of the code nested in this sequence (e.g. contained in
+  // entry_), and use it as the basis for the depths of entry_->owner.
+  auto [semaDepth, perfDepth]{getNestedDepths()};
+  if (hasInvalidIC_ || length.value_or(0) != 1) {
+    semaDepth = perfDepth = 0;
+  } else if (hasOpaqueIC_ || length.value_or(0) != 1) {
+    perfDepth = 0;
+  }
+
+  if (!entry_->owner) {
+    return Depth{semaDepth, perfDepth};
+  }
+  if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
+    return Depth{plus(1, semaDepth), plus(1, perfDepth)};
+  }
+
+  auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
+  const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
+  llvm::omp::Directive dir{beginSpec.DirId()};
+  if (!IsTransformableLoop(omp)) {
+    return Depth{0, 0};
+  }
+
+  switch (dir) {
+  // TODO: case llvm::omp::Directive::OMPD_split:
+  // TODO: case llvm::omp::Directive::OMPD_flatten:
+  case llvm::omp::Directive::OMPD_fuse:
+    if (auto *clause{parser::omp::FindClause(
+            beginSpec, llvm::omp::Clause::OMPC_depth)}) {
+      // FIXME: all loops must be fused for this
+      auto &expr{parser::UnwrapRef<parser::Expr>(clause->u)};
+      auto value{GetIntValue(expr)};
+      return Depth{value, value};
+    }
+    return Depth{1, 1};
+  case llvm::omp::Directive::OMPD_interchange:
+  case llvm::omp::Directive::OMPD_nothing:
+  case llvm::omp::Directive::OMPD_reverse:
+    return {semaDepth, perfDepth};
+  case llvm::omp::Directive::OMPD_stripe:
+  case llvm::omp::Directive::OMPD_tile:
+    // Look for SIZES clause.
+    if (auto *clause{parser::omp::FindClause(
+            beginSpec, llvm::omp::Clause::OMPC_sizes)}) {
+      // Return the number of arguments in the SIZES clause
+      size_t num{
+          parser::UnwrapRef<parser::OmpClause::Sizes>(clause->u).v.size()};
+      return Depth{plus(num, semaDepth), plus(num, perfDepth)};
+    }
+    // The SIZES clause is mandatory, if it's missing the result is unknown.
+    return {std::nullopt, std::nullopt};
+  case llvm::omp::Directive::OMPD_unroll:
+    if (IsFullUnroll(omp)) {
+      return Depth{0, 0};
+    }
+    // If this is not a full unroll then look for a PARTIAL clause.
+    if (auto *clause{parser::omp::FindClause(
+            beginSpec, llvm::omp::Clause::OMPC_partial)}) {
+      std::optional<int64_t> factor;
+      if (auto *expr{parser::Unwrap<parser::Expr>(clause->u)}) {
+        factor = GetIntValue(*expr);
+      }
+      // If it's a partial unroll, and the unroll count is 1, then this
+      // construct is a no-op.
+      if (factor && *factor == 1) {
+        return Depth{semaDepth, perfDepth};
+      }
+      // If it's a proper partial unroll, then the resulting loop cannot
+      // have either depth greater than 1: if it had a loop nested in it,
+      // then after unroll it will have at least two copies it it, making
+      // it a final loop.
+      return {1, 1};
+    }
+    return Depth{std::nullopt, std::nullopt};
+  default:
+    llvm_unreachable("Expecting loop-transforming construct");
+  }
+}
+
+LoopSequence::Depth LoopSequence::getNestedDepths() const {
+  if (length() != 1) {
+    return Depth{0, 0};
+  } else if (children_.empty()) {
+    assert(entry_->owner &&
+        parser::Unwrap<parser::DoConstruct>(entry_->owner) &&
+        "Expecting DO construct");
+    return Depth{0, 0};
+  }
+  return children_.front().depth_;
 }
 } // namespace Fortran::semantics::omp
