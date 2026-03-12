@@ -195,7 +195,7 @@ class PRSubscriber:
 {self.COMMENT_TAG}
 {team_mention}
 
-{format_author(self.issue.author)}
+{format_author(self.pr.user)}
 
 <details>
 <summary>Changes</summary>
