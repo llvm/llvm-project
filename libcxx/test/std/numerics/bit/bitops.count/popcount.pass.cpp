@@ -165,6 +165,17 @@ int main(int, char**)
       assert(std::popcount(T64(~T64(0))) == 64);
       assert(std::popcount(T128(0)) == 0);
       assert(std::popcount(T128(~T128(0))) == 128);
+
+      // Odd (non-byte-aligned) widths: popcount is safe regardless of
+      // numeric_limits::digits (no digits dependency).
+      using T13 = unsigned _BitInt(13);
+      using T77 = unsigned _BitInt(77);
+      assert(std::popcount(T13(0)) == 0);
+      assert(std::popcount(T13(1)) == 1);
+      assert(std::popcount(T13(~T13(0))) == 13);
+      assert(std::popcount(T77(0)) == 0);
+      assert(std::popcount(T77(1)) == 1);
+      assert(std::popcount(T77(~T77(0))) == 77);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

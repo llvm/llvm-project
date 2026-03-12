@@ -155,6 +155,19 @@ int main(int, char**)
       assert(std::has_single_bit(T64(1)));
       assert(!std::has_single_bit(T128(0)));
       assert(std::has_single_bit(T128(1)));
+
+      // Odd (non-byte-aligned) widths: has_single_bit is safe regardless of
+      // numeric_limits::digits (no digits dependency).
+      using T13 = unsigned _BitInt(13);
+      using T77 = unsigned _BitInt(77);
+      assert(!std::has_single_bit(T13(0)));
+      assert(std::has_single_bit(T13(1)));
+      assert(std::has_single_bit(T13(64)));
+      assert(!std::has_single_bit(T13(65)));
+      assert(!std::has_single_bit(T77(0)));
+      assert(std::has_single_bit(T77(1)));
+      assert(std::has_single_bit(T77(T77(1) << 76)));
+      assert(!std::has_single_bit(T77((T77(1) << 76) | T77(1))));
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

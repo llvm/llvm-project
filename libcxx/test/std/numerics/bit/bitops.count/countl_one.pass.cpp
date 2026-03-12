@@ -150,6 +150,16 @@ int main(int, char**)
       assert(std::countl_one(T64(~T64(0))) == 64);
       assert(std::countl_one(T128(0)) == 0);
       assert(std::countl_one(T128(~T128(0))) == 128);
+
+      // Odd (non-byte-aligned) widths: countl_one is safe for values that
+      // are not all-ones (calls countl_zero(~x); digits fallback only
+      // triggers when ~x == 0, i.e. x is all-ones).
+      using T13 = unsigned _BitInt(13);
+      using T77 = unsigned _BitInt(77);
+      assert(std::countl_one(T13(0)) == 0);
+      assert(std::countl_one(T13(1)) == 0);
+      assert(std::countl_one(T77(0)) == 0);
+      assert(std::countl_one(T77(1)) == 0);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {

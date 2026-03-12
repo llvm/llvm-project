@@ -151,6 +151,15 @@ int main(int, char**)
       assert(std::countr_zero(T64(1) << 63) == 63);
       assert(std::countr_zero(T128(1)) == 0);
       assert(std::countr_zero(T128(1) << 127) == 127);
+
+      // Odd (non-byte-aligned) widths: countr_zero is safe for nonzero
+      // inputs (digits is only the fallback for zero via __builtin_ctzg).
+      using T13 = unsigned _BitInt(13);
+      using T77 = unsigned _BitInt(77);
+      assert(std::countr_zero(T13(1)) == 0);
+      assert(std::countr_zero(T13(1) << 12) == 12);
+      assert(std::countr_zero(T77(1)) == 0);
+      assert(std::countr_zero(T77(1) << 76) == 76);
     }
 #  if __BITINT_MAXWIDTH__ >= 256
     {
