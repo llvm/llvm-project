@@ -76,7 +76,7 @@ struct LiveRegUse : public UseDistancePair {
       : UseDistancePair(Use, Dist) {}
   LiveRegUse(const UseDistancePair &P) : UseDistancePair(P) {}
 
-  bool unset() const { return Use == nullptr; }
+  bool isUnset() const { return Use == nullptr; }
 
   Register getReg() const { return Use->getReg(); }
   unsigned getSubReg() const { return Use->getSubReg(); }
@@ -1732,7 +1732,7 @@ public:
         if (MIDependent)
           U.Dist -= LastDelta;
       }
-      if (U.unset()) {
+      if (U.isUnset()) {
         this->getUses(Reg, LaneMask, MI, Uses);
         if (Uses.empty())
           continue;
@@ -2053,8 +2053,6 @@ AMDGPUNextUseAnalysisPass::run(MachineFunction &MF,
 // AMDGPUNextUseAnalysisPrinterLegacyPass
 //==============================================================================
 namespace {
-inline format_object<double> Fmt(double Dist) { return format("%.1f", Dist); }
-
 void printInstrMember(json::OStream &J, ModuleSlotTracker &MST,
                       const MachineInstr &MI,
                       const AMDGPUNextUseAnalysisImpl &NUA) {
