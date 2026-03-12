@@ -1108,8 +1108,6 @@ public:
     Callsites->push_back(std::move(Callsite));
   }
 
-  void addCallsite(CallsiteInfo &Callsite) { addCallsite(std::move(Callsite)); }
-
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
@@ -1121,8 +1119,6 @@ public:
       Allocs = std::make_unique<AllocsTy>();
     Allocs->push_back(std::move(Alloc));
   }
-
-  void addAlloc(AllocInfo &Alloc) { addAlloc(std::move(Alloc)); }
 
   AllocsTy &mutableAllocs() {
     assert(Allocs);

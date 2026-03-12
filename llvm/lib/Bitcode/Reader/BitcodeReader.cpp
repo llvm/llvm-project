@@ -7766,21 +7766,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   std::vector<AllocInfo> PendingAllocs;
   std::vector<uint64_t> PendingContextIds;
 
-  auto IsFunctionRelatedSummaryRecord = [](unsigned BitCode) {
-    return BitCode == bitc::FS_PERMODULE_CALLSITE_INFO ||
-           BitCode == bitc::FS_COMBINED_CALLSITE_INFO ||
-           BitCode == bitc::FS_ALLOC_CONTEXT_IDS ||
-           BitCode == bitc::FS_PERMODULE_ALLOC_INFO ||
-           BitCode == bitc::FS_COMBINED_ALLOC_INFO ||
-           BitCode == bitc::FS_COMBINED_ALLOC_INFO_NO_CONTEXT ||
-           BitCode == bitc::FS_PERMODULE ||
-           BitCode == bitc::FS_PERMODULE_PROFILE ||
-           BitCode == bitc::FS_PERMODULE_RELBF ||
-           BitCode == bitc::FS_COMBINED ||
-           BitCode == bitc::FS_COMBINED_PROFILE ||
-           BitCode == bitc::FS_COMBINED_ORIGINAL_NAME;
-  };
-
   while (true) {
     Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
     if (!MaybeEntry)
@@ -7810,12 +7795,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     if (!MaybeBitCode)
       return MaybeBitCode.takeError();
     unsigned BitCode = MaybeBitCode.get();
-
-    // If we see a record that is not a function summary or one of its
-    // associated subsequent summary records, reset the current prevailing
-    // function summary pointer.
-    if (!IsFunctionRelatedSummaryRecord(BitCode))
-      CurrentPrevailingFS = nullptr;
 
     switch (BitCode) {
     default: // Default behavior: ignore.
@@ -7889,10 +7868,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
-      auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
-      auto VI = std::get<0>(VIAndOriginalGUID);
-      auto GUID = std::get<1>(VIAndOriginalGUID);
+      auto [VI, GUID] = getValueInfoFromValueId(ValueID);
 
+      // The linker doesn't resolve local linkage values so don't check whether
+      // those are prevailing (set IsPrevailingSym so they are always processed
+      // and kept).
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
       bool IsPrevailingSym = !IsPrevailing || GlobalValue::isLocalLinkage(LT) ||
                              IsPrevailing(VI.getGUID());
