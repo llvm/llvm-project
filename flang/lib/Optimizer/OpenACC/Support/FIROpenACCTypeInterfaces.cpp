@@ -911,8 +911,8 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
   if (isOptional) {
     fir::ResultOp::create(builder, loc, retVal);
     builder.setInsertionPointToStart(&optIfOp->getElseRegion().front());
-    mlir::Value zero = fir::ZeroOp::create(builder, loc, type);
-    fir::ResultOp::create(builder, loc, zero);
+    mlir::Value absent = fir::AbsentOp::create(builder, loc, type);
+    fir::ResultOp::create(builder, loc, absent);
     return optIfOp->getResult(0);
   }
   return retVal;

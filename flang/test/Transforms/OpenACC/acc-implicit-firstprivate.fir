@@ -283,7 +283,7 @@ func.func @test_i16_scalar_in_parallel() {
 // CHECK:           %[[ALLOC:.*]] = fir.alloca i32
 // CHECK:           fir.result %[[ALLOC]] : !fir.ref<i32>
 // CHECK:         } else {
-// CHECK:           fir.zero_bits !fir.ref<i32>
+// CHECK:           fir.absent !fir.ref<i32>
 // CHECK:           fir.result
 // CHECK:         }
 // CHECK:         acc.yield {{.*}} : !fir.ref<i32>
