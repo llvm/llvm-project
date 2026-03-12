@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/clc_convert.h"
-#include "clc/float/definitions.h"
-#include "clc/math/clc_nextdown.h"
-#include "clc/math/clc_nextup.h"
-#include "clc/relational/clc_isunordered.h"
+_CLC_OVERLOAD _CLC_CONST _CLC_DEF __CLC_GENTYPE
+__clc_nextafter(__CLC_GENTYPE x, __CLC_GENTYPE y) {
+  __CLC_GENTYPE up = __clc_nextup(x);
+  __CLC_GENTYPE down = __clc_nextdown(x);
+  __CLC_GENTYPE ret = x < y ? up : y;
+  ret = x > y ? down : ret;
 
-#define __CLC_BODY <clc_nextafter.inc>
-#include <clc/math/gentype.inc>
+  return __clc_isunordered(x, y) ? __CLC_GENTYPE_NAN : ret;
+}

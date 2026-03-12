@@ -137,6 +137,8 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_native_sqrt.cl
   math/clc_native_tan.cl
   math/clc_nextafter.cl
+  math/clc_nextdown.cl
+  math/clc_nextup.cl
   math/clc_pow.cl
   math/clc_pown.cl
   math/clc_powr.cl
