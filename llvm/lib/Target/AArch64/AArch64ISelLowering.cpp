@@ -23365,6 +23365,31 @@ static SDValue performAddTruncShiftCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, Trunc, Shift);
 }
 
+// Fold ADD(SBC(Y, 0, W), C) -> SBC(Y, -C, W)
+// SBC(Y, 0, W) = Y - 0 - ~carry = Y + carry - 1
+// Adding C:  Y + carry - 1 + C = Y - (-C) - ~carry = SBC(Y, -C, W)
+static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue SBC = N->getOperand(0);
+  SDValue C = N->getOperand(1);
+  // ADD is commutative; operands may be on either side.
+  if (SBC.getOpcode() != AArch64ISD::SBC)
+    std::swap(SBC, C);
+  if (SBC.getOpcode() != AArch64ISD::SBC || !SBC.hasOneUse())
+    return SDValue();
+  if (!isNullConstant(SBC.getOperand(1)))
+    return SDValue();
+  // AArch64 SBC (non-flag-setting) has only one output; no flags guard needed.
+  SDLoc DL(N);
+  return DAG.getNode(AArch64ISD::SBC, DL, VT, SBC.getOperand(0),
+                     DAG.getNegative(C, DL, VT), SBC.getOperand(2));
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -23390,7 +23415,8 @@ static SDValue performAddSubCombine(SDNode *N,
     return Val;
   if (SDValue Val = performAddTruncShiftCombine(N, DCI.DAG))
     return Val;
-
+  if (SDValue Val = performAddWithSBCCombine(N, DCI.DAG))
+    return Val;
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
 

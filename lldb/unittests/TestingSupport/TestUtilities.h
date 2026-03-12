@@ -16,7 +16,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest.h"
 #include <string>
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -66,21 +65,12 @@ private:
   std::string Buffer;
 };
 
-/// Check if the debugger supports the given platform.
-bool DebuggerSupportsLLVMTarget(llvm::StringRef target);
-
-#define SKIP_IF_LLVM_TARGET_MISSING(platform)                                  \
-  if (!::lldb_private::DebuggerSupportsLLVMTarget(platform)) {                 \
-    GTEST_SKIP() << "Unsupported platform";                                    \
-  }
-
 template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
   std::string encoded;
   llvm::raw_string_ostream OS(encoded);
   OS << toJSON(input);
   return llvm::json::parse<T>(encoded);
 }
-
 } // namespace lldb_private
 
 #endif

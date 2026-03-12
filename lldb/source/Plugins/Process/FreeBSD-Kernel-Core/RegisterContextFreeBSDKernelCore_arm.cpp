@@ -14,6 +14,11 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
+#if defined(__FreeBSD__) && defined(__arm__)
+#include <cstddef>
+#include <machine/frame.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -60,6 +65,33 @@ bool RegisterContextFreeBSDKernelCore_arm::ReadRegister(
     llvm::support::ulittle32_t lr;
     llvm::support::ulittle32_t pc;
   } pcb;
+
+#if defined(__FreeBSD__) && defined(__arm__)
+  static_assert(offsetof(struct switchframe, sf_r4) ==
+                offsetof(decltype(pcb), r4));
+  static_assert(offsetof(struct switchframe, sf_r5) ==
+                offsetof(decltype(pcb), r5));
+  static_assert(offsetof(struct switchframe, sf_r6) ==
+                offsetof(decltype(pcb), r6));
+  static_assert(offsetof(struct switchframe, sf_r7) ==
+                offsetof(decltype(pcb), r7));
+  static_assert(offsetof(struct switchframe, sf_r8) ==
+                offsetof(decltype(pcb), r8));
+  static_assert(offsetof(struct switchframe, sf_r9) ==
+                offsetof(decltype(pcb), r9));
+  static_assert(offsetof(struct switchframe, sf_r10) ==
+                offsetof(decltype(pcb), r10));
+  static_assert(offsetof(struct switchframe, sf_r11) ==
+                offsetof(decltype(pcb), r11));
+  static_assert(offsetof(struct switchframe, sf_r12) ==
+                offsetof(decltype(pcb), r12));
+  static_assert(offsetof(struct switchframe, sf_sp) ==
+                offsetof(decltype(pcb), sp));
+  static_assert(offsetof(struct switchframe, sf_lr) ==
+                offsetof(decltype(pcb), lr));
+  static_assert(offsetof(struct switchframe, sf_pc) ==
+                offsetof(decltype(pcb), pc));
+#endif
 
   Status error;
   size_t rd =

@@ -3497,6 +3497,18 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   if (!ISD::isConstantSplatVector(C.getNode(), MulC))
     return false;
 
+  if (VT.isVector() && VT.getScalarSizeInBits() == 8) {
+    // Check whether a vXi8 multiply can be decomposed into two shifts
+    // (decomposing 2^m ± 2^n as 2^(a+b) ± 2^b). Similar to
+    // DAGCombiner::visitMUL, consider the constant `2` decomposable as
+    // (2^0 + 1).
+    APInt ShiftedMulC = MulC.abs();
+    unsigned TZeros = ShiftedMulC == 2 ? 0 : ShiftedMulC.countr_zero();
+    ShiftedMulC.lshrInPlace(TZeros);
+    if ((ShiftedMulC - 1).isPowerOf2() || (ShiftedMulC + 1).isPowerOf2())
+      return true;
+  }
+
   // Find the type this will be legalized too. Otherwise we might prematurely
   // convert this to shl+add/sub and then still have to type legalize those ops.
   // Another choice would be to defer the decision for illegal types until
@@ -28477,11 +28489,12 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       SDValue Addr = Op.getOperand(2);
       SDValue Src1 = Op.getOperand(3);
       SDValue Src2 = Op.getOperand(4);
-      SDValue CC = Op.getOperand(5);
+      X86::CondCode X86CondCode = (X86::CondCode)Op.getConstantOperandVal(5);
+      SDValue CC = DAG.getTargetConstant(X86CondCode, DL, MVT::i8);
       MachineMemOperand *MMO = cast<MemIntrinsicSDNode>(Op)->getMemOperand();
-      SDValue Operation = DAG.getMemIntrinsicNode(
-          X86ISD::CMPCCXADD, DL, Op->getVTList(), {Chain, Addr, Src1, Src2, CC},
-          MVT::i32, MMO);
+      SDValue Operation =
+          DAG.getMemIntrinsicNode(X86ISD::CMPCCXADD, DL, Op->getVTList(),
+                                  {Chain, Addr, Src1, Src2, CC}, MVT::i32, MMO);
       return Operation;
     }
     case Intrinsic::x86_aadd32:
@@ -29905,8 +29918,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
 
   bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
   bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
-  bool IgnoreSignedZero = DAG.getTarget().Options.NoSignedZerosFPMath ||
-                          Op->getFlags().hasNoSignedZeros() ||
+  bool IgnoreSignedZero = Op->getFlags().hasNoSignedZeros() ||
                           DAG.isKnownNeverZeroFloat(X) ||
                           DAG.isKnownNeverZeroFloat(Y);
   bool ShouldHandleZeros = true;
@@ -34467,16 +34479,21 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     AmtLane = DAG.getZExtOrTrunc(AmtLane, dl, MVT::i8);
 
     if (auto *SrcC = dyn_cast<ConstantSDNode>(Src)) {
-      // Special case: SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
-      if (Opc == ISD::SHL && SrcC->getAPIntValue() == 1) {
-        SDValue Bit = DAG.getConstant(1, dl, MVT::i64);
+      // SHL(1,Amt) --> SELECT(1<<(Amt/64), SPLAT(1<<(Amt%64)), 0)
+      // SRL(MSB,Amt) --> SELECT(MSB8>>u(Amt/64), SPLAT(MSB64>>u(Amt%64)), 0)
+      if ((Opc == ISD::SHL && SrcC->getAPIntValue() == 1) ||
+          (Opc == ISD::SRL && SrcC->getAPIntValue().isSignMask())) {
+        APInt EltBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
+        APInt LaneBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 7);
+        SDValue EltBit = DAG.getConstant(EltBitVal, dl, MVT::i64);
+        SDValue LaneBit = DAG.getConstant(LaneBitVal, dl, MVT::i64);
         SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
                                      DAG.getZExtOrTrunc(Amt, dl, MVT::i64),
                                      DAG.getConstant(63, dl, MVT::i64));
-        SDValue LaneMask = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtLane);
+        SDValue LaneMask = DAG.getNode(Opc, dl, MVT::i64, LaneBit, AmtLane);
         LaneMask =
             DAG.getBitcast(BoolVT, DAG.getZExtOrTrunc(LaneMask, dl, MVT::i8));
-        SDValue Elt = DAG.getNode(ISD::SHL, dl, MVT::i64, Bit, AmtMod);
+        SDValue Elt = DAG.getNode(Opc, dl, MVT::i64, EltBit, AmtMod);
         SDValue Res =
             DAG.getSelect(dl, VecVT, LaneMask, DAG.getSplat(VecVT, dl, Elt),
                           DAG.getConstant(0, dl, VecVT));
@@ -48241,7 +48258,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
       // the operands would cause it to handle comparisons between positive
       // and negative zero incorrectly.
       if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+        if (!N->getFlags().hasNoSignedZeros() &&
             !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
           break;
         std::swap(LHS, RHS);
@@ -48251,7 +48268,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
     case ISD::SETOLE:
       // Converting this to a min would handle comparisons between positive
       // and negative zero incorrectly.
-      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+      if (!N->getFlags().hasNoSignedZeros() &&
           !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
         break;
       Opcode = X86ISD::FMIN;
@@ -48270,7 +48287,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
     case ISD::SETOGE:
       // Converting this to a max would handle comparisons between positive
       // and negative zero incorrectly.
-      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+      if (!N->getFlags().hasNoSignedZeros() &&
           !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
         break;
       Opcode = X86ISD::FMAX;
@@ -48280,7 +48297,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
       // the operands would cause it to handle comparisons between positive
       // and negative zero incorrectly.
       if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+        if (!N->getFlags().hasNoSignedZeros() &&
             !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)))
           break;
         std::swap(LHS, RHS);
@@ -48307,7 +48324,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
       // Converting this to a min would handle comparisons between positive
       // and negative zero incorrectly, and swapping the operands would
       // cause it to handle NaNs incorrectly.
-      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+      if (!N->getFlags().hasNoSignedZeros() &&
           !(DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS))) {
         if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
           break;
@@ -48342,7 +48359,7 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
       // Converting this to a max would handle comparisons between positive
       // and negative zero incorrectly, and swapping the operands would
       // cause it to handle NaNs incorrectly.
-      if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+      if (!N->getFlags().hasNoSignedZeros() &&
           !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS)) {
         if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
           break;
@@ -54946,10 +54963,6 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
 //  FADD(A, FMA(B, C, 0)) and FADD(A, FMUL(B, C)) to FMA(B, C, A)
 static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
-  auto HasNoSignedZero = [&DAG](const SDNodeFlags &Flags) {
-    return DAG.getTarget().Options.NoSignedZerosFPMath ||
-           Flags.hasNoSignedZeros();
-  };
   auto IsVectorAllNegativeZero = [&DAG](SDValue Op) {
     APInt AI = APInt(32, 0x80008000);
     KnownBits Bits = DAG.computeKnownBits(Op);
@@ -54969,8 +54982,8 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &IsVectorAllNegativeZero,
-                       &HasNoSignedZero](SDValue N) -> bool {
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj,
+                       &IsVectorAllNegativeZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
     SDValue Op0 = N.getOperand(0);
@@ -54984,7 +54997,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
       }
       if ((Opcode == X86ISD::VFMADDC || Opcode == X86ISD::VFCMADDC) &&
           ((ISD::isBuildVectorAllZeros(Op0->getOperand(2).getNode()) &&
-            HasNoSignedZero(Op0->getFlags())) ||
+            Op0->getFlags().hasNoSignedZeros()) ||
            IsVectorAllNegativeZero(Op0->getOperand(2)))) {
         MulOp0 = Op0.getOperand(0);
         MulOp1 = Op0.getOperand(1);
@@ -56227,8 +56240,7 @@ static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
 
   // FMIN/FMAX are commutative if no NaNs and no negative zeros are allowed.
   if ((!DAG.getTarget().Options.NoNaNsFPMath && !N->getFlags().hasNoNaNs()) ||
-      (!DAG.getTarget().Options.NoSignedZerosFPMath &&
-       !N->getFlags().hasNoSignedZeros()))
+      !N->getFlags().hasNoSignedZeros())
     return SDValue();
 
   // If we run in unsafe-math mode, then convert the FMAX and FMIN nodes
@@ -58627,6 +58639,28 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
       // Negate X86ISD::SUB(C, RHS) and replace generic add(RHS, -C).
       MatchGeneric(ISD::ADD, RHS, NegC, true);
+    }
+  }
+
+  // Fold ADD(ADC(Y, C1, CF), C2) -> ADC(Y, C1 + C2, CF) and
+  //      ADD(ADC(Y, 0, CF), X) -> ADC(Y, X, CF)
+  if (!IsSub && LHS.getOpcode() == X86ISD::ADC && LHS.hasOneUse() &&
+      !needCarryOrOverflowFlag(SDValue(N, 1))) {
+
+    auto *C1 = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+    auto *C2 = dyn_cast<ConstantSDNode>(RHS);
+
+    // Both are constants: fold C1 + C2
+    if (C1 && C2) {
+      APInt Sum = C1->getAPIntValue() + C2->getAPIntValue();
+      return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
+                         DAG.getConstant(Sum, DL, VT), LHS.getOperand(2));
+    }
+
+    // Case: ADC(Y, 0, CF) + X -> ADC(Y, X, CF)
+    if (C1 && C1->isZero()) {
+      return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
+                         RHS, LHS.getOperand(2));
     }
   }
 

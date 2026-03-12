@@ -9,6 +9,7 @@ static_library("Index") {
     "//clang/lib/Rewrite",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling/Core",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]

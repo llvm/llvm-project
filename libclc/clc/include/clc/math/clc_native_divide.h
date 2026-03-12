@@ -11,9 +11,9 @@
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_native_divide
-#define __CLC_BODY "clc/shared/binary_decl.inc"
+#define __CLC_BODY <clc/shared/binary_decl.inc>
 
-#include "clc/math/gentype.inc"
+#include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
 
