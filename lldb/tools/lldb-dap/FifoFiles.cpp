@@ -35,6 +35,8 @@ FifoFile::FifoFile(StringRef path, lldb::pipe_t pipe) : m_path(path) {
            "FifoFile path should start with '\\\\.\\pipe\\'");
     pipe = CreateFileA(m_path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL,
                        OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+    DWORD mode = PIPE_READMODE_MESSAGE;
+    SetNamedPipeHandleState(pipe, &mode, NULL, NULL);
   }
 #endif
   m_pipe = pipe;
