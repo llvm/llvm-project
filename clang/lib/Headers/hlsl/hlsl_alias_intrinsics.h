@@ -35,6 +35,8 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
 #endif
 
+#define _HLSL_16BIT_AVAILABILITY_DEFAULT() _HLSL_AVAILABILITY(shadermodel, 6.2)
+
 //===----------------------------------------------------------------------===//
 // abs builtins
 //===----------------------------------------------------------------------===//
@@ -2482,43 +2484,43 @@ float4 trunc(float4);
 /// group. Otherwise, the result is false.
 /// \param Value The value to compare with
 /// \return True if all values across all lanes are equal, false otherwise
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool WaveActiveAllEqual(half);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool2 WaveActiveAllEqual(half2);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool3 WaveActiveAllEqual(half3);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool4 WaveActiveAllEqual(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool WaveActiveAllEqual(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool2 WaveActiveAllEqual(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool3 WaveActiveAllEqual(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool4 WaveActiveAllEqual(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool WaveActiveAllEqual(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool2 WaveActiveAllEqual(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool3 WaveActiveAllEqual(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_all_equal)
 __attribute__((convergent)) bool4 WaveActiveAllEqual(uint16_t4);
 #endif
@@ -2681,29 +2683,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) bool4 WaveReadLaneAt(bool4, uint32_t);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) int16_t WaveReadLaneAt(int16_t, uint32_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) int16_t2 WaveReadLaneAt(int16_t2, uint32_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) int16_t3 WaveReadLaneAt(int16_t3, uint32_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) int16_t4 WaveReadLaneAt(int16_t4, uint32_t);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) uint16_t WaveReadLaneAt(uint16_t, uint32_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) uint16_t2 WaveReadLaneAt(uint16_t2, uint32_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) uint16_t3 WaveReadLaneAt(uint16_t3, uint32_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
 __attribute__((convergent)) uint16_t4 WaveReadLaneAt(uint16_t4, uint32_t);
 #endif
@@ -2827,29 +2829,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) half4 WaveActiveMax(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) int16_t WaveActiveMax(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) int16_t2 WaveActiveMax(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) int16_t3 WaveActiveMax(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) int16_t4 WaveActiveMax(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) uint16_t WaveActiveMax(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) uint16_t2 WaveActiveMax(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) uint16_t3 WaveActiveMax(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) uint16_t4 WaveActiveMax(uint16_t4);
 #endif
@@ -2926,29 +2928,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) half4 WaveActiveMin(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) int16_t WaveActiveMin(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) int16_t2 WaveActiveMin(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) int16_t3 WaveActiveMin(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) int16_t4 WaveActiveMin(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) uint16_t WaveActiveMin(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) uint16_t2 WaveActiveMin(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) uint16_t3 WaveActiveMin(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
 __attribute__((convergent)) uint16_t4 WaveActiveMin(uint16_t4);
 #endif
@@ -3049,29 +3051,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) half4 WaveActiveSum(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) int16_t WaveActiveSum(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) int16_t2 WaveActiveSum(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) int16_t3 WaveActiveSum(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) int16_t4 WaveActiveSum(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) uint16_t WaveActiveSum(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) uint16_t2 WaveActiveSum(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) uint16_t3 WaveActiveSum(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_sum)
 __attribute__((convergent)) uint16_t4 WaveActiveSum(uint16_t4);
 #endif
@@ -3148,29 +3150,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) half4 WaveActiveProduct(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) int16_t WaveActiveProduct(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) int16_t2 WaveActiveProduct(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) int16_t3 WaveActiveProduct(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) int16_t4 WaveActiveProduct(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) uint16_t WaveActiveProduct(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) uint16_t2 WaveActiveProduct(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) uint16_t3 WaveActiveProduct(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_product)
 __attribute__((convergent)) uint16_t4 WaveActiveProduct(uint16_t4);
 #endif
@@ -3271,29 +3273,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) half4 WavePrefixSum(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) int16_t WavePrefixSum(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) int16_t2 WavePrefixSum(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) int16_t3 WavePrefixSum(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) int16_t4 WavePrefixSum(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) uint16_t WavePrefixSum(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) uint16_t2 WavePrefixSum(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) uint16_t3 WavePrefixSum(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_sum)
 __attribute__((convergent)) uint16_t4 WavePrefixSum(uint16_t4);
 #endif
@@ -3370,29 +3372,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) half4 WavePrefixProduct(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) int16_t WavePrefixProduct(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) int16_t2 WavePrefixProduct(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) int16_t3 WavePrefixProduct(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) int16_t4 WavePrefixProduct(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) uint16_t WavePrefixProduct(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) uint16_t2 WavePrefixProduct(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) uint16_t3 WavePrefixProduct(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_16BIT_AVAILABILITY_DEFAULT()
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_product)
 __attribute__((convergent)) uint16_t4 WavePrefixProduct(uint16_t4);
 #endif
