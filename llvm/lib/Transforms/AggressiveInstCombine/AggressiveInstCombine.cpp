@@ -498,10 +498,9 @@ struct CtlzConstants {
 // Check if this array of constants represents a ctlz table.
 // Iterate over the elements from \p Table by trying to find/match all
 // the numbers from 0 to \p InputBits that should represent ctlz results.
-static bool isCTLZTable(Constant *Table,
-                        CtlzConstants &TableConstant, Type *AccessTy,
-                        unsigned InputBits, const APInt &GEPIdxFactor,
-                        const DataLayout &DL) {
+static bool isCTLZTable(Constant *Table, CtlzConstants &TableConstant,
+                        Type *AccessTy, unsigned InputBits,
+                        const APInt &GEPIdxFactor, const DataLayout &DL) {
   static const uint32_t DeBruijnClz[32] = {
       0, 9,  1,  10, 13, 21, 2,  29, 11, 14, 16, 18, 22, 25, 3, 30,
       8, 12, 20, 28, 15, 17, 24, 7,  19, 27, 23, 6,  26, 5,  4, 31};
