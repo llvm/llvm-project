@@ -4287,8 +4287,8 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
 
   Type *TCType = Legal->getWidestInductionType();
   const SCEV *RemainingIterations = nullptr;
-  unsigned MaxTripCount = 0;
-  const SCEV *TC = vputils::getSCEVExprForVPValue(MainPlan.getTripCount(), PSE);
+  const SCEV *TC = vputils::getSCEVExprForVPValue(
+      getPlanFor(MainLoopVF).getTripCount(), PSE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
   const SCEV *KnownMinTC;
   bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
@@ -4313,54 +4313,25 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
   if (RemainingIterations->isZero())
     return nullptr;
 
-  if (MainLoopVF.isFixed()) {
-    MaxTripCount = MainLoopVF.getFixedValue() * IC - 1;
-    if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
-                            SE.getConstant(TCType, MaxTripCount))) {
-      MaxTripCount = SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
-    }
-    LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
-                      << MaxTripCount << "\n");
-  }
-
-  auto SkipVF = [&](const SCEV *VF, const SCEV *RemIter) -> bool {
-    return SE.isKnownPredicate(CmpInst::ICMP_UGT, VF, RemIter);
-  };
+  unsigned MaxTripCount = EstimatedRuntimeVF.getFixedValue() * IC - 1;
+  if (SE.isKnownPredicate(CmpInst::ICMP_ULT, RemainingIterations,
+                          SE.getConstant(TCType, MaxTripCount)))
+    MaxTripCount = SE.getUnsignedRangeMax(RemainingIterations).getZExtValue();
+  LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: " << MaxTripCount
+                    << "\n");
+  
   VectorizationFactor Result = VectorizationFactor::Disabled();
   VPlan *BestPlan = nullptr;
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
       continue;
-
     VPlan &CurrentPlan = getPlanFor(NextVF.Width);
     ElementCount EffectiveVF = GetEffectiveVF(CurrentPlan, NextVF.Width);
-    // Skip candidate VFs with widths >= the (estimated) runtime VF (scalable
-    // vectors) or > the VF of the main loop (fixed vectors).
-    if ((!EffectiveVF.isScalable() && MainLoopVF.isScalable() &&
-         ElementCount::isKnownGE(EffectiveVF, EstimatedRuntimeVF)) ||
-        (EffectiveVF.isScalable() &&
-         ElementCount::isKnownGE(EffectiveVF, MainLoopVF)) ||
-        (!EffectiveVF.isScalable() && !MainLoopVF.isScalable() &&
-         ElementCount::isKnownGT(EffectiveVF, MainLoopVF)))
+    if (ElementCount::isKnownGT(ElementCount::getFixed(estimateElementCount(
+                                    EffectiveVF, CM.getVScaleForTuning())),
+                                ElementCount::getFixed(MaxTripCount)))
       continue;
-
-    // If EffectiveVF is greater than the number of remaining iterations, the
-    // epilogue loop would be dead. Skip such factors. If the epilogue plan
-    // also has narrowed interleave groups, use the effective VF since
-    // the epilogue step will be reduced to its IC.
-    // TODO: We should also consider comparing against a scalable
-    // RemainingIterations when SCEV be able to evaluate non-canonical
-    // vscale-based expressions.
-    if (!ScalableRemIter) {
-      // Handle the case where EffectiveVF and RemainingIterations are in
-      // different numerical spaces.
-      if (EffectiveVF.isScalable())
-        EffectiveVF = ElementCount::getFixed(
-            estimateElementCount(EffectiveVF, CM.getVScaleForTuning()));
-      if (SkipVF(SE.getElementCount(TCType, EffectiveVF), RemainingIterations))
-        continue;
-    }
 
     if (Result.Width.isScalar() ||
         isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
