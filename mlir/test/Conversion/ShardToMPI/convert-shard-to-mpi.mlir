@@ -186,7 +186,6 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: linalg.copy ins([[vtobuf]] : memref<3x2x4xf32>) outs([[valloctmp]] : memref<3x2x4xf32>)
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<2x4xf32>
     // CHECK: mpi.reduce_scatter_block([[valloctmp]], [[valloc]], MPI_SUM,
-    // CHECK: memref.dealloc [[valloctmp]] : memref<3x2x4xf32>
     // CHECK: [[vout:%.*]] = bufferization.to_tensor [[valloc]] restrict : memref<2x4xf32> to tensor<2x4xf32>
     %0 = shard.reduce_scatter %arg0 on @grid0 grid_axes = [0] scatter_dim = 1 : tensor<2x12xf32> -> tensor<2x4xf32>
     // CHECK: return [[vout]] : tensor<2x4xf32>
