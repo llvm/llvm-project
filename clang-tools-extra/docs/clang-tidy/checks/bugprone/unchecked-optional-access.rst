@@ -314,6 +314,7 @@ GoogleTest awareness
 --------------------
 
 The check recognizes common macros like `ASSERT_TRUE` and `ASSERT_FALSE`:
+
 .. code-block:: c++
 
    TEST(OptionalTest, CheckValue) {
