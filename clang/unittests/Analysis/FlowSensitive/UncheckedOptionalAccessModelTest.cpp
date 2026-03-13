@@ -2945,7 +2945,6 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
     }
   )cc");
 
-
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
 
