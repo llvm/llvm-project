@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fexperimental-call-graph-section -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 // Check that we do not generate callee_type metadata for indirect calls
 // to functions with internal linkage (e.g., types in anonymous namespaces),
