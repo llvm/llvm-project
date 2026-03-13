@@ -25,7 +25,7 @@ HasScalarArrayMember::HasScalarArrayMember(const HasScalarArrayMember &) = defau
 // CIR-NEXT:    cir.return
 
 // LLVM-LABEL: define {{.*}} @_ZN20HasScalarArrayMemberC2ERKS_(
-// LLVM-SAME:      ptr %[[ARG0:.*]], ptr %[[ARG1:.*]])
+// LLVM-SAME:      ptr {{.*}} %[[ARG0:.*]], ptr {{.*}} %[[ARG1:.*]])
 // LLVM-NEXT:    %[[THIS:.*]] = alloca ptr
 // LLVM-NEXT:    %[[OTHER:.*]] = alloca ptr
 // LLVM-NEXT:    store ptr %[[ARG0]], ptr %[[THIS]]

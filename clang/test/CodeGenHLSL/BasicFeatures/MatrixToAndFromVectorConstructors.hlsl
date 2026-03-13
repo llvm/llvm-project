@@ -40,11 +40,13 @@ float4 fn(float2x2 m) {
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i64 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i32> poison, i32 [[VECEXT]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 1
+// CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+// COL-CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 2
+// ROW-CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 1
-// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 2
+// CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
+// COL-CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 1
+// ROW-CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <4 x i32> [[TMP3]], i64 3
 // CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x i32> [[VECINIT4]], i32 [[VECEXT5]], i32 3

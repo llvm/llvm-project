@@ -147,6 +147,17 @@ Value lowerToVectorReductions(TypedValue<VectorType> src,
                               vector::CombiningKind kind, int64_t reductionDim,
                               Location loc, PatternRewriter &rewriter);
 
+/// Lowers cross-lane reductions to shuffle operations on a 2D vector.
+/// Extracts slices along the reduction dimension, performs subgroup reductions
+/// with shuffles across reductionSize work-items, and inserts the results back
+/// into an accumulator vector.
+Value lowerCrossLaneReductionToShuffles(TypedValue<VectorType> src,
+                                        TypedValue<VectorType> acc,
+                                        vector::CombiningKind kind,
+                                        int64_t reductionDim,
+                                        int64_t reductionSize, Location loc,
+                                        PatternRewriter &rewriter);
+
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
 /// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or

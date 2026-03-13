@@ -63,24 +63,23 @@ using remove_reference_t = typename remove_reference<T>::type;
 
 template <typename T> struct is_const : type_constant<bool, false> {};
 template <typename T> struct is_const<const T> : type_constant<bool, true> {};
-template <typename T> RPC_ATTRS constexpr bool is_const_v = is_const<T>::value;
+template <typename T> inline constexpr bool is_const_v = is_const<T>::value;
 
 template <typename T> struct is_pointer : type_constant<bool, false> {};
 template <typename T> struct is_pointer<T *> : type_constant<bool, true> {};
 template <typename T>
 struct is_pointer<T *const> : type_constant<bool, true> {};
-template <typename T>
-RPC_ATTRS constexpr bool is_pointer_v = is_pointer<T>::value;
+template <typename T> inline constexpr bool is_pointer_v = is_pointer<T>::value;
 
 template <typename T, typename U>
 struct is_same : type_constant<bool, false> {};
 template <typename T> struct is_same<T, T> : type_constant<bool, true> {};
 template <typename T, typename U>
-RPC_ATTRS constexpr bool is_same_v = is_same<T, U>::value;
+inline constexpr bool is_same_v = is_same<T, U>::value;
 
 template <typename T> struct is_void : type_constant<bool, false> {};
 template <> struct is_void<void> : type_constant<bool, true> {};
-template <typename T> RPC_ATTRS constexpr bool is_void_v = is_void<T>::value;
+template <typename T> inline constexpr bool is_void_v = is_void<T>::value;
 
 // Scary trait that can change within a TU, use with caution.
 template <typename...> using void_t = void;
@@ -90,21 +89,35 @@ template <typename T>
 struct is_complete<T, void_t<decltype(sizeof(T))>> : type_constant<bool, true> {
 };
 template <typename T>
-RPC_ATTRS constexpr bool is_complete_v = is_complete<T>::value;
+inline constexpr bool is_complete_v = is_complete<T>::value;
 
 template <typename T>
 struct is_trivially_copyable
     : public type_constant<bool, __is_trivially_copyable(T)> {};
 template <typename T>
-RPC_ATTRS constexpr bool is_trivially_copyable_v =
-    is_trivially_copyable<T>::value;
+inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
 
 template <typename T, typename... Args>
 struct is_trivially_constructible
     : type_constant<bool, __is_trivially_constructible(T, Args...)> {};
 template <typename T, typename... Args>
-RPC_ATTRS constexpr bool is_trivially_constructible_v =
+inline constexpr bool is_trivially_constructible_v =
     is_trivially_constructible<T>::value;
+
+/// Tag type to indicate an array of elements being passed through RPC.
+template <typename T> struct span {
+  T *data;
+  uint64_t size;
+  RPC_ATTRS operator T *() const { return data; }
+};
+
+template <typename T> struct is_span : type_constant<bool, false> {};
+template <typename T> struct is_span<span<T>> : type_constant<bool, true> {};
+template <typename T> inline constexpr bool is_span_v = is_span<T>::value;
+
+template <typename T> struct remove_span : type_identity<T> {};
+template <typename T> struct remove_span<span<T>> : type_identity<T *> {};
+template <typename T> using remove_span_t = typename remove_span<T>::type;
 
 template <bool B, typename T, typename F>
 struct conditional : type_identity<T> {};
@@ -431,7 +444,8 @@ template <typename T, typename U> RPC_ATTRS T *advance(T *ptr, U bytes) {
 
 /// Wrapper around the optimal memory copy implementation for the target.
 RPC_ATTRS void rpc_memcpy(void *dst, const void *src, uint64_t count) {
-  __builtin_memcpy(dst, src, count);
+  if (count)
+    __builtin_memcpy(dst, src, count);
 }
 
 /// Minimal string length function.
@@ -445,6 +459,12 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
 /// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
+  using return_type = R;
+  using arg_types = rpc::tuple<Args...>;
+  static constexpr uint64_t ARITY = sizeof...(Args);
+};
+template <typename R, typename... Args>
+struct function_traits<R (*)(Args...) noexcept> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);

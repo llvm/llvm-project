@@ -374,6 +374,13 @@ func.func @expand_shape_illegal_output_shape(%arg0: tensor<2xf32>) {
   return
 }
 
+// -----
+
+func.func @expand_shape_output_shape_dynamic_dim_mismatch(%arg0: tensor<6xf32>) {
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 0, expected 2}}
+  %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [2, 3] : tensor<6xf32> into tensor<?x?xf32>
+  return
+}
 
 // -----
 

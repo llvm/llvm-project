@@ -1061,15 +1061,31 @@ genDataExitOperations(fir::FirOpBuilder &builder,
 /// Return the corresponding enum value for the mlir::acc::ReductionOperator
 /// from the parser representation.
 static mlir::acc::ReductionOperator
-getReductionOperator(const Fortran::parser::ReductionOperator &op) {
+getReductionOperator(const Fortran::parser::ReductionOperator &op,
+                     mlir::Type reductionTy,
+                     const Fortran::lower::AbstractConverter &converter) {
+  Fortran::common::FPMaxminBehavior maxminMode =
+      converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
   case Fortran::parser::ReductionOperator::Operator::Max:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMaximumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMaxnumf;
+    }
     return mlir::acc::ReductionOperator::AccMax;
   case Fortran::parser::ReductionOperator::Operator::Min:
+    if (fir::isa_real(reductionTy)) {
+      if (maxminMode == Fortran::common::FPMaxminBehavior::Extremum)
+        return mlir::acc::ReductionOperator::AccMinimumf;
+      else if (maxminMode == Fortran::common::FPMaxminBehavior::ExtremeNum)
+        return mlir::acc::ReductionOperator::AccMinnumf;
+    }
     return mlir::acc::ReductionOperator::AccMin;
   case Fortran::parser::ReductionOperator::Operator::Iand:
     return mlir::acc::ReductionOperator::AccIand;
@@ -1115,7 +1131,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
   const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
-  mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1143,6 +1158,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
 
     if (!isSupportedReductionType(reductionTy))
       TODO(operandLocation, "reduction with unsupported type");
+
+    mlir::acc::ReductionOperator mlirOp =
+        getReductionOperator(op, reductionTy, converter);
 
     if (designator) {
       Fortran::semantics::SomeExpr someExpr = *designator;
@@ -2829,11 +2847,30 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
       if (semanticsContext.IsEnabled(Fortran::common::LanguageFeature::CUDA)) {
         const Fortran::parser::AccObjectList &objectList{useDevice->v};
         for (const auto &accObject : objectList.v) {
-          Fortran::semantics::Symbol &symbol =
-              getSymbolFromAccObject(accObject);
-          const Fortran::semantics::Symbol *baseSym =
-              localSymbols.lookupSymbolByName(symbol.name().ToString());
-          localSymbols.copySymbolBinding(*baseSym, symbol);
+          const Fortran::semantics::Symbol *newSym = nullptr;
+          if (const auto *designator =
+                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
+            if (const auto *name =
+                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
+              newSym = name->symbol;
+            } else if (const auto *component = Fortran::parser::Unwrap<
+                           Fortran::parser::StructureComponent>(*designator)) {
+              const Fortran::parser::DataRef &base{component->Base()};
+              if (const auto *name =
+                      std::get_if<Fortran::parser::Name>(&base.u)) {
+                newSym = name->symbol;
+              }
+            }
+          } else if (const auto *name =
+                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
+            newSym = name->symbol;
+          }
+          if (newSym) {
+            const Fortran::semantics::Symbol *origSym =
+                localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym)
+              localSymbols.copySymbolBinding(*origSym, *newSym);
+          }
         }
       }
       genDataOperandOperations<mlir::acc::UseDeviceOp>(

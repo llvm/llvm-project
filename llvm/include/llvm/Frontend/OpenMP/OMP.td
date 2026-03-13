@@ -159,6 +159,9 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let clangClass = "OMPDepobjClause";
   let isImplicit = true;
 }
+def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let flangClass = "ScalarIntConstantExpr";
+}
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {
   let clangClass = "OMPDestroyClause";
   let flangClass = "OmpDestroyClause";
@@ -926,6 +929,16 @@ def OMP_Error : Directive<[Spelling<"error">]> {
   let association = AS_None;
   let category = CA_Utility;
 }
+def OMP_Flatten : Directive<[Spelling<"flatten">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Depth, 61>,
+  ];
+  let association = AS_LoopNest;
+  let category = CA_Executable;
+}
 def OMP_Flush : Directive<[Spelling<"flush">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_AcqRel, 50>,
@@ -966,7 +979,10 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let languages = [L_C, L_Fortran];
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
-  let allowedOnceClauses = [VersionedClause<OMPC_LoopRange, 60>];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Depth, 61>,
+    VersionedClause<OMPC_LoopRange, 60>,
+  ];
   let association = AS_LoopSeq;
   let category = CA_Executable;
 }
@@ -1185,6 +1201,16 @@ def OMP_EndSingle : Directive<[Spelling<"end single">]> {
   let association = OMP_Single.association;
   let category = OMP_Single.category;
   let languages = [L_Fortran];
+}
+def OMP_Split : Directive<[Spelling<"split">]> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Apply, 60>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Counts, 60>,
+  ];
+  let association = AS_LoopNest;
+  let category = CA_Executable;
 }
 def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [

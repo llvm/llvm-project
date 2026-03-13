@@ -12,7 +12,6 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
-
 namespace clang::tidy::performance {
 
 static auto getStringTypeMatcher(StringRef CharType) {
@@ -48,54 +47,46 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
   const auto RedundantFunctionalCast = cxxFunctionalCastExpr(
       hasType(IsStdString), hasDescendant(RedundantStringConstruction));
 
-  // Match method calls on std::string that modify or use the string,
-  // such as operator+, append(), substr(), c_str(), etc.
-  const auto HasStringOperatorCall = hasDescendant(cxxOperatorCallExpr(
-      hasOverloadedOperatorName("+"), hasType(IsStdString)));
-  const auto HasStringMethodCall =
-      hasDescendant(cxxMemberCallExpr(on(hasType(IsStdString))));
+  const auto RedundantTemporaryString =
+      expr(anyOf(RedundantStringConstruction, RedundantFunctionalCast));
 
-  const auto IsCallReturningString = callExpr(hasType(IsStdString));
-  const auto IsImplicitStringViewFromCall =
-      cxxConstructExpr(hasType(IsStdStringView),
-                       hasArgument(0, ignoringImplicit(IsCallReturningString)));
+  // Matches std::string(...).[c_str()|.data()]
+  const auto RedundantStringWithCStr =
+      cxxMemberCallExpr(callee(cxxMethodDecl(hasAnyName("c_str", "data"))),
+                        on(ignoringParenImpCasts(RedundantTemporaryString)));
 
-  // Main matcher: finds function calls where:
-  // 1. A parameter has type string_view
-  // 2. The corresponding argument contains a redundant std::string construction
-  //    (either functional cast syntax or direct construction/brace init)
-  // 3. The argument does NOT involve:
-  //    - String concatenation with operator+ (string_view doesn't support it)
-  //    - Method calls on the std::string (like append(), substr(), etc.)
+  // Main matcher: finds cases where an expression convertible to
+  // std::string_view is first converted to std::string unnecessarily.
   Finder->addMatcher(
-      callExpr(forEachArgumentWithParam(
-          expr(hasType(IsStdStringView),
-               // Ignore cases where the argument is a function call
-               unless(ignoringParenImpCasts(IsImplicitStringViewFromCall)),
-               // Match either syntax for std::string construction
-               hasDescendant(expr(anyOf(RedundantFunctionalCast,
-                                        RedundantStringConstruction))
-                                 .bind("redundantExpr")),
-               // Exclude cases of std::string methods or operator+ calls
-               unless(anyOf(HasStringOperatorCall, HasStringMethodCall)))
-              .bind("paramExpr"),
-          parmVarDecl(hasType(IsStdStringView)))),
+      cxxMemberCallExpr(
+          callee(memberExpr(member(cxxConversionDecl(returns(IsStdStringView))),
+                            has(ignoringImplicit(RedundantTemporaryString.bind(
+                                "redundantExpr"))))))
+          .bind("stringView"),
+      this);
+
+  Finder->addMatcher(
+      cxxConstructExpr(
+          argumentCountIs(1),
+          hasArgument(0, RedundantStringWithCStr.bind("redundantExpr")))
+          .bind("stringView"),
       this);
 }
 
 void StringViewConversionsCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *ParamExpr = Result.Nodes.getNodeAs<Expr>("paramExpr");
+  const auto *StringView = Result.Nodes.getNodeAs<Expr>("stringView");
   const auto *RedundantExpr = Result.Nodes.getNodeAs<Expr>("redundantExpr");
   const auto *OriginalExpr = Result.Nodes.getNodeAs<Expr>("originalStringView");
-  assert(RedundantExpr && ParamExpr && OriginalExpr);
+  assert(StringView && RedundantExpr && OriginalExpr);
 
-  // Sanity check. Verify that the redundant expression is the direct source of
-  // the argument, not part of a larger expression (e.g., std::string(sv) +
-  // "bar").
-  // FIXME: This is a temporary solution to avoid assertions. Instead the
-  // matcher must be fixed.
-  if (ParamExpr->getSourceRange() != RedundantExpr->getSourceRange())
-    return;
+  bool IsCStrPattern = false;
+  StringRef MethodName;
+  const auto *CStrCall = dyn_cast<CXXMemberCallExpr>(RedundantExpr);
+  if (CStrCall && CStrCall->getMethodDecl()) {
+    MethodName = CStrCall->getMethodDecl()->getName();
+    if (MethodName == "c_str" || MethodName == "data")
+      IsCStrPattern = true;
+  }
 
   const StringRef OriginalText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(OriginalExpr->getSourceRange()),
@@ -104,11 +95,21 @@ void StringViewConversionsCheck::check(const MatchFinder::MatchResult &Result) {
   if (OriginalText.empty())
     return;
 
-  diag(RedundantExpr->getBeginLoc(),
-       "redundant conversion to %0 and then back to %1")
-      << RedundantExpr->getType() << ParamExpr->getType()
-      << FixItHint::CreateReplacement(RedundantExpr->getSourceRange(),
-                                      OriginalText);
+  const FixItHint FixRedundantConversion = FixItHint::CreateReplacement(
+      RedundantExpr->getSourceRange(), OriginalText);
+  if (IsCStrPattern && CStrCall) {
+    // Handle std::string(sv).c_str() or std::string(sv).data() pattern
+    diag(RedundantExpr->getBeginLoc(),
+         "redundant conversion to %0 and calling .%1() and then back to %2")
+        << CStrCall->getImplicitObjectArgument()->getType() << MethodName
+        << StringView->getType() << FixRedundantConversion;
+  } else {
+    // Handle direct std::string(sv) pattern
+    diag(RedundantExpr->getBeginLoc(),
+         "redundant conversion to %0 and then back to %1")
+        << RedundantExpr->getType() << StringView->getType()
+        << FixRedundantConversion;
+  }
 }
 
 } // namespace clang::tidy::performance

@@ -446,6 +446,11 @@ static bool shouldFormatSymbolNameAttr(const NamedAttribute *attr) {
   return attr->attr.getBaseAttr().getAttrDefName() == "SymbolNameAttr";
 }
 
+/// The code snippet used to get properties from the operation state.
+/// {0}: The C++ class name of the operation.
+const char *const getPropertiesCode =
+    "result.getOrAddProperties<{0}::Properties>()";
+
 /// The code snippet used to generate a parser call for an attribute.
 ///
 /// {0}: The name of the attribute.
@@ -528,15 +533,16 @@ const char *const enumAttrParserCode = R"(
 
 /// The code snippet used to generate a parser call for a property.
 /// {0}: The name of the property
-/// {1}: The C++ class name of the operation
-/// {2}: The property's parser code with appropriate substitutions performed
-/// {3}: The description of the expected property for the error message.
+/// {1}: The property access expression
+/// (result.getOrAddProperties<Op::Properties>()) {2}: The property's parser
+/// code with appropriate substitutions performed {3}: The description of the
+/// expected property for the error message.
 const char *const propertyParserCode = R"(
   auto {0}PropLoc = parser.getCurrentLocation();
   auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::ParseResult {{
     {2}
     return ::mlir::success();
-  }(result.getOrAddProperties<{1}::Properties>().{0});
+  }({1}.{0});
   if (failed({0}PropParseResult)) {{
     return parser.emitError({0}PropLoc, "invalid value for property {0}, expected {3}");
   }
@@ -544,13 +550,14 @@ const char *const propertyParserCode = R"(
 
 /// The code snippet used to generate a parser call for a property.
 /// {0}: The name of the property
-/// {1}: The C++ class name of the operation
-/// {2}: The property's parser code with appropriate substitutions performed
+/// {1}: The property access expression
+/// (result.getOrAddProperties<Op::Properties>()) {2}: The property's parser
+/// code with appropriate substitutions performed
 const char *const optionalPropertyParserCode = R"(
   auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::OptionalParseResult {{
     {2}
     return ::mlir::success();
-  }(result.getOrAddProperties<{1}::Properties>().{0});
+  }({1}.{0});
   if ({0}PropParseResult.has_value() && failed(*{0}PropParseResult)) {{
     return ::mlir::failure();
   }
@@ -965,7 +972,8 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
 }
 
 /// Generate the parser for a parameter to a custom directive.
-static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
+static void genCustomParameterParser(FormatElement *param, MethodBody &body,
+                                     StringRef opCppClassName) {
   if (auto *attr = dyn_cast<AttributeVariable>(param)) {
     body << attr->getVar()->name << "Attr";
   } else if (isa<AttrDictDirective>(param)) {
@@ -999,7 +1007,7 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
       body << formatv("{0}Successor", name);
 
   } else if (auto *dir = dyn_cast<RefDirective>(param)) {
-    genCustomParameterParser(dir->getArg(), body);
+    genCustomParameterParser(dir->getArg(), body, opCppClassName);
 
   } else if (auto *dir = dyn_cast<TypeDirective>(param)) {
     ArgumentLengthKind lengthKind;
@@ -1020,8 +1028,8 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     body << tgfmt(string->getValue(), &ctx);
 
   } else if (auto *property = dyn_cast<PropertyVariable>(param)) {
-    body << formatv("result.getOrAddProperties<Properties>().{0}",
-                    property->getVar()->name);
+    body << formatv(getPropertiesCode, opCppClassName) << "."
+         << property->getVar()->name;
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -1092,7 +1100,7 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
   body << "    auto odsResult = parse" << dir->getName() << "(parser";
   for (FormatElement *param : dir->getElements()) {
     body << ", ";
-    genCustomParameterParser(param, body);
+    genCustomParameterParser(param, body, opCppClassName);
   }
   body << ");\n";
 
@@ -1110,9 +1118,8 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
       if (var->attr.isOptional() || var->attr.hasDefaultValue())
         body << formatv("    if ({0}Attr)\n  ", var->name);
       if (useProperties) {
-        body << formatv(
-            "    result.getOrAddProperties<{1}::Properties>().{0} = {0}Attr;\n",
-            var->name, opCppClassName);
+        std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+        body << formatv("    {0}.{1} = {1}Attr;\n", propAccess, var->name);
       } else {
         body << formatv("    result.addAttribute(\"{0}\", {0}Attr);\n",
                         var->name);
@@ -1190,10 +1197,8 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
   }
   std::string attrAssignment;
   if (useProperties) {
-    attrAssignment =
-        formatv("  "
-                "result.getOrAddProperties<{1}::Properties>().{0} = {0}Attr;",
-                var->name, opCppClassName);
+    std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+    attrAssignment = formatv("  {0}.{1} = {1}Attr;", propAccess, var->name);
   } else {
     attrAssignment =
         formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
@@ -1217,11 +1222,12 @@ static void genPropertyParser(PropertyVariable *propVar, MethodBody &body,
   fmtContext.addSubst("_ctxt", "parser.getContext()");
   fmtContext.addSubst("_storage", "propStorage");
 
+  std::string propAccess = formatv(getPropertiesCode, opCppClassName);
   if (parseOptionally) {
-    body << formatv(optionalPropertyParserCode, name, opCppClassName,
+    body << formatv(optionalPropertyParserCode, name, propAccess,
                     tgfmt(prop.getOptionalParserCall(), &fmtContext));
   } else {
-    body << formatv(propertyParserCode, name, opCppClassName,
+    body << formatv(propertyParserCode, name, propAccess,
                     tgfmt(prop.getParserCall(), &fmtContext),
                     prop.getSummary());
   }
@@ -1265,10 +1271,9 @@ static void genAttrParser(AttributeVariable *attr, MethodBody &body,
     }
   }
   if (useProperties) {
-    body << formatv(
-        "  if ({0}Attr) result.getOrAddProperties<{1}::Properties>().{0} = "
-        "{0}Attr;\n",
-        var->name, opCppClassName);
+    std::string propAccess = formatv(getPropertiesCode, opCppClassName);
+    body << formatv("  if ({0}Attr) {1}.{0} = {0}Attr;\n", var->name,
+                    propAccess);
   } else {
     body << formatv(
         "  if ({0}Attr) result.attributes.append(\"{0}\", {0}Attr);\n",
@@ -1432,6 +1437,7 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
 void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                                        FmtContext &attrTypeCtx,
                                        GenContext genCtx) {
+  std::string propAccess = formatv(getPropertiesCode, opCppClassName);
   /// Optional Group.
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
     auto genElementParsers = [&](FormatElement *firstElement,
@@ -1448,14 +1454,11 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
           // Add the anchor unit attribute or property to the operation state
           // or set the property to true.
           if (isa<PropertyVariable>(anchorVar)) {
-            body << formatv(
-                "    result.getOrAddProperties<{1}::Properties>().{0} = true;",
-                anchorVar->getName(), opCppClassName);
+            body << formatv("    {0}.{1} = true;", propAccess,
+                            anchorVar->getName());
           } else if (useProperties) {
-            body << formatv(
-                "    result.getOrAddProperties<{1}::Properties>().{0} = "
-                "parser.getBuilder().getUnitAttr();",
-                anchorVar->getName(), opCppClassName);
+            body << formatv("    {0}.{1} = parser.getBuilder().getUnitAttr();",
+                            propAccess, anchorVar->getName());
           } else {
             body << "    result.addAttribute(\"" << anchorVar->getName()
                  << "\", parser.getBuilder().getUnitAttr());\n";
@@ -1551,14 +1554,11 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       if (AttributeLikeVariable *unitVarElem =
               oilist->getUnitVariableParsingElement(pelement)) {
         if (isa<PropertyVariable>(unitVarElem)) {
-          body << formatv(
-              "    result.getOrAddProperties<{1}::Properties>().{0} = true;",
-              unitVarElem->getName(), opCppClassName);
+          body << formatv("    {0}.{1} = true;", propAccess,
+                          unitVarElem->getName());
         } else if (useProperties) {
-          body << formatv(
-              "    result.getOrAddProperties<{1}::Properties>().{0} = "
-              "parser.getBuilder().getUnitAttr();",
-              unitVarElem->getName(), opCppClassName);
+          body << formatv("    {0}.{1} = parser.getBuilder().getUnitAttr();",
+                          propAccess, unitVarElem->getName());
         } else {
           body << "  result.addAttribute(\"" << unitVarElem->getName()
                << "\", UnitAttr::get(parser.getContext()));\n";
@@ -1906,6 +1906,7 @@ void OperationFormat::genParserSuccessorResolution(Operator &op,
 
 void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          MethodBody &body) {
+  std::string propAccess = formatv(getPropertiesCode, op.getCppClassName());
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
@@ -1915,38 +1916,18 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         else
           body << "1";
       };
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << formatv("}), "
-                        "result.getOrAddProperties<{0}::Properties>()."
-                        "operandSegmentSizes.begin());\n",
-                        op.getCppClassName());
-      } else {
-        body << "  result.addAttribute(\"operandSegmentSizes\", "
-             << "parser.getBuilder().getDenseI32ArrayAttr({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << "}));\n";
-      }
+      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+      body << "}), " << propAccess << ".operandSegmentSizes.begin());\n";
     }
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
         continue;
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << formatv(
-            "  result.getOrAddProperties<{0}::Properties>().{1} = "
-            "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
-            op.getCppClassName(),
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-            operand.name);
-      } else {
-        body << formatv(
-            "  result.addAttribute(\"{0}\", "
-            "parser.getBuilder().getDenseI32ArrayAttr({1}OperandGroupSizes));"
-            "\n",
-            operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
-            operand.name);
-      }
+      body << formatv(
+          "  {0}.{1} = "
+          "parser.getBuilder().getDenseI32ArrayAttr({2}OperandGroupSizes);\n",
+          propAccess, operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+          operand.name);
     }
   }
 
@@ -1959,19 +1940,9 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << formatv("}), "
-                      "result.getOrAddProperties<{0}::Properties>()."
-                      "resultSegmentSizes.begin());\n",
-                      op.getCppClassName());
-    } else {
-      body << "  result.addAttribute(\"resultSegmentSizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << "}));\n";
-    }
+    body << "::llvm::copy(::llvm::ArrayRef<int32_t>({";
+    llvm::interleaveComma(op.getResults(), body, interleaveFn);
+    body << "}), " << propAccess << ".resultSegmentSizes.begin());\n";
   }
 }
 

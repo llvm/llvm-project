@@ -689,7 +689,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->StatCache = StatCache;
+    Result->StatCache = std::move(StatCache);
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     // Move the options instead of copying them. The invocation doesn't need
     // them anymore.
