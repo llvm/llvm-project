@@ -8783,8 +8783,6 @@ static mlir::Value genExtremumResult(mlir::Location loc,
     if (mlir::isa<mlir::IndexType>(type))
       TODO(loc, "extremum for index type");
 
-    mlir::Value cmpLeft = left;
-    mlir::Value cmpRight = right;
     if (type.isUnsignedInteger()) {
       // arith.maxui/minui operands must have singless type.
       mlir::Type signlessType = mlir::IntegerType::get(
