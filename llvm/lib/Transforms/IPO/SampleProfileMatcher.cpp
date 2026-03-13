@@ -179,7 +179,8 @@ bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
   return (SymbolMap->find(ProfileFuncName) == SymbolMap->end()) &&
          (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
           !ProfileFuncName.isStringRef() ||
-          (ProbeManager->getDesc(ProfileFuncName.stringRef()) == nullptr));
+          (ProbeManager->getDesc(FunctionSamples::getCanonicalFnName(
+               ProfileFuncName.stringRef())) == nullptr));
 }
 
 bool SampleProfileMatcher::functionMatchesProfile(
