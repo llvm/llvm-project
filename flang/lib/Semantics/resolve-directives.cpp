@@ -2041,7 +2041,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
 
 void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     const parser::Name &iv) {
-  // Find the parallel or task generating construct enclosing the
+  unsigned version{context_.langOptions().OpenMPVersion};
+  // Find the parallel, teams or task generating construct enclosing the
   // sequential loop.
   auto targetIt{dirContext_.rbegin()};
   for (;; ++targetIt) {
@@ -2051,6 +2052,11 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (llvm::omp::allParallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
+    }
+    if (version >= 52) {
+      if (llvm::omp::allTeamsSet.test(targetIt->directive)) {
+        break;
+      }
     }
   }
   if (IsLocalInsideScope(*iv.symbol, targetIt->scope)) {
@@ -3140,8 +3146,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
                 "Variable '%s' may not appear on both %s and %s clauses on a %s construct"_err_en_US,
                 symbol2->name(), Symbol::OmpFlagToClauseName(firstOmpFlag),
                 Symbol::OmpFlagToClauseName(secondOmpFlag),
-                parser::ToUpperCaseLetters(
-                    llvm::omp::getOpenMPDirectiveName(directive, version)));
+                parser::omp::GetUpperName(directive, version));
           }
         }};
     if (dataCopyingAttributeFlags.test(ompFlag)) {
@@ -3519,9 +3524,7 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
     context_
         .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
         .Attach(target, "In the enclosing %s directive branched into"_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                targetContext->directive, version)
-                    .str()));
+            parser::omp::GetUpperName(targetContext->directive, version));
   }
   if (sourceContext &&
       (!targetContext ||
@@ -3532,9 +3535,7 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
         .Say(source,
             "invalid branch leaving an OpenMP structured block"_err_en_US)
         .Attach(target, "Outside the enclosing %s directive"_en_US,
-            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                sourceContext->directive, version)
-                    .str()));
+            parser::omp::GetUpperName(sourceContext->directive, version));
   }
 }
 
@@ -3559,12 +3560,13 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
             if (memOrder) {
               if (details.has_ompAtomicDefaultMemOrder() &&
                   *details.ompAtomicDefaultMemOrder() != *memOrder) {
+                unsigned version{context_.langOptions().OpenMPVersion};
                 context_.Say(programUnit.sourceRange(),
                     "Conflicting '%s' REQUIRES clauses found in compilation "
                     "unit"_err_en_US,
-                    parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(
-                        llvm::omp::Clause::OMPC_atomic_default_mem_order)
-                            .str()));
+                    parser::omp::GetUpperName(
+                        llvm::omp::Clause::OMPC_atomic_default_mem_order,
+                        version));
               }
               details.set_ompAtomicDefaultMemOrder(*memOrder);
             }
@@ -3584,9 +3586,7 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(llvm::omp::Directive D,
   if (version < EmitFromVersion) {
     return;
   }
-  warnStrOS << "OpenMP directive "
-            << parser::ToUpperCaseLetters(
-                   llvm::omp::getOpenMPDirectiveName(D, version).str())
+  warnStrOS << "OpenMP directive " << parser::omp::GetUpperName(D, version)
             << " has been deprecated";
 
   auto setAlternativeStr = [&warnStrOS](llvm::StringRef alt) {

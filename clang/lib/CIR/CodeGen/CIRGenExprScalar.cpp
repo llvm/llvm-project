@@ -700,8 +700,9 @@ public:
       if (mlir::isa<cir::SingleType, cir::DoubleType>(value.getType())) {
         // Create the inc/dec operation.
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        assert(kind == cir::UnaryOpKind::Inc ||
-               kind == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind");
+        assert(
+            (kind == cir::UnaryOpKind::Inc || kind == cir::UnaryOpKind::Dec) &&
+            "Invalid UnaryOp kind");
         value = emitUnaryOp(e, kind, value);
       } else {
         cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
@@ -733,8 +734,8 @@ public:
   mlir::Value emitIncDecConsiderOverflowBehavior(const UnaryOperator *e,
                                                  mlir::Value inVal,
                                                  cir::UnaryOpKind kind) {
-    assert(kind == cir::UnaryOpKind::Inc ||
-           kind == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind");
+    assert((kind == cir::UnaryOpKind::Inc || kind == cir::UnaryOpKind::Dec) &&
+           "Invalid UnaryOp kind");
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
       return emitUnaryOp(e, kind, inVal, /*nsw=*/false);
@@ -1195,19 +1196,25 @@ public:
         result = builder.createCompare(loc, kind, lhs, rhs);
       }
     } else {
-      // Complex Comparison: can only be an equality comparison.
-      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
-      BinOpInfo boInfo = emitBinOps(e);
-      mlir::Value lhs = boInfo.lhs;
-      if (!lhsTy->isAnyComplexType()) {
-        lhs = builder.createComplexCreate(
-            loc, lhs, builder.getNullValue(lhs.getType(), loc));
+      assert((e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE) &&
+             "Complex Comparison: can only be an equality comparison");
+
+      mlir::Value lhs;
+      if (lhsTy->isAnyComplexType()) {
+        lhs = cgf.emitComplexExpr(e->getLHS());
+      } else {
+        mlir::Value lhsReal = Visit(e->getLHS());
+        mlir::Value lhsImag = builder.getNullValue(convertType(lhsTy), loc);
+        lhs = builder.createComplexCreate(loc, lhsReal, lhsImag);
       }
 
-      mlir::Value rhs = boInfo.rhs;
-      if (!rhsTy->isAnyComplexType()) {
-        rhs = builder.createComplexCreate(
-            loc, rhs, builder.getNullValue(rhs.getType(), loc));
+      mlir::Value rhs;
+      if (rhsTy->isAnyComplexType()) {
+        rhs = cgf.emitComplexExpr(e->getRHS());
+      } else {
+        mlir::Value rhsReal = Visit(e->getRHS());
+        mlir::Value rhsImag = builder.getNullValue(convertType(rhsTy), loc);
+        rhs = builder.createComplexCreate(loc, rhsReal, rhsImag);
       }
 
       result = builder.createCompare(loc, kind, lhs, rhs);
@@ -2524,9 +2531,9 @@ mlir::Value ScalarExprEmitter::VisitUnaryImag(const UnaryOperator *e) {
 
 mlir::Value ScalarExprEmitter::VisitRealImag(const UnaryOperator *e,
                                              QualType promotionTy) {
-  assert(e->getOpcode() == clang::UO_Real ||
-         e->getOpcode() == clang::UO_Imag &&
-             "Invalid UnaryOp kind for ComplexType Real or Imag");
+  assert(
+      (e->getOpcode() == clang::UO_Real || e->getOpcode() == clang::UO_Imag) &&
+      "Invalid UnaryOp kind for ComplexType Real or Imag");
 
   Expr *op = e->getSubExpr();
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
@@ -2621,12 +2628,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
       }
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
-    cgf.getCIRGenModule().errorNYI(
-        e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
-        e->getStmtClassName());
-    return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
-                               llvm::APSInt(llvm::APInt(64, 1), true)));
+    clang::CharUnits::QuantityType alignment =
+        cgf.getContext()
+            .toCharUnitsFromBits(cgf.getContext().getOpenMPDefaultSimdAlign(
+                e->getTypeOfArgument()->getPointeeType()))
+            .getQuantity();
+    return builder.getConstantInt(loc, cgf.cgm.sizeTy, alignment);
   } else if (e->getKind() == UETT_VectorElements) {
     auto vecTy = cast<cir::VectorType>(convertType(e->getTypeOfArgument()));
     if (vecTy.getIsScalable()) {

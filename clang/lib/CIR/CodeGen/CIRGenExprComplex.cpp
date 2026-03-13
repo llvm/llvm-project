@@ -61,8 +61,8 @@ public:
   }
 
   mlir::Value VisitStmt(Stmt *s) {
-    cgf.cgm.errorNYI(s->getBeginLoc(), "ComplexExprEmitter VisitStmt");
-    return {};
+    s->dump(llvm::errs(), cgf.getContext());
+    llvm_unreachable("Stmt can't have complex result type!");
   }
 
   mlir::Value VisitExpr(Expr *e);
@@ -328,9 +328,7 @@ public:
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitPackIndexingExpr");
-    return {};
+    return Visit(e->getSelectedExpr());
   }
 };
 } // namespace
@@ -469,13 +467,12 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
   case CK_NoOp:
   case CK_LValueToRValue:
+  case CK_UserDefinedConversion:
     return Visit(op);
 
   case CK_AtomicToNonAtomic:
-  case CK_NonAtomicToAtomic:
-  case CK_UserDefinedConversion: {
-    cgf.cgm.errorNYI(
-        "ComplexExprEmitter::emitCast Atmoic & UserDefinedConversion");
+  case CK_NonAtomicToAtomic: {
+    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast Atmoic");
     return {};
   }
 
@@ -593,9 +590,8 @@ mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
 mlir::Value ComplexExprEmitter::VisitPlusMinus(const UnaryOperator *e,
                                                cir::UnaryOpKind kind,
                                                QualType promotionType) {
-  assert(kind == cir::UnaryOpKind::Plus ||
-         kind == cir::UnaryOpKind::Minus &&
-             "Invalid UnaryOp kind for ComplexType Plus or Minus");
+  assert((kind == cir::UnaryOpKind::Plus || kind == cir::UnaryOpKind::Minus) &&
+         "Invalid UnaryOp kind for ComplexType Plus or Minus");
 
   mlir::Value op;
   if (!promotionType.isNull())
@@ -1099,8 +1095,8 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
                                                      LValue lv,
                                                      cir::UnaryOpKind op,
                                                      bool isPre) {
-  assert(op == cir::UnaryOpKind::Inc ||
-         op == cir::UnaryOpKind::Dec && "Invalid UnaryOp kind for ComplexType");
+  assert((op == cir::UnaryOpKind::Inc || op == cir::UnaryOpKind::Dec) &&
+         "Invalid UnaryOp kind for ComplexType");
 
   mlir::Value inVal = emitLoadOfComplex(lv, e->getExprLoc());
   mlir::Location loc = getLoc(e->getExprLoc());

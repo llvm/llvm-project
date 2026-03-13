@@ -482,7 +482,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ReductionStartVector:
-  case VPInstruction::ExtractLastActive:
     return 3;
   case Instruction::Call: {
     // For unmasked calls, the last argument will the called function. Use that
@@ -506,6 +505,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::SLPLoad:
   case VPInstruction::SLPStore:
   case VPInstruction::ExtractLane:
+  case VPInstruction::ExtractLastActive:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -905,13 +905,21 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::Reverse:
     return Builder.CreateVectorReverse(State.get(getOperand(0)), "reverse");
   case VPInstruction::ExtractLastActive: {
-    Value *Data = State.get(getOperand(0));
-    Value *Mask = State.get(getOperand(1));
-    Value *Default = State.get(getOperand(2), /*IsScalar=*/true);
-    Type *VTy = Data->getType();
-    return Builder.CreateIntrinsic(
-        Intrinsic::experimental_vector_extract_last_active, {VTy},
-        {Data, Mask, Default});
+    Value *Result = State.get(getOperand(0), /*IsScalar=*/true);
+    for (unsigned Idx = 1; Idx < getNumOperands(); Idx += 2) {
+      Value *Data = State.get(getOperand(Idx));
+      Value *Mask = State.get(getOperand(Idx + 1));
+      Type *VTy = Data->getType();
+
+      if (State.VF.isScalar())
+        Result = Builder.CreateSelect(Mask, Data, Result);
+      else
+        Result = Builder.CreateIntrinsic(
+            Intrinsic::experimental_vector_extract_last_active, {VTy},
+            {Data, Mask, Result});
+    }
+
+    return Result;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -2240,6 +2248,9 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     case RecurKind::AnyOf:
       O << "any-of";
       break;
+    case RecurKind::FindLast:
+      O << "find-last";
+      break;
     case RecurKind::SMax:
       O << "smax";
       break;
@@ -2293,7 +2304,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   switch (Opcode) {
   case Instruction::Call:
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::PHI:
   case Instruction::GetElementPtr:
     llvm_unreachable("This instruction is handled by a different recipe.");
@@ -2692,9 +2704,8 @@ void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
   VPlan &Plan = *getParent()->getPlan();
   VPValue *VFVal = getVFValue();
   VPTypeAnalysis TypeInfo(Plan);
-  const DataLayout &DL =
-      Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(getPointer()));
+  const DataLayout &DL = Plan.getDataLayout();
+  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(this));
   VPValue *Stride =
       Plan.getConstantInt(IndexTy, getStride(), /*IsSigned=*/true);
   Type *VFTy = TypeInfo.inferScalarType(VFVal);
@@ -3575,7 +3586,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       if (!PtrSCEV || Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
         break;
       Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
-      Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
+      Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(
           IntegerType::getInt1Ty(Ctx.L->getHeader()->getContext()), VF);

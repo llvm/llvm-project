@@ -1,0 +1,89 @@
+set(_gen ${CMAKE_CURRENT_SOURCE_DIR}/../generic)
+
+# CLSPV uses a curated subset of generic builtins plus its own overrides,
+# so this list is self-contained rather than merged with the generic set.
+libclc_configure_source_list(_clspv_sources
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  conversion/convert_float2float.cl
+  conversion/convert_float2int.cl
+  conversion/convert_int2float.cl
+  conversion/convert_integer.cl
+  math/fma.cl
+  shared/vstore_half.cl
+)
+
+libclc_configure_source_list(_gen_sources
+  ${_gen}
+  geometric/distance.cl
+  geometric/length.cl
+  math/acos.cl
+  math/acosh.cl
+  math/acospi.cl
+  math/asin.cl
+  math/asinh.cl
+  math/asinpi.cl
+  math/atan.cl
+  math/atan2.cl
+  math/atan2pi.cl
+  math/atanh.cl
+  math/atanpi.cl
+  math/cbrt.cl
+  math/cos.cl
+  math/cosh.cl
+  math/cospi.cl
+  math/erf.cl
+  math/erfc.cl
+  math/exp.cl
+  math/exp2.cl
+  math/exp10.cl
+  math/expm1.cl
+  math/fdim.cl
+  math/fmod.cl
+  math/fract.cl
+  math/frexp.cl
+  math/half_cos.cl
+  math/half_divide.cl
+  math/half_exp.cl
+  math/half_exp2.cl
+  math/half_exp10.cl
+  math/half_log.cl
+  math/half_log2.cl
+  math/half_log10.cl
+  math/half_powr.cl
+  math/half_recip.cl
+  math/half_sin.cl
+  math/half_sqrt.cl
+  math/half_tan.cl
+  math/hypot.cl
+  math/ilogb.cl
+  math/ldexp.cl
+  math/lgamma.cl
+  math/lgamma_r.cl
+  math/log.cl
+  math/log2.cl
+  math/log10.cl
+  math/log1p.cl
+  math/logb.cl
+  math/maxmag.cl
+  math/minmag.cl
+  math/modf.cl
+  math/nan.cl
+  math/nextafter.cl
+  math/pow.cl
+  math/pown.cl
+  math/powr.cl
+  math/remainder.cl
+  math/remquo.cl
+  math/rootn.cl
+  math/sin.cl
+  math/sincos.cl
+  math/sinh.cl
+  math/sinpi.cl
+  math/tan.cl
+  math/tanh.cl
+  math/tanpi.cl
+  math/tgamma.cl
+  subnormal_config.cl
+)
+
+set(OPENCL_CLSPV_SOURCES ${_clspv_sources} ${_gen_sources} PARENT_SCOPE)
