@@ -57,9 +57,9 @@ double B::VAR = 1.0;
 
 // CK1-LABEL: @.__omp_offloading_{{.*}}implicit_maps_integer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
+// CK1-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
+// CK1-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
 
 // CK1-LABEL: implicit_maps_integer{{.*}}(
 void implicit_maps_integer (int a){
@@ -81,14 +81,14 @@ void implicit_maps_integer (int a){
 // CK1-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
 // CK1-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-// CK1: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+// CK1: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
 #pragma omp target
   {
    ++i;
   }
 }
 
-// CK1: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
+// CK1: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK1: [[ADDR:%.+]] = alloca i[[sz]],
 // CK1: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK1-64: {{.+}} = load i32, ptr [[ADDR]],

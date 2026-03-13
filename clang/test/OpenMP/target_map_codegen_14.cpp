@@ -34,19 +34,19 @@
 #ifdef CK15
 
 // CK15: [[ST:%.+]] = type { i32, double }
-// CK15: [[SIZES:@.+]] = {{.+}}constant [5 x i64] [i64 0, i64 4, i64 8, i64 4, i64 0]
+// CK15: [[SIZES:@.+]] = {{.+}}constant [4 x i64] [i64 0, i64 4, i64 8, i64 4]
 // Map types:
 // - OMP_MAP_TARGET_PARAM = 32
 // - OMP_MAP_TO + OMP_MAP_FROM | OMP_MAP_IMPLICIT | OMP_MAP_MEMBER_OF = 281474976711171
 // - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK15: [[TYPES:@.+]] = {{.+}}constant [5 x i64] [i64 32, i64 281474976711171, i64 281474976711171, i64 800, i64 288]
+// CK15: [[TYPES:@.+]] = {{.+}}constant [4 x i64] [i64 32, i64 281474976711171, i64 281474976711171, i64 800]
 
-// CK15: [[SIZES2:@.+]] = {{.+}}constant [5 x i64] [i64 0, i64 4, i64 8, i64 4, i64 0]
+// CK15: [[SIZES2:@.+]] = {{.+}}constant [4 x i64] [i64 0, i64 4, i64 8, i64 4]
 // Map types:
 // - OMP_MAP_TARGET_PARAM = 32
 // - OMP_MAP_TO + OMP_MAP_FROM | OMP_MAP_IMPLICIT | OMP_MAP_MEMBER_OF = 281474976711171
 // - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK15: [[TYPES2:@.+]] = {{.+}}constant [5 x i64] [i64 32, i64 281474976711171, i64 281474976711171, i64 800, i64 288]
+// CK15: [[TYPES2:@.+]] = {{.+}}constant [4 x i64] [i64 32, i64 281474976711171, i64 281474976711171, i64 800]
 
 template<int x>
 class SSST {
@@ -113,7 +113,7 @@ void implicit_maps_templated_class (int a){
   // CK15-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
   // CK15-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-  // CK15: call void [[KERNEL:@.+]](ptr [[DECL]], i[[sz]] {{.+}}, ptr null)
+  // CK15: call void [[KERNEL:@.+]](ptr [[DECL]], i[[sz]] {{.+}})
   ssst.foo(456);
 
   // CK15: define {{.*}}void @{{.+}}bar{{.+}}(ptr {{[^,]+}}, i32 {{[^,]+}})
@@ -152,11 +152,11 @@ void implicit_maps_templated_class (int a){
   // CK15-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
   // CK15-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-  // CK15: call void [[KERNEL2:@.+]](ptr [[DECL]], i[[sz]] {{.+}}, ptr null)
+  // CK15: call void [[KERNEL2:@.+]](ptr [[DECL]], i[[sz]] {{.+}})
   ssst.bar<210>(789);
 }
 
-// CK15: define internal void [[KERNEL]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
+// CK15: define internal void [[KERNEL]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
 // CK15: [[ADDR0:%.+]] = alloca ptr,
 // CK15: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK15: store ptr [[THIS]], ptr [[ADDR0]],
@@ -166,7 +166,7 @@ void implicit_maps_templated_class (int a){
 // CK15-32: {{.+}} = load i32, ptr [[ADDR1]],
 // CK15: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF0]], i32 0, i32 0
 
-// CK15: define internal void [[KERNEL2]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
+// CK15: define internal void [[KERNEL2]](ptr noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
 // CK15: [[ADDR0:%.+]] = alloca ptr,
 // CK15: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK15: store ptr [[THIS]], ptr [[ADDR0]],

@@ -33,10 +33,10 @@
 // SIMD-ONLY15-NOT: {{__kmpc|__tgt}}
 #ifdef CK16
 
-// CK16-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
+// CK16-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types:
 // - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK16-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
+// CK16-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
 
 template<int y>
 int foo(int d) {
@@ -67,10 +67,10 @@ void implicit_maps_templated_function (int a){
   // CK16-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
   // CK16-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-  // CK16: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+  // CK16: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
   i = foo<543>(i);
 }
-// CK16: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
+// CK16: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK16: [[ADDR:%.+]] = alloca i[[sz]],
 // CK16: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK16-64: {{.+}} = load i32, ptr [[ADDR]],

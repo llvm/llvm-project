@@ -106,7 +106,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <line:5:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | | | `-FieldDecl {{.*}} <line:6:3> col:3 implicit 'int &'
@@ -247,7 +246,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |     `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <col:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:4:1) *const restrict'
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       |   |-RecordDecl {{.*}} <line:5:1> col:1 implicit struct definition
 // CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       |   | `-FieldDecl {{.*}} <line:6:3> col:3 implicit 'int &'
@@ -419,7 +417,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-DeclRefExpr {{.*}} <line:13:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <line:14:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:11:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:11:1) *const restrict'
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <line:12:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} <line:13:3> col:3 implicit 'int &'
@@ -625,7 +622,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-DeclRefExpr {{.*}} <line:13:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <line:14:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:11:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:11:1) *const restrict'
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       |   |-RecordDecl {{.*}} <line:12:1> col:1 implicit struct definition
 // CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       |   | |-FieldDecl {{.*}} <line:13:3> col:3 implicit 'int &'
@@ -833,7 +829,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-DeclRefExpr {{.*}} <line:21:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <line:22:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:19:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:19:1) *const restrict'
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <line:20:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} <line:21:3> col:3 implicit 'int &'
@@ -1043,7 +1038,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-DeclRefExpr {{.*}} <line:21:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <line:22:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:19:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:19:1) *const restrict'
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       |   |-RecordDecl {{.*}} <line:20:1> col:1 implicit struct definition
 // CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       |   | |-FieldDecl {{.*}} <line:21:3> col:3 implicit 'int &'
@@ -1251,7 +1245,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-DeclRefExpr {{.*}} <line:29:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <line:30:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:27:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:27:1) *const restrict'
-// CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       | | | |-RecordDecl {{.*}} <line:28:1> col:1 implicit struct definition
 // CHECK-NEXT: |       | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       | | | | |-FieldDecl {{.*}} <line:29:3> col:3 implicit 'int &'
@@ -1480,7 +1473,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-DeclRefExpr {{.*}} <line:29:3> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <line:30:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:27:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:27:1) *const restrict'
-// CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT: |       |   |-RecordDecl {{.*}} <line:28:1> col:1 implicit struct definition
 // CHECK-NEXT: |       |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT: |       |   | |-FieldDecl {{.*}} <line:29:3> col:3 implicit 'int &'
@@ -1740,7 +1732,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   |-DeclRefExpr {{.*}} <line:38:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | | | |   `-DeclRefExpr {{.*}} <line:39:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | | | |-ImplicitParamDecl {{.*}} <line:35:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:35:1) *const restrict'
-// CHECK-NEXT:         | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT:         | | | |-RecordDecl {{.*}} <line:36:1> col:1 implicit struct definition
 // CHECK-NEXT:         | | | | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:         | | | | |-FieldDecl {{.*}} <line:37:3> col:3 implicit 'int &'
@@ -2034,7 +2025,6 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   |-DeclRefExpr {{.*}} <line:38:5> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         |   |   `-DeclRefExpr {{.*}} <line:39:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         |   |-ImplicitParamDecl {{.*}} <line:35:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-parallel-for.c:35:1) *const restrict'
-// CHECK-NEXT:         |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT:         |   |-RecordDecl {{.*}} <line:36:1> col:1 implicit struct definition
 // CHECK-NEXT:         |   | |-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:         |   | |-FieldDecl {{.*}} <line:37:3> col:3 implicit 'int &'

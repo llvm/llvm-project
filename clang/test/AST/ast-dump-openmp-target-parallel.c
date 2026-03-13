@@ -20,7 +20,6 @@ void test(void) {
 // CHECK-NEXT:           |   |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT:           |   |   `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-parallel.c:4:1) *const restrict'
 // CHECK-NEXT:           |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-parallel.c:4:1) *const restrict'
-// CHECK-NEXT:           |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT:           |   |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT:           |   | `-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:           |   `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
@@ -45,7 +44,6 @@ void test(void) {
 // CHECK-NEXT:             |   |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT:             |   `-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-parallel.c:4:1) *const restrict'
 // CHECK-NEXT:             |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-target-parallel.c:4:1) *const restrict'
-// CHECK-NEXT:             |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit dyn_ptr 'void *const restrict'
 // CHECK-NEXT:             |-RecordDecl {{.*}} <col:1> col:1 implicit struct definition
 // CHECK-NEXT:             | `-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
 // CHECK-NEXT:             `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow

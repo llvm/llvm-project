@@ -62,7 +62,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     }
     llvm.return
   }
-  // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_arg_8_l{{.*}}(i32 %{{.*}}, i64 %[[ARG:.*]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+  // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_arg_8_l{{.*}}(i32 %{{.*}}, i64 %[[ARG:.*]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
   // CHECK: %[[CONV_LB:.*]] = trunc i64 %[[ARG]] to i32
   // CHECK: %[[CONV_UB:.*]] = trunc i64 %[[ARG]] to i32
   // CHECK: call void @__kmpc_push_num_teams_51({{.*}}, {{.*}}, i32 %[[CONV_LB]], i32 %[[CONV_UB]], {{.*}})
@@ -168,7 +168,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     }
     llvm.return
   }
-  // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_8_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:[^,]+]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+  // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_8_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:.*]], ptr %{{.*}}, ptr %{{.*}})
   // CHECK: %[[ARG_LD:.*]] = load i64, ptr %[[ARG]], align 8
   // CHECK: %[[CONV_TL:.*]] = trunc i64 %[[ARG_LD]] to i32
   // CHECK: call void @__kmpc_push_num_teams_51({{.*}}, {{.*}}, i32 0, i32 0, i32 %[[CONV_TL]])
@@ -221,7 +221,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     }
     llvm.return
   }
-  // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_2_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:[^,]+]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
+  // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_2_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:.*]], ptr %{{.*}}, ptr %{{.*}})
   // CHECK: %[[ARG_LD:.*]] = load i16, ptr %[[ARG]], align 2
   // CHECK: %[[CONV_TL:.*]] = sext i16 %[[ARG_LD]] to i32
   // CHECK: call void @__kmpc_push_num_teams_51({{.*}}, {{.*}}, i32 0, i32 0, i32 %[[CONV_TL]])

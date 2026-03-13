@@ -24,7 +24,7 @@ llvm.func @callee_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 }
 
 
-// CHECK: define internal void @__omp_offloading_{{.*}}_caller__{{.*}}(ptr %[[X_PARAM:.*]], ptr %[[I_PARAM:.*]], ptr %{{.*}}) {
+// CHECK: define internal void @__omp_offloading_{{.*}}_caller__{{.*}}(ptr %[[X_PARAM:.*]], ptr %[[I_PARAM:.*]]) {
 
 // CHECK:   %[[I_VAL:.*]] = load i32, ptr %[[I_PARAM]], align 4
 // CHECK:   %[[I_VAL_FL:.*]] = sitofp i32 %[[I_VAL]] to float

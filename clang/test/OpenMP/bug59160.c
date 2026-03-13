@@ -21,6 +21,6 @@ void zoo(void) {
   }
 }
 
-// CHECK: @{{.+}} = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
-// SIMD-ONLY0-NOT: @{{.+}} = private unnamed_addr constant [2 x i64] [i64 288, i64 288]
+// CHECK: @{{.+}} = private unnamed_addr constant [1 x i64] [i64 288]
+// SIMD-ONLY0-NOT: @{{.+}} = private unnamed_addr constant [1 x i64] [i64 288]
 

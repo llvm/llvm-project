@@ -64,35 +64,35 @@
 // CK21: [[ST:%.+]] = type { i32, i32, ptr }
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK21-USE: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
-// CK21-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 3, i64 288]
+// CK21: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK21-USE: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK21-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 492, i64 {{4|8}}, i64 0]
-// CK21-USE: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
-// CK21-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 3, i64 16384, i64 288]
+// CK21: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 492, i64 {{4|8}}]
+// CK21-USE: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
+// CK21-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 3, i64 16384]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21-USE: [[SIZE02:@.+]] = private {{.*}}constant [4 x i64] [i64 {{4|8}}, i64 500, i64 {{4|8}}, i64 0]
-// CK21-NOUSE: [[SIZE02:@.+]] = private {{.*}}constant [3 x i64] [i64 500, i64 {{4|8}}, i64 0]
-// CK21-USE: [[MTYPE02:@.+]] = private {{.*}}constant [4 x i64] [i64 547, i64 2, i64 16384, i64 288]
-// CK21-NOUSE: [[MTYPE02:@.+]] = private {{.*}}constant [3 x i64] [i64 2, i64 16384, i64 288]
+// CK21-USE: [[SIZE02:@.+]] = private {{.*}}constant [3 x i64] [i64 {{4|8}}, i64 500, i64 {{4|8}}]
+// CK21-NOUSE: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 500, i64 {{4|8}}]
+// CK21-USE: [[MTYPE02:@.+]] = private {{.*}}constant [3 x i64] [i64 547, i64 2, i64 16384]
+// CK21-NOUSE: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 2, i64 16384]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 492, i64 0]
-// CK21-USE: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 288]
-// CK21-NOUSE: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 2, i64 288]
+// CK21: [[SIZE03:@.+]] = private {{.*}}constant [1 x i64] [i64 492]
+// CK21-USE: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK21-NOUSE: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[SIZE04:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK21-USE: [[MTYPE04:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 288]
-// CK21-NOUSE: [[MTYPE04:@.+]] = private {{.*}}constant [2 x i64] [i64 2, i64 288]
+// CK21: [[SIZE04:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK21-USE: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK21-NOUSE: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK21-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK21: [[SIZE05:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 4, i64 4, i64 0]
-// CK21-USE: [[MTYPE05:@.+]] = private {{.*}}constant [4 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 288]
-// CK21-NOUSE: [[MTYPE05:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 281474976710659, i64 281474976710659, i64 288]
+// CK21: [[SIZE05:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 4, i64 4]
+// CK21-USE: [[MTYPE05:@.+]] = private {{.*}}constant [3 x i64] [i64 32, i64 281474976710659, i64 281474976710659]
+// CK21-NOUSE: [[MTYPE05:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 281474976710659, i64 281474976710659]
 
 // CK21-LABEL: explicit_maps_template_args_and_members{{.*}}(
 
@@ -121,8 +121,8 @@ struct CC {
 // CK21-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
 // CK21-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[VAR0:%.+]], i{{.+}} 0, i{{.+}} 0
 
-// CK21-USE: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
-// CK21-NOUSE: call void [[CALL00:@.+]](ptr null)
+// CK21-USE: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK21-NOUSE: call void [[CALL00:@.+]]()
 #pragma omp target map(A)
     {
 #ifdef USE
@@ -158,8 +158,8 @@ struct CC {
 // CK21-DAG: [[RLB0_1]] = getelementptr {{.*}}ptr [[RLB_2:%.+]], i{{.+}} 0
 // CK21-DAG: [[RLB_2]] = load ptr, ptr %lb
 
-// CK21-USE: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
-// CK21-NOUSE: call void [[CALL01:@.+]](ptr null)
+// CK21-USE: call void [[CALL01:@.+]](ptr {{[^,]+}})
+// CK21-NOUSE: call void [[CALL01:@.+]]()
 #pragma omp target map(lb[:X])
     {
 #ifdef USE
@@ -207,8 +207,8 @@ struct CC {
 // CK21-NOUSE-DAG: store ptr [[VAR00]], ptr [[BP1]]
 // CK21-NOUSE-DAG: store ptr [[SEC0]], ptr [[P1]]
 
-// CK21-USE: call void [[CALL02:@.+]](ptr {{[^,]+}}, ptr null)
-// CK21-NOUSE: call void [[CALL02:@.+]](ptr null)
+// CK21-USE: call void [[CALL02:@.+]](ptr {{[^,]+}})
+// CK21-NOUSE: call void [[CALL02:@.+]]()
 #pragma omp target map(from \
                        : B [X:X + 2])
     {
@@ -231,8 +231,8 @@ struct CC {
 // CK21-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK21-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK21-USE: call void [[CALL03:@.+]](ptr {{[^,]+}}, ptr null)
-// CK21-NOUSE: call void [[CALL03:@.+]](ptr null)
+// CK21-USE: call void [[CALL03:@.+]](ptr {{[^,]+}})
+// CK21-NOUSE: call void [[CALL03:@.+]]()
 #pragma omp target map(from \
                        : la)
     {
@@ -255,8 +255,8 @@ struct CC {
 // CK21-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK21-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK21-USE: call void [[CALL04:@.+]](ptr {{[^,]+}}, ptr null)
-// CK21-NOUSE: call void [[CALL04:@.+]](ptr null)
+// CK21-USE: call void [[CALL04:@.+]](ptr {{[^,]+}})
+// CK21-NOUSE: call void [[CALL04:@.+]]()
 #pragma omp target map(from \
                        : arg)
     {
@@ -297,8 +297,8 @@ struct CC {
 // CK21-DAG: store ptr [[SEC2:%.+]], ptr [[P2]]
 // CK21-DAG: [[SEC2]] = getelementptr {{.*}}ptr [[VAR2]], i{{.+}} 0, i{{.+}} 1
 
-// CK21-USE: call void [[CALL05:@.+]](ptr {{[^,]+}}, ptr null)
-// CK21-NOUSE: call void [[CALL05:@.+]](ptr null)
+// CK21-USE: call void [[CALL05:@.+]](ptr {{[^,]+}})
+// CK21-NOUSE: call void [[CALL05:@.+]]()
 #pragma omp target map(A, A2)
     {
 #ifdef USE

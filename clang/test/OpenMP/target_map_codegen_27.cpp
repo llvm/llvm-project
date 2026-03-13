@@ -34,12 +34,12 @@
 #ifdef CK28
 
 // CK28-LABEL: @.__omp_offloading_{{.*}}explicit_maps_pointer_references{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK28: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 0]
-// CK28: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 288]
+// CK28: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
+// CK28: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
 // CK28-LABEL: @.__omp_offloading_{{.*}}explicit_maps_pointer_references{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK28: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 400, i64 {{4|8}}, i64 0]
-// CK28: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
+// CK28: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 400, i64 {{4|8}}]
+// CK28: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
 
 // CK28-LABEL: explicit_maps_pointer_references{{.*}}(
 void explicit_maps_pointer_references (int *p){
@@ -61,7 +61,7 @@ void explicit_maps_pointer_references (int *p){
 // CK28-DAG: [[VAR0]] = load ptr, ptr [[VAR00:%.+]],
 // CK28-DAG: [[VAR1]] = load ptr, ptr [[VAR11:%.+]],
 
-// CK28: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
+// CK28: call void [[CALL00:@.+]](ptr {{[^,]+}})
 #pragma omp target map(a)
   {
     ++a;
@@ -99,7 +99,7 @@ void explicit_maps_pointer_references (int *p){
 // CK28-DAG: [[RRA_2]] = load ptr, ptr [[RA_3:%.+]],
 // CK28-DAG: [[RA_3]] = load ptr, ptr [[A]]
 
-// CK28: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
+// CK28: call void [[CALL01:@.+]](ptr {{[^,]+}})
 #pragma omp target map(a [2:100])
   {
     ++a;

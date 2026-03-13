@@ -53,13 +53,13 @@ llvm.func @_FortranAAssign(!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> !llvm.struct
 // CHECK-NOT: define internal void
 // CHECK: %[[DESC_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1
 // CHECK: call void @__omp_offloading_[[OFFLOADED_FUNCTION:.*]](ptr {{[^,]+}},
-// CHECK-SAME: ptr %[[DESC_ALLOC]], ptr null)
+// CHECK-SAME: ptr %[[DESC_ALLOC]])
 
 // The second set of checks ensure that to allocate memory for the
 // allocatable, we are, in fact, using the memory reference of the descriptor
 // passed as the second argument to the offloaded function.
 // CHECK: define internal void @__omp_offloading_[[OFFLOADED_FUNCTION]]
-// CHECK-SAME: (ptr {{[^,]+}}, ptr %[[DESCRIPTOR_ARG:[^,]+]], ptr %{{.*}}) {
+// CHECK-SAME: (ptr {{[^,]+}}, ptr %[[DESCRIPTOR_ARG:.*]]) {
 // CHECK: %[[DESC_TO_DEALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
 // CHECK: call void @alloc_foo_1(ptr %[[DESCRIPTOR_ARG]])
 

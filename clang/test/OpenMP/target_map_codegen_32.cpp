@@ -40,11 +40,11 @@
 // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
 
 // CK31B-LABEL: @.__omp_offloading_{{.*}}test_present_members{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK31B: [[SIZE00:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 4, i64 4, i64 0]
-// CK31B-USE: [[MTYPE00:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x1020]],
-// CK31B-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x1000]],
-// CK31B-USE-SAME: {{^}} i64 [[#0x1000000001003]], i64 [[#0x1000000000003]], i64 288]
-// CK31B-NOUSE-SAME: {{^}} i64 [[#0x1000000001003]], i64 [[#0x1000000000003]], i64 288]
+// CK31B: [[SIZE00:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 4, i64 4]
+// CK31B-USE: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1020]],
+// CK31B-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x1000]],
+// CK31B-USE-SAME: {{^}} i64 [[#0x1000000001003]], i64 [[#0x1000000000003]]]
+// CK31B-NOUSE-SAME: {{^}} i64 [[#0x1000000001003]], i64 [[#0x1000000000003]]]
 
 struct ST {
   int i;
@@ -63,7 +63,7 @@ struct ST {
 // CK31B-DAG: store ptr [[PGEP:%.+]], ptr [[PARG]]
 // CK31B-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
 // CK31B-DAG: store ptr [[SIZES:%.+]], ptr [[SARG]]
-// CK31B-DAG: [[SIZES]] = getelementptr inbounds [4 x i64], ptr [[S:%.+]], i{{.+}} 0, i{{.+}} 0
+// CK31B-DAG: [[SIZES]] = getelementptr inbounds [3 x i64], ptr [[S:%.+]], i{{.+}} 0, i{{.+}} 0
 // CK31B-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK31B-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -87,8 +87,8 @@ struct ST {
 // CK31B-DAG: store ptr [[THIS]], ptr [[BP2]]
 // CK31B-DAG: store ptr [[I]], ptr [[P2]]
 
-// CK31B-USE: call void [[CALL00:@.+]](ptr [[THIS]], ptr null)
-// CK31B-NOUSE: call void [[CALL00:@.+]](ptr null)
+// CK31B-USE: call void [[CALL00:@.+]](ptr [[THIS]])
+// CK31B-NOUSE: call void [[CALL00:@.+]]()
 #pragma omp target map(tofrom                   \
                        : i) map(present, tofrom \
                                 : j)

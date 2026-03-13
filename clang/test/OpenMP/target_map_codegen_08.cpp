@@ -35,9 +35,9 @@
 
 // CK9-LABEL: @.__omp_offloading_{{.*}}implicit_maps_array{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK9-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
+// CK9-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 16]
 // Map types: OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK9-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 288]
+// CK9-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 547]
 
 // CK9-LABEL: implicit_maps_array{{.*}}(
 void implicit_maps_array (int a){
@@ -55,7 +55,7 @@ void implicit_maps_array (int a){
 // CK9-DAG: store ptr [[DECL:%[^,]+]], ptr [[BP1]]
 // CK9-DAG: store ptr [[DECL]], ptr [[P1]]
 
-// CK9: call void [[KERNEL:@.+]](ptr [[DECL]], ptr null)
+// CK9: call void [[KERNEL:@.+]](ptr [[DECL]])
 #pragma omp target
   {
     darr[0] += 1.0;
@@ -63,7 +63,7 @@ void implicit_maps_array (int a){
   }
 }
 
-// CK9: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]], ptr {{[^)]*}})
+// CK9: define internal void [[KERNEL]](ptr {{.+}}[[ARG:%.+]])
 // CK9: [[ADDR:%.+]] = alloca ptr,
 // CK9: store ptr [[ARG]], ptr [[ADDR]],
 // CK9: [[REF:%.+]] = load ptr, ptr [[ADDR]],

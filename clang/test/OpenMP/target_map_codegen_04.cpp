@@ -35,9 +35,9 @@
 
 // CK5-LABEL: @.__omp_offloading_{{.*}}implicit_maps_nested_integer_and_enum{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
-// CK5-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 4, i64 0]
+// CK5-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK5-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 800, i64 288]
+// CK5-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
 
 // CK5-LABEL: implicit_maps_nested_integer_and_enum{{.*}}(
 void implicit_maps_nested_integer_and_enum (int a){
@@ -62,7 +62,7 @@ void implicit_maps_nested_integer_and_enum (int a){
 // CK5-DAG: [[VAL]] = load i[[sz]], ptr [[ADDR:%.+]],
 // CK5-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-// CK5: call void [[KERNEL:@.+]](i[[sz]] [[VAL]], ptr null)
+// CK5: call void [[KERNEL:@.+]](i[[sz]] [[VAL]])
 #pragma omp target
   {
     ++i;
@@ -70,7 +70,7 @@ void implicit_maps_nested_integer_and_enum (int a){
   }
 }
 
-// CK5: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]], ptr {{[^)]*}})
+// CK5: define internal void [[KERNEL]](i[[sz]] noundef [[ARG:%.+]])
 // CK5: [[ADDR:%.+]] = alloca i[[sz]],
 // CK5: store i[[sz]] [[ARG]], ptr [[ADDR]],
 // CK5-64: {{.+}} = load i32, ptr [[ADDR]],

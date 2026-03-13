@@ -28,11 +28,11 @@
 #ifdef CK11
 
 // CK11-LABEL: @.__omp_offloading_{{.*}}implicit_maps_double_complex{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK11_4-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 16, i64 {{8|4}}, i64 0]
-// CK11_5-DAG: [[SIZES:@.+]] = {{.+}}constant [3 x i64] [i64 16, i64 0, i64 0]
+// CK11_4-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 {{8|4}}]
+// CK11_5-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TO  | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK11_4-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 547, i64 547, i64 288]
-// CK11_5-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 547, i64 544, i64 288]
+// CK11_4-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 547]
+// CK11_5-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 544]
 
 // CK11-LABEL: implicit_maps_double_complex{{.*}}(
 void implicit_maps_double_complex (int a, int *b){
@@ -51,7 +51,7 @@ void implicit_maps_double_complex (int a, int *b){
 // CK11-DAG: store ptr [[PTR]], ptr [[P1]]
 
 
-// CK11: call void [[KERNEL:@.+]](ptr [[PTR]], ptr %{{.+}}, ptr null)
+// CK11: call void [[KERNEL:@.+]](ptr [[PTR]], ptr %{{.+}})
 #pragma omp target defaultmap(tofrom \
                               : scalar)
   {
@@ -59,7 +59,7 @@ void implicit_maps_double_complex (int a, int *b){
   }
 }
 
-// CK11: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{.*}}, ptr {{[^)]*}})
+// CK11: define internal void [[KERNEL]](ptr {{.*}}[[ARG:%.+]], ptr {{.*}})
 // CK11: [[ADDR:%.+]] = alloca ptr,
 // CK11: store ptr [[ARG]], ptr [[ADDR]],
 // CK11: [[REF:%.+]] = load ptr, ptr [[ADDR]],
