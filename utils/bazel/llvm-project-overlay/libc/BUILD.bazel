@@ -1215,6 +1215,32 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_file_platform_file",
+    srcs = [
+        "src/__support/File/linux/file.cpp",
+    ],
+    hdrs = [
+        "src/__support/File/linux/file.h",
+        "src/__support/File/linux/lseekImpl.h",
+    ],
+    deps = [
+        ":__support_alloc_checker",
+        ":__support_common",
+        ":__support_cpp_new",
+        ":__support_error_or",
+        ":__support_file_file",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_fcntl",
+        ":__support_osutil_syscall",
+        ":hdr_fcntl_macros",
+        ":hdr_stdint_proxy",
+        ":hdr_stdio_macros",
+        ":types_off_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_alloc_checker",
     hdrs = ["src/__support/alloc-checker.h"],
     deps = [
@@ -9875,6 +9901,31 @@ libc_function(
 ################################ stdio targets #################################
 
 libc_support_library(
+    name = "stdin",
+    srcs = ["src/stdio/linux/stdin.cpp"],
+    hdrs = ["src/stdio/stdin.h"],
+    deps = [
+        "__support_common",
+        ":__support_file_file",
+        ":__support_file_platform_file",
+        ":__support_macros_config",
+        ":types_FILE",
+    ],
+)
+
+libc_support_library(
+    name = "stdout",
+    srcs = ["src/stdio/linux/stdout.cpp"],
+    hdrs = ["src/stdio/stdout.h"],
+    deps = [
+        ":__support_common",
+        ":__support_file_platform_file",
+        ":__support_macros_config",
+        ":types_FILE",
+    ],
+)
+
+libc_support_library(
     name = "printf_config",
     hdrs = ["src/stdio/printf_core/printf_config.h"],
     deps = [
@@ -10103,6 +10154,7 @@ libc_function(
         ":errno",
         ":printf_core_structs",
         ":printf_error_mapper",
+        ":stdout",
         ":types_FILE",
         ":vfprintf_internal",
     ],
@@ -10186,6 +10238,7 @@ libc_function(
         ":errno",
         ":printf_core_structs",
         ":printf_error_mapper",
+        ":stdout",
         ":types_FILE",
         ":vfprintf_internal",
     ],
@@ -10321,6 +10374,7 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_config",
+        ":stdin",
         ":types_FILE",
         ":vfscanf_internal",
     ],
@@ -10334,6 +10388,7 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_config",
+        ":stdin",
         ":types_FILE",
         ":vfscanf_internal",
     ],
