@@ -311,7 +311,7 @@ advantages:
     dynamic check, but without incurring redundant costs.
 
 GoogleTest awareness
--------
+--------------------
 
 The check recognizes common macros like `ASSERT_TRUE` and `ASSERT_FALSE`:
 .. code-block:: c++
@@ -325,8 +325,7 @@ The check recognizes common macros like `ASSERT_TRUE` and `ASSERT_FALSE`:
      EXPECT_EQ(opt.value(), 42); // safe: ASSERT_TRUE terminates if no value.
    }
 
-
-Less common macros such as `ASSERT_NE(..., nullopt)` and `ASSERT_THAT` are 
+Less common macros such as `ASSERT_NE(..., nullopt)` and `ASSERT_THAT` are
 not currently supported and are ignored, which may result in false positives.
 
 Options
