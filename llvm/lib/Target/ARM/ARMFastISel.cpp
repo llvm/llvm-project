@@ -1897,7 +1897,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   default:
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
-    if (Subtarget->hasVFP2Base() && !isVarArg) {
+    if (Subtarget->hasFPRegs() && !isVarArg) {
       if (!TM.isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
@@ -2911,7 +2911,7 @@ bool ARMFastISel::fastSelectInstruction(const Instruction *I) {
       return SelectLoad(I);
     case Instruction::Store:
       return SelectStore(I);
-    case Instruction::Br:
+    case Instruction::CondBr:
       return SelectBranch(I);
     case Instruction::IndirectBr:
       return SelectIndirectBr(I);

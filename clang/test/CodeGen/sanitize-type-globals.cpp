@@ -74,6 +74,6 @@ public:
 // CHECK: [[META6]] = !{!"any pointer", [[META3]], i64 0}
 // CHECK: [[META7:![0-9]+]] = !{ptr @d, [[META8:![0-9]+]]}
 // CHECK: [[META8]] = !{!"_ZTS1b"}
-// CHECK: [[META9:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META10:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META9:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META10:![0-9]+]] = !{[[META2]], [[META2]], i64 0}
 //.

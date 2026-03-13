@@ -14,6 +14,7 @@ class TestLinkerSymbols(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessPlatform(["linux"])
     def test_linker_symbols(self):
         build_dict = dict(LD_EXTRAS="-Wl,-T," + self.getSourcePath("linker.script"))
         self.build(dictionary=build_dict)

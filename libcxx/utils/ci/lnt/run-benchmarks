@@ -127,11 +127,12 @@ def main(argv):
         run([build_dir / '.venv/bin/pip', 'install', 'llvm-lnt'])
 
         logging.info(f'Building libc++ at commit {args.benchmark_commit}')
-        run([args.git_repo / 'libcxx/utils/build-at-commit',
+        build_cmd = [args.git_repo / 'libcxx/utils/build-at-commit',
                         '--git-repo', args.git_repo,
                         '--install-dir', build_dir / 'install',
                         '--commit', args.benchmark_commit,
-                        '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo', f'-DCMAKE_CXX_COMPILER={args.compiler}'])
+                        '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo', f'-DCMAKE_CXX_COMPILER={args.compiler}']
+        run(build_cmd, enforce_success=False) # if the build fails, carry on: we'll fail later and submit empty LNT results
 
         logging.info(f'Running benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
         cmd = [args.git_repo / 'libcxx/utils/test-at-commit',

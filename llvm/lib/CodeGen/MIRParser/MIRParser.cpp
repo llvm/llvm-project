@@ -116,6 +116,12 @@ public:
   bool initializeMachineFunction(const yaml::MachineFunction &YamlMF,
                                  MachineFunction &MF);
 
+  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
+                              const yaml::MachineFunction &YamlMF);
+
+  bool initializePrefetchTargets(PerFunctionMIParsingState &PFS,
+                                 const yaml::MachineFunction &YamlMF);
+
   bool parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          const yaml::MachineFunction &YamlMF);
 
@@ -129,9 +135,6 @@ public:
       PerFunctionMIParsingState &PFS,
       const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
       llvm::SaveRestorePoints &SaveRestorePoints);
-
-  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
-                              const yaml::MachineFunction &YamlMF);
 
   bool parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
                                 std::vector<CalleeSavedInfo> &CSIInfo,
@@ -600,6 +603,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))
     return true;
+  if (initializePrefetchTargets(PFS, YamlMF))
+    return true;
   if (!YamlMF.Constants.empty()) {
     auto *ConstantPool = MF.getConstantPool();
     assert(ConstantPool && "Constant pool must be created");
@@ -685,11 +690,29 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   if (parseCalledGlobals(PFS, MF, YamlMF))
     return true;
 
+  if (initializePrefetchTargets(PFS, YamlMF))
+    return true;
+
   setupDebugValueTracking(MF, PFS, YamlMF);
 
   MF.getSubtarget().mirFileLoaded(MF);
 
   MF.verify(nullptr, nullptr, &errs());
+  return false;
+}
+
+bool MIRParserImpl::initializePrefetchTargets(
+    PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
+  MachineFunction &MF = PFS.MF;
+  SMDiagnostic Error;
+  DenseMap<UniqueBBID, SmallVector<unsigned>> Targets;
+  for (const auto &YamlTarget : YamlMF.PrefetchTargets) {
+    CallsiteID Target;
+    if (llvm::parsePrefetchTarget(PFS, Target, YamlTarget.Value, Error))
+      return error(Error, YamlTarget.SourceRange);
+    Targets[Target.BBID].push_back(Target.CallsiteIndex);
+  }
+  MF.setPrefetchTargets(Targets);
   return false;
 }
 
