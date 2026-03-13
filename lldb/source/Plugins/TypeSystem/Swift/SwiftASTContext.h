@@ -929,6 +929,8 @@ protected:
 
   bool DiscoverExplicitMainModule(const SymbolContext &sc, const Module &image);
 
+  bool SetupFileSystemFromCacheKey(llvm::StringRef cache_key);
+
   void DiscoverImplicitlyTrackedModules(const ModuleList &modules,
                                         lldb::ModuleSP module_sp,
                                         std::vector<std::string> &module_names);
