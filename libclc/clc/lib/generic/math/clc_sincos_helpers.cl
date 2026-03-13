@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/math/clc_frexp.h"
+#include "clc/math/clc_ldexp.h"
 #include <clc/clc_convert.h>
 #include <clc/integer/clc_clz.h>
 #include <clc/integer/clc_mul_hi.h>

@@ -199,8 +199,11 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionSmallS(
 
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
     private __CLC_FLOATN *r, private __CLC_FLOATN *rr, __CLC_FLOATN x) {
-  __CLC_INTN xe = __CLC_AS_INTN((__CLC_AS_UINTN(x) >> 23) - 127);
-  __CLC_UINTN xm = 0x00800000U | (__CLC_AS_UINTN(x) & 0x7fffffU);
+  __CLC_INTN xe;
+  __CLC_FLOATN m = __clc_frexp(x, &xe);
+  --xe;
+
+  __CLC_UINTN xm = __CLC_CONVERT_UINTN(__clc_ldexp(m, 24));
 
   // 224 bits of 2/PI: . A2F9836E 4E441529 FC2757D1 F534DDC0 DB629599 3C439041
   // FE5163AB
