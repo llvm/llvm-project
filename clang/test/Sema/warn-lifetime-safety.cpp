@@ -612,6 +612,14 @@ int return_reference_to_parameter_no_error(int a) {
     return b;
 }
 
+MyObj*& return_ref_to_local_ptr_pointing_to_local() {
+  MyObj local;
+  MyObj* p = &local; // expected-warning {{address of stack memory is returned later}}
+  return p;          // expected-note {{returned here}} \
+                     // expected-warning {{address of stack memory is returned later}} \
+                     // expected-note {{returned here}}
+}
+
 const int& reference_via_conditional(int a, int b, bool cond) {
     const int &c = (cond ? ((a)) : (b));  // expected-warning 2 {{address of stack memory is returned later}}
     return c;                             // expected-note 2 {{returned here}}
