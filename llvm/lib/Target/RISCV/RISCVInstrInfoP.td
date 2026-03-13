@@ -1797,8 +1797,7 @@ let Predicates = [HasStdExtP] in {
   def : PatGprImm<riscv_psra, PSRAI_H, uimm4, XLenVecI16VT>;
 
   // 16-bit signed saturation shift left patterns
-  def : Pat<(XLenVecI16VT (riscv_psslai GPR:$rs1, timm:$shamt)),
-            (PSSLAI_H GPR:$rs1, timm:$shamt)>;
+  def : PatGprImm<riscv_psslai, PSSLAI_H, timm, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
   def : Pat<(XLenVecI8VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
@@ -1972,8 +1971,7 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprImm<riscv_psra, PSRAI_W, uimm5, v2i32>;
 
   // 32-bit signed saturation shift left patterns
-  def : Pat<(v2i32 (riscv_psslai GPR:$rs1, timm:$shamt)),
-            (PSSLAI_W GPR:$rs1, timm:$shamt)>;
+  def : PatGprImm<riscv_psslai, PSSLAI_W, timm, v2i32>;
 
   // 32-bit logical shift left/right
   def : Pat<(v2i32 (riscv_pshl GPR:$rs1, GPR:$rs2)),
@@ -1994,11 +1992,6 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // a < b
   def : PatGprGpr<setlt, PMSLT_W, v2i32>;
   def : PatGprGpr<setult, PMSLTU_W, v2i32>;
-  // a > b => b < a
-  def : Pat<(v2i32 (setgt (v2i32 GPR:$rs2), GPR:$rs1)),
-            (PMSLT_W GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (setugt (v2i32 GPR:$rs2), GPR:$rs1)),
-            (PMSLTU_W GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit [s|u]min/[s|u]max patterns
   def : PatGprGpr<smin, PMIN_W, v2i32>;

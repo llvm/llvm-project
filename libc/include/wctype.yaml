@@ -44,3 +44,9 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswalnum
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
