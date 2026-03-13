@@ -371,12 +371,12 @@ int main_gdbserver(int argc, char *argv[]) {
       "Use '" + Name + " --help' for a complete list of options.\n";
   if (HasError) {
     llvm::errs() << HelpText;
-    return 1;
+    return EXIT_FAILURE;
   }
 
   if (Args.hasArg(OPT_help)) {
     Opts.PrintHelp(Name);
-    return 0;
+    return EXIT_SUCCESS;
   }
 
 #ifndef _WIN32
@@ -412,7 +412,7 @@ int main_gdbserver(int argc, char *argv[]) {
     uint64_t Arg;
     if (!llvm::to_integer(Args.getLastArgValue(OPT_pipe), Arg)) {
       WithColor::error() << "invalid '--pipe' argument\n" << HelpText;
-      return 1;
+      return EXIT_FAILURE;
     }
     unnamed_pipe = (pipe_t)Arg;
   }
@@ -420,7 +420,7 @@ int main_gdbserver(int argc, char *argv[]) {
     int64_t fd;
     if (!llvm::to_integer(Args.getLastArgValue(OPT_fd), fd)) {
       WithColor::error() << "invalid '--fd' argument\n" << HelpText;
-      return 1;
+      return EXIT_FAILURE;
     }
     connection_fd = (shared_fd_t)fd;
   }
@@ -440,7 +440,7 @@ int main_gdbserver(int argc, char *argv[]) {
   }
   if (Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {
     WithColor::error() << "no connection arguments\n" << HelpText;
-    return 1;
+    return EXIT_FAILURE;
   }
 
   NativeProcessManager manager(mainloop);
@@ -462,12 +462,12 @@ int main_gdbserver(int argc, char *argv[]) {
   if (!attach_target.empty()) {
     if (llvm::Error err = handle_attach(gdb_server, attach_target)) {
       llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
-      return 1;
+      return EXIT_FAILURE;
     }
   } else if (!Inputs.empty()) {
     if (llvm::Error err = handle_launch(gdb_server, Inputs)) {
       llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
-      return 1;
+      return EXIT_FAILURE;
     }
   }
 
@@ -478,21 +478,21 @@ int main_gdbserver(int argc, char *argv[]) {
           mainloop, gdb_server, reverse_connect, host_and_port, progname,
           subcommand, named_pipe_path.c_str(), unnamed_pipe, connection_fd)) {
     llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
-    return 1;
+    return EXIT_FAILURE;
   }
 
   if (!gdb_server.IsConnected()) {
     fprintf(stderr, "no connection information provided, unable to run\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   Status ret = mainloop.Run();
   if (ret.Fail()) {
     fprintf(stderr, "lldb-server terminating due to error: %s\n",
             ret.AsCString());
-    return 1;
+    return EXIT_FAILURE;
   }
   fprintf(stderr, "lldb-server exiting...\n");
 
-  return 0;
+  return EXIT_SUCCESS;
 }
