@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "lldb/Target/PostMortemProcess.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
@@ -155,8 +156,8 @@ private:
   // Executable name found from the ELF PRPSINFO
   std::string m_executable_name;
 
-  // Command line args string found from the ELF PRPSINFO (pr_psargs)
-  std::string m_process_args_string;
+  // Command line args found from the ELF PRPSINFO (pr_psargs)
+  lldb_private::Args m_process_args;
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,

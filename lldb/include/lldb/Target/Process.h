@@ -1523,12 +1523,12 @@ public:
   ///     File path to the core file.
   virtual FileSpec GetCoreFile() const { return {}; }
 
-  /// Provide arguments of a command that triggers a core dump
-  /// Only available when we have a core file
+  /// Provide arguments of a command that triggered a core dump.
   ///
   /// \return
-  ///     Args of a core dump
-  Args GetCoreFileCommandString() {
+  ///   The arguments that created the core dump. 
+  ///   If this process is a live debug session, returns an empty list of arguments.
+  Args GetCoreFileArgs() {
     if (!GetCoreFile())
       return {};
 
