@@ -8,9 +8,10 @@ int main(int argc, char **argv) {
   int (&array_ref)[10] = array;
   int *p_int0 = &array[0];
 
-  const char *p_char1 = "hello";
+  const char *p_char = "hello!";
+  const char *p_char5 = p_char + 5;
   typedef const char *my_char_ptr;
-  my_char_ptr my_p_char1 = p_char1;
+  my_char_ptr my_p_char = p_char;
 
   int **pp_int0 = &p_int0;
   const int *cp_int0 = &array[0];
@@ -19,7 +20,7 @@ int main(int argc, char **argv) {
   typedef int *td_int_ptr_t;
   td_int_ptr_t td_int_ptr0 = &array[0];
 
-  void *p_void = (void *)p_char1;
+  void *p_void = (void *)p_char;
   void **pp_void0 = &p_void;
   void **pp_void1 = pp_void0 + 1;
 

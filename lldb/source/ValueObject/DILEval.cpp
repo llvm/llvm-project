@@ -539,8 +539,8 @@ Interpreter::Visit(const UnaryOpNode &node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::PointerAdd(lldb::ValueObjectSP ptr, int64_t offset,
-                        uint32_t location) {
+Interpreter::PointerOffset(lldb::ValueObjectSP ptr, lldb::ValueObjectSP offset,
+                           bool positive, uint32_t location) {
   if (ptr->GetCompilerType().IsPointerToVoid())
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "arithmetic on a pointer to void", location);
@@ -548,12 +548,23 @@ Interpreter::PointerAdd(lldb::ValueObjectSP ptr, int64_t offset,
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "arithmetic on a nullptr is undefined", location);
 
+  bool success;
+  int64_t offset_int = offset->GetValueAsSigned(0, &success);
+  if (!success) {
+    std::string errMsg = llvm::formatv("could not get the offset: {0}",
+                                       offset->GetError().AsCString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                                location);
+  }
+
   llvm::Expected<uint64_t> byte_size =
       ptr->GetCompilerType().GetPointeeType().GetByteSize(
           m_exe_ctx_scope.get());
   if (!byte_size)
     return byte_size.takeError();
-  uintptr_t addr = ptr->GetValueAsUnsigned(0) + offset * (*byte_size);
+  if (!positive)
+    offset_int = -offset_int;
+  uintptr_t addr = ptr->GetValueAsUnsigned(0) + offset_int * (*byte_size);
 
   ExecutionContext exe_ctx(m_target.get(), false);
   Scalar scalar(addr);
@@ -623,7 +634,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
                                                 location);
   }
 
-  return PointerAdd(ptr, offset->GetValueAsUnsigned(0), location);
+  return PointerOffset(ptr, offset, true, location);
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
@@ -647,7 +658,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
 
   // "pointer - integer" operation.
   if (lhs_type.IsPointerType() && rhs_type.IsInteger())
-    return PointerAdd(lhs, -rhs->GetValueAsUnsigned(0), location);
+    return PointerOffset(lhs, rhs, false, location);
 
   // "pointer - pointer" operation.
   if (lhs_type.IsPointerType() && rhs_type.IsPointerType()) {

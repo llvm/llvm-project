@@ -24,17 +24,25 @@ class TestFrameVarDILExprPointerArithmetic(TestBase):
         self.expect_var_path("+p_int0", type="int *")
 
         # Binary operations
-        self.expect_var_path("p_char1", type="const char *")
-        self.expect_var_path("p_char1 + 1", type="const char *")
-        self.expect_var_path("p_char1 + offset", type="const char *")
+        self.expect_var_path("p_char", type="const char *")
+        self.expect_var_path("p_char + 1", type="const char *")
+        self.expect_var_path("p_char + offset", type="const char *")
+        self.expect_var_path("p_char5 + -1", type="const char *")
+        self.expect_var_path("p_char5 - 1", type="const char *")
+        self.expect_var_path("p_char5 - offset", type="const char *")
 
-        self.expect_var_path("my_p_char1", type="my_char_ptr")
-        self.expect_var_path("my_p_char1 + 1", type="my_char_ptr")
-        self.expect_var_path("my_p_char1 + offset", type="my_char_ptr")
+        self.expect_var_path("my_p_char", type="my_char_ptr")
+        self.expect_var_path("my_p_char + 1", type="my_char_ptr")
+        self.expect_var_path("my_p_char - 1", type="my_char_ptr")
 
-        self.expect_var_path("*(p_char1 + 0)", value="'h'")
-        self.expect_var_path("*(4 + p_char1)", value="'o'")
-        self.expect_var_path("*(p_char1 + offset - 1)", value="'o'")
+        self.expect_var_path("*(p_char + 0)", value="'h'")
+        self.expect_var_path("*(5 + p_char)", value="'!'")
+        self.expect_var_path("*(p_char5 + -5)", value="'h'")
+        self.expect_var_path("*(p_char5 - 5)", value="'h'")
+        self.expect_var_path("*(p_char - -5)", value="'!'")
+        self.expect_var_path("*(p_char5 - offset + 5)", value="'!'")
+        self.expect_var_path("*((p_char + offset) - 5)", value="'h'")
+        self.expect_var_path("*(p_char + (offset - 5))", value="'h'")
 
         self.expect_var_path("*p_int0", value="0")
         self.expect_var_path("*cp_int5", value="5")
@@ -63,7 +71,7 @@ class TestFrameVarDILExprPointerArithmetic(TestBase):
             substrs=["invalid argument type 'int *' to unary expression"],
         )
         self.expect(
-            "frame var -- 'cp_int5 - p_char1'",
+            "frame var -- 'cp_int5 - p_char'",
             error=True,
             substrs=[
                 "'const int *' and 'const char *' are not pointers to compatible types"
@@ -87,7 +95,7 @@ class TestFrameVarDILExprPointerArithmetic(TestBase):
             substrs=["arithmetic on a pointer to void"],
         )
         self.expect(
-            "frame var -- 'p_void - p_char1'",
+            "frame var -- 'p_void - p_char'",
             error=True,
             substrs=[
                 "'void *' and 'const char *' are not pointers to compatible types"
@@ -99,7 +107,7 @@ class TestFrameVarDILExprPointerArithmetic(TestBase):
             substrs=["arithmetic on pointers to void"],
         )
         self.expect(
-            "frame var -- 'pp_void0 - p_char1'",
+            "frame var -- 'pp_void0 - p_char'",
             error=True,
             substrs=[
                 "'void **' and 'const char *' are not pointers to compatible types"
@@ -139,4 +147,14 @@ class TestFrameVarDILExprPointerArithmetic(TestBase):
             "frame var -- 'int_null - 1'",
             error=True,
             substrs=["arithmetic on a nullptr is undefined"],
+        )
+        self.expect(
+            "frame var -- 'p_char + *((int*) 0)'",
+            error=True,
+            substrs=["could not get the offset: parent is NULL"],
+        )
+        self.expect(
+            "frame var -- 'p_char - *((int*) 0)'",
+            error=True,
+            substrs=["could not get the offset: parent is NULL"],
         )
