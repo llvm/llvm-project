@@ -889,6 +889,7 @@ add_header_library(
   HDRS
     erfcf16.h
   DEPENDS
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add

@@ -15,6 +15,7 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -141,8 +142,8 @@ LIBC_INLINE float16 erfcf16(float16 x) {
       return x;
     }
     // erfc(+Inf) = 0, erfc(-Inf) = 2
-    return xbits.is_neg() ? static_cast<float16>(2.0)
-                          : static_cast<float16>(0.0);
+    return xbits.is_neg() ? fputil::cast<float16>(2.0)
+                          : fputil::cast<float16>(0.0);
   }
 
   if (LIBC_UNLIKELY(x_abs == 0))
@@ -153,8 +154,8 @@ LIBC_INLINE float16 erfcf16(float16 x) {
     if (xbits.is_neg()) {
       // 0x1.0p-12 is ~0.25 ULP of 2.0 in float16, small enough to round
       // to 2.0 in RN, but large enough to round down in RD/RZ.
-      double xd = static_cast<double>(x);
-      return static_cast<float16>(2.0 - 0x1.0p-12 * (4.0 / -xd));
+      double xd = fputil::cast<double>(x);
+      return fputil::cast<float16>(2.0 - 0x1.0p-12 * (4.0 / -xd));
     }
     return 0.0f16;
   }
@@ -164,10 +165,8 @@ LIBC_INLINE float16 erfcf16(float16 x) {
   //   erfc(x) ~ 2 - erfc(|x|)  if x < 0
   // erfc(|x|) is evaluated using a degree-7 polynomial on each sub-interval.
 
-  float xf = static_cast<float>(xbits.abs().get_val());
-  int idx = static_cast<int>(xf * 8.0f);
-
-  double xd = static_cast<double>(xbits.abs().get_val());
+  int idx = static_cast<int>(xbits.abs().get_val() * 8.0f16);
+  double xd = fputil::cast<double>(xbits.abs().get_val());
   double xsq = xd * xd;
   double x4 = xsq * xsq;
 
@@ -182,9 +181,9 @@ LIBC_INLINE float16 erfcf16(float16 x) {
   double erfc_abs = fputil::multiply_add(x4, p47, p03);
 
   if (xbits.is_neg())
-    return static_cast<float16>(2.0 - erfc_abs);
+    return fputil::cast<float16>(2.0 - erfc_abs);
 
-  return static_cast<float16>(erfc_abs);
+  return fputil::cast<float16>(erfc_abs);
 }
 
 } // namespace math
