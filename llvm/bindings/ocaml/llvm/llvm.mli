@@ -206,8 +206,8 @@ module Opcode : sig
   | Invalid (** Not an instruction *)
 
   | Ret (** Terminator Instructions *)
-  | Switch
   | Invalid3
+  | Switch
   | IndirectBr
   | Invoke
   | Invalid2

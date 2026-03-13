@@ -180,8 +180,8 @@ module Opcode  = struct
   | Invalid (* not an instruction *)
   (* Terminator Instructions *)
   | Ret
-  | Switch
   | Invalid3
+  | Switch
   | IndirectBr
   | Invoke
   | Invalid2
