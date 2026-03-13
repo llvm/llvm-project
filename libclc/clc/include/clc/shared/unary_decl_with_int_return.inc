@@ -6,16 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/address_space/clc_qualifier.h"
-
-#if _CLC_GENERIC_AS_SUPPORTED
-
-#define __CLC_CONST_TYPE const
-#include "clc_qualifier.inc"
-#undef __CLC_CONST_TYPE
-
-#define __CLC_CONST_TYPE
-#include "clc_qualifier.inc"
-#undef __CLC_CONST_TYPE
-
-#endif
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_INTN __CLC_FUNCTION(__CLC_GENTYPE x);

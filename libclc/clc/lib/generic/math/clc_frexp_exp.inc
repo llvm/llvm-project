@@ -6,16 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/address_space/clc_qualifier.h"
-
-#if _CLC_GENERIC_AS_SUPPORTED
-
-#define __CLC_CONST_TYPE const
-#include "clc_qualifier.inc"
-#undef __CLC_CONST_TYPE
-
-#define __CLC_CONST_TYPE
-#include "clc_qualifier.inc"
-#undef __CLC_CONST_TYPE
-
-#endif
+_CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_frexp_exp(__CLC_GENTYPE x) {
+  __CLC_INTN e;
+  (void)__clc_frexp(x, &e);
+  return e;
+}

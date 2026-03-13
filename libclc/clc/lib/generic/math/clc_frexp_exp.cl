@@ -6,16 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/address_space/clc_qualifier.h"
+#include "clc/math/clc_frexp.h"
+#include "clc/math/clc_frexp_exp.h"
 
-#if _CLC_GENERIC_AS_SUPPORTED
-
-#define __CLC_CONST_TYPE const
-#include "clc_qualifier.inc"
-#undef __CLC_CONST_TYPE
-
-#define __CLC_CONST_TYPE
-#include "clc_qualifier.inc"
-#undef __CLC_CONST_TYPE
-
-#endif
+#define __CLC_BODY "clc_frexp_exp.inc"
+#include "clc/math/gentype.inc"
