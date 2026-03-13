@@ -716,10 +716,7 @@ static mlir::Operation *
 createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
                               const semantics::Symbol *sym) {
-  // The handling of linear symbols is deferred to the OpenMP IRBuilder,
-  // which is responsible for all its aspects, including privatization.
-  assert((converter.isPresentShallowLookup(*sym) ||
-          sym->test(semantics::Symbol::Flag::OmpLinear)) &&
+  assert(converter.isPresentShallowLookup(*sym) &&
          "Expected symbol to be in symbol table.");
   return setLoopVar(converter, loc, indexVal, sym);
 }
@@ -2860,7 +2857,12 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
                   mapperId = getOrGenImplicitDefaultDeclareMapper(
-                      converter, loc, recordType, mapperIdName);
+                      converter.getFirOpBuilder(), loc, recordType,
+                      mapperIdName,
+                      [&](std::string &mapperIdName,
+                          llvm::StringRef memberName) {
+                        defaultMangler(converter, mapperIdName, memberName);
+                      });
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
@@ -4326,10 +4328,12 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
         !std::holds_alternative<clause::Detach>(clause.u) &&
         !std::holds_alternative<clause::Device>(clause.u)) {
-      std::string name =
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(clause.id));
-      if (!semaCtx.langOptions().OpenMPSimd)
+      const common::LangOptions &options = semaCtx.langOptions();
+      if (!options.OpenMPSimd) {
+        std::string name =
+            parser::omp::GetUpperName(clause.id, options.OpenMPVersion);
         TODO(clauseLocation, name + " clause is not implemented yet");
+      }
     }
   }
 

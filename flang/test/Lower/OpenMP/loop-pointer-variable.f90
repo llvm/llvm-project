@@ -8,7 +8,6 @@ program loop_var
   integer, pointer :: ip1, ip2
   integer, allocatable :: ia1
 
-!CHECK:  %[[IA1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEia1"}
 !CHECK:  omp.wsloop private(@_QFEip1_private_box_ptr_i32 %{{.*}}#0 -> %[[IP1_PVT:.*]], @_QFEip2_private_box_ptr_i32 %{{.*}}#0 -> %[[IP2_PVT:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:  omp.loop_nest (%[[IP1_INDX:.*]], %[[IP2_INDX:.*]]) : i64 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}})
 !CHECK:    %[[IP1_PVT_DECL:.*]]:2 = hlfir.declare %[[IP1_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEip1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
@@ -29,12 +28,13 @@ program loop_var
   end do
   !$omp end do
 
-!CHECK:    omp.simd
+!CHECK:    omp.simd private(@_QFEia1_private_box_heap_i32 %{{.*}}#0 -> %[[IA1_PVT:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
 !CHECK:      omp.loop_nest (%[[IA1_INDX:.*]]) : i64 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}})
-!CHECK:        %[[IA1_INDX_I32:.*]] = fir.convert %[[IA1_INDX]] : (i64) -> i32
-!CHECK:        %[[IA1_BOX:.*]] = fir.load %[[IA1]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+!CHECK:        %[[IA1_PVT_DECL:.*]]:2 = hlfir.declare %[[IA1_PVT]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEia1"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+!CHECK:        %[[IA1:.*]] = fir.convert %[[IA1_INDX]] : (i64) -> i32
+!CHECK:        %[[IA1_BOX:.*]] = fir.load %[[IA1_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 !CHECK:        %[[IA1_ADDR:.*]] = fir.box_addr %[[IA1_BOX]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-!CHECK:        hlfir.assign %[[IA1_INDX_I32]] to %[[IA1_ADDR]] : i32, !fir.heap<i32>
+!CHECK:        hlfir.assign %[[IA1]] to %[[IA1_ADDR]] : i32, !fir.heap<i32>
 !CHECK:        omp.yield
   !$omp simd
   do ia1 = 1, 10

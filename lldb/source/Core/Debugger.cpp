@@ -1015,6 +1015,12 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
         "Settings specify to the debugger's command interpreter.", true,
         m_command_interpreter_up->GetValueProperties());
   }
+#ifndef NDEBUG
+  m_collection_sp->AppendProperty(
+      "testing", "Testing-only settings.", /*is_global=*/true,
+      TestingProperties::GetGlobalTestingProperties().GetValueProperties());
+#endif
+
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);
