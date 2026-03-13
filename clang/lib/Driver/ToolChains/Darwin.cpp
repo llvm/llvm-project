@@ -3383,6 +3383,14 @@ void Darwin::addClangTargetOptions(
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
 
+  // Enable objc_msgSend selector stubs by default if the linker supports it.
+  // ld64-811.2+ does, for arm64, arm64e, and arm64_32.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fobjc_msgsend_selector_stubs,
+                                options::OPT_fno_objc_msgsend_selector_stubs) &&
+      getTriple().isAArch64() &&
+      (getLinkerVersion(DriverArgs) >= VersionTuple(811, 2)))
+    CC1Args.push_back("-fobjc-msgsend-selector-stubs");
+
   // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
   // or disabled sized deallocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,

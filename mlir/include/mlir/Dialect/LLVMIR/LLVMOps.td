@@ -629,6 +629,50 @@ def LLVM_IntToPtrOp : LLVM_DereferenceableCastOp<"inttoptr", "IntToPtr",
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
+
+def LLVM_PtrToAddrOp : LLVM_CastOp<"ptrtoaddr", "PtrToAddr",
+                                  LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
+                                  LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
+  // Overwrite the base class llvmBuilder since the instruction doesn't take a
+  // destination type argument.
+  let llvmBuilder = "$res = builder.CreatePtrToAddr($arg);";
+  let hasVerifier = 1;
+
+  let description = [{
+    Operation mirroring LLVM's `ptrtoaddr` operation.
+
+    This operation casts a pointer (or a vector of pointers) to an integer
+    (or a vector of integers) without capturing the provenance of the pointer.
+    Therefore, an integer returned or derived from `llvm.ptrtoaddr` does not
+    create a legal-to-access pointer when used in `llvm.inttoptr`.
+    Code that only cares about the address value of a pointer
+    (e.g. pointer subtraction) should prefer `llvm.ptrtoaddr` over
+    `llvm.ptrtoint`.
+
+    The integer type used as the result type is required to be equal in width
+    to the pointer type as specified in the data layout.
+    Use the `llvm-target-to-data-layout` pass to derive an MLIR datalayout from
+    an LLVM datalayout.
+
+    Examples:
+    ```
+    llvm.func @default_64_bit_ptrtoaddr(%arg0 : !llvm.ptr) -> i64 {
+      %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+      llvm.return i64
+    }
+
+    module attributes { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<!llvm.ptr, dense<[/*size=*/32, 32, 64]> : vector<3xi64>>
+    >} {
+      llvm.func @datalayout_32_bit(%arg0 : !llvm.ptr) -> i32 {
+        %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i32
+        llvm.return %0 : i32
+      }
+    }
+    ```
+  }];
+}
+
 def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                               LLVM_ScalarOrVectorOf<AnySignlessInteger>> {
@@ -1986,7 +2030,6 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$reciprocal_estimates,
     OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
-    OptionalAttr<BoolAttr>:$no_nans_fp_math,
     OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
     OptionalAttr<LLVM_DenormalFPEnvAttr>:$denormal_fpenv,
     OptionalAttr<StrAttr>:$fp_contract,
