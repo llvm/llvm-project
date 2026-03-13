@@ -44,18 +44,18 @@
 // CHECK:           %[[VAL_33:.*]] = memref.cast %[[VAL_32]] : memref<4xindex> to memref<?xindex>
 // CHECK:           linalg.fill ins(%[[VAL_8]] : f64) outs(%[[VAL_30]] : memref<4xf64>)
 // CHECK:           linalg.fill ins(%[[VAL_10]] : i1) outs(%[[VAL_31]] : memref<4xi1>)
-// CHECK:           %[[VAL_34:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  pos_mem_sz at 1 : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_35:.*]] = memref.subview %[[VAL_0]][0] {{\[}}%[[VAL_34]]] [1] : memref<?xindex> to memref<?xindex>
-// CHECK:           %[[VAL_36:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  crd_mem_sz at 1 : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_37:.*]] = memref.subview %[[VAL_1]][0] {{\[}}%[[VAL_36]]] [1] : memref<?xindex> to memref<?xindex>
-// CHECK:           %[[VAL_38:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  val_mem_sz : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_39:.*]] = memref.subview %[[VAL_2]][0] {{\[}}%[[VAL_38]]] [1] : memref<?xf64> to memref<?xf64>
-// CHECK:           %[[VAL_40:.*]] = sparse_tensor.storage_specifier.get %[[VAL_7]]  pos_mem_sz at 1 : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_41:.*]] = memref.subview %[[VAL_4]][0] {{\[}}%[[VAL_40]]] [1] : memref<?xindex> to memref<?xindex>
-// CHECK:           %[[VAL_42:.*]] = sparse_tensor.storage_specifier.get %[[VAL_7]]  crd_mem_sz at 1 : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_43:.*]] = memref.subview %[[VAL_5]][0] {{\[}}%[[VAL_42]]] [1] : memref<?xindex> to memref<?xindex>
-// CHECK:           %[[VAL_44:.*]] = sparse_tensor.storage_specifier.get %[[VAL_7]]  val_mem_sz : !sparse_tensor.storage_specifier
-// CHECK:           %[[VAL_45:.*]] = memref.subview %[[VAL_6]][0] {{\[}}%[[VAL_44]]] [1] : memref<?xf64> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_34:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  pos_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK-DAG:       %[[VAL_35:.*]] = memref.subview %[[VAL_0]][0] {{\[}}%[[VAL_34]]] [1] : memref<?xindex> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_36:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  crd_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK-DAG:       %[[VAL_37:.*]] = memref.subview %[[VAL_1]][0] {{\[}}%[[VAL_36]]] [1] : memref<?xindex> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_38:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]  val_mem_sz : !sparse_tensor.storage_specifier
+// CHECK-DAG:       %[[VAL_39:.*]] = memref.subview %[[VAL_2]][0] {{\[}}%[[VAL_38]]] [1] : memref<?xf64> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_40:.*]] = sparse_tensor.storage_specifier.get %[[VAL_7]]  pos_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK-DAG:       %[[VAL_41:.*]] = memref.subview %[[VAL_4]][0] {{\[}}%[[VAL_40]]] [1] : memref<?xindex> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_42:.*]] = sparse_tensor.storage_specifier.get %[[VAL_7]]  crd_mem_sz at 1 : !sparse_tensor.storage_specifier
+// CHECK-DAG:       %[[VAL_43:.*]] = memref.subview %[[VAL_5]][0] {{\[}}%[[VAL_42]]] [1] : memref<?xindex> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_44:.*]] = sparse_tensor.storage_specifier.get %[[VAL_7]]  val_mem_sz : !sparse_tensor.storage_specifier
+// CHECK-DAG:       %[[VAL_45:.*]] = memref.subview %[[VAL_6]][0] {{\[}}%[[VAL_44]]] [1] : memref<?xf64> to memref<?xf64>
 // CHECK:           %[[VAL_46:.*]]:4 = scf.for %[[VAL_47:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_11]] iter_args(%[[VAL_48:.*]] = %[[VAL_27]], %[[VAL_49:.*]] = %[[VAL_17]], %[[VAL_50:.*]] = %[[VAL_19]], %[[VAL_51:.*]] = %[[VAL_29]]) -> (memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 // CHECK:             %[[VAL_52:.*]] = memref.load %[[VAL_35]]{{\[}}%[[VAL_47]]] : memref<?xindex>
 // CHECK:             %[[VAL_53:.*]] = arith.addi %[[VAL_47]], %[[VAL_11]] : index

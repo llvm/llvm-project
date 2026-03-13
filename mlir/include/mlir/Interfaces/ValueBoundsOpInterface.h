@@ -135,9 +135,16 @@ public:
 
     /// Construct a variable for a map and its operands.
     Variable(AffineMap map, ArrayRef<Variable> mapOperands);
-    Variable(AffineMap map, ArrayRef<Value> mapOperands);
+    Variable(AffineMap map, ValueRange mapOperands);
 
     MLIRContext *getContext() const { return map.getContext(); }
+
+    /// Returns the affine map.
+    AffineMap getMap() const { return map; }
+
+    /// Returns the map operands.
+    ValueDimList &getOperands() { return mapOperands; }
+    const ValueDimList &getOperands() const { return mapOperands; }
 
   private:
     friend class ValueBoundsConstraintSet;
@@ -210,7 +217,7 @@ public:
   /// `closedUB` is set to "true", upper bounds are also closed.
   static FailureOr<int64_t>
   computeConstantBound(presburger::BoundType type, const Variable &var,
-                       StopConditionFn stopCondition = nullptr,
+                       const StopConditionFn &stopCondition = nullptr,
                        bool closedUB = false);
 
   /// Compute a constant delta between the given two values. Return "failure"
@@ -254,6 +261,12 @@ public:
   /// prove the relation or until it ran out of IR.
   static bool compare(const Variable &lhs, ComparisonOperator cmp,
                       const Variable &rhs);
+  /// This function is similar to `ValueBoundsConstraintSet::compare`, except
+  /// that it returns false if `!(lhs cmp rhs)`, and `failure` if neither the
+  /// relation nor its inverse relation could be proven.
+  static llvm::FailureOr<bool> strongCompare(const Variable &lhs,
+                                             ComparisonOperator cmp,
+                                             const Variable &rhs);
 
   /// Compute whether the given variables are equal. Return "failure" if
   /// equality could not be determined.
@@ -269,18 +282,18 @@ public:
   ///
   /// Slice are non-overlapping if the above constraint is not satisfied for
   /// at least one dimension.
-  static FailureOr<bool> areOverlappingSlices(MLIRContext *ctx,
-                                              HyperrectangularSlice slice1,
-                                              HyperrectangularSlice slice2);
+  static FailureOr<bool>
+  areOverlappingSlices(MLIRContext *ctx, const HyperrectangularSlice &slice1,
+                       const HyperrectangularSlice &slice2);
 
   /// Return "true" if the given slices are guaranteed to be equivalent.
   /// Return "false" if the given slices are guaranteed to be non-equivalent.
   /// Return "failure" if unknown.
   ///
   /// Slices are equivalent if their offsets, sizes and strices are equal.
-  static FailureOr<bool> areEquivalentSlices(MLIRContext *ctx,
-                                             HyperrectangularSlice slice1,
-                                             HyperrectangularSlice slice2);
+  static FailureOr<bool>
+  areEquivalentSlices(MLIRContext *ctx, const HyperrectangularSlice &slice1,
+                      const HyperrectangularSlice &slice2);
 
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.
@@ -313,7 +326,8 @@ protected:
   /// An index-typed value or the dimension of a shaped-type value.
   using ValueDim = std::pair<Value, int64_t>;
 
-  ValueBoundsConstraintSet(MLIRContext *ctx, StopConditionFn stopCondition,
+  ValueBoundsConstraintSet(MLIRContext *ctx,
+                           const StopConditionFn &stopCondition,
                            bool addConservativeSemiAffineBounds = false);
 
   /// Return "true" if, based on the current state of the constraint system,
@@ -326,6 +340,16 @@ protected:
   /// This function does not analyze any IR and does not populate any additional
   /// constraints.
   bool comparePos(int64_t lhsPos, ComparisonOperator cmp, int64_t rhsPos);
+
+  /// Return "true" if, based on the current state of the constraint system,
+  /// "lhs cmp rhs" was proven to hold. It returns "false" if "!(lhs cmp rhs)"
+  /// can be proven. Otherwise, it returns `failure` if neither the relation nor
+  /// its inverse relation could be proven.
+  ///
+  /// This function does not analyze any IR and does not populate any additional
+  /// constraints.
+  llvm::FailureOr<bool> strongComparePos(int64_t lhsPos, ComparisonOperator cmp,
+                                         int64_t rhsPos);
 
   /// Given an affine map with a single result (and map operands), add a new
   /// column to the constraint set that represents the result of the map.
@@ -378,7 +402,8 @@ protected:
   /// Insert the given affine map and its bound operands as a new column in the
   /// constraint system. Return the position of the new column. Any operands
   /// that were not analyzed yet are put on the worklist.
-  int64_t insert(AffineMap map, ValueDimList operands, bool isSymbol = true);
+  int64_t insert(AffineMap map, const ValueDimList &operands,
+                 bool isSymbol = true);
   int64_t insert(const Variable &var, bool isSymbol = true);
 
   /// Project out the given column in the constraint set.

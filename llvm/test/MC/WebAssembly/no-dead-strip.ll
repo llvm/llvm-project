@@ -50,6 +50,11 @@ entry:
 ; CHECK-NEXT:        Segment:         3
 ; CHECK-NEXT:        Offset:          8
 ; CHECK-NEXT:        Size:            8
+; CHECK-NEXT:      - Index:           5
+; CHECK-NEXT:        Kind:            TABLE
+; CHECK-NEXT:        Name:            __indirect_function_table
+; CHECK-NEXT:        Flags:           [ UNDEFINED, NO_STRIP ]
+; CHECK-NEXT:        Table:           0
 ; CHECK-NEXT:    SegmentInfo:
 ; CHECK-NEXT:      - Index:           0
 ; CHECK-NEXT:        Name:            .data.gv0

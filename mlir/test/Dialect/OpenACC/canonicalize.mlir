@@ -116,10 +116,10 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
   acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
     acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    } attributes { inclusiveUpperbound = array<i1: true> }
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
-    } attributes { inclusiveUpperbound = array<i1: true> }
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.terminator
   }
   return
@@ -219,3 +219,30 @@ func.func @update_unnecessary_computations(%x: memref<i32>) {
 // CHECK-LABEL: func.func @update_unnecessary_computations
 // CHECK-NOT: acc.atomic.update
 // CHECK: acc.atomic.write
+
+// -----
+
+func.func @kernel_environment_canonicalization(%q1: i32, %q2: i32, %q3: i32) {
+  // Empty kernel_environment (no wait) - should be removed
+  acc.kernel_environment {
+  }
+
+  acc.kernel_environment wait({%q1 : i32, %q2 : i32}) {
+  }
+
+  acc.kernel_environment wait {
+  }
+
+  acc.kernel_environment wait({%q3 : i32} [#acc.device_type<nvidia>]) {
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @kernel_environment_canonicalization
+// CHECK-SAME: ([[Q1:%.*]]: i32, [[Q2:%.*]]: i32, [[Q3:%.*]]: i32)
+// CHECK-NOT: acc.kernel_environment wait({{.*}}[#acc.device_type<none>])
+// CHECK: acc.wait([[Q1]], [[Q2]] : i32, i32)
+// CHECK: acc.wait{{$}}
+// CHECK: acc.kernel_environment wait({{.*}}[#acc.device_type<nvidia>])
+// CHECK: return

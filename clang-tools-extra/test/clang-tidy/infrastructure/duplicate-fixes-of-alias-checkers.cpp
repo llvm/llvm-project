@@ -28,10 +28,10 @@ public:
 private:
   int _num1;
   int _num2;
-  // CHECK-FIXES: _num2{};
+  // CHECK-FIXES: int _num2{};
 };
 
-int should_use_emplace(std::vector<Foo> &v) {
+void should_use_emplace(std::vector<Foo> &v) {
   v.push_back(Foo());
   // CHECK-FIXES: v.emplace_back();
   // CHECK-MESSAGES: warning: use emplace_back instead of push_back [hicpp-use-emplace,modernize-use-emplace]

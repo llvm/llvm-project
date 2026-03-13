@@ -40,7 +40,7 @@ define internal void @callee(ptr noalias %arg) {
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARG_PRIV_B4]], align 4
 ; CHECK-NEXT:    [[ARG_PRIV_B8:%.*]] = getelementptr i8, ptr [[ARG_PRIV]], i64 8
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ARG_PRIV_B8]], align 4
-; CHECK-NEXT:    call void @use(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(12) [[ARG_PRIV]])
+; CHECK-NEXT:    call void @use(ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(12) [[ARG_PRIV]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

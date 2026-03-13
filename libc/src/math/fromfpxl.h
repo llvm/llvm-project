@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_FROMFPXL_H
 #define LLVM_LIBC_SRC_MATH_FROMFPXL_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 long double fromfpxl(long double x, int rnd, unsigned int width);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FROMFPXL_H

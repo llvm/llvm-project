@@ -1,0 +1,81 @@
+# This test tests that llvm-dwp can successfully promote .debug_str_offsets to
+# DWARF64. We do this by using a hidden option to llvm-dwp which is
+# "--force-dwarf64-str-offsets". This allows us to test if llvm-dwp can
+# successfully promote a DWARF32 version of .debug_str_offsets to a DWARF64
+# version. This allows us to test the functionality without having to create a
+# 4GB .dwo file.
+
+# RUN: yaml2obj %s -o %t.dwo
+# RUN: llvm-dwp %t.dwo -o %t.dwp
+# RUN: llvm-dwp %t.dwo -o %t.default.dwp --dwarf64-str-offsets-promotion
+# RUN: llvm-dwp %t.dwo -o %t.disabled.dwp --dwarf64-str-offsets-promotion=disabled
+# RUN: llvm-dwp %t.dwo -o %t.enabled.dwp --dwarf64-str-offsets-promotion=enabled
+# RUN: llvm-dwp %t.dwo -o %t.always.dwp --dwarf64-str-offsets-promotion=always
+# RUN: not llvm-dwp %t.dwo -o %t.invalid.dwp --dwarf64-str-offsets-promotion=invalid 2>&1 | FileCheck --check-prefixes=ERROR %s
+# RUN: llvm-dwarfdump --debug-str-offsets %t.dwp | FileCheck --check-prefixes=DWARF32 %s
+# RUN: llvm-dwarfdump --debug-str-offsets %t.default.dwp | FileCheck --check-prefixes=DWARF32 %s
+# RUN: llvm-dwarfdump --debug-str-offsets %t.disabled.dwp | FileCheck --check-prefixes=DWARF32 %s
+# RUN: llvm-dwarfdump --debug-str-offsets %t.enabled.dwp | FileCheck --check-prefixes=DWARF32 %s
+# RUN: llvm-dwarfdump --debug-str-offsets %t.always.dwp | FileCheck --check-prefixes=DWARF64 %s
+
+# DWARF32:      .debug_str_offsets.dwo contents:
+# DWARF32-NEXT: 0x00000000: Contribution size = 36, Format = DWARF32, Version = 5
+# DWARF32-NEXT: 0x00000008: 00000000 "main"
+# DWARF32-NEXT: 0x0000000c: 00000005 "int"
+# DWARF32-NEXT: 0x00000010: 00000009 "argc"
+# DWARF32-NEXT: 0x00000014: 0000000e "argv"
+# DWARF32-NEXT: 0x00000018: 00000013 "char"
+# DWARF32-NEXT: 0x0000001c: 00000018 "Apple clang version 17.0.0 (clang-1700.4.4.1)"
+# DWARF32-NEXT: 0x00000020: 00000046 "simple.cpp"
+# DWARF32-NEXT: 0x00000024: 00000051 "simple.dwo"
+
+# DWARF64:      .debug_str_offsets.dwo contents:
+# DWARF64-NEXT: 0x00000000: Contribution size = 68, Format = DWARF64, Version = 5
+# DWARF64-NEXT: 0x00000010: 0000000000000000 "main"
+# DWARF64-NEXT: 0x00000018: 0000000000000005 "int"
+# DWARF64-NEXT: 0x00000020: 0000000000000009 "argc"
+# DWARF64-NEXT: 0x00000028: 000000000000000e "argv"
+# DWARF64-NEXT: 0x00000030: 0000000000000013 "char"
+# DWARF64-NEXT: 0x00000038: 0000000000000018 "Apple clang version 17.0.0 (clang-1700.4.4.1)"
+# DWARF64-NEXT: 0x00000040: 0000000000000046 "simple.cpp"
+# DWARF64-NEXT: 0x00000048: 0000000000000051 "simple.dwo"
+
+# ERROR: invalid value for --dwarf64-str-offsets-promotion. Valid values are one of: "enabled", "disabled" or "always".
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         '24000000050000000000000005000000090000000E00000013000000180000004600000051000000'
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         6D61696E00696E74006172676300617267760063686172004170706C6520636C616E672076657273696F6E2031372E302E302028636C616E672D313730302E342E342E31290073696D706C652E6370700073696D706C652E64776F00
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         540000000500050800000000031DD228762F8E1C0105210006070200190000000156000001400000000302917802000140000000030291700300014400000000040105040549000000054E00000006530000000404060100
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x1
+    Content:         01110125251305032576250000022E01111B1206401803253A0B3B0B49133F190000030500021803253A0B3B0B4913000004240003253E0B0B0B0000050F00491300000626004913000000
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_str_offsets.dwo
+      - Name:            .debug_str.dwo
+      - Name:            .debug_info.dwo
+      - Name:            .debug_abbrev.dwo
+...

@@ -1,5 +1,4 @@
-; RUN: opt --passes=loop-rotate -o - -S %s | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt --passes=loop-rotate -o - -S %s --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt --passes=loop-rotate -o - -S %s | FileCheck %s --implicit-check-not=dbg_value
 ;
 ;; Test some fine-grained behaviour of loop-rotate's de-duplication of
 ;; dbg.values. The intrinsic on the first branch should be seen and
@@ -10,17 +9,16 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: declare void @llvm.dbg.value(metadata,
 
 ; CHECK-LABEL: define void @_ZNK4llvm5APInt4sextEj(ptr
 ; CHECK-LABEL: entry:
-; CHECK:       call void @llvm.dbg.value(metadata i32 0, metadata ![[SRC:[0-9]+]],
+; CHECK:       #dbg_value(i32 0, ![[SRC:[0-9]+]],
 ; CHECK-NEXT:  load
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 0, metadata ![[SINK:[0-9]+]],
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 0, metadata ![[SRC]],
+; CHECK-NEXT:  #dbg_value(i32 0, ![[SINK:[0-9]+]],
+; CHECK-NEXT:  #dbg_value(i32 0, ![[SRC]],
 ; CHECK-LABEL: for.body:
-; CHECK:       call void @llvm.dbg.value(metadata i32 0, metadata ![[SINK]],
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 0, metadata ![[SRC]],
+; CHECK:       #dbg_value(i32 0, ![[SINK]],
+; CHECK-NEXT:  #dbg_value(i32 0, ![[SRC]],
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

@@ -61,6 +61,6 @@ void test() {
 
   // error: S::f is visible in instantiation context, but  R::g has internal
   // linkage and cannot be used outside N.cpp
-  apply(x, S::Z()); // expected-error@N.cpp:10 {{no matching function for call to 'g'}}
-                    // expected-note@-1 {{in instantiation of function template specialization 'apply<R::X, S::Z>' requested here}}
+  apply(x, S::Z()); // expected-error@N.cpp:10 {{use of undeclared identifier 'g'}}
+                    // expected-note@-1 {{requested here}}
 }

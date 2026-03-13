@@ -19,7 +19,6 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 
@@ -50,6 +49,9 @@ public:
 
   /// Emit an error to the reader.
   virtual InFlightDiagnostic emitError(const Twine &msg = {}) const = 0;
+
+  /// Emit a warning to the reader.
+  virtual InFlightDiagnostic emitWarning(const Twine &msg = {}) const = 0;
 
   /// Retrieve the dialect version by name if available.
   virtual FailureOr<const DialectVersion *>
@@ -398,6 +400,10 @@ public:
   /// guaranteed to not die before the end of the bytecode process. The blob is
   /// written as-is, with no additional compression or compaction.
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
+
+  /// Write a blob to the bytecode, which is not owned by the caller. The blob
+  /// is copied into the bytecode, and need not strictly outlive the call.
+  virtual void writeUnownedBlob(ArrayRef<char> blob) = 0;
 
   /// Write a bool to the output stream.
   virtual void writeOwnedBool(bool value) = 0;

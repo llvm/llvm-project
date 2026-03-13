@@ -89,7 +89,7 @@ void Operands() {
   (void)(four_ints ? uss : shrt);    // should be fine, since they get promoted to int.
   (void)(four_ints ? shrt : shrt);   //expected-error {{vector condition type 'FourInts' (vector of 4 'int' values) and result type '__attribute__((__vector_size__(4 * sizeof(short)))) short' (vector of 4 'short' values) do not have elements of the same size}}
 
-  // Vectors must be the same type as eachother.
+  // Vectors must be the same type as each other.
   (void)(four_ints ? four_uints : four_floats); // expected-error {{vector operands to the vector conditional must be the same type ('FourUInts' (vector of 4 'unsigned int' values) and 'FourFloats' (vector of 4 'float' values))}}
   (void)(four_ints ? four_uints : four_ints);   // expected-error {{vector operands to the vector conditional must be the same type ('FourUInts' (vector of 4 'unsigned int' values) and 'FourInts' (vector of 4 'int' values))}}
   (void)(four_ints ? four_ints : four_uints);   // expected-error {{vector operands to the vector conditional must be the same type ('FourInts' (vector of 4 'int' values) and 'FourUInts' (vector of 4 'unsigned int' values))}}

@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -verify-machineinstrs | FileCheck %s
 
-define i32 @tail_merge_unreachable(i32 %i) {
+define i32 @tail_merge_unreachable(i32 %i, i1 %arg) {
 entry:
-  br i1 undef, label %sw, label %end
+  br i1 %arg, label %sw, label %end
 sw:
   switch i32 %i, label %end [
     i32 99,  label %sw.bb

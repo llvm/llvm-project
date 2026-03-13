@@ -5,11 +5,11 @@
 
 ## Verify that mapping symbols are actually present in the object at expected
 ## addresses.
-# RUN: llvm-nm --special-syms %t | FileCheck %s -check-prefix MAPPING_SYM
+# RUN: llvm-nm --special-syms %t | FileCheck %s -check-prefix MAPPING_SYM --match-full-lines
 
-# MAPPING_SYM:      00000000 t $d.0
-# MAPPING_SYM-NEXT: 00000008 t $d.2
-# MAPPING_SYM-NEXT: 00000004 t $t.1
+# MAPPING_SYM:      00000000 t $d
+# MAPPING_SYM-NEXT: 00000008 t $d
+# MAPPING_SYM-NEXT: 00000004 t $t
 # MAPPING_SYM-NEXT: 00000000 T foo
 
 # RUN: llvm-symbolizer --obj=%t 0 4 0xc | FileCheck %s -check-prefix SYMBOL

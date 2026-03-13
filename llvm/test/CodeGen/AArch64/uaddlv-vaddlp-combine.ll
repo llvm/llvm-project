@@ -5,8 +5,7 @@ define i32 @uaddlv_uaddlp_v8i16(<8 x i16> %0) {
 ; CHECK-LABEL: uaddlv_uaddlp_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uaddlv s0, v0.8h
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %2 = tail call <4 x i32> @llvm.aarch64.neon.uaddlp.v4i32.v8i16(<8 x i16> %0)
   %3 = tail call i64 @llvm.aarch64.neon.uaddlv.i64.v4i32(<4 x i32> %2)

@@ -15,7 +15,7 @@
 define void @widget(ptr %arg1, float %arg2, i64 %idx1, i64 %idx2, i32 %limit) {
 ; CHECK: Function Attrs: nofree norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@widget
-; CHECK-SAME: (ptr nocapture nofree writeonly [[ARG1:%.*]], float [[ARG2:%.*]], i64 [[IDX1:%.*]], i64 [[IDX2:%.*]], i32 [[LIMIT:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree writeonly captures(none) [[ARG1:%.*]], float [[ARG2:%.*]], i64 [[IDX1:%.*]], i64 [[IDX2:%.*]], i32 [[LIMIT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [128 x float], i32 0, align 4
 ; CHECK-NEXT:    [[ALLOCA3:%.*]] = alloca [81 x float], i32 0, align 4

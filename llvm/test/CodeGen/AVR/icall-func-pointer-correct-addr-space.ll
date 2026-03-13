@@ -1,4 +1,4 @@
-; RUN: llc -mattr=lpm,lpmw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=lpm,lpmw < %s -mtriple=avr | FileCheck %s
 
 @callbackPtr = common global ptr addrspace(1) null, align 8
 @myValuePtr = common global ptr null, align 8

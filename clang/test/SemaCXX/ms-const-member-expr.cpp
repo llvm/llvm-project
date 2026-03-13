@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++11 -fms-compatibility -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++11 -fms-compatibility -fsyntax-only -verify -fexperimental-new-constant-interpreter
 
 struct S {
   enum { E = 1 };

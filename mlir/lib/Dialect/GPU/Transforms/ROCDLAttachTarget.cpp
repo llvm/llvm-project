@@ -69,7 +69,7 @@ DictionaryAttr ROCDLAttachTarget::getFlags(OpBuilder &builder) const {
 void ROCDLAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
-  SmallVector<StringRef> filesToLink(libs.begin(), libs.end());
+  SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<ROCDLTargetAttr>(
       optLevel, triple, chip, features, abiVersion, getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
@@ -86,8 +86,7 @@ void ROCDLAttachTarget::runOnOperation() {
           targets.append(attrs->getValue().begin(), attrs->getValue().end());
         targets.push_back(target);
         // Remove any duplicate targets.
-        targets.erase(std::unique(targets.begin(), targets.end()),
-                      targets.end());
+        targets.erase(llvm::unique(targets), targets.end());
         // Update the target attribute array.
         module.setTargetsAttr(builder.getArrayAttr(targets));
       }

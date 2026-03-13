@@ -11,14 +11,16 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/spawn/file_actions.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/mode_t.h"
 #include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
@@ -42,7 +44,7 @@ cpp::optional<int> open(const char *path, int oflags, mode_t mode) {
   int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, oflags,
                                              mode);
 #endif
-  if (fd > 0)
+  if (fd >= 0)
     return fd;
   // The open function is called as part of the child process' preparatory
   // steps. If an open fails, the child process just exits. So, unlike
@@ -145,4 +147,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

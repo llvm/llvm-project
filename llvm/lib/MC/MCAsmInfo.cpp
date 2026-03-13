@@ -17,6 +17,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -40,44 +42,16 @@ cl::opt<cl::boolOrDefault> UseLEB128Directives(
 }
 
 MCAsmInfo::MCAsmInfo() {
-  SeparatorString = ";";
-  CommentString = "#";
-  LabelSuffix = ":";
-  PrivateGlobalPrefix = "L";
-  PrivateLabelPrefix = PrivateGlobalPrefix;
-  LinkerPrivateGlobalPrefix = "";
-  InlineAsmStart = "APP";
-  InlineAsmEnd = "NO_APP";
-  Code16Directive = ".code16";
-  Code32Directive = ".code32";
-  Code64Directive = ".code64";
-  ZeroDirective = "\t.zero\t";
-  AsciiDirective = "\t.ascii\t";
-  AscizDirective = "\t.asciz\t";
-  Data8bitsDirective = "\t.byte\t";
-  Data16bitsDirective = "\t.short\t";
-  Data32bitsDirective = "\t.long\t";
-  Data64bitsDirective = "\t.quad\t";
-  GlobalDirective = "\t.globl\t";
-  WeakDirective = "\t.weak\t";
   if (DwarfExtendedLoc != Default)
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::BOU_UNSET)
     HasLEB128Directives = UseLEB128Directives == cl::BOU_TRUE;
-  UseIntegratedAssembler = true;
-  ParseInlineAsmUsingAsmParser = false;
-  PreserveAsmComments = true;
-  PPCUseFullRegisterNames = false;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;
 
 void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
   InitialFrameState.push_back(Inst);
-}
-
-bool MCAsmInfo::isSectionAtomizableBySymbols(const MCSection &Section) const {
-  return false;
 }
 
 const MCExpr *
@@ -127,4 +101,48 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   // FIXME: Does .section .bss/.data/.text work everywhere??
   return SectionName == ".text" || SectionName == ".data" ||
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
+}
+
+void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {
+  assert(AtSpecifierToName.empty() && "cannot initialize twice");
+  UseAtForSpecifier = true;
+  for (auto Desc : Descs) {
+    [[maybe_unused]] auto It =
+        AtSpecifierToName.try_emplace(Desc.Kind, Desc.Name);
+    assert(It.second && "duplicate Kind");
+    [[maybe_unused]] auto It2 =
+        NameToAtSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
+    assert(It2.second);
+  }
+}
+
+StringRef MCAsmInfo::getSpecifierName(uint32_t S) const {
+  auto It = AtSpecifierToName.find(S);
+  assert(It != AtSpecifierToName.end() &&
+         "ensure the specifier is set in initializeVariantKinds");
+  return It->second;
+}
+
+std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
+  auto It = NameToAtSpecifier.find(Name.lower());
+  if (It != NameToAtSpecifier.end())
+    return It->second;
+  return {};
+}
+
+void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!E.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(E.getSpecifier());
+  return !Res.getSubSym();
 }

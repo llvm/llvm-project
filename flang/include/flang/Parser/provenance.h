@@ -172,15 +172,17 @@ public:
   }
   void setShowColors(bool showColors) { showColors_ = showColors; }
   bool getShowColors() const { return showColors_; }
+  std::optional<ProvenanceRange> GetInclusionInfo(
+      const std::optional<ProvenanceRange> &) const;
   void EmitMessage(llvm::raw_ostream &, const std::optional<ProvenanceRange> &,
       const std::string &message, const std::string &prefix,
       llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
-      Provenance, std::size_t *offset = nullptr) const;
+      Provenance, std::size_t *offset = nullptr, bool topLevel = false) const;
   const char *GetSource(ProvenanceRange) const;
   std::optional<SourcePosition> GetSourcePosition(Provenance) const;
   std::optional<ProvenanceRange> GetFirstFileProvenance() const;
-  std::string GetPath(Provenance) const; // __FILE__
+  std::string GetPath(Provenance, bool topLevel = false) const; // __FILE__
   int GetLineNumber(Provenance) const; // __LINE__
   Provenance CompilerInsertionProvenance(char ch);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;
@@ -257,6 +259,10 @@ public:
     provenanceMap_.Put(pm);
   }
 
+  void MarkPossibleFixedFormContinuation() {
+    possibleFixedFormContinuations_.push_back(BufferedBytes());
+  }
+
   std::size_t BufferedBytes() const;
   void Marshal(AllCookedSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
@@ -269,6 +275,7 @@ private:
   std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
   ProvenanceRangeToOffsetMappings invertedMap_;
+  std::list<std::size_t> possibleFixedFormContinuations_;
 };
 
 class AllCookedSources {

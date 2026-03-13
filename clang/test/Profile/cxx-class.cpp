@@ -9,7 +9,7 @@
 // RUN: FileCheck --input-file=%tgen -check-prefix=VDTRGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-class.proftext -o %t.profdata
-// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -triple %itanium_abi_triple > %tuse
+// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -triple %itanium_abi_triple > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=CTRUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=DTRUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=MTHUSE %s

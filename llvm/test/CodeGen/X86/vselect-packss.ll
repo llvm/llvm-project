@@ -66,7 +66,7 @@ define <16 x i8> @vselect_packss_v16i16(<16 x i16> %a0, <16 x i16> %a1, <16 x i8
 ; AVX512VL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -82,7 +82,7 @@ define <16 x i8> @vselect_packss_v16i16(<16 x i16> %a0, <16 x i16> %a1, <16 x i8
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0
 ; AVX512BWVL-NEXT:    vpmovm2b %k0, %xmm0
-; AVX512BWVL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %1 = icmp eq <16 x i16> %a0, %a1
@@ -156,7 +156,7 @@ define <16 x i8> @vselect_packss_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i8
 ; AVX512F-LABEL: vselect_packss_v16i32:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -165,9 +165,9 @@ define <16 x i8> @vselect_packss_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i8
 ; AVX512VL-LABEL: vselect_packss_v16i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -183,7 +183,7 @@ define <16 x i8> @vselect_packss_v16i32(<16 x i32> %a0, <16 x i32> %a1, <16 x i8
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
 ; AVX512BWVL-NEXT:    vpmovm2b %k0, %xmm0
-; AVX512BWVL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %1 = icmp eq <16 x i32> %a0, %a1
@@ -312,7 +312,7 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; AVX512F-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
 ; AVX512F-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vpblendvb %xmm0, %xmm4, %xmm5, %xmm0
 ; AVX512F-NEXT:    vzeroupper
@@ -323,9 +323,9 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; AVX512VL-NEXT:    vpcmpeqq %zmm2, %zmm0, %k0
 ; AVX512VL-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; AVX512VL-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq $202, %xmm5, %xmm4, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm5 ^ (xmm0 & (xmm4 ^ xmm5))
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -345,7 +345,7 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; AVX512BWVL-NEXT:    vpcmpeqq %zmm3, %zmm1, %k1
 ; AVX512BWVL-NEXT:    kunpckbw %k0, %k1, %k0
 ; AVX512BWVL-NEXT:    vpmovm2b %k0, %xmm0
-; AVX512BWVL-NEXT:    vpternlogq $202, %xmm5, %xmm4, %xmm0
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm5 ^ (xmm0 & (xmm4 ^ xmm5))
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %1 = icmp eq <16 x i64> %a0, %a1
@@ -415,7 +415,7 @@ define <16 x i8> @vselect_packss(<16 x i16> %a0, <16 x i16> %a1, <16 x i8> %a2, 
 ; AVX512VL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512VL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
 ;
@@ -433,7 +433,7 @@ define <16 x i8> @vselect_packss(<16 x i16> %a0, <16 x i16> %a1, <16 x i8> %a2, 
 ; AVX512BWVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
 ; AVX512BWVL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512BWVL-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpternlogq $202, %xmm3, %xmm2, %xmm0
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm3 ^ (xmm0 & (xmm2 ^ xmm3))
 ; AVX512BWVL-NEXT:    vzeroupper
 ; AVX512BWVL-NEXT:    retq
   %1 = icmp eq <16 x i16> %a0, %a1

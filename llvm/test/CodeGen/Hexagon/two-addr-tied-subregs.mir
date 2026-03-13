@@ -1,4 +1,5 @@
 # RUN: llc -march hexagon -run-pass livevars -run-pass twoaddressinstruction  -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march hexagon --passes='require<live-vars>,two-address-instruction' -verify-each -o - %s | FileCheck %s
 
 
 ###############################################################################

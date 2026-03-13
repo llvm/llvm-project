@@ -27,7 +27,6 @@ int test_i32(char *fmt, ...) {
 // N32:   %va = alloca ptr, align [[$PTRALIGN:4]]
 // N64:   %va = alloca ptr, align [[$PTRALIGN:8]]
 // ALL:   [[V:%.*]] = alloca i32, align 4
-// NEW:   [[PROMOTION_TEMP:%.*]] = alloca i32, align 4
 //
 // ALL:   call void @llvm.va_start.p0(ptr %va)
 // ALL:   [[AP_CUR:%.+]] = load ptr, ptr %va, align [[$PTRALIGN]]
@@ -40,9 +39,7 @@ int test_i32(char *fmt, ...) {
 //
 // N32:   [[TMP:%.+]] = load i64, ptr [[AP_CUR]], align [[CHUNKALIGN:8]]
 // N64:   [[TMP:%.+]] = load i64, ptr [[AP_CUR]], align [[CHUNKALIGN:8]]
-// NEW:   [[TMP2:%.+]] = trunc i64 [[TMP]] to i32
-// NEW:   store i32 [[TMP2]], ptr [[PROMOTION_TEMP]], align 4
-// NEW:   [[ARG:%.+]] = load i32, ptr [[PROMOTION_TEMP]], align 4
+// NEW:   [[ARG:%.+]] = trunc i64 [[TMP]] to i32
 // ALL:   store i32 [[ARG]], ptr [[V]], align 4
 //
 // ALL:   call void @llvm.va_end.p0(ptr %va)
@@ -91,7 +88,6 @@ char *test_ptr(char *fmt, ...) {
 //
 // ALL:   %va = alloca ptr, align [[$PTRALIGN]]
 // ALL:   [[V:%.*]] = alloca ptr, align [[$PTRALIGN]]
-// N32:   [[AP_CAST:%.+]] = alloca ptr, align 4
 // ALL:   call void @llvm.va_start.p0(ptr %va)
 // ALL:   [[AP_CUR:%.+]] = load ptr, ptr %va, align [[$PTRALIGN]]
 // ALL:   [[AP_NEXT:%.+]] = getelementptr inbounds i8, ptr [[AP_CUR]], [[$INTPTR_T]] [[$CHUNKSIZE]]
@@ -102,12 +98,9 @@ char *test_ptr(char *fmt, ...) {
 // N32:   [[TMP2:%.+]] = load i64, ptr [[AP_CUR]], align 8
 // N32:   [[TMP3:%.+]] = trunc i64 [[TMP2]] to i32
 // N32:   [[PTR:%.+]] = inttoptr i32 [[TMP3]] to ptr
-// N32:   store ptr [[PTR]], ptr [[AP_CAST]], align 4
-// N32:   [[ARG:%.+]] = load ptr, ptr [[AP_CAST]], align [[$PTRALIGN]]
-//
-// O32:   [[ARG:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
-// N64:   [[ARG:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
-// ALL:   store ptr [[ARG]], ptr [[V]], align [[$PTRALIGN]]
+// O32:   [[PTR:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
+// N64:   [[PTR:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
+// ALL:   store ptr [[PTR]], ptr [[V]], align [[$PTRALIGN]]
 //
 // ALL:   call void @llvm.va_end.p0(ptr %va)
 // ALL: }

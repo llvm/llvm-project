@@ -45,6 +45,7 @@ driver_executable("llvm-objdump") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/CodeGen",
     "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/Debuginfod",
@@ -54,6 +55,7 @@ driver_executable("llvm-objdump") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/Support/HTTP",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsDisassemblers",
     "//llvm/lib/Target:AllTargetsInfos",
@@ -62,6 +64,7 @@ driver_executable("llvm-objdump") {
   ]
   sources = [
     "COFFDump.cpp",
+    "DXContainerDump.cpp",
     "ELFDump.cpp",
     "MachODump.cpp",
     "OffloadDump.cpp",

@@ -28,9 +28,9 @@
 !CHECK-LABEL: @test_cvspbf16_
 !LLVMIR:  %1 = alloca <16 x i8>, i64 1, align 16
 !LLVMIR:  %2 = alloca <16 x i8>, i64 1, align 16
-!LLVMIR:  %3 = load <16 x i8>, ptr %2, align 16
+!LLVMIR:  %3 = load <16 x i8>, ptr %1, align 16
 !LLVMIR:  %4 = call <16 x i8> @llvm.ppc.vsx.xvcvspbf16(<16 x i8> %3)
-!LLVMIR:  store <16 x i8> %4, ptr %1, align 16
+!LLVMIR:  store <16 x i8> %4, ptr %2, align 16
 
       subroutine test_cvbf16spn()
       implicit none
@@ -41,9 +41,9 @@
 !CHECK-LABEL: @test_cvbf16spn_
 !LLVMIR:  %1 = alloca <16 x i8>, i64 1, align 16
 !LLVMIR:  %2 = alloca <16 x i8>, i64 1, align 16
-!LLVMIR:  %3 = load <16 x i8>, ptr %2, align 16
+!LLVMIR:  %3 = load <16 x i8>, ptr %1, align 16
 !LLVMIR:  %4 = call <16 x i8> @llvm.ppc.vsx.xvcvbf16spn(<16 x i8> %3)
-!LLVMIR:  store <16 x i8> %4, ptr %1, align 16
+!LLVMIR:  store <16 x i8> %4, ptr %2, align 16
 
 !----------------------
 ! vec_lxvp

@@ -20,14 +20,17 @@ def isUbuntu18_04():
             with open(path) as f:
                 contents = f.read()
             if "Ubuntu 18.04" in contents:
-                return True
+                return "Ubuntu 18.04 is not supported."
 
-    return False
+    return None
 
 
 class TestRerunExprDylib(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipTestIfFn(isUbuntu18_04, bugnumber="rdar://103831050")
     @skipIfWindows
+    @skipIfRemote
     def test(self):
         """
         Tests whether re-launching a process without destroying

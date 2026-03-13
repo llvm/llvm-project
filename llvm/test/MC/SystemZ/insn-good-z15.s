@@ -146,24 +146,28 @@
 #CHECK: nogrk	%r0, %r15, %r0          # encoding: [0xb9,0x66,0x00,0x0f]
 #CHECK: nogrk	%r15, %r0, %r0          # encoding: [0xb9,0x66,0x00,0xf0]
 #CHECK: nogrk	%r7, %r8, %r9           # encoding: [0xb9,0x66,0x90,0x78]
+#CHECK: notgr	%r7, %r8                # encoding: [0xb9,0x66,0x80,0x78]
 
 	nogrk	%r0,%r0,%r0
 	nogrk	%r0,%r0,%r15
 	nogrk	%r0,%r15,%r0
 	nogrk	%r15,%r0,%r0
 	nogrk	%r7,%r8,%r9
+	notgr	%r7,%r8
 
 #CHECK: nork	%r0, %r0, %r0           # encoding: [0xb9,0x76,0x00,0x00]
 #CHECK: nork	%r0, %r0, %r15          # encoding: [0xb9,0x76,0xf0,0x00]
 #CHECK: nork	%r0, %r15, %r0          # encoding: [0xb9,0x76,0x00,0x0f]
 #CHECK: nork	%r15, %r0, %r0          # encoding: [0xb9,0x76,0x00,0xf0]
 #CHECK: nork	%r7, %r8, %r9           # encoding: [0xb9,0x76,0x90,0x78]
+#CHECK: notr	%r7, %r8                # encoding: [0xb9,0x76,0x80,0x78]
 
 	nork	%r0,%r0,%r0
 	nork	%r0,%r0,%r15
 	nork	%r0,%r15,%r0
 	nork	%r15,%r0,%r0
 	nork	%r7,%r8,%r9
+	notr	%r7,%r8
 
 #CHECK: nxgrk	%r0, %r0, %r0           # encoding: [0xb9,0x67,0x00,0x00]
 #CHECK: nxgrk	%r0, %r0, %r15          # encoding: [0xb9,0x67,0xf0,0x00]

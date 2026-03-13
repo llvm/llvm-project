@@ -1,3 +1,8 @@
+if (NOT LLVM_ENABLE_LIBXML2)
+  message(STATUS "Not building llvm-mt${CMAKE_EXECUTABLE_SUFFIX} because libxml2 is not available")
+  return()
+endif ()
+
 set(LLVM_LINK_COMPONENTS
   Option
   Support

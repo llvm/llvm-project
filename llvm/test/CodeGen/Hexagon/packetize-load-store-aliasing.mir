@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -mcpu=hexagonv60 -run-pass hexagon-packetizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -run-pass hexagon-packetizer %s -o - | FileCheck %s
 
 # Check that a store can be packetized with a load that happens later
 # if these instructions are not aliased (the load will actually execute

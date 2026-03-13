@@ -197,6 +197,6 @@ void implicit_present_double_complex (int a){
 // CK4: [[ADDR:%.+]] = alloca ptr,
 // CK4: store ptr [[ARG]], ptr [[ADDR]],
 // CK4: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK4: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK4: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 #endif

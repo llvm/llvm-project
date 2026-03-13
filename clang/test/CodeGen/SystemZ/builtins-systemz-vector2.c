@@ -125,13 +125,15 @@ void test_float(void) {
   // CHECK: call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 1);
   // CHECK: call <4 x float> @llvm.round.v4f32(<4 x float> %{{.*}})
+  vf = __builtin_s390_vfisb(vf, 4, 4);
+  // CHECK: call <4 x float> @llvm.roundeven.v4f32(<4 x float> %{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 5);
   // CHECK: call <4 x float> @llvm.trunc.v4f32(<4 x float> %{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 6);
   // CHECK: call <4 x float> @llvm.ceil.v4f32(<4 x float> %{{.*}})
   vf = __builtin_s390_vfisb(vf, 4, 7);
   // CHECK: call <4 x float> @llvm.floor.v4f32(<4 x float> %{{.*}})
-  vf = __builtin_s390_vfisb(vf, 4, 4);
-  // CHECK: call <4 x float> @llvm.s390.vfisb(<4 x float> %{{.*}}, i32 4, i32 4)
+  vf = __builtin_s390_vfisb(vf, 4, 3);
+  // CHECK: call <4 x float> @llvm.s390.vfisb(<4 x float> %{{.*}}, i32 4, i32 3)
 }
 

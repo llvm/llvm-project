@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "startup/baremetal/fini.h"
+
+#include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdint.h>
 
-extern "C" {
-extern uintptr_t __fini_array_start[];
-extern uintptr_t __fini_array_end[];
-}
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using FiniCallback = void(void);
 
@@ -24,4 +21,4 @@ extern "C" void __libc_fini_array(void) {
     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

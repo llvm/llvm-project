@@ -39,6 +39,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -52,7 +53,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <string>
@@ -168,10 +168,24 @@ static bool mayExtractBlock(const BasicBlock &BB) {
   //
   // Resumes that are not reachable from a cleanup landing pad are considered to
   // be unreachable. It’s not safe to split them out either.
+
   if (BB.hasAddressTaken() || BB.isEHPad())
     return false;
   auto Term = BB.getTerminator();
-  return !isa<InvokeInst>(Term) && !isa<ResumeInst>(Term);
+  if (isa<InvokeInst>(Term) || isa<ResumeInst>(Term))
+    return false;
+
+  // Do not outline basic blocks that have token type instructions. e.g.,
+  // exception:
+  // %0 = cleanuppad within none []
+  // call void @"?terminate@@YAXXZ"() [ "funclet"(token %0) ]
+  // br label %continue-exception
+  if (llvm::any_of(
+          BB, [](const Instruction &I) { return I.getType()->isTokenTy(); })) {
+    return false;
+  }
+
+  return true;
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.
@@ -185,7 +199,7 @@ static bool markFunctionCold(Function &F, bool UpdateEntryCount = false) {
     F.addFnAttr(Attribute::Cold);
     Changed = true;
   }
-  if (!F.hasFnAttribute(Attribute::MinSize)) {
+  if (!F.hasMinSize()) {
     F.addFnAttr(Attribute::MinSize);
     Changed = true;
   }
@@ -257,6 +271,11 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
       F.hasFnAttribute(Attribute::SanitizeThread) ||
       F.hasFnAttribute(Attribute::SanitizeMemory))
     return false;
+
+  // Do not outline scoped EH personality functions.
+  if (F.hasPersonalityFn())
+    if (isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+      return false;
 
   return true;
 }
@@ -714,7 +733,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             none_of(SubRegion, [&](BasicBlock *Block) {
               return ColdBlocks.contains(Block);
             })) {
-          ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
+          ColdBlocks.insert_range(SubRegion);
 
           LLVM_DEBUG({
             for (auto *Block : SubRegion)

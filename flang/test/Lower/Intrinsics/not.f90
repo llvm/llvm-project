@@ -13,4 +13,3 @@ subroutine not_test
     ! CHECK: return
     destination = not(source)
   end subroutine
-  

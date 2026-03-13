@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -emit-llvm  -triple x86_64-apple-darwin -x objective-c %s -o - | FileCheck %s
 
-@interface A {
+@interface SuperClass
+@end
+
+@interface A : SuperClass {
         struct {
                 unsigned char a : 1;
                 unsigned char b : 1;

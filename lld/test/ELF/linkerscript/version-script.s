@@ -6,7 +6,8 @@
 # RUN: llvm-readobj -V %t.so | FileCheck %s
 
 # RUN: echo "SECTIONS { .text : { bar = foo; *(.text) } }" > %t.script
-# RUN: echo "VERSION { V { global: foo; bar; local: *; }; }" >> %t.script
+## `:` in `local:*` is lexed as a separate token.
+# RUN: echo "VERSION { V { global: foo; bar; local:*; }; }" >> %t.script
 # RUN: ld.lld -T %t.script -shared --no-undefined-version %t.o -o %t.so
 # RUN: llvm-readobj -V %t.so | FileCheck %s
 
@@ -17,7 +18,7 @@
 # CHECK-NEXT:     Name:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Version: 0
 # CHECK-NEXT:     Name: und
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {

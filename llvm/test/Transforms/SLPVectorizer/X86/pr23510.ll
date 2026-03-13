@@ -11,16 +11,16 @@ define void @_Z3fooPml(ptr nocapture %a, i64 %i) {
 ; CHECK-LABEL: @_Z3fooPml(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 4, i64 4>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 4)
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[A]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @total, align 8
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr @total, align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr <2 x i64> [[TMP5]], <i64 4, i64 4>
-; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP5]], splat (i64 4)
+; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr @total, align 8
 ; CHECK-NEXT:    [[ADD9:%.*]] = add i64 [[TMP7]], [[TMP6]]

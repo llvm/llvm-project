@@ -14,5 +14,8 @@ unittest("MIRTests") {
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
-  sources = [ "MachineMetadata.cpp" ]
+  sources = [
+    "MachineMetadata.cpp",
+    "MachineStableHashTest.cpp",
+  ]
 }

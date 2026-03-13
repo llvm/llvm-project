@@ -349,7 +349,7 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
                         &NewFeatures, Env.Cov, &NewCov, CFPath,
                         /*Verbose=*/false, /*IsSetCoverMerge=*/false);
     Env.Features.insert(NewFeatures.begin(), NewFeatures.end());
-    Env.Cov.insert(NewFeatures.begin(), NewFeatures.end());
+    Env.Cov.insert(NewCov.begin(), NewCov.end());
     RemoveFile(CFPath);
   }
 

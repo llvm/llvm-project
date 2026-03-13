@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SERIALIZATION_MODULEFILE_H
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ASTBitCodes.h"
@@ -61,8 +62,9 @@ enum ModuleKind {
 
 /// The input file info that has been loaded from an AST file.
 struct InputFileInfo {
-  std::string FilenameAsRequested;
-  std::string Filename;
+  StringRef UnresolvedImportedFilenameAsRequested;
+  StringRef UnresolvedImportedFilename;
+
   uint64_t ContentHash;
   off_t StoredSize;
   time_t StoredTime;
@@ -70,6 +72,10 @@ struct InputFileInfo {
   bool Transient;
   bool TopLevel;
   bool ModuleMap;
+
+  bool isValid() const {
+    return !UnresolvedImportedFilenameAsRequested.empty();
+  }
 };
 
 /// The input file that has been loaded from this AST file, along with
@@ -88,13 +94,13 @@ public:
 
   InputFile(FileEntryRef File, bool isOverridden = false,
             bool isOutOfDate = false) {
-    assert(!(isOverridden && isOutOfDate) &&
-           "an overridden cannot be out-of-date");
     unsigned intVal = 0;
-    if (isOverridden)
-      intVal = Overridden;
-    else if (isOutOfDate)
+    // Make isOutOfDate with higher priority than isOverridden.
+    // It is possible if the recorded hash value mismatches.
+    if (isOutOfDate)
       intVal = OutOfDate;
+    else if (isOverridden)
+      intVal = Overridden;
     Val.setPointerAndInt(&File.getMapEntry(), intVal);
   }
 
@@ -112,6 +118,21 @@ public:
   bool isOverridden() const { return Val.getInt() == Overridden; }
   bool isOutOfDate() const { return Val.getInt() == OutOfDate; }
   bool isNotFound() const { return Val.getInt() == NotFound; }
+};
+
+/// Specifies the high-level result of validating input files.
+enum class InputFilesValidation {
+  /// Initial value, before the validation has been performed.
+  NotStarted = 0,
+  /// When the validation is disabled. For example, for a precompiled header.
+  Disabled,
+  /// When the validation is skipped because it was already done in the current
+  /// build session.
+  SkippedInBuildSession,
+  /// When the validation is done only for user files as an optimization.
+  UserFiles,
+  /// When the validation is done both for user files and system files.
+  AllFiles,
 };
 
 /// Information about a module that has been loaded by the ASTReader.
@@ -144,8 +165,8 @@ public:
   /// The base directory of the module.
   std::string BaseDirectory;
 
-  std::string getTimestampFilename() const {
-    return FileName + ".timestamp";
+  static std::string getTimestampFilename(StringRef FileName) {
+    return (FileName + ".timestamp").str();
   }
 
   /// The original source file name that was used to build the
@@ -270,6 +291,14 @@ public:
   /// The time is specified in seconds since the start of the Epoch.
   uint64_t InputFilesValidationTimestamp = 0;
 
+  /// Captures the high-level result of validating input files.
+  ///
+  /// Useful when encountering a changed input file. This way, we can check
+  /// what kind of validation has been done already and can try to figure out
+  /// why a changed file hasn't been discovered earlier.
+  InputFilesValidation InputFilesValidationStatus =
+      InputFilesValidation::NotStarted;
+
   // === Source Locations ===
 
   /// Cursor used to read source location entries.
@@ -310,9 +339,6 @@ public:
   /// Base identifier ID for identifiers local to this module.
   serialization::IdentifierID BaseIdentifierID = 0;
 
-  /// Remapping table for identifier IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> IdentifierRemap;
-
   /// Actual data for the on-disk hash table of identifiers.
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
@@ -350,9 +376,6 @@ public:
   /// Base macro ID for macros local to this module.
   serialization::MacroID BaseMacroID = 0;
 
-  /// Remapping table for macro IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> MacroRemap;
-
   /// The offset of the start of the set of defined macros.
   uint64_t MacroStartOffset = 0;
 
@@ -368,9 +391,6 @@ public:
   /// Base preprocessed entity ID for preprocessed entities local to
   /// this module.
   serialization::PreprocessedEntityID BasePreprocessedEntityID = 0;
-
-  /// Remapping table for preprocessed entity IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> PreprocessedEntityRemap;
 
   const PPEntityOffset *PreprocessedEntityOffsets = nullptr;
   unsigned NumPreprocessedEntities = 0;
@@ -454,23 +474,11 @@ public:
   /// by the declaration ID (-1).
   const DeclOffset *DeclOffsets = nullptr;
 
-  /// Base declaration ID for declarations local to this module.
-  serialization::DeclID BaseDeclID = 0;
-
-  /// Remapping table for declaration IDs in this module.
-  ContinuousRangeMap<serialization::DeclID, int, 2> DeclRemap;
-
-  /// Mapping from the module files that this module file depends on
-  /// to the base declaration ID for that module as it is understood within this
-  /// module.
-  ///
-  /// This is effectively a reverse global-to-local mapping for declaration
-  /// IDs, so that we can interpret a true global ID (for this translation unit)
-  /// as a local ID (for this module file).
-  llvm::DenseMap<ModuleFile *, serialization::DeclID> GlobalToLocalDeclIDs;
+  /// Base declaration index in ASTReader for declarations local to this module.
+  unsigned BaseDeclIndex = 0;
 
   /// Array of file-level DeclIDs sorted by file.
-  const LocalDeclID *FileSortedDecls = nullptr;
+  const serialization::unaligned_decl_id_t *FileSortedDecls = nullptr;
   unsigned NumFileSortedDecls = 0;
 
   /// Array of category list location information within this
@@ -496,9 +504,6 @@ public:
   /// Base type ID for types local to this module as represented in
   /// the global type ID space.
   serialization::TypeID BaseTypeIndex = 0;
-
-  /// Remapping table for type IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> TypeRemap;
 
   // === Miscellaneous ===
 

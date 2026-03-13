@@ -8,11 +8,12 @@
 
 #include "src/threads/cnd_destroy.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/CndVar.h"
 
 #include <threads.h> // cnd_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(CndVar) == sizeof(cnd_t));
 
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(void, cnd_destroy, (cnd_t * cond)) {
   CndVar::destroy(cndvar);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

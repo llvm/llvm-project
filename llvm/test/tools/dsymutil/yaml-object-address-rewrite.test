@@ -12,10 +12,12 @@
 # CHECK-NEXT: objects:
 # CHECK-NEXT: filename:{{.*}}/Inputs/basic1.macho.x86_64.o
 # CHECK-NEXT: timestamp: 0
+# CHECK-NEXT: type: 102
 # CHECK-NEXT: symbols:
 # CHECK-NEXT: sym: _main, objAddr: 0x0, binAddr: 0x100000EA0, size: 0x24
 # CHECK-NEXT: filename:{{.*}}/Inputs/./libbasic.a(basic2.macho.x86_64.o)'
 # CHECK-NEXT: timestamp: 0
+# CHECK-NEXT: type: 102
 # CHECK-NEXT: symbols:
 # CHECK-DAG:   sym: _foo, objAddr: 0x20, binAddr: 0x100000ED0, size: 0x50
 # CHECK-DAG:   sym: _private_int, objAddr: 0x560, binAddr: 0x100001004, size: 0x0
@@ -24,6 +26,7 @@
 # CHECK-NOT: { sym:
 # CHECK-NEXT: filename:{{.*}}/Inputs/./libbasic.a(basic3.macho.x86_64.o)'
 # CHECK-NEXT: timestamp: 0
+# CHECK-NEXT: type: 102
 # CHECK-NEXT: symbols:
 # CHECK-DAG:   sym: _val, binAddr: 0x100001008, size: 0x0
 # CHECK-DAG:   sym: _bar, objAddr: 0x20, binAddr: 0x100000F40, size: 0x50

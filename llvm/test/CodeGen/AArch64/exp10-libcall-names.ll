@@ -4,11 +4,18 @@
 ; RUN: llc -mtriple=aarch64-apple-tvos7.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=aarch64-apple-watchos7.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=aarch64-apple-xros7.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=aarch64-apple-tvos6.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=aarch64-apple-xros6.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=aarch64-apple-xros1.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=arm64-apple-driverkit < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=arm64-apple-driverkit1.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=arm64-apple-driverkit24.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=arm64-apple-bridgeos < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=arm64-apple-bridgeos1.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=arm64-apple-bridgeos9.0 < %s | FileCheck -check-prefix=APPLE %s
 
 ; RUN: not llc -mtriple=aarch64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -mtriple=aarch64-apple-ios6.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=aarch64-apple-tvos6.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=aarch64-apple-xros6.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
 

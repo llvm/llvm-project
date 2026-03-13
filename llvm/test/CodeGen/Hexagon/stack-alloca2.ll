@@ -1,4 +1,4 @@
-; RUN: llc -O0 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O0 -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r[[AP:[0-9]+]] = and(r30,#-32)
 ; CHECK: sub(r29,r[[SP:[0-9]+]])
 ; CHECK: r29 = r[[SP]]

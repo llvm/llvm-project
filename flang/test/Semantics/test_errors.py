@@ -17,7 +17,7 @@ from difflib import unified_diff
 
 cm.check_args(sys.argv)
 srcdir = cm.set_source(sys.argv[1])
-with open(srcdir, "r") as f:
+with open(srcdir, "r", encoding="utf-8") as f:
     src = f.readlines()
 actual = ""
 expect = ""
@@ -39,6 +39,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
             check=True,
             universal_newlines=True,
             cwd=tmpdir,
+            encoding="utf-8",
         )
     except subprocess.CalledProcessError as e:
         log = e.stderr

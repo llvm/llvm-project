@@ -1,0 +1,17 @@
+// RUN: llvm-profdata merge %S/Inputs/branch-logical-mixed.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=count %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs | FileCheck %S/Inputs/branch-logical-mixed.cpp -D#C=999
+// RUN: llvm-cov report --show-branch-summary %S/Inputs/branch-logical-mixed.o32l -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/branch-logical-mixed.cpp
+| FileCheck %s -check-prefix=REPORT
+
+// RUN: yaml2obj %S/Inputs/branch-logical-mixed-single.yaml -o %t.o
+// RUN: llvm-profdata merge %S/Inputs/branch-logical-mixed-single.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/branch-logical-mixed.cpp -D#C=1
+// RUN: llvm-cov report --show-branch-summary %t.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/branch-logical-mixed.cpp
+| FileCheck %s -check-prefix=REPORT
+
+// REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
+// REPORT-NEXT: ---
+// REPORT-NEXT: _Z4funcii                        77      15  80.52%        60       2  96.67%        80      30  62.50%
+// REPORT-NEXT: main                              1       0 100.00%         5       0 100.00%         0       0   0.00%
+// REPORT-NEXT: ---
+// REPORT-NEXT: TOTAL                            78      15  80.77%        65       2  96.92%        80      30  62.50%

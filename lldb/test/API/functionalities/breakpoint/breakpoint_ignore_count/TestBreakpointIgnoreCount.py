@@ -175,11 +175,11 @@ class BreakpointIgnoreCountTestCase(TestBase):
         if use_location:
             loc = bkpt.location[0]
             self.assertTrue(loc.IsValid(), "Got a valid location")
-            loc.SetIgnoreCount(2)
-            loc.SetCondition("i >= 3")
+            loc.ignore_count = 2
+            loc.condition = "i >= 3"
         else:
-            bkpt.SetIgnoreCount(2)
-            bkpt.SetCondition("i >= 3")
+            bkpt.ignore_count = 2
+            bkpt.condition = "i >= 3"
 
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertEqual(len(threads), 1, "Hit the breakpoint")
@@ -188,4 +188,4 @@ class BreakpointIgnoreCountTestCase(TestBase):
         val = var.GetValueAsUnsigned(10000)
         self.assertNotEqual(val, 10000, "Got the fail value for i")
         self.assertEqual(val, 5, "We didn't stop the right number of times")
-        self.assertEqual(bkpt.GetHitCount(), 3, "Hit count is not right")
+        self.assertEqual(bkpt.hit_count, 3, "Hit count is not right")

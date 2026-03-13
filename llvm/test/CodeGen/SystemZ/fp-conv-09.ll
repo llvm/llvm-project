@@ -2,6 +2,16 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+; Test f16->i32.
+define i32 @f0(half %f) {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: cfebr %r2, 5, %f0
+; CHECK: br %r14
+  %conv = fptosi half %f to i32
+  ret i32 %conv
+}
+
 ; Test f32->i32.
 define i32 @f1(float %f) {
 ; CHECK-LABEL: f1:

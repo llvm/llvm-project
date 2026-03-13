@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/InstructionCost.h"
 #include <optional>
 
 namespace llvm {
@@ -31,7 +32,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetTransformInfo;
 
-using CacheCostTy = int64_t;
+using CacheCostTy = InstructionCost;
 using LoopVectorTy = SmallVector<Loop *, 8>;
 
 /// Represents a memory reference as a base pointer and a set of indexing
@@ -98,10 +99,6 @@ public:
 private:
   /// Attempt to delinearize the indexed reference.
   bool delinearize(const LoopInfo &LI);
-
-  /// Attempt to delinearize \p AccessFn for fixed-size arrays.
-  bool tryDelinearizeFixedSize(const SCEV *AccessFn,
-                               SmallVectorImpl<const SCEV *> &Subscripts);
 
   /// Return true if the index reference is invariant with respect to loop \p L.
   bool isLoopInvariant(const Loop &L) const;
@@ -192,8 +189,6 @@ class CacheCost {
   using LoopCacheCostTy = std::pair<const Loop *, CacheCostTy>;
 
 public:
-  static CacheCostTy constexpr InvalidCost = -1;
-
   /// Construct a CacheCost object for the loop nest described by \p Loops.
   /// The optional parameter \p TRT can be used to specify the max. distance
   /// between array elements accessed in a loop so that the elements are

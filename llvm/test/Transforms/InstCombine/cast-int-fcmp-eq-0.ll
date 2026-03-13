@@ -533,7 +533,7 @@ define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_n0_sitofp(<2 x i32> %i) {
 define <2 x i1> @i32_vec_cast_cmp_oeq_vec_int_i32imax_sitofp(<2 x i32> %i) {
 ; CHECK-LABEL: @i32_vec_cast_cmp_oeq_vec_int_i32imax_sitofp(
 ; CHECK-NEXT:    [[F:%.*]] = sitofp <2 x i32> [[I:%.*]] to <2 x float>
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[F]], <float 0x41E0000000000000, float 0x41E0000000000000>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[F]], splat (float 0x41E0000000000000)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %f = sitofp <2 x i32> %i to <2 x float>

@@ -113,11 +113,40 @@ define amdgpu_kernel void @workitem_id_x_not_singlethreaded_dimz() !reqd_work_gr
   ret void
 }
 
+; CHECK-LABEL: UniformityInfo for function 'workitem_id_z_uniform_len_1'
+; CHECK-NOT: DIVERGENT
+define amdgpu_kernel void @workitem_id_z_uniform_len_1(ptr %o) !reqd_work_group_size !4 {
+  %id.z = call i32 @llvm.amdgcn.workitem.id.z()
+  store i32 %id.z, ptr %o
+  ret void
+}
+
+; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_div_wavefront_size'
+; CHECK: DIVERGENT: %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NOT: DIVERGENT
+define amdgpu_kernel void @workitem_id_x_div_wavefront_size(ptr %o) #3 !reqd_work_group_size !5 {
+  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %id.sg = lshr i32 %id.x, 6
+  store i32 %id.sg, ptr %o
+  ret void
+}
+
+; CHECK-LABEL: UniformityInfo for function 'workitem_id_y_uniform_in_subgroup'
+; CHECK-NOT: DIVERGENT
+define amdgpu_kernel void @workitem_id_y_uniform_in_subgroup(ptr %o) #3 !reqd_work_group_size !5 {
+  %id.y = call i32 @llvm.amdgcn.workitem.id.y()
+  store i32 %id.y, ptr %o
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }
+attributes #3 = { "target-cpu"="gfx900" "amdgpu-flat-work-group-size"="256,256" }
 
 !0 = !{i32 1, i32 1, i32 1}
 !1 = !{i32 2, i32 1, i32 1}
 !2 = !{i32 1, i32 2, i32 1}
 !3 = !{i32 1, i32 1, i32 2}
+!4 = !{i32 64, i32 1, i32 1}
+!5 = !{i32 128, i32 2, i32 1}

@@ -1,8 +1,20 @@
-Test warnings.
-REQUIRES: shell
+Test unsupported language warning
+
+TODO: This test does not work on Windows, seemingly because the sed commands
+are not actually doing anything. This should be fixed so we can enable this on
+Windows.
+UNSUPPORTED: system-windows
+
 RUN: %clang_host %S/Inputs/true.c -std=c99 -g -c -S -emit-llvm -o - \
 RUN:   | sed -e 's/DW_LANG_C99/DW_LANG_Mips_Assembler/g' >%t.ll
 RUN: %clang_host %t.ll -g -o %t.exe
-RUN: %lldb -o "b main" -o r -o q -b %t.exe 2>&1 | FileCheck %s
+RUN: %lldb -o "b main" -o r -o q -b %t.exe 2>&1 | FileCheck %s --check-prefix ASM
 
-CHECK: This version of LLDB has no plugin for the language "assembler"
+ASM-NOT: This version of LLDB has no plugin for the language "assembler"
+
+RUN: %clang_host %S/Inputs/true.c -std=c99 -g -c -S -emit-llvm -o - \
+RUN:   | sed -e 's/DW_LANG_C99/DW_LANG_Cobol74/g' >%t.ll
+RUN: %clang_host %t.ll -g -o %t.exe
+RUN: %lldb -o "b main" -o r -o q -b %t.exe 2>&1 | FileCheck %s --check-prefix COBOL
+
+COBOL: This version of LLDB has no plugin for the language "cobol74"

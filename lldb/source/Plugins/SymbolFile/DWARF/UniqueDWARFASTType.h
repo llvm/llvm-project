@@ -15,6 +15,7 @@
 
 #include "DWARFDIE.h"
 #include "lldb/Core/Declaration.h"
+#include "lldb/Symbol/Type.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -29,6 +30,21 @@ public:
         m_is_forward_declaration(rhs.m_is_forward_declaration) {}
 
   ~UniqueDWARFASTType() = default;
+
+  // This UniqueDWARFASTType might be created from declaration, update its info
+  // to definition DIE.
+  void UpdateToDefDIE(const DWARFDIE &def_die, Declaration &declaration,
+                      int32_t byte_size) {
+    // Need to update Type ID to refer to the definition DIE, because
+    // it's used in DWARFASTParserClang::ParseCXXMethod to determine if we need
+    // to copy cxx method types from a declaration DIE to this definition DIE.
+    m_type_sp->SetID(def_die.GetID());
+    if (declaration.IsValid())
+      m_declaration = declaration;
+    if (byte_size)
+      m_byte_size = byte_size;
+    m_is_forward_declaration = false;
+  }
 
   lldb::TypeSP m_type_sp;
   DWARFDIE m_die;

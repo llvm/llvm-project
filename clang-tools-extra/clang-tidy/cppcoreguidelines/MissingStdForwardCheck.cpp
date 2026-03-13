@@ -1,4 +1,4 @@
-//===--- MissingStdForwardCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,11 +26,12 @@ AST_MATCHER_P(QualType, possiblyPackExpansionOf,
 }
 
 AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
-  ast_matchers::internal::Matcher<QualType> Inner = possiblyPackExpansionOf(
-      qualType(rValueReferenceType(),
-               references(templateTypeParmType(
-                   hasDeclaration(templateTypeParmDecl()))),
-               unless(references(qualType(isConstQualified())))));
+  const ast_matchers::internal::Matcher<QualType> Inner =
+      possiblyPackExpansionOf(
+          qualType(rValueReferenceType(),
+                   references(templateTypeParmType(
+                       hasDeclaration(templateTypeParmDecl()))),
+                   unless(references(qualType(isConstQualified())))));
   if (!Inner.matches(Node.getType(), Finder, Builder))
     return false;
 
@@ -43,9 +44,19 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
   if (!FuncTemplate)
     return false;
 
-  QualType ParamType =
+  const QualType ParamType =
       Node.getType().getNonPackExpansionType()->getPointeeType();
-  const auto *TemplateType = ParamType->getAs<TemplateTypeParmType>();
+
+  // Explicit object parameters with a type constraint are still forwarding
+  // references per [temp.deduct.call]. We conservatively suppress warnings
+  // here to avoid false positives when constraints restrict the deduced type,
+  // accepting false negatives as a trade-off.
+  if (Node.isExplicitObjectParameter())
+    if (const auto *TTPT = ParamType->getAs<TemplateTypeParmType>())
+      if (const auto *Decl = TTPT->getDecl(); Decl && Decl->hasTypeConstraint())
+        return false;
+
+  const auto *TemplateType = ParamType->getAsCanonical<TemplateTypeParmType>();
   if (!TemplateType)
     return false;
 
@@ -54,10 +65,10 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
 }
 
 AST_MATCHER_P(NamedDecl, hasSameNameAsBoundNode, std::string, BindingID) {
-  IdentifierInfo *II = Node.getIdentifier();
+  const IdentifierInfo *II = Node.getIdentifier();
   if (nullptr == II)
     return false;
-  StringRef Name = II->getName();
+  const StringRef Name = II->getName();
 
   return Builder->removeBindings(
       [this, Name](const ast_matchers::internal::BoundNodesMap &Nodes) {
@@ -81,7 +92,7 @@ AST_MATCHER_P(LambdaExpr, hasCaptureDefaultKind, LambdaCaptureDefault, Kind) {
 
 AST_MATCHER(VarDecl, hasIdentifier) {
   const IdentifierInfo *ID = Node.getIdentifier();
-  return ID != NULL && !ID->isPlaceholder();
+  return ID != nullptr && !ID->isPlaceholder();
 }
 
 } // namespace
@@ -92,19 +103,15 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                                   declRefExpr(to(equalsBoundNode("param"))))));
   auto RefToParm = capturesVar(
       varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
-  auto HasRefToParm = hasAnyCapture(RefToParm);
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
             unless(hasAnyCapture(
                 capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureInCopy = allOf(
-      hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByCopy), HasRefToParm);
   auto CaptureByRefExplicit = hasAnyCapture(
       allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
 
-  auto CapturedInBody =
-      lambdaExpr(anyOf(CaptureInRef, CaptureInCopy, CaptureByRefExplicit));
+  auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
   auto CapturedInCaptureList = hasAnyCapture(capturesVar(
       varDecl(hasInitializer(ignoringParenImpCasts(equalsBoundNode("call"))))));
 
@@ -124,7 +131,7 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                           equalsBoundNode("param"), equalsBoundNode("var")))))),
                 CapturedInLambda)),
       callee(unresolvedLookupExpr(hasAnyDeclaration(
-          namedDecl(hasUnderlyingDecl(hasName("::std::forward")))))),
+          namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
 
       unless(anyOf(hasAncestor(typeLoc()),
                    hasAncestor(expr(hasUnevaluatedContext())))));
@@ -136,8 +143,7 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
           hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
-              unless(anyOf(isDeleted(),
-                           hasDescendant(std::move(ForwardCallMatcher))))))),
+              unless(anyOf(isDeleted(), hasDescendant(ForwardCallMatcher)))))),
       this);
 }
 
@@ -151,6 +157,15 @@ void MissingStdForwardCheck::check(const MatchFinder::MatchResult &Result) {
        "forwarding reference parameter %0 is never forwarded "
        "inside the function body")
       << Param;
+}
+
+MissingStdForwardCheck::MissingStdForwardCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ForwardFunction(Options.get("ForwardFunction", "::std::forward")) {}
+
+void MissingStdForwardCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ForwardFunction", ForwardFunction);
 }
 
 } // namespace clang::tidy::cppcoreguidelines

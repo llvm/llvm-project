@@ -45,13 +45,16 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 // entries, so that the NDD variant can be selected first to benefit RA.
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
+def HasZU        : Predicate<"Subtarget->hasZU()">;
+def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
+                                   "Subtarget->preferLegacySetCC()">;
+def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
+                                    "!Subtarget->preferLegacySetCC()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
-def Has3DNow     : Predicate<"Subtarget->hasThreeDNow()">;
-def Has3DNowA    : Predicate<"Subtarget->hasThreeDNowA()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;
 def UseSSE1      : Predicate<"Subtarget->hasSSE1() && !Subtarget->hasAVX()">;
 def HasSSE2      : Predicate<"Subtarget->hasSSE2()">;
@@ -70,9 +73,9 @@ def NoAVX        : Predicate<"!Subtarget->hasAVX()">;
 def HasAVX       : Predicate<"Subtarget->hasAVX()">;
 def HasAVX2      : Predicate<"Subtarget->hasAVX2()">;
 def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
-def HasEVEX512   : Predicate<"Subtarget->hasEVEX512()">;
 def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
-def HasAVX10_1_512 : Predicate<"Subtarget->hasAVX10_1_512()">;
+def HasAVX10_2   : Predicate<"Subtarget->hasAVX10_2()">;
+def NoAVX10_2    : Predicate<"!Subtarget->hasAVX10_2()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;
@@ -141,7 +144,6 @@ def HasSGX       : Predicate<"Subtarget->hasSGX()">;
 def HasSM3       : Predicate<"Subtarget->hasSM3()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasSSEPrefetch : Predicate<"Subtarget->hasSSEPrefetch()">;
-def NoSSEPrefetch : Predicate<"!Subtarget->hasSSEPrefetch()">;
 def HasPRFCHW    : Predicate<"Subtarget->hasPRFCHW()">;
 def HasPREFETCHI : Predicate<"Subtarget->hasPREFETCHI()">;
 def HasPrefetchW : Predicate<"Subtarget->hasPrefetchW()">;
@@ -152,6 +154,7 @@ def HasCLZERO    : Predicate<"Subtarget->hasCLZERO()">;
 def HasCLDEMOTE  : Predicate<"Subtarget->hasCLDEMOTE()">;
 def HasMOVDIRI   : Predicate<"Subtarget->hasMOVDIRI()">;
 def HasMOVDIR64B : Predicate<"Subtarget->hasMOVDIR64B()">;
+def HasMOVRS     : Predicate<"Subtarget->hasMOVRS()">;
 def HasPTWRITE   : Predicate<"Subtarget->hasPTWRITE()">;
 def FPStackf32   : Predicate<"!Subtarget->hasSSE1()">;
 def FPStackf64   : Predicate<"!Subtarget->hasSSE2()">;
@@ -182,6 +185,10 @@ def HasAMXTILE   : Predicate<"Subtarget->hasAMXTILE()">;
 def HasAMXBF16   : Predicate<"Subtarget->hasAMXBF16()">;
 def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
+def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
+def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
+def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
+def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
@@ -191,6 +198,12 @@ def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
+
+def IsX32Mode  : Predicate<"Subtarget->getTargetTriple().isX32()">,
+                            AssemblerPredicate<(all_of IsX32), "x32 ABI">;
+def NotX32Mode  : Predicate<"!Subtarget->getTargetTriple().isX32()">,
+                            AssemblerPredicate<(all_of (not IsX32)), "not x32 ABI">;
+
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
@@ -207,8 +220,6 @@ def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"
 }
 def IsPS         : Predicate<"Subtarget->isTargetPS()">;
 def NotPS        : Predicate<"!Subtarget->isTargetPS()">;
-def IsNaCl       : Predicate<"Subtarget->isTargetNaCl()">;
-def NotNaCl      : Predicate<"!Subtarget->isTargetNaCl()">;
 def SmallCode    : Predicate<"TM.getCodeModel() == CodeModel::Small">;
 def KernelCode   : Predicate<"TM.getCodeModel() == CodeModel::Kernel">;
 def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
@@ -226,6 +237,15 @@ let RecomputePerFunction = 1 in {
                             "shouldOptForSize(MF)">;
   def NoSSE41_Or_OptForSize : Predicate<"shouldOptForSize(MF) || "
                                         "!Subtarget->hasSSE41()">;
+  def ImportCallOptimizationEnabled : Predicate<"MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+  def ImportCallOptimizationDisabled : Predicate<"!MF->getFunction().getParent()->getModuleFlag(\"import-call-optimization\")">;
+
+  def IsWin64CCFunc : Predicate<"Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
+  def IsNotWin64CCFunc : Predicate<"!Subtarget->isCallingConvWin64(MF->getFunction().getCallingConv())">;
+  def IsHiPECCFunc : Predicate<"MF->getFunction().getCallingConv() == CallingConv::HiPE">;
+
+  def IsNotHiPECCFunc : Predicate<
+    "MF->getFunction().getCallingConv() != CallingConv::HiPE">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
@@ -239,3 +259,11 @@ def HasMFence    : Predicate<"Subtarget->hasMFence()">;
 def HasFastDPWSSD: Predicate<"Subtarget->hasFastDPWSSD()">;
 def UseIndirectThunkCalls : Predicate<"Subtarget->useIndirectThunkCalls()">;
 def NotUseIndirectThunkCalls : Predicate<"!Subtarget->useIndirectThunkCalls()">;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar X86_32 = DefaultMode;
+def X86_64 : HwMode<[In64BitMode, NotX32Mode]>;
+def X86_64_X32 : HwMode<[IsX32Mode]>;

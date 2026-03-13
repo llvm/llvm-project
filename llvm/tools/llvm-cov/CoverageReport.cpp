@@ -102,8 +102,25 @@ void adjustColumnWidths(ArrayRef<StringRef> Files,
 
 /// Prints a horizontal divider long enough to cover the given column
 /// widths.
-void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS) {
-  size_t Length = std::accumulate(ColumnWidths.begin(), ColumnWidths.end(), 0);
+void renderDivider(raw_ostream &OS, const CoverageViewOptions &Options, bool isFileReport) {
+  size_t Length;
+  if (isFileReport) {
+    Length = std::accumulate(std::begin(FileReportColumns), std::end(FileReportColumns), 0);
+    if (!Options.ShowRegionSummary)
+      Length -= (FileReportColumns[1] + FileReportColumns[2] + FileReportColumns[3]);
+    if (!Options.ShowInstantiationSummary)
+      Length -= (FileReportColumns[7] + FileReportColumns[8] + FileReportColumns[9]);
+    if (!Options.ShowBranchSummary)
+      Length -= (FileReportColumns[13] + FileReportColumns[14] + FileReportColumns[15]);
+    if (!Options.ShowMCDCSummary)
+      Length -= (FileReportColumns[16] + FileReportColumns[17] + FileReportColumns[18]);
+  } else {
+    Length = std::accumulate(std::begin(FunctionReportColumns), std::end(FunctionReportColumns), 0);
+    if (!Options.ShowBranchSummary)
+      Length -= (FunctionReportColumns[7] + FunctionReportColumns[8] + FunctionReportColumns[9]);
+    if (!Options.ShowMCDCSummary)
+      Length -= (FunctionReportColumns[10] + FunctionReportColumns[11] + FunctionReportColumns[12]);
+  }
   for (size_t I = 0; I < Length; ++I)
     OS << '-';
 }
@@ -234,18 +251,20 @@ void CoverageReport::render(const FileCoverageSummary &File,
       OS << column("-", FileReportColumns[3], Column::RightAlignment);
   }
 
-  OS << format("%*u", FileReportColumns[4],
-               (unsigned)File.FunctionCoverage.getNumFunctions());
-  OS << format("%*u", FileReportColumns[5],
-               (unsigned)(File.FunctionCoverage.getNumFunctions() -
-                          File.FunctionCoverage.getExecuted()));
-  if (File.FunctionCoverage.getNumFunctions())
-    Options.colored_ostream(OS, FuncCoverageColor)
-        << format("%*.2f", FileReportColumns[6] - 1,
-                  File.FunctionCoverage.getPercentCovered())
-        << '%';
-  else
-    OS << column("-", FileReportColumns[6], Column::RightAlignment);
+  if (Options.ShowFunctionSummary) {
+    OS << format("%*u", FileReportColumns[4],
+                 (unsigned)File.FunctionCoverage.getNumFunctions());
+    OS << format("%*u", FileReportColumns[5],
+                 (unsigned)(File.FunctionCoverage.getNumFunctions() -
+                            File.FunctionCoverage.getExecuted()));
+    if (File.FunctionCoverage.getNumFunctions())
+      Options.colored_ostream(OS, FuncCoverageColor)
+          << format("%*.2f", FileReportColumns[6] - 1,
+                    File.FunctionCoverage.getPercentCovered())
+          << '%';
+    else
+      OS << column("-", FileReportColumns[6], Column::RightAlignment);
+  }
 
   if (Options.ShowInstantiationSummary) {
     OS << format("%*u", FileReportColumns[7],
@@ -405,7 +424,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
          << column("Miss", FunctionReportColumns[11], Column::RightAlignment)
          << column("Cover", FunctionReportColumns[12], Column::RightAlignment);
     OS << "\n";
-    renderDivider(FunctionReportColumns, OS);
+    renderDivider(OS, Options, false);
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
     for (const auto &F : Functions) {
@@ -418,7 +437,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
       render(Function, DC, OS);
     }
     if (Totals.ExecutionCount) {
-      renderDivider(FunctionReportColumns, OS);
+      renderDivider(OS, Options, false);
       OS << "\n";
       render(Totals, DC, OS);
     }
@@ -522,9 +541,11 @@ void CoverageReport::renderFileReports(
     OS << column("Regions", FileReportColumns[1], Column::RightAlignment)
        << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
        << column("Cover", FileReportColumns[3], Column::RightAlignment);
-  OS << column("Functions", FileReportColumns[4], Column::RightAlignment)
-     << column("Missed Functions", FileReportColumns[5], Column::RightAlignment)
-     << column("Executed", FileReportColumns[6], Column::RightAlignment);
+  if (Options.ShowFunctionSummary)
+    OS << column("Functions", FileReportColumns[4], Column::RightAlignment)
+       << column("Missed Functions", FileReportColumns[5],
+                 Column::RightAlignment)
+       << column("Executed", FileReportColumns[6], Column::RightAlignment);
   if (Options.ShowInstantiationSummary)
     OS << column("Instantiations", FileReportColumns[7], Column::RightAlignment)
        << column("Missed Insts.", FileReportColumns[8], Column::RightAlignment)
@@ -544,7 +565,7 @@ void CoverageReport::renderFileReports(
                  Column::RightAlignment)
        << column("Cover", FileReportColumns[18], Column::RightAlignment);
   OS << "\n";
-  renderDivider(FileReportColumns, OS);
+  renderDivider(OS, Options, true);
   OS << "\n";
 
   std::vector<const FileCoverageSummary *> EmptyFiles;
@@ -563,7 +584,7 @@ void CoverageReport::renderFileReports(
       render(*FCS, OS);
   }
 
-  renderDivider(FileReportColumns, OS);
+  renderDivider(OS, Options, true);
   OS << "\n";
   render(Totals, OS);
 }

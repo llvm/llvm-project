@@ -1,0 +1,90 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements pass that canonicalizes CIR operations, eliminating
+// redundant branches, empty scopes, and other unnecessary operations.
+//
+//===----------------------------------------------------------------------===//
+
+#include "PassDetail.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Region.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
+
+using namespace mlir;
+using namespace cir;
+
+namespace mlir {
+#define GEN_PASS_DEF_CIRCANONICALIZE
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
+namespace {
+
+//===----------------------------------------------------------------------===//
+// CIRCanonicalizePass
+//===----------------------------------------------------------------------===//
+
+struct CIRCanonicalizePass
+    : public impl::CIRCanonicalizeBase<CIRCanonicalizePass> {
+  using CIRCanonicalizeBase::CIRCanonicalizeBase;
+
+  // The same operation rewriting done here could have been performed
+  // by CanonicalizerPass (adding hasCanonicalizer for target Ops and
+  // implementing the same from above in CIRDialects.cpp). However, it's
+  // currently too aggressive for static analysis purposes, since it might
+  // remove things where a diagnostic can be generated.
+  //
+  // FIXME: perhaps we can add one more mode to GreedyRewriteConfig to
+  // disable this behavior.
+  void runOnOperation() override;
+};
+
+void CIRCanonicalizePass::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+
+  // Collect canonicalization patterns from CIR ops.
+  mlir::Dialect *cir = getContext().getLoadedDialect<cir::CIRDialect>();
+  for (mlir::RegisteredOperationName op :
+       getContext().getRegisteredOperations())
+    if (&op.getDialect() == cir)
+      op.getCanonicalizationPatterns(patterns, &getContext());
+
+  // Collect operations to apply patterns.
+  llvm::SmallVector<Operation *, 16> ops;
+  getOperation()->walk([&](Operation *op) {
+    assert(!cir::MissingFeatures::tryOp());
+    assert(!cir::MissingFeatures::callOp());
+
+    // Many operations are here to perform a manual `fold` in
+    // applyOpPatternsGreedily.
+    if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp,
+            ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
+            VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
+            VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
+            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp, ConstantOp>(op))
+      ops.push_back(op);
+  });
+
+  // Apply patterns.
+  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+    signalPassFailure();
+}
+
+} // namespace
+
+std::unique_ptr<Pass> mlir::createCIRCanonicalizePass() {
+  return std::make_unique<CIRCanonicalizePass>();
+}

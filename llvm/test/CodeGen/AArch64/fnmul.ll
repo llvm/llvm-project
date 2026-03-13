@@ -8,7 +8,6 @@ define half @fnmul16(half noundef %x, half noundef %y)  {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmul h0, h0, h1
 ; CHECK-NEXT:    ret
-;
 entry:
   %fneg = fneg fast half %x
   %mul = fmul fast half %fneg, %y
@@ -20,7 +19,6 @@ define float @fnmul32(float noundef %x, float noundef %y)  {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmul s0, s0, s1
 ; CHECK-NEXT:    ret
-;
 entry:
   %fneg = fneg float %x
   %mul = fmul float %fneg, %y
@@ -32,7 +30,6 @@ define double @fnmul64(double noundef %x, double noundef %y)  {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmul d0, d0, d1
 ; CHECK-NEXT:    ret
-;
 entry:
   %fneg = fneg fast double %x
   %mul = fmul fast double %fneg, %y
@@ -44,7 +41,6 @@ define half @fnmul16_2(half noundef %x, half noundef %y)  {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmul h0, h1, h0
 ; CHECK-NEXT:    ret
-;
 entry:
   %fneg = fneg fast half %y
   %mul = fmul fast half %x, %fneg
@@ -56,7 +52,6 @@ define float @fnmul32_2(float noundef %x, float noundef %y)  {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmul s0, s1, s0
 ; CHECK-NEXT:    ret
-;
 entry:
   %fneg = fneg fast float %y
   %mul = fmul fast float %x, %fneg
@@ -68,7 +63,6 @@ define double @fnmul64_2(double noundef %x, double noundef %y)  {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fnmul d0, d1, d0
 ; CHECK-NEXT:    ret
-;
 entry:
   %fneg = fneg double %y
   %mul = fmul double %x, %fneg

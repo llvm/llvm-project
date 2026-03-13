@@ -83,7 +83,7 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, ptr addrspace(
 ; IR-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP6]], [[ENTRY]] ], [ [[TMP16:%.*]], [[COMPUTELOOP]] ]
 ; IR-NEXT:    [[TMP10:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
 ; IR-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; IR-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.readlane(i32 [[VALUE]], i32 [[TMP11]])
+; IR-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[VALUE]], i32 [[TMP11]])
 ; IR-NEXT:    [[TMP13]] = add i32 [[ACCUMULATOR]], [[TMP12]]
 ; IR-NEXT:    [[TMP14:%.*]] = shl i64 1, [[TMP10]]
 ; IR-NEXT:    [[TMP15:%.*]] = xor i64 [[TMP14]], -1

@@ -52,7 +52,7 @@ define i64 @c_sext_h(i64 %x, i16 %y, i64 %z) {
 define i64 @c_zext_b(i64 %x, i8 %y, i64 %z) {
 ; CHECK-LABEL: c_zext_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a1, a1, 255
+; CHECK-NEXT:    zext.b a1, a1
 ; CHECK-NEXT:    lui a0, 1
 ; CHECK-NEXT:    or a0, a0, a1
 ; CHECK-NEXT:    ret

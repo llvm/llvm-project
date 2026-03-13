@@ -22,17 +22,17 @@ entry:
   call void @longjmp(ptr %buf, i32 1) #1
   unreachable
 ; CHECK: entry:
+; CHECK-NEXT:  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
 ; CHECK-NEXT: %functionInvocationId = alloca i32, align 4
 ; CHECK-NEXT: br label %entry.split
 
 ; CHECK: entry.split
-; CHECK-NEXT: %[[BUF:.*]] = alloca [1 x %struct.__jmp_buf_tag]
-; CHECK-NEXT: call void @__wasm_setjmp(ptr %[[BUF]], i32 1, ptr %functionInvocationId)
+; CHECK-NEXT: call void @__wasm_setjmp(ptr %buf, i32 1, ptr %functionInvocationId)
 ; CHECK-NEXT: br label %entry.split.split
 
 ; CHECK: entry.split.split:
 ; CHECK-NEXT: phi i32 [ 0, %entry.split ], [ %[[LONGJMP_RESULT:.*]], %if.end ]
-; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint ptr %[[BUF]] to [[PTR]]
+; CHECK-NEXT: %[[JMPBUF:.*]] = ptrtoint ptr %buf to [[PTR]]
 ; CHECK-NEXT: store [[PTR]] 0, ptr @__THREW__
 ; CHECK-NEXT: call cc{{.*}} void @__invoke_void_[[PTR]]_i32(ptr @emscripten_longjmp, [[PTR]] %[[JMPBUF]], i32 1)
 ; CHECK-NEXT: %[[__THREW__VAL:.*]] = load [[PTR]], ptr @__THREW__
@@ -292,12 +292,7 @@ attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
 attributes #3 = { allocsize(0) }
-; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="getTempRet0" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { nounwind "wasm-import-module"="env" "wasm-import-name"="setTempRet0" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_void" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__wasm_setjmp" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__wasm_setjmp_test" }
-; CHECK-DAG: attributes #{{[0-9]+}} = { noreturn "wasm-import-module"="env" "wasm-import-name"="emscripten_longjmp" }
 ; CHECK-DAG: attributes #{{[0-9]+}} = { "wasm-import-module"="env" "wasm-import-name"="__invoke_ptr_i32_ptr" }
 ; CHECK-DAG: attributes #[[ALLOCSIZE_ATTR]] = { allocsize(1) }
 

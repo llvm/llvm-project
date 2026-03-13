@@ -19,6 +19,7 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "operator_hijacker.h"
 
 int main(int, char**)
 {
@@ -27,6 +28,12 @@ int main(int, char**)
         double x = 0;
         fs >> x;
         assert(x == 3.25);
+    }
+    {
+      std::basic_ifstream<char, operator_hijacker_char_traits<char> > fs("test.dat");
+      std::basic_string<char, operator_hijacker_char_traits<char> > x;
+      fs >> x;
+      assert(x == "3.25");
     }
     // std::ifstream(const char*, std::ios_base::openmode) is tested in
     // test/std/input.output/file.streams/fstreams/ofstream.cons/pointer.pass.cpp
@@ -38,6 +45,12 @@ int main(int, char**)
         double x = 0;
         fs >> x;
         assert(x == 3.25);
+    }
+    {
+      std::basic_ifstream<wchar_t, operator_hijacker_char_traits<wchar_t> > fs("test.dat");
+      std::basic_string<wchar_t, operator_hijacker_char_traits<wchar_t> > x;
+      fs >> x;
+      assert(x == L"3.25");
     }
     // std::wifstream(const char*, std::ios_base::openmode) is tested in
     // test/std/input.output/file.streams/fstreams/ofstream.cons/pointer.pass.cpp

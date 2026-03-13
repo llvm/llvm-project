@@ -30,6 +30,27 @@
 # INVALID-MAJOR-NUMBER: 'foo' is not a valid subsystem major version
 # INVALID-MINOR-NUMBER: 'bar' is not a valid subsystem minor version
 
+# RUN: llvm-objcopy --subsystem=efi_application %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-APPLICATION
+# RUN: llvm-objcopy --subsystem=efi-app %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-APPLICATION
+
+# EFI-APPLICATION: Subsystem: IMAGE_SUBSYSTEM_EFI_APPLICATION
+
+# RUN: llvm-objcopy --subsystem=efi_boot_service_driver %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-BOOT-SERVICE-DRIVER
+# RUN: llvm-objcopy --subsystem=efi-bsd %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-BOOT-SERVICE-DRIVER
+
+# EFI-BOOT-SERVICE-DRIVER: Subsystem: IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
+
+# RUN: llvm-objcopy --subsystem=efi_runtime_driver %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-RUNTIME-DRIVER
+# RUN: llvm-objcopy --subsystem=efi-rtd %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-RUNTIME-DRIVER
+
+# EFI-RUNTIME-DRIVER: Subsystem: IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
+
 --- !COFF
 OptionalHeader:
   AddressOfEntryPoint: 4096

@@ -1,7 +1,5 @@
 ; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -debug-only=irtranslator \
 ; RUN:     -stop-after=irtranslator %s -o - 2>&1 | FileCheck %s
-; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -debug-only=irtranslator \
-; RUN:     -stop-after=irtranslator %s -o - 2>&1 --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; REQUIRES: asserts
 

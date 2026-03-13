@@ -11,7 +11,6 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 namespace transform {
@@ -119,6 +118,12 @@ public:
   /// transformations.
   Status status;
 };
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                                     const CopyMappingInfo &info) {
+  info.print(os);
+  return os;
+}
 
 } // namespace gpu
 } // namespace transform

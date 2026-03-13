@@ -15,6 +15,9 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLY_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLY_H
 
+#include "GISel/WebAssemblyRegisterBankInfo.h"
+#include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CodeGen.h"
 
@@ -32,6 +35,18 @@ FunctionPass *createWebAssemblyOptimizeReturned();
 FunctionPass *createWebAssemblyLowerRefTypesIntPtrConv();
 FunctionPass *createWebAssemblyRefTypeMem2Local();
 
+// GlobalISel
+InstructionSelector *
+createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
+                                     const WebAssemblySubtarget &,
+                                     const WebAssemblyRegisterBankInfo &);
+
+FunctionPass *createWebAssemblyPostLegalizerCombiner();
+void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
+
+FunctionPass *createWebAssemblyPreLegalizerCombiner();
+void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
+
 // ISel and immediate followup passes.
 FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
                                        CodeGenOptLevel OptLevel);
@@ -44,7 +59,7 @@ FunctionPass *createWebAssemblyReplacePhysRegs();
 FunctionPass *createWebAssemblyNullifyDebugValueLists();
 FunctionPass *createWebAssemblyOptimizeLiveIntervals();
 FunctionPass *createWebAssemblyMemIntrinsicResults();
-FunctionPass *createWebAssemblyRegStackify();
+FunctionPass *createWebAssemblyRegStackify(CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyRegColoring();
 FunctionPass *createWebAssemblyFixBrTableDefaults();
 FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
@@ -64,6 +79,7 @@ void initializeOptimizeReturnedPass(PassRegistry &);
 void initializeWebAssemblyRefTypeMem2LocalPass(PassRegistry &);
 void initializeWebAssemblyAddMissingPrototypesPass(PassRegistry &);
 void initializeWebAssemblyArgumentMovePass(PassRegistry &);
+void initializeWebAssemblyAsmPrinterPass(PassRegistry &);
 void initializeWebAssemblyCleanCodeAfterTrapPass(PassRegistry &);
 void initializeWebAssemblyCFGSortPass(PassRegistry &);
 void initializeWebAssemblyCFGStackifyPass(PassRegistry &);

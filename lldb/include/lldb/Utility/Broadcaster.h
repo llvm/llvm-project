@@ -9,11 +9,11 @@
 #ifndef LLDB_UTILITY_BROADCASTER_H
 #define LLDB_UTILITY_BROADCASTER_H
 
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <cstdint>
 #include <map>
@@ -87,12 +87,6 @@ public:
 
   ~BroadcasterManager() = default;
 
-  uint32_t RegisterListenerForEvents(const lldb::ListenerSP &listener_sp,
-                                     const BroadcastEventSpec &event_spec);
-
-  bool UnregisterListenerForEvents(const lldb::ListenerSP &listener_sp,
-                                   const BroadcastEventSpec &event_spec);
-
   lldb::ListenerSP
   GetListenerForEventSpec(const BroadcastEventSpec &event_spec) const;
 
@@ -105,13 +99,20 @@ public:
   void Clear();
 
 private:
+  uint32_t
+  RegisterListenerForEventsNoLock(const lldb::ListenerSP &listener_sp,
+                                  const BroadcastEventSpec &event_spec);
+
+  bool UnregisterListenerForEventsNoLock(const lldb::ListenerSP &listener_sp,
+                                         const BroadcastEventSpec &event_spec);
+
   typedef std::pair<BroadcastEventSpec, lldb::ListenerSP> event_listener_key;
   typedef std::map<BroadcastEventSpec, lldb::ListenerSP> collection;
   typedef std::set<lldb::ListenerSP> listener_collection;
   collection m_event_map;
   listener_collection m_listeners;
 
-  mutable std::recursive_mutex m_manager_mutex;
+  mutable std::mutex m_manager_mutex;
 };
 
 /// \class Broadcaster Broadcaster.h "lldb/Utility/Broadcaster.h" An event
@@ -441,7 +442,7 @@ protected:
     collection m_listeners;
 
     /// A mutex that protects \a m_listeners.
-    std::recursive_mutex m_listeners_mutex;
+    std::mutex m_listeners_mutex;
 
     /// See the discussion of Broadcasters and Listeners above.
     lldb::ListenerSP m_primary_listener_sp;

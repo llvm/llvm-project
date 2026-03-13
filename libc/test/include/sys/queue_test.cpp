@@ -2,12 +2,13 @@
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
-// SPDSList-License-Identifier: Apache-2.0 WITH LLVM-exception
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/char_vector.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 #include "include/llvm-libc-macros/sys-queue-macros.h"
@@ -15,7 +16,7 @@
 using LIBC_NAMESPACE::CharVector;
 using LIBC_NAMESPACE::cpp::string;
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 TEST(LlvmLibcQueueTest, SList) {
   struct Entry {
@@ -165,4 +166,4 @@ TEST(LlvmLibcQueueTest, STailQ) {
   ASSERT_TRUE(STAILQ_EMPTY(&head));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

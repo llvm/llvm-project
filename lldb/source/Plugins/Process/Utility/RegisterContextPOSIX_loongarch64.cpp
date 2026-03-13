@@ -58,7 +58,7 @@ RegisterContextPOSIX_loongarch64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextPOSIX_loongarch64::GetRegisterSetCount() {
-  return m_register_info_up->GetRegisterCount();
+  return m_register_info_up->GetRegisterSetCount();
 }
 
 const lldb_private::RegisterSet *
@@ -79,4 +79,14 @@ bool RegisterContextPOSIX_loongarch64::IsGPR(unsigned int reg) {
 bool RegisterContextPOSIX_loongarch64::IsFPR(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
          RegisterInfoPOSIX_loongarch64::FPRegSet;
+}
+
+bool RegisterContextPOSIX_loongarch64::IsLSX(unsigned int reg) {
+  return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::LSXRegSet;
+}
+
+bool RegisterContextPOSIX_loongarch64::IsLASX(unsigned int reg) {
+  return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_loongarch64::LASXRegSet;
 }

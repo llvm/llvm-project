@@ -30,7 +30,7 @@
 // CHECK-DAG: @dx = {{protected | }}global i32 0,
 // CHECK-DAG: @dy = {{protected | }}global i32 0,
 // CHECK-DAG: @bbb = {{protected | }}global i32 0,
-// CHECK-DAG: weak constant %struct.__tgt_offload_entry { ptr @bbb,
+// CHECK-DAG: weak constant %struct.__tgt_offload_entry {
 // CHECK-DAG: @ccc = external global i32,
 // CHECK-DAG: @ddd = {{protected | }}global i32 0,
 // CHECK-DAG: @hhh_decl_tgt_ref_ptr = weak global ptr null

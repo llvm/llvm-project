@@ -2,6 +2,18 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 
+; Check i32->f16.  There is no native instruction, so we must promote
+; to i64 first.
+define half @f0(i32 %i) {
+; CHECK-LABEL: f0:
+; CHECK: llgfr [[REGISTER:%r[0-5]]], %r2
+; CHECK: cegbr %f0, [[REGISTER]]
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = uitofp i32 %i to half
+  ret half %conv
+}
+
 ; Check i32->f32.  There is no native instruction, so we must promote
 ; to i64 first.
 define float @f1(i32 %i) {

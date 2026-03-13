@@ -2,7 +2,7 @@
 template<typename T>
 struct X0 {
   typedef T* type;
-  
+
   void f0(T);
   void f1(type);
 };
@@ -71,13 +71,13 @@ namespace PR41607 {
     };
 
     template<typename...> static int a;
-    template<> static constexpr int a<> = N;
+    template<> constexpr int a<> = N;
 
     template<typename...> static inline int b;
-    template<> static inline constexpr int b<> = N;
+    template<> inline constexpr int b<> = N;
 
     template<typename...> static constexpr int f();
-    template<> static constexpr int f() {
+    template<> constexpr int f() {
       return N;
     }
   };

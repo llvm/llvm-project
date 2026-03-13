@@ -35,9 +35,9 @@ define float @PR35982_emms(<1 x i64>) nounwind {
   %2 = bitcast <1 x i64> %0 to <2 x i32>
   %3 = extractelement <2 x i32> %2, i32 0
   %4 = extractelement <1 x i64> %0, i32 0
-  %5 = bitcast i64 %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx %5, x86_mmx %5)
-  %7 = bitcast x86_mmx %6 to <2 x i32>
+  %5 = bitcast i64 %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64> %5, <1 x i64> %5)
+  %7 = bitcast <1 x i64> %6 to <2 x i32>
   %8 = extractelement <2 x i32> %7, i32 0
   tail call void @llvm.x86.mmx.emms()
   %9 = sitofp i32 %3 to float
@@ -46,50 +46,5 @@ define float @PR35982_emms(<1 x i64>) nounwind {
   ret float %11
 }
 
-define float @PR35982_femms(<1 x i64>) nounwind {
-; NO-POSTRA-LABEL: PR35982_femms:
-; NO-POSTRA:       # %bb.0:
-; NO-POSTRA-NEXT:    subl $8, %esp
-; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
-; NO-POSTRA-NEXT:    movd %mm0, %ecx
-; NO-POSTRA-NEXT:    femms
-; NO-POSTRA-NEXT:    movl %eax, (%esp)
-; NO-POSTRA-NEXT:    fildl (%esp)
-; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; NO-POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)
-; NO-POSTRA-NEXT:    addl $8, %esp
-; NO-POSTRA-NEXT:    retl
-;
-; POSTRA-LABEL: PR35982_femms:
-; POSTRA:       # %bb.0:
-; POSTRA-NEXT:    subl $8, %esp
-; POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
-; POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
-; POSTRA-NEXT:    movd %mm0, %ecx
-; POSTRA-NEXT:    femms
-; POSTRA-NEXT:    movl %eax, (%esp)
-; POSTRA-NEXT:    fildl (%esp)
-; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)
-; POSTRA-NEXT:    addl $8, %esp
-; POSTRA-NEXT:    retl
-  %2 = bitcast <1 x i64> %0 to <2 x i32>
-  %3 = extractelement <2 x i32> %2, i32 0
-  %4 = extractelement <1 x i64> %0, i32 0
-  %5 = bitcast i64 %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx %5, x86_mmx %5)
-  %7 = bitcast x86_mmx %6 to <2 x i32>
-  %8 = extractelement <2 x i32> %7, i32 0
-  tail call void @llvm.x86.mmx.femms()
-  %9 = sitofp i32 %3 to float
-  %10 = sitofp i32 %8 to float
-  %11 = fadd float %9, %10
-  ret float %11
-}
-
-declare x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx, x86_mmx)
-declare void @llvm.x86.mmx.femms()
+declare <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64>, <1 x i64>)
 declare void @llvm.x86.mmx.emms()

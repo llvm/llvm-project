@@ -339,7 +339,7 @@ public:
   ASTContext &getASTContext() const { return *Ctx; }
   CXTranslationUnit getCXTU() const { return CXTU; }
 
-  void setASTContext(ASTContext &ctx);
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> ctx);
   void setPreprocessor(std::shared_ptr<Preprocessor> PP) override;
 
   bool shouldSuppressRefs() const {

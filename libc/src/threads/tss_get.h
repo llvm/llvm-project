@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_THREADS_TSS_GET_H
 #define LLVM_LIBC_SRC_THREADS_TSS_GET_H
 
+#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 void *tss_get(tss_t);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_THREADS_TSS_GET_H

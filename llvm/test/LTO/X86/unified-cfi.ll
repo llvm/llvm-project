@@ -6,7 +6,6 @@
 
 ; CHECK: jbe
 ; CHECK-NEXT: ud2
-; CHECK-NEXT: ud2
 
 ; ModuleID = 'llvm/test/LTO/X86/unified-cfi.ll'
 source_filename = "cfi.cpp"

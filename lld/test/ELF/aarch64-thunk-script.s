@@ -43,8 +43,8 @@ high_target:
 // CHECK-NEXT:                 ret
 
 /// Local symbols copied from %t.o
-// NM:      t $x.0
-// NM-NEXT: t $x.1
+// NM:      t $x
+// NM-NEXT: t $x
 /// Local thunk symbols.
 // NM-NEXT: t __AArch64AbsLongThunk_high_target
 // NM-NEXT: t $x

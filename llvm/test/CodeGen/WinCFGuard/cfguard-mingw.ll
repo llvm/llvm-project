@@ -35,7 +35,7 @@
 ; }
 ;-------------------------------------------------------------------------------
 
-; CHECK: .set @feat.00, 2048
+; CHECK: @feat.00 = 2048
 
 ; CHECK: .section .gfids$y
 ; CHECK: .symidx _ZNK7Derived4calcEv

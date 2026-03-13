@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -fast-isel=false -O0 < %s 2>&1 | FileCheck %s -check-prefix=O0
-; RUN: llc -march=mips -fast-isel=false -O2 < %s 2>&1 | FileCheck %s -check-prefix=O2
+; RUN: llc -mtriple=mips -fast-isel=false -O0 < %s 2>&1 | FileCheck %s -check-prefix=O0
+; RUN: llc -mtriple=mips -fast-isel=false -O2 < %s 2>&1 | FileCheck %s -check-prefix=O2
 
 ; At -O0, DAGCombine won't try to merge these consecutive loads but it will at
 ; -O2.

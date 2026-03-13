@@ -34,7 +34,8 @@ public:
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpressionList &location,
            bool external, bool artificial, bool location_is_constant_data,
-           bool static_member = false);
+           bool static_member = false,
+           std::optional<uint64_t> tag_offset = std::nullopt);
 
   virtual ~Variable();
 
@@ -79,6 +80,10 @@ public:
     return m_location_list;
   }
 
+  uint64_t GetTagOffset() const { return m_tag_offset.value(); }
+
+  bool HasTagOffset() const { return m_tag_offset.has_value(); }
+
   // When given invalid address, it dumps all locations. Otherwise it only dumps
   // the location that contains this address.
   bool DumpLocations(Stream *s, const Address &address);
@@ -88,6 +93,9 @@ public:
   void CalculateSymbolContext(SymbolContext *sc);
 
   bool IsInScope(StackFrame *frame);
+
+  /// Returns true if this variable is in scope at `addr` inside `block`.
+  bool IsInScope(const Block &block, const Address &addr);
 
   bool LocationIsValidForFrame(StackFrame *frame);
 
@@ -140,6 +148,8 @@ protected:
   unsigned m_loc_is_const_data : 1;
   /// Non-zero if variable is static member of a class or struct.
   unsigned m_static_member : 1;
+  /// The value of DW_AT_LLVM_tag_offset if present.
+  std::optional<uint64_t> m_tag_offset;
 
 private:
   Variable(const Variable &rhs) = delete;

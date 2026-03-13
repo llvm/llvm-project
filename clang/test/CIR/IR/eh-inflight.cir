@@ -1,0 +1,40 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+
+module {
+
+cir.func dso_local @inflight_exception() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception
+  cir.return
+}
+
+// CHECK: cir.func dso_local @inflight_exception() {
+// CHECK:  %exception_ptr, %type_id = cir.eh.inflight_exception
+// CHECK:  cir.return
+// CHECK: }
+
+cir.func dso_local @inflight_exception_with_cleanup() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+  cir.return
+}
+
+// CHECK: cir.func dso_local @inflight_exception_with_cleanup() {
+// CHECK:  %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+// CHECK:  cir.return
+// CHECK: }
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func dso_local @inflight_exception_with_catch_type_list() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
+  cir.return
+}
+
+// CHECK: cir.func dso_local @inflight_exception_with_catch_type_list() {
+// CHECK:  %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
+// CHECK:  cir.return
+// CHECK:}
+
+}

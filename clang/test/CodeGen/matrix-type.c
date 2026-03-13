@@ -137,10 +137,10 @@ void matrix_struct(Matrix *a, Matrix *b) {
   // CHECK-NEXT:    store ptr %a, ptr %a.addr, align 8
   // CHECK-NEXT:    store ptr %b, ptr %b.addr, align 8
   // CHECK-NEXT:    %0 = load ptr, ptr %a.addr, align 8
-  // CHECK-NEXT:    %Data = getelementptr inbounds %struct.Matrix, ptr %0, i32 0, i32 1
+  // CHECK-NEXT:    %Data = getelementptr inbounds nuw %struct.Matrix, ptr %0, i32 0, i32 1
   // CHECK-NEXT:    %1 = load <12 x float>, ptr %Data, align 4
   // CHECK-NEXT:    %2 = load ptr, ptr %b.addr, align 8
-  // CHECK-NEXT:    %Data1 = getelementptr inbounds %struct.Matrix, ptr %2, i32 0, i32 1
+  // CHECK-NEXT:    %Data1 = getelementptr inbounds nuw %struct.Matrix, ptr %2, i32 0, i32 1
   // CHECK-NEXT:    store <12 x float> %1, ptr %Data1, align 4
   // CHECK-NEXT:    ret void
   b->Data = a->Data;

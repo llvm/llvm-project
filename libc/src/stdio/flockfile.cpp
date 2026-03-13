@@ -8,13 +8,14 @@
 
 #include "src/stdio/flockfile.h"
 #include "src/__support/File/file.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void, flockfile, (::FILE * stream)) {
   reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->lock();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

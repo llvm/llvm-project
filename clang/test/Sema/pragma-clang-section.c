@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple arm-none-eabi
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple arm64-windows-msvc
 #pragma clang section bss = "mybss.1" data = "mydata.1" rodata = "myrodata.1" text = "mytext.1" // expected-note 2 {{#pragma entered here}}
 #pragma clang section bss="" data="" rodata="" text=""
 #pragma clang section

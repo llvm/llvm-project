@@ -107,7 +107,7 @@ public:
                                             int64_t *value_bits = nullptr,
                                             uint64_t *payload = nullptr) = 0;
     /// @}
- 
+
     virtual uint64_t GetInstanceSize() = 0;
 
     // use to implement version-specific additional constraints on pointers
@@ -321,8 +321,8 @@ public:
     m_negative_complete_class_cache.clear();
   }
 
-  bool GetTypeBitSize(const CompilerType &compiler_type,
-                      uint64_t &size) override;
+  std::optional<uint64_t>
+  GetTypeBitSize(const CompilerType &compiler_type) override;
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".
@@ -386,16 +386,8 @@ private:
     }
 
     bool operator<(const ClassAndSel &rhs) const {
-      if (class_addr < rhs.class_addr)
-        return true;
-      else if (class_addr > rhs.class_addr)
-        return false;
-      else {
-        if (sel_addr < rhs.sel_addr)
-          return true;
-        else
-          return false;
-      }
+      return std::tie(class_addr, sel_addr) <
+             std::tie(rhs.class_addr, rhs.sel_addr);
     }
 
     lldb::addr_t class_addr = LLDB_INVALID_ADDRESS;
@@ -473,6 +465,10 @@ protected:
 
   ObjCLanguageRuntime(const ObjCLanguageRuntime &) = delete;
   const ObjCLanguageRuntime &operator=(const ObjCLanguageRuntime &) = delete;
+
+private:
+  CompilerType LookupInRuntime(ConstString class_name);
+  CompilerType LookupInModulesVendor(ConstString class_name, Target &process);
 };
 
 } // namespace lldb_private

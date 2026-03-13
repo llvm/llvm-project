@@ -48,17 +48,11 @@
     static groupshared float g;
   };
 
-  // expected-error@+1 {{parameter may not be qualified with an address space}}
-  float foo2(groupshared float a) {
-    return a;
-  }
-
-// expected-note@+2 {{parameter may not be qualified with an address space}}
+// expected-note@+2 {{candidate template ignored: substitution failure [with T = GSF]}}
 template<typename T>
   T tfoo(T t) {
      return t;
   }
-  // expected-warning@+1 {{alias declarations are a C++11 extension}}
  using GSF = groupshared float;
  GSF gs;
  // expected-error@+1 {{no matching function for call to 'tfoo'}}
@@ -68,13 +62,12 @@ template<typename T>
 // it is caused by return type check is after pointer check which is acceptable.
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 groupshared void (*fp)();
-// expected-error@+2 {{pointers are unsupported in HLSL}}
-// expected-error@+1 {{parameter may not be qualified with an address space}}
+// expected-error@+1 {{pointers are unsupported in HLSL}}
 void (*fp2)(groupshared float);
 // NOTE: HLSL not support trailing return types.
-// expected-warning@+2 {{'auto' type specifier is a C++11 extension}}
-// expected-error@+1 {{expected function body after function declarator}}
-auto func() -> groupshared void;
+// expected-warning@#func{{'auto' type specifier is a HLSL 202y extension}}
+// expected-error@#func{{return type cannot be qualified with address space}}
+auto func() -> groupshared void; // #func
 // expected-warning@+2 {{'groupshared' attribute only applies to variables}}
 // expected-error@+1 {{return type cannot be qualified with address space}}
 void groupshared f();
@@ -103,5 +96,4 @@ _Static_assert(S3<groupshared float>::value, "");
 
 // Can you overload based on the qualifier?
 void func(float f) {}
-// expected-error@+1 {{parameter may not be qualified with an address space}}
 void func(groupshared float f) {}

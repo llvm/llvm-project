@@ -61,21 +61,10 @@ class StdUnorderedMapSynthProvider:
     def __init__(self, valobj, dict):
         self.valobj = valobj
         self.count = None
-        self.kind = self.get_object_kind(valobj)
-
-    def get_object_kind(self, valobj):
-        type_name = valobj.GetTypeName()
-        return "set" if "set" in type_name else "map"
 
     def extract_type(self):
-        type = self.valobj.GetType()
-        # type of std::pair<key, value> is the first template
-        # argument type of the 4th template argument to std::map and
-        # 3rd template argument for std::set. That's why
-        # we need to know kind of the object
-        template_arg_num = 4 if self.kind == "map" else 3
-        allocator_type = type.GetTemplateArgumentType(template_arg_num)
-        data_type = allocator_type.GetTemplateArgumentType(0)
+        head_type = self.head.GetType().GetCanonicalType()
+        data_type = head_type.GetTemplateArgumentType(1)
         return data_type
 
     def update(self):
@@ -473,11 +462,7 @@ class StdVectorSynthProvider:
                 "[" + str(index) + "]", element_offset, element_type
             )
             bit = element.GetValueAsUnsigned(0) & (1 << bit_offset)
-            if bit != 0:
-                value_expr = "(bool)true"
-            else:
-                value_expr = "(bool)false"
-            return self.valobj.CreateValueFromExpression("[%d]" % index, value_expr)
+            return self.valobj.CreateBoolValue("[%d]" % index, bool(bit))
 
         def update(self):
             try:
@@ -892,35 +877,6 @@ class StdDequeSynthProvider:
         except:
             pass
         return False
-
-
-def VariantSummaryProvider(valobj, dict):
-    raw_obj = valobj.GetNonSyntheticValue()
-    index_obj = raw_obj.GetChildMemberWithName("_M_index")
-    data_obj = raw_obj.GetChildMemberWithName("_M_u")
-    if not (index_obj and index_obj.IsValid() and data_obj and data_obj.IsValid()):
-        return "<Can't find _M_index or _M_u>"
-
-    def get_variant_npos_value(index_byte_size):
-        if index_byte_size == 1:
-            return 0xFF
-        elif index_byte_size == 2:
-            return 0xFFFF
-        else:
-            return 0xFFFFFFFF
-
-    npos_value = get_variant_npos_value(index_obj.GetByteSize())
-    index = index_obj.GetValueAsUnsigned(0)
-    if index == npos_value:
-        return " No Value"
-
-    # Invalid index can happen when the variant is not initialized yet.
-    template_arg_count = data_obj.GetType().GetNumberOfTemplateArguments()
-    if index >= template_arg_count:
-        return " <Invalid>"
-
-    active_type = data_obj.GetType().GetTemplateArgumentType(index)
-    return f" Active Type = {active_type.GetDisplayTypeName()} "
 
 
 class VariantSynthProvider:

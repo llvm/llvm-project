@@ -80,10 +80,10 @@ namespace test4 {
   // CHECK-LABEL:    define{{.*}} void @_ZN5test41AC2Ev(
   // CHECK:      [[THIS:%.*]] = load ptr, ptr {{%.*}}
   //   Construct single.
-  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[THIS]], i32 0, i32 0
+  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds nuw [[A:%.*]], ptr [[THIS]], i32 0, i32 0
   // CHECK-NEXT: store ptr null, ptr [[SINGLE]], align 8
   //   Construct array.
-  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[THIS]], i32 0, i32 1
+  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds nuw [[A:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: call void @llvm.memset.p0.i64(ptr align 8 [[ARRAY]], i8 0, i64 48, i1 false)
   //   throw 0;
   // CHECK:      invoke void @__cxa_throw(
@@ -115,23 +115,20 @@ void test5(void) {
 }
 // CHECK-LABEL: define{{.*}} void @_Z5test5v()
 // CHECK:       [[ARRAY:%.*]] = alloca [2 x [2 x ptr]], align
-// CHECK:       [[A0:%.*]] = getelementptr inbounds [2 x [2 x ptr]], ptr [[ARRAY]], i64 0, i64 0
-// CHECK-NEXT:  store ptr [[A0]],
-// CHECK-NEXT:  [[A00:%.*]] = getelementptr inbounds [2 x ptr], ptr [[A0]], i64 0, i64 0
-// CHECK-NEXT:  store ptr [[A00]],
+// CHECK:       store ptr [[ARRAY]],
+// CHECK-NEXT:  store ptr [[ARRAY]],
 // CHECK-NEXT:  [[T0:%.*]] = invoke noundef ptr @_Z12test5_helperj(i32 noundef 0)
-// CHECK:       store ptr [[T0]], ptr [[A00]], align
-// CHECK-NEXT:  [[A01:%.*]] = getelementptr inbounds ptr, ptr [[A00]], i64 1
+// CHECK:       store ptr [[T0]], ptr [[ARRAY]], align
+// CHECK-NEXT:  [[A01:%.*]] = getelementptr inbounds ptr, ptr [[ARRAY]], i64 1
 // CHECK-NEXT:  store ptr [[A01]],
 // CHECK-NEXT:  [[T0:%.*]] = invoke noundef ptr @_Z12test5_helperj(i32 noundef 1)
 // CHECK:       store ptr [[T0]], ptr [[A01]], align
-// CHECK-NEXT:  [[A1:%.*]] = getelementptr inbounds [2 x ptr], ptr [[A0]], i64 1
+// CHECK-NEXT:  [[A1:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARRAY]], i64 1
 // CHECK-NEXT:  store ptr [[A1]],
-// CHECK-NEXT:  [[A10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[A1]], i64 0, i64 0
-// CHECK-NEXT:  store ptr [[A10]],
+// CHECK-NEXT:  store ptr [[A1]],
 // CHECK-NEXT:  [[T0:%.*]] = invoke noundef ptr @_Z12test5_helperj(i32 noundef 2)
-// CHECK:       store ptr [[T0]], ptr [[A10]], align
-// CHECK-NEXT:  [[A11:%.*]] = getelementptr inbounds ptr, ptr [[A10]], i64 1
+// CHECK:       store ptr [[T0]], ptr [[A1]], align
+// CHECK-NEXT:  [[A11:%.*]] = getelementptr inbounds ptr, ptr [[A1]], i64 1
 // CHECK-NEXT:  store ptr [[A11]],
 // CHECK-NEXT:  [[T0:%.*]] = invoke noundef ptr @_Z12test5_helperj(i32 noundef 3)
 // CHECK:       store ptr [[T0]], ptr [[A11]], align

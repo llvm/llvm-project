@@ -144,13 +144,11 @@ QueryRef QueryParser::endQuery(QueryRef Q) {
   StringRef Extra = Line;
   StringRef ExtraTrimmed = Extra.ltrim(" \t\v\f\r");
 
-  if ((!ExtraTrimmed.empty() && ExtraTrimmed[0] == '\n') ||
-      (ExtraTrimmed.size() >= 2 && ExtraTrimmed[0] == '\r' &&
-       ExtraTrimmed[1] == '\n'))
+  if (ExtraTrimmed.starts_with('\n') || ExtraTrimmed.starts_with("\r\n"))
     Q->RemainingContent = Extra;
   else {
     StringRef TrailingWord = lexWord();
-    if (!TrailingWord.empty() && TrailingWord.front() == '#') {
+    if (TrailingWord.starts_with('#')) {
       Line = Line.drop_until([](char c) { return c == '\n'; });
       Line = Line.drop_while([](char c) { return c == '\n'; });
       return endQuery(Q);
@@ -184,6 +182,7 @@ enum ParsedQueryVariable {
   PQV_Output,
   PQV_BindRoot,
   PQV_PrintMatcher,
+  PQV_EnableProfile,
   PQV_Traversal
 };
 
@@ -287,6 +286,7 @@ QueryRef QueryParser::doParse() {
             .Case("output", PQV_Output)
             .Case("bind-root", PQV_BindRoot)
             .Case("print-matcher", PQV_PrintMatcher)
+            .Case("enable-profile", PQV_EnableProfile)
             .Case("traversal", PQV_Traversal)
             .Default(PQV_Invalid);
     if (VarStr.empty())
@@ -304,6 +304,9 @@ QueryRef QueryParser::doParse() {
       break;
     case PQV_PrintMatcher:
       Q = parseSetBool(&QuerySession::PrintMatcher);
+      break;
+    case PQV_EnableProfile:
+      Q = parseSetBool(&QuerySession::EnableProfile);
       break;
     case PQV_Traversal:
       Q = parseSetTraversalKind(&QuerySession::TK);

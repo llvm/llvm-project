@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-define void @main() {
+define void @main(i1 %arg) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -27,17 +27,17 @@ define void @main() {
 ; CHECK-NEXT:    [[ADD19]] = fadd double undef, [[MUL18]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[MUL13]], [[MUL14]]
 ; CHECK-NEXT:    [[ADD20]] = fadd double undef, [[SUB]]
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY12]], label [[FOR_INC21]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY12]], label [[FOR_INC21]]
 ; CHECK:       for.inc21:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END23:%.*]], label [[FOR_BODY6]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END23:%.*]], label [[FOR_BODY6]]
 ; CHECK:       for.end23:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN25:%.*]], label [[IF_THEN26:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN25:%.*]], label [[IF_THEN26:%.*]]
 ; CHECK:       if.then25:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END44:%.*]], label [[FOR_COND4_PREHEADER]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END44:%.*]], label [[FOR_COND4_PREHEADER]]
 ; CHECK:       if.then26:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       for.end44:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END48:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END48:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end48:
 ; CHECK-NEXT:    ret void
 ;
@@ -67,22 +67,22 @@ if.end:                                           ; preds = %for.body12
   %add19 = fadd double undef, %mul18
   %sub = fsub double %mul13, %mul14
   %add20 = fadd double undef, %sub
-  br i1 undef, label %for.body12, label %for.inc21
+  br i1 %arg, label %for.body12, label %for.inc21
 
 for.inc21:                                        ; preds = %if.end, %for.body12
-  br i1 undef, label %for.end23, label %for.body6
+  br i1 %arg, label %for.end23, label %for.body6
 
 for.end23:                                        ; preds = %for.inc21
-  br i1 undef, label %if.then25, label %if.then26
+  br i1 %arg, label %if.then25, label %if.then26
 
 if.then25:                                        ; preds = %for.end23
-  br i1 undef, label %for.end44, label %for.cond4.preheader
+  br i1 %arg, label %for.end44, label %for.cond4.preheader
 
 if.then26:                                        ; preds = %for.end23
   unreachable
 
 for.end44:                                        ; preds = %if.then25
-  br i1 undef, label %for.end48, label %for.body
+  br i1 %arg, label %for.end48, label %for.body
 
 for.end48:                                        ; preds = %for.end44
   ret void
@@ -90,7 +90,7 @@ for.end48:                                        ; preds = %for.end44
 
 %struct.hoge = type { double, double, double}
 
-define void @zot(ptr %arg) {
+define void @zot(ptr %arg, i1 %arg2) {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load double, ptr undef, align 8
@@ -102,7 +102,7 @@ define void @zot(ptr %arg) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP7]], align 8
-; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12:%.*]]
+; CHECK-NEXT:    br i1 %arg2, label [[BB11:%.*]], label [[BB12:%.*]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb12:
@@ -124,7 +124,7 @@ bb:
   %tmp9 = fsub double %tmp8, undef
   %tmp10 = getelementptr inbounds %struct.hoge, ptr %arg, i64 0, i32 2
   store double %tmp9, ptr %tmp10, align 8
-  br i1 undef, label %bb11, label %bb12
+  br i1 %arg2, label %bb11, label %bb12
 
 bb11:                                             ; preds = %bb
   br label %bb14
@@ -140,15 +140,15 @@ bb14:                                             ; preds = %bb12, %bb11
 
 %struct.rc4_state.0.24 = type { i32, i32, [256 x i32] }
 
-define void @rc4_crypt(ptr nocapture %s) {
+define void @rc4_crypt(ptr nocapture %s, i1 %arg) {
 ; CHECK-LABEL: @rc4_crypt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y2:%.*]] = getelementptr inbounds [[STRUCT_RC4_STATE_0_24:%.*]], ptr [[S:%.*]], i64 0, i32 1
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[CONV4:%.*]] = and i32 undef, 255
 ; CHECK-NEXT:    [[CONV7:%.*]] = and i32 undef, 255
-; CHECK-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END]], label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[X_0_LCSSA:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[CONV4]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[Y_0_LCSSA:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[CONV7]], [[FOR_BODY]] ]
@@ -158,14 +158,14 @@ define void @rc4_crypt(ptr nocapture %s) {
 ;
 entry:
   %y2 = getelementptr inbounds %struct.rc4_state.0.24, ptr %s, i64 0, i32 1
-  br i1 undef, label %for.body, label %for.end
+  br i1 %arg, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.body, %entry
   %x.045 = phi i32 [ %conv4, %for.body ], [ undef, %entry ]
   %conv4 = and i32 undef, 255
   %conv7 = and i32 undef, 255
   %idxprom842 = zext i32 %conv7 to i64
-  br i1 undef, label %for.end, label %for.body
+  br i1 %arg, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   %x.0.lcssa = phi i32 [ undef, %entry ], [ %conv4, %for.body ]

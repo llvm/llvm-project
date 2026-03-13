@@ -65,8 +65,8 @@ void HexagonMCChecker::init() {
     init(MCB);
 }
 
-void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
-                               bool &isTrue) {
+void HexagonMCChecker::initReg(MCInst const &MCI, MCRegister R,
+                               MCRegister &PredReg, bool &isTrue) {
   if (HexagonMCInstrInfo::isPredicated(MCII, MCI) &&
       HexagonMCInstrInfo::isPredReg(RI, R)) {
     // Note an used predicate register.
@@ -91,7 +91,7 @@ void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
 
 void HexagonMCChecker::init(MCInst const &MCI) {
   const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(MCII, MCI);
-  unsigned PredReg = Hexagon::NoRegister;
+  MCRegister PredReg;
   bool isTrue = false;
 
   // Get used registers.
@@ -133,7 +133,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
 
   // Figure out explicit register definitions.
   for (unsigned i = 0; i < MCID.getNumDefs(); ++i) {
-    unsigned R = MCI.getOperand(i).getReg(), S = Hexagon::NoRegister;
+    MCRegister R = MCI.getOperand(i).getReg(), S = MCRegister();
     // USR has subregisters (while C8 does not for technical reasons), so
     // reset R to USR, since we know how to handle multiple defs of USR,
     // taking into account its subregisters.
@@ -187,7 +187,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
   if (HexagonMCInstrInfo::isPredicatedNew(MCII, MCI))
     for (unsigned i = MCID.getNumDefs(); i < MCID.getNumOperands(); ++i)
       if (MCI.getOperand(i).isReg()) {
-        unsigned P = MCI.getOperand(i).getReg();
+        MCRegister P = MCI.getOperand(i).getReg();
 
         if (HexagonMCInstrInfo::isPredReg(RI, P))
           NewPreds.insert(P);
@@ -385,7 +385,7 @@ bool HexagonMCChecker::checkSlots() {
 bool HexagonMCChecker::checkPredicates() {
   // Check for proper use of new predicate registers.
   for (const auto &I : NewPreds) {
-    unsigned P = I;
+    MCRegister P = I;
 
     if (!Defs.count(P) || LatePreds.count(P) || Defs.count(Hexagon::P3_0)) {
       // Error out if the new predicate register is not defined,
@@ -398,7 +398,7 @@ bool HexagonMCChecker::checkPredicates() {
 
   // Check for proper use of auto-anded of predicate registers.
   for (const auto &I : LatePreds) {
-    unsigned P = I;
+    MCRegister P = I;
 
     if (LatePreds.count(P) > 1 || Defs.count(P)) {
       // Error out if predicate register defined "late" multiple times or
@@ -531,7 +531,7 @@ bool HexagonMCChecker::checkRegistersReadOnly() {
     for (unsigned j = 0; j < Defs; ++j) {
       MCOperand const &Operand = Inst.getOperand(j);
       assert(Operand.isReg() && "Def is not a register");
-      unsigned Register = Operand.getReg();
+      MCRegister Register = Operand.getReg();
       if (ReadOnly.find(Register) != ReadOnly.end()) {
         reportError(Inst.getLoc(), "Cannot write to read-only register `" +
                                        Twine(RI.getName(Register)) + "'");
@@ -542,7 +542,7 @@ bool HexagonMCChecker::checkRegistersReadOnly() {
   return true;
 }
 
-bool HexagonMCChecker::registerUsed(unsigned Register) {
+bool HexagonMCChecker::registerUsed(MCRegister Register) {
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB))
     for (unsigned j = HexagonMCInstrInfo::getDesc(MCII, I).getNumDefs(),
                   n = I.getNumOperands();
@@ -556,7 +556,7 @@ bool HexagonMCChecker::registerUsed(unsigned Register) {
 
 std::tuple<MCInst const *, unsigned, HexagonMCInstrInfo::PredicateInfo>
 HexagonMCChecker::registerProducer(
-    unsigned Register, HexagonMCInstrInfo::PredicateInfo ConsumerPredicate) {
+    MCRegister Register, HexagonMCInstrInfo::PredicateInfo ConsumerPredicate) {
   std::tuple<MCInst const *, unsigned, HexagonMCInstrInfo::PredicateInfo>
       WrongSense;
 
@@ -588,7 +588,7 @@ void HexagonMCChecker::checkRegisterCurDefs() {
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
     if (HexagonMCInstrInfo::isCVINew(MCII, I) &&
         HexagonMCInstrInfo::getDesc(MCII, I).mayLoad()) {
-      const unsigned RegDef = I.getOperand(0).getReg();
+      const MCRegister RegDef = I.getOperand(0).getReg();
 
       bool HasRegDefUse = false;
       for (MCRegAliasIterator Alias(RegDef, &RI, true); Alias.isValid();
@@ -607,7 +607,7 @@ void HexagonMCChecker::checkRegisterCurDefs() {
 bool HexagonMCChecker::checkRegisters() {
   // Check for proper register definitions.
   for (const auto &I : Defs) {
-    unsigned R = I.first;
+    MCRegister R = I.first;
 
     if (isLoopRegister(R) && Defs.count(R) > 1 &&
         (HexagonMCInstrInfo::isInnerLoop(MCB) ||
@@ -620,8 +620,8 @@ bool HexagonMCChecker::checkRegisters() {
     if (SoftDefs.count(R)) {
       // Error out for explicit changes to registers also weakly defined
       // (e.g., "{ usr = r0; r0 = sfadd(...) }").
-      unsigned UsrR = Hexagon::USR; // Silence warning about mixed types in ?:.
-      unsigned BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
+      MCRegister UsrR = Hexagon::USR;
+      MCRegister BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
       reportErrorRegisters(BadR);
       return false;
     }
@@ -633,8 +633,8 @@ bool HexagonMCChecker::checkRegisters() {
       if (PM.count(Unconditional)) {
         // Error out on an unconditional change when there are any other
         // changes, conditional or not.
-        unsigned UsrR = Hexagon::USR;
-        unsigned BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
+        MCRegister UsrR = Hexagon::USR;
+        MCRegister BadR = RI.isSubRegister(Hexagon::USR, R) ? UsrR : R;
         reportErrorRegisters(BadR);
         return false;
       }
@@ -664,7 +664,7 @@ bool HexagonMCChecker::checkRegisters() {
 
   // Check for use of temporary definitions.
   for (const auto &I : TmpDefs) {
-    unsigned R = I;
+    MCRegister R = I;
 
     if (!Uses.count(R)) {
       // special case for vhist
@@ -765,12 +765,12 @@ void HexagonMCChecker::compoundRegisterMap(unsigned &Register) {
   }
 }
 
-void HexagonMCChecker::reportErrorRegisters(unsigned Register) {
+void HexagonMCChecker::reportErrorRegisters(MCRegister Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' modified more than once");
 }
 
-void HexagonMCChecker::reportErrorNewValue(unsigned Register) {
+void HexagonMCChecker::reportErrorNewValue(MCRegister Register) {
   reportError("register `" + Twine(RI.getName(Register)) +
               "' used with `.new' "
               "but not validly modified in the same packet");
@@ -819,7 +819,7 @@ bool HexagonMCChecker::checkHVXAccum()
         HexagonMCInstrInfo::isAccumulator(MCII, I) && I.getOperand(0).isReg();
     if (!IsTarget)
       continue;
-    unsigned int R = I.getOperand(0).getReg();
+    MCRegister R = I.getOperand(0).getReg();
     TmpDefsIterator It = TmpDefs.find(R);
     if (It != TmpDefs.end()) {
       reportError("register `" + Twine(RI.getName(R)) + ".tmp" +

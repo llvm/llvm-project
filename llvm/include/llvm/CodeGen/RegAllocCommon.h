@@ -9,23 +9,20 @@
 #ifndef LLVM_CODEGEN_REGALLOCCOMMON_H
 #define LLVM_CODEGEN_REGALLOCCOMMON_H
 
+#include "llvm/CodeGen/Register.h"
 #include <functional>
 
 namespace llvm {
 
 class TargetRegisterClass;
 class TargetRegisterInfo;
+class MachineRegisterInfo;
 
+/// Filter function for register classes during regalloc. Default register class
+/// filter is nullptr, where all registers should be allocated.
 typedef std::function<bool(const TargetRegisterInfo &TRI,
-                           const TargetRegisterClass &RC)> RegClassFilterFunc;
-
-/// Default register class filter function for register allocation. All virtual
-/// registers should be allocated.
-static inline bool allocateAllRegClasses(const TargetRegisterInfo &,
-                                         const TargetRegisterClass &) {
-  return true;
-}
-
+                           const MachineRegisterInfo &MRI, const Register Reg)>
+    RegAllocFilterFunc;
 }
 
 #endif // LLVM_CODEGEN_REGALLOCCOMMON_H

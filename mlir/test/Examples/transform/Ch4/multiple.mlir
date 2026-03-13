@@ -12,15 +12,15 @@ func.func @fc_relu_operands_00(
 
   // Elementwise addition.
   // expected-remark @below {{add # 0}}
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
-  %c0f = arith.constant 0.0 : f32
+  %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
   // expected-remark @below {{max # 0}}
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
-    ins(%biased, %c0f : tensor<512x512xf32>, f32)
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
 }
@@ -37,15 +37,15 @@ func.func @fc_relu_operands_01(
 
   // Elementwise addition.
   // expected-remark @below {{add # 1}}
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
-  %c0f = arith.constant 0.0 : f32
+  %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
   // expected-remark @below {{max # 1}}
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
-    ins(%c0f, %biased : f32, tensor<512x512xf32>)
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%c0f, %biased : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
 }
@@ -97,7 +97,7 @@ module @transforms attributes { transform.with_named_sequence } {
       -> (!transform.any_op, !transform.any_op, !transform.any_op,
           !transform.param<i32>) {
     // The last operation must be an elementwise binary.
-    transform.match.operation_name %last ["linalg.elemwise_binary"]
+    transform.match.operation_name %last ["linalg.elementwise"]
       : !transform.any_op
 
     // One of its operands must be defined by another operation, to which we
@@ -111,7 +111,7 @@ module @transforms attributes { transform.with_named_sequence } {
       %def = transform.get_defining_op %operand 
         : (!transform.any_value) -> !transform.any_op
       // The defining operation must itself be an elementwise binary.
-      transform.match.operation_name %def ["linalg.elemwise_binary"]
+      transform.match.operation_name %def ["linalg.elementwise"]
         : !transform.any_op
       transform.yield %def : !transform.any_op
     }

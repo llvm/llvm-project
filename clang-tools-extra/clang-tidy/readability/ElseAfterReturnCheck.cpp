@@ -1,4 +1,4 @@
-//===--- ElseAfterReturnCheck.cpp - clang-tidy-----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,12 +39,19 @@ private:
   const SourceManager &SM;
 };
 
+AST_MATCHER_P(Stmt, stripLabelLikeStatements,
+              ast_matchers::internal::Matcher<Stmt>, InnerMatcher) {
+  const Stmt *S = Node.stripLabelLikeStatements();
+  return InnerMatcher.matches(*S, Finder, Builder);
+}
+
 } // namespace
 
-static const char InterruptingStr[] = "interrupting";
-static const char WarningMessage[] = "do not use 'else' after '%0'";
-static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
-static const char WarnOnConditionVariablesStr[] = "WarnOnConditionVariables";
+static constexpr char InterruptingStr[] = "interrupting";
+static constexpr char WarningMessage[] = "do not use 'else' after %0";
+static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
+static constexpr char WarnOnConditionVariablesStr[] =
+    "WarnOnConditionVariables";
 
 static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
   if (!Node)
@@ -53,10 +60,9 @@ static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
     if (DeclRef->getDecl()->getID() == DeclIdentifier)
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -70,11 +76,10 @@ findUsageRange(const Stmt *Node,
     if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
       return DeclRef;
   } else {
-    for (const Stmt *ChildNode : Node->children()) {
+    for (const Stmt *ChildNode : Node->children())
       if (const DeclRefExpr *Result =
               findUsageRange(ChildNode, DeclIdentifiers))
         return Result;
-    }
   }
   return nullptr;
 }
@@ -88,7 +93,7 @@ static const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
     assert(isa<VarDecl>(InitDecl) && "SingleDecl must be a VarDecl");
     return findUsage(If->getElse(), InitDecl->getID());
   }
-  llvm::SmallVector<int64_t, 4> DeclIdentifiers;
+  SmallVector<int64_t, 4> DeclIdentifiers;
   for (const Decl *ChildDecl : InitDeclStmt->decls()) {
     assert(isa<VarDecl>(ChildDecl) && "Init Decls must be a VarDecl");
     DeclIdentifiers.push_back(ChildDecl->getID());
@@ -124,21 +129,21 @@ static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
 
   if (const auto *CS = dyn_cast<CompoundStmt>(Else)) {
     Diag << tooling::fixit::createRemoval(ElseLoc);
-    SourceLocation LBrace = CS->getLBracLoc();
-    SourceLocation RBrace = CS->getRBracLoc();
-    SourceLocation RangeStart =
+    const SourceLocation LBrace = CS->getLBracLoc();
+    const SourceLocation RBrace = CS->getRBracLoc();
+    const SourceLocation RangeStart =
         Remap(LBrace).getLocWithOffset(TokLen(LBrace) + 1);
-    SourceLocation RangeEnd = Remap(RBrace).getLocWithOffset(-1);
+    const SourceLocation RangeEnd = Remap(RBrace).getLocWithOffset(-1);
 
-    llvm::StringRef Repl = Lexer::getSourceText(
+    const StringRef Repl = Lexer::getSourceText(
         CharSourceRange::getTokenRange(RangeStart, RangeEnd),
         Context.getSourceManager(), Context.getLangOpts());
     Diag << tooling::fixit::createReplacement(CS->getSourceRange(), Repl);
   } else {
-    SourceLocation ElseExpandedLoc = Remap(ElseLoc);
-    SourceLocation EndLoc = Remap(Else->getEndLoc());
+    const SourceLocation ElseExpandedLoc = Remap(ElseLoc);
+    const SourceLocation EndLoc = Remap(Else->getEndLoc());
 
-    llvm::StringRef Repl = Lexer::getSourceText(
+    const StringRef Repl = Lexer::getSourceText(
         CharSourceRange::getTokenRange(
             ElseExpandedLoc.getLocWithOffset(TokLen(ElseLoc) + 1), EndLoc),
         Context.getSourceManager(), Context.getLangOpts());
@@ -169,25 +174,28 @@ void ElseAfterReturnCheck::registerPPCallbacks(const SourceManager &SM,
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
-      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
-  Finder->addMatcher(
-      compoundStmt(
-          forEach(ifStmt(unless(isConstexpr()), unless(isConsteval()),
-                         hasThen(stmt(
-                             anyOf(InterruptsControlFlow,
-                                   compoundStmt(has(InterruptsControlFlow))))),
-                         hasElse(stmt().bind("else")))
-                      .bind("if")))
-          .bind("cs"),
-      this);
+      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr),
+      callExpr(callee(functionDecl(isNoReturn()))).bind(InterruptingStr)));
+
+  const auto IfWithInterruptingThenElse =
+      ifStmt(unless(isConstexpr()), unless(isConsteval()),
+             hasThen(stripLabelLikeStatements(
+                 stmt(anyOf(InterruptsControlFlow,
+                            compoundStmt(has(InterruptsControlFlow)))))),
+             hasElse(stmt().bind("else")))
+          .bind("if");
+
+  Finder->addMatcher(compoundStmt(forEach(stripLabelLikeStatements(
+                                      IfWithInterruptingThenElse)))
+                         .bind("cs"),
+                     this);
 }
 
 static bool hasPreprocessorBranchEndBetweenLocations(
     const ElseAfterReturnCheck::ConditionalBranchMap &ConditionalBranchMap,
     const SourceManager &SM, SourceLocation StartLoc, SourceLocation EndLoc) {
-
-  SourceLocation ExpandedStartLoc = SM.getExpansionLoc(StartLoc);
-  SourceLocation ExpandedEndLoc = SM.getExpansionLoc(EndLoc);
+  const SourceLocation ExpandedStartLoc = SM.getExpansionLoc(StartLoc);
+  const SourceLocation ExpandedEndLoc = SM.getExpansionLoc(EndLoc);
   if (!SM.isWrittenInSameFile(ExpandedStartLoc, ExpandedEndLoc))
     return false;
 
@@ -224,14 +232,16 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
 static StringRef getControlFlowString(const Stmt &Stmt) {
   if (isa<ReturnStmt>(Stmt))
-    return "return";
+    return "'return'";
   if (isa<ContinueStmt>(Stmt))
-    return "continue";
+    return "'continue'";
   if (isa<BreakStmt>(Stmt))
-    return "break";
+    return "'break'";
   if (isa<CXXThrowExpr>(Stmt))
-    return "throw";
-  llvm_unreachable("Unknown control flow interruptor");
+    return "'throw'";
+  if (isa<CallExpr>(Stmt))
+    return "calling a function that doesn't return";
+  llvm_unreachable("Unknown control flow interrupter");
 }
 
 void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
@@ -239,20 +249,20 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Else = Result.Nodes.getNodeAs<Stmt>("else");
   const auto *OuterScope = Result.Nodes.getNodeAs<CompoundStmt>("cs");
   const auto *Interrupt = Result.Nodes.getNodeAs<Stmt>(InterruptingStr);
-  SourceLocation ElseLoc = If->getElseLoc();
+  const SourceLocation ElseLoc = If->getElseLoc();
 
   if (hasPreprocessorBranchEndBetweenLocations(
           PPConditionals, *Result.SourceManager, Interrupt->getBeginLoc(),
           ElseLoc))
     return;
 
-  bool IsLastInScope = OuterScope->body_back() == If;
-  StringRef ControlFlowInterruptor = getControlFlowString(*Interrupt);
+  const bool IsLastInScope = OuterScope->body_back() == If;
+  const StringRef ControlFlowInterrupter = getControlFlowString(*Interrupt);
 
   if (!IsLastInScope && containsDeclInScope(Else)) {
     if (WarnOnUnfixable) {
       // Warn, but don't attempt an autofix.
-      diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
+      diag(ElseLoc, WarningMessage) << ControlFlowInterrupter;
     }
     return;
   }
@@ -264,21 +274,21 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
       DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterruptor
+                               << ControlFlowInterrupter
                                << SourceRange(ElseLoc);
       if (checkInitDeclUsageInElse(If) != nullptr) {
         Diag << tooling::fixit::createReplacement(
                     SourceRange(If->getIfLoc()),
                     (tooling::fixit::getText(*If->getInit(), *Result.Context) +
-                     llvm::StringRef("\n"))
+                     StringRef("\n"))
                         .str())
              << tooling::fixit::createRemoval(If->getInit()->getSourceRange());
       }
       const DeclStmt *VDeclStmt = If->getConditionVariableDeclStmt();
       const VarDecl *VDecl = If->getConditionVariable();
-      std::string Repl =
+      const std::string Repl =
           (tooling::fixit::getText(*VDeclStmt, *Result.Context) +
-           llvm::StringRef(";\n") +
+           StringRef(";\n") +
            tooling::fixit::getText(If->getIfLoc(), *Result.Context))
               .str();
       Diag << tooling::fixit::createReplacement(SourceRange(If->getIfLoc()),
@@ -288,7 +298,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
     } else if (WarnOnUnfixable) {
       // Warn, but don't attempt an autofix.
-      diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
+      diag(ElseLoc, WarningMessage) << ControlFlowInterrupter;
     }
     return;
   }
@@ -300,7 +310,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
       DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterruptor
+                               << ControlFlowInterrupter
                                << SourceRange(ElseLoc);
       Diag << tooling::fixit::createReplacement(
                   SourceRange(If->getIfLoc()),
@@ -312,13 +322,13 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
     } else if (WarnOnUnfixable) {
       // Warn, but don't attempt an autofix.
-      diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
+      diag(ElseLoc, WarningMessage) << ControlFlowInterrupter;
     }
     return;
   }
 
   DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                           << ControlFlowInterruptor << SourceRange(ElseLoc);
+                           << ControlFlowInterrupter << SourceRange(ElseLoc);
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
 }
 

@@ -44,7 +44,7 @@ namespace cwg1715 { // cwg1715: 3.9
   //   since-cxx11-note@#cwg1715-E {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 2 were provided}}
   //   since-cxx11-note@#cwg1715-E {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 2 were provided}}
 #endif
-}
+} // namespace cwg1715
 
 namespace cwg1719 { // cwg1719: 19
 #if __cplusplus >= 201103L
@@ -96,26 +96,9 @@ struct A {
 // operator, or move assignment operator.
 static_assert(__is_trivially_copyable(A), "");
 #endif
-}
+} // namespace cwg1734
 
-namespace cwg1736 { // cwg1736: 3.9
-#if __cplusplus >= 201103L
-struct S {
-  template <class T> S(T t) {
-    struct L : S {
-      using S::S;
-    };
-    typename T::type value;
-    // since-cxx11-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-    //   since-cxx11-note@#cwg1736-l {{in instantiation of function template specialization 'cwg1736::S::S<int>' requested here}}
-    //   since-cxx11-note@#cwg1736-s {{in instantiation of function template specialization 'cwg1736::S::S<cwg1736::Q>' requested here}}
-    L l(value); // #cwg1736-l
-  }
-};
-struct Q { typedef int type; } q;
-S s(q); // #cwg1736-s
-#endif
-}
+// cwg1736 is in cwg1736.cpp
 
 namespace cwg1738 { // cwg1738: sup P0136R1
 #if __cplusplus >= 201103L
@@ -132,7 +115,7 @@ struct B : A {
 template B::B(int, double);
 // since-cxx11-error@-1 {{explicit instantiation of 'B' does not refer to a function template, variable template, member function, member class, or static data member}}
 #endif
-}
+} // namespace cwg1738
 
 // cwg1748 is in cwg1748.cpp
 
@@ -165,7 +148,7 @@ namespace cwg1753 { // cwg1753: 11
     n.~decltype(n)(); // OK
   #endif
   }
-}
+} // namespace cwg1753
 
 namespace cwg1756 { // cwg1756: 3.7
 #if __cplusplus >= 201103L
@@ -176,7 +159,7 @@ namespace cwg1756 { // cwg1756: 3.7
   struct X { operator int(); } x;
   int b{x};
 #endif
-}
+} // namespace cwg1756
 
 namespace cwg1758 { // cwg1758: 3.7
 #if __cplusplus >= 201103L
@@ -195,7 +178,7 @@ namespace cwg1758 { // cwg1758: 3.7
   } b;
   A a{b};
 #endif
-}
+} // namespace cwg1758
 
 namespace cwg1762 { // cwg1762: 14
 #if __cplusplus >= 201103L
@@ -204,7 +187,7 @@ namespace cwg1762 { // cwg1762: 14
   // since-cxx11-error@-1 {{invalid suffix on literal; C++11 requires a space between literal and identifier}}
   // since-cxx11-warning@-2 {{user-defined literal suffixes not starting with '_' are reserved; no literal will invoke this operator}}
 #endif
-}
+} // namespace cwg1762
 
 // cwg1772 is in cwg177x.cpp
 
@@ -221,12 +204,12 @@ namespace cwg1778 { // cwg1778: 9
   static_assert(!noexcept(C()), "");
   static_assert(noexcept(D()), "");
 #endif
-}
+} // namespace cwg1778
 
 // cwg1779 is in cwg177x.cpp
 
-namespace cwg1794 { // cwg1794: yes
-                   // NB: dup 1710
+namespace cwg1794 { // cwg1794: 2.7
+                    // NB: dup 1710
 #if __cplusplus >= 201103L
 template <template <typename> class Template> struct Internal {
   template <typename Arg> using Bind = Template<Arg>;

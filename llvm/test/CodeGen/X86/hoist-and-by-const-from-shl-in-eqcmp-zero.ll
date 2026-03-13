@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+sse,sse2                  < %s | FileCheck %s --check-prefixes=X86,X86-SSE2,X86-BMI1
 ; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+sse,sse2,+bmi             < %s | FileCheck %s --check-prefixes=X86,X86-SSE2,X86-BMI1
 ; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+sse,sse2,+bmi,+bmi2       < %s | FileCheck %s --check-prefixes=X86,X86-SSE2,X86-BMI2
-; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+sse,sse2,+bmi,+bmi2,+avx2 < %s | FileCheck %s --check-prefixes=X86,X86-BMI2,AVX2
+; RUN: llc -mtriple=i686-unknown-linux-gnu -mattr=+sse,sse2,+bmi,+bmi2,+avx2 < %s | FileCheck %s --check-prefixes=X86,X86-BMI2,AVX2,X86-BMI2-AVX2
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+sse,sse2                  < %s | FileCheck %s --check-prefixes=X64,X64-SSE2,X64-BMI1
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+sse,sse2,+bmi             < %s | FileCheck %s --check-prefixes=X64,X64-SSE2,X64-BMI1
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+sse,sse2,+bmi,+bmi2       < %s | FileCheck %s --check-prefixes=X64,X64-SSE2,X64-BMI2
@@ -341,43 +341,20 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 }
 
 define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
-; X86-BMI1-LABEL: scalar_i64_lowestbit_eq:
-; X86-BMI1:       # %bb.0:
-; X86-BMI1-NEXT:    pushl %esi
-; X86-BMI1-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI1-NEXT:    movl $1, %eax
-; X86-BMI1-NEXT:    xorl %esi, %esi
-; X86-BMI1-NEXT:    xorl %edx, %edx
-; X86-BMI1-NEXT:    shldl %cl, %eax, %edx
-; X86-BMI1-NEXT:    shll %cl, %eax
-; X86-BMI1-NEXT:    testb $32, %cl
-; X86-BMI1-NEXT:    cmovnel %eax, %edx
-; X86-BMI1-NEXT:    cmovnel %esi, %eax
-; X86-BMI1-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X86-BMI1-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-BMI1-NEXT:    orl %edx, %eax
-; X86-BMI1-NEXT:    sete %al
-; X86-BMI1-NEXT:    popl %esi
-; X86-BMI1-NEXT:    retl
-;
-; X86-BMI2-LABEL: scalar_i64_lowestbit_eq:
-; X86-BMI2:       # %bb.0:
-; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movl $1, %edx
-; X86-BMI2-NEXT:    xorl %esi, %esi
-; X86-BMI2-NEXT:    xorl %eax, %eax
-; X86-BMI2-NEXT:    shldl %cl, %edx, %eax
-; X86-BMI2-NEXT:    shlxl %ecx, %edx, %edx
-; X86-BMI2-NEXT:    testb $32, %cl
-; X86-BMI2-NEXT:    cmovnel %edx, %eax
-; X86-BMI2-NEXT:    cmovnel %esi, %edx
-; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    orl %eax, %edx
-; X86-BMI2-NEXT:    sete %al
-; X86-BMI2-NEXT:    popl %esi
-; X86-BMI2-NEXT:    retl
+; X86-LABEL: scalar_i64_lowestbit_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    testb $32, %al
+; X86-NEXT:    je .LBB10_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    jmp .LBB10_3
+; X86-NEXT:  .LBB10_1:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:  .LBB10_3:
+; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    setae %al
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: scalar_i64_lowestbit_eq:
 ; X64:       # %bb.0:
@@ -453,6 +430,72 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
   ret i1 %res
 }
 
+define i1 @scalar_i128_lowestbit_eq(i128 %x, i128 %y) nounwind {
+; X86-SSE2-LABEL: scalar_i128_lowestbit_eq:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    subl $44, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
+; X86-SSE2-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE2-NEXT:    movaps %xmm0, (%esp)
+; X86-SSE2-NEXT:    movl %eax, %ecx
+; X86-SSE2-NEXT:    shrb $3, %cl
+; X86-SSE2-NEXT:    andb $12, %cl
+; X86-SSE2-NEXT:    movzbl %cl, %ecx
+; X86-SSE2-NEXT:    movl (%esp,%ecx), %ecx
+; X86-SSE2-NEXT:    btl %eax, %ecx
+; X86-SSE2-NEXT:    setae %al
+; X86-SSE2-NEXT:    addl $44, %esp
+; X86-SSE2-NEXT:    retl
+;
+; X86-BMI2-AVX2-LABEL: scalar_i128_lowestbit_eq:
+; X86-BMI2-AVX2:       # %bb.0:
+; X86-BMI2-AVX2-NEXT:    subl $44, %esp
+; X86-BMI2-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-AVX2-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
+; X86-BMI2-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X86-BMI2-AVX2-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%esp)
+; X86-BMI2-AVX2-NEXT:    vmovaps %xmm0, (%esp)
+; X86-BMI2-AVX2-NEXT:    movl %eax, %ecx
+; X86-BMI2-AVX2-NEXT:    shrb $3, %cl
+; X86-BMI2-AVX2-NEXT:    andb $12, %cl
+; X86-BMI2-AVX2-NEXT:    movzbl %cl, %ecx
+; X86-BMI2-AVX2-NEXT:    movl (%esp,%ecx), %ecx
+; X86-BMI2-AVX2-NEXT:    btl %eax, %ecx
+; X86-BMI2-AVX2-NEXT:    setae %al
+; X86-BMI2-AVX2-NEXT:    addl $44, %esp
+; X86-BMI2-AVX2-NEXT:    retl
+;
+; X64-BMI1-LABEL: scalar_i128_lowestbit_eq:
+; X64-BMI1:       # %bb.0:
+; X64-BMI1-NEXT:    movl %edx, %ecx
+; X64-BMI1-NEXT:    andb $32, %cl
+; X64-BMI1-NEXT:    shrq %cl, %rsi
+; X64-BMI1-NEXT:    shrq %cl, %rdi
+; X64-BMI1-NEXT:    testb $64, %dl
+; X64-BMI1-NEXT:    cmovneq %rsi, %rdi
+; X64-BMI1-NEXT:    btl %edx, %edi
+; X64-BMI1-NEXT:    setae %al
+; X64-BMI1-NEXT:    retq
+;
+; X64-BMI2-LABEL: scalar_i128_lowestbit_eq:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl %edx, %eax
+; X64-BMI2-NEXT:    andb $32, %al
+; X64-BMI2-NEXT:    shrxq %rax, %rsi, %rcx
+; X64-BMI2-NEXT:    shrxq %rax, %rdi, %rax
+; X64-BMI2-NEXT:    testb $64, %dl
+; X64-BMI2-NEXT:    cmovneq %rcx, %rax
+; X64-BMI2-NEXT:    btl %edx, %eax
+; X64-BMI2-NEXT:    setae %al
+; X64-BMI2-NEXT:    retq
+  %t0 = shl i128 1, %y
+  %t1 = and i128 %t0, %x
+  %res = icmp eq i128 %t1, 0
+  ret i1 %res
+}
+
 ;------------------------------------------------------------------------------;
 ; A few trivial vector tests
 ;------------------------------------------------------------------------------;
@@ -499,9 +542,9 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [0,1,16776960,2147483648]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2 # [1,1,2147483648,2147483648]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -524,9 +567,9 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,1,16776960,2147483648]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1,1,2147483648,2147483648]
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X64-SSE2-NEXT:    pand %xmm1, %xmm0
@@ -542,16 +585,14 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-LABEL: vec_4xi32_nonsplat_undef0_eq:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl $1, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
 ; X86-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
-; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [1,1,u,1]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
@@ -567,16 +608,14 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ;
 ; X64-SSE2-LABEL: vec_4xi32_nonsplat_undef0_eq:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movl $1, %eax
-; X64-SSE2-NEXT:    movd %eax, %xmm2
 ; X64-SSE2-NEXT:    pslld $23, %xmm1
 ; X64-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
-; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X64-SSE2-NEXT:    pand %xmm2, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,1,u,1]
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X64-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X64-SSE2-NEXT:    retq
@@ -622,16 +661,14 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-SSE2-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl $1, %eax
-; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm1
 ; X86-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
-; X86-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [1,1,u,1]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X86-SSE2-NEXT:    retl
@@ -647,16 +684,14 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ;
 ; X64-SSE2-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movl $1, %eax
-; X64-SSE2-NEXT:    movd %eax, %xmm2
 ; X64-SSE2-NEXT:    pslld $23, %xmm1
 ; X64-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
-; X64-SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X64-SSE2-NEXT:    pand %xmm2, %xmm0
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,3,2,3]
+; X64-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,1,u,1]
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X64-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X64-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; X64-SSE2-NEXT:    retq

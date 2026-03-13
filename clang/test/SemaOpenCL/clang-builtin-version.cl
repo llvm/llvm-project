@@ -17,12 +17,8 @@ kernel void dse_builtins(void) {
   });
 #if (__OPENCL_C_VERSION__ >= CL_VERSION_3_0) && !defined(__opencl_c_device_enqueue)
 // expected-error@-10{{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
-// FIXME: the typo correction for the undeclared identifiers finds alternative
-// suggestions, but instantiating the typo correction causes us to
-// re-instantiate the argument to the call, which triggers the support
-// diagnostic a second time.
-// expected-error@-12 2{{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
-// expected-error@-10 2{{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
+// expected-error@-8 {{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
+// expected-error@-6 {{support disabled - compile with -fblocks or for OpenCL C 2.0 or OpenCL C 3.0 with __opencl_c_device_enqueue feature}}
 #endif
 }
 

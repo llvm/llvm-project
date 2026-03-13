@@ -254,7 +254,7 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
     }
   }
 
-  unsigned Size = GVar->getParent()->getDataLayout().getTypeAllocSize(GType);
+  unsigned Size = GVar->getDataLayout().getTypeAllocSize(GType);
   if (Size == 0) {
     LLVM_DEBUG(dbgs() << "no, has size 0\n");
     return false;
@@ -317,7 +317,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::FloatTyID:
   case Type::DoubleTyID:
   case Type::IntegerTyID: {
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     // It is unfortunate that DL's function take non-const Type*.
     return DL.getTypeAllocSize(const_cast<Type*>(Ty));
   }
@@ -329,7 +329,6 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
   case Type::PPC_FP128TyID:
   case Type::LabelTyID:
   case Type::MetadataTyID:
-  case Type::X86_MMXTyID:
   case Type::X86_AMXTyID:
   case Type::TokenTyID:
   case Type::TypedPointerTyID:

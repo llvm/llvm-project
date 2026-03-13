@@ -234,8 +234,8 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:  # %bb.4: # %bb37
 ; CHECK-BE-NEXT:    bc 4, 4*cr5+lt, .LBB0_14
 ; CHECK-BE-NEXT:  .LBB0_5: # %bb42
-; CHECK-BE-NEXT:    addi r3, r3, global_1@toc@l
 ; CHECK-BE-NEXT:    li r4, 0
+; CHECK-BE-NEXT:    addi r3, r3, global_1@toc@l
 ; CHECK-BE-NEXT:    cmpwi r28, 0
 ; CHECK-BE-NEXT:    isel r3, r3, r4, 4*cr2+gt
 ; CHECK-BE-NEXT:    crnot 4*cr2+lt, eq

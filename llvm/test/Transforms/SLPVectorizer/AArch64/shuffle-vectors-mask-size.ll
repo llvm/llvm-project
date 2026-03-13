@@ -11,10 +11,10 @@ define void @p(double %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP3]], <2 x i32> <i32 1, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> <double 1.000000e+00, double 1.000000e+00, double poison, double poison>, <4 x double> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul <4 x double> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, <4 x double> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x double> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd <4 x double> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi <4 x double> [[TMP12]] to <4 x i32>

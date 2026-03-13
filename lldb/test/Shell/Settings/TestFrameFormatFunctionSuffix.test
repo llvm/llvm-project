@@ -1,0 +1,23 @@
+# UNSUPPORTED: system-windows
+
+# Test the ${function.suffix} frame-format variable.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+void bar() asm("_Z3barv.cold");
+void bar() {}
+
+int main() { bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.suffix}'\n"
+break set -n "_Z3barv.cold"
+
+run
+bt
+
+# CHECK: custom-frame ' (.cold)'

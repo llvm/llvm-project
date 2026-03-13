@@ -99,7 +99,8 @@ public:
   ///
   /// \return
   ///    \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context) override;
+  bool ShouldStop(StoppointCallbackContext *context,
+                  BreakpointLocationCollection &stopping_bp_loc) override;
 
   /// Standard Dump method
   void Dump(Stream *s) const override;
@@ -155,6 +156,10 @@ public:
   ///     would be valid for this thread, false otherwise.
   bool ValidForThisThread(Thread &thread);
 
+  /// Returns true if at least one constituent is both public and valid for
+  /// `thread`.
+  bool ContainsUserBreakpointForThread(Thread &thread);
+
   /// Print a description of this breakpoint site to the stream \a s.
   /// GetDescription tells you about the breakpoint site's constituents. Use
   /// BreakpointSite::Dump(Stream *) to get information about the breakpoint
@@ -169,6 +174,11 @@ public:
   ///
   /// \see lldb::DescriptionLevel
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
+
+  // This runs through all the breakpoint locations owning this site and returns
+  // the greatest of their suggested stack frame indexes.  This only handles
+  // inlined stack changes.
+  std::optional<uint32_t> GetSuggestedStackFrameIndex();
 
   /// Tell whether a breakpoint has a location at this site.
   ///

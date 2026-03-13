@@ -1,6 +1,23 @@
 // RUN: mlir-opt -split-input-file -convert-arith-to-spirv -verify-diagnostics %s
 
 ///===----------------------------------------------------------------------===//
+// Cast ops
+//===----------------------------------------------------------------------===//
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Float16, Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @experimental_constrained_fptrunc(%arg0 : f32) {
+  // expected-error@+1 {{failed to legalize operation 'arith.truncf'}}
+  %3 = arith.truncf %arg0 to_nearest_away : f32 to f16
+  return
+}
+
+} // end module
+
+///===----------------------------------------------------------------------===//
 // Binary ops
 //===----------------------------------------------------------------------===//
 
@@ -40,6 +57,14 @@ func.func @int_vector4_invalid(%arg0: vector<2xi16>) {
   // expected-error @+2 {{failed to legalize operation 'arith.divui'}}
   // expected-error @+1 {{bitwidth emulation is not implemented yet on unsigned op}}
   %0 = arith.divui %arg0, %arg0: vector<2xi16>
+  return
+}
+
+// -----
+
+func.func @int_vector_invalid_bitwidth(%arg0: vector<2xi12>) {
+  // expected-error @+1 {{failed to legalize operation 'arith.addi'}}
+  %0 = arith.addi %arg0, %arg0: vector<2xi12>
   return
 }
 
@@ -93,6 +118,16 @@ func.func @unsupported_constant_tensor_2xf64_0() {
   // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
   %1 = arith.constant dense<0.0> : tensor<2xf64>
   return
+}
+
+// -----
+
+// Regression test: arith.trunci on tensor types should not crash
+// (https://github.com/llvm/llvm-project/issues/178214).
+func.func @trunci_tensor_no_crash(%arg0: tensor<1xi32>) -> tensor<1xi16> {
+  // expected-error @+1 {{failed to legalize operation 'arith.trunci'}}
+  %0 = arith.trunci %arg0 : tensor<1xi32> to tensor<1xi16>
+  return %0 : tensor<1xi16>
 }
 
 // -----

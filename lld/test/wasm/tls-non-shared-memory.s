@@ -44,6 +44,7 @@ tls1:
 
 # RUN: wasm-ld --no-gc-sections --no-entry -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
+# RUN: llvm-objdump --disassemble-symbols=get_tls1 --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 
 # RUN: wasm-ld --experimental-pic -shared -o %t.so %t.o
 # RUN: obj2yaml %t.so | FileCheck %s --check-prefixes=SHARED,PIC
@@ -62,41 +63,49 @@ tls1:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66576
+# CHECK-NEXT:           Value:           65536
 # __tls_base
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # GOT.data.internal.tls1
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:   - Type:            EXPORT
 
 #      CHECK:  - Type:            DATA
 # .data
 # CHECK-NEXT:    Segments:
-# CHECK-NEXT:      - SectionOffset:   7
+# CHECK-NEXT:      - SectionOffset:   8
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1024
+# CHECK-NEXT:          Value:           65536
 # CHECK-NEXT:        Content:         2B000000
 # .tdata
-# CHECK-NEXT:      - SectionOffset:   17
+# CHECK-NEXT:      - SectionOffset:   19
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1028
+# CHECK-NEXT:          Value:           65540
 # CHECK-NEXT:        Content:         2A000000
 # CHECK-NEXT:  - Type:            CUSTOM
 
+# The constant value here which we add to `__tls_base` should not be absolute
+# but relative to `__tls_base`, in this case zero rather than 1024.
+# DIS:      <get_tls1>:
+# DIS-EMPTY:
+# DIS-NEXT:  global.get 1
+# DIS-NEXT:  i32.const 0
+# DIS-NEXT:  i32.add
+# DIS-NEXT:  end
 
 # In PIC mode we expect TLS data and non-TLS data to be merged into
 # a single segment which is initialized via the  __memory_base import
@@ -127,9 +136,6 @@ tls1:
 # PIE-NEXT:       - Name:            memory
 # PIE-NEXT:         Kind:            MEMORY
 # PIE-NEXT:         Index:           0
-# PIE-NEXT:       - Name:            __wasm_apply_data_relocs
-# PIE-NEXT:         Kind:            FUNCTION
-# PIE-NEXT:         Index:           1
 # PIE-NEXT:   - Type:
 
 # .tdata and .data are combined into single segment in PIC mode.

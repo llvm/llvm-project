@@ -672,8 +672,8 @@ private:
 
     // Concatenate the two paths
     std::vector<FlowJump *> Result;
-    Result.insert(Result.end(), ForwardPath.begin(), ForwardPath.end());
-    Result.insert(Result.end(), BackwardPath.begin(), BackwardPath.end());
+    llvm::append_range(Result, ForwardPath);
+    llvm::append_range(Result, BackwardPath);
     return Result;
   }
 
@@ -969,7 +969,7 @@ private:
     // of all blocks
     if (UnknownBlocks.size() != AcyclicOrder.size())
       return false;
-    UnknownBlocks = AcyclicOrder;
+    UnknownBlocks = std::move(AcyclicOrder);
     return true;
   }
 
@@ -1174,8 +1174,6 @@ std::pair<int64_t, int64_t> assignJumpCosts(const ProfiParams &Params,
     else
       CostInc = Params.CostJumpUnknownInc;
     CostDec = 0;
-  } else {
-    assert(Jump.Weight > 0 && "found zero-weight jump with a positive weight");
   }
   return std::make_pair(CostInc, CostDec);
 }

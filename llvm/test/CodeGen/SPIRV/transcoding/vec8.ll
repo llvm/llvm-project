@@ -10,6 +10,6 @@
 
 define spir_kernel void @test(<8 x i32> %v) {
   %1 = alloca <8 x i32>, align 32
-  store <8 x i32> %v, <8 x i32>* %1, align 32
+  store <8 x i32> %v, ptr %1, align 32
   ret void
 }

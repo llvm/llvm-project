@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/floor.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
+#include "src/__support/math/floor.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, floor, (double x)) { return fputil::floor(x); }
+LLVM_LIBC_FUNCTION(double, floor, (double x)) { return math::floor(x); }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

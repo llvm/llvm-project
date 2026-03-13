@@ -299,7 +299,7 @@ or parser so we'll need to add it.
    }
 
 In this set of code we've added some functionality on how to keep track of the
-line and column of the "source file". As we lex every token we set our current
+line and column of the "source file". As we lex every token we set our
 current "lexical location" to the assorted line and column for the beginning
 of the token. We do this by overriding all of the previous calls to
 ``getchar()`` with our new ``advance()`` that keeps track of the information
@@ -416,7 +416,7 @@ argument allocas in ``FunctionAST::codegen``.
 
 Here we're first creating the variable, giving it the scope (``SP``),
 the name, source location, type, and since it's an argument, the argument
-index. Next, we create an ``lvm.dbg.declare`` call to indicate at the IR
+index. Next, we create a ``#dbg_declare`` record to indicate at the IR
 level that we've got a variable in an alloca (and it gives a starting
 location for the variable), and setting a source location for the
 beginning of the scope on the declare.

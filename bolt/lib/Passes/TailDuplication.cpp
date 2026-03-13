@@ -26,7 +26,7 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> NoThreads;
 
-cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
+static cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
     "tail-duplication",
     cl::desc("duplicate unconditional branches that cross a cache line"),
     cl::init(bolt::TailDuplication::TD_NONE),
@@ -97,8 +97,8 @@ bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst, unsigned Reg,
   getCallerSavedRegs(Inst, WrittenRegs, BC);
   if (BC.MIB->isRep(Inst))
     BC.MIB->getRepRegs(WrittenRegs);
-  WrittenRegs &= BC.MIB->getAliases(Reg, false);
-  return WrittenRegs.any();
+  const BitVector &AllAliases = BC.MIB->getAliases(Reg, false);
+  return WrittenRegs.anyCommon(AllAliases);
 }
 
 bool TailDuplication::regIsDefinitelyOverwritten(const MCInst &Inst,
@@ -117,8 +117,8 @@ bool TailDuplication::regIsUsed(const MCInst &Inst, unsigned Reg,
                                 BinaryContext &BC) const {
   BitVector SrcRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getSrcRegs(Inst, SrcRegs);
-  SrcRegs &= BC.MIB->getAliases(Reg, true);
-  return SrcRegs.any();
+  const BitVector &SmallerAliases = BC.MIB->getAliases(Reg, true);
+  return SrcRegs.anyCommon(SmallerAliases);
 }
 
 bool TailDuplication::isOverwrittenBeforeUsed(BinaryBasicBlock &StartBB,

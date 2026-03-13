@@ -241,13 +241,17 @@ define i64 @test_i64(i1 %a, i1 %b, i64 %i, i64 %j, i64 %k) {
 ;
 ; CHECK-V8A-TWO-FOLD-6-LABEL: @test_i64(
 ; CHECK-V8A-TWO-FOLD-6-NEXT:  entry:
+; CHECK-V8A-TWO-FOLD-6-NEXT:    br i1 [[A:%.*]], label [[M:%.*]], label [[O:%.*]]
+; CHECK-V8A-TWO-FOLD-6:       O:
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IAJ:%.*]] = add i64 [[I:%.*]], [[J:%.*]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IAJAK:%.*]] = add i64 [[IAJ]], [[K:%.*]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IXJ:%.*]] = xor i64 [[I]], [[J]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IXJXK:%.*]] = xor i64 [[IXJ]], [[K]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[WP:%.*]] = select i1 [[B:%.*]], i64 [[IAJAK]], i64 [[IXJXK]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[WP2:%.*]] = add i64 [[WP]], [[WP]]
-; CHECK-V8A-TWO-FOLD-6-NEXT:    [[W:%.*]] = select i1 [[A:%.*]], i64 2, i64 [[WP2]]
+; CHECK-V8A-TWO-FOLD-6-NEXT:    br label [[M]]
+; CHECK-V8A-TWO-FOLD-6:       M:
+; CHECK-V8A-TWO-FOLD-6-NEXT:    [[W:%.*]] = phi i64 [ [[WP2]], [[O]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[R:%.*]] = add i64 [[W]], 1
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    ret i64 [[R]]
 ;
@@ -374,13 +378,17 @@ define i64 @test_i64_minsize(i1 %a, i1 %b, i64 %i, i64 %j, i64 %k) #0 {
 ;
 ; CHECK-V8A-TWO-FOLD-6-LABEL: @test_i64_minsize(
 ; CHECK-V8A-TWO-FOLD-6-NEXT:  entry:
+; CHECK-V8A-TWO-FOLD-6-NEXT:    br i1 [[A:%.*]], label [[M:%.*]], label [[O:%.*]]
+; CHECK-V8A-TWO-FOLD-6:       O:
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IAJ:%.*]] = add i64 [[I:%.*]], [[J:%.*]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IAJAK:%.*]] = add i64 [[IAJ]], [[K:%.*]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IXJ:%.*]] = xor i64 [[I]], [[J]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[IXJXK:%.*]] = xor i64 [[IXJ]], [[K]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[WP:%.*]] = select i1 [[B:%.*]], i64 [[IAJAK]], i64 [[IXJXK]]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[WP2:%.*]] = add i64 [[WP]], [[WP]]
-; CHECK-V8A-TWO-FOLD-6-NEXT:    [[W:%.*]] = select i1 [[A:%.*]], i64 2, i64 [[WP2]]
+; CHECK-V8A-TWO-FOLD-6-NEXT:    br label [[M]]
+; CHECK-V8A-TWO-FOLD-6:       M:
+; CHECK-V8A-TWO-FOLD-6-NEXT:    [[W:%.*]] = phi i64 [ [[WP2]], [[O]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    [[R:%.*]] = add i64 [[W]], 1
 ; CHECK-V8A-TWO-FOLD-6-NEXT:    ret i64 [[R]]
 ;

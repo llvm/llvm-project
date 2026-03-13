@@ -1,7 +1,8 @@
-#include <stdlib.h>
+#include <assert.h>
 #include <limits.h>
-#include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "int_types.h"
 
@@ -230,40 +231,49 @@ static inline double makeQNaN64(void)
     return fromRep64(0x7ff8000000000000UL);
 }
 
-#if __LDBL_MANT_DIG__ == 64 && defined(__x86_64__)
-static inline long double F80FromRep128(uint64_t hi, uint64_t lo) {
-    __uint128_t x = ((__uint128_t)hi << 64) + lo;
-    long double ret;
-    memcpy(&ret, &x, 16);
-    return ret;
+#if HAS_80_BIT_LONG_DOUBLE
+static inline xf_float F80FromRep80(uint16_t hi, uint64_t lo) {
+  uqwords bits;
+  bits.high.all = hi;
+  bits.low.all = lo;
+  xf_float ret;
+  static_assert(sizeof(xf_float) <= sizeof(uqwords), "wrong representation");
+  memcpy(&ret, &bits, sizeof(ret));
+  return ret;
 }
 
-static inline __uint128_t F80ToRep128(long double x) {
-    __uint128_t ret;
-    memcpy(&ret, &x, 16);
-    return ret;
+static inline uqwords F80ToRep80(xf_float x) {
+  uqwords ret;
+  memset(&ret, 0, sizeof(ret));
+  memcpy(&ret, &x, sizeof(x));
+  // Any bits beyond the first 16 in high are undefined.
+  ret.high.all = (uint16_t)ret.high.all;
+  return ret;
 }
 
-static inline int compareResultF80(long double result, uint64_t expectedHi,
+static inline int compareResultF80(xf_float result, uint16_t expectedHi,
                                    uint64_t expectedLo) {
-    __uint128_t rep = F80ToRep128(result);
-    // F80 occupies the lower 80 bits of __uint128_t.
-    uint64_t hi = (rep >> 64) & ((1UL << (80 - 64)) - 1);
-    uint64_t lo = rep;
-    return !(hi == expectedHi && lo == expectedLo);
+  uqwords rep = F80ToRep80(result);
+  // F80 high occupies the lower 16 bits of high.
+  assert((uint64_t)(uint16_t)rep.high.all == rep.high.all);
+  return !(rep.high.all == expectedHi && rep.low.all == expectedLo);
 }
 
-static inline long double makeQNaN80(void) {
-    return F80FromRep128(0x7fffUL, 0xc000000000000000UL);
+static inline xf_float makeQNaN80(void) {
+  return F80FromRep80(0x7fffu, 0xc000000000000000UL);
 }
 
-static inline long double makeNaN80(uint64_t rand) {
-    return F80FromRep128(0x7fffUL,
-                         0x8000000000000000 | (rand & 0x3fffffffffffffff));
+static inline xf_float makeNaN80(uint64_t rand) {
+  return F80FromRep80(0x7fffu,
+                      0x8000000000000000 | (rand & 0x3fffffffffffffff));
 }
 
-static inline long double makeInf80(void) {
-    return F80FromRep128(0x7fffUL, 0x8000000000000000UL);
+static inline xf_float makeInf80(void) {
+  return F80FromRep80(0x7fffu, 0x8000000000000000UL);
+}
+
+static inline xf_float makeNegativeInf80(void) {
+  return F80FromRep80(0xffffu, 0x8000000000000000UL);
 }
 #endif
 
@@ -298,6 +308,8 @@ static inline TYPE_FP16 makeInf16(void)
 {
     return fromRep16(0x7c00U);
 }
+
+static inline TYPE_FP16 makeNegativeInf16(void) { return fromRep16(0xfc00U); }
 
 static inline float makeInf32(void)
 {

@@ -14,9 +14,11 @@ intermediate LLVM representation.
 
    AArch64SME
    AddingConstrainedIntrinsics
+   AdminTasks
    AdvancedBuilds
    AliasAnalysis
    AMDGPUUsage
+   AMDGPUAsyncOperations
    Benchmarking
    BigEndianNEON
    BuildingADistribution
@@ -32,6 +34,7 @@ intermediate LLVM representation.
    DebuggingJITedCode
    DirectXUsage
    Docker
+   DTLTO
    FatLTO
    ExtendingLLVM
    GitHub
@@ -46,10 +49,13 @@ intermediate LLVM representation.
    InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
+   KeyInstructionsDebugInfo
+   LFI
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
    MemorySSA
+   MemProf
    MergeFunctions
    MCJITDesignAndImplementation
    MisExpect
@@ -64,12 +70,16 @@ intermediate LLVM representation.
    Remarks
    RemoveDIsDebugInfo
    RISCVUsage
+   RISCV/RISCVVectorExtension
+   RISCV/RISCVVCIX
    SourceLevelDebugging
    SPIRVUsage
+   SandboxIR
    StackSafetyAnalysis
    SupportLibrary
    TableGen/index
    TableGenFundamentals
+   Telemetry
    Vectorizers
    WritingAnLLVMPass
    WritingAnLLVMNewPMPass
@@ -148,6 +158,9 @@ Optimizations
 :doc:`MemorySSA`
    Information about the MemorySSA utility in LLVM, as well as how to use it.
 
+:doc:`MemProf`
+   User guide and internals of MemProf, profile guided optimizations for memory.
+
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
 
@@ -160,6 +173,11 @@ Optimizations
 :doc:`LinkTimeOptimization`
    This document describes the interface between LLVM intermodular optimizer
    and the linker and its design
+
+:doc:`DTLTO`
+   This document describes the DTLTO implementation, which allows for
+   distributing ThinLTO backend compilations without requiring support from
+   the build system.
 
 :doc:`GoldPlugin`
    How to build your programs with link-time optimization on Linux.
@@ -184,12 +202,17 @@ Optimizations
    This is a migration guide describing how to move from debug info using
    intrinsics such as dbg.value to using the non-instruction DbgRecord object.
 
+:doc:`KeyInstructionsDebugInfo`
+   This document explains how the debug info feature Key Instructions is
+   implemented in LLVM.
+
 :doc:`InstrProfileFormat`
    This document explains two binary formats of instrumentation-based profiles.
 
 :doc:`InstCombineContributorGuide`
    This document specifies guidelines for contributions for InstCombine and
    related passes.
+
 
 Code Generation
 ---------------
@@ -266,6 +289,9 @@ Additional Topics
 :doc:`AMDGPUUsage`
    This document describes using the AMDGPU backend to compile GPU kernels.
 
+:doc:`AMDGPUAsyncOperations`
+   Builtins for invoking asynchronous data transfer operations in AMD GPUs.
+
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging
    for targets such as the AMDGPU backend.
@@ -283,4 +309,19 @@ Additional Topics
    DirectX runtime.
 
 :doc:`RISCVUsage`
-   This document describes using the RISCV-V target.
+   This document describes using the RISC-V target.
+
+:doc:`RISCV/RISCVVectorExtension`
+   This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.
+
+:doc:`RISCV/RISCVVCIX`
+   This document shows how the scheduling information for RISC-V's ``XSfvcp`` extension -- SiFive Vector Coprocessor Interface (VCIX) -- works and how to customize them.
+
+:doc:`Sandbox IR <SandboxIR>`
+   This document describes the design and usage of Sandbox IR, a transactional layer over LLVM IR.
+
+:doc:`Telemetry`
+   This document describes the Telemetry framework in LLVM.
+
+:doc:`LFI <LFI>`
+    This document describes the Lightweight Fault Isolation (LFI) target in LLVM.

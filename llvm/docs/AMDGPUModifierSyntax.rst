@@ -1078,6 +1078,73 @@ Examples:
   offset:0xfffff
   offset:-x
 
+.. _amdgpu_synid_smem_offset24s:
+
+offset24s
+~~~~~~~~~
+
+Specifies a signed 24-bit offset, in bytes. The default value is 0.
+
+    ============================= ====================================================================
+    Syntax                        Description
+    ============================= ====================================================================
+    offset:{-0x1000000..0xFFFFFF} Specifies an offset as an
+                                  :ref:`integer number <amdgpu_synid_integer_number>`
+                                  or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    ============================= ====================================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset:-1
+  offset:0xfffff
+  offset:-x
+
+.. _amdgpu_synid_th:
+
+th
+~~
+
+Specifies temporal hint of memory operation.
+
+    =============================== =========================================================
+    Syntax                          Description
+    =============================== =========================================================
+    TH_{LOAD|STORE}_RT              Regular
+    TH_{LOAD|STORE}_NT              Non-temporal
+    TH_{LOAD|STORE}_HT              High-temporal
+    TH_{LOAD|STORE}_LU              Last use. Not available in SYS scope.
+    TH_{LOAD|STORE}_WB              Regular (CU, SE); High-temporal with write-back (MALL)
+    TH_{LOAD|STORE}_NT_RT           Non-temporal (CU, SE); Regular (MALL)
+    TH_{LOAD|STORE}_RT_NT           Regular (CU, SE); Non-temporal (MALL)
+    TH_{LOAD|STORE}_NT_HT           Non-temporal (CU, SE); High-temporal (MALL)
+    TH_{LOAD|STORE}_NT_WB           Non-temporal (CU, SE); High-temporal with write-back (MALL)
+    TH_{LOAD|STORE}_BYPASS          Available for SYS scope only.
+    TH_ATOMIC_RT                    Regular
+    TH_ATOMIC_RT_RETURN             Regular. For atomic instructions that return values.
+    TH_ATOMIC_NT                    Non-temporal
+    TH_ATOMIC_NT_RETURN             Non-temporal. For atomic instructions that return values.
+    TH_ATOMIC_CASCADE_RT            Cascading atomic; Regular.
+    TH_ATOMIC_CASCADE_NT            Cascading atomic; Non-temporal.
+    =============================== =========================================================
+
+.. _amdgpu_synid_scope:
+
+scope
+~~~~~
+
+Specifies scope of memory operation.
+
+    =============================== =========================================================
+    Syntax                          Description
+    =============================== =========================================================
+    SCOPE_CU                        Coherency within a Compute Unit.
+    SCOPE_SE                        Coherency within a Shader Engine.
+    SCOPE_DEV                       Coherency within a single device.
+    SCOPE_SYS                       Coherency across the full system.
+    =============================== =========================================================
+
 VINTRP/VINTERP/LDSDIR Modifiers
 -------------------------------
 
@@ -1117,6 +1184,27 @@ The default value is zero. This is a safe value, but it may be suboptimal.
                      issuing this instruction.
     ================ ======================================================
 
+.. _amdgpu_synid_wait_va_vdst:
+
+wait_va_vdst
+~~~~~~~~~~~~
+
+Manually specify a wait on the VA_VDST counter before issuing this instruction. VA_VDST must be less
+than or equal to this value before the instruction is issued. If set to 15, no wait is performed.
+
+If unspecified the current default is zero. This is a safe value but may have poor performance characteristics.
+
+This modifier is a shorthand for the WAR hazard where VALU reads a VGPR that is written by a parameter
+load. Since there is no VA_VSRC counter we must use VA_VDST as a proxy to detect when the
+VALU instruction has completed:
+
+Examples:
+
+.. parsed-literal::
+
+  v_mov_b32 v1, v0
+  ds_param_load v0, . . . wait_va_vdst:0
+
 .. _amdgpu_synid_wait_vdst:
 
 wait_vdst
@@ -1134,6 +1222,27 @@ The default value is zero. This is a safe value, but it may be suboptimal.
     wait_vdst:{0..15}  An additional wait on the VA_VDST counter before
                        issuing this instruction.
     ================== ======================================================
+
+.. _amdgpu_synid_wait_vm_vsrc:
+
+wait_vm_vsrc
+~~~~~~~~~~~~
+
+Manually specify a wait on the VM_VSRC counter before issuing this instruction. VM_VSRC must be less
+than or equal to this value before the instruction is issued. If set to 1, no wait is performed.
+
+If unspecified the current default is zero. This is a safe value but may have poor performance characteristics.
+
+This modifier is a shorthand for the WAR hazard where VMEM reads a VGPR that is written by a parameter
+load.
+
+Examples:
+
+.. parsed-literal::
+
+  buffer_load_b32 v1, v0, s0, 0
+  ds_param_load v0, . . . wait_vm_vsrc:0
+
 
 DPP8 Modifiers
 --------------

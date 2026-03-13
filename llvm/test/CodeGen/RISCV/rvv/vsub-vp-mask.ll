@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK
 
-
-declare <vscale x 2 x i1> @llvm.vp.sub.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i1> @vsub_vv_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %b, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -16,8 +13,6 @@ define <vscale x 2 x i1> @vsub_vv_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1
   %v = call <vscale x 2 x i1> @llvm.vp.sub.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %b, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i1> %v
 }
-
-declare <vscale x 4 x i1> @llvm.vp.sub.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i1> @vsub_vv_nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1> %b, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_nxv4i1:
@@ -29,8 +24,6 @@ define <vscale x 4 x i1> @vsub_vv_nxv4i1(<vscale x 4 x i1> %va, <vscale x 4 x i1
   ret <vscale x 4 x i1> %v
 }
 
-declare <vscale x 8 x i1> @llvm.vp.sub.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i1> @vsub_vv_nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1> %b, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_nxv8i1:
 ; CHECK:       # %bb.0:
@@ -41,8 +34,6 @@ define <vscale x 8 x i1> @vsub_vv_nxv8i1(<vscale x 8 x i1> %va, <vscale x 8 x i1
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 16 x i1> @llvm.vp.sub.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x i1> @vsub_vv_nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_nxv16i1:
 ; CHECK:       # %bb.0:
@@ -52,8 +43,6 @@ define <vscale x 16 x i1> @vsub_vv_nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 
   %v = call <vscale x 16 x i1> @llvm.vp.sub.nxv16i1(<vscale x 16 x i1> %va, <vscale x 16 x i1> %b, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i1> %v
 }
-
-declare <vscale x 32 x i1> @llvm.vp.sub.nxv32i1(<vscale x 32 x i1>, <vscale x 32 x i1>, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i1> @vsub_vv_nxv32i1(<vscale x 32 x i1> %va, <vscale x 32 x i1> %b, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_nxv32i1:

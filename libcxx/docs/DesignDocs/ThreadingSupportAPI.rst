@@ -45,9 +45,9 @@ API but leaves out the implementation.
 Threading Configuration Macros
 ==============================
 
-**_LIBCPP_HAS_NO_THREADS**
-  This macro is defined when libc++ is built without threading support. It
-  should not be manually defined by the user.
+**_LIBCPP_HAS_THREADS**
+  This macro is set to 1 when libc++ is built with threading support. Otherwise
+  it is set to 0. It should not be manually defined by the user.
 
 **_LIBCPP_HAS_THREAD_API_EXTERNAL**
   This macro is defined when libc++ should use the ``<__external_threading>``

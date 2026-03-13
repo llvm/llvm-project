@@ -1,6 +1,16 @@
 set(BUILTINS_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(BUILTINS_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} builtins)
+# If COMPILER_RT_TEST_EXTERNAL_BUILTINS is set, the builtins
+# were already built and we are just going to test them.
+# NOTE: This is currently an LLVM-internal option which should
+# only be used by the LLVM_ENABLE_RUNTIMES build configured
+# in llvm/runtimes/CMakeLists.txt
+if(COMPILER_RT_TEST_EXTERNAL_BUILTINS)
+  set(BUILTINS_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
+else()
+  set(BUILTINS_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} builtins)
+endif()
+
 set(BUILTINS_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/TestCases)
 
 # Test cases.
@@ -13,7 +23,7 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
-if (COMPILER_RT_BUILD_CRT)
+if (COMPILER_RT_BUILD_CRT AND TARGET crt)
   list(APPEND BUILTINS_TEST_DEPS crt)
 endif()
 pythonize_bool(COMPILER_RT_BUILD_CRT)
@@ -44,7 +54,8 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
-  if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ${arch} STREQUAL "riscv32")
+  if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$"
+    AND NOT CMAKE_COMPILER_IS_GNUCC))
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fforce-enable-int128)
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
@@ -56,10 +67,35 @@ foreach(arch ${BUILTIN_TEST_ARCH})
       string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
     endif()
   else()
-    if (${arch} MATCHES "arm|armhf|aarch64|arm64|i?86|x86_64|AMD64|riscv32|riscv64" AND COMPILER_RT_HAS_${arch}_FLOAT16)
+    if (${arch} MATCHES "arm|armhf|aarch64|arm64|i?86|x86_64|AMD64|riscv32|riscv64|s390x" AND COMPILER_RT_HAS_${arch}_FLOAT16)
       list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
       string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
     endif()
+  endif()
+
+  if(COMPILER_RT_ARM_OPTIMIZED_FP AND arch MATCHES "arm")
+    if(arch MATCHES "armv6m|armv8m\.base")
+      # Set a compile-time definition promising that the Thumb-1 optimized FP
+      # implementations are present in this library, and therefore, can be
+      # expected to behave in the way expected by the extra-strict tests of NaN
+      # and error handling.
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+        -DCOMPILER_RT_ARM_OPTIMIZED_FP_THUMB1)
+    elseif(NOT arch MATCHES "armv[456]")
+      # For AArch32 targets that are not just Thumb-1, set a more general flag
+      # _and_ the previous one too, so that tests can check
+      # COMPILER_RT_ARM_OPTIMIZED_FP_THUMB1 by itself to test for an optimized
+      # function available on all AArch32 platforms.
+      #
+      # We exclude armv[456] because those architecture versions are too old
+      # for the optimized functions to support them at all. (And we test
+      # against the fixed set of too-old versions rather than the open-ended
+      # set of newer ones, for future-proofing.)
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+        -DCOMPILER_RT_ARM_OPTIMIZED_FP
+        -DCOMPILER_RT_ARM_OPTIMIZED_FP_THUMB1)
+    endif()
+    string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
   if(COMPILER_RT_ENABLE_CET)
@@ -76,13 +112,24 @@ foreach(arch ${BUILTIN_TEST_ARCH})
   if(APPLE)
     # TODO: Support other Apple platforms.
     set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins_${arch}_osx")
+    set(BUILTIN_LIB_OUTPUT_NAME "clang_rt.builtins_${arch}_osx")
   else()
     set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins-${arch}")
+    set_output_name(BUILTIN_LIB_OUTPUT_NAME clang_rt.builtins ${arch})
   endif()
-  if (NOT TARGET "${BUILTIN_LIB_TARGET_NAME}")
-    message(FATAL_ERROR "Target ${BUILTIN_LIB_TARGET_NAME} does not exist")
+  # Normally, we can just inspect the target directly to get the sources, but if
+  # we are testing an externally-built builtins library, we expect a file named
+  # ${BUILTIN_LIB_OUTPUT_NAME}.sources.txt in the compiler-rt output directory.
+  # This file is created by compiler-rt/lib/builtins/CMakeLists.txt
+  if(NOT COMPILER_RT_TEST_EXTERNAL_BUILTINS)
+    if (NOT TARGET "${BUILTIN_LIB_TARGET_NAME}")
+      message(FATAL_ERROR "Target ${BUILTIN_LIB_TARGET_NAME} does not exist")
+    endif()
+    get_target_property(BUILTIN_LIB_SOURCES "${BUILTIN_LIB_TARGET_NAME}" SOURCES)
+  else()
+    get_compiler_rt_output_dir(${arch} BUILTIN_LIB_OUTPUT_DIR)
+    file(READ "${BUILTIN_LIB_OUTPUT_DIR}/${BUILTIN_LIB_OUTPUT_NAME}.sources.txt" BUILTIN_LIB_SOURCES)
   endif()
-  get_target_property(BUILTIN_LIB_SOURCES "${BUILTIN_LIB_TARGET_NAME}" SOURCES)
   list(LENGTH BUILTIN_LIB_SOURCES BUILTIN_LIB_SOURCES_LENGTH)
   if (BUILTIN_LIB_SOURCES_LENGTH EQUAL 0)
     message(FATAL_ERROR "Failed to find source files for ${arch} builtin library")

@@ -7,7 +7,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @test_constant(i64 %src_size, ptr %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[SRC_SIZE]]
@@ -15,6 +17,8 @@ define void @test_constant(i64 %src_size, ptr %dst, i64 %dst_size, i8 %c) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr @C, i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr @C, i64 %src_size, i1 false)
   ret void
@@ -22,7 +26,9 @@ define void @test_constant(i64 %src_size, ptr %dst, i64 %dst_size, i8 %c) {
 
 define void @test(ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[SRC_SIZE]]
@@ -30,6 +36,8 @@ define void @test(ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
   ret void
@@ -37,8 +45,10 @@ define void @test(ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %
 
 define void @test_different_types_i32_i64(ptr noalias %dst, ptr %src, i32 %dst_size, i64 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i32_i64(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[DST_SIZE:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP1]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP1]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i64 0, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[SRC_SIZE]]
@@ -46,6 +56,8 @@ define void @test_different_types_i32_i64(ptr noalias %dst, ptr %src, i32 %dst_s
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i32(ptr %dst, i8 %c, i32 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
   ret void
@@ -53,7 +65,9 @@ define void @test_different_types_i32_i64(ptr noalias %dst, ptr %src, i32 %dst_s
 
 define void @test_different_types_i128_i32(ptr noalias %dst, ptr %src, i128 %dst_size, i32 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i128_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SRC_SIZE:%.*]] to i128
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i32 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SRC_SIZE]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i128 [[DST_SIZE:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i128 [[DST_SIZE]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i128 0, i128 [[TMP3]]
@@ -62,6 +76,8 @@ define void @test_different_types_i128_i32(ptr noalias %dst, ptr %src, i128 %dst
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST]], ptr [[SRC:%.*]], i32 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i32 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i128(ptr %dst, i8 %c, i128 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %src, i32 %src_size, i1 false)
   ret void
@@ -69,8 +85,10 @@ define void @test_different_types_i128_i32(ptr noalias %dst, ptr %src, i128 %dst
 
 define void @test_different_types_i32_i128(ptr noalias %dst, ptr %src, i32 %dst_size, i128 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i32_i128(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i128 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[DST_SIZE:%.*]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i128 [[TMP1]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i128 [[TMP1]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i128 [[TMP1]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i128 0, i128 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST:%.*]], i128 [[SRC_SIZE]]
@@ -78,6 +96,8 @@ define void @test_different_types_i32_i128(ptr noalias %dst, ptr %src, i32 %dst_
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i128(ptr [[DST]], ptr [[SRC:%.*]], i128 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i128 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i32(ptr %dst, i8 %c, i32 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i128(ptr %dst, ptr %src, i128 %src_size, i1 false)
   ret void
@@ -85,7 +105,9 @@ define void @test_different_types_i32_i128(ptr noalias %dst, ptr %src, i32 %dst_
 
 define void @test_different_types_i64_i32(ptr noalias %dst, ptr %src, i64 %dst_size, i32 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i64_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SRC_SIZE:%.*]] to i64
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i32 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SRC_SIZE]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST_SIZE]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP2]], i64 0, i64 [[TMP3]]
@@ -94,6 +116,8 @@ define void @test_different_types_i64_i32(ptr noalias %dst, ptr %src, i64 %dst_s
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DST]], ptr [[SRC:%.*]], i32 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i32 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i32(ptr %dst, ptr %src, i32 %src_size, i1 false)
   ret void
@@ -146,14 +170,18 @@ define void @test_align_memcpy(ptr %src, ptr noalias %dst, i64 %dst_size) {
 
 define void @test_non_i8_dst_type(ptr %src, i64 %src_size, ptr noalias %dst_pi64, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_non_i8_dst_type(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST_PI64:%.*]], i64 [[SRC_SIZE]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST_PI64:%.*]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST_PI64]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst_pi64, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst_pi64, ptr %src, i64 %src_size, i1 false)
   ret void
@@ -161,10 +189,14 @@ define void @test_non_i8_dst_type(ptr %src, i64 %src_size, ptr noalias %dst_pi64
 
 define void @test_different_dst(ptr noalias %dst2, ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size) {
 ; CHECK-LABEL: @test_different_dst(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 0, i64 [[DST_SIZE:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst2, ptr %src, i64 %src_size, i1 false)
   ret void
@@ -206,11 +238,15 @@ define void @test_intermediate_write(ptr %b) #0 {
 
 define void @test_throwing_call(ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_throwing_call(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 [[C:%.*]], i64 [[DST_SIZE:%.*]], i1 false)
-; CHECK-NEXT:    call void @call() #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @call() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @call() readnone
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
@@ -220,8 +256,10 @@ define void @test_throwing_call(ptr %src, i64 %src_size, ptr noalias %dst, i64 %
 define void @test_throwing_call_alloca(ptr %src, i64 %src_size, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_throwing_call_alloca(
 ; CHECK-NEXT:    [[DST:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @call() #[[ATTR2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    call void @call() #[[ATTR3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[SRC_SIZE]]
@@ -230,6 +268,8 @@ define void @test_throwing_call_alloca(ptr %src, i64 %src_size, i64 %dst_size, i
 ; CHECK-NEXT:    ret void
 ;
   %dst = alloca i8
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @call() readnone
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
@@ -240,10 +280,14 @@ define void @test_throwing_call_alloca(ptr %src, i64 %src_size, i64 %dst_size, i
 ; is not legal.
 define void @test_missing_noalias(ptr %src, i64 %src_size, ptr %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_missing_noalias(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST:%.*]], i8 [[C:%.*]], i64 [[DST_SIZE:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
   ret void
@@ -261,9 +305,13 @@ define void @test_same_const_size(ptr noalias %src, ptr noalias %dst, i8 %c) {
 
 define void @test_same_dynamic_size(ptr noalias %src, ptr noalias %dst, i64 %size, i8 %c) {
 ; CHECK-LABEL: @test_same_dynamic_size(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 false)
   ret void
@@ -286,9 +334,11 @@ define void @test_must_alias_same_size(ptr noalias %src, ptr noalias %dst, i8 %c
 
 define void @test_must_alias_different_size(ptr noalias %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_must_alias_different_size(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 16
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[GEP2]], i64 [[SRC_SIZE]]
@@ -296,6 +346,8 @@ define void @test_must_alias_different_size(ptr noalias %src, i64 %src_size, ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP2]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   %gep1 = getelementptr i8, ptr %dst, i64 16
   call void @llvm.memset.p0.i64(ptr %gep1, i8 %c, i64 %dst_size, i1 false)
   %gep2 = getelementptr i8, ptr %dst, i64 16
@@ -305,14 +357,18 @@ define void @test_must_alias_different_size(ptr noalias %src, i64 %src_size, ptr
 
 define void @test_weird_element_type(ptr %src, i64 %src_size, ptr noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_weird_element_type(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[SRC_SIZE]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP5]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[SRC_SIZE]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %src_size, i1 false)
   ret void
@@ -320,7 +376,9 @@ define void @test_weird_element_type(ptr %src, i64 %src_size, ptr noalias %dst, 
 
 define void @test_addrspace(ptr addrspace(1) %src, i64 %src_size, ptr addrspace(1) noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_addrspace(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ne i64 [[SRC_SIZE:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(1) [[DST:%.*]], i64 [[SRC_SIZE]]
@@ -328,6 +386,8 @@ define void @test_addrspace(ptr addrspace(1) %src, i64 %src_size, ptr addrspace(
 ; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST]], ptr addrspace(1) [[SRC:%.*]], i64 [[SRC_SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
+  %non.zero = icmp ne i64 %src_size, 0
+  call void @llvm.assume(i1 %non.zero)
   call void @llvm.memset.p1.i64(ptr addrspace(1) %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 %src_size, i1 false)
   ret void

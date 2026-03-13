@@ -20,20 +20,18 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_multiset<int> C;
-        const C c;
-        assert(c.max_bucket_count() > 0);
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_multiset<int> C;
+    const C c;
+    assert(c.max_bucket_count() > 0);
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef std::unordered_multiset<int, std::hash<int>,
-                                      std::equal_to<int>, min_allocator<int>> C;
-        const C c;
-        assert(c.max_bucket_count() > 0);
-    }
+  {
+    typedef std::unordered_multiset<int, std::hash<int>, std::equal_to<int>, min_allocator<int>> C;
+    const C c;
+    assert(c.max_bucket_count() > 0);
+  }
 #endif
 
   return 0;

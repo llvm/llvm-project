@@ -11,7 +11,7 @@
 #include "vector.h"
 
 TEST(ScudoVectorTest, Basic) {
-  scudo::Vector<int> V;
+  scudo::Vector<int, 64U> V;
   EXPECT_EQ(V.size(), 0U);
   V.push_back(42);
   EXPECT_EQ(V.size(), 1U);
@@ -23,7 +23,7 @@ TEST(ScudoVectorTest, Basic) {
 }
 
 TEST(ScudoVectorTest, Stride) {
-  scudo::Vector<scudo::uptr> V;
+  scudo::Vector<scudo::uptr, 32U> V;
   for (scudo::uptr I = 0; I < 1000; I++) {
     V.push_back(I);
     EXPECT_EQ(V.size(), I + 1U);
@@ -34,7 +34,7 @@ TEST(ScudoVectorTest, Stride) {
 }
 
 TEST(ScudoVectorTest, ResizeReduction) {
-  scudo::Vector<int> V;
+  scudo::Vector<int, 64U> V;
   V.push_back(0);
   V.push_back(0);
   EXPECT_EQ(V.size(), 2U);
@@ -48,7 +48,7 @@ TEST(ScudoVectorTest, ResizeReduction) {
 
 // Verify that if the reallocate fails, nothing new is added.
 TEST(ScudoVectorTest, ReallocateFails) {
-  scudo::Vector<char> V;
+  scudo::Vector<char, 256U> V;
   scudo::uptr capacity = V.capacity();
 
   // Get the current address space size.
@@ -62,9 +62,9 @@ TEST(ScudoVectorTest, ReallocateFails) {
   scudo::MemMapT MemMap;
   if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
                  MAP_ALLOWNOMEM)) {
-    MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    MemMap.unmap();
     setrlimit(RLIMIT_AS, &Limit);
-    GTEST_SKIP() << "Limiting address space does not prevent mmap.";
+    TEST_SKIP("Limiting address space does not prevent mmap.");
   }
 
   V.resize(capacity);

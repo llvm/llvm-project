@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compile-generic && %libomptarget-run-generic
 // RUN: %libomptarget-compileopt-generic && %libomptarget-run-generic
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +12,7 @@ int main() {
   int Threads = 64;
   int Teams = 10;
 
-  // Allocate ~55MB on the device.
+  // Allocate ~160 KiB on the device.
 #pragma omp target map(from : DP)
   DP = (long unsigned *)malloc(sizeof(long unsigned) * N * Threads * Teams);
 

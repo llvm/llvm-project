@@ -54,9 +54,9 @@ Symbols:
 
 ## Functional testing for MTE globals.
 # RUN: split-file %S/Inputs/aarch64-memtag-globals.s %t
-# RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android \
+# RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android \
 # RUN:   %t/input_1.s -o %t1.o
-# RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android \
+# RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android \
 # RUN:   %t/input_2.s -o %t2.o
 # RUN: ld.lld -shared --android-memtag-mode=sync %t1.o %t2.o -o %t.so
 
@@ -76,7 +76,7 @@ Symbols:
 ## Ensure that fully statically linked executables just simply drop the MTE
 ## globals stuff: special relocations, data in the place to be relocated,
 ## dynamic entries, etc.
-# RUN: llvm-mc --filetype=obj -triple=aarch64-none-linux-android \
+# RUN: llvm-mc --filetype=obj -triple=aarch64-linux-android \
 # RUN:   %t/input_3.s -o %t3.o
 # RUN: ld.lld -static --android-memtag-mode=sync %t1.o %t2.o %t3.o -o %t.static.so
 # RUN: llvm-readelf -s --section-headers --relocs --memtag %t.static.so | \

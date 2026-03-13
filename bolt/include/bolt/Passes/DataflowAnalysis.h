@@ -11,6 +11,7 @@
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/Errc.h"
 #include <optional>
 #include <queue>
@@ -292,14 +293,17 @@ public:
   /// Relies on a ptr map to fetch the previous instruction and then retrieve
   /// state. WARNING: Watch out for invalidated pointers. Do not use this
   /// function if you invalidated pointers after the analysis has been completed
-  ErrorOr<const StateTy &> getStateBefore(const MCInst &Point) {
-    return getStateAt(PrevPoint[&Point]);
+  ErrorOr<const StateTy &> getStateBefore(const MCInst &Point) const {
+    auto It = PrevPoint.find(&Point);
+    if (It == PrevPoint.end())
+      return make_error_code(std::errc::result_out_of_range);
+    return getStateAt(It->getSecond());
   }
 
-  ErrorOr<const StateTy &> getStateBefore(ProgramPoint Point) {
+  ErrorOr<const StateTy &> getStateBefore(ProgramPoint Point) const {
     if (Point.isBB())
       return getStateAt(*Point.getBB());
-    return getStateAt(PrevPoint[Point.getInst()]);
+    return getStateBefore(*Point.getInst());
   }
 
   /// Remove any state annotations left by this analysis
@@ -329,23 +333,41 @@ public:
     }
 
     std::queue<BinaryBasicBlock *> Worklist;
-    // TODO: Pushing this in a DFS ordering will greatly speed up the dataflow
-    // performance.
+    DenseSet<BinaryBasicBlock *> BBs;
     if (!Backward) {
-      for (BinaryBasicBlock &BB : Func) {
-        Worklist.push(&BB);
-        MCInst *Prev = nullptr;
-        for (MCInst &Inst : BB) {
-          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&BB);
-          Prev = &Inst;
-        }
+      llvm::ReversePostOrderTraversal<BinaryFunction *> RPOT(&Func);
+      for (BinaryBasicBlock *BB : RPOT) {
+        Worklist.push(BB);
+        BBs.insert(BB);
       }
     } else {
-      for (BinaryBasicBlock &BB : llvm::reverse(Func)) {
-        Worklist.push(&BB);
-        MCInst *Prev = nullptr;
-        for (MCInst &Inst : llvm::reverse(BB)) {
-          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&BB);
+      for (BinaryBasicBlock *BB : post_order(&Func)) {
+        Worklist.push(BB);
+        BBs.insert(BB);
+      }
+    }
+
+    // Reverse post-order and post-order will leave unreachable basic
+    // blocks. Here will identify and add them to the worklist.
+    if (BBs.size() != Func.size()) {
+      for (BinaryBasicBlock &BB : Func) {
+        if (!BBs.count(&BB)) {
+          Worklist.push(&BB);
+          BBs.insert(&BB);
+        }
+      }
+    }
+
+    for (auto *BB : BBs) {
+      MCInst *Prev = nullptr;
+      if (!Backward) {
+        for (MCInst &Inst : *BB) {
+          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(BB);
+          Prev = &Inst;
+        }
+      } else {
+        for (MCInst &Inst : llvm::reverse(*BB)) {
+          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(BB);
           Prev = &Inst;
         }
       }

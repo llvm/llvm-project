@@ -13,6 +13,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_CSEMIRBUILDER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -20,16 +21,22 @@ class GISelInstProfileBuilder;
 /// Defines a builder that does CSE of MachineInstructions using GISelCSEInfo.
 /// Eg usage.
 ///
+/// \code
+///    GISelCSEInfo *Info =
+///        &getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEInfo();
+///    CSEMIRBuilder CB(Builder.getState());
+///    CB.setCSEInfo(Info);
+///    auto A = CB.buildConstant(s32, 42);
+///    auto B = CB.buildConstant(s32, 42);
+///    assert(A == B);
+///    unsigned CReg = MRI.createGenericVirtualRegister(s32);
+///    auto C = CB.buildConstant(CReg, 42);
+///    assert(C->getOpcode() == TargetOpcode::COPY);
+/// \endcode
 ///
-/// GISelCSEInfo *Info =
-/// &getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEInfo(); CSEMIRBuilder
-/// CB(Builder.getState()); CB.setCSEInfo(Info); auto A = CB.buildConstant(s32,
-/// 42); auto B = CB.buildConstant(s32, 42); assert(A == B); unsigned CReg =
-/// MRI.createGenericVirtualRegister(s32); auto C = CB.buildConstant(CReg, 42);
-/// assert(C->getOpcode() == TargetOpcode::COPY);
 /// Explicitly passing in a register would materialize a copy if possible.
 /// CSEMIRBuilder also does trivial constant folding for binary ops.
-class CSEMIRBuilder : public MachineIRBuilder {
+class LLVM_ABI CSEMIRBuilder : public MachineIRBuilder {
 
   /// Returns true if A dominates B (within the same basic block).
   /// Both iterators must be in the same basic block.

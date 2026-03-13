@@ -16,6 +16,17 @@
 # CHECK-NEXT: [[FILE2]]
 # CHECK-NEXT:      18      36      72     126      7e (TOTALS)
 
+# RUN: yaml2obj %s --docnum=3 -o %t-macho.o
+# RUN: yaml2obj %s --docnum=4 -o %t-macho2.o
+# RUN: llvm-size --totals %t-macho.o %t-macho2.o | \
+# RUN:   FileCheck %s --check-prefix=MACHO-CHECK --strict-whitespace \
+# RUN:       --match-full-lines --implicit-check-not={{.}} -DFILE1=%t-macho.o -DFILE2=%t-macho2.o
+
+# MACHO-CHECK:__TEXT	__DATA	__OBJC	others	dec	hex
+# MACHO-CHECK-NEXT:20	100	0	32	152	98	[[FILE1]]
+# MACHO-CHECK-NEXT:20	200	0	32	252	fc	[[FILE2]]
+# MACHO-CHECK-NEXT:40	300	0	64	404	194	(TOTALS)
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -55,3 +66,141 @@ Sections:
     Type:    SHT_NOBITS
     Flags:   [SHF_ALLOC, SHF_WRITE]
     Size:    32
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           2
+  sizeofcmds:      352
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          152
+    fileoff:         384
+    filesize:        152
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            20
+        offset:          0x180
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x18
+        size:            100
+        offset:          0x198
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x20
+        size:            32
+        offset:          0x200
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         68157696
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           2
+  sizeofcmds:      352
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          252
+    fileoff:         384
+    filesize:        252
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            20
+        offset:          0x180
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x18
+        size:            200
+        offset:          0x198
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x20
+        size:            32
+        offset:          0x260
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         68157696

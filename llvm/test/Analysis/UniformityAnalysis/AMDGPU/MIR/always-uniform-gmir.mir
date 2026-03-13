@@ -1,10 +1,11 @@
 # NOTE: This file is Generic MIR translation of test/Analysis/UniformityAnalysis/AMDGPU/always_uniform.ll test file
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 ---
 name:            readfirstlane
 body:             |
   bb.1:
-    ; CHECK-LABEL: MachineUniformityInfo for function: readfirstlane
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @readfirstlane
     ; CHECK: DIVERGENT: %{{[0-9]+}}
     ; CHECK-SAME:llvm.amdgcn.workitem.id.x
     ; CHECK-NOT: DIVERGENT: {{.*}}llvm.amdgcn.readfirstlane
@@ -19,7 +20,7 @@ name:            icmp
 body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function: icmp
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @icmp
     ; CHECK-NEXT: ALL VALUES UNIFORM
 
     %3:_(p4) = COPY $sgpr4_sgpr5
@@ -39,7 +40,7 @@ name:            fcmp
 body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function: fcmp
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @fcmp
     ; CHECK-NEXT: ALL VALUES UNIFORM
 
     %3:_(p4) = COPY $sgpr4_sgpr5
@@ -62,7 +63,7 @@ name:            ballot
 body:             |
   bb.1:
     liveins: $sgpr4_sgpr5
-    ; CHECK-LABEL: MachineUniformityInfo for function: ballot
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @ballot
     ; CHECK-NEXT: ALL VALUES UNIFORM
 
     %2:_(p4) = COPY $sgpr4_sgpr5
@@ -85,12 +86,12 @@ registers:
 body:             |
   bb.0:
     liveins: $vgpr0
-    ; CHECK-LABEL: MachineUniformityInfo for function: asm_sgpr
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @asm_sgpr
     ; CHECK-NOT: DIVERGENT: %1
 
     %0:_(s32) = COPY $vgpr0
     %2:vgpr_32 = COPY %0(s32)
-    INLINEASM &"; def $0, $1", 0 /* attdialect */, 1966090 /* regdef:SReg_32 */, def %1, 1835017 /* reguse:VGPR_32 */, %2
+    INLINEASM &"; def $0, $1", 0 /* attdialect */, 1572874 /* regdef:SReg_32 */, def %1, 1179657 /* reguse:VGPR_32 */, %2
     %3:_(s32) = COPY %1
     $vgpr0 = COPY %3(s32)
     SI_RETURN implicit $vgpr0
@@ -112,7 +113,7 @@ frameInfo:
 body:             |
   bb.0:
     liveins: $vgpr0
-    ; CHECK-LABEL: MachineUniformityInfo for function: asm_mixed_sgpr_vgpr
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @asm_mixed_sgpr_vgpr
     ; CHECK: DIVERGENT: %0:
     ; CHECK: DIVERGENT: %3:
     ; CHECK-NOT: DIVERGENT: %1:
@@ -122,7 +123,7 @@ body:             |
     %0:_(s32) = COPY $vgpr0
     %6:_(p1) = G_IMPLICIT_DEF
     %3:vgpr_32 = COPY %0(s32)
-    INLINEASM &"; def $0, $1, $2", 0 /* attdialect */, 1966090 /* regdef:SReg_32 */, def %1, 1835018 /* regdef:VGPR_32 */, def %2, 1835017 /* reguse:VGPR_32 */, %3
+    INLINEASM &"; def $0, $1, $2", 0 /* attdialect */, 1572874 /* regdef:SReg_32 */, def %1, 1179658 /* regdef:VGPR_32 */, def %2, 1179657 /* reguse:VGPR_32 */, %3
     %4:_(s32) = COPY %1
     %5:_(s32) = COPY %2
     G_STORE %5(s32), %6(p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)

@@ -13,6 +13,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPCMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -47,7 +48,7 @@ FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
 
-void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   const char *RegName = getRegisterName(Reg);
   OS << RegName;
 }
@@ -81,7 +82,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   // Check if the last operand is an expression with the variant kind
-  // VK_PPC_PCREL_OPT. If this is the case then this is a linker optimization
+  // VK_PCREL_OPT. If this is the case then this is a linker optimization
   // relocation and the .reloc directive needs to be added.
   unsigned LastOp = MI->getNumOperands() - 1;
   if (MI->getNumOperands() > 1) {
@@ -91,7 +92,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       const MCSymbolRefExpr *SymExpr =
           static_cast<const MCSymbolRefExpr *>(Expr);
 
-      if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_PPC_PCREL_OPT) {
+      if (SymExpr && getSpecifier(SymExpr) == PPC::S_PCREL_OPT) {
         const MCSymbol &Symbol = SymExpr->getSymbol();
         if (MI->getOpcode() == PPC::PLDpc) {
           printInstruction(MI, Address, STI, O);
@@ -217,11 +218,10 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
 void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
-                                           raw_ostream &O,
-                                           const char *Modifier) {
+                                           raw_ostream &O, StringRef Modifier) {
   unsigned Code = MI->getOperand(OpNo).getImm();
 
-  if (StringRef(Modifier) == "cc") {
+  if (Modifier == "cc") {
     switch ((PPC::Predicate)Code) {
     case PPC::PRED_LT_MINUS:
     case PPC::PRED_LT_PLUS:
@@ -270,7 +270,7 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
     llvm_unreachable("Invalid predicate code");
   }
 
-  if (StringRef(Modifier) == "pm") {
+  if (Modifier == "pm") {
     switch ((PPC::Predicate)Code) {
     case PPC::PRED_LT:
     case PPC::PRED_LE:
@@ -308,7 +308,7 @@ void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
     llvm_unreachable("Invalid predicate code");
   }
 
-  assert(StringRef(Modifier) == "reg" &&
+  assert(Modifier == "reg" &&
          "Need to specify 'cc', 'pm' or 'reg' as predicate op modifier!");
   printOperand(MI, OpNo + 1, STI, O);
 }
@@ -323,43 +323,25 @@ void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
     O << "+";
 }
 
-void PPCInstPrinter::printU1ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for unsigned immediate operands with validation.
+// Validates that the value fits within the specified width and prints it.
+template <unsigned Width>
+void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 1 && "Invalid u1imm argument!");
+  assert(Value <= ((1U << Width) - 1) && "Invalid uimm argument!");
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printU2ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 3 && "Invalid u2imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU3ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 8 && "Invalid u3imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 15 && "Invalid u4imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for signed immediate operands with sign extension.
+// Sign-extends the value to the specified width and prints it.
+template <unsigned Width>
+void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   int Value = MI->getOperand(OpNo).getImm();
-  Value = SignExtend32<5>(Value);
+  Value = SignExtend32<Width>(Value);
   O << (int)Value;
 }
 
@@ -371,54 +353,14 @@ void PPCInstPrinter::printImmZeroOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printU5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 31 && "Invalid u5imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU6ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 63 && "Invalid u6imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 127 && "Invalid u7imm argument!");
-  O << (unsigned int)Value;
-}
-
-// Operands of BUILD_VECTOR are signed and we use this to print operands
-// of XXSPLTIB which are unsigned. So we simply truncate to 8 bits and
-// print as unsigned.
-void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Truncating version specifically for BUILD_VECTOR operands that may be
+// sign-extended (e.g., -1 becomes 0xFFFFFFFF). Truncates to 8 bits without
+// validation, unlike the standard printUImmOperand<8> which validates.
+void PPCInstPrinter::printU8ImmOperandTrunc(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
   unsigned char Value = MI->getOperand(OpNo).getImm();
   O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU10ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned short Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 1023 && "Invalid u10imm argument!");
-  O << (unsigned short)Value;
-}
-
-void PPCInstPrinter::printU12ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned short Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 4095 && "Invalid u12imm argument!");
-  O << (unsigned short)Value;
 }
 
 void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -427,6 +369,17 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
   if (MI->getOperand(OpNo).isImm())
     O << (short)MI->getOperand(OpNo).getImm();
   else
+    printOperand(MI, OpNo, STI, O);
+}
+
+void PPCInstPrinter::printS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<32>(Value) && "Invalid s32imm argument!");
+    O << (long long)Value;
+  } else
     printOperand(MI, OpNo, STI, O);
 }
 
@@ -492,9 +445,9 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
 
 void PPCInstPrinter::printcrbitm(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned CCReg = MI->getOperand(OpNo).getReg();
+  MCRegister CCReg = MI->getOperand(OpNo).getReg();
   unsigned RegNo;
-  switch (CCReg) {
+  switch (CCReg.id()) {
   default: llvm_unreachable("Unknown CR register");
   case PPC::CR0: RegNo = 0; break;
   case PPC::CR1: RegNo = 1; break;
@@ -575,22 +528,22 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
     RefExp = cast<MCSymbolRefExpr>(Op.getExpr());
 
   O << RefExp->getSymbol().getName();
-  // The variant kind VK_PPC_NOTOC needs to be handled as a special case
+  // The variant kind VK_NOTOC needs to be handled as a special case
   // because we do not want the assembly to print out the @notoc at the
   // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
   // like __tls_get_addr@notoc(x@tlsgd).
-  if (RefExp->getKind() == MCSymbolRefExpr::VK_PPC_NOTOC)
-    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
+  if (getSpecifier(RefExp) == PPC::S_NOTOC)
+    O << '@' << MAI.getSpecifierName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
-  if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
-      RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
-    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
+  if (getSpecifier(RefExp) != PPC::S_None &&
+      getSpecifier(RefExp) != PPC::S_NOTOC)
+    O << '@' << MAI.getSpecifierName(RefExp->getKind());
   if (Rhs) {
     SmallString<0> Buf;
     raw_svector_ostream Tmp(Buf);
-    Rhs->print(Tmp, &MAI);
+    MAI.printExpr(Tmp, *Rhs);
     if (isdigit(Buf[0]))
       O << '+';
     O << Buf;
@@ -619,11 +572,11 @@ bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
 /// getVerboseConditionalRegName - This method expands the condition register
 /// when requested explicitly or targetting Darwin.
 const char *
-PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
+PPCInstPrinter::getVerboseConditionRegName(MCRegister Reg,
                                            unsigned RegEncoding) const {
   if (!FullRegNames && !MAI.useFullRegisterNames())
     return nullptr;
-  if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
+  if (Reg < PPC::CR0EQ || Reg > PPC::CR7UN)
     return nullptr;
   const char *CRBits[] = {
     "lt", "gt", "eq", "un",
@@ -648,7 +601,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
@@ -671,5 +624,5 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand kind in printOperand");
-  Op.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *Op.getExpr());
 }

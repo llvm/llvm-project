@@ -9,19 +9,21 @@ target triple = "wasm32-unknown-unknown"
 define void @shl_loop(ptr %a, i8 %shift, i32 %count) {
 ; CHECK-LABEL: shl_loop:
 ; CHECK:         .functype shl_loop (i32, i32, i32) -> ()
+; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB0_1: # %body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    loop # label0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0:p2align=0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shl
-; CHECK-NEXT:    v128.store 16
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i32.const -1
@@ -56,23 +58,25 @@ exit:
 define void @shl_phi_loop(ptr %a, i8 %shift, i32 %count) {
 ; CHECK-LABEL: shl_phi_loop:
 ; CHECK:         .functype shl_phi_loop (i32, i32, i32) -> ()
+; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB1_1: # %body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    loop # label1:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.tee 3
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load 0:p2align=0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.shl
-; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    local.set 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i32.const -1

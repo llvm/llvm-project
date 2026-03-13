@@ -1,0 +1,1025 @@
+//===- OpenACCUtilsLoopTest.cpp - Unit tests for OpenACC loop utilities --===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
+#include "gtest/gtest.h"
+
+using namespace mlir;
+using namespace mlir::acc;
+
+//===----------------------------------------------------------------------===//
+// Test Fixture
+//===----------------------------------------------------------------------===//
+
+class OpenACCUtilsLoopTest : public ::testing::Test {
+protected:
+  OpenACCUtilsLoopTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    context.loadDialect<acc::OpenACCDialect, affine::AffineDialect,
+                        arith::ArithDialect, memref::MemRefDialect,
+                        func::FuncDialect, scf::SCFDialect,
+                        cf::ControlFlowDialect>();
+  }
+
+  /// Helper to create an index constant
+  Value createIndexConstant(int64_t value) {
+    return arith::ConstantIndexOp::create(b, loc, value);
+  }
+
+  /// Helper to create an i32 constant
+  Value createI32Constant(int32_t value) {
+    return arith::ConstantIntOp::create(b, loc, b.getI32Type(), value);
+  }
+
+  /// Helper to create a simple acc.loop with the given bounds.
+  /// Preserves the builder's insertion point.
+  acc::LoopOp createLoopOp(ValueRange lbs, ValueRange ubs, ValueRange steps,
+                           bool inclusiveUpperbound = true) {
+    OpBuilder::InsertionGuard guard(b);
+
+    auto loopOp = acc::LoopOp::create(b, loc, lbs, ubs, steps,
+                                      acc::LoopParMode::loop_independent);
+
+    // Set inclusive upper bound attribute
+    SmallVector<bool> inclusiveFlags(lbs.size(), inclusiveUpperbound);
+    loopOp.setInclusiveUpperboundAttr(b.getDenseBoolArrayAttr(inclusiveFlags));
+
+    // Add body block with IV arguments and yield
+    Region &region = loopOp.getRegion();
+    Block *block = b.createBlock(&region, region.begin());
+    for (Value lb : lbs)
+      block->addArgument(lb.getType(), loc);
+    b.setInsertionPointToEnd(block);
+    acc::YieldOp::create(b, loc);
+
+    return loopOp;
+  }
+
+  /// Helper to create an unstructured acc.loop with multiple blocks and ops.
+  /// Preserves the builder's insertion point.
+  acc::LoopOp createUnstructuredLoopOp(ValueRange lbs, ValueRange ubs,
+                                       ValueRange steps) {
+    OpBuilder::InsertionGuard guard(b);
+
+    auto loopOp = acc::LoopOp::create(b, loc, lbs, ubs, steps,
+                                      acc::LoopParMode::loop_independent);
+    loopOp.setInclusiveUpperboundAttr(
+        b.getDenseBoolArrayAttr(SmallVector<bool>(lbs.size(), true)));
+    loopOp.setUnstructuredAttr(b.getUnitAttr());
+
+    // Create 4 blocks with control flow to test proper replication
+    Region &region = loopOp.getRegion();
+    Block *entry = b.createBlock(&region, region.begin());
+    Block *thenBlock = b.createBlock(&region, region.end());
+    Block *elseBlock = b.createBlock(&region, region.end());
+    Block *exitBlock = b.createBlock(&region, region.end());
+
+    // Entry block: create a condition and conditional branch
+    b.setInsertionPointToEnd(entry);
+    Value cond =
+        arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+    cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+    // Then block: create an arith op and branch to exit
+    b.setInsertionPointToEnd(thenBlock);
+    Value c1 =
+        arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+    Value c2 =
+        arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+    arith::AddIOp::create(b, loc, c1, c2);
+    cf::BranchOp::create(b, loc, exitBlock);
+
+    // Else block: create a different arith op and branch to exit
+    b.setInsertionPointToEnd(elseBlock);
+    Value c3 =
+        arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+    Value c4 =
+        arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(4));
+    arith::MulIOp::create(b, loc, c3, c4);
+    cf::BranchOp::create(b, loc, exitBlock);
+
+    // Exit block: yield
+    b.setInsertionPointToEnd(exitBlock);
+    acc::YieldOp::create(b, loc);
+
+    return loopOp;
+  }
+
+  /// Create a module with a function and set the insertion point in it
+  std::pair<OwningOpRef<ModuleOp>, func::FuncOp> createModuleWithFunc() {
+    OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+    b.setInsertionPointToStart(module->getBody());
+
+    auto funcType = b.getFunctionType({}, {});
+    auto funcOp = func::FuncOp::create(b, loc, "test_func", funcType);
+    Block *entryBlock = funcOp.addEntryBlock();
+    b.setInsertionPointToStart(entryBlock);
+
+    return {std::move(module), funcOp};
+  }
+
+  /// Create a module with a function that has arguments
+  std::pair<OwningOpRef<ModuleOp>, func::FuncOp>
+  createModuleWithFuncArgs(TypeRange argTypes) {
+    OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+    b.setInsertionPointToStart(module->getBody());
+
+    auto funcType = b.getFunctionType(argTypes, {});
+    auto funcOp = func::FuncOp::create(b, loc, "test_func", funcType);
+    Block *entryBlock = funcOp.addEntryBlock();
+    b.setInsertionPointToStart(entryBlock);
+
+    return {std::move(module), funcOp};
+  }
+
+  /// Helper to extract constant index value from a Value
+  std::optional<int64_t> getConstantIndex(Value v) {
+    if (auto constOp = v.getDefiningOp<arith::ConstantIndexOp>())
+      return constOp.value();
+    if (auto constOp = v.getDefiningOp<arith::ConstantOp>()) {
+      if (auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue()))
+        return intAttr.getInt();
+    }
+    return std::nullopt;
+  }
+
+  MLIRContext context;
+  IRRewriter b;
+  Location loc;
+};
+
+//===----------------------------------------------------------------------===//
+// convertACCLoopToSCFFor Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, ConvertSimpleLoopToSCFFor) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // Verify IV type is index
+  EXPECT_TRUE(forOp.getInductionVar().getType().isIndex());
+
+  // Verify bounds: lb=0, ub=11 (folded from 10+1), step=1
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto ubConst = getConstantIndex(forOp.getUpperBound());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*ubConst, 11); // inclusive 10 becomes exclusive 11
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+
+  // Verify the body has a yield terminator
+  EXPECT_TRUE(isa<scf::YieldOp>(forOp.getBody()->getTerminator()));
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithI32Bounds) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value lb = createI32Constant(0);
+  Value ub = createI32Constant(100);
+  Value step = createI32Constant(1);
+
+  acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // IV type should be converted to index
+  EXPECT_TRUE(forOp.getInductionVar().getType().isIndex());
+
+  // Bounds should be cast to index type
+  EXPECT_TRUE(forOp.getLowerBound().getType().isIndex());
+  EXPECT_TRUE(forOp.getUpperBound().getType().isIndex());
+  EXPECT_TRUE(forOp.getStep().getType().isIndex());
+
+  // Verify the body has a yield terminator
+  EXPECT_TRUE(isa<scf::YieldOp>(forOp.getBody()->getTerminator()));
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
+  auto [module, funcOp] =
+      createModuleWithFuncArgs({b.getIndexType(), b.getIndexType()});
+
+  Value lb = funcOp.getArgument(0);
+  Value ub = funcOp.getArgument(1);
+  Value step = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // Normalized: lb=0, step=1, ub=tripCount (computed from dynamic bounds)
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+
+  EXPECT_FALSE(getConstantIndex(forOp.getUpperBound()).has_value());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0, c0}, {c10, c10}, {c1, c1});
+  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/true);
+
+  ASSERT_TRUE(forOp);
+
+  // With collapse, there should be NO nested for loops
+  bool hasNestedFor = false;
+  forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
+  EXPECT_FALSE(hasNestedFor);
+
+  // The collapsed loop should iterate over the product of dimensions
+  // lb=0, step=1 (after collapsing two 0..10 inclusive loops)
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+
+  // Upper bound should be 11*11=121 (product of trip counts)
+  // coalesceLoops normalizes the loops, so ub = totalTripCount
+  EXPECT_TRUE(forOp.getUpperBound().getType().isIndex());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNoCollapse) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0, c0}, {c10, c10}, {c1, c1});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  bool hasNestedFor = false;
+  forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
+  EXPECT_TRUE(hasNestedFor);
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapseAndDynamicBounds) {
+  // Test with dynamic (non-constant) bounds to ensure all bounds are computed
+  // before any ForOp is created. This is required for coalesceLoops to work
+  // correctly (called when enableCollapse is true) - if inner loop bounds were
+  // computed inside the outer loop, coalesceLoops would create ops that
+  // reference values from a nested region.
+  auto [module, funcOp] = createModuleWithFuncArgs(
+      {b.getIndexType(), b.getIndexType(), b.getIndexType(), b.getIndexType()});
+
+  // Use function arguments as dynamic bounds
+  Value lb0 = funcOp.getArgument(0);
+  Value ub0 = funcOp.getArgument(1);
+  Value lb1 = funcOp.getArgument(2);
+  Value ub1 = funcOp.getArgument(3);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({lb0, lb1}, {ub0, ub1}, {c1, c1});
+  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/true);
+
+  ASSERT_TRUE(forOp);
+
+  // With collapse, there should be NO nested for loops
+  bool hasNestedFor = false;
+  forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
+  EXPECT_FALSE(hasNestedFor);
+
+  // Verify the IR is valid
+  EXPECT_TRUE(module->verify().succeeded());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForExclusiveUpperBound) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp =
+      createLoopOp({c0}, {c10}, {c1}, /*inclusiveUpperbound=*/false);
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // Normalized: lb=0, step=1, ub=tripCount
+  // For exclusive [0, 10) with step 1: tripCount = (9 - 0 + 1) / 1 = 10
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto ubConst = getConstantIndex(forOp.getUpperBound());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*ubConst, 10);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNegativeStep) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  Value cNeg1 = createIndexConstant(-1);
+
+  // acc.loop from 10 to 1 step -1 (inclusive)
+  acc::LoopOp loopOp = createLoopOp({c10}, {c1}, {cNeg1});
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
+
+  ASSERT_TRUE(forOp);
+
+  // Normalized: lb=0, step=1, ub=tripCount
+  // tripCount = (1 - 10 + (-1)) / (-1) = (-10) / (-1) = 10
+  auto lbConst = getConstantIndex(forOp.getLowerBound());
+  ASSERT_TRUE(lbConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+
+  auto ubConst = getConstantIndex(forOp.getUpperBound());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*ubConst, 10);
+
+  auto stepConst = getConstantIndex(forOp.getStep());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*stepConst, 1);
+
+  EXPECT_TRUE(isa<scf::YieldOp>(forOp.getBody()->getTerminator()));
+  EXPECT_TRUE(module->verify().succeeded());
+}
+
+//===----------------------------------------------------------------------===//
+// convertACCLoopToSCFParallel Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, ConvertSimpleLoopToSCFParallel) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+  scf::ParallelOp parallelOp = convertACCLoopToSCFParallel(loopOp, b);
+
+  ASSERT_TRUE(parallelOp);
+  EXPECT_EQ(parallelOp.getNumLoops(), 1u);
+
+  // scf.parallel uses normalized bounds: lb=0, step=1, ub=tripCount
+  auto lb = getConstantIndex(parallelOp.getLowerBound()[0]);
+  auto step = getConstantIndex(parallelOp.getStep()[0]);
+  auto ub = getConstantIndex(parallelOp.getUpperBound()[0]);
+  ASSERT_TRUE(lb.has_value());
+  ASSERT_TRUE(step.has_value());
+  ASSERT_TRUE(ub.has_value());
+  EXPECT_EQ(*lb, 0);
+  EXPECT_EQ(*step, 1);
+  EXPECT_EQ(*ub, 11); // trip count for 0..10 inclusive with step 1
+
+  // Verify IVs are index type
+  EXPECT_EQ(parallelOp.getInductionVars().size(), 1u);
+  EXPECT_TRUE(parallelOp.getInductionVars()[0].getType().isIndex());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithI32BoundsToSCFParallel) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value lb = createI32Constant(5);
+  Value ub = createI32Constant(15);
+  Value step = createI32Constant(2);
+
+  acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
+  scf::ParallelOp parallelOp = convertACCLoopToSCFParallel(loopOp, b);
+
+  ASSERT_TRUE(parallelOp);
+  EXPECT_EQ(parallelOp.getNumLoops(), 1u);
+
+  // All bounds should be index type (converted from i32)
+  EXPECT_TRUE(parallelOp.getLowerBound()[0].getType().isIndex());
+  EXPECT_TRUE(parallelOp.getUpperBound()[0].getType().isIndex());
+  EXPECT_TRUE(parallelOp.getStep()[0].getType().isIndex());
+
+  // Normalized: lb=0, step=1
+  // Note: ub is trip count but not folded because index_cast prevents folding
+  auto lbConst = getConstantIndex(parallelOp.getLowerBound()[0]);
+  auto stepConst = getConstantIndex(parallelOp.getStep()[0]);
+  ASSERT_TRUE(lbConst.has_value());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+  EXPECT_EQ(*stepConst, 1);
+
+  // Verify IVs are index type
+  EXPECT_TRUE(parallelOp.getInductionVars()[0].getType().isIndex());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBoundsToSCFParallel) {
+  auto [module, funcOp] = createModuleWithFuncArgs(
+      {b.getIndexType(), b.getIndexType(), b.getIndexType()});
+  Block &entryBlock = funcOp.getBody().front();
+
+  Value lb = entryBlock.getArgument(0);
+  Value ub = entryBlock.getArgument(1);
+  Value step = entryBlock.getArgument(2);
+
+  acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
+  scf::ParallelOp parallelOp = convertACCLoopToSCFParallel(loopOp, b);
+
+  ASSERT_TRUE(parallelOp);
+  EXPECT_EQ(parallelOp.getNumLoops(), 1u);
+
+  // Normalized: lb=0, step=1
+  auto lbConst = getConstantIndex(parallelOp.getLowerBound()[0]);
+  auto stepConst = getConstantIndex(parallelOp.getStep()[0]);
+  ASSERT_TRUE(lbConst.has_value());
+  ASSERT_TRUE(stepConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+  EXPECT_EQ(*stepConst, 1);
+
+  // Upper bound should be computed trip count (not a constant)
+  // Verify it's not a simple constant (since bounds are dynamic)
+  EXPECT_FALSE(getConstantIndex(parallelOp.getUpperBound()[0]).has_value());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertMultiDimLoopToSCFParallel) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({c0, c0}, {c10, c10}, {c1, c1});
+  scf::ParallelOp parallelOp = convertACCLoopToSCFParallel(loopOp, b);
+
+  ASSERT_TRUE(parallelOp);
+  EXPECT_EQ(parallelOp.getNumLoops(), 2u);
+
+  // Both dimensions should have normalized lb=0, step=1, ub=11
+  for (unsigned i = 0; i < 2; ++i) {
+    auto lb = getConstantIndex(parallelOp.getLowerBound()[i]);
+    auto step = getConstantIndex(parallelOp.getStep()[i]);
+    auto ub = getConstantIndex(parallelOp.getUpperBound()[i]);
+
+    ASSERT_TRUE(lb.has_value());
+    ASSERT_TRUE(step.has_value());
+    ASSERT_TRUE(ub.has_value());
+
+    EXPECT_EQ(*lb, 0);
+    EXPECT_EQ(*step, 1);
+    EXPECT_EQ(*ub, 11); // 0..10 inclusive = 11 iterations
+  }
+
+  // Should have 2 induction variables
+  EXPECT_EQ(parallelOp.getInductionVars().size(), 2u);
+  EXPECT_TRUE(parallelOp.getInductionVars()[0].getType().isIndex());
+  EXPECT_TRUE(parallelOp.getInductionVars()[1].getType().isIndex());
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithLargeStepToSCFParallel) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value lb = createIndexConstant(0);
+  Value ub = createIndexConstant(100);
+  Value step = createIndexConstant(10);
+
+  acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
+  scf::ParallelOp parallelOp = convertACCLoopToSCFParallel(loopOp, b);
+
+  ASSERT_TRUE(parallelOp);
+  EXPECT_EQ(parallelOp.getNumLoops(), 1u);
+
+  // Normalized: lb=0, step=1, ub=tripCount
+  auto lbConst = getConstantIndex(parallelOp.getLowerBound()[0]);
+  auto stepConst = getConstantIndex(parallelOp.getStep()[0]);
+  auto ubConst = getConstantIndex(parallelOp.getUpperBound()[0]);
+  ASSERT_TRUE(lbConst.has_value());
+  ASSERT_TRUE(stepConst.has_value());
+  ASSERT_TRUE(ubConst.has_value());
+  EXPECT_EQ(*lbConst, 0);
+  EXPECT_EQ(*stepConst, 1);
+  EXPECT_EQ(*ubConst, 11); // trip count for 0..100 inclusive with step 10
+
+  // Verify IV is index type
+  EXPECT_TRUE(parallelOp.getInductionVars()[0].getType().isIndex());
+}
+
+//===----------------------------------------------------------------------===//
+// convertUnstructuredACCLoopToSCFExecuteRegion Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, ConvertUnstructuredLoopToExecuteRegion) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createUnstructuredLoopOp({c0}, {c10}, {c1});
+
+  // Verify the source loop has 4 blocks
+  EXPECT_EQ(loopOp.getRegion().getBlocks().size(), 4u);
+
+  scf::ExecuteRegionOp exeRegionOp =
+      convertUnstructuredACCLoopToSCFExecuteRegion(loopOp, b);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  // The execute_region should have 4 blocks replicated from the source
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 4u);
+
+  // Verify that the control flow structure is preserved:
+  Block &entryBlock = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(entryBlock.getTerminator()));
+
+  Block &exitBlock = exeRegionOp.getRegion().back();
+  EXPECT_TRUE(isa<scf::YieldOp>(exitBlock.getTerminator()));
+
+  // Count arith operations to verify body was cloned correctly
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertUnstructuredLoopPreservesSuccessors) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createUnstructuredLoopOp({c0}, {c10}, {c1});
+  scf::ExecuteRegionOp exeRegionOp =
+      convertUnstructuredACCLoopToSCFExecuteRegion(loopOp, b);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  Block &entryBlock = exeRegionOp.getRegion().front();
+  auto condBranch = dyn_cast<cf::CondBranchOp>(entryBlock.getTerminator());
+  ASSERT_TRUE(condBranch);
+
+  // Both successors should exist in the region
+  Block *trueDest = condBranch.getTrueDest();
+  Block *falseDest = condBranch.getFalseDest();
+  EXPECT_TRUE(trueDest->getParent() == &exeRegionOp.getRegion());
+  EXPECT_TRUE(falseDest->getParent() == &exeRegionOp.getRegion());
+}
+
+//===----------------------------------------------------------------------===//
+// wrapMultiBlockRegionWithSCFExecuteRegion Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionMultiBlock) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  // Create a region with multi-block control flow: use acc.parallel
+  // only to own the region, then build entry -> then/else -> exit with
+  // acc.yield.
+  OwningOpRef<acc::ParallelOp> parallelOp =
+      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  Region &region = parallelOp->getRegion();
+  Block *entry = b.createBlock(&region, region.begin());
+  Block *thenBlock = b.createBlock(&region, region.end());
+  Block *elseBlock = b.createBlock(&region, region.end());
+  Block *exitBlock = b.createBlock(&region, region.end());
+
+  b.setInsertionPointToEnd(entry);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+  cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+  b.setInsertionPointToEnd(thenBlock);
+  Value c1 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+  Value c2 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+  arith::AddIOp::create(b, loc, c1, c2);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(elseBlock);
+  Value c3 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+  Value c4 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(4));
+  arith::MulIOp::create(b, loc, c3, c4);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(exitBlock);
+  acc::YieldOp::create(b, loc);
+
+  EXPECT_EQ(region.getBlocks().size(), 4u);
+
+  b.setInsertionPointAfter(parallelOp.get());
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  // The execute_region should have the same number of blocks as the source
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 4u);
+
+  // Entry block should have cond_br (control flow preserved)
+  Block &entryBlock = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(entryBlock.getTerminator()));
+
+  // Last block should have scf.yield (acc.yield was replaced)
+  Block &lastBlock = exeRegionOp.getRegion().back();
+  EXPECT_TRUE(isa<scf::YieldOp>(lastBlock.getTerminator()));
+
+  // Body ops should be cloned (one addi, one muli from then/else blocks)
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockWithEarlyExitRegionWithSCFExecuteRegion) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  OwningOpRef<acc::ParallelOp> parallelOp =
+      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  Region &region = parallelOp->getRegion();
+  // Block order as in all.mlir: ^bb0 entry, ^bb1 header, ^bb2 exit, ^bb3 body
+  Block *entry = b.createBlock(&region, region.begin());
+  Block *header = b.createBlock(&region, region.end());
+  Block *exitBlock = b.createBlock(&region, region.end());
+  Block *bodyBlock = b.createBlock(&region, region.end());
+
+  // ^bb0 (entry): setup then cf.br ^bb1
+  b.setInsertionPointToEnd(entry);
+  Value c1 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+  arith::AddIOp::create(b, loc, c1, c1); // some op like fir.store in all.mlir
+  cf::BranchOp::create(b, loc, header);
+
+  // ^bb1 (header): 2 preds (entry, body). cond_br to exit or body
+  b.setInsertionPointToEnd(header);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(false));
+  cf::CondBranchOp::create(b, loc, cond, exitBlock, bodyBlock);
+
+  // ^bb2 (exit): return — use acc.yield (replaced with scf.yield by the util)
+  b.setInsertionPointToEnd(exitBlock);
+  acc::YieldOp::create(b, loc);
+
+  // ^bb3 (body): body ops then cf.br ^bb1
+  b.setInsertionPointToEnd(bodyBlock);
+  Value c2 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+  Value c3 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+  arith::MulIOp::create(b, loc, c2, c3);
+  cf::BranchOp::create(b, loc, header);
+
+  EXPECT_EQ(region.getBlocks().size(), 4u);
+
+  b.setInsertionPointAfter(parallelOp.get());
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 4u);
+
+  // First block (entry): branch to header
+  Block &exeEntry = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::BranchOp>(exeEntry.getTerminator()));
+
+  // Second block (header): cond_br, 2 predecessors (entry and body)
+  Block &exeHeader = *std::next(exeRegionOp.getRegion().begin());
+  EXPECT_TRUE(isa<cf::CondBranchOp>(exeHeader.getTerminator()));
+
+  // Third block (exit): scf.yield
+  Block &exeExit = *std::next(exeRegionOp.getRegion().begin(), 2);
+  EXPECT_TRUE(isa<scf::YieldOp>(exeExit.getTerminator()));
+
+  // Fourth block (body): branch back to header
+  Block &exeBody = exeRegionOp.getRegion().back();
+  EXPECT_TRUE(isa<cf::BranchOp>(exeBody.getTerminator()));
+  EXPECT_EQ(exeBody.getTerminator()->getSuccessor(0), &exeHeader);
+
+  // Body ops preserved: one addi (entry), one muli (body)
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionConvertFuncReturn) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  // Build a multi-block region that uses func.return (function body).
+  // wrapMultiBlockRegionWithSCFExecuteRegion(..., true) should replace
+  // func.return with scf.yield.
+  Region &region = funcOp.getBody();
+  Block *entry = &region.front();
+  Block *thenBlock = b.createBlock(&region, region.end());
+  Block *elseBlock = b.createBlock(&region, region.end());
+  Block *exitBlock = b.createBlock(&region, region.end());
+  Block *tailBlock = b.createBlock(&region, region.end());
+
+  b.setInsertionPointToEnd(entry);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+  cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+  b.setInsertionPointToEnd(thenBlock);
+  Value c1 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+  Value c2 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+  arith::AddIOp::create(b, loc, c1, c2);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(elseBlock);
+  Value c3 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+  Value c4 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(4));
+  arith::MulIOp::create(b, loc, c3, c4);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  b.setInsertionPointToEnd(exitBlock);
+  func::ReturnOp::create(b, loc, ValueRange{});
+
+  b.setInsertionPointToEnd(tailBlock);
+  cf::BranchOp::create(b, loc, exitBlock);
+
+  EXPECT_EQ(region.getBlocks().size(), 5u);
+
+  b.setInsertionPointAfter(funcOp);
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
+      region, mapping, loc, b, /*convertFuncReturn=*/true);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 5u);
+
+  // Only the block that had func.return is replaced with scf.yield; other
+  // blocks keep their cf.cond_br / cf.br terminators.
+  unsigned exeBlockIndex = 0;
+  Block *exeExitBlock = nullptr;
+  for (Block &block : exeRegionOp.getRegion().getBlocks()) {
+    if (exeBlockIndex ==
+        3) // exitBlock (entry=0, then=1, else=2, exit=3, tail=4)
+      exeExitBlock = &block;
+    exeBlockIndex++;
+  }
+  ASSERT_TRUE(exeExitBlock);
+  EXPECT_TRUE(isa<scf::YieldOp>(exeExitBlock->getTerminator()))
+      << "block that had func.return should now have scf.yield";
+
+  // Control flow and body ops preserved
+  Block &exeEntry = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(exeEntry.getTerminator()));
+
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionFuncMultipleReturnsWithResults) {
+  // Create a function with multiple blocks that each end with func.return
+  // with results. wrapMultiBlockRegionWithSCFExecuteRegion(..., true) should
+  // replace each func.return with scf.yield and produce an execute_region
+  // with the same result types.
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  b.setInsertionPointToStart(module->getBody());
+
+  Type i32 = b.getI32Type();
+  auto funcType = b.getFunctionType({}, {i32});
+  auto funcOp = func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *entry = funcOp.addEntryBlock();
+  Block *thenBlock = b.createBlock(&funcOp.getBody(), funcOp.getBody().end());
+  Block *elseBlock = b.createBlock(&funcOp.getBody(), funcOp.getBody().end());
+
+  b.setInsertionPointToEnd(entry);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(true));
+  cf::CondBranchOp::create(b, loc, cond, thenBlock, elseBlock);
+
+  b.setInsertionPointToEnd(thenBlock);
+  Value thenV = createI32Constant(1);
+  func::ReturnOp::create(b, loc, ValueRange{thenV});
+
+  b.setInsertionPointToEnd(elseBlock);
+  Value elseV = createI32Constant(3);
+  func::ReturnOp::create(b, loc, ValueRange{elseV});
+
+  Region &region = funcOp.getBody();
+  EXPECT_EQ(region.getBlocks().size(), 3u);
+
+  b.setInsertionPointAfter(funcOp);
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp = wrapMultiBlockRegionWithSCFExecuteRegion(
+      region, mapping, loc, b, /*convertFuncReturn=*/true);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  // execute_region should have one result (same as func.return operands)
+  EXPECT_EQ(exeRegionOp.getNumResults(), 1u);
+  EXPECT_TRUE(exeRegionOp.getResult(0).getType().isSignlessInteger(32));
+
+  // Cloned region should have 3 blocks
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 3u);
+
+  // Entry block: cond_br unchanged
+  Block &exeEntry = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::CondBranchOp>(exeEntry.getTerminator()));
+
+  // Both then and else blocks should now have scf.yield with one operand
+  unsigned yieldCount = 0;
+  for (Block &block : exeRegionOp.getRegion().getBlocks()) {
+    if (isa<scf::YieldOp>(block.getTerminator())) {
+      EXPECT_EQ(block.getTerminator()->getNumOperands(), 1u);
+      yieldCount++;
+    }
+  }
+  EXPECT_EQ(yieldCount, 2u) << "both return blocks should be scf.yield";
+}
+
+TEST_F(OpenACCUtilsLoopTest, UnstructuredLoopWithYieldOperandsSucceeds) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+
+  // Create an unstructured loop where the yield has operands (loop with
+  // results); conversion should succeed and produce execute_region with
+  // results.
+  auto loopOp = acc::LoopOp::create(b, loc, {c0}, {c10}, {c1},
+                                    acc::LoopParMode::loop_independent);
+  loopOp.setInclusiveUpperboundAttr(b.getDenseBoolArrayAttr({true}));
+  loopOp.setUnstructuredAttr(b.getUnitAttr());
+
+  // Create multi-block body with yield that has operands
+  {
+    OpBuilder::InsertionGuard guard(b);
+    Region &region = loopOp.getRegion();
+    Block *entry = b.createBlock(&region, region.begin());
+    Block *exitBlock = b.createBlock(&region, region.end());
+
+    b.setInsertionPointToEnd(entry);
+    cf::BranchOp::create(b, loc, exitBlock);
+
+    b.setInsertionPointToEnd(exitBlock);
+    Value result = createI32Constant(42);
+    acc::YieldOp::create(b, loc, ValueRange{result});
+  }
+
+  scf::ExecuteRegionOp exeRegionOp =
+      convertUnstructuredACCLoopToSCFExecuteRegion(loopOp, b);
+
+  ASSERT_TRUE(exeRegionOp);
+  EXPECT_EQ(exeRegionOp.getNumResults(), 1u);
+  EXPECT_TRUE(exeRegionOp.getResult(0).getType().isSignlessInteger(32));
+}
+
+//===----------------------------------------------------------------------===//
+// cloneACCRegionInto Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithYield) {
+  auto [module, funcOp] = createModuleWithFunc();
+  Block *entry = &funcOp.getBody().front();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  // Add a constant to the loop body before the yield so the region has
+  // something to clone besides the terminator.
+  Block *loopBody = &loopOp.getRegion().front();
+  b.setInsertionPoint(loopBody->getTerminator());
+  arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(42));
+
+  b.setInsertionPointToEnd(entry);
+  func::ReturnOp::create(b, loc);
+
+  IRMapping mapping;
+  mapping.map(loopBody->getArgument(0), c0);
+
+  auto [replacements, ip] = acc::cloneACCRegionInto(
+      &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{});
+
+  EXPECT_TRUE(replacements.empty());
+  // The cloned block should have been merged: constant 42 present, no acc.yield
+  bool hasConst42 = false;
+  bool hasAccYield = false;
+  for (Operation &op : entry->getOperations()) {
+    if (auto cst = dyn_cast<arith::ConstantOp>(op))
+      hasConst42 = hasConst42 || (cst.getValue() == b.getI32IntegerAttr(42));
+    hasAccYield = hasAccYield || isa<acc::YieldOp>(op);
+  }
+  EXPECT_TRUE(hasConst42);
+  EXPECT_FALSE(hasAccYield);
+}
+
+TEST_F(OpenACCUtilsLoopTest, CloneACCRegionIntoWithResultReplacement) {
+  auto [module, funcOp] = createModuleWithFunc();
+  Block *entry = &funcOp.getBody().front();
+
+  // Value that will be replaced by the cloned region's yield operand
+  Value origVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(0)).getResult();
+
+  Value c0 = createIndexConstant(0);
+  Value c10 = createIndexConstant(10);
+  Value c1 = createIndexConstant(1);
+  acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
+
+  Block *loopBody = &loopOp.getRegion().front();
+  b.setInsertionPoint(loopBody->getTerminator());
+  Value replacementVal =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  loopBody->getTerminator()->erase();
+  b.setInsertionPointToEnd(loopBody);
+  acc::YieldOp::create(b, loc, ValueRange{replacementVal});
+
+  b.setInsertionPointToEnd(entry);
+  Value c1value =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(1)).getResult();
+  Value addResult = arith::AddIOp::create(b, loc, origVal, c1value)
+                        .getResult(); // use of origVal
+  (void)addResult;
+  func::ReturnOp::create(b, loc);
+
+  IRMapping mapping;
+  mapping.map(loopBody->getArgument(0), c0);
+
+  auto [replacements, ip] = acc::cloneACCRegionInto(
+      &loopOp.getRegion(), entry, entry->begin(), mapping, ValueRange{origVal});
+
+  ASSERT_EQ(replacements.size(), 1u);
+  // The addi should now use the replacement (constant 1), not origVal
+  bool addiUsesReplacement = false;
+  for (Operation &op : entry->getOperations()) {
+    if (auto addi = dyn_cast<arith::AddIOp>(op))
+      addiUsesReplacement = (addi.getLhs() == replacements[0]);
+  }
+  EXPECT_TRUE(addiUsesReplacement);
+}

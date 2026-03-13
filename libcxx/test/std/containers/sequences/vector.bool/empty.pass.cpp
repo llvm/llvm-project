@@ -18,9 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
     typedef std::vector<bool> C;
     C c;
     ASSERT_NOEXCEPT(c.empty());
@@ -29,9 +28,9 @@ TEST_CONSTEXPR_CXX20 bool tests()
     assert(!c.empty());
     c.clear();
     assert(c.empty());
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::vector<bool, min_allocator<bool>> C;
     C c;
     ASSERT_NOEXCEPT(c.empty());
@@ -40,17 +39,16 @@ TEST_CONSTEXPR_CXX20 bool tests()
     assert(!c.empty());
     c.clear();
     assert(c.empty());
-    }
+  }
 #endif
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

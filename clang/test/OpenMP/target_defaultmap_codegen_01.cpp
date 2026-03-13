@@ -6,6 +6,8 @@
 
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
+// Verify implicit-behavior 'storage' as alias for 'alloc' in OpenMP 6.0
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -DOMP6 -verify -Wno-vla -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK1 -verify -Wno-vla -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK1
@@ -43,8 +45,12 @@ void implicit_maps_double_complex (int a){
 // CK1-DAG: store ptr [[PTR]], ptr [[P1]]
 
 // CK1: call void [[KERNEL:@.+]](ptr [[PTR]])
-#pragma omp target defaultmap(alloc \
-                              : scalar)
+#ifdef OMP6
+// 'storage' is an alias for 'alloc' in OpenMP 6.0
+#pragma omp target defaultmap(storage : scalar)
+#else
+#pragma omp target defaultmap(alloc : scalar)
+#endif // OMP6
   {
    dc *= dc;
   }
@@ -54,7 +60,7 @@ void implicit_maps_double_complex (int a){
 // CK1: [[ADDR:%.+]] = alloca ptr,
 // CK1: store ptr [[ARG]], ptr [[ADDR]],
 // CK1: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK1: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK1: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK2 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK2
@@ -107,7 +113,7 @@ void implicit_maps_double_complex (int a){
 // CK2: [[ADDR:%.+]] = alloca ptr,
 // CK2: store ptr [[ARG]], ptr [[ADDR]],
 // CK2: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK2: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK2: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK3 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK3
@@ -160,7 +166,7 @@ void implicit_maps_double_complex (int a){
 // CK3: [[ADDR:%.+]] = alloca ptr,
 // CK3: store ptr [[ARG]], ptr [[ADDR]],
 // CK3: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK3: {{.+}} = getelementptr inbounds { double, double }, ptr [[REF]], i32 0, i32 0
+// CK3: {{.+}} = getelementptr inbounds nuw { double, double }, ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK4 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK4 --check-prefix CK4-64
@@ -235,6 +241,8 @@ void implicit_maps_double (int a){
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
+// Verify implicit-behavior 'alloc' still accepted in OpenMP 6.0
+// RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK5
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla  %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK5 -verify -Wno-vla  -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s  --check-prefix CK5
@@ -726,8 +734,8 @@ void explicit_maps_single (){
 // CK14-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
 // CK14: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
-// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
-// CK14: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 544]
+// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_LITERAL | OMP_MAP_IMPLICIT = 800
+// CK14: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 800]
 
 // CK14-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (){
@@ -893,7 +901,7 @@ void implicit_maps_struct (int a){
 // CK16: [[ADDR:%.+]] = alloca ptr,
 // CK16: store ptr [[ARG]], ptr [[ADDR]],
 // CK16: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK16: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK16: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK17 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK17
@@ -953,7 +961,7 @@ void implicit_maps_struct (int a){
 // CK17: [[ADDR:%.+]] = alloca ptr,
 // CK17: store ptr [[ARG]], ptr [[ADDR]],
 // CK17: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK17: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK17: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK18 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK18
@@ -1013,7 +1021,7 @@ void implicit_maps_struct (int a){
 // CK18: [[ADDR:%.+]] = alloca ptr,
 // CK18: store ptr [[ARG]], ptr [[ADDR]],
 // CK18: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK18: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK18: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK19 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK19
@@ -1073,7 +1081,7 @@ void implicit_maps_struct (int a){
 // CK19: [[ADDR:%.+]] = alloca ptr,
 // CK19: store ptr [[ARG]], ptr [[ADDR]],
 // CK19: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK19: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK19: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK20 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK20 --check-prefix CK20-64
@@ -1204,7 +1212,7 @@ void implicit_maps_struct (int a){
 // CK21: [[ADDR:%.+]] = alloca ptr,
 // CK21: store ptr [[ARG]], ptr [[ADDR]],
 // CK21: [[REF:%.+]] = load ptr, ptr [[ADDR]],
-// CK21: {{.+}} = getelementptr inbounds [[ST]], ptr [[REF]], i32 0, i32 0
+// CK21: {{.+}} = getelementptr inbounds nuw [[ST]], ptr [[REF]], i32 0, i32 0
 #endif
 ///==========================================================================///
 // RUN: %clang_cc1 -no-enable-noundef-analysis -DCK22 -verify -Wno-vla  -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap  %s --check-prefix CK22

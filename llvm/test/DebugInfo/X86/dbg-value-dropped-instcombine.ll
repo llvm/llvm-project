@@ -21,8 +21,8 @@
 ; }
 
 ; CHECK: define dso_local i64 @foo
-; CHECK: @llvm.dbg.value(metadata i64 {{.*}}, metadata ![[BEE:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)),
-; CHECK: @llvm.dbg.value(metadata i64 {{.*}}, metadata ![[BEE]], metadata !DIExpression({{.*}}, DW_OP_LLVM_fragment, 32, 32)),
+; CHECK: #dbg_value(i64 {{.*}}, ![[BEE:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
+; CHECK: #dbg_value(i64 {{.*}}, ![[BEE]], !DIExpression({{.*}}, DW_OP_LLVM_fragment, 32, 32),
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

@@ -41,14 +41,10 @@ TypeSystem::~TypeSystem() = default;
 
 static TypeSystemSP CreateInstanceHelper(lldb::LanguageType language,
                                          Module *module, Target *target) {
-  uint32_t i = 0;
-  TypeSystemCreateInstance create_callback;
-  while ((create_callback = PluginManager::GetTypeSystemCreateCallbackAtIndex(
-              i++)) != nullptr) {
+  for (auto create_callback : PluginManager::GetTypeSystemCreateCallbacks()) {
     if (auto type_system_sp = create_callback(language, module, target))
       return type_system_sp;
   }
-
   return {};
 }
 
@@ -123,6 +119,17 @@ CompilerType TypeSystem::GetTypeForFormatters(void *type) {
   return CompilerType(weak_from_this(), type);
 }
 
+bool TypeSystem::IsPromotableIntegerType(lldb::opaque_compiler_type_t type) {
+  return false;
+}
+
+llvm::Expected<CompilerType>
+TypeSystem::DoIntegralPromotion(CompilerType from,
+                                ExecutionContextScope *exe_scope) {
+  return llvm::createStringError(
+      "Integral promotion is not implemented for this TypeSystem");
+}
+
 bool TypeSystem::IsTemplateType(lldb::opaque_compiler_type_t type) {
   return false;
 }
@@ -155,6 +162,10 @@ LazyBool TypeSystem::ShouldPrintAsOneLiner(void *type, ValueObject *valobj) {
 
 bool TypeSystem::IsMeaninglessWithoutDynamicResolution(void *type) {
   return false;
+}
+
+ConstString TypeSystem::GetMangledTypeName(void *type) {
+  return GetTypeName(type, false);
 }
 
 ConstString TypeSystem::DeclGetMangledName(void *opaque_decl) {
@@ -334,4 +345,15 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
         }));
   }
   return GetTypeSystemForLanguage(language);
+}
+
+bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
+  if (language == eLanguageTypeUnknown || language >= eNumLanguageTypes)
+    return false;
+
+  LanguageSet languages =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (languages.Empty())
+    return false;
+  return languages[language];
 }

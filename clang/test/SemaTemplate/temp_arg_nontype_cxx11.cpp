@@ -114,3 +114,12 @@ void lookup() {
   Kolumn<&container::a>().ls();   // expected-error {{<&container::a}}
   Kolumn<nullptr>().ls();         // expected-error {{<nullptr}}
 }
+
+namespace GH167709 {
+  template <unsigned I> struct A {
+    static_assert(false, "shouldn't instantiate this");
+  };
+  template <int> void f() {}
+  template <int I> typename A<I>::type f() = delete;
+  template void f<-1>();
+} // namespace GH167709

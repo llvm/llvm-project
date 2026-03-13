@@ -15,6 +15,7 @@
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Utility/UserID.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/ArrayRef.h"
 
 #include <mutex>
@@ -428,7 +429,7 @@ public:
   ///     The section offset based address for this function.
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, const AddressRange &range);
+           Type *func_type, Address address, AddressRanges ranges);
 
   /// Destructor.
   ~Function() override;
@@ -444,9 +445,20 @@ public:
 
   Function *CalculateSymbolContextFunction() override;
 
-  const AddressRange &GetAddressRange() { return m_range; }
+  AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
+
+  /// Return the address of the function (its entry point). This address is also
+  /// used as a base address for relocation of function-scope entities (blocks
+  /// and variables).
+  const Address &GetAddress() const { return m_address; }
+
+  bool GetRangeContainingLoadAddress(lldb::addr_t load_addr, Target &target,
+                                     AddressRange &range) {
+    return m_block.GetRangeContainingLoadAddress(load_addr, target, range);
+  }
 
   lldb::LanguageType GetLanguage() const;
+
   /// Find the file and line number of the source location of the start of the
   /// function.  This will use the declaration if present and fall back on the
   /// line table if that fails.  So there may NOT be a line table entry for
@@ -457,18 +469,12 @@ public:
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
+  void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
+                              uint32_t &line_no);
 
-  /// Find the file and line number of the source location of the end of the
-  /// function.
-  ///
-  ///
-  /// \param[out] source_file
-  ///     The source file.
-  ///
-  /// \param[out] line_no
-  ///     The line number.
-  void GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no);
+  using SourceRange = Range<uint32_t, uint32_t>;
+  /// Find the file and line number range of the function.
+  llvm::Expected<std::pair<SupportFileNSP, SourceRange>> GetSourceInfo();
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).
@@ -649,9 +655,8 @@ protected:
   /// All lexical blocks contained in this function.
   Block m_block;
 
-  /// The function address range that covers the widest range needed to contain
-  /// all blocks
-  AddressRange m_range;
+  /// The address (entry point) of the function.
+  Address m_address;
 
   /// The frame base expression for variables that are relative to the frame
   /// pointer.

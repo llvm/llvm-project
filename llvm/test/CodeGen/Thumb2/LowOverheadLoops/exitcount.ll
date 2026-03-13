@@ -7,26 +7,26 @@ define void @foo(ptr nocapture readonly %st, ptr %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    ldrd r12, r2, [r0]
-; CHECK-NEXT:    ldrd r4, r3, [r0, #8]
-; CHECK-NEXT:    rsb r12, r12, r2, lsl #1
+; CHECK-NEXT:    ldrd r12, r3, [r0]
+; CHECK-NEXT:    ldrd r4, r2, [r0, #8]
+; CHECK-NEXT:    rsb r12, r12, r3, lsl #1
 ; CHECK-NEXT:    dlstp.16 lr, r12
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r3], #16
+; CHECK-NEXT:    vldrh.u16 q0, [r2], #16
 ; CHECK-NEXT:    vstrh.16 q0, [r4], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
-; CHECK-NEXT:    ldr r2, [r0]
+; CHECK-NEXT:    ldr r3, [r0]
 ; CHECK-NEXT:    ldr r0, [r0, #8]
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
-; CHECK-NEXT:    mov.w r3, #6144
-; CHECK-NEXT:    dlstp.16 lr, r2
+; CHECK-NEXT:    mov.w r2, #6144
+; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB0_3: @ %do.body6
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vcvt.f16.s16 q0, q0
-; CHECK-NEXT:    vmul.f16 q0, q0, r3
+; CHECK-NEXT:    vmul.f16 q0, q0, r2
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB0_3
 ; CHECK-NEXT:  @ %bb.4: @ %do.end13

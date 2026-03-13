@@ -33,7 +33,7 @@ func.func @test_array_coor_box_component_slice(%arg0: !fir.box<!fir.array<2x!fir
 func.func private @take_int(%arg0: !fir.ref<i32>) -> ()
 
 // CHECK-LABEL: define void @test_array_coor_box_component_slice(
-// CHECK-SAME: ptr %[[VAL_0:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[VAL_0:.*]])
 // CHECK:   %[[VAL_1:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[VAL_0]], i32 0, i32 7, i32 0, i32 2
 // CHECK:   %[[VAL_2:.*]] = load i64, ptr %[[VAL_1]]
 // CHECK:   %[[VAL_3:.*]] = mul nsw i64 1, %[[VAL_2]]

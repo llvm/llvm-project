@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This testcase used to fail with "cannot select 'i1 = add x, y'".
 ; Check for some sane output:
 ; CHECK: xor(p{{[0-3]}},p{{[0-3]}})

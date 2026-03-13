@@ -13,19 +13,30 @@
 #ifndef LLVM_CLANG_SEMA_SEMAAMDGPU_H
 #define LLVM_CLANG_SEMA_SEMAAMDGPU_H
 
-#include "clang/AST/Attr.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Expr.h"
-#include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Sema/ParsedAttr.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/Sema/SemaBase.h"
 
 namespace clang {
+class AttributeCommonInfo;
+class ParsedAttr;
+
 class SemaAMDGPU : public SemaBase {
 public:
   SemaAMDGPU(Sema &S);
 
   bool CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+
+  /// Emits a diagnostic if the \p E is not an atomic ordering encoded in the C
+  /// ABI format, or if the atomic ordering is not valid for the operation type
+  /// as defined by \p MayLoad and \p MayStore. \returns true if a diagnostic
+  /// was emitted.
+  bool checkAtomicOrderingCABIArg(Expr *E, bool MayLoad, bool MayStore);
+
+  bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
+  bool checkAtomicMonitorLoad(CallExpr *TheCall);
+
+  bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
+                               unsigned NumDataArgs);
 
   /// Create an AMDGPUWavesPerEUAttr attribute.
   AMDGPUFlatWorkGroupSizeAttr *

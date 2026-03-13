@@ -9,12 +9,15 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_READ_H
 #define LLVM_LIBC_SRC_UNISTD_READ_H
 
-#include <unistd.h>
+#include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 ssize_t read(int fd, void *buf, size_t count);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_READ_H

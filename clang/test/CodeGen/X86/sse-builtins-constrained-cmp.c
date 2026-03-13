@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -ffp-exception-behavior=strict -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>

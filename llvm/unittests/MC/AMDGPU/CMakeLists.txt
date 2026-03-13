@@ -6,15 +6,15 @@ include_directories(
 set(LLVM_LINK_COMPONENTS
   AMDGPUCodeGen
   AMDGPUDesc
+  AMDGPUDisassembler
   AMDGPUInfo
-  CodeGen
-  Core
   MC
+  MCDisassembler
   Support
   TargetParser
   )
 
 add_llvm_unittest(AMDGPUMCTests
+  Disassembler.cpp
   DwarfRegMappings.cpp
-  SIProgramInfoMCExprs.cpp
   )

@@ -83,7 +83,7 @@ bool r23 = requires { typename identity<T>::temp<T>; };
 template<typename T>
 bool r24 = requires {
     typename identity<T>::template temp<T>;
-    typename identity<T>::template temp; // expected-error{{expected an identifier or template-id after '::'}}
+    typename identity<T>::template temp; // expected-error{{template argument list is expected after a name prefixed by the template keyword}}
 };
 
 bool r25 = requires { ; };

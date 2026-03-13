@@ -39,7 +39,7 @@ void ARMException::beginFunction(const MachineFunction *MF) {
   if (CFISecType == AsmPrinter::CFISection::Debug) {
     if (!hasEmittedCFISections) {
       if (Asm->getModuleCFISectionType() == AsmPrinter::CFISection::Debug)
-        Asm->OutStreamer->emitCFISections(false, true);
+        Asm->OutStreamer->emitCFISections(false, true, false);
       hasEmittedCFISections = true;
     }
 

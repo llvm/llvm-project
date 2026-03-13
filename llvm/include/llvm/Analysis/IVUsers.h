@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {

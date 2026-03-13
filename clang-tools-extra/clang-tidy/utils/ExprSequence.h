@@ -1,4 +1,4 @@
-//===------------- ExprSequence.h - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRSEQUENCE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRSEQUENCE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXPRSEQUENCE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXPRSEQUENCE_H
 
 #include "clang/Analysis/CFG.h"
 #include "clang/Lex/Lexer.h"
@@ -117,4 +117,4 @@ private:
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_EXPRSEQUENCE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXPRSEQUENCE_H

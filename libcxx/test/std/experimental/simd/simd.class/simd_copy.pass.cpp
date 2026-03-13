@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// FIXME: Fatal error with following targets (remove XFAIL when fixed):
-//   Pass-by-value arguments with alignment greater than register width are not supported.
-// XFAIL: target=powerpc{{.*}}-ibm-aix7.2.5.7
-
 // <experimental/simd>
 //
 // [simd.class]

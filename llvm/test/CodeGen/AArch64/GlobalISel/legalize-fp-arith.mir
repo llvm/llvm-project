@@ -6,9 +6,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fadd_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FADD:%[0-9]+]]:_(<2 x s64>) = G_FADD [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[FADD]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x s64>) = G_FADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[FADD]](<2 x s64>)
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = G_FADD %0, %1
@@ -21,9 +21,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fdiv_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[FDIV:%[0-9]+]]:_(<2 x s32>) = G_FDIV [[COPY]], [[COPY1]]
-    ; CHECK: $d0 = COPY [[FDIV]](<2 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[FDIV:%[0-9]+]]:_(<2 x s32>) = G_FDIV [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[FDIV]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s32>) = G_FDIV %0, %1
@@ -36,9 +36,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fsub_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[FSUB:%[0-9]+]]:_(<2 x s32>) = G_FSUB [[COPY]], [[COPY1]]
-    ; CHECK: $d0 = COPY [[FSUB]](<2 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(<2 x s32>) = G_FSUB [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[FSUB]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s32>) = G_FSUB %0, %1
@@ -51,8 +51,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fneg_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[FNEG:%[0-9]+]]:_(<2 x s32>) = G_FNEG [[COPY]]
-    ; CHECK: $d0 = COPY [[FNEG]](<2 x s32>)
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s32>) = G_FNEG [[COPY]]
+    ; CHECK-NEXT: $d0 = COPY [[FNEG]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = G_FNEG %0
     $d0 = COPY %1(<2 x s32>)
@@ -64,9 +64,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fmul_v4s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK: $q0 = COPY [[FMUL]](<4 x s32>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[FMUL]](<4 x s32>)
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s32>) = G_FMUL %0, %1
@@ -79,10 +79,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fmul_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[FMUL:%[0-9]+]]:_(<2 x s64>) = G_FMUL [[DEF]], [[DEF]]
-    ; CHECK: [[FMUL1:%[0-9]+]]:_(<2 x s64>) = G_FMUL [[DEF]], [[DEF]]
-    ; CHECK: $q0 = COPY [[FMUL]](<2 x s64>)
-    ; CHECK: $q1 = COPY [[FMUL1]](<2 x s64>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<2 x s64>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(<2 x s64>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK-NEXT: $q0 = COPY [[FMUL]](<2 x s64>)
+    ; CHECK-NEXT: $q1 = COPY [[FMUL1]](<2 x s64>)
     %0:_(<4 x s64>) = G_IMPLICIT_DEF
     %1:_(<4 x s64>) = G_IMPLICIT_DEF
     %2:_(<4 x s64>) = G_FMUL %0, %1
@@ -97,10 +97,10 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fmul_v8s32
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[DEF]], [[DEF]]
-    ; CHECK: [[FMUL1:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[DEF]], [[DEF]]
-    ; CHECK: $q0 = COPY [[FMUL]](<4 x s32>)
-    ; CHECK: $q1 = COPY [[FMUL1]](<4 x s32>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK-NEXT: $q0 = COPY [[FMUL]](<4 x s32>)
+    ; CHECK-NEXT: $q1 = COPY [[FMUL1]](<4 x s32>)
     %0:_(<8 x s32>) = G_IMPLICIT_DEF
     %1:_(<8 x s32>) = G_IMPLICIT_DEF
     %2:_(<8 x s32>) = G_FMUL %0, %1

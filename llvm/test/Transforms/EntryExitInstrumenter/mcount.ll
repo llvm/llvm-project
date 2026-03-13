@@ -129,6 +129,13 @@ define void @naked() naked {
   ret void
 }
 
+define available_externally void @always_inline() {
+; CHECK-LABEL: define available_externally void @always_inline() {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
 ; The attributes are "consumed" when the instrumentation is inserted.
 ; CHECK: attributes
 ; CHECK-NOT: instrument-function

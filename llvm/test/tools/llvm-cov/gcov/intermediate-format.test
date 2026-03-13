@@ -1,5 +1,3 @@
-REQUIRES: shell
-
 RUN: rm -rf %t && mkdir %t && cd %t
 RUN: cp %S/Inputs/test.gcno %S/Inputs/test.gcda .
 

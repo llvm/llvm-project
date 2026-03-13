@@ -22,14 +22,12 @@
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -42,6 +40,11 @@
 
 using namespace llvm;
 using namespace sampleprof;
+
+// To begin with, make this option off by default.
+static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
+    "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
+    cl::desc("Write vtable type profile in ext-binary sample profile writer"));
 
 namespace llvm {
 namespace support {
@@ -437,6 +440,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagIsPreInlined);
   if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
+  if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
+    addSectionFlag(SecProfSummary,
+                   SecProfSummaryFlags::SecFlagHasVTableTypeProf);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
@@ -478,6 +484,12 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (std::error_code EC = addNewSection(Type, LayoutIdx, SectionStart))
     return EC;
   return sampleprof_error::success;
+}
+
+SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
+    std::unique_ptr<raw_ostream> &OS)
+    : SampleProfileWriterExtBinaryBase(OS) {
+  WriteVTableProf = ExtBinaryWriteVTableTypeProf;
 }
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
@@ -582,34 +594,57 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     LineLocation Loc = I->first;
     const SampleRecord &Sample = I->second;
     OS.indent(Indent + 1);
-    if (Loc.Discriminator == 0)
-      OS << Loc.LineOffset << ": ";
-    else
-      OS << Loc.LineOffset << "." << Loc.Discriminator << ": ";
-
-    OS << Sample.getSamples();
+    Loc.print(OS);
+    OS << ": " << Sample.getSamples();
 
     for (const auto &J : Sample.getSortedCallTargets())
       OS << " " << J.first << ":" << J.second;
     OS << "\n";
     LineCount++;
+
+    if (const TypeCountMap *Map = S.findCallsiteTypeSamplesAt(Loc);
+        Map && !Map->empty()) {
+      OS.indent(Indent + 1);
+      Loc.print(OS);
+      OS << ": ";
+      OS << kVTableProfPrefix;
+      for (const auto [TypeName, Count] : *Map) {
+        OS << TypeName << ":" << Count << " ";
+      }
+      OS << "\n";
+      LineCount++;
+    }
   }
 
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get())
-    for (const auto &FS : I->second) {
-      LineLocation Loc = I->first;
-      const FunctionSamples &CalleeSamples = FS.second;
+  for (const auto *Element : SortedCallsiteSamples.get()) {
+    // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+    const auto &[Loc, FunctionSamplesMap] = *Element;
+    for (const FunctionSamples &CalleeSamples :
+         make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);
-      if (Loc.Discriminator == 0)
-        OS << Loc.LineOffset << ": ";
-      else
-        OS << Loc.LineOffset << "." << Loc.Discriminator << ": ";
+      Loc.print(OS);
+      OS << ": ";
       if (std::error_code EC = writeSample(CalleeSamples))
         return EC;
     }
+
+    if (const TypeCountMap *Map = S.findCallsiteTypeSamplesAt(Loc);
+        Map && !Map->empty()) {
+      OS.indent(Indent);
+      Loc.print(OS);
+      OS << ": ";
+      OS << kVTableProfPrefix;
+      for (const auto [TypeId, Count] : *Map) {
+        OS << TypeId << ":" << Count << " ";
+      }
+      OS << "\n";
+      LineCount++;
+    }
+  }
+
   Indent -= 1;
 
   if (FunctionSamples::ProfileIsProbeBased) {
@@ -623,6 +658,9 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     OS << "!Attributes: " << S.getContext().getAllAttributes() << "\n";
     LineCount++;
   }
+
+  if (Indent == 0 && MarkFlatProfiles && S.getCallsiteSamples().size() == 0)
+    OS << " !Flat\n";
 
   return sampleprof_error::success;
 }
@@ -666,6 +704,17 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
       addName(CalleeSamples.getFunction());
       addNames(CalleeSamples);
     }
+
+  if (!WriteVTableProf)
+    return;
+  // Add all the vtable names to NameTable.
+  for (const auto &VTableAccessCountMap :
+       llvm::make_second_range(S.getCallsiteTypeCounts())) {
+    // Add type name to NameTable.
+    for (const auto Type : llvm::make_first_range(VTableAccessCountMap)) {
+      addName(Type);
+    }
+  }
 }
 
 void SampleProfileWriterExtBinaryBase::addContext(
@@ -804,6 +853,22 @@ std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterBinary::writeCallsiteVTableProf(
+    const CallsiteTypeMap &CallsiteTypeMap, raw_ostream &OS) {
+  assert(WriteVTableProf &&
+         "writeCallsiteVTableProf should not be called if WriteVTableProf is "
+         "false");
+
+  encodeULEB128(CallsiteTypeMap.size(), OS);
+  for (const auto &[Loc, TypeMap] : CallsiteTypeMap) {
+    Loc.serialize(OS);
+    if (std::error_code EC = serializeTypeMap(TypeMap, getNameTable(), OS))
+      return EC;
+  }
+
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileWriterBinary::writeSummary() {
   auto &OS = *OutputStream;
   encodeULEB128(Summary->getTotalCount(), OS);
@@ -811,8 +876,7 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
   encodeULEB128(Summary->getMaxFunctionCount(), OS);
   encodeULEB128(Summary->getNumCounts(), OS);
   encodeULEB128(Summary->getNumFunctions(), OS);
-  const std::vector<ProfileSummaryEntry> &Entries =
-      Summary->getDetailedSummary();
+  ArrayRef<ProfileSummaryEntry> Entries = Summary->getDetailedSummary();
   encodeULEB128(Entries.size(), OS);
   for (auto Entry : Entries) {
     encodeULEB128(Entry.Cutoff, OS);
@@ -833,17 +897,8 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &I : S.getBodySamples()) {
     LineLocation Loc = I.first;
     const SampleRecord &Sample = I.second;
-    encodeULEB128(Loc.LineOffset, OS);
-    encodeULEB128(Loc.Discriminator, OS);
-    encodeULEB128(Sample.getSamples(), OS);
-    encodeULEB128(Sample.getCallTargets().size(), OS);
-    for (const auto &J : Sample.getSortedCallTargets()) {
-      FunctionId Callee = J.first;
-      uint64_t CalleeSamples = J.second;
-      if (std::error_code EC = writeNameIdx(Callee))
-        return EC;
-      encodeULEB128(CalleeSamples, OS);
-    }
+    Loc.serialize(OS);
+    Sample.serialize(OS, getNameTable());
   }
 
   // Recursively emit all the callsite samples.
@@ -853,13 +908,13 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   encodeULEB128(NumCallsites, OS);
   for (const auto &J : S.getCallsiteSamples())
     for (const auto &FS : J.second) {
-      LineLocation Loc = J.first;
-      const FunctionSamples &CalleeSamples = FS.second;
-      encodeULEB128(Loc.LineOffset, OS);
-      encodeULEB128(Loc.Discriminator, OS);
-      if (std::error_code EC = writeBody(CalleeSamples))
+      J.first.serialize(OS);
+      if (std::error_code EC = writeBody(FS.second))
         return EC;
     }
+
+  if (WriteVTableProf)
+    return writeCallsiteVTableProf(S.getCallsiteTypeCounts(), OS);
 
   return sampleprof_error::success;
 }

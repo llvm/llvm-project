@@ -24,6 +24,10 @@ class OperatingSystemPlugIn(OperatingSystem):
         return None
 
     def get_thread_info(self):
+        if self.process.state != lldb.eStateStopped:
+            print("Error: get_thread_info called with state not stopped")
+            return []
+
         if not self.threads:
             self.threads = [
                 {

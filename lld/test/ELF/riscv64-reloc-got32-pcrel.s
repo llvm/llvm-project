@@ -12,16 +12,16 @@ bar:
 
   .globl _start
 _start:  // PC = 0x33a8
-// bar@GOTPCREL   = 0x2398 (got entry for `bar`) - 0x33a8 (.) = 0xf0efffff
-// bar@GOTPCREL+4 = 0x2398 (got entry for `bar`) - 0x33ac (.) + 4 = 0xf0efffff
-// bar@GOTPCREL-4 = 0x2398 (got entry for `bar`) - 0x33b0 (.) - 4 = 0xe4efffff
+// %gotpcrel(bar)   = 0x2398 (got entry for `bar`) - 0x33a8 (.) = 0xf0efffff
+// %gotpcrel(bar+4) = 0x2398 (got entry for `bar`) - 0x33ac (.) + 4 = 0xf0efffff
+// %gotpcrel(bar-4) = 0x2398 (got entry for `bar`) - 0x33b0 (.) - 4 = 0xe4efffff
 // CHECK:      Contents of section .data:
 // CHECK-NEXT:  {{.*}} f0efffff f0efffff e4efffff
-  .word bar@GOTPCREL
-  .word bar@GOTPCREL+4
-  .word bar@GOTPCREL-4
+  .word %gotpcrel(bar)
+  .word %gotpcrel(bar+4)
+  .word %gotpcrel(bar-4)
 
 // WARN: relocation R_RISCV_GOT32_PCREL out of range: {{.*}} is not in [-2147483648, 2147483647]; references 'baz'
 // WARN: relocation R_RISCV_GOT32_PCREL out of range: {{.*}} is not in [-2147483648, 2147483647]; references 'baz'
-  .word baz@GOTPCREL+0xffffffff
-  .word baz@GOTPCREL-0xffffffff
+  .word %gotpcrel(baz+0xffffffff)
+  .word %gotpcrel(baz-0xffffffff)

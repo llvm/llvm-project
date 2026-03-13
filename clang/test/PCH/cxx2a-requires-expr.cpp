@@ -22,3 +22,20 @@ bool f() {
     requires C<typename T::val> || (C<typename T::val> || C<T>);
   };
 }
+
+namespace trailing_requires_expression {
+
+template <typename T> requires C<T> && C2<T, T>
+// CHECK: template <typename T> requires C<T> && C2<T, T> void g();
+void g();
+
+template <typename T> requires C<T> || C2<T, T>
+// CHECK: template <typename T> requires C<T> || C2<T, T> constexpr int h = sizeof(T);
+constexpr int h = sizeof(T);
+
+template <typename T> requires C<T>
+// CHECK:      template <typename T> requires C<T> class i {
+// CHECK-NEXT: };
+class i {};
+
+}

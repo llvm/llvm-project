@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMScalarOpts
   DeadStoreElimination.cpp
   DFAJumpThreading.cpp
   DivRemPairs.cpp
+  DropUnnecessaryAssumes.cpp
   EarlyCSE.cpp
   FlattenCFGPass.cpp
   Float2Int.cpp
@@ -44,6 +45,7 @@ add_llvm_component_library(LLVMScalarOpts
   LoopRotation.cpp
   LoopSimplifyCFG.cpp
   LoopStrengthReduce.cpp
+  LoopTermFold.cpp
   LoopUnrollPass.cpp
   LoopUnrollAndJamPass.cpp
   LoopVersioningLICM.cpp
@@ -77,7 +79,6 @@ add_llvm_component_library(LLVMScalarOpts
   StraightLineStrengthReduce.cpp
   StructurizeCFG.cpp
   TailRecursionElimination.cpp
-  TLSVariableHoist.cpp
   WarnMissedTransforms.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -95,6 +96,7 @@ add_llvm_component_library(LLVMScalarOpts
   Analysis
   Core
   InstCombine
+  ProfileData
   Support
   TransformUtils
   )

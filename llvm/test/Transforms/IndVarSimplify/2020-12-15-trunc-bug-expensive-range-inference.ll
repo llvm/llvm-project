@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: test
 
 bb:
@@ -31,7 +31,7 @@ bb8:                                              ; preds = %bb5, %bb3
 
 bb10:                                             ; preds = %bb13
   %tmp11 = phi i32 [ %tmp15, %bb13 ]
-  br i1 undef, label %bb12, label %bb1
+  br i1 %arg, label %bb12, label %bb1
 
 bb12:                                             ; preds = %bb10
   ret void
@@ -39,7 +39,7 @@ bb12:                                             ; preds = %bb10
 bb13:                                             ; preds = %bb13, %bb8
   %tmp14 = phi i32 [ %tmp, %bb8 ], [ %tmp15, %bb13 ]
   %tmp15 = add i32 %tmp14, undef
-  br i1 undef, label %bb10, label %bb13
+  br i1 %arg, label %bb10, label %bb13
 
 bb16:                                             ; preds = %bb16, %bb4
   %tmp17 = phi i32 [ %tmp27, %bb16 ], [ %tmp2, %bb4 ]

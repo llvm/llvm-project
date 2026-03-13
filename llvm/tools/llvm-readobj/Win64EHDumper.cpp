@@ -65,6 +65,8 @@ static StringRef getUnwindCodeTypeName(uint8_t Code) {
   case UOP_SaveXMM128: return "SAVE_XMM128";
   case UOP_SaveXMM128Big: return "SAVE_XMM128_FAR";
   case UOP_PushMachFrame: return "PUSH_MACHFRAME";
+  case UOP_Epilog:
+    return "EPILOG";
   }
 }
 
@@ -99,6 +101,7 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
   case UOP_AllocSmall:
   case UOP_SetFPReg:
   case UOP_PushMachFrame:
+  case UOP_Epilog:
     return 1;
   case UOP_SaveNonVol:
   case UOP_SaveXMM128:
@@ -254,7 +257,8 @@ void Dumper::printRuntimeFunctionEntry(const Context &Ctx,
 // Prints one unwind code. Because an unwind code can occupy up to 3 slots in
 // the unwind codes array, this function requires that the correct number of
 // slots is provided.
-void Dumper::printUnwindCode(const UnwindInfo& UI, ArrayRef<UnwindCode> UC) {
+void Dumper::printUnwindCode(const UnwindInfo &UI, ArrayRef<UnwindCode> UC,
+                             bool &SeenFirstEpilog) {
   assert(UC.size() >= getNumUsedSlots(UC[0]));
 
   SW.startLine() << format("0x%02X: ", unsigned(UC[0].u.CodeOffset))
@@ -306,6 +310,23 @@ void Dumper::printUnwindCode(const UnwindInfo& UI, ArrayRef<UnwindCode> UC) {
   case UOP_PushMachFrame:
     OS << " errcode=" << (UC[0].getOpInfo() == 0 ? "no" : "yes");
     break;
+
+  case UOP_Epilog:
+    if (SeenFirstEpilog) {
+      uint32_t Offset = UC[0].getEpilogOffset();
+      if (Offset == 0) {
+        OS << " padding";
+      } else {
+        OS << " offset=" << format("0x%X", Offset);
+      }
+    } else {
+      SeenFirstEpilog = true;
+      bool AtEnd = (UC[0].getOpInfo() & 0x1) != 0;
+      uint32_t Length = UC[0].u.CodeOffset;
+      OS << " atend=" << (AtEnd ? "yes" : "no")
+         << ", length=" << format("0x%X", Length);
+    }
+    break;
   }
 
   OS << "\n";
@@ -330,6 +351,7 @@ void Dumper::printUnwindInfo(const Context &Ctx, const coff_section *Section,
   {
     ListScope UCS(SW, "UnwindCodes");
     ArrayRef<UnwindCode> UC(&UI.UnwindCodes[0], UI.NumCodes);
+    bool SeenFirstEpilog = false;
     for (const UnwindCode *UCI = UC.begin(), *UCE = UC.end(); UCI < UCE; ++UCI) {
       unsigned UsedSlots = getNumUsedSlots(*UCI);
       if (UsedSlots > UC.size()) {
@@ -337,7 +359,7 @@ void Dumper::printUnwindInfo(const Context &Ctx, const coff_section *Section,
         return;
       }
 
-      printUnwindCode(UI, ArrayRef(UCI, UCE));
+      printUnwindCode(UI, ArrayRef(UCI, UCE), SeenFirstEpilog);
       UCI = UCI + UsedSlots - 1;
     }
   }

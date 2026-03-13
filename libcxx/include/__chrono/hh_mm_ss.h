@@ -29,8 +29,8 @@ namespace chrono {
 template <class _Duration>
 class hh_mm_ss {
 private:
-  static_assert(__is_duration<_Duration>::value, "template parameter of hh_mm_ss must be a std::chrono::duration");
-  using __CommonType = common_type_t<_Duration, chrono::seconds>;
+  static_assert(__is_duration_v<_Duration>, "template parameter of hh_mm_ss must be a std::chrono::duration");
+  using __CommonType _LIBCPP_NODEBUG = common_type_t<_Duration, chrono::seconds>;
 
   _LIBCPP_HIDE_FROM_ABI static constexpr uint64_t __pow10(unsigned __exp) {
     uint64_t __ret = 1;
@@ -59,13 +59,13 @@ public:
         __s_(chrono::duration_cast<chrono::seconds>(chrono::abs(__d) - hours() - minutes())),
         __f_(chrono::duration_cast<precision>(chrono::abs(__d) - hours() - minutes() - seconds())) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative() const noexcept { return __is_neg_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours hours() const noexcept { return __h_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr chrono::minutes minutes() const noexcept { return __m_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr chrono::seconds seconds() const noexcept { return __s_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr precision subseconds() const noexcept { return __f_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative() const noexcept { return __is_neg_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours hours() const noexcept { return __h_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::minutes minutes() const noexcept { return __m_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::seconds seconds() const noexcept { return __s_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr precision subseconds() const noexcept { return __f_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr precision to_duration() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr precision to_duration() const noexcept {
     auto __dur = __h_ + __m_ + __s_ + __f_;
     return __is_neg_ ? -__dur : __dur;
   }
@@ -81,14 +81,14 @@ private:
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(hh_mm_ss);
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool is_am(const hours& __h) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_am(const hours& __h) noexcept {
   return __h >= hours(0) && __h < hours(12);
 }
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool is_pm(const hours& __h) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_pm(const hours& __h) noexcept {
   return __h >= hours(12) && __h < hours(24);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr hours make12(const hours& __h) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr hours make12(const hours& __h) noexcept {
   if (__h == hours(0))
     return hours(12);
   else if (__h <= hours(12))
@@ -97,7 +97,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr hours make12(const hours& __h) noexcept {
     return __h - hours(12);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr hours make24(const hours& __h, bool __is_pm) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr hours make24(const hours& __h, bool __is_pm) noexcept {
   if (__is_pm)
     return __h == hours(12) ? __h : __h + hours(12);
   else

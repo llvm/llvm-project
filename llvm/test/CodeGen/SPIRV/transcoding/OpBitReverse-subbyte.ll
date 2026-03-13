@@ -7,6 +7,9 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_bit_instructions -o - -filetype=obj | spirv-val %}
 
+; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
+; XFAIL: expensive_checks
+
 ; CHECK-SPIRV: OpCapability BitInstructions
 ; CHECK-SPIRV: OpExtension "SPV_KHR_bit_instructions"
 ; CHECK-SPIRV: %[[#CharTy:]] = OpTypeInt 8 0
@@ -16,10 +19,15 @@
 ; TODO: Add a check to ensure that there's no behavior change of bitreverse operation
 ;       between the LLVM-IR and SPIR-V for i2 and i4
 
+@G_res2 = global i2 0
+@G_res4 = global i4 0
+
 define spir_func void @foo(i2 %a, i4 %b) {
 entry:
   %res2 = tail call i2 @llvm.bitreverse.i2(i2 %a)
+  store i2 %res2, ptr @G_res2
   %res4 = tail call i4 @llvm.bitreverse.i4(i4 %b)
+  store i4 %res4, ptr @G_res4
   ret void
 }
 

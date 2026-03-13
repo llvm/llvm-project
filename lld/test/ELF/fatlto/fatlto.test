@@ -8,7 +8,6 @@
 ; RUN: opt < a-LTO.ll --module-summary -o a-fatLTO.bc
 ; RUN: llvm-objcopy --add-section=.llvm.lto=a-fatLTO.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c a-fatLTO.o
 
-
 ; RUN: llc main-LTO.ll --filetype=obj -o main-fatLTO.o --relocation-model=pic
 ; RUN: opt < main-LTO.ll --module-summary -o main-fatLTO.bc
 ; RUN: llvm-objcopy --add-section=.llvm.lto=main-fatLTO.bc --set-section-flags=.llvm.lto=exclude --set-section-type=.llvm.lto=0x6fff4c0c main-fatLTO.o
@@ -17,11 +16,6 @@
 ; RUN: llvm-readelf -S main-fatLTO.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
 
 ;; Make sure that the section flags are set correctly
-; HA_LLVM_LTO: Name: .llvm.lto
-; HA_LLVM_LTO-NEXT: Type: SHT_LLVM_LTO
-; HA_LLVM_LTO-NEXT: Flags
-; HA_LLVM_LTO-NEXT: SHF_EXCLUDE
-
 ; HAS_LLVM_LTO: Name Type Address Off Size ES Flg Lk Inf Al
 ; HAS_LLVM_LTO: .llvm.lto LLVM_LTO {{.*}} 00  WE  0   0  1
 
@@ -64,16 +58,13 @@
 ; RUN: ld.lld -o foo-fatLTO.archive a.a main-LTO.bc --fat-lto-objects
 ; RUN: cmp foo-fatLTO.archive foo-LTO
 
-;; Test FatLTO works with relocatable links using PIC objects
-;; Currently, with PIC relocatable links, FatLTO sections are treated as
-;; orphan sections and incorrectly concatenated together. This test verifies
-;; the current behavior, but should be fixed to either merge those sections
-;; correctly, or to drop them altogether.
+;; Test FatLTO works with relocatable links using PIC objects, and that
+;; SHT_LLVM_LTO sections are discarded.
 ; RUN: llvm-ar rcs fatLTO-pic.a a-fatLTO.o main-fatLTO.o
 ; RUN: llvm-readelf -S fatLTO-pic.a | FileCheck --check-prefix=HAS_LLVM_LTO %s
 
-; RUN: ld.lld --whole-archive fatLTO-pic.a -r -o fatLTO-pic-reolcatable.o
-; RUN: llvm-readelf -S fatLTO-pic-reolcatable.o | FileCheck --check-prefix=HAS_LLVM_LTO %s
+; RUN: ld.lld --whole-archive fatLTO-pic.a -r -o fatLTO-pic-relocatable.o
+; RUN: llvm-readelf -S fatLTO-pic-relocatable.o | FileCheck --check-prefix=CHECK-NON-LTO-TARGET %s
 
 ;--- a-LTO.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

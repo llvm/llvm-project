@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpf | FileCheck %s
+; RUN: llc < %s -mtriple=bpf -mcpu=v1 | FileCheck %s
 
 ; Function Attrs: nounwind readnone uwtable
 define signext i8 @foo_cmp1(i8 signext %a, i8 signext %b) #0 {

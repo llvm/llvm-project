@@ -1,0 +1,7 @@
+CHECK: BINGO
+RUN: %cpp_compiler %S/SimulateEmptyModuleTest.cpp -o %t-SimulateEmptyModuleTest
+
+RUN: not %run %t-SimulateEmptyModuleTest         2>&1 | FileCheck %s
+
+# only_ascii mode. Will perform some minimal self-validation.
+RUN: not %run %t-SimulateEmptyModuleTest -only_ascii=1 2>&1

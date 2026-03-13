@@ -1,10 +1,17 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -verify=expected,cxx98,cxx98-14,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify=expected,cxx98-14,cxx98-11,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2a %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++23 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2c %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace cwg705 { // cwg705: yes
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+namespace cwg705 { // cwg705: 2.7
   namespace N {
     struct S {};
     void f(S); // #cwg705-f
@@ -14,10 +21,10 @@ namespace cwg705 { // cwg705: yes
     N::S s;
     f(s);      // ok
     (f)(s);
-    // expected-error@-1 {{use of undeclared identifier 'f'}}
+    // expected-error@-1 {{use of undeclared identifier 'f'; did you mean 'N::f'?}}
     //   expected-note@#cwg705-f {{'N::f' declared here}}
   }
-}
+} // namespace cwg705
 
 namespace cwg712 { // cwg712: partial
   void use(int);
@@ -28,8 +35,6 @@ namespace cwg712 { // cwg712: partial
         use(a);
         use((a));
         use(cond ? a : a);
-        use((cond, a));
-        // expected-warning@-1 {{left operand of comma operator has no effect}}
 
         (void)a;
         // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg712::f'}} FIXME
@@ -42,10 +47,13 @@ namespace cwg712 { // cwg712: partial
         //   expected-note@#cwg712-f-a {{'a' declared here}}
         // expected-error@#cwg712-ternary {{reference to local variable 'a' declared in enclosing function 'cwg712::f'}} FIXME
         //   expected-note@#cwg712-f-a {{'a' declared here}}
-        (void)(cond, a); // #cwg712-comma
+        (void)(cond, a);
         // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg712::f'}} FIXME
         //   expected-note@#cwg712-f-a {{'a' declared here}}
-        // expected-warning@#cwg712-comma {{left operand of comma operator has no effect}}
+        // expected-warning@-3 {{left operand of comma operator has no effect}}
+
+        use((cond, a));
+        // expected-warning@-1 {{left operand of comma operator has no effect}}
       }
     };
   }
@@ -69,7 +77,29 @@ namespace cwg712 { // cwg712: partial
     };
   }
 #endif
-}
+} // namespace cwg712
+
+namespace cwg713 { // cwg713: 3.0
+template<typename T>
+struct is_const {
+    static const bool value = __is_const(T);
+};
+template<typename T>
+struct is_volatile {
+    static const bool value = __is_volatile(T);
+};
+
+static_assert(!is_const<void()const>::value, "");
+static_assert(!is_const<void()const volatile>::value, "");
+static_assert(!is_volatile<void()volatile>::value, "");
+static_assert(!is_volatile<void()const volatile>::value, "");
+#if __cplusplus >= 201103L
+static_assert(!is_const<void()const&>::value, "");
+static_assert(!is_volatile<void()volatile&>::value, "");
+#endif
+} // namespace cwg713
+
+// cwg722 is in cwg722.cpp
 
 namespace cwg727 { // cwg727: partial
   struct A {
@@ -80,7 +110,7 @@ namespace cwg727 { // cwg727: partial
 
     template<> struct C<int>;
     template<> void f<int>();
-    template<> static int N<int>;
+    template<> int N<int>;
 
     template<typename T> struct C<T*>;
     template<typename T> static int N<T*>;
@@ -91,7 +121,7 @@ namespace cwg727 { // cwg727: partial
       //   expected-note@#cwg727-C {{explicitly specialized declaration is here}}
       template<> void f<float>();
       // expected-error@-1 {{no function template matches function template specialization 'f'}}
-      template<> static int N<float>;
+      template<> int N<float>;
       // expected-error@-1 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-N {{explicitly specialized declaration is here}}
 
@@ -107,9 +137,9 @@ namespace cwg727 { // cwg727: partial
       // expected-error@-2 {{class template specialization of 'C' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-C {{explicitly specialized declaration is here}}
       template<> void A::f<double>();
-      // expected-error@-1 {{o function template matches function template specialization 'f'}}
-      // expected-error@-2 {{non-friend class member 'f' cannot have a qualified name}}
-      template<> static int A::N<double>;
+      // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+      // expected-error@-2 {{no function template matches function template specialization 'f'}}
+      template<> int A::N<double>;
       // expected-error@-1 {{non-friend class member 'N' cannot have a qualified name}}
       // expected-error@-2 {{variable template specialization of 'N' not in class 'A' or an enclosing namespace}}
       //   expected-note@#cwg727-N {{explicitly specialized declaration is here}}
@@ -159,37 +189,46 @@ namespace cwg727 { // cwg727: partial
     template<typename T> void f() { T::error; }
     // expected-error@-1 {{type 'float' cannot be used prior to '::' because it has no members}}
     //   expected-note@#cwg727-f-float {{in instantiation of function template specialization 'cwg727::D<int>::f<float>' requested here}}
-    template<typename T> static const int N = T::error;
-    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
-    // expected-error@-2 {{type 'float' cannot be used prior to '::' because it has no members}}
-    //   expected-note@#cwg727-N-float {{in instantiation of static data member 'cwg727::D<int>::N<float>' requested here}}
 
     template<> struct C<int> {};
     template<> void f<int>() {}
-    template<> static const int N<int>;
 
     template<typename T> struct C<T*> {};
-    template<typename T> static const int N<T*>;
-
-    template<typename>
-    struct E {
-      template<> void f<void>() {}
-      // expected-error@-1 {{no candidate function template was found for dependent member function template specialization}}
-    };
   };
 
   void d(D<int> di) {
     D<int>::C<int>();
     di.f<int>();
-    int a = D<int>::N<int>;
-
     D<int>::C<int*>();
-    int b = D<int>::N<int*>;
-
-    D<int>::C<float>(); // #cwg727-C-float
-    di.f<float>(); // #cwg727-f-float
-    int c = D<int>::N<float>; // #cwg727-N-float
+    D<int>::C<float>();  // #cwg727-C-float
   }
+
+  template void D<int>::f<float>();  // #cwg727-f-float
+
+#if __cplusplus >= 201402L
+  template<typename>
+  struct E {
+    template<typename T> static const int N = T::error;
+    // since-cxx14-error@-1 {{type 'float' cannot be used prior to '::' because it has no members}}
+    //   since-cxx14-note@#cwg727-N-float {{in instantiation of static data member 'cwg727::E<int>::N<float>' requested here}}
+    template<> const int N<int>;
+    template<typename T> static const int N<T*>;
+  };
+  void e() {
+    int a = E<int>::N<int>;
+    int b = E<int>::N<int*>;
+    int c = E<int>::N<float>; // #cwg727-N-float
+  }
+#endif
+
+  template<typename>
+  struct F {
+    template<typename>
+    struct F2 {
+      template<> void f<void>() {}
+      // expected-error@-1 {{no candidate function template was found for dependent member function template specialization}}
+    };
+  };
 
   namespace mixed_inner_outer_specialization {
 #if __cplusplus >= 201103L
@@ -208,18 +247,18 @@ namespace cwg727 { // cwg727: partial
 #if __cplusplus >= 201402L
     template<int> struct B {
       template<int> static const int u = 1;
-      template<> static const int u<0> = 2; // #cwg727-u0
+      template<> const int u<0> = 2; // #cwg727-u0
 
       // Note that in C++17 onwards, these are implicitly inline, and so the
       // initializer of v<0> is not instantiated with the declaration. In
       // C++14, v<0> is a non-defining declaration and its initializer is
       // instantiated with the class.
       template<int> static constexpr int v = 1;
-      template<> static constexpr int v<0> = 2; // #cwg727-v0
+      template<> constexpr int v<0> = 2; // #cwg727-v0
 
       template<int> static const inline int w = 1;
       // cxx14-error@-1 {{inline variables are a C++17 extension}}
-      template<> static const inline int w<0> = 2;
+      template<> const inline int w<0> = 2;
       // cxx14-error@-1 {{inline variables are a C++17 extension}}
     };
 
@@ -244,7 +283,7 @@ namespace cwg727 { // cwg727: partial
     static_assert(B<1>().v<0> == 2, "");
     static_assert(B<0>().v<1> == 3, "");
     static_assert(B<0>().v<0> == 4, "");
-    // cxx14-error@-1 {{static assertion failed due to requirement 'cwg727::mixed_inner_outer_specialization::B<0>().v<0> == 4'}}
+    // cxx14-error@-1 {{static assertion failed due to requirement 'cwg727::mixed_inner_outer_specialization::B<0>().v<0> == 4':}}
     //   cxx14-note@-2 {{expression evaluates to '2 == 4'}}
 
     static_assert(B<1>().w<1> == 1, "");
@@ -265,23 +304,21 @@ namespace cwg727 { // cwg727: partial
     template<> int f2<T>() {}
     template<> int f2<U>() {}
 
+#if __cplusplus >= 201402L
     template<typename> static int v1;
-    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
-    template<> static int v1<T>; // #cwg727-v1-T
-    template<> static int v1<U>;
-    // expected-error@-1 {{duplicate member 'v1'}}
-    //   expected-note@#cwg727-Collision-int-int {{in instantiation of template class 'cwg727::Collision<int, int>' requested here}}
-    //   expected-note@#cwg727-v1-T {{previous}}
-
+    template<> int v1<T>; // #cwg727-v1-T
+    template<> int v1<U>;
+    // since-cxx14-error@-1 {{duplicate member 'v1'}}
+    //   since-cxx14-note@#cwg727-Collision-int-int {{in instantiation of template class 'cwg727::Collision<int, int>' requested here}}
+    //   since-cxx14-note@#cwg727-v1-T {{previous declaration is here}}
+#endif
+#if __cplusplus >= 201703L
     template<typename> static inline int v2;
-    // cxx98-11-error@-1 {{variable templates are a C++14 extension}}
-    // cxx98-14-error@-2 {{inline variables are a C++17 extension}}
-    template<> static inline int v2<T>; // #cwg727-v2-T
-    // cxx98-14-error@-1 {{inline variables are a C++17 extension}} 
-    template<> static inline int v2<U>;
-    // cxx98-14-error@-1 {{inline variables are a C++17 extension}}
-    // expected-error@-2 {{duplicate member 'v2'}}
-    //   expected-note@#cwg727-v2-T {{previous declaration is here}}
+    template<> inline int v2<T>; // #cwg727-v2-T
+    template<> inline int v2<U>;
+    // since-cxx17-error@-1 {{duplicate member 'v2'}}
+    //   since-cxx17-note@#cwg727-v2-T {{previous declaration is here}}
+#endif
 
     // FIXME: Missing diagnostic for duplicate class explicit specialization.
     template<typename> struct S1;
@@ -292,10 +329,11 @@ namespace cwg727 { // cwg727: partial
     template<> struct S2<T> {}; // #cwg727-S2-T
     template<> struct S2<U> {};
     // expected-error@-1 {{redefinition of 'S2<int>'}}
-    //   expected-note@#cwg727-S2-T {{previous}}
+    //   cxx98-11-note@#cwg727-Collision-int-int {{in instantiation of template class 'cwg727::Collision<int, int>' requested here}}
+    //   expected-note@#cwg727-S2-T {{previous definition is here}}
   };
   Collision<int, int> c; // #cwg727-Collision-int-int
-}
+} // namespace cwg727
 
 namespace cwg777 { // cwg777: 3.7
 #if __cplusplus >= 201103L
@@ -309,4 +347,15 @@ void g(int i = 0, T ...args, T ...args2) {}
 template <typename... T>
 void h(int i = 0, T ...args, int j = 1) {}
 #endif
-}
+} // namespace cwg777
+
+namespace cwg794 { // cwg794: 2.7
+struct B {};
+struct D : B {};
+struct X {
+  D d;
+};
+struct Y : X {};
+B Y::*pm = &X::d;
+// expected-error@-1 {{cannot initialize a variable of type 'B Y::*' with an rvalue of type 'D X::*': different classes ('Y' vs 'X')}}
+} // namespace cwg794

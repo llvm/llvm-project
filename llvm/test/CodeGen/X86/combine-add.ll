@@ -235,10 +235,10 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; SSE-NEXT:    psubd %xmm1, %xmm3
 ; SSE-NEXT:    psubd %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    paddd %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm3, %xmm1
-; SSE-NEXT:    paddd %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm1, %xmm1
 ; SSE-NEXT:    paddd %xmm3, %xmm1
 ; SSE-NEXT:    movdqu %xmm3, 16(%rsi)
 ; SSE-NEXT:    movdqu %xmm2, (%rsi)
@@ -265,8 +265,8 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [10,10,10,10,10,10,10,10]
 ; AVX2-NEXT:    vpsubd (%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [3,3,3,3,3,3,3,3]
-; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vmovdqu %ymm0, (%rsi)
 ; AVX2-NEXT:    vmovdqu %ymm1, (%rdi)
 ; AVX2-NEXT:    vzeroupper
@@ -501,10 +501,8 @@ define i1 @PR51238(i1 %b, i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: PR51238:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %cl
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addb %dl, %cl
-; CHECK-NEXT:    adcb $1, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
    %ny = xor i8 %y, -1
    %nz = xor i8 %z, -1
@@ -562,4 +560,83 @@ define i64 @add_notx_x(i64 %v0) nounwind {
   %x = xor i64 %v0, -1
   %y = add i64 %x, %v0
   ret i64 %y
+}
+
+; Basic positive test
+define i32 @add_adc_to_adc(i32 %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: add_adc_to_adc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $42, %edx
+; CHECK-NEXT:    cmovsl %esi, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, 42
+  %7 = add i32 %6, %5
+  %8 = icmp slt i32 %7, 0
+  %9 = select i1 %8, i32 %1, i32 %0
+  ret i32 %9
+}
+
+; positive test: nonconst
+define i32 @add_adc_to_adc_nonconst(i32 %0, i32 %1, i32 %2, i32 %extra) nounwind {
+; CHECK-LABEL: add_adc_to_adc_nonconst:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl %ecx, %edx
+; CHECK-NEXT:    cmovsl %esi, %eax
+; CHECK-NEXT:    retq
+  %c = icmp ult i32 %0, %1
+  %carry = zext i1 %c to i32
+  %adc = add i32 %2, %carry
+  %final = add i32 %adc, %extra
+  %neg = icmp slt i32 %final, 0
+  %sel = select i1 %neg, i32 %1, i32 %0
+  ret i32 %sel
+}
+
+; Negative test: Carry or overflow flag is used
+define i32 @add_adc_wrong_flags(i32 %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: add_adc_wrong_flags:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $10, %edx
+; CHECK-NEXT:    addl $32, %edx
+; CHECK-NEXT:    cmovbl %edi, %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, 10
+  %7 = add i32 %6, %5
+  %8 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %7, i32 32)
+  %9 = extractvalue { i32, i1 } %8, 1
+  %10 = select i1 %9, i32 %0, i32 %1
+  ret i32 %10
+}
+
+; Negative test: Multi-use
+define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: add_adc_multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    adcl $0, %edx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    addl $42, %eax
+; CHECK-NEXT:    cmovsl %edi, %esi
+; CHECK-NEXT:    leal (%rsi,%rdx), %eax
+; CHECK-NEXT:    retq
+  %4 = icmp ult i32 %0, %1
+  %5 = zext i1 %4 to i32
+  %6 = add i32 %2, %5
+  %7 = add i32 %6, 42
+  %8 = icmp slt i32 %7, 0
+  %9 = select i1 %8, i32 %0, i32 %1
+  %10 = add i32 %9, %6
+  ret i32 %10
 }

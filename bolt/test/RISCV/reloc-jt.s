@@ -1,6 +1,6 @@
 /// NOTE: assign section addresses explicitly to make the symbol difference
 /// calculation below less fragile.
-// RUN: %clang %cflags -Wl,--section-start=.text=0x1000,--section-start=.data=0x2000 -o %t %s
+// RUN: %clang %cflags -Wl,--image-base=0,--section-start=.text=0x1000,--section-start=.data=0x2000 -o %t %s
 // RUN: llvm-bolt -o %t.bolt %t
 // RUN: llvm-readelf -x .data %t.bolt | FileCheck %s
 

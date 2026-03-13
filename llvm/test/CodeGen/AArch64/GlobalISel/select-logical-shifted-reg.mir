@@ -14,10 +14,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: and_xor_bicxrs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[BICXrs:%[0-9]+]]:gpr64 = BICXrs [[COPY]], [[COPY]], 8
-    ; CHECK: $x0 = COPY [[BICXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[BICXrs:%[0-9]+]]:gpr64 = BICXrs [[COPY]], [[COPY]], 8
+    ; CHECK-NEXT: $x0 = COPY [[BICXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_CONSTANT i64 -1
@@ -37,10 +38,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: or_xor_ornxrs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[ORNXrs:%[0-9]+]]:gpr64 = ORNXrs [[COPY]], [[COPY]], 8
-    ; CHECK: $x0 = COPY [[ORNXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[ORNXrs:%[0-9]+]]:gpr64 = ORNXrs [[COPY]], [[COPY]], 8
+    ; CHECK-NEXT: $x0 = COPY [[ORNXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_CONSTANT i64 -1
@@ -60,10 +62,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: xor_xor_eonxrs
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[EONXrs:%[0-9]+]]:gpr64 = EONXrs [[COPY]], [[COPY]], 8
-    ; CHECK: $x0 = COPY [[EONXrs]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[EONXrs:%[0-9]+]]:gpr64 = EONXrs [[COPY]], [[COPY]], 8
+    ; CHECK-NEXT: $x0 = COPY [[EONXrs]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 8
     %2:gpr(s64) = G_CONSTANT i64 -1

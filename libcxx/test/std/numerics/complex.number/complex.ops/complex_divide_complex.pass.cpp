@@ -12,11 +12,12 @@
 //   complex<T>
 //   operator/(const complex<T>& lhs, const complex<T>& rhs); // constexpr in C++20
 
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=5000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
-#include <complex>
 #include <cassert>
+#include <complex>
 
+#include "floating_pointer_helpers.h"
 #include "test_macros.h"
 #include "../cases.h"
 
@@ -27,7 +28,9 @@ test()
 {
     const std::complex<T> lhs(-4.0, 7.5);
     const std::complex<T> rhs(1.5, 2.5);
-    assert(lhs / rhs == std::complex<T>(1.5, 2.5));
+    const std::complex<T> c = lhs / rhs;
+    assert(is_close(c.real(), T(1.5)));
+    assert(is_close(c.imag(), T(2.5)));
     return true;
 }
 

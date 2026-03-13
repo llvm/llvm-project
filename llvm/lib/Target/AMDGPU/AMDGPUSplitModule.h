@@ -12,18 +12,27 @@
 #define LLVM_TARGET_AMDGPUSPLITMODULE_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/IR/PassManager.h"
 #include <memory>
 
 namespace llvm {
 
-class Module;
-class AMDGPUTargetMachine;
-
 /// Splits the module M into N linkable partitions. The function ModuleCallback
 /// is called N times passing each individual partition as the MPart argument.
-void splitAMDGPUModule(
-    const AMDGPUTargetMachine &TM, Module &M, unsigned N,
-    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback);
+class AMDGPUSplitModulePass : public PassInfoMixin<AMDGPUSplitModulePass> {
+public:
+  using ModuleCreationCallback =
+      function_ref<void(std::unique_ptr<Module> MPart)>;
+
+  AMDGPUSplitModulePass(unsigned N, ModuleCreationCallback ModuleCallback)
+      : N(N), ModuleCallback(ModuleCallback) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+
+private:
+  unsigned N;
+  ModuleCreationCallback ModuleCallback;
+};
 
 } // end namespace llvm
 

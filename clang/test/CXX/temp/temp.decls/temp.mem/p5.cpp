@@ -56,6 +56,10 @@ class Foo {
 template float Foo::As();
 template double Foo::As2();
 
+template<int B1> struct B {};
+template<class C1> struct C {};
+template<class D1, int D2> struct D {};
+
 // Partial ordering with conversion function templates.
 struct X0 {
   template<typename T> operator T*() {
@@ -64,6 +68,11 @@ struct X0 {
   }
 
   template<typename T> operator T*() const; // expected-note{{explicit instantiation refers here}}
+  template<int V> operator B<V>() const; // expected-note{{explicit instantiation refers here}}
+  template<class T, int V> operator C<T[V]>() const; // expected-note{{explicit instantiation refers here}}
+#if __cplusplus >= 201103L
+  template<int V> operator D<decltype(V), V>() const; // expected-note{{explicit instantiation refers here}}
+#endif
 
   template<typename T> operator const T*() const {
     T x = T();
@@ -76,7 +85,15 @@ struct X0 {
 
 template X0::operator const char*() const; // expected-note{{'X0::operator const char *<char>' requested here}}
 template X0::operator const int*(); // expected-note{{'X0::operator const int *<const int>' requested here}}
+// FIXME: These diagnostics are printing canonical types.
 template X0::operator float*() const; // expected-error{{explicit instantiation of undefined function template 'operator type-parameter-0-0 *'}}
+template X0::operator B<0>() const; // expected-error {{undefined function template 'operator B<value-parameter-0-0>'}}
+// FIXME: Within the above issue were we print canonical types here, printing the array
+// index expression as non-canonical is extra bad.
+template X0::operator C<int[1]>() const; // expected-error {{undefined function template 'operator C<type-parameter-0-0[V]>'}}
+#if __cplusplus >= 201103L
+template X0::operator D<int, 0>() const; // expected-error {{undefined function template 'operator D<decltype(value-parameter-0-0), value-parameter-0-0>'}}
+#endif
 
 void test_X0(X0 x0, const X0 &x0c) {
   x0.operator const int*(); // expected-note{{in instantiation of function template specialization}}

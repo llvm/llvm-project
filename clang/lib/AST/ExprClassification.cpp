@@ -63,6 +63,7 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_Void:
   case Cl::CL_AddressableVoid:
   case Cl::CL_DuplicateVectorComponents:
+  case Cl::CL_DuplicateMatrixComponents:
   case Cl::CL_MemberFunction:
   case Cl::CL_SubObjCPropertySetting:
   case Cl::CL_ClassTemporary:
@@ -119,12 +120,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 
     // First come the expressions that are always lvalues, unconditionally.
   case Expr::ObjCIsaExprClass:
-    // C++ [expr.prim.general]p1: A string literal is an lvalue.
-  case Expr::StringLiteralClass:
-    // @encode is equivalent to its string
-  case Expr::ObjCEncodeExprClass:
-    // __func__ and friends are too.
-  case Expr::PredefinedExprClass:
     // Property references are lvalues
   case Expr::ObjCSubscriptRefExprClass:
   case Expr::ObjCPropertyRefExprClass:
@@ -135,7 +130,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // FIXME: Is this wise? Should they get their own kind?
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
-  case Expr::TypoExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CXXDependentScopeMemberExprClass:
   case Expr::DependentScopeDeclRefExprClass:
@@ -148,7 +142,28 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
+  case Expr::HLSLOutArgExprClass:
     return Cl::CL_LValue;
+
+    // C++ [expr.prim.general]p1: A string literal is an lvalue.
+  case Expr::StringLiteralClass:
+    // @encode is equivalent to its string
+  case Expr::ObjCEncodeExprClass:
+    // Except we special case them as prvalues when they are used to
+    // initialize a char array.
+    return E->isLValue() ? Cl::CL_LValue : Cl::CL_PRValue;
+
+    // __func__ and friends are too.
+    // The char array initialization special case also applies
+    // when they are transparent.
+  case Expr::PredefinedExprClass: {
+    auto *PE = cast<PredefinedExpr>(E);
+    const StringLiteral *SL = PE->getFunctionName();
+    if (PE->isTransparent())
+      return SL ? ClassifyInternal(Ctx, SL) : Cl::CL_LValue;
+    assert(!SL || SL->isLValue());
+    return Cl::CL_LValue;
+  }
 
     // C99 6.5.2.5p5 says that compound literals are lvalues.
     // In C++, they're prvalue temporaries, except for file-scope arrays.
@@ -202,6 +217,12 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::SourceLocExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
+  case Expr::CXXReflectExprClass:
+    return Cl::CL_PRValue;
+
+  case Expr::EmbedExprClass:
+    // Nominally, this just goes through as a PRValue until we actually expand
+    // it and check it.
     return Cl::CL_PRValue;
 
   // Make HLSL this reference-like
@@ -239,6 +260,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
         return ClassifyInternal(Ctx, Base);
     }
     return Cl::CL_LValue;
+
+  case Expr::MatrixSingleSubscriptExprClass:
+    return ClassifyInternal(Ctx, cast<MatrixSingleSubscriptExpr>(E)->getBase());
 
   // Subscripting matrix types behaves like member accesses.
   case Expr::MatrixSubscriptExprClass:
@@ -350,6 +374,16 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
       return Cl::CL_LValue;
     return ClassifyInternal(Ctx, cast<ExtVectorElementExpr>(E)->getBase());
 
+  // Matrix element access is an lvalue unless there are duplicates
+  // in the shuffle expression.
+  case Expr::MatrixElementExprClass:
+    if (cast<MatrixElementExpr>(E)->containsDuplicateElements())
+      return Cl::CL_DuplicateMatrixComponents;
+    // NOTE: MatrixElementExpr is currently only used by HLSL which does not
+    // have pointers so there is no isArrow() necessary or way to test
+    // Cl::CL_LValue
+    return ClassifyInternal(Ctx, cast<MatrixElementExpr>(E)->getBase());
+
     // Simply look at the actual default argument.
   case Expr::CXXDefaultArgExprClass:
     return ClassifyInternal(Ctx, cast<CXXDefaultArgExpr>(E)->getExpr());
@@ -451,6 +485,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::CoyieldExprClass:
     return ClassifyInternal(Ctx, cast<CoroutineSuspendExpr>(E)->getResumeExpr());
   case Expr::SYCLUniqueStableNameExprClass:
+  case Expr::OpenACCAsteriskSizeExprClass:
     return Cl::CL_PRValue;
     break;
 
@@ -466,12 +501,13 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
 /// ClassifyDecl - Return the classification of an expression referencing the
 /// given declaration.
 static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
-  // C++ [expr.prim.general]p6: The result is an lvalue if the entity is a
-  //   function, variable, or data member and a prvalue otherwise.
+  // C++ [expr.prim.id.unqual]p3: The result is an lvalue if the entity is a
+  // function, variable, or data member, or a template parameter object and a
+  // prvalue otherwise.
   // In C, functions are not lvalues.
   // In addition, NonTypeTemplateParmDecl derives from VarDecl but isn't an
-  // lvalue unless it's a reference type (C++ [temp.param]p6), so we need to
-  // special-case this.
+  // lvalue unless it's a reference type or a class type (C++ [temp.param]p8),
+  // so we need to special-case this.
 
   if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
     if (M->isImplicitObjectMemberFunction())
@@ -580,6 +616,13 @@ static Cl::Kinds ClassifyMemberExpr(ASTContext &Ctx, const MemberExpr *E) {
 static Cl::Kinds ClassifyBinaryOp(ASTContext &Ctx, const BinaryOperator *E) {
   assert(Ctx.getLangOpts().CPlusPlus &&
          "This is only relevant for C++.");
+
+  // For binary operators which are unknown due to type dependence, the
+  // convention is to classify them as a prvalue. This does not matter much, but
+  // it needs to agree with how they are created.
+  if (E->getType() == Ctx.DependentTy)
+    return Cl::CL_PRValue;
+
   // C++ [expr.ass]p1: All [...] return an lvalue referring to the left operand.
   // Except we override this for writes to ObjC properties.
   if (E->isAssignmentOp())
@@ -683,7 +726,8 @@ static Cl::ModifiableType IsModifiable(ASTContext &Ctx, const Expr *E,
     return Cl::CM_ConstAddrSpace;
 
   // Arrays are not modifiable, only their elements are.
-  if (CT->isArrayType())
+  if (CT->isArrayType() &&
+      !(Ctx.getLangOpts().HLSL && CT->isConstantArrayType()))
     return Cl::CM_ArrayType;
   // Incomplete types are not modifiable.
   if (CT->isIncompleteType())
@@ -706,6 +750,8 @@ Expr::LValueClassification Expr::ClassifyLValue(ASTContext &Ctx) const {
   case Cl::CL_Void: return LV_InvalidExpression;
   case Cl::CL_AddressableVoid: return LV_IncompleteVoidType;
   case Cl::CL_DuplicateVectorComponents: return LV_DuplicateVectorComponents;
+  case Cl::CL_DuplicateMatrixComponents:
+    return LV_DuplicateMatrixComponents;
   case Cl::CL_MemberFunction: return LV_MemberFunction;
   case Cl::CL_SubObjCPropertySetting: return LV_SubObjCPropertySetting;
   case Cl::CL_ClassTemporary: return LV_ClassTemporary;
@@ -727,6 +773,8 @@ Expr::isModifiableLvalue(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_Void: return MLV_InvalidExpression;
   case Cl::CL_AddressableVoid: return MLV_IncompleteVoidType;
   case Cl::CL_DuplicateVectorComponents: return MLV_DuplicateVectorComponents;
+  case Cl::CL_DuplicateMatrixComponents:
+    return MLV_DuplicateMatrixComponents;
   case Cl::CL_MemberFunction: return MLV_MemberFunction;
   case Cl::CL_SubObjCPropertySetting: return MLV_SubObjCPropertySetting;
   case Cl::CL_ClassTemporary: return MLV_ClassTemporary;

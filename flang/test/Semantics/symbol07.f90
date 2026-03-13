@@ -1,40 +1,40 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
-!DEF: /main MainProgram
-program main
+!DEF: /MAIN MainProgram
+program MAIN
  implicit complex(z)
- !DEF: /main/t DerivedType
+ !DEF: /MAIN/t DerivedType
  type :: t
-  !DEF: /main/t/re ObjectEntity REAL(4)
+  !DEF: /MAIN/t/re ObjectEntity REAL(4)
   real :: re
-  !DEF: /main/t/im ObjectEntity REAL(4)
+  !DEF: /MAIN/t/im ObjectEntity REAL(4)
   real :: im
  end type
- !DEF: /main/z1 ObjectEntity COMPLEX(4)
+ !DEF: /MAIN/z1 ObjectEntity COMPLEX(4)
  complex z1
- !REF: /main/t
- !DEF: /main/w ObjectEntity TYPE(t)
+ !REF: /MAIN/t
+ !DEF: /MAIN/w ObjectEntity TYPE(t)
  type(t) :: w
- !DEF: /main/x ObjectEntity REAL(4)
- !DEF: /main/y ObjectEntity REAL(4)
+ !DEF: /MAIN/x ObjectEntity REAL(4)
+ !DEF: /MAIN/y ObjectEntity REAL(4)
  real x, y
- !REF: /main/x
- !REF: /main/z1
+ !REF: /MAIN/x
+ !REF: /MAIN/z1
  x = z1%re
- !REF: /main/y
- !REF: /main/z1
+ !REF: /MAIN/y
+ !REF: /MAIN/z1
  y = z1%im
- !DEF: /main/z2 (Implicit) ObjectEntity COMPLEX(4)
- !REF: /main/x
+ !DEF: /MAIN/z2 (Implicit) ObjectEntity COMPLEX(4)
+ !REF: /MAIN/x
  z2%re = x
- !REF: /main/z2
- !REF: /main/y
+ !REF: /MAIN/z2
+ !REF: /MAIN/y
  z2%im = y
- !REF: /main/x
- !REF: /main/w
- !REF: /main/t/re
+ !REF: /MAIN/x
+ !REF: /MAIN/w
+ !REF: /MAIN/t/re
  x = w%re
- !REF: /main/y
- !REF: /main/w
- !REF: /main/t/im
+ !REF: /MAIN/y
+ !REF: /MAIN/w
+ !REF: /MAIN/t/im
  y = w%im
 end program

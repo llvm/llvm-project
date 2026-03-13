@@ -15,9 +15,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceMgrAdapter.h"
-#include "clang/Basic/Version.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,12 +49,13 @@ public:
 } // namespace
 
 APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
-    : SM(SM), ImplicitAPINotes(LangOpts.APINotes) {}
+    : SM(SM), ImplicitAPINotes(LangOpts.APINotes),
+      VersionIndependentSwift(LangOpts.SwiftVersionIndependentAPINotes) {}
 
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
   for (const auto &Entry : Readers) {
-    if (auto Reader = Entry.second.dyn_cast<APINotesReader *>())
+    if (auto Reader = dyn_cast_if_present<APINotesReader *>(Entry.second))
       delete Reader;
   }
 
@@ -99,8 +98,11 @@ APINotesManager::loadAPINotes(FileEntryRef APINotesFile) {
 
   // Load the binary form we just compiled.
   auto Reader = APINotesReader::Create(std::move(CompiledBuffer), SwiftVersion);
-  assert(Reader && "Could not load the API notes we just generated?");
-  return Reader;
+  if (!Reader) {
+    llvm::consumeError(Reader.takeError());
+    return nullptr;
+  }
+  return std::move(Reader.get());
 }
 
 std::unique_ptr<APINotesReader>
@@ -119,9 +121,13 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
 
   CompiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
       StringRef(APINotesBuffer.data(), APINotesBuffer.size()));
+
   auto Reader = APINotesReader::Create(std::move(CompiledBuffer), SwiftVersion);
-  assert(Reader && "Could not load the API notes we just generated?");
-  return Reader;
+  if (!Reader) {
+    llvm::consumeError(Reader.takeError());
+    return nullptr;
+  }
+  return std::move(Reader.get());
 }
 
 bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
@@ -374,14 +380,14 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       ++NumDirectoryCacheHits;
 
       // We've been redirected to another directory for answers. Follow it.
-      if (Known->second && Known->second.is<DirectoryEntryRef>()) {
+      if (Known->second && isa<DirectoryEntryRef>(Known->second)) {
         DirsVisited.insert(*Dir);
-        Dir = Known->second.get<DirectoryEntryRef>();
+        Dir = cast<DirectoryEntryRef>(Known->second);
         continue;
       }
 
       // We have the answer.
-      if (auto Reader = Known->second.dyn_cast<APINotesReader *>())
+      if (auto Reader = dyn_cast_if_present<APINotesReader *>(Known->second))
         Results.push_back(Reader);
       break;
     }

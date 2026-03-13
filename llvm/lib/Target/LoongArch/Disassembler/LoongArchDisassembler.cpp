@@ -10,20 +10,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "loongarch-disassembler"
 
@@ -47,7 +48,8 @@ static MCDisassembler *createLoongArchDisassembler(const Target &T,
   return new LoongArchDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheLoongArch32Target(),
                                          createLoongArchDisassembler);
@@ -62,6 +64,14 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint64_t RegNo,
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createReg(LoongArch::R0 + RegNo));
   return MCDisassembler::Success;
+}
+
+static DecodeStatus
+DecodeGPRNoR0R1RegisterClass(MCInst &Inst, uint64_t RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  if (RegNo <= 1)
+    return MCDisassembler::Fail;
+  return DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeFPR32RegisterClass(MCInst &Inst, uint64_t RegNo,
@@ -144,6 +154,29 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
   // Shift left Imm <S> bits, then sign-extend the number in the bottom <N+S>
   // bits.
   Inst.addOperand(MCOperand::createImm(SignExtend64<N + S>(Imm << S)));
+  return MCDisassembler::Success;
+}
+
+// Decode AMSWAP.W and UD, which share the same base encoding.
+// If rk == 1 and rd == rj, interpret the instruction as UD;
+// otherwise decode as AMSWAP.W.
+static DecodeStatus DecodeAMOrUDInstruction(MCInst &Inst, unsigned Insn,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  unsigned Rd = fieldFromInstruction(Insn, 0, 5);
+  unsigned Rj = fieldFromInstruction(Insn, 5, 5);
+  unsigned Rk = fieldFromInstruction(Insn, 10, 5);
+
+  if (Rk == 1 && Rd == Rj) {
+    Inst.setOpcode(LoongArch::UD);
+    Inst.addOperand(MCOperand::createImm(Rd));
+  } else {
+    Inst.setOpcode(LoongArch::AMSWAP_W);
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + Rd));
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + Rk));
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + Rj));
+  }
+
   return MCDisassembler::Success;
 }
 

@@ -9,7 +9,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[TMP4]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[TMP4]], splat (i32 2)
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -11,14 +11,14 @@ define void @bound_check_partially_known_1(i32 %N) {
 ; CHECK-NEXT:  loop.lver.check:
 ; CHECK-NEXT:    [[N_EXT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[N_EXT]], 3
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr @global, i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr @global, i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[N_EXT]], 4
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr @global, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP0]], 256000
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr @global, i64 [[TMP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr @global, [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND13:%.*]] = icmp ult ptr getelementptr inbounds (i8, ptr @global, i64 256000), [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND13:%.*]] = icmp ult ptr getelementptr inbounds nuw (i8, ptr @global, i64 256000), [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND13]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[LOOP_PH_LVER_ORIG:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph.lver.orig:

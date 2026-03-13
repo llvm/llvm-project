@@ -38,7 +38,7 @@ contains
     allocate(negate, source=this)
     negate%a = -this%a
   end function
-  
+
   subroutine select_type1(a)
     class(p1), intent(in) :: a
 
@@ -63,21 +63,20 @@ contains
 ! CHECK: ^[[CLASS_IS_P1_BLK]]
 ! CHECK: ^[[CLASS_IS_P2_BLK]]
 ! CHECK: %[[P2:.*]] = fir.convert %[[ARG0:.*]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>
-! CHECK: %[[FIELD:.*]] = fir.field_index c, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
-! CHECK: %{{.*}} = fir.coordinate_of %[[P2]], %[[FIELD]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK: %{{.*}} = fir.coordinate_of %[[P2]], c : (!fir.class<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>) -> !fir.ref<i32>
 ! CHECK: ^[[DEFAULT_BLOCK]]
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type1(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
-! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
-! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> index
-! CFG:      %[[BOX_TDESC_CONV:.*]] = fir.convert %[[BOX_TDESC]] : (!fir.tdesc<none>) -> index
+! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
+! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> index
+! CFG:      %[[BOX_TDESC_CONV:.*]] = fir.convert %[[BOX_TDESC]] : (!fir.tdesc<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> index
 ! CFG:      %[[TDESC_CMP:.*]] = arith.cmpi eq, %[[TDESC_P1_CONV]], %[[BOX_TDESC_CONV]] : index
 ! CFG:      cf.cond_br %[[TDESC_CMP]], ^[[TYPE_IS_P1_BLK:.*]], ^[[NOT_TYPE_IS_P1_BLK:.*]]
 ! CFG:    ^[[NOT_TYPE_IS_P1_BLK]]:
-! CFG:      %[[TDESC_P2_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p2) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P2_CONV:.*]] = fir.convert %[[TDESC_P2_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P2_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp2{{.*}}
+! CFG:      %[[TDESC_P2_CONV:.*]] = fir.convert %[[TDESC_P2_ADDR]] : (!fir.tdesc<{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P2_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS]], ^bb[[CLASS_IS_P2_BLK:.*]], ^[[NOT_CLASS_IS_P2_BLK:.*]]
@@ -88,8 +87,8 @@ contains
 ! CFG:    ^bb[[CLASS_IS_P1_BLK:[0-9]]]:
 ! CFG:      cf.br ^[[END_SELECT_BLK:.*]]
 ! CFG:    ^[[NOT_CLASS_IS_P2_BLK]]:
-! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc<{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS]], ^bb[[CLASS_IS_P1_BLK]], ^bb[[NOT_CLASS_IS_P1_BLK]]
@@ -127,15 +126,15 @@ contains
 ! CFG:     %[[GET_CLASS:.*]] = fir.call @_QMselect_type_lower_testPget_class() {{.*}} : () -> !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CFG:     fir.save_result %[[GET_CLASS]] to %[[CLASS_ALLOCA]] : !fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
 ! CFG:     %[[LOAD_CLASS:.*]] = fir.load %[[CLASS_ALLOCA]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>
-! CFG:     %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:     %[[CLASS_TDESC:.*]] = fir.box_tdesc %[[LOAD_CLASS]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.tdesc<none>
-! CFG:     %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> index
-! CFG:     %[[BOX_TDESC_CONV:.*]] = fir.convert %[[CLASS_TDESC]] : (!fir.tdesc<none>) -> index
+! CFG:     %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:     %[[CLASS_TDESC:.*]] = fir.box_tdesc %[[LOAD_CLASS]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.tdesc<{{.*}}>
+! CFG:     %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> index
+! CFG:     %[[BOX_TDESC_CONV:.*]] = fir.convert %[[CLASS_TDESC]] : (!fir.tdesc<{{.*}}>) -> index
 ! CFG:     %[[TDESC_CMP:.*]] = arith.cmpi eq, %[[TDESC_P1_CONV]], %[[BOX_TDESC_CONV]] : index
 ! CFG:     cf.cond_br %[[TDESC_CMP]], ^[[TYPE_IS_P1_BLK:.*]], ^[[NOT_TYPE_IS_P1_BLK:.*]]
 ! CFG:   ^[[NOT_TYPE_IS_P1_BLK]]:
-! CFG:     %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:     %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:     %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:     %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CFG:     %[[BOX_NONE:.*]] = fir.convert %[[LOAD_CLASS]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<none>
 ! CFG:     %[[CLASS_IS:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:     cf.cond_br %[[CLASS_IS]], ^[[CLASS_IS_BLK:.*]], ^[[NOT_CLASS_IS_BLK:.*]]
@@ -177,15 +176,15 @@ contains
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type3(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>>> {fir.bindc_name = "a"}) {
 ! CFG:      %[[SELECTOR:.*]] = fir.embox %{{.*}} source_box %{{.*}} : (!fir.ref<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>, !fir.class<{{.*}}>) -> !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>
-! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[SELECTOR_TDESC:.*]] = fir.box_tdesc %[[SELECTOR]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
-! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> index
-! CFG:      %[[TDESC_CONV:.*]] = fir.convert %[[SELECTOR_TDESC]] : (!fir.tdesc<none>) -> index
+! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:      %[[SELECTOR_TDESC:.*]] = fir.box_tdesc %[[SELECTOR]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<{{.*}}>
+! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> index
+! CFG:      %[[TDESC_CONV:.*]] = fir.convert %[[SELECTOR_TDESC]] : (!fir.tdesc<{{.*}}>) -> index
 ! CFG:      %[[TDESC_CMP:.*]] = arith.cmpi eq, %[[TDESC_P1_CONV]], %[[TDESC_CONV]] : index
 ! CFG:      cf.cond_br %[[TDESC_CMP]], ^[[TYPE_IS_P1_BLK:.*]], ^[[NOT_TYPE_IS_P1_BLK:.*]]
 ! CFG:    ^[[NOT_TYPE_IS_P1_BLK]]:
-! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS]], ^[[CLASS_IS_BLK:.*]], ^[[NOT_CLASS_IS:.*]]
@@ -223,25 +222,25 @@ contains
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type4(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>> {fir.bindc_name = "a"}) {
-! CFG:      %[[TDESC_P3_8_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p3.8) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
-! CFG:      %[[TDESC_P3_8_CONV:.*]] = fir.convert %[[TDESC_P3_8_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> index
-! CFG:      %[[BOX_TDESC_CONV:.*]] = fir.convert %[[BOX_TDESC]] : (!fir.tdesc<none>) -> index
+! CFG:      %[[TDESC_P3_8_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp3K8
+! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<{{.*}}>
+! CFG:      %[[TDESC_P3_8_CONV:.*]] = fir.convert %[[TDESC_P3_8_ADDR]] : (!fir.tdesc{{.*}}>) -> index
+! CFG:      %[[BOX_TDESC_CONV:.*]] = fir.convert %[[BOX_TDESC]] : (!fir.tdesc<{{.*}}>) -> index
 ! CFG:      %[[TDESC_CMP:.*]] = arith.cmpi eq, %[[TDESC_P3_8_CONV]], %[[BOX_TDESC_CONV]] : index
 ! CFG:      cf.cond_br %[[TDESC_CMP]], ^[[P3_8_BLK:.*]], ^[[NOT_P3_8_BLK:.*]]
 ! CFG:    ^[[NOT_P3_8_BLK]]:
-! CFG:      %[[TDESC_P3_4_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p3.4) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<none>
-! CFG:      %[[TDESC_P3_4_CONV:.*]] = fir.convert %[[TDESC_P3_4_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> index
-! CFG:      %[[BOX_TDESC_CONV:.*]] = fir.convert %[[BOX_TDESC]] : (!fir.tdesc<none>) -> index
+! CFG:      %[[TDESC_P3_4_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp3K4
+! CFG:      %[[BOX_TDESC:.*]] = fir.box_tdesc %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.tdesc<{{.*}}>
+! CFG:      %[[TDESC_P3_4_CONV:.*]] = fir.convert %[[TDESC_P3_4_ADDR]] : (!fir.tdesc{{.*}}>) -> index
+! CFG:      %[[BOX_TDESC_CONV:.*]] = fir.convert %[[BOX_TDESC]] : (!fir.tdesc<{{.*}}>) -> index
 ! CFG:      %[[TDESC_CMP:.*]] = arith.cmpi eq, %[[TDESC_P3_4_CONV]], %[[BOX_TDESC_CONV]] : index
 ! CFG:      cf.cond_br %[[TDESC_CMP]], ^[[P3_4_BLK:.*]], ^[[NOT_P3_4_BLK:.*]]
 ! CFG:    ^[[P3_8_BLK]]:
 ! CFG:      _FortranAioOutputAscii
 ! CFG:      cf.br ^bb[[EXIT_SELECT_BLK:[0-9]]]
 ! CFG:    ^[[NOT_P3_4_BLK]]:
-! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS]], ^[[P1_BLK:.*]], ^[[NOT_P1_BLK:.*]]
@@ -276,7 +275,7 @@ contains
 ! CHECK-LABEL: func.func @_QMselect_type_lower_testPselect_type5(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"})
 ! CHECK: fir.select_type %[[ARG0]] : !fir.class<none>
-! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], #fir.type_is<!fir.char<1,?>>, ^[[CHAR_BLK:.*]], unit, ^[[DEFAULT:.*]]] 
+! CHECK-SAME: [#fir.type_is<i8>, ^[[I8_BLK:.*]], #fir.type_is<i32>, ^[[I32_BLK:.*]], #fir.type_is<f32>, ^[[F32_BLK:.*]], #fir.type_is<!fir.logical<4>>, ^[[LOG_BLK:.*]], #fir.type_is<!fir.char<1,?>>, ^[[CHAR_BLK:.*]], unit, ^[[DEFAULT:.*]]]
 ! CHECK: ^[[I8_BLK]]
 ! CHECK: ^[[I32_BLK]]
 ! CHECK: ^[[F32_BLK]]
@@ -410,8 +409,8 @@ contains
 
 ! CFG-LABEL: func.func @_QMselect_type_lower_testPselect_type7(
 ! CFG-SAME: %[[ARG0:.*]]: !fir.class<none> {fir.bindc_name = "a"}) {
-! CFG:      %[[TDESC_P4_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p4) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P4_CONV:.*]] = fir.convert %[[TDESC_P4_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P4_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp4
+! CFG:      %[[TDESC_P4_CONV:.*]] = fir.convert %[[TDESC_P4_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<none>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS_P4:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P4_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS_P4]], ^[[CLASS_IS_P4_BLK:.*]], ^[[CLASS_NOT_P4_BLK:.*]]
@@ -420,16 +419,16 @@ contains
 ! CFG:    ^bb[[CLASS_IS_P1_BLK:[0-9]]]:
 ! CFG:      cf.br ^[[EXIT_SELECT_BLK:.*]]
 ! CFG:    ^bb[[CLASS_NOT_P2_BLK:[0-9]]]:
-! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P1_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
+! CFG:      %[[TDESC_P1_CONV:.*]] = fir.convert %[[TDESC_P1_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<none>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS_P1:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P1_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS_P1]], ^bb[[CLASS_IS_P1_BLK]], ^bb[[CLASS_NOT_P1_BLK]]
 ! CFG:    ^bb[[CLASS_IS_P2_BLK:[0-9]]]:
 ! CFG:      cf.br ^[[EXIT_SELECT_BLK]]
 ! CFG:    ^[[CLASS_NOT_P4_BLK]]:
-! CFG:      %[[TDESC_P2_ADDR:.*]] = fir.address_of(@_QMselect_type_lower_testE.dt.p2) : !fir.ref<!fir.type<{{.*}}>>
-! CFG:      %[[TDESC_P2_CONV:.*]] = fir.convert %[[TDESC_P2_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CFG:      %[[TDESC_P2_ADDR:.*]] = fir.type_desc !fir.type<_QMselect_type_lower_testTp2
+! CFG:      %[[TDESC_P2_CONV:.*]] = fir.convert %[[TDESC_P2_ADDR]] : (!fir.tdesc{{.*}}>) -> !fir.ref<none>
 ! CFG:      %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.class<none>) -> !fir.box<none>
 ! CFG:      %[[CLASS_IS_P2:.*]] = fir.call @_FortranAClassIs(%[[BOX_NONE]], %[[TDESC_P2_CONV]]) : (!fir.box<none>, !fir.ref<none>) -> i1
 ! CFG:      cf.cond_br %[[CLASS_IS_P2]], ^bb[[CLASS_IS_P2_BLK]], ^bb[[CLASS_NOT_P2_BLK]]
@@ -468,7 +467,7 @@ contains
 ! CHECK: %[[SELECTOR:.*]] = fir.rebox %[[ARG0]] : (!fir.class<!fir.array<?xnone>>) -> !fir.class<!fir.array<?xnone>>
 ! CHECK: fir.select_type %[[SELECTOR]] : !fir.class<!fir.array<?xnone>> [#fir.type_is<i32>, ^{{.*}}, #fir.type_is<f32>, ^{{.*}}, #fir.type_is<!fir.char<1,?>>, ^bb{{.*}}, unit, ^{{.*}}]
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xi32>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[SELECTOR_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
@@ -483,7 +482,7 @@ contains
 ! CHECK:  fir.array_merge_store %[[ARRAY_LOAD]], %[[LOOP_RES]] to %[[BOX]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?xi32>>
 ! CHECK:  cf.br ^{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xf32>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:  %[[SELECTOR_DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
@@ -498,7 +497,7 @@ contains
 ! CHECK:  fir.array_merge_store %[[ARRAY_LOAD]], %[[LOOP_RES]] to %[[BOX]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
 ! CHECK:  cf.br ^{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK:  %[[BOX:.*]] = fir.convert %{{[0-9]+}} : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>> 
+! CHECK:  %[[BOX:.*]] = fir.convert %{{[0-9]+}} : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?xnone>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
@@ -518,7 +517,7 @@ contains
 ! CHECK:  %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[EXACT_BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, index) -> (index, index, index)
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
-! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32> 
+! CHECK:  %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
 ! CHECK:  %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
 ! CHECK:    %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:    fir.result %[[ARR_UP]] : !fir.array<?xi32>
@@ -600,7 +599,7 @@ contains
 ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[EXACT_BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, index) -> (index, index, index)
 ! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[SLICE:.*]] = fir.slice %[[C1]], %[[BOX_DIMS]]#1, %[[C1]] path %[[FIELD_B]] : (index, index, index, !fir.field) -> !fir.slice<1>
-! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32> 
+! CHECK: %[[ARRAY_LOAD:.*]] = fir.array_load %[[EXACT_BOX]] [%[[SLICE]]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>) -> !fir.array<?xi32>
 ! CHECK: %[[DO_RES:.*]] = fir.do_loop %[[IND:.*]] = %{{.*}} to %{{.*}} step %c{{.*}} unordered iter_args(%[[ARG:.*]] = %[[ARRAY_LOAD]]) -> (!fir.array<?xi32>) {
 ! CHECK:   %[[ARR_UP:.*]] = fir.array_update %[[ARG]], %{{.*}}, %[[IND]] : (!fir.array<?xi32>, i32, index) -> !fir.array<?xi32>
 ! CHECK:   fir.result %[[ARR_UP]] : !fir.array<?xi32>
@@ -608,7 +607,7 @@ contains
 ! CHECK: fir.array_merge_store %[[ARRAY_LOAD]], %[[DO_RES]] to %[[EXACT_BOX]][%[[SLICE]]] : !fir.array<?xi32>, !fir.array<?xi32>, !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.slice<1>
 ! CHECK: cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
-! CHECK: %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>> 
+! CHECK: %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.array<?x!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 ! CHECK: %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[EXACT_BOX]], %[[C0]] : (!fir.box<!fir.array<?x!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, index) -> (index, index, index)
@@ -663,21 +662,18 @@ contains
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:  %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_A]] : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C1]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
-! CHECK:  %[[FIELD_C:.*]] = fir.field_index c, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
-! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_C]] : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.box<!fir.ptr<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C3]] to %[[COORD_C]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}
 ! CHECK:  %[[C5:.*]] = arith.constant 5 : i32
-! CHECK:  %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[SELECTOR]], %[[FIELD_A]] : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[SELECTOR]], a : (!fir.class<!fir.ptr<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C5]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 
@@ -699,15 +695,13 @@ contains
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : i32
-! CHECK:  %[[FIELD_A:.*]] = fir.field_index a, !fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>
-! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_A]] : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_A:.*]] = fir.coordinate_of %[[EXACT_BOX]], a : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C1]] to %[[COORD_A]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 ! CHECK: ^bb{{.*}}:
 ! CHECK:  %[[EXACT_BOX:.*]] = fir.convert %[[SELECTOR]] : (!fir.class<!fir.heap<!fir.type<_QMselect_type_lower_testTp1{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : i32
-! CHECK:  %[[FIELD_C:.*]] = fir.field_index c, !fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>
-! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], %[[FIELD_C]] : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[COORD_C:.*]] = fir.coordinate_of %[[EXACT_BOX]], c : (!fir.box<!fir.heap<!fir.type<_QMselect_type_lower_testTp2{a:i32,b:i32,c:i32}>>>) -> !fir.ref<i32>
 ! CHECK:  fir.store %[[C3]] to %[[COORD_C]] : !fir.ref<i32>
 ! CHECK:  cf.br ^bb{{.*}}
 

@@ -200,7 +200,7 @@ public:
         Input(&Pdb), ExePath(ExePath), LogicalVisitor(this, W, Input) {}
   LVCodeViewReader(const LVCodeViewReader &) = delete;
   LVCodeViewReader &operator=(const LVCodeViewReader &) = delete;
-  ~LVCodeViewReader() = default;
+  ~LVCodeViewReader() override = default;
 
   void getLinkageName(const llvm::object::coff_section *CoffSection,
                       uint32_t RelocOffset, uint32_t Offset,

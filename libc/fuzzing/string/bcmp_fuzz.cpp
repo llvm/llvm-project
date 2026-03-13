@@ -9,7 +9,7 @@
 /// Fuzzing test for llvm-libc bcmp implementation.
 ///
 //===----------------------------------------------------------------------===//
-#include "src/string/bcmp.h"
+#include "src/strings/bcmp.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

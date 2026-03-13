@@ -1,13 +1,14 @@
-! REQUIRES: plugins, examples, shell
+! REQUIRES: plugins, examples
+! XFAIL: system-aix
 
-! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport.so -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
 ! Check OpenMP declarative directives
 
 ! 2.8.2 declare-simd
 
 subroutine declare_simd_1(a, b)
-  real(8), intent(inout) :: a, b
+  real(8), intent(inout), allocatable :: a, b
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
 end subroutine declare_simd_1
@@ -29,13 +30,13 @@ end
 
 ! CHECK:---
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-declarative-directive.f90'
-! CHECK-NEXT:  line:            11
+! CHECK-NEXT:  line:            [[@LINE-21]]
 ! CHECK-NEXT:  construct:       declare simd
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      aligned
 ! CHECK-NEXT:      details:     a
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-declarative-directive.f90'
-! CHECK-NEXT:  line:            21
+! CHECK-NEXT:  line:            [[@LINE-17]]
 ! CHECK-NEXT:  construct:       declare target
 ! CHECK-NEXT:  clauses:         []
 ! CHECK-NEXT:...

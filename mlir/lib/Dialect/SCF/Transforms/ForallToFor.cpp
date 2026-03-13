@@ -21,10 +21,7 @@ namespace mlir {
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 } // namespace mlir
 
-using namespace llvm;
 using namespace mlir;
-using scf::ForallOp;
-using scf::ForOp;
 using scf::LoopNest;
 
 LogicalResult
@@ -33,13 +30,16 @@ mlir::scf::forallToForLoop(RewriterBase &rewriter, scf::ForallOp forallOp,
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(forallOp);
 
+  if (!forallOp.getOutputs().empty()) {
+    forallOp.emitWarning()
+        << "skipping scf.forall with outputs, currently not supported";
+    return success();
+  }
+
   Location loc = forallOp.getLoc();
-  SmallVector<Value> lbs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedLowerBound());
-  SmallVector<Value> ubs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedUpperBound());
-  SmallVector<Value> steps =
-      getValueOrCreateConstantIndexOp(rewriter, loc, forallOp.getMixedStep());
+  SmallVector<Value> lbs = forallOp.getLowerBound(rewriter);
+  SmallVector<Value> ubs = forallOp.getUpperBound(rewriter);
+  SmallVector<Value> steps = forallOp.getStep(rewriter);
   LoopNest loopNest = scf::buildLoopNest(rewriter, loc, lbs, ubs, steps);
 
   SmallVector<Value> ivs = llvm::map_to_vector(

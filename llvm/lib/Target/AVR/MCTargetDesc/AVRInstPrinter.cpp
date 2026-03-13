@@ -14,13 +14,13 @@
 
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 
 #include <cstring>
 
@@ -86,38 +86,21 @@ void AVRInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 }
 
-const char *AVRInstPrinter::getPrettyRegisterName(unsigned RegNum,
+const char *AVRInstPrinter::getPrettyRegisterName(MCRegister Reg,
                                                   MCRegisterInfo const &MRI) {
   // GCC prints register pairs by just printing the lower register
   // If the register contains a subregister, print it instead
   if (MRI.getNumSubRegIndices() > 0) {
-    unsigned RegLoNum = MRI.getSubReg(RegNum, AVR::sub_lo);
-    RegNum = (RegLoNum != AVR::NoRegister) ? RegLoNum : RegNum;
+    MCRegister RegLo = MRI.getSubReg(Reg, AVR::sub_lo);
+    Reg = (RegLo != AVR::NoRegister) ? RegLo : Reg;
   }
 
-  return getRegisterName(RegNum);
+  return getRegisterName(Reg);
 }
 
 void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
   const MCOperandInfo &MOI = this->MII.get(MI->getOpcode()).operands()[OpNo];
-  if (MOI.RegClass == AVR::ZREGRegClassID) {
-    // Special case for the Z register, which sometimes doesn't have an operand
-    // in the MCInst.
-    O << "Z";
-    return;
-  }
-
-  if (OpNo >= MI->size()) {
-    // Not all operands are correctly disassembled at the moment. This means
-    // that some machine instructions won't have all the necessary operands
-    // set.
-    // To avoid asserting, print <unknown> instead until the necessary support
-    // has been implemented.
-    O << "<unknown>";
-    return;
-  }
-
   const MCOperand &Op = MI->getOperand(OpNo);
 
   if (Op.isReg()) {
@@ -134,7 +117,7 @@ void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     O << formatImm(Op.getImm());
   } else {
     assert(Op.isExpr() && "Unknown operand kind in printOperand");
-    O << *Op.getExpr();
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -166,7 +149,7 @@ void AVRInstPrinter::printPCRelImm(const MCInst *MI, unsigned OpNo,
     O << Imm;
   } else {
     assert(Op.isExpr() && "Unknown pcrel immediate operand");
-    O << *Op.getExpr();
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -189,7 +172,7 @@ void AVRInstPrinter::printMemri(const MCInst *MI, unsigned OpNo,
 
     O << Offset;
   } else if (OffsetOp.isExpr()) {
-    O << *OffsetOp.getExpr();
+    MAI.printExpr(O, *OffsetOp.getExpr());
   } else {
     llvm_unreachable("unknown type for offset");
   }

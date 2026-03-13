@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -cse -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds, cse))' -verify-diagnostics \
 // RUN:   -verify-diagnostics -split-input-file | FileCheck %s
 
 #map_dim_i = affine_map<(d0)[s0] -> (-d0 + 32400, s0)>
@@ -213,5 +213,33 @@ func.func @unsupported_negative_mod() {
   // expected-error @below{{could not reify bound}}
   %bound = "test.reify_bound"(%0) <{scalable, type = "UB", vscale_min = 1 : i64, vscale_max = 16 : i64}> : (index) -> index
   "test.some_use"(%bound) : (index) -> ()
+  return
+}
+
+// -----
+
+// CHECK: #[[$SCALABLE_BOUND_MAP_5:.*]] = affine_map<()[s0] -> (s0 * 4)>
+
+// CHECK-LABEL: @extract_slice_loop
+//       CHECK:   %[[VSCALE:.*]] = vector.vscale
+//       CHECK:   %[[SCALABLE_BOUND:.*]] = affine.apply #[[$SCALABLE_BOUND_MAP_5]]()[%[[VSCALE]]]
+//       CHECK:   "test.some_use"(%[[SCALABLE_BOUND]]) : (index) -> ()
+
+func.func @extract_slice_loop(%tensor: tensor<1x1x3x?xf32>) {
+  %vscale = vector.vscale
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.0 : f32
+  %c4_vscale = arith.muli %c4, %vscale : index
+  %slice = tensor.extract_slice %tensor[0, 0, 0, 0] [1, 1, 3, %c4_vscale] [1, 1, 1, 1] : tensor<1x1x3x?xf32> to tensor<1x3x?xf32>
+  %15 = scf.for %arg6 = %c0 to %c3 step %c1 iter_args(%arg = %slice) -> (tensor<1x3x?xf32>) {
+    %dim = tensor.dim %arg, %c2 : tensor<1x3x?xf32>
+    %bound = "test.reify_bound"(%dim) {type = "LB", vscale_min = 1, vscale_max = 16, scalable} : (index) -> index
+    "test.some_use"(%bound) : (index) -> ()
+    scf.yield %arg : tensor<1x3x?xf32>
+  }
   return
 }

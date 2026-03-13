@@ -419,7 +419,6 @@ define <1 x i64> @insertelement_v1i64(<1 x i64> %op1) {
 ; CHECK-LABEL: insertelement_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #5 // =0x5
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: insertelement_v1i64:
@@ -427,8 +426,7 @@ define <1 x i64> @insertelement_v1i64(<1 x i64> %op1) {
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    mov w8, #5 // =0x5
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
     %r = insertelement <1 x i64> %op1, i64 5, i64 0
@@ -506,25 +504,21 @@ define <4 x i64> @insertelement_v4i64(ptr %a) {
 define <2 x half> @insertelement_v2f16(<2 x half> %op1) {
 ; CHECK-LABEL: insertelement_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    fmov h1, #5.00000000
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    str h0, [sp, #8]
-; CHECK-NEXT:    str h1, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: insertelement_v2f16:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    adrp x8, .LCPI14_0
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldr h0, [x8, :lo12:.LCPI14_0]
+; NONEON-NOSVE-NEXT:    adrp x8, .LCPI14_0
 ; NONEON-NOSVE-NEXT:    ldr h1, [sp]
-; NONEON-NOSVE-NEXT:    str h0, [sp, #10]
+; NONEON-NOSVE-NEXT:    ldr h0, [x8, :lo12:.LCPI14_0]
 ; NONEON-NOSVE-NEXT:    str h1, [sp, #8]
+; NONEON-NOSVE-NEXT:    str h0, [sp, #10]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
@@ -765,9 +759,7 @@ define <1 x double> @insertelement_v1f64(<1 x double> %op1) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #16
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    mov x8, #4617315517961601024 // =0x4014000000000000
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, #5.00000000
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
     %r = insertelement <1 x double> %op1, double 5.0, i64 0

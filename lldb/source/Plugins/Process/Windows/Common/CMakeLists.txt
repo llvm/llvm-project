@@ -20,6 +20,8 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   x64/RegisterContextWindows_x64.cpp
   x86/RegisterContextWindows_x86.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
@@ -30,6 +32,4 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
     ws2_32
     rpcrt4
     psapi
-  LINK_COMPONENTS
-    Support
   )
