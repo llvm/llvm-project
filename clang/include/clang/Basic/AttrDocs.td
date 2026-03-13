@@ -9884,7 +9884,7 @@ def PersonalityDocs : Documentation {
 routine that is different from the language that is being used to implement the
 function. This is a targeted, low-level feature aimed at language runtime
 implementors who write runtime support code in C/C++ but need that code to
-participate in a foreign language’s exception-handling or unwinding model.
+participate in a foreign language's exception-handling or unwinding model.
 
 A personality routine is a language-specific callback attached to each stack
 frame that the unwinder invokes to determine whether that frame handles a given
