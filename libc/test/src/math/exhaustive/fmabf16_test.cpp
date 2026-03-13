@@ -23,9 +23,8 @@ struct FmaBf16Checker : public virtual LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   using StorageType = typename FPBits::StorageType;
 
-  uint64_t check(uint16_t x_start, uint16_t x_stop,
-                 [[maybe_unused]] uint16_t y_start, uint16_t y_stop,
-                 mpfr::RoundingMode rounding) {
+  uint64_t check(uint16_t x_start, uint16_t x_stop, uint16_t y_start,
+                 uint16_t y_stop, mpfr::RoundingMode rounding) {
 
     mpfr::ForceRoundingMode r(rounding);
     if (!r.success)
@@ -34,10 +33,10 @@ struct FmaBf16Checker : public virtual LIBC_NAMESPACE::testing::Test {
     uint64_t failed = 0;
     do {
       BFloat16 x = FPBits(xbits).get_val();
-      uint16_t ybits = xbits;
+      uint16_t ybits = y_start;
       do {
         BFloat16 y = FPBits(ybits).get_val();
-        BFloat16 z = FPBits(uint16_t(0x3F80)).get_val();
+        BFloat16 z = FPBits(uint16_t(0x03E1)).get_val();
         mpfr::TernaryInput<BFloat16> input{x, y, z};
         bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
             mpfr::Operation::Fma, input, LIBC_NAMESPACE::fmabf16(x, y, z), 0.5,
@@ -67,4 +66,12 @@ TEST_F(LlvmLibcBfloat16ExhaustiveFmaTest, PositiveRange) {
 
 TEST_F(LlvmLibcBfloat16ExhaustiveFmaTest, PositiveNegative) {
   test_full_range_all_roundings(POS_START, POS_STOP, NEG_START, NEG_STOP);
+}
+
+TEST_F(LlvmLibcBfloat16ExhaustiveFmaTest, NegativePositive) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP, POS_START, POS_STOP);
+}
+
+TEST_F(LlvmLibcBfloat16ExhaustiveFmaTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP, NEG_START, NEG_STOP);
 }
