@@ -485,10 +485,9 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // Early exit branch if difference found to ResultBlock. Otherwise,
   // continue to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  CondBrInst *CmpBr = CondBrInst::Create(Cmp, ResBlock.BB, NextBB);
+  CondBrInst *CmpBr = Builder.CreateCondBr(Cmp, ResBlock.BB, NextBB);
   setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
                                               CI->getFunction());
-  Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
                        {DominatorTree::Insert, BB, NextBB}});
@@ -551,10 +550,9 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // Early exit branch if difference found to ResultBlock. Otherwise, continue
   // to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  CondBrInst *CmpBr = CondBrInst::Create(Cmp, NextBB, ResBlock.BB);
+  CondBrInst *CmpBr = Builder.CreateCondBr(Cmp, NextBB, ResBlock.BB);
   setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
                                               CI->getFunction());
-  Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, NextBB},
                        {DominatorTree::Insert, BB, ResBlock.BB}});
@@ -579,8 +577,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
     Builder.SetInsertPoint(ResBlock.BB, InsertPt);
     Value *Res = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 1);
     PhiRes->addIncoming(Res, ResBlock.BB);
-    UncondBrInst *NewBr = UncondBrInst::Create(EndBlock);
-    Builder.Insert(NewBr);
+    Builder.CreateBr(EndBlock);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
     return;
@@ -598,8 +595,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
                                               DEBUG_TYPE, CI->getFunction());
 
   PhiRes->addIncoming(Res, ResBlock.BB);
-  UncondBrInst *NewBr = UncondBrInst::Create(EndBlock);
-  Builder.Insert(NewBr);
+  Builder.CreateBr(EndBlock);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
 }
