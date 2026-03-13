@@ -389,11 +389,12 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
                          std::shared_ptr<StackFrame> frame_sp,
                          lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                         bool fragile_ivar, bool check_ptr_vs_member)
+                         bool fragile_ivar, bool check_ptr_vs_member,
+                         bool allow_var_updates)
     : m_target(std::move(target)), m_expr(expr), m_exe_ctx_scope(frame_sp),
       m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
-      m_fragile_ivar(fragile_ivar), m_check_ptr_vs_member(check_ptr_vs_member) {
-}
+      m_fragile_ivar(fragile_ivar), m_check_ptr_vs_member(check_ptr_vs_member),
+      m_allow_var_updates(allow_var_updates) {}
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
   // Evaluate an AST.

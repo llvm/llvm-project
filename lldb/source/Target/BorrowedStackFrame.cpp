@@ -99,9 +99,10 @@ BorrowedStackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP BorrowedStackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode,
+    bool allow_var_updates) {
   return m_borrowed_frame_sp->GetValueForVariableExpressionPath(
-      var_expr, use_dynamic, options, var_sp, error, mode);
+      var_expr, use_dynamic, options, var_sp, error, mode, allow_var_updates);
 }
 
 bool BorrowedStackFrame::HasDebugInformation() {

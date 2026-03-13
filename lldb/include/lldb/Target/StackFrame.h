@@ -325,7 +325,7 @@ public:
   virtual lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull);
+      lldb::DILMode mode = lldb::eDILModeFull, bool allow_var_updates = false);
 
   /// Determine whether this StackFrame has debug information available or not.
   ///
@@ -621,7 +621,7 @@ private:
   lldb::ValueObjectSP DILGetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error,
-      lldb::DILMode mode = lldb::eDILModeFull);
+      lldb::DILMode mode = lldb::eDILModeFull, bool allow_var_updates = false);
 
   StackFrame(const StackFrame &) = delete;
   const StackFrame &operator=(const StackFrame &) = delete;

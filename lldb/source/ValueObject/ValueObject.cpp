@@ -1202,22 +1202,23 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
   return llvm::createStringError("type cannot be converted to bool");
 }
 
-void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
+void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error,
+                                      bool CanUpdateVar) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
-        Status::FromErrorString("current value object is not an integer objet");
+        Status::FromErrorString("current value object is not an scalar object");
     return;
   }
 
-  // Verify the current object is not actually associated with any program
-  // variable.
-  if (GetVariable()) {
+  // Verify, if current object is associated with a program variable, that
+  // we are allowing updating progrma variables in this case.
+  if (GetVariable() && !CanUpdateVar) {
     error = Status::FromErrorString(
-        "current value object is not a temporary object");
+        "Not allowed to update program variables in this case.");
     return;
   }
 
@@ -1241,22 +1242,22 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
 }
 
 void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
-                                      Status &error) {
+                                      Status &error, bool CanUpdateVar) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
-        Status::FromErrorString("current value object is not an integer objet");
+        Status::FromErrorString("current value object is not an scalar object");
     return;
   }
 
-  // Verify the current object is not actually associated with any program
-  // variable.
-  if (GetVariable()) {
+  // Verify, if current object is associated with a program variable, that
+  // we are allowing updating progrma variables in this case.
+  if (GetVariable() && !CanUpdateVar) {
     error = Status::FromErrorString(
-        "current value object is not a temporary object");
+        "Not allowed to update program variables in this case.");
     return;
   }
 
@@ -1272,13 +1273,13 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   if (new_val_type.IsInteger()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
     if (value_or_err)
-      SetValueFromInteger(*value_or_err, error);
+      SetValueFromInteger(*value_or_err, error, CanUpdateVar);
     else
       error = Status::FromErrorString("error getting APSInt from new_val_sp");
   } else if (HasFloatingRepresentation(new_val_type)) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
-      SetValueFromInteger(value_or_err->bitcastToAPInt(), error);
+      SetValueFromInteger(value_or_err->bitcastToAPInt(), error, CanUpdateVar);
     else
       error = Status::FromErrorString("error getting APFloat from new_val_sp");
   } else if (new_val_type.IsPointerType()) {
@@ -1290,7 +1291,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       if (auto temp = llvm::expectedToOptional(
               new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
-      SetValueFromInteger(llvm::APInt(num_bits, int_val), error);
+      SetValueFromInteger(llvm::APInt(num_bits, int_val), error, CanUpdateVar);
     } else
       error = Status::FromErrorString("error converting new_val_sp to integer");
   }

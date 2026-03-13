@@ -524,13 +524,14 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode,
+    bool allow_var_updates) {
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   if (use_DIL)
-    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                var_sp, error, mode);
+    return DILGetValueForVariableExpressionPath(
+        var_expr, use_dynamic, options, var_sp, error, mode, allow_var_updates);
 
   return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                  var_sp, error);
@@ -539,7 +540,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error,
-    lldb::DILMode mode) {
+    lldb::DILMode mode, bool allow_var_updates) {
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -568,7 +569,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   lldb::TargetSP target = this->CalculateTarget();
   dil::Interpreter interpreter(target, var_expr, shared_from_this(),
                                use_dynamic, !no_synth_child, !no_fragile_ivar,
-                               check_ptr_vs_member);
+                               check_ptr_vs_member, allow_var_updates);
 
   auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {
