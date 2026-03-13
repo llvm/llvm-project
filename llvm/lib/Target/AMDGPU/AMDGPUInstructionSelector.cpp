@@ -6889,7 +6889,6 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   if (!EncodedOffset)
     return std::nullopt;
 
-  assert(MRI->getType(SOffset) == LLT::scalar(32));
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
