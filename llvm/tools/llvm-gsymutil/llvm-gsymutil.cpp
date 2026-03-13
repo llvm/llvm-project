@@ -18,8 +18,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -101,6 +103,7 @@ static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
+static bool ShowStatistics;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -194,6 +197,8 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
+
+  ShowStatistics = Args.hasArg(OPT_statistics);
 
   for (const llvm::opt::Arg *A :
        Args.filtered(OPT_merged_functions_filter_EQ)) {
@@ -527,6 +532,61 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
   return Error::success();
 }
 
+static void dumpStatistics(StringRef GSYMPath, GsymReader &Gsym,
+                           raw_ostream &OS) {
+  const auto &Hdr = Gsym.getHeader();
+
+  // Get the total file size.
+  uint64_t FileSize = 0;
+  if (auto EC = sys::fs::file_size(GSYMPath, FileSize)) {
+    OS << "error: cannot stat file '" << GSYMPath << "': " << EC.message()
+       << "\n";
+    return;
+  }
+
+  // Header section.
+  const uint64_t HeaderSize = sizeof(Header);
+
+  // Address table: aligned to AddrOffSize, contains NumAddresses entries.
+  const uint64_t AddrTableStart = alignTo(HeaderSize, Hdr.AddrOffSize);
+  const uint64_t AddrTableSize =
+      static_cast<uint64_t>(Hdr.NumAddresses) * Hdr.AddrOffSize;
+
+  // Address info offsets table: aligned to 4 bytes, NumAddresses uint32_t's.
+  const uint64_t AddrInfoOffsetsStart =
+      alignTo(AddrTableStart + AddrTableSize, sizeof(uint32_t));
+  const uint64_t AddrInfoOffsetsSize =
+      static_cast<uint64_t>(Hdr.NumAddresses) * sizeof(uint32_t);
+
+  // File table: immediately follows address info offsets.
+  const uint64_t FileTableStart = AddrInfoOffsetsStart + AddrInfoOffsetsSize;
+  const uint64_t FileTableSize = Hdr.StrtabOffset - FileTableStart;
+
+  // String table: offset and size from header.
+  const uint64_t StrtabSize = Hdr.StrtabSize;
+
+  // Function info data: everything after the string table to end of file.
+  const uint64_t FuncInfoStart =
+      static_cast<uint64_t>(Hdr.StrtabOffset) + Hdr.StrtabSize;
+  const uint64_t FuncInfoSize = FileSize - FuncInfoStart;
+
+  // Padding between sections due to alignment.
+  const uint64_t Padding =
+      (AddrTableStart - HeaderSize) +
+      (AddrInfoOffsetsStart - AddrTableStart - AddrTableSize);
+
+  OS << "GSYM Statistics for \"" << GSYMPath << "\":\n";
+  OS << "  File size:           " << FileSize << " bytes\n";
+  OS << "  Header:              " << HeaderSize << " bytes\n";
+  OS << "  Address table:       " << AddrTableSize << " bytes\n";
+  OS << "  Addr info offsets:   " << AddrInfoOffsetsSize << " bytes\n";
+  OS << "  File table:          " << FileTableSize << " bytes\n";
+  OS << "  String table:        " << StrtabSize << " bytes\n";
+  OS << "  Function info data:  " << FuncInfoSize << " bytes\n";
+  OS << "  Padding:             " << Padding << " bytes\n";
+  OS << "  Number of addresses: " << Hdr.NumAddresses << "\n";
+}
+
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
@@ -701,6 +761,11 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     auto Gsym = GsymReader::openFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
+
+    if (ShowStatistics) {
+      dumpStatistics(GSYMPath, *Gsym, OS);
+      continue;
+    }
 
     if (LookupAddresses.empty()) {
       Gsym->dump(outs());

@@ -51,3 +51,5 @@ defm merged_functions_filter :
      "When used with --address/--addresses-from-stdin and --merged-functions,\n"
      "filters the merged functions output to only show functions matching any of the specified regex patterns.\n"
      "Can be specified multiple times.">;
+def statistics :
+  FF<"statistics", "Print the size of each section in the input GSYM file(s)">;
