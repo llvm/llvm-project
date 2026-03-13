@@ -776,7 +776,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMP_NumTeams("OMP_NUM_TEAMS"),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
-      OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
       // Do not initialize the following two envars since they depend on the
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We initialize them in GenericDeviceTy::init().

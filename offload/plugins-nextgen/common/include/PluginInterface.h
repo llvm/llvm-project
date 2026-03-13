@@ -1023,7 +1023,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDebugKind() const { return OMPX_DebugKind; }
-  uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
@@ -1196,7 +1195,6 @@ private:
 
   /// Environment variables defined by the LLVM OpenMP implementation.
   Int32Envar OMPX_DebugKind;
-  UInt32Envar OMPX_SharedMemorySize;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 
