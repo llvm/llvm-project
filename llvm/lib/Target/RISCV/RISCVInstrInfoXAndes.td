@@ -926,12 +926,14 @@ defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
   def : VTypeInfoToWide<VI16M8,  VI64M8>;
 }
 
-defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS",
-                            AllQuadWidenableVD4DOTVectors>;
-defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU",
-                            AllQuadWidenableVD4DOTVectors>;
-defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
-                            AllQuadWidenableVD4DOTVectors>;
+let Predicates = [HasVendorXAndesVDot] in {
+  defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS",
+                              AllQuadWidenableVD4DOTVectors>;
+  defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU",
+                              AllQuadWidenableVD4DOTVectors>;
+  defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
+                              AllQuadWidenableVD4DOTVectors>;
+} // Predicates = [HasVendorXAndesVDot]
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions for SFB (Short Forward Branch)
