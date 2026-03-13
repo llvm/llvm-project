@@ -5587,10 +5587,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Op->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      
-      const FPMathOperator *FPop = cast<FPMathOperator>(Op); 
+
+      const FPMathOperator *FPop = cast<FPMathOperator>(Op);
       bool HasNSZ = FPop->hasNoSignedZeros();
-      
+
       if (!HasNSZ && Self && Opc == Instruction::FAdd) {
         Known = KnownFPClass::fadd_self(KnownLHS, Mode);
       } else {
