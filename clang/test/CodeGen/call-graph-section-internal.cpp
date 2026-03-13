@@ -17,6 +17,8 @@ public:
   void d() { e.c(*this); }
 };
 
+void b::c(a) {}
+
 void f() {
   a *g = nullptr;
   g->d();
