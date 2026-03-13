@@ -3,12 +3,13 @@
 
 !s32i = !cir.int<s, 32>
 
-module {
-  cir.global external target_address_space(1) @global_as1 = #cir.int<42> : !s32i
-  // CHECK: llvm.mlir.global external @global_as1(42 : i32) {addr_space = 1 : i32} : i32
+module attributes { cir.triple = "amdgcn-amd-amdhsa" } {
+  // Target address space lowering (passthrough)
+  cir.global external target_address_space(1) @global_target_as1 = #cir.int<42> : !s32i
+  // CHECK: llvm.mlir.global external @global_target_as1(42 : i32) {addr_space = 1 : i32} : i32
 
-  cir.global external target_address_space(3) @global_as3 = #cir.int<100> : !s32i
-  // CHECK: llvm.mlir.global external @global_as3(100 : i32) {addr_space = 3 : i32} : i32
+  cir.global external target_address_space(3) @global_target_as3 = #cir.int<100> : !s32i
+  // CHECK: llvm.mlir.global external @global_target_as3(100 : i32) {addr_space = 3 : i32} : i32
 
   cir.global external @global_default = #cir.int<0> : !s32i
   // CHECK: llvm.mlir.global external @global_default(0 : i32) {addr_space = 0 : i32} : i32
@@ -16,20 +17,20 @@ module {
   // Test cir.get_global with address space produces correct llvm.mlir.addressof type
   // CHECK-LABEL: llvm.func @test_get_global_as1
   cir.func @test_get_global_as1() -> !s32i {
-    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_as1 : !llvm.ptr<1>
+    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_target_as1 : !llvm.ptr<1>
     // CHECK: %[[VAL:.*]] = llvm.load %[[ADDR]] {{.*}} : !llvm.ptr<1> -> i32
     // CHECK: llvm.return %[[VAL]] : i32
-    %0 = cir.get_global @global_as1 : !cir.ptr<!s32i, target_address_space(1)>
+    %0 = cir.get_global @global_target_as1 : !cir.ptr<!s32i, target_address_space(1)>
     %1 = cir.load %0 : !cir.ptr<!s32i, target_address_space(1)>, !s32i
     cir.return %1 : !s32i
   }
 
   // CHECK-LABEL: llvm.func @test_get_global_as3
   cir.func @test_get_global_as3() -> !s32i {
-    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_as3 : !llvm.ptr<3>
+    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_target_as3 : !llvm.ptr<3>
     // CHECK: %[[VAL:.*]] = llvm.load %[[ADDR]] {{.*}} : !llvm.ptr<3> -> i32
     // CHECK: llvm.return %[[VAL]] : i32
-    %0 = cir.get_global @global_as3 : !cir.ptr<!s32i, target_address_space(3)>
+    %0 = cir.get_global @global_target_as3 : !cir.ptr<!s32i, target_address_space(3)>
     %1 = cir.load %0 : !cir.ptr<!s32i, target_address_space(3)>, !s32i
     cir.return %1 : !s32i
   }
@@ -42,5 +43,43 @@ module {
     %0 = cir.get_global @global_default : !cir.ptr<!s32i>
     %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.return %1 : !s32i
+  }
+
+  // Language address space lowering (AMDGPU mapping)
+  // See: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+  // OffloadGlobal -> 1
+  cir.global external lang_address_space(offload_global) @global_lang_global = #cir.int<1> : !s32i
+  // CHECK: llvm.mlir.global external @global_lang_global(1 : i32) {addr_space = 1 : i32} : i32
+
+  // OffloadLocal -> 3
+  cir.global "private" internal lang_address_space(offload_local) @global_lang_local : !s32i
+  // CHECK: llvm.mlir.global internal @global_lang_local() {addr_space = 3 : i32} : i32
+
+  // OffloadConstant -> 4
+  cir.global external lang_address_space(offload_constant) @global_lang_constant = #cir.int<2> : !s32i
+  // CHECK: llvm.mlir.global external @global_lang_constant(2 : i32) {addr_space = 4 : i32} : i32
+
+  // OffloadPrivate -> 5
+  cir.global "private" internal lang_address_space(offload_private) @global_lang_private : !s32i
+  // CHECK: llvm.mlir.global internal @global_lang_private() {addr_space = 5 : i32} : i32
+
+  // OffloadGeneric -> 0
+  cir.global external lang_address_space(offload_generic) @global_lang_generic = #cir.int<3> : !s32i
+  // CHECK: llvm.mlir.global external @global_lang_generic(3 : i32) {addr_space = 0 : i32} : i32
+
+  // Pointer type lowering with lang_address_space
+  // CHECK: llvm.func @test_ptr_lang_as(%arg0: !llvm.ptr<1>)
+  cir.func @test_ptr_lang_as(%arg0: !cir.ptr<!s32i, lang_address_space(offload_global)>) {
+    // The alloca stores a pointer to address space 1, but the alloca itself is on the stack (default AS)
+    // CHECK: llvm.alloca {{.*}} x !llvm.ptr<1> {{.*}} : (i64) -> !llvm.ptr
+    %0 = cir.alloca !cir.ptr<!s32i, lang_address_space(offload_global)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
+  }
+
+  // CHECK: llvm.func @test_ptr_target_as(%arg0: !llvm.ptr<5>)
+  cir.func @test_ptr_target_as(%arg0: !cir.ptr<!s32i, target_address_space(5)>) {
+    // CHECK: llvm.alloca {{.*}} x !llvm.ptr<5> {{.*}} : (i64) -> !llvm.ptr
+    %0 = cir.alloca !cir.ptr<!s32i, target_address_space(5)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(5)>>, ["arg", init] {alignment = 8 : i64}
+    cir.return
   }
 }
