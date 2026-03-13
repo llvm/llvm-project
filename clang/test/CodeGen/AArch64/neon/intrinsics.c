@@ -936,3 +936,25 @@ uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
   return vabaq_u32(v1, v2, v3);
 }
+
+// LLVM-LABEL: @test_vshld_n_s64
+// CIR-LABEL: @test_vshld_n_s64
+int64_t test_vshld_n_s64(int64_t a) {
+  // CIR: cir.shift(left, {{.*}})
+
+  // LLVM-SAME: i64 noundef [[A:%.*]])
+  // LLVM: [[SHL_N:%.*]] = shl i64 [[A]], 1
+  // LLVM: ret i64 [[SHL_N]]
+  return (int64_t)vshld_n_s64(a, 1);
+}
+
+// LLVM-LABEL: @test_vshld_n_u64
+// CIR-LABEL: @test_vshld_n_u64
+int64_t test_vshld_n_u64(int64_t a) {
+  // CIR: cir.shift(left, {{.*}})
+
+  // LLVM-SAME: i64 noundef [[A:%.*]])
+  // LLVM: [[SHL_N:%.*]] = shl i64 [[A]], 1
+  // LLVM: ret i64 [[SHL_N]]
+  return (int64_t)vshld_n_u64(a, 1);
+}
