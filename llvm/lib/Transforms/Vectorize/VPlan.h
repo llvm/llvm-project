@@ -4747,6 +4747,10 @@ public:
     return getScalarHeader()->getIRBasicBlock()->getContext();
   }
 
+  const DataLayout &getDataLayout() const {
+    return getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  }
+
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   void setVF(ElementCount VF) {
