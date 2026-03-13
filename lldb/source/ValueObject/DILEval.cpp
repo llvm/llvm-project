@@ -558,7 +558,7 @@ Interpreter::PointerAdd(lldb::ValueObjectSP ptr, int64_t offset,
   ExecutionContext exe_ctx(m_target.get(), false);
   Scalar scalar(addr);
   return ValueObject::CreateValueObjectFromScalar(
-      m_target, scalar, ptr->GetCompilerType(), "result");
+      m_exe_ctx_scope, scalar, ptr->GetCompilerType(), "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -694,8 +694,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
           m_expr, "unable to determine pointer diff type", location);
 
     Scalar scalar(diff);
-    return ValueObject::CreateValueObjectFromScalar(m_target, scalar, ptrdiff_t,
-                                                    "result");
+    return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
+                                                    ptrdiff_t, "result");
   }
 
   std::string errMsg =
