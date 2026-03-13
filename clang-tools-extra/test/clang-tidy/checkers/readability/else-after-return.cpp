@@ -451,7 +451,19 @@ skip_over_return:
     goto skip_over_return2;
     return;
 skip_over_return2:
+    // No statement after label. Valid since C++23/C23.
   } else {
+    f(0);
+  }
+
+  if (true) {
+    goto skip_over_return3;
+    return;
+skip_over_return3:
+    return;
+  } else { // comment-28
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}}  } // comment-28
     f(0);
   }
 }
@@ -459,9 +471,9 @@ skip_over_return2:
 void testExcessiveBracing() {
   if (false) {
     {{{ return; }}}
-  } else { // comment-28
+  } else { // comment-29
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
-  // CHECK-FIXES: {{^}}  } // comment-28
+  // CHECK-FIXES: {{^}}  } // comment-29
     return;
   }
 }
@@ -475,18 +487,18 @@ struct NoReturnMember {
 void testNoReturn() {
   if (true) {
     noReturn();
-  } else { // comment-29
+  } else { // comment-30
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
-    // CHECK-FIXES: {{^}}  } // comment-29
+    // CHECK-FIXES: {{^}}  } // comment-30
     f(0);
   }
 
   if (true) {
     NoReturnMember f;
     f.noReturn();
-  } else { // comment-30
+  } else { // comment-31
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
-    // CHECK-FIXES: {{^}}  } // comment-30
+    // CHECK-FIXES: {{^}}  } // comment-31
     f(0);
   }
 }
