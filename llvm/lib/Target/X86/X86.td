@@ -778,12 +778,12 @@ def TuningUseGLMDivSqrtCosts
         "Use Goldmont specific floating point div/sqrt costs">;
 
 def TuningNDDImm
-    : SubtargetFeature<"enable-ndd-imm", "HasNDDI",
-          "true", "Target optimizes NDD immediate variant">;
+    : SubtargetFeature<"prefer-ndd-imm", "HasNDDI",
+          "true", "Prefer NDD immediate variant">;
 
 def TuningNDDMem
-    : SubtargetFeature<"enable-ndd-mem", "HasNDDM",
-          "true", "Target optimizes NDD memory addressing">;
+    : SubtargetFeature<"prefer-ndd-mem", "HasNDDM",
+          "true", "Prefer NDD memory addressing">;
 
 // Starting with Redwood Cove architecture, the branch has branch taken hint
 // (i.e., instruction prefix 3EH).
