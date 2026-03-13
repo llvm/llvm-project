@@ -4,8 +4,7 @@
 ## Curr.getParent(), causing an infinite loop when the call_site's
 ## immediate parent was not a subprogram (e.g., a lexical_block).
 
-# RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfdump --verify %t.o 2>&1 | FileCheck %s
+# RUN: yaml2obj %s -o - | llvm-dwarfdump --verify - 2>&1 | FileCheck %s
 
 # CHECK: No errors.
 
