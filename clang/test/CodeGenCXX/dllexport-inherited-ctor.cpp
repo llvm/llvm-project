@@ -269,6 +269,7 @@ struct __declspec(dllexport) ConstrainedChild : ConstrainedBase<false> {
 // The constrained default constructor should NOT be exported.
 // MSVC-NOT: dllexport{{.*}}ConstrainedChild@@QEAA@XZ
 // M32-NOT: dllexport{{.*}}ConstrainedChild@@QAE@XZ
+// GNU-NOT: dllexport{{.*}}ConstrainedBaseILb0EEEv
 
 // Constrained non-default constructor: only export when the constraint is met.
 template <typename T>
@@ -290,3 +291,26 @@ struct __declspec(dllexport) SelectiveChild : SelectiveBase<char> {
 // The constrained int constructor should NOT be exported.
 // MSVC-NOT: dllexport{{.*}}SelectiveChild@@QEAA@H@Z
 // M32-NOT: dllexport{{.*}}SelectiveChild@@QAE@H@Z
+// GNU-NOT: dllexport{{.*}}SelectiveBaseIcEEi
+
+//===----------------------------------------------------------------------===//
+// Non-constructor constrained method: when dllexport propagates to a base
+// template specialization, methods with unsatisfied constraints should not
+// be exported.
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+struct BaseWithConstrainedMethod {
+  void foo() requires(sizeof(T) > 100) {}
+  void bar() {}
+};
+
+struct __declspec(dllexport) MethodChild : BaseWithConstrainedMethod<int> {};
+
+// bar() should be exported (no constraint).
+// MSVC-DAG: define {{.*}}dllexport {{.*}} @"?bar@?$BaseWithConstrainedMethod@H@@QEAAXXZ"
+// M32-DAG: define {{.*}}dllexport {{.*}} @"?bar@?$BaseWithConstrainedMethod@H@@QAEXXZ"
+
+// foo() should NOT be exported (constraint not satisfied).
+// MSVC-NOT: dllexport{{.*}}foo@?$BaseWithConstrainedMethod@H
+// M32-NOT: dllexport{{.*}}foo@?$BaseWithConstrainedMethod@H

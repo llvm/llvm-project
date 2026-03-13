@@ -22,3 +22,14 @@ struct ConstrainedBase {
 struct __declspec(dllexport) ConstrainedChild : ConstrainedBase<false> {
   using ConstrainedBase::ConstrainedBase;
 };
+
+// Non-constructor constrained method on a base template specialization.
+// When dllexport propagates to the base, methods whose requires clause
+// is not satisfied must be skipped.
+template <typename T>
+struct BaseWithConstrainedMethod {
+  void foo() requires(sizeof(T) > 100) {}
+  void bar() {}
+};
+
+struct __declspec(dllexport) MethodChild : BaseWithConstrainedMethod<int> {};
