@@ -99,11 +99,6 @@ Improvements to clang-tidy
   manages the creation of temporary header files and ensures that diagnostics
   and fixes are verified for the specified headers.
 
-- Improved :doc:`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
-  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
-  number of false positives in test code.
-
 New checks
 ^^^^^^^^^^
 
@@ -173,6 +168,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
+  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
+  number of false positives in test code.
 
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
