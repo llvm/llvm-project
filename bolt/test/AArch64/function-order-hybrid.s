@@ -20,6 +20,9 @@
 # RUN:   -o %t.null 2>&1 | FileCheck %s --check-prefix=CHECK-HYBRID
 # RUN: FileCheck %s --input-file %t.genorder1 --check-prefix=CHECK-HYBRID-ORDER
 
+# CHECK-HYBRID: BOLT-INFO: hybrid mode: functions from
+# CHECK-HYBRID-SAME: order file will be pinned first,
+# CHECK-HYBRID-SAME: remaining functions ordered by exec-count
 # CHECK-HYBRID: BOLT-INFO: 2 functions pinned by order file
 
 # CHECK-HYBRID-ORDER:      func_b
@@ -27,20 +30,25 @@
 # CHECK-HYBRID-ORDER-NEXT: func_c
 # CHECK-HYBRID-ORDER-NEXT: func_d
 
-## Test 2: Default (none) + order file.
+## Test 2: Standalone order file (no --reorder-functions).
+## Should auto-default to --reorder-functions=user.
 ## Order-file functions come first, then remaining in original address order
 ## (func_d before func_c in the binary).
 # RUN: llvm-bolt %t.exe --data %t.fdata \
 # RUN:   --function-order=%t.order --generate-function-order=%t.genorder2 \
-# RUN:   -o %t.null 2>&1 | FileCheck %s --check-prefix=CHECK-NONE
-# RUN: FileCheck %s --input-file %t.genorder2 --check-prefix=CHECK-NONE-ORDER
+# RUN:   -o %t.null 2>&1 | FileCheck %s --check-prefix=CHECK-STANDALONE
+# RUN: FileCheck %s --input-file %t.genorder2 \
+# RUN:   --check-prefix=CHECK-STANDALONE-ORDER
 
-# CHECK-NONE: BOLT-INFO: 2 functions pinned by order file
+# CHECK-STANDALONE: BOLT-INFO: --function-order specified
+# CHECK-STANDALONE-SAME: without --reorder-functions,
+# CHECK-STANDALONE-SAME: defaulting to --reorder-functions=user
+# CHECK-STANDALONE: BOLT-INFO: 2 functions pinned by order file
 
-# CHECK-NONE-ORDER:      func_b
-# CHECK-NONE-ORDER-NEXT: func_a
-# CHECK-NONE-ORDER-NEXT: func_d
-# CHECK-NONE-ORDER-NEXT: func_c
+# CHECK-STANDALONE-ORDER:      func_b
+# CHECK-STANDALONE-ORDER-NEXT: func_a
+# CHECK-STANDALONE-ORDER-NEXT: func_d
+# CHECK-STANDALONE-ORDER-NEXT: func_c
 
 ## Test 3: User mode + order file. Same result as none + order file since
 ## RT_USER delegates entirely to the order file.
@@ -56,7 +64,24 @@
 # CHECK-USER-ORDER-NEXT: func_d
 # CHECK-USER-ORDER-NEXT: func_c
 
-## Test 4: Order file with a missing function.
+## Test 4: Explicit --reorder-functions=none + order file.
+## Should warn and reset to --reorder-functions=user.
+# RUN: llvm-bolt %t.exe --data %t.fdata --reorder-functions=none \
+# RUN:   --function-order=%t.order --generate-function-order=%t.genorder4 \
+# RUN:   -o %t.null 2>&1 | FileCheck %s --check-prefix=CHECK-RESET
+# RUN: FileCheck %s --input-file %t.genorder4 --check-prefix=CHECK-RESET-ORDER
+
+# CHECK-RESET: BOLT-WARNING: --reorder-functions=none
+# CHECK-RESET-SAME: is incompatible with --function-order,
+# CHECK-RESET-SAME: resetting to --reorder-functions=user
+# CHECK-RESET: BOLT-INFO: 2 functions pinned by order file
+
+# CHECK-RESET-ORDER:      func_b
+# CHECK-RESET-ORDER-NEXT: func_a
+# CHECK-RESET-ORDER-NEXT: func_d
+# CHECK-RESET-ORDER-NEXT: func_c
+
+## Test 5: Order file with a missing function.
 ## The nonexistent function is skipped with a warning, valid functions are still
 ## pinned correctly.
 # RUN: echo "func_b" > %t.order_missing
@@ -64,9 +89,9 @@
 # RUN: echo "func_a" >> %t.order_missing
 # RUN: llvm-bolt %t.exe --data %t.fdata --reorder-functions=exec-count \
 # RUN:   --function-order=%t.order_missing \
-# RUN:   --generate-function-order=%t.genorder4 -v=1 \
+# RUN:   --generate-function-order=%t.genorder5 -v=1 \
 # RUN:   -o %t.null 2>&1 | FileCheck %s --check-prefix=CHECK-MISS
-# RUN: FileCheck %s --input-file %t.genorder4 \
+# RUN: FileCheck %s --input-file %t.genorder5 \
 # RUN:   --check-prefix=CHECK-MISS-ORDER
 
 # CHECK-MISS-DAG: can't find function for nonexist

@@ -70,7 +70,7 @@ static cl::opt<bool> ReorderFunctionsUseHotSize(
 static cl::opt<std::string> FunctionOrderFile(
     "function-order",
     cl::desc("file containing an ordered list of functions to use for function "
-             "reordering"),
+             "reordering; can be combined with --reorder-functions algorithms"),
     cl::cat(BoltOptCategory));
 
 static cl::opt<std::string> GenerateFunctionOrderFile(
@@ -351,9 +351,49 @@ Expected<uint32_t> ReorderFunctions::assignFunctionOrder(
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   auto &BFs = BC.getBinaryFunctions();
 
+  // If a function order file is provided but no reorder algorithm was
+  // explicitly specified, default to RT_USER.
+  if (!opts::FunctionOrderFile.empty()) {
+    if (opts::ReorderFunctions.getNumOccurrences() == 0) {
+      opts::ReorderFunctions = RT_USER;
+      BC.outs()
+          << "BOLT-INFO: --function-order specified without "
+          << "--reorder-functions, defaulting to --reorder-functions=user\n";
+    } else if (opts::ReorderFunctions == RT_NONE) {
+      BC.errs() << "BOLT-WARNING: --reorder-functions=none is incompatible "
+                << "with --function-order, resetting to "
+                << "--reorder-functions=user\n";
+      opts::ReorderFunctions = RT_USER;
+    } else if (opts::ReorderFunctions != RT_USER) {
+      StringRef AlgName;
+      switch (opts::ReorderFunctions) {
+      case RT_EXEC_COUNT:
+        AlgName = "exec-count";
+        break;
+      case RT_HFSORT:
+        AlgName = "hfsort";
+        break;
+      case RT_CDSORT:
+        AlgName = "cdsort";
+        break;
+      case RT_PETTIS_HANSEN:
+        AlgName = "pettis-hansen";
+        break;
+      case RT_RANDOM:
+        AlgName = "random";
+        break;
+      default:
+        llvm_unreachable("unexpected reorder type in hybrid mode");
+      }
+      BC.outs() << "BOLT-INFO: hybrid mode: functions from order file will be "
+                << "pinned first, remaining functions ordered by " << AlgName
+                << "\n";
+    }
+  }
+
   // Process order file if provided. Assign indices 0..N-1 to listed functions.
   // For algorithmic modes, the algorithm orders remaining functions starting
-  // at index N. For RT_NONE/RT_USER, remaining functions keep original order.
+  // at index N. For RT_USER, remaining functions keep original order.
   // UserFileEndIndex tracks the number of functions pinned by the order file.
   uint32_t UserFileEndIndex = 0;
   DenseSet<const BinaryFunction *> UserOrderedFuncs;
