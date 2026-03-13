@@ -49,11 +49,13 @@ jobs:
       run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder
       env:
         TAG: ${{ github.sha }}
+        BASE_IMAGE_VERSION: ${{ github.sha }}
 
     - name: Build the Android builder image
       run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-android-builder
       env:
         TAG: ${{ github.sha }}
+        BASE_IMAGE_VERSION: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0

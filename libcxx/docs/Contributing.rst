@@ -285,15 +285,24 @@ files is read by the `Terraform configuration in llvm-zorg
 When updating the container image, you can either update just the runner binary (the part
 that connects to Github), or you can update everything (tools, etc.). To update the runner
 binary, bump the value of ``GITHUB_RUNNER_VERSION`` in ``libcxx/utils/ci/docker/docker-compose.yml``.
-To update all of the tools, bump ``BASE_IMAGE_VERSION`` to a newer version of the ``libcxx-linux-builder-base``
-image. You can see all versions of that image at https://github.com/llvm/llvm-project/pkgs/container/libcxx-linux-builder-base.
+To update the base tools (compilers, system packages, etc.), modify ``linux-builder-base.dockerfile``
+directly.
 
-On push to ``main``, a new version of both the ``libcxx-linux-builder`` and the ``libcxx-android-builder``
-images will be built and pushed to https://github.com/llvm/llvm-project/packages.
+On push to ``main``, new versions of ``libcxx-linux-builder-base``, ``libcxx-linux-builder``,
+and ``libcxx-android-builder`` are built in a workflow run and tagged with a commit SHA (the
+current ``HEAD``). The derived images (``libcxx-linux-builder`` and ``libcxx-android-builder``)
+are automatically wired to use the base image built in that same workflow run. All images are
+pushed to https://github.com/llvm/llvm-project/packages.
 
-You can then update the image used by the actual runners by changing the image encoded in
-``libcxx/utils/ci/images`` and asking an LLVM premerge maintainer (a Google employee) to
-actually deploy the changes to the GKE cluster via Terraform.
+To update the runners to use a new image, the workflow is:
+
+1. Make dockerfile changes (base or derived) in a PR, land it, and wait for the
+   ``Build Docker images for libc++ CI`` workflow to complete on ``main``. Note
+   the resulting commit SHA.
+2. Update ``libcxx/utils/ci/images/libcxx_next_runners.txt`` (or the appropriate runners
+   file) with that SHA.
+3. Ask an LLVM premerge maintainer (a Google employee) to apply the changes to the
+   GKE cluster via Terraform.
 
 Monitoring premerge testing performance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
