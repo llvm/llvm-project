@@ -664,7 +664,7 @@ def Vector_ExtractOp :
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     InferTypeOpAdaptorWithIsCompatible]> {
+     InferTypeOpAdaptor]> {
   let summary = "extract operation";
   let description = [{
     Extracts an (n − k)-D result sub-vector from an n-D source vector at a
