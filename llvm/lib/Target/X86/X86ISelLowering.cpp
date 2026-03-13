@@ -2934,12 +2934,12 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 
 // Return true if its cheap to bitcast this to a vector type.
 static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
-                              const X86Subtarget &Subtarget,
-                              bool AssumeSingleUse = false) {
+                              const X86Subtarget &Subtarget) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
+
   EVT VT = Op.getValueType();
   unsigned Opcode = Op.getOpcode();
   if ((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
@@ -2966,7 +2966,7 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
              mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget);
     }
   }
-  return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
+  return X86::mayFoldLoad(Op, Subtarget, /*AssumeSingleUse=*/true,
                           /*IgnoreAlignment=*/true);
 }
 
@@ -23539,9 +23539,8 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
-  // TODO: Drop AssumeSingleUse = true override.
-  if ((!mayFoldIntoVector(X, DAG, Subtarget, /*AssumeSingleUse=*/true) ||
-       !mayFoldIntoVector(Y, DAG, Subtarget, /*AssumeSingleUse=*/true)) &&
+  if ((!mayFoldIntoVector(X, DAG, Subtarget) ||
+       !mayFoldIntoVector(Y, DAG, Subtarget)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
@@ -29960,8 +29959,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
          (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
          "Unexpected type in LowerFMINIMUM_FMAXIMUM");
 
-  bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
-                   Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
+  bool IgnoreNaN = Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
 
   // If we did no ordering operands for signed zero handling and we need
   // to process NaN and we know that one of the operands is not NaN then:
@@ -34459,8 +34457,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Amt = N->getOperand(1);
     assert(Subtarget.useAVX512Regs() && "AVX512F required");
     assert(VT == MVT::i512 && "Unexpected VT!");
-    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
+    unsigned BW = VT.getSizeInBits();
+    unsigned NumElts = BW / 64;
+    MVT VecVT = MVT::getVectorVT(MVT::i64, NumElts);
+    MVT BoolVT = MVT::getVectorVT(MVT::i1, NumElts);
 
     if (!mayFoldIntoVector(Src, DAG, Subtarget))
       return;
@@ -34468,7 +34468,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // Early out if this will fold to a constant shift of whole byte elements.
     // TODO: Directly lower to a shuffle?
     if (auto *AmtC = dyn_cast<ConstantSDNode>(Amt)) {
-      assert(AmtC->getAPIntValue().ult(512) && "Out of bounds shift amount");
+      assert(AmtC->getAPIntValue().ult(BW) && "Out of bounds shift amount");
       if (AmtC->getAPIntValue().urem(8) == 0)
         return;
     }
@@ -34484,7 +34484,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       if ((Opc == ISD::SHL && SrcC->getAPIntValue() == 1) ||
           (Opc == ISD::SRL && SrcC->getAPIntValue().isSignMask())) {
         APInt EltBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
-        APInt LaneBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 7);
+        APInt LaneBitVal =
+            APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : (NumElts - 1));
         SDValue EltBit = DAG.getConstant(EltBitVal, dl, MVT::i64);
         SDValue LaneBit = DAG.getConstant(LaneBitVal, dl, MVT::i64);
         SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
@@ -34510,29 +34511,30 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
                     DAG.getNode(ISD::SHL, dl, MVT::i32,
                                 DAG.getAllOnesConstant(dl, MVT::i32), AmtLane));
+    Mask = DAG.getBitcast(BoolVT, Mask);
     Src = DAG.getBitcast(VecVT, Src);
 
+    SmallVector<int, 8> ShufMask(NumElts);
     SDValue PassThrough;
     if (Opc == ISD::SRA) {
       // Splat the MSB sign bit across the vector.
+      std::fill(ShufMask.begin(), ShufMask.end(), NumElts - 1);
       PassThrough = DAG.getNode(ISD::SRA, dl, VecVT, Src,
                                 DAG.getShiftAmountConstant(63, VecVT, dl));
-      PassThrough = DAG.getVectorShuffle(VecVT, dl, PassThrough, PassThrough,
-                                         {7, 7, 7, 7, 7, 7, 7, 7});
+      PassThrough =
+          DAG.getVectorShuffle(VecVT, dl, PassThrough, PassThrough, ShufMask);
     } else {
       PassThrough = DAG.getConstant(0, dl, VecVT);
     }
     SDValue A, B;
     if (Opc == ISD::SHL) {
-      A = DAG.getNode(X86ISD::EXPAND, dl, VecVT, Src, PassThrough,
-                      DAG.getBitcast(BoolVT, Mask));
-      B = DAG.getVectorShuffle(VecVT, dl, PassThrough, A,
-                               {7, 8, 9, 10, 11, 12, 13, 14});
+      std::iota(ShufMask.begin(), ShufMask.end(), NumElts - 1);
+      A = DAG.getNode(X86ISD::EXPAND, dl, VecVT, Src, PassThrough, Mask);
+      B = DAG.getVectorShuffle(VecVT, dl, PassThrough, A, ShufMask);
     } else {
-      B = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, Src, PassThrough,
-                      DAG.getBitcast(BoolVT, Mask));
-      A = DAG.getVectorShuffle(VecVT, dl, B, PassThrough,
-                               {1, 2, 3, 4, 5, 6, 7, 8});
+      std::iota(ShufMask.begin(), ShufMask.end(), 1);
+      B = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, Src, PassThrough, Mask);
+      A = DAG.getVectorShuffle(VecVT, dl, B, PassThrough, ShufMask);
     }
     // Funnel shifts use modulo shift amount so no need to explicitly mask it.
     SDValue Res =
@@ -43058,6 +43060,12 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         }
       }
     }
+
+    // Attempt to convert to VZEXT_MOVL if all upper elements are known zero.
+    if (32 <= EltBits &&
+        DAG.MaskedVectorIsZero(N, APInt::getHighBitsSet(NumElts, NumElts - 1)))
+      return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT,
+                         N.getConstantOperandVal(2) & 1 ? N1 : N0);
     return SDValue();
   }
   case X86ISD::SHUFP: {
@@ -56239,8 +56247,7 @@ static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == X86ISD::FMIN || N->getOpcode() == X86ISD::FMAX);
 
   // FMIN/FMAX are commutative if no NaNs and no negative zeros are allowed.
-  if ((!DAG.getTarget().Options.NoNaNsFPMath && !N->getFlags().hasNoNaNs()) ||
-      !N->getFlags().hasNoSignedZeros())
+  if (!N->getFlags().hasNoNaNs() || !N->getFlags().hasNoSignedZeros())
     return SDValue();
 
   // If we run in unsafe-math mode, then convert the FMAX and FMIN nodes
@@ -56284,7 +56291,7 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   // If we don't have to respect NaN inputs, this is a direct translation to x86
   // min/max instructions.
-  if (DAG.getTarget().Options.NoNaNsFPMath || N->getFlags().hasNoNaNs())
+  if (N->getFlags().hasNoNaNs())
     return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
 
   // If one of the operands is known non-NaN use the native min/max instructions

@@ -22,6 +22,7 @@ from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
 from ..passmanager import PassManager
+from contextlib import nullcontext
 
 ir = _cext.ir
 
@@ -804,9 +805,10 @@ class Dialect(ir.Dialect):
 
     @classmethod
     def _emit_module(cls) -> ir.Module:
-        m = ir.Module.create()
-        with ir.InsertionPoint(m.body):
-            cls._emit_dialect()
+        with ir.Location.unknown() if not ir.Location.current else nullcontext():
+            m = ir.Module.create()
+            with ir.InsertionPoint(m.body):
+                cls._emit_dialect()
 
         return m
 
