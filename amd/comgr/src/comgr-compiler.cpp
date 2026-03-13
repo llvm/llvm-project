@@ -1644,11 +1644,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       // string to assign. This string is used when the DataObject is written
       // to the file system via SAVE_TEMPS, or if the object is a bundle which
       // also needs a file system write for unpacking
-      const size_t BufSize = sizeof(char) * 30;
-      char *Buf = (char *)malloc(BufSize);
-      snprintf(Buf, BufSize, "comgr-anon-bitcode-%d.bc", std::rand() % 10000);
-
-      Input->Name = Buf;
+      std::string Name =
+          "comgr-anon-bitcode-" + std::to_string(std::rand() % 10000) + ".bc";
+      Input->setName(Name);
     }
 
     if (env::shouldSaveTemps()) {
