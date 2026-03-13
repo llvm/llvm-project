@@ -215,15 +215,38 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   const __CLC_UINTN b1 = 0x3C439041U;
   const __CLC_UINTN b0 = 0xFE5163ABU;
 
-  __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7, c0, c1;
+  __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7;
+  __CLC_ULONGN a;
 
-  __CLC_FULL_MUL(xm, b0, c0, p0);
-  __CLC_FULL_MAD(xm, b1, c0, c1, p1);
-  __CLC_FULL_MAD(xm, b2, c1, c0, p2);
-  __CLC_FULL_MAD(xm, b3, c0, c1, p3);
-  __CLC_FULL_MAD(xm, b4, c1, c0, p4);
-  __CLC_FULL_MAD(xm, b5, c0, c1, p5);
-  __CLC_FULL_MAD(xm, b6, c1, p7, p6);
+  __CLC_ULONGN xm_u64 = __CLC_CONVERT_ULONGN(xm);
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b0);
+  p0 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b1) + a;
+  p1 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b2) + a;
+  p2 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b3) + a;
+  p3 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b4) + a;
+  p4 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b5) + a;
+  p5 = __CLC_CONVERT_UINTN(a);
+  a >>= 32;
+
+  a = xm_u64 * __CLC_CONVERT_ULONGN(b6) + a;
+  p6 = __CLC_CONVERT_UINTN(a);
+  p7 = __CLC_CONVERT_UINTN(a >> 32);
 
   __CLC_UINTN fbits = (__CLC_UINTN)224 + (__CLC_UINTN)23 - __CLC_AS_UINTN(xe);
 
@@ -232,15 +255,14 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   __CLC_UINTN shift = 256U - 2 - fbits;
 
   // Shift by up to 134/32 = 4 words
-  __CLC_INTN c = shift > 31;
-  p7 = c ? p6 : p7;
-  p6 = c ? p5 : p6;
-  p5 = c ? p4 : p5;
-  p4 = c ? p3 : p4;
-  p3 = c ? p2 : p3;
-  p2 = c ? p1 : p2;
-  p1 = c ? p0 : p1;
-  shift -= (c ? 32U : 0U);
+  __CLC_INTN c = shift > 63;
+  p7 = c ? p5 : p7;
+  p6 = c ? p4 : p6;
+  p5 = c ? p3 : p5;
+  p4 = c ? p2 : p4;
+  p3 = c ? p1 : p3;
+  p2 = c ? p0 : p2;
+  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)64);
 
   c = shift > 31;
   p7 = c ? p6 : p7;
@@ -248,23 +270,14 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   p5 = c ? p4 : p5;
   p4 = c ? p3 : p4;
   p3 = c ? p2 : p3;
-  p2 = c ? p1 : p2;
-  shift -= (c ? 32U : 0U);
+  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)32);
 
   c = shift > 31;
   p7 = c ? p6 : p7;
   p6 = c ? p5 : p6;
   p5 = c ? p4 : p5;
   p4 = c ? p3 : p4;
-  p3 = c ? p2 : p3;
-  shift -= (c ? 32U : 0U);
-
-  c = shift > 31;
-  p7 = c ? p6 : p7;
-  p6 = c ? p5 : p6;
-  p5 = c ? p4 : p5;
-  p4 = c ? p3 : p4;
-  shift -= (c ? 32U : 0U);
+  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)32);
 
   // bitalign cannot handle a shift of 32
   c = shift > 0;
