@@ -2380,6 +2380,54 @@ m_ZExtOrTruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
 }
 
+template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
+  CondTy Cond;
+  LTy TrueC;
+  RTy FalseC;
+
+  SelectLike_match(const CondTy &C, const LTy &TC, const RTy &FC)
+      : Cond(C), TrueC(TC), FalseC(FC) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    // select(Cond, TrueC, FalseC) — captures both constants directly
+    if (PatternMatch::match(V, m_Select(Cond, TrueC, FalseC)))
+      return true;
+
+    Type *Ty = V->getType();
+    Value *CondV = nullptr;
+
+    // zext(i1 Cond) is equivalent to select(Cond, 1, 0)
+    if (PatternMatch::match(V, m_ZExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(ConstantInt::get(Ty, 1)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
+      return true;
+
+    // sext(i1 Cond) is equivalent to select(Cond, -1, 0)
+    if (PatternMatch::match(V, m_SExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(Constant::getAllOnesValue(Ty)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
+      return true;
+
+    return false;
+  }
+};
+
+/// Matches a value that behaves like a boolean-controlled select, i.e. one of:
+///   select i1 Cond, TrueC, FalseC
+///   zext i1 Cond             (equivalent to select i1 Cond, 1, 0)
+///   sext i1 Cond             (equivalent to select i1 Cond, -1, 0)
+///
+/// The condition is matched against \p Cond, and the true/false constants
+/// against \p TrueC and \p FalseC respectively. For zext/sext, the synthetic
+/// constants are bound to \p TrueC and \p FalseC via their matchers.
+template <typename CondTy, typename LTy, typename RTy>
+inline SelectLike_match<CondTy, LTy, RTy>
+m_SelectLike(const CondTy &C, const LTy &TrueC, const RTy &FalseC) {
+  return SelectLike_match<CondTy, LTy, RTy>(C, TrueC, FalseC);
+}
+
 template <typename OpTy>
 inline CastInst_match<OpTy, UIToFPInst> m_UIToFP(const OpTy &Op) {
   return CastInst_match<OpTy, UIToFPInst>(Op);
@@ -2420,11 +2468,10 @@ struct br_match {
   br_match(BasicBlock *&Succ) : Succ(Succ) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isUnconditional()) {
-        Succ = BI->getSuccessor(0);
-        return true;
-      }
+    if (auto *BI = dyn_cast<UncondBrInst>(V)) {
+      Succ = BI->getSuccessor();
+      return true;
+    }
     return false;
   }
 };
@@ -2441,8 +2488,8 @@ struct brc_match {
       : Cond(C), T(t), F(f) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isConditional() && Cond.match(BI->getCondition()))
+    if (auto *BI = dyn_cast<CondBrInst>(V))
+      if (Cond.match(BI->getCondition()))
         return T.match(BI->getSuccessor(0)) && F.match(BI->getSuccessor(1));
     return false;
   }
@@ -2980,6 +3027,20 @@ template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
 m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>

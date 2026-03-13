@@ -33,17 +33,16 @@ RWStructuredBuffer<float> In;
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[CALL]], align 4
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <6 x float> poison, float [[TMP0]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[CALL1]], align 4
-// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <6 x float> [[VECINIT]], float [[TMP1]], i32 1
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <6 x float> [[VECINIT]], float [[TMP1]], i32 3
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[CALL2]], align 4
-// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <6 x float> [[VECINIT6]], float [[TMP2]], i32 2
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <6 x float> [[VECINIT6]], float [[TMP2]], i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[CALL3]], align 4
-// CHECK-NEXT:    [[VECINIT8:%.*]] = insertelement <6 x float> [[VECINIT7]], float [[TMP3]], i32 3
+// CHECK-NEXT:    [[VECINIT8:%.*]] = insertelement <6 x float> [[VECINIT7]], float [[TMP3]], i32 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[CALL4]], align 4
-// CHECK-NEXT:    [[VECINIT9:%.*]] = insertelement <6 x float> [[VECINIT8]], float [[TMP4]], i32 4
+// CHECK-NEXT:    [[VECINIT9:%.*]] = insertelement <6 x float> [[VECINIT8]], float [[TMP4]], i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[CALL5]], align 4
 // CHECK-NEXT:    [[VECINIT10:%.*]] = insertelement <6 x float> [[VECINIT9]], float [[TMP5]], i32 5
-// CHECK-NEXT:    [[MATRIX_ROWMAJOR2COLMAJOR:%.*]] = shufflevector <6 x float> [[VECINIT10]], <6 x float> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-// CHECK-NEXT:    ret <6 x float> [[MATRIX_ROWMAJOR2COLMAJOR]]
+// CHECK-NEXT:    ret <6 x float> [[VECINIT10]]
 //
 float3x2 case2() {
   // vec[0] = Call
@@ -70,21 +69,20 @@ float3x2 case2() {
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <6 x float> poison, float [[VECEXT]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <3 x float> [[TMP1]], i64 1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT]], float [[VECEXT1]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <6 x float> [[VECINIT]], float [[VECEXT1]], i32 3
 // CHECK-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr [[A_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <3 x float> [[TMP2]], i64 2
-// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[VECEXT3]], i32 2
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <6 x float> [[VECINIT2]], float [[VECEXT3]], i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <3 x float> [[TMP3]], i64 0
-// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <6 x float> [[VECINIT4]], float [[VECEXT5]], i32 3
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <6 x float> [[VECINIT4]], float [[VECEXT5]], i32 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT7:%.*]] = extractelement <3 x float> [[TMP4]], i64 1
-// CHECK-NEXT:    [[VECINIT8:%.*]] = insertelement <6 x float> [[VECINIT6]], float [[VECEXT7]], i32 4
+// CHECK-NEXT:    [[VECINIT8:%.*]] = insertelement <6 x float> [[VECINIT6]], float [[VECEXT7]], i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = load <3 x float>, ptr [[B_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT9:%.*]] = extractelement <3 x float> [[TMP5]], i64 2
 // CHECK-NEXT:    [[VECINIT10:%.*]] = insertelement <6 x float> [[VECINIT8]], float [[VECEXT9]], i32 5
-// CHECK-NEXT:    [[MATRIX_ROWMAJOR2COLMAJOR:%.*]] = shufflevector <6 x float> [[VECINIT10]], <6 x float> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
-// CHECK-NEXT:    ret <6 x float> [[MATRIX_ROWMAJOR2COLMAJOR]]
+// CHECK-NEXT:    ret <6 x float> [[VECINIT10]]
 //
 float3x2 case3(float3 a, float3 b) {
  // vec[0] = A[0]

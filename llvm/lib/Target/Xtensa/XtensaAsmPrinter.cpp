@@ -85,7 +85,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
 
     if (XtensaSym->isPrivateLinkage()) {
       const DataLayout &DL = getDataLayout();
-      MCSym = OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+      MCSym = OutContext.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            SymName);
     } else {
       MCSym = OutContext.getOrCreateSymbol(SymName);

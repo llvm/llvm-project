@@ -1101,6 +1101,27 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case ApplyINTRIN_IMAGE:
     return applyRegisterBanksINTRIN_IMAGE(MI);
+  case SplitFFB64To32: {
+    // (ffbh hi:lo) -> umin(ffbh(hi), uaddsat(ffbh(lo), 32))
+    // (ffbl hi:lo) -> umin(ffbl(lo), uaddsat(ffbl(hi), 32))
+    auto Unmerge = B.buildUnmerge({VgprRB, S32}, MI.getOperand(1).getReg());
+    unsigned Opc = MI.getOpcode();
+    auto Lo = B.buildInstr(Opc, {{VgprRB, S32}}, {Unmerge.getReg(0)});
+    auto Hi = B.buildInstr(Opc, {{VgprRB, S32}}, {Unmerge.getReg(1)});
+
+    // FFBH counts from MSB, FFBL counts from LSB. The secondary half adds 32 to
+    // account for the primary half's width.
+    bool IsFFBH = Opc == AMDGPU::G_AMDGPU_FFBH_U32;
+    auto Primary = IsFFBH ? Hi : Lo;
+    auto Secondary = IsFFBH ? Lo : Hi;
+    auto Adjusted =
+        B.buildInstr(AMDGPU::G_UADDSAT, {{VgprRB, S32}},
+                     {Secondary, B.buildConstant({VgprRB, S32}, 32)});
+    B.buildUMin(MI.getOperand(0).getReg(), Primary, Adjusted);
+
+    MI.eraseFromParent();
+    return true;
+  }
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {
@@ -1176,6 +1197,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprV4S32:
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
+  case VgprV8S32:
+    return LLT::fixed_vector(8, 32);
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
@@ -1188,6 +1211,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   switch (ID) {
   case SgprB32:
   case VgprB32:
+  case SgprB32_M0:
   case UniInVgprB32:
     if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
         isAnyPtr(Ty, 32))
@@ -1335,6 +1359,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S64:
   case VgprV3S32:
   case VgprV4S32:
+  case VgprV8S32:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1394,7 +1419,8 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV2S32:
     case VgprV2S64:
     case VgprV3S32:
-    case VgprV4S32: {
+    case VgprV4S32:
+    case VgprV8S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -1577,7 +1603,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV2S32:
     case VgprV2S64:
     case VgprV3S32:
-    case VgprV4S32: {
+    case VgprV4S32:
+    case VgprV8S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
@@ -1638,6 +1665,16 @@ bool RegBankLegalizeHelper::applyMappingSrc(
         WFI.Start = Start;
         WFI.End = End;
       }
+      break;
+    }
+    case SgprB32_M0: {
+      assert(Ty == getBTyFromID(MethodIDs[i], Ty));
+      if (RB == SgprRB)
+        break;
+      assert(RB == VgprRB);
+      Register NewSGPR32 = MRI.createVirtualRegister({SgprRB, Ty});
+      buildReadFirstLane(B, NewSGPR32, Op.getReg(), RBI);
+      Op.setReg(NewSGPR32);
       break;
     }
     // sgpr and vgpr scalars with extend

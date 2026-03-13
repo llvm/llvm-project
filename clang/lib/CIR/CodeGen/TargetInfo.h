@@ -49,6 +49,13 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p d is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual clang::LangAS getGlobalVarAddressSpace(CIRGenModule &cgm,
+                                                 const clang::VarDecl *d) const;
+
   /// Get the address space for alloca.
   virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
@@ -99,6 +106,15 @@ public:
   /// right thing when calling a function with no know signature.
   virtual bool isNoProtoCallVariadic(const FunctionNoProtoType *fnType) const;
 
+  /// Provides a convenient hook to handle extra target-specific attributes
+  /// for the given global.
+  /// In OG, the function receives an llvm::GlobalValue. However, functions
+  /// and global variables are separate types in Clang IR, so we use a general
+  /// mlir::Operation*.
+  virtual void setTargetAttributes(const clang::Decl *decl,
+                                   mlir::Operation *global,
+                                   CIRGenModule &module) const {}
+
   virtual bool isScalarizableAsmOperand(CIRGenFunction &cgf,
                                         mlir::Type ty) const {
     return false;
@@ -115,6 +131,9 @@ public:
     return ty;
   }
 };
+
+std::unique_ptr<TargetCIRGenInfo>
+createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt);
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 

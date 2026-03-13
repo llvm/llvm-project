@@ -41,16 +41,16 @@ float4 fn(float2x2 m) {
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i32> poison, i32 [[VECEXT]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 1
+// COL-CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 2
+// ROW-CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
-// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 2
+// COL-CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 1
+// ROW-CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <4 x i32> [[TMP3]], i64 3
 // CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x i32> [[VECINIT4]], i32 [[VECEXT5]], i32 3
-// COL-CHECK-NEXT:    [[MATRIX_ROWMAJOR2COLMAJOR:%.*]] = shufflevector <4 x i32> [[VECINIT6]], <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-// COL-CHECK-NEXT:    store <4 x i32> [[MATRIX_ROWMAJOR2COLMAJOR]], ptr [[M]], align 4
-// ROW-CHECK-NEXT:    store <4 x i32> [[VECINIT6]], ptr [[M]], align 4
+// CHECK-NEXT:    store <4 x i32> [[VECINIT6]], ptr [[M]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[M]], align 4
 // CHECK-NEXT:    ret <4 x i32> [[TMP4]]
 //
@@ -70,9 +70,7 @@ int2x2 fn(int4 v) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <2 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 1
-// COL-CHECK-NEXT:    [[MATRIX_ROWMAJOR2COLMAJOR:%.*]] = shufflevector <2 x i32> [[VECINIT2]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
-// COL-CHECK-NEXT:    ret <2 x i32> [[MATRIX_ROWMAJOR2COLMAJOR]]
-// ROW-CHECK-NEXT:    ret <2 x i32> [[VECINIT2]]
+// CHECK-NEXT:    ret <2 x i32> [[VECINIT2]]
 //
 int1x2 fn1(int2 v) {
     return v;
@@ -96,9 +94,7 @@ int1x2 fn1(int2 v) {
 // CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc <3 x i32> [[TMP3]] to <3 x i1>
 // CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <3 x i1> [[LOADEDV4]], i64 2
 // CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <3 x i1> [[VECINIT3]], i1 [[VECEXT5]], i32 2
-// COL-CHECK-NEXT:    [[MATRIX_ROWMAJOR2COLMAJOR:%.*]] = shufflevector <3 x i1> [[VECINIT6]], <3 x i1> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// COL-CHECK-NEXT:    ret <3 x i1> [[MATRIX_ROWMAJOR2COLMAJOR]]
-// ROW-CHECK-NEXT:    ret <3 x i1> [[VECINIT6]]
+// CHECK-NEXT:    ret <3 x i1> [[VECINIT6]]
 //
 bool3x1 fn2(bool3 b) {
     return b;
