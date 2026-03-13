@@ -2468,11 +2468,10 @@ struct br_match {
   br_match(BasicBlock *&Succ) : Succ(Succ) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isUnconditional()) {
-        Succ = BI->getSuccessor(0);
-        return true;
-      }
+    if (auto *BI = dyn_cast<UncondBrInst>(V)) {
+      Succ = BI->getSuccessor();
+      return true;
+    }
     return false;
   }
 };
@@ -2489,8 +2488,8 @@ struct brc_match {
       : Cond(C), T(t), F(f) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isConditional() && Cond.match(BI->getCondition()))
+    if (auto *BI = dyn_cast<CondBrInst>(V))
+      if (Cond.match(BI->getCondition()))
         return T.match(BI->getSuccessor(0)) && F.match(BI->getSuccessor(1));
     return false;
   }
