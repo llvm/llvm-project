@@ -13,15 +13,14 @@ _CLC_OVERLOAD _CLC_DEF __CLC_FLOATN __clc_sin(__CLC_FLOATN x) {
 
   __CLC_FLOATN absx = __clc_fabs(x);
 
-  __CLC_FLOATN r0, r1;
-  __CLC_INTN regn = __clc_argReductionS(&r0, &r1, absx);
+  __CLC_FLOATN r0;
+  __CLC_INTN regn = __clc_argReductionS(&r0, absx);
+  __CLC_SINCOS_RET_GENTYPE eval = __clc_sincos_reduced_eval(r0);
 
-  __CLC_FLOATN ss = __clc_sinf_piby4(r0, r1);
-  __CLC_FLOATN cc = __clc_cosf_piby4(r0, r1);
+  __CLC_FLOATN s = (regn & 1) != 0 ? eval.cos : eval.sin;
 
-  __CLC_FLOATN s = (regn & 1) != 0 ? cc : ss;
-  return __CLC_AS_FLOATN(__CLC_AS_INTN(s) ^ ((regn > 1) << 31) ^
-                         (__CLC_AS_INTN(x) ^ __CLC_AS_INTN(absx)));
+  return __CLC_AS_FLOATN(__CLC_AS_UINTN(s) ^ (regn > 1 ? SIGNBIT_SP32 : 0) ^
+                         (__CLC_AS_UINTN(x) ^ __CLC_AS_UINTN(absx)));
 }
 
 #elif __CLC_FPSIZE == 16
