@@ -3902,6 +3902,9 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
+  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
+    return Op;
+
   const SDValue Int32VT = DAG.getValueType(MVT::i32);
 
   // Perform all saturation at i32 and truncate
