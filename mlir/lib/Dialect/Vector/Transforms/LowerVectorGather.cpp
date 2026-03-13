@@ -166,9 +166,10 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
 /// loads/extracts are made conditional using `scf.if` ops.
 ///
 /// For multi-dimensional memrefs (rank > 1), the gather index is combined
-/// with the base offsets via linearize-then-delinearize to produce correct
+/// with the offsets via linearize-then-delinearize to produce correct
 /// N-D load indices:
-///   flatIdx = linearize(baseOffsets, memrefShape) + gatherIndex
+///   idx = indices[i]
+///   flatIdx = linearize(offsets, memrefShape) + idx
 ///   loadIndices = delinearize(flatIdx, memrefShape)
 struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
   using Base::Base;
@@ -191,7 +192,7 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     Value base = op.getBase();
 
     // For multi-dimensional memrefs, use linearize+delinearize to compute
-    // correct N-D load indices from the 1-D gather offset.
+    // correct N-D load indices from the 1-D gather index.
     bool useDelinearization = false;
     if (auto memType = dyn_cast<MemRefType>(base.getType())) {
       // vector.load requires the most minor memref dim to have unit stride
@@ -200,7 +201,8 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
               dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
         if (stridesAttr.getStrides().back() != 1 &&
             resultTy.getNumElements() != 1)
-          return failure();
+          return rewriter.notifyMatchFailure(
+              op, "most minor memref dim must have unit stride");
       }
 
       if (memType.getRank() > 1)
@@ -210,17 +212,17 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     Value indexVec = rewriter.createOrFold<arith::IndexCastOp>(
         loc, op.getIndexVectorType().clone(rewriter.getIndexType()),
         op.getIndices());
-    auto baseOffsets = llvm::to_vector(op.getOffsets());
-    Value lastBaseOffset = baseOffsets.back();
+    auto loadOffsets = llvm::to_vector(op.getOffsets());
+    Value lastLoadOffset = loadOffsets.back();
 
-    // Compute the basis (memref shape) and linearized base offset once,
-    // outside the per-element loop.
-    SmallVector<OpFoldResult> basis;
-    Value linearizedBase;
+    // Compute the memref shape and linearized offsets once, outside the
+    // per-element loop.
+    SmallVector<OpFoldResult> baseShape;
+    Value linearizedOffsets;
     if (useDelinearization) {
-      basis = memref::getMixedSizes(rewriter, loc, base);
-      linearizedBase = affine::AffineLinearizeIndexOp::create(
-          rewriter, loc, baseOffsets, basis, /*disjoint=*/false);
+      baseShape = memref::getMixedSizes(rewriter, loc, base);
+      linearizedOffsets = affine::AffineLinearizeIndexOp::create(
+          rewriter, loc, loadOffsets, baseShape, /*disjoint=*/false);
     }
 
     Value result = op.getPassThru();
@@ -236,19 +238,19 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
       if (useDelinearization) {
         // The gather index offsets the innermost dimension. Combine with
-        // the base offsets by linearizing, adding the gather index, then
+        // the offsets by linearizing, adding the gather index, then
         // delinearizing back to N-D indices:
-        //   flatIdx = linearize(baseOffsets, shape) + gatherIndex
+        //   flatIdx = linearize(offsets, shape) + idx
         //   loadIndices = delinearize(flatIdx, shape)
         Value flatIdx =
-            rewriter.createOrFold<arith::AddIOp>(loc, linearizedBase, index);
+            rewriter.createOrFold<arith::AddIOp>(loc, linearizedOffsets, index);
         auto delinOp = affine::AffineDelinearizeIndexOp::create(
-            rewriter, loc, flatIdx, basis, /*hasOuterBound=*/true);
-        for (int64_t d = 0, rank = baseOffsets.size(); d < rank; ++d)
-          baseOffsets[d] = delinOp.getResult(d);
+            rewriter, loc, flatIdx, baseShape, /*hasOuterBound=*/true);
+        for (int64_t d = 0, rank = loadOffsets.size(); d < rank; ++d)
+          loadOffsets[d] = delinOp.getResult(d);
       } else {
-        baseOffsets.back() =
-            rewriter.createOrFold<arith::AddIOp>(loc, lastBaseOffset, index);
+        loadOffsets.back() =
+            rewriter.createOrFold<arith::AddIOp>(loc, lastLoadOffset, index);
       }
 
       auto loadBuilder = [&](OpBuilder &b, Location loc) {
@@ -257,12 +259,12 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
           // `vector.load` does not support scalar result; emit a vector load
           // and extract the single result instead.
           Value load =
-              vector::LoadOp::create(b, loc, elemVecTy, base, baseOffsets,
+              vector::LoadOp::create(b, loc, elemVecTy, base, loadOffsets,
                                      nontemporalAttr, alignmentAttr);
           int64_t zeroIdx[1] = {0};
           extracted = vector::ExtractOp::create(b, loc, load, zeroIdx);
         } else {
-          extracted = tensor::ExtractOp::create(b, loc, base, baseOffsets);
+          extracted = tensor::ExtractOp::create(b, loc, base, loadOffsets);
         }
 
         Value newResult =
