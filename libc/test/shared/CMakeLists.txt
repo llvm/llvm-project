@@ -149,6 +149,7 @@ add_fp_unittest(
     libc.src.__support.math.getpayloadf128
     libc.src.__support.math.getpayloadf16
     libc.src.__support.math.getpayloadl
+    libc.src.__support.math.hypot
     libc.src.__support.math.hypotf
     libc.src.__support.math.hypotbf16
     libc.src.__support.math.hypotf16

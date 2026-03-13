@@ -5507,6 +5507,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_hypot",
+    hdrs = ["src/__support/math/hypot.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_hypot",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_hypotf",
     hdrs = ["src/__support/math/hypotf.h"],
     deps = [
@@ -7215,7 +7225,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "hypot")
+libc_math_function(
+    name = "hypot",
+    additional_deps = [
+        ":__support_math_hypot",
+    ],
+)
 
 libc_math_function(
     name = "hypotf",
