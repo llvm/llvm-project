@@ -5,6 +5,7 @@ unittest("ClangScalableAnalysisTests") {
   deps = [
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
+    "//clang/lib/Basic",
     "//clang/lib/Frontend",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
     "//clang/lib/Serialization",
