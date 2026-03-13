@@ -492,13 +492,15 @@ static RecipeOp genRecipeOp(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
+  auto initArg = mlir::cast<MappableValue>(initBlock->getArgument(0));
+  mlir::acc::VariableInfo varInfo = mappableTy.genPrivateVariableInfo(initArg);
   bool needsDestroy = false;
   llvm::SmallVector<mlir::Value> initBounds =
       getRecipeBounds(builder, loc, dataOperationBounds,
                       initBlock->getArguments().drop_front(1));
   mlir::Value retVal = mappableTy.generatePrivateInit(
-      builder, loc, mlir::cast<MappableValue>(initBlock->getArgument(0)),
-      initName, initBounds, initValue, needsDestroy);
+      builder, loc, initArg, initName, initBounds, initValue, varInfo,
+      needsDestroy);
   mlir::acc::YieldOp::create(builder, loc, retVal);
   // Create destroy region and generate destruction if requested.
   if (needsDestroy) {
@@ -524,7 +526,7 @@ static RecipeOp genRecipeOp(
         getRecipeBounds(builder, loc, dataOperationBounds,
                         destroyBlock->getArguments().drop_front(2));
     [[maybe_unused]] bool success = mappableTy.generatePrivateDestroy(
-        builder, loc, destroyBlock->getArgument(1), destroyBounds);
+        builder, loc, destroyBlock->getArgument(1), destroyBounds, varInfo);
     assert(success && "failed to generate destroy region");
     mlir::acc::TerminatorOp::create(builder, loc);
   }
@@ -576,8 +578,10 @@ mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
-  [[maybe_unused]] bool success =
-      mappableTy.generateCopy(builder, loc, source, destination, copyBounds);
+  mlir::acc::VariableInfo copyVarInfo =
+      mappableTy.genPrivateVariableInfo(source);
+  [[maybe_unused]] bool success = mappableTy.generateCopy(
+      builder, loc, source, destination, copyBounds, copyVarInfo);
   assert(success && "failed to generate copy");
   mlir::acc::TerminatorOp::create(builder, loc);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
