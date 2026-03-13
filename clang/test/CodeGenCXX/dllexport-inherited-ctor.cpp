@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -emit-llvm -std=c++17 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=MSVC %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc -emit-llvm -std=c++17 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=M32 %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-gnu -emit-llvm -std=c++17 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=GNU %s
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -emit-llvm -std=c++17 -fms-extensions -fno-dllexport-inlines -O0 -o - %s | FileCheck --check-prefix=NOINLINE %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -emit-llvm -std=c++20 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=MSVC %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc -emit-llvm -std=c++20 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=M32 %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-gnu -emit-llvm -std=c++20 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=GNU %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -emit-llvm -std=c++20 -fms-extensions -fno-dllexport-inlines -O0 -o - %s | FileCheck --check-prefix=NOINLINE %s
 
 // Test that inherited constructors via 'using Base::Base' in a dllexport
 // class are properly exported (https://github.com/llvm/llvm-project/issues/162640).
@@ -241,3 +241,52 @@ struct __declspec(dllexport) CalleeCleanupChild : CalleeCleanupBase {
 // The implicit default ctor is a regular inline method, NOT an inherited
 // constructor, so -fno-dllexport-inlines correctly suppresses it.
 // NOINLINE-NOT: define {{.*}}dllexport{{.*}} @"??0AllDefChild@@QEAA@XZ"
+
+//===----------------------------------------------------------------------===//
+// Constrained constructors: inherited constructors whose requires clause is
+// not satisfied should not be exported.
+// Regression test for https://github.com/llvm/llvm-project/issues/185924
+//===----------------------------------------------------------------------===//
+
+template <bool B>
+struct ConstrainedBase {
+  ConstrainedBase() requires(!B) = delete;
+  ConstrainedBase() requires(B) {}
+  ConstrainedBase(int);
+};
+
+// B=false: the default ctor with requires(B) is not satisfied, and the
+// deleted ctor with requires(!B) is satisfied (but deleted). Only the
+// inherited ConstrainedChild(int) should be exported.
+struct __declspec(dllexport) ConstrainedChild : ConstrainedBase<false> {
+  using ConstrainedBase::ConstrainedBase;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ConstrainedChild@@QEAA@H@Z"
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ConstrainedChild@@QAE@H@Z"
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN16ConstrainedChildCI115ConstrainedBaseILb0EEEi(
+
+// The constrained default constructor should NOT be exported.
+// MSVC-NOT: dllexport{{.*}}ConstrainedChild@@QEAA@XZ
+// M32-NOT: dllexport{{.*}}ConstrainedChild@@QAE@XZ
+
+// Constrained non-default constructor: only export when the constraint is met.
+template <typename T>
+struct SelectiveBase {
+  SelectiveBase(int) requires(sizeof(T) > 1) {}
+  SelectiveBase(double);
+};
+
+// sizeof(char)==1, so SelectiveBase(int) requires(sizeof(char)>1) is not
+// satisfied. Only the SelectiveChild(double) constructor should be exported.
+struct __declspec(dllexport) SelectiveChild : SelectiveBase<char> {
+  using SelectiveBase::SelectiveBase;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0SelectiveChild@@QEAA@N@Z"
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0SelectiveChild@@QAE@N@Z"
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN14SelectiveChildCI113SelectiveBaseIcEEd(
+
+// The constrained int constructor should NOT be exported.
+// MSVC-NOT: dllexport{{.*}}SelectiveChild@@QEAA@H@Z
+// M32-NOT: dllexport{{.*}}SelectiveChild@@QAE@H@Z
