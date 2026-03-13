@@ -3853,6 +3853,10 @@ defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages
 defm objc_msgsend_selector_stubs : BoolFOption<"objc-msgsend-selector-stubs",
   CodeGenOpts<"ObjCMsgSendSelectorStubs">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>, NegFlag<SetFalse>>;
+defm objc_msgsend_class_selector_stubs : BoolFOption<"objc-msgsend-class-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendClassSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+  NegFlag<SetFalse>>;
 defm objc_arc_exceptions : BoolFOption<"objc-arc-exceptions",
   CodeGenOpts<"ObjCAutoRefCountExceptions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],

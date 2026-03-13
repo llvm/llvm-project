@@ -1254,8 +1254,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
-  const DataLayout &DL =
-      Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  const DataLayout &DL = Plan->getDataLayout();
   if (VPValue *V = tryToFoldLiveIns(*Def, Def->operands(), DL, TypeInfo))
     return Def->replaceAllUsesWith(V);
 
@@ -2248,8 +2247,7 @@ static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
           R.getDebugLoc());
       if (Trunc != AVL) {
         auto *TruncR = cast<VPSingleDefRecipe>(Trunc);
-        const DataLayout &DL =
-            Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+        const DataLayout &DL = Plan.getDataLayout();
         VPTypeAnalysis TypeInfo(Plan);
         if (VPValue *Folded =
                 tryToFoldLiveIns(*TruncR, TruncR->operands(), DL, TypeInfo))

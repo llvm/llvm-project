@@ -3,10 +3,6 @@ static_library("Core") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",
-    "//clang/lib/ASTMatchers",
-    "//clang/lib/Basic",
-    "//clang/lib/Frontend",
-    "//clang/lib/Lex",
     "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/Support",
   ]
