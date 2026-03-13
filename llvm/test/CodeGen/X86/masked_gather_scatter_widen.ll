@@ -353,7 +353,8 @@ define <2 x i32> @test_gather_v2i32_data_index(ptr %base, <2 x i32> %ind, <2 x i
 ;
 ; WIDEN_AVX2-LABEL: test_gather_v2i32_data_index:
 ; WIDEN_AVX2:       # %bb.0:
-; WIDEN_AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
+; WIDEN_AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; WIDEN_AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm3[2,3]
 ; WIDEN_AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
 ; WIDEN_AVX2-NEXT:    vpgatherdd %xmm1, (%rdi,%xmm0,4), %xmm2
 ; WIDEN_AVX2-NEXT:    vmovdqa %xmm2, %xmm0

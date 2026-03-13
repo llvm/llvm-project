@@ -178,7 +178,6 @@ void CodeGenFunction::CGFPOptionsRAII::ConstructorHelper(FPOptions FPFeatures) {
     if (OldValue != NewValue)
       CGF.CurFn->addFnAttr(Name, llvm::toStringRef(NewValue));
   };
-  mergeFnAttrValue("no-nans-fp-math", FPFeatures.getNoHonorNaNs());
   mergeFnAttrValue("no-signed-zeros-fp-math", FPFeatures.getNoSignedZero());
 }
 
@@ -1654,6 +1653,15 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   FinishFunction(BodyRange.getEnd());
 
   PGO->verifyCounterMap();
+
+  if (CurCodeDecl->hasAttr<PersonalityAttr>()) {
+    StringRef Identifier =
+        CurCodeDecl->getAttr<PersonalityAttr>()->getRoutine()->getName();
+    llvm::FunctionCallee PersonalityRoutine =
+        CGM.CreateRuntimeFunction(llvm::FunctionType::get(CGM.Int32Ty, true),
+                                  Identifier, {}, /*local=*/true);
+    Fn->setPersonalityFn(cast<llvm::Constant>(PersonalityRoutine.getCallee()));
+  }
 
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.

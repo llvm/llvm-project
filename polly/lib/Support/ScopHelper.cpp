@@ -243,7 +243,7 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
 
   explicit ScopExpander(const Region &R, ScalarEvolution &SE, Function *GenFn,
                         ScalarEvolution &GenSE, const char *Name,
-                        ValueMapT *VMap, LoopToScevMapT *LoopMap,
+                        ValueMapT *VMap, polly::LoopToScevMapT *LoopMap,
                         BasicBlock *RTCBB)
       : Expander(GenSE, Name, /*PreserveLCSSA=*/false), Name(Name), R(R),
         VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
@@ -272,7 +272,7 @@ private:
   const char *Name;
   const Region &R;
   ValueMapT *VMap;
-  LoopToScevMapT *LoopMap;
+  polly::LoopToScevMapT *LoopMap;
   BasicBlock *RTCBB;
   DenseMap<const SCEV *, const SCEV *> SCEVCache;
 
@@ -389,50 +389,50 @@ private:
     return GenSE.getUDivExpr(visit(E->getLHS()), RHSScev);
   }
   const SCEV *visitAddExpr(const SCEVAddExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
+    SmallVector<SCEVUse, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getAddExpr(NewOps);
   }
   const SCEV *visitMulExpr(const SCEVMulExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
+    SmallVector<SCEVUse, 4> NewOps;
     for (const SCEV *Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getMulExpr(NewOps);
   }
   const SCEV *visitUMaxExpr(const SCEVUMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMaxExpr(NewOps);
   }
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMaxExpr(NewOps);
   }
   const SCEV *visitUMinExpr(const SCEVUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps);
   }
   const SCEV *visitSMinExpr(const SCEVSMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getSMinExpr(NewOps);
   }
   const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
     return GenSE.getUMinExpr(NewOps, /*Sequential=*/true);
   }
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *E) {
-    SmallVector<const SCEV *, 4> NewOps;
-    for (const SCEV *Op : E->operands())
+    SmallVector<SCEVUse, 4> NewOps;
+    for (SCEVUse Op : E->operands())
       NewOps.push_back(visit(Op));
 
     const Loop *L = E->getLoop();

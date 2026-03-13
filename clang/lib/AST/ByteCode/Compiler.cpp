@@ -3469,7 +3469,8 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
 
     bool Fatal = true;
     if (PointeeToT && PointeeFromT) {
-      if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
+      if (isIntegerOrBoolType(*PointeeFromT) &&
+          isIntegerOrBoolType(*PointeeToT))
         Fatal = false;
       else if (E->getCastKind() == CK_LValueBitCast)
         Fatal = false;
@@ -4504,7 +4505,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
     return false;
 
   PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
-  if (isIntegralType(SecondFieldT)) {
+  if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
     return this->emitInitField(SecondFieldT, R->getField(1u)->Offset, E);
@@ -5055,12 +5056,6 @@ template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
-  // If we won't destroy the toplevel scope, check for memory leaks first.
-  if (!DestroyToplevelScope) {
-    if (!this->emitCheckAllocations(E))
-      return false;
-  }
-
   auto maybeDestroyLocals = [&]() -> bool {
     if (DestroyToplevelScope)
       return RootScope.destroyLocals() && this->emitCheckAllocations(E);
@@ -5101,7 +5096,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
     return this->emitRetValue(E) && maybeDestroyLocals();
   }
 
-  return maybeDestroyLocals() && this->emitCheckAllocations(E) && false;
+  return maybeDestroyLocals() && false;
 }
 
 template <class Emitter>
@@ -7043,12 +7038,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (!this->emitStoreFloat(E))
         return false;
     } else if (SubExpr->refersToBitField()) {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreIncBitfield(*T, E->canOverflow(), getBitWidth(SubExpr),
                                     E))
         return false;
     } else {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreInc(*T, E->canOverflow(), E))
         return false;
     }
@@ -7098,12 +7093,12 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (!this->emitStoreFloat(E))
         return false;
     } else if (SubExpr->refersToBitField()) {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreDecBitfield(*T, E->canOverflow(), getBitWidth(SubExpr),
                                     E))
         return false;
     } else {
-      assert(isIntegralType(*T));
+      assert(isIntegerOrBoolType(*T));
       if (!this->emitPreDec(*T, E->canOverflow(), E))
         return false;
     }
@@ -7625,18 +7620,18 @@ bool Compiler<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
                                                getFPOptions(E), E);
 
     // Float to integral.
-    if (isIntegralType(ToT) || ToT == PT_Bool)
+    if (isIntegerOrBoolType(ToT) || ToT == PT_Bool)
       return this->emitCastFloatingIntegral(ToT, getFPOptions(E), E);
   }
 
-  if (isIntegralType(FromT) || FromT == PT_Bool) {
+  if (isIntegerOrBoolType(FromT) || FromT == PT_Bool) {
     if (ToT == PT_IntAP)
       return this->emitCastAP(FromT, Ctx.getBitWidth(ToQT), E);
     if (ToT == PT_IntAPS)
       return this->emitCastAPS(FromT, Ctx.getBitWidth(ToQT), E);
 
     // Integral to integral.
-    if (isIntegralType(ToT) || ToT == PT_Bool)
+    if (isIntegerOrBoolType(ToT) || ToT == PT_Bool)
       return FromT != ToT ? this->emitCast(FromT, ToT, E) : true;
 
     if (ToT == PT_Float) {

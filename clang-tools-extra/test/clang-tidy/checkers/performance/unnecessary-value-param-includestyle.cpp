@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- \
 // RUN:   -config="{CheckOptions: {performance-unnecessary-value-param.IncludeStyle: 'google' \
-// RUN: }}" -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: }}" -- -fno-delayed-template-parsing
 
 // CHECK-FIXES: #include <utility>
 

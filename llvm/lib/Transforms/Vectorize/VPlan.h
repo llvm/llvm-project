@@ -1391,7 +1391,8 @@ public:
     // Conservatively return calls have results for now.
     switch (getOpcode()) {
     case Instruction::Ret:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Store:
     case Instruction::Switch:
     case Instruction::IndirectBr:
@@ -4733,17 +4734,21 @@ public:
   VPSymbolicValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns the VF of the vector loop region.
-  VPValue &getVF() { return VF; };
-  const VPValue &getVF() const { return VF; };
+  VPSymbolicValue &getVF() { return VF; };
+  const VPSymbolicValue &getVF() const { return VF; };
 
   /// Returns the UF of the vector loop region.
-  VPValue &getUF() { return UF; };
+  VPSymbolicValue &getUF() { return UF; };
 
   /// Returns VF * UF of the vector loop region.
-  VPValue &getVFxUF() { return VFxUF; }
+  VPSymbolicValue &getVFxUF() { return VFxUF; }
 
   LLVMContext &getContext() const {
     return getScalarHeader()->getIRBasicBlock()->getContext();
+  }
+
+  const DataLayout &getDataLayout() const {
+    return getScalarHeader()->getIRBasicBlock()->getDataLayout();
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }

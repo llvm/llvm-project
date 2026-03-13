@@ -68,7 +68,7 @@ public:
 
   // Similar queries for InstructionT. These accept a pointer argument so that
   // in LLVM IR, they overload the equivalent queries for Value*. For example,
-  // if querying whether a BranchInst is divergent, it should not be treated as
+  // if querying whether a CondBrInst is divergent, it should not be treated as
   // a Value in LLVM IR.
   bool isUniform(const InstructionT *I) const { return !isDivergent(I); };
   bool isDivergent(const InstructionT *I) const;
