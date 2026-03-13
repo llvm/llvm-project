@@ -3839,6 +3839,10 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
     }
 
     lower::StatementContext stmtCtx;
+    mlir::Type eleTy = isByRef ? fir::unwrapRefType(lhs.getType())
+                               : lhs.getType();
+    bool isDerived = fir::isa_derived(eleTy);
+
     mlir::Value result = common::visit(
         common::visitors{
             [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
@@ -3848,29 +3852,48 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               return outVal;
             },
             [&](const auto &expr) -> mlir::Value {
+              if (isDerived && isByRef) {
+                mlir::Value exprResult = fir::getBase(convertExprToValue(
+                    loc, converter, evalExpr, symTable, stmtCtx));
+                // Check if this is a component-level expression (has a
+                // designator on omp_out) or a whole-struct expression
+                // (function call returning a struct).
+                mlir::Value designator;
+                for (auto *user : ompOutVar.getUsers()) {
+                  if (auto desig = mlir::dyn_cast<hlfir::DesignateOp>(user))
+                    designator = desig.getResult();
+                }
+                if (designator) {
+                  // Component-level: store into the designator.
+                  fir::StoreOp::create(builder, loc, exprResult, designator);
+                  return mlir::Value{};
+                }
+                // Whole-struct function result: return the value so the
+                // post-visit code can store it into lhs.
+                if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                        exprResult.getType()))
+                  exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                return exprResult;
+              }
               mlir::Value exprResult = fir::getBase(convertExprToValue(
                   loc, converter, evalExpr, symTable, stmtCtx));
-              // Optional load may be generated if we get a reference to the
-              // reduction type.
               if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
                       exprResult.getType())) {
                 mlir::Type expectedType =
-                    isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
+                    isByRef ? fir::unwrapRefType(lhs.getType())
+                            : lhs.getType();
                 if (expectedType == refType.getElementType())
-                  exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                  exprResult =
+                      fir::LoadOp::create(builder, loc, exprResult);
               }
               return exprResult;
             }},
         evalExpr.u);
     stmtCtx.finalizeAndPop();
     if (isByRef) {
-      // For user-defined combiners the assignment expression (e.g.
-      // "omp_out%x = omp_out%x + omp_in%x") already wrote into omp_out
-      // as a side-effect. We only need to yield the lhs reference.
-      // Only store result back if its type actually matches the element type.
-      mlir::Type eleTy = fir::unwrapRefType(lhs.getType());
-      if (result.getType() == eleTy)
+      if (result) {
         fir::StoreOp::create(builder, loc, result, lhs);
+      }
       mlir::omp::YieldOp::create(builder, loc, lhs);
     } else {
       mlir::omp::YieldOp::create(builder, loc, result);

@@ -41,17 +41,17 @@ contains
   end function func
 
 end module maxtype_mod
-!CHECK:  omp.declare_reduction @red_add_max : !fir.ref<{{.*}}> attributes {byref_element_type = {{.*}}} alloc {
+!CHECK:  omp.declare_reduction @red_add_max : !fir.ref<[[MAXTYPE:.*]]> {{.*}} alloc {
 !CHECK:  %[[ALLOCA:.*]] = fir.alloca [[MAXTYPE:.*]]
 !CHECK:  omp.yield(%[[ALLOCA]] : !fir.ref<[[MAXTYPE]]>)
 !CHECK:  } init {
 !CHECK:  ^bb0(%[[INIT_ARG0:.*]]: !fir.ref<[[MAXTYPE]]>, %[[INIT_ARG1:.*]]: !fir.ref<[[MAXTYPE]]>):
 !CHECK:    %{{.*}} = fir.embox %[[INIT_ARG1]]
 !CHECK:    %{{.*}} = fir.embox %[[INIT_ARG0]]
-!CHECK:    %[[OMP_ORIG:.*]]:2 = hlfir.declare %[[INIT_ARG0]] {uniq_name = "omp_orig"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
-!CHECK:    %[[OMP_PRIV:.*]]:2 = hlfir.declare %[[INIT_ARG0]] {uniq_name = "omp_priv"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
-!CHECK:    fir.call @_QMmaxtype_modPinitme(%[[OMP_PRIV]]#0, %[[OMP_ORIG]]#0) fastmath<contract> : (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>) -> ()
-!CHECK:    %{{.*}} = fir.load %[[OMP_PRIV]]#0 : !fir.ref<[[MAXTYPE]]>
+!CHECK:    %[[OMP_ORIG_DECL:.*]]:2 = hlfir.declare %[[INIT_ARG0]] {uniq_name = "omp_orig"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
+!CHECK:    %[[OMP_PRIV_DECL:.*]]:2 = hlfir.declare %[[INIT_ARG1]] {uniq_name = "omp_priv"} : (!fir.ref<[[MAXTYPE]]>) -> (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>)
+!CHECK:    fir.call @_QMmaxtype_modPinitme(%[[OMP_PRIV_DECL]]#0, %[[OMP_ORIG_DECL]]#0) fastmath<contract> : (!fir.ref<[[MAXTYPE]]>, !fir.ref<[[MAXTYPE]]>) -> ()
+!CHECK:    %[[OMP_PRIV_VAL:.*]] = fir.load %[[OMP_PRIV_DECL]]#0 : !fir.ref<[[MAXTYPE]]>
 !CHECK:    omp.yield(%[[INIT_ARG1]] : !fir.ref<[[MAXTYPE]]>)
 !CHECK:  } combiner {
 !CHECK:  ^bb0(%[[LHS_ARG:.*]]: !fir.ref<[[MAXTYPE]]>, %[[RHS_ARG:.*]]: !fir.ref<[[MAXTYPE]]>):

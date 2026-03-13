@@ -396,6 +396,7 @@ bool ClauseProcessor::processInitializer(
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr;
+        std::string name = object.sym()->name().ToString();
         mlir::Type ompOrigType = ompOrig.getType();
         // Check for unsupported dynamic-length character reductions
         mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
@@ -408,8 +409,16 @@ bool ClauseProcessor::processInitializer(
                  "OpenMP reduction allocation for dynamic length character");
           }
         }
-        // If ompOrig is already a reference, we can use it directly
-        if (fir::isa_ref_type(ompOrigType)) {
+        // For by-ref reductions, the init block has two arguments:
+        //   arg0 = mold/original, arg1 = private allocation.
+        // omp_priv must map to arg1 (the private copy), not arg0.
+        if (name == "omp_priv" && fir::isa_ref_type(ompOrigType)) {
+          mlir::Block *initBlock = builder.getInsertionBlock();
+          if (initBlock->getNumArguments() > 1)
+            addr = initBlock->getArgument(1);
+          else
+            addr = ompOrig;
+        } else if (fir::isa_ref_type(ompOrigType)) {
           addr = ompOrig;
         } else {
           addr = builder.createTemporary(loc, ompOrigType);
@@ -419,7 +428,6 @@ bool ClauseProcessor::processInitializer(
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
-        std::string name = object.sym()->name().ToString();
         // Get length parameters for types that need them (e.g., characters).
         // Note: DeclareOp requires exactly one type parameter for non-boxed
         // characters, unlike EmboxOp which doesn't allow them for constant-len.
@@ -451,13 +459,23 @@ bool ClauseProcessor::processInitializer(
               [&](const auto &expr) -> mlir::Value {
                 mlir::Value exprResult = fir::getBase(convertExprToValue(
                     loc, converter, initExpr, symMap, stmtCtx));
-                // Conversion can either give a value or a refrence to a value,
-                // we need to return the reduction type, so an optional load may
-                // be generated.
                 if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
+
+                // For derived types in by-ref reductions, the init value
+                // (e.g. t(0)) must be stored into omp_priv explicitly.
+                // populateByRefInitAndCleanupRegions doesn't handle
+                // scalarInitValue for unboxed derived types, so we store
+                // here and return null to prevent a redundant store attempt.
+                if (ompPrivVar &&
+                    fir::isa_ref_type(ompPrivVar.getType()) &&
+                    fir::isa_derived(
+                        fir::unwrapRefType(ompPrivVar.getType()))) {
+                  fir::StoreOp::create(builder, loc, exprResult, ompPrivVar);
+                  return mlir::Value{};
+                }
                 return exprResult;
               }},
           initExpr.u);
