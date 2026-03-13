@@ -2711,7 +2711,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       continue;
     unsigned OpNo = Op.getOperandNo();
     if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+               (!II->isBundleOperand(OpNo) &&
+                II->paramHasAttr(OpNo, Attribute::ImmArg))))
       continue;
 
     if (!BPrepared) {

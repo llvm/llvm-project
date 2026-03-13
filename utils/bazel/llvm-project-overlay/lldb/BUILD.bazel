@@ -979,6 +979,9 @@ cc_library(
         ["tools/debugserver/source/**/*.cpp"],
         exclude = ["tools/debugserver/source/debugserver.cpp"],
     ),
+    copts = [
+        "-Wno-vla-cxx-extension",
+    ],
     local_defines = ["LLDB_USE_OS_LOG"],
     tags = ["nobuildkite"],
     deps = [
@@ -1021,6 +1024,9 @@ cc_binary(
         "tools/debugserver/source/debugserver.cpp",
         ":debugserver_version_gen",
         ":mach_gen",
+    ],
+    copts = [
+        "-Wno-vla-cxx-extension",
     ],
     tags = ["nobuildkite"],
     target_compatible_with = select({
