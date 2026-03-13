@@ -623,9 +623,11 @@ namespace {
   /// file.
   class DumpModuleInfoListener : public ASTReaderListener {
     llvm::raw_ostream &Out;
+    FileManager &FileMgr;
 
   public:
-    DumpModuleInfoListener(llvm::raw_ostream &Out) : Out(Out) { }
+    DumpModuleInfoListener(llvm::raw_ostream &Out, FileManager &FileMgr)
+        : Out(Out), FileMgr(FileMgr) {}
 
 #define DUMP_BOOLEAN(Value, Text)                       \
     Out.indent(4) << Text << ": " << (Value? "Yes" : "No") << "\n"
@@ -716,8 +718,12 @@ namespace {
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                  StringRef ModuleFilename,
-                                 StringRef SpecificModuleCachePath,
+                                 StringRef ContextHash,
                                  bool Complain) override {
+      std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+          FileMgr, HSOpts.ModuleCachePath, HSOpts.DisableModuleHash,
+          std::string(ContextHash));
+
       Out.indent(2) << "Header search options:\n";
       Out.indent(4) << "System root [-isysroot=]: '" << HSOpts.Sysroot << "'\n";
       Out.indent(4) << "Resource dir [ -resource-dir=]: '" << HSOpts.ResourceDir << "'\n";
@@ -905,7 +911,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   Out << "  Module format: " << (IsRaw ? "raw" : "obj") << "\n";
 
   Preprocessor &PP = CI.getPreprocessor();
-  DumpModuleInfoListener Listener(Out);
+  DumpModuleInfoListener Listener(Out, CI.getFileManager());
   const HeaderSearchOptions &HSOpts =
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 

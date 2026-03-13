@@ -20,6 +20,12 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: iswdigit
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
   - name: iswlower
     standards:
       - stdc
@@ -39,6 +45,12 @@ functions:
     arguments:
       - type: wint_t
   - name: iswxdigit
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswalnum
     standards:
       - stdc
     return_type: int

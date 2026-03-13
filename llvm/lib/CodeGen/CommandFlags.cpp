@@ -74,7 +74,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
@@ -231,12 +230,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoNaNsFPMath(
-      "enable-no-nans-fp-math",
-      cl::desc("Enable FP math optimizations that assume no NaNs"),
-      cl::init(false));
-  CGBINDOPT(EnableNoNaNsFPMath);
 
   static cl::opt<bool> EnableNoSignedZerosFPMath(
       "enable-no-signed-zeros-fp-math",
@@ -589,7 +582,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
@@ -739,7 +731,6 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
 
   if ((DenormalFPMathView->getNumOccurrences() > 0 ||

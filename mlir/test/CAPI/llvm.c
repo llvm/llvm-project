@@ -250,9 +250,9 @@ static void testDebugInfoAttributes(MlirContext ctx) {
       mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("bar"));
 
   MlirAttribute none = mlirUnitAttrGet(ctx);
-  MlirAttribute id = mlirDisctinctAttrCreate(none);
-  MlirAttribute recId0 = mlirDisctinctAttrCreate(none);
-  MlirAttribute recId1 = mlirDisctinctAttrCreate(none);
+  MlirAttribute id = mlirDistinctAttrCreate(none);
+  MlirAttribute recId0 = mlirDistinctAttrCreate(none);
+  MlirAttribute recId1 = mlirDistinctAttrCreate(none);
 
   // CHECK: #llvm.di_null_type
   mlirAttributeDump(mlirLLVMDINullTypeAttrGet(ctx));

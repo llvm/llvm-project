@@ -18,6 +18,11 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
+#if defined(__FreeBSD__) && defined(__aarch64__)
+#include <machine/pcb.h>
+#include <sys/param.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -52,6 +57,11 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     llvm::support::ulittle64_t sp;
   } pcb;
 
+#if defined(__FreeBSD__) && defined(__aarch64__) && __FreeBSD_version >= 1400084
+  static_assert(offsetof(struct pcb, pcb_x) == offsetof(decltype(pcb), x));
+  static_assert(offsetof(struct pcb, pcb_sp) == offsetof(decltype(pcb), sp));
+#endif
+
   // https://cgit.freebsd.org/src/tree/sys/arm64/include/pcb.h?h=stable%2F13
   struct {
     llvm::support::ulittle64_t x[30];
@@ -59,6 +69,12 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     llvm::support::ulittle64_t _reserved;
     llvm::support::ulittle64_t sp;
   } pcb13;
+
+#if defined(__FreeBSD__) && defined(__aarch64__) && __FreeBSD_version < 1400084
+  static_assert(offsetof(struct pcb, pcb_x) == offsetof(decltype(pcb13), x));
+  static_assert(offsetof(struct pcb, pcb_lr) == offsetof(decltype(pcb13), lr));
+  static_assert(offsetof(struct pcb, pcb_sp) == offsetof(decltype(pcb13), sp));
+#endif
 
   Status error;
   constexpr int FBSD14 = 1400084;
@@ -72,8 +88,8 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
 
   // TODO: LLVM 24: Remove FreeBSD 13 support
   if (osreldate >= FBSD14) {
-    constexpr uint32_t PCB_FP = 10;
-    constexpr uint32_t PCB_LR = 11;
+    constexpr uint32_t pcb_fp = 10;
+    constexpr uint32_t pcb_lr = 11;
     size_t rd =
         m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
     if (rd != sizeof(pcb))
@@ -92,7 +108,7 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     case gpr_x27_arm64:
     case gpr_x28_arm64:
     case gpr_fp_arm64:
-      static_assert(gpr_fp_arm64 - gpr_x19_arm64 == PCB_FP,
+      static_assert(gpr_fp_arm64 - gpr_x19_arm64 == pcb_fp,
                     "nonconsecutive arm64 register numbers");
       value = pcb.x[reg - gpr_x19_arm64];
       break;
@@ -101,7 +117,7 @@ bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
       break;
     case gpr_pc_arm64:
       // The pc of crashing thread is stored in lr.
-      static_assert(gpr_lr_arm64 - gpr_x19_arm64 == PCB_LR,
+      static_assert(gpr_lr_arm64 - gpr_x19_arm64 == pcb_lr,
                     "nonconsecutive arm64 register numbers");
       value = pcb.x[gpr_lr_arm64 - gpr_x19_arm64];
       break;
