@@ -56,6 +56,7 @@ if (SPHINX_FOUND)
       net/if
       netinet/in
       pthread
+      pwd
       setjmp
       signal
       stdbit

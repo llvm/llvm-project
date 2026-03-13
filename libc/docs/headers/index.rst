@@ -22,6 +22,7 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   pwd
    search
    setjmp
    signal
