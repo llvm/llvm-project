@@ -2853,6 +2853,11 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
             if (const auto *name =
                     Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
               newSym = name->symbol;
+            } else if (const auto *arrayElement = Fortran::parser::Unwrap<
+                           Fortran::parser::ArrayElement>(*designator)) {
+              const Fortran::parser::Name &name =
+                  Fortran::parser::GetLastName(arrayElement->Base());
+              newSym = name.symbol;
             } else if (const auto *component = Fortran::parser::Unwrap<
                            Fortran::parser::StructureComponent>(*designator)) {
               const Fortran::parser::DataRef &base{component->Base()};
