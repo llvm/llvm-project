@@ -520,7 +520,7 @@ struct CommOpPattern : public OpConversionPattern<CommOp> {
   Value getAsMemref(Value input, ImplicitLocOpBuilder &iBuilder,
                     bool readOnly) const {
     auto itype = input.getType();
-    // If the source is a memref, cast it to a tensor.
+    // If the source is a tensor, materialize a memref for it.
     if (isa<RankedTensorType>(itype)) {
       auto memrefType = getMemrefType(cast<ShapedType>(itype));
       input = bufferization::ToBufferOp::create(iBuilder, memrefType, input,
@@ -902,7 +902,7 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
       // 4. Cast back to memref if needed.
       if (isa<MemRefType>(op.getType()))
         finalOutput =
-            bufferization::ToBufferOp::create(ib, outType, finalOutput, true);
+            bufferization::ToBufferOp::create(ib, outType, finalOutput, false);
     }
 
     rewriter.replaceOp(op, finalOutput);

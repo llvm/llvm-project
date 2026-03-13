@@ -260,7 +260,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: [[v4:%.*]] = tensor.empty() : tensor<3x5x4xf32>
     // CHECK: [[vtransposed:%.*]] = linalg.transpose ins([[v3]] : tensor<5x3x4xf32>) outs([[v4]] : tensor<3x5x4xf32>) permutation = [1, 0, 2] 
     // CHECK: [[vcollapsed:%.*]] = tensor.collapse_shape [[vtransposed]] {{\[\[}}0], [1, 2]] : tensor<3x5x4xf32> into tensor<3x20xf32>
-    // CHECK: [[v5:%.*]] = bufferization.to_buffer [[vcollapsed]] read_only : tensor<3x20xf32> to memref<3x20xf32>
+    // CHECK: [[v5:%.*]] = bufferization.to_buffer [[vcollapsed]] : tensor<3x20xf32> to memref<3x20xf32>
     %0 = shard.all_gather %arg0 on @grid0 grid_axes = [2] gather_axis = 1 : memref<3x4xf32> -> memref<3x20xf32>
     // CHECK: return [[v5]] : memref<3x20xf32>
     return %0 : memref<3x20xf32>
