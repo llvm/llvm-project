@@ -2944,10 +2944,7 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
 	EXPECT_EQ(*opt, 42); // [[unsafe]]
     }
   )cc");
-
 }
-
-
 
 // FIXME: Add support for:
 // - constructors (copy, move)
