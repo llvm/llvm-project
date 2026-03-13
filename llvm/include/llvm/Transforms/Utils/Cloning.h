@@ -225,10 +225,10 @@ LLVM_ABI void CloneFunctionBodyInto(
     const MetadataPredicate *IdentityMD = nullptr);
 
 LLVM_ABI void CloneAndPruneIntoFromInst(
-    Function *NewFunc, const Function *OldFunc, const Instruction *StartingInst,
-    ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-    SmallVectorImpl<ReturnInst *> &Returns, const char *NameSuffix = "",
-    ClonedCodeInfo *CodeInfo = nullptr);
+    CallBase &CB, Function *NewFunc, const Function *OldFunc,
+    const Instruction *StartingInst, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr);
 
 /// This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The
@@ -241,10 +241,13 @@ LLVM_ABI void CloneAndPruneIntoFromInst(
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-LLVM_ABI void CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void CloneAndPruneFunctionInto(CallBase &CB, Function *NewFunc,
+                                        const Function *OldFunc,
+                                        ValueToValueMapTy &VMap,
+                                        bool ModuleLevelChanges,
+                                        SmallVectorImpl<ReturnInst *> &Returns,
+                                        const char *NameSuffix = "",
+                                        ClonedCodeInfo *CodeInfo = nullptr);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
