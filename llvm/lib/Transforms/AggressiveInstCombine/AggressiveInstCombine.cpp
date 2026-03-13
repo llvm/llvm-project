@@ -744,8 +744,7 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
     return false;
 
   unsigned InputBits = X->getType()->getScalarSizeInBits();
-  // TODO: Support more sizes.
-  if (InputBits != 16 && InputBits != 32 && InputBits != 64)
+  if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
     return false;
 
   // Verify shift amount.
