@@ -83,24 +83,29 @@ def riscv_read_vlenb : RVSDNode<"READ_VLENB",
 // Operand that is allowed to be a register other than X0, a 5 bit unsigned
 // immediate, or -1. -1 means VLMAX. This allows us to pick between VSETIVLI and
 // VSETVLI opcodes using the same pseudo instructions.
+// Operand should be named $vl for getNamedOperandIdx.
 def AVL : RegisterOperand<GPRNoX0> {
   let OperandNamespace = "RISCVOp";
   let OperandType = "OPERAND_AVL";
 }
 
+// Operand should be named $policy for getNamedOperandIdx.
 def vec_policy : RISCVOp {
   let OperandType = "OPERAND_VEC_POLICY";
 }
 
+// Operand should be named $sew for getNamedOperandIdx.
 def sew : RISCVOp {
   let OperandType = "OPERAND_SEW";
 }
 
 // SEW for mask only instructions like vmand and vmsbf. Should always be 0.
+// Operand should be named $sew for getNamedOperandIdx.
 def sew_mask : RISCVOp {
   let OperandType = "OPERAND_SEW_MASK";
 }
 
+// Operand should be named $rm for getNamedOperandIdx.
 def vec_rm : RISCVOp {
   let OperandType = "OPERAND_VEC_RM";
 }
@@ -564,7 +569,7 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
-  bit IsAltFmt = !eq(AltFmtType.Value, IS_ALTFMT.Value);
+  bits<1> IsAltFmt = !eq(AltFmtType.Value, IS_ALTFMT.Value);
   bit IncludeInInversePseudoTable = 1;
 
   let UseNamedOperandTable = true;

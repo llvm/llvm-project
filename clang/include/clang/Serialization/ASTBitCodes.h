@@ -44,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 35;
+const unsigned VERSION_MAJOR = 36;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -1617,6 +1617,9 @@ enum StmtCode {
 
   /// A SYCLKernelCallStmt record.
   STMT_SYCLKERNELCALL,
+
+  /// An UnresolvedSYCLKernelCallStmt record.
+  STMT_UNRESOLVED_SYCL_KERNEL_CALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,

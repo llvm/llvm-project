@@ -31,6 +31,7 @@ driver_executable("llvm-debuginfod-find") {
     "//llvm/lib/Debuginfod",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/Support/HTTP",
   ]
   sources = [ "llvm-debuginfod-find.cpp" ]
 }

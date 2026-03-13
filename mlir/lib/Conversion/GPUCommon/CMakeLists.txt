@@ -18,6 +18,7 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   AttrToSPIRVConverter.cpp
   GPUToLLVMConversion.cpp
   GPUOpsLowering.cpp
+  IndexIntrinsicsOpLowering.cpp
 
   DEPENDS
   MLIRConversionPassIncGen

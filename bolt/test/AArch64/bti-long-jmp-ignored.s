@@ -1,7 +1,5 @@
 # This test checks the situation where LongJmp adds a stub targeting an ignored (skipped) function.
-# The problem is that by default BOLT cannot modify ignored functions, so it cannot add the needed BTI.
-
-# Current behaviour is to emit an error.
+# As far_away_func does not have a nop at the entry, BOLT cannot safely patch it.
 
 # REQUIRES: system-linux, asserts
 
@@ -11,7 +9,7 @@
 # RUN: not llvm-bolt %t.exe -o %t.bolt \
 # RUN:   --align-text=0x10000000 --skip-funcs=far_away_func 2>&1 | FileCheck %s
 
-# CHECK: BOLT-ERROR: Cannot add BTI landing pad to ignored function far_away_func
+# CHECK:  BOLT-ERROR: Cannot add BTI to function without CFG far_away_func. Recompile the binary using -fpatchable-function-entry 1 to include a nop at the entry
 
   .section .text
   .align 4

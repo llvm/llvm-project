@@ -196,9 +196,9 @@ define <4 x float> @test_signed_v4f32_min_max(<4 x float> %x) {
 ; SIGNED-ZEROS:       // %bb.0: // %entry
 ; SIGNED-ZEROS-NEXT:    fcvtzs v0.4s, v0.4s
 ; SIGNED-ZEROS-NEXT:    mvni v1.4s, #1, msl #8
+; SIGNED-ZEROS-NEXT:    movi v2.4s, #3, msl #8
 ; SIGNED-ZEROS-NEXT:    smax v0.4s, v0.4s, v1.4s
-; SIGNED-ZEROS-NEXT:    movi v1.4s, #3, msl #8
-; SIGNED-ZEROS-NEXT:    smin v0.4s, v0.4s, v1.4s
+; SIGNED-ZEROS-NEXT:    smin v0.4s, v0.4s, v2.4s
 ; SIGNED-ZEROS-NEXT:    scvtf v0.4s, v0.4s
 ; SIGNED-ZEROS-NEXT:    ret
 ;
@@ -225,9 +225,9 @@ define <4 x float> @test_unsigned_v4f32_min_max(<4 x float> %x) {
 ; SIGNED-ZEROS:       // %bb.0: // %entry
 ; SIGNED-ZEROS-NEXT:    movi v1.4s, #2, lsl #8
 ; SIGNED-ZEROS-NEXT:    fcvtzu v0.4s, v0.4s
+; SIGNED-ZEROS-NEXT:    movi v2.4s, #3, msl #8
 ; SIGNED-ZEROS-NEXT:    umax v0.4s, v0.4s, v1.4s
-; SIGNED-ZEROS-NEXT:    movi v1.4s, #3, msl #8
-; SIGNED-ZEROS-NEXT:    umin v0.4s, v0.4s, v1.4s
+; SIGNED-ZEROS-NEXT:    umin v0.4s, v0.4s, v2.4s
 ; SIGNED-ZEROS-NEXT:    ucvtf v0.4s, v0.4s
 ; SIGNED-ZEROS-NEXT:    ret
 ;

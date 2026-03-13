@@ -96,7 +96,6 @@ public:
   bool findRuleAndApplyMapping(MachineInstr &MI);
 
   // Manual apply helpers.
-  bool applyMappingPHI(MachineInstr &MI);
   void applyMappingTrivial(MachineInstr &MI);
 
 private:
@@ -140,6 +139,7 @@ private:
   bool lowerSplitTo32SExtInReg(MachineInstr &MI);
   bool lowerUnpackMinMax(MachineInstr &MI);
   bool lowerUnpackAExt(MachineInstr &MI);
+  bool applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU

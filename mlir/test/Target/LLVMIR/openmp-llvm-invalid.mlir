@@ -94,7 +94,7 @@ llvm.func @omp_threadprivate() {
 
 llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error @below {{Ill-formed type attributes for linear variables}}
-  omp.wsloop linear(%x = %step : !llvm.ptr) {
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
        omp.yield
      }
@@ -106,7 +106,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error @below {{Ill-formed type attributes for linear variables}} 
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
        omp.yield
      }

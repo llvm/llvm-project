@@ -606,9 +606,9 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 ;
 ; SSE41-LABEL: shrunkblend_nonvselectuse:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    psllq $63, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
+; SSE41-NEXT:    pslld $31, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    paddq %xmm2, %xmm0
 ; SSE41-NEXT:    retq
@@ -633,45 +633,23 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
 ; to match (crash).
 
 define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
-; SSE2-LABEL: simplify_select:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pslld $31, %xmm0
-; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    movd %edi, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm2[1,1]
-; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    pandn %xmm1, %xmm0
-; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    retq
+; SSE-LABEL: simplify_select:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %edi, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    retq
 ;
-; SSE41-LABEL: simplify_select:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE41-NEXT:    pslld $31, %xmm0
-; SSE41-NEXT:    movd %edi, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
-; SSE41-NEXT:    por %xmm1, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,1,1]
-; SSE41-NEXT:    pinsrd $1, %edi, %xmm1
-; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movaps %xmm1, %xmm0
-; SSE41-NEXT:    retq
+; AVX1-LABEL: simplify_select:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    retq
 ;
-; AVX-LABEL: simplify_select:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
-; AVX-NEXT:    vpor %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
-; AVX-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX2-LABEL: simplify_select:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    retq
   %a = insertelement <2 x i32> <i32 0, i32 undef>, i32 %x, i32 1
   %b = insertelement <2 x i32> <i32 undef, i32 0>, i32 %x, i32 0
   %y = or <2 x i32> %a, %b
@@ -740,24 +718,14 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; SSE-NEXT:    shll $15, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX1-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    shll $15, %eax
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [49,49,49,49]
-; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    shll $15, %eax
-; AVX2-NEXT:    retq
+; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    andl $1, %eax
+; AVX-NEXT:    shll $15, %eax
+; AVX-NEXT:    retq
 0:
   %1 = load <8 x i8>, ptr %x
   %2 = icmp eq <8 x i8> %1, <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>

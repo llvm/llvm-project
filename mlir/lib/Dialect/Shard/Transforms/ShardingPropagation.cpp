@@ -364,12 +364,19 @@ struct ShardingPropagation
     FunctionOpInterface funcOp = getOperation();
     MLIRContext *ctx = funcOp.getContext();
     Region &region = funcOp.getFunctionBody();
-    OpBuilder builder(ctx);
+
+    if (region.empty())
+      return;
+
+    Block &block = region.front();
+    // Nothing to propagate if there is no sharding annotation in the block.
+    if (block.getOps<shard::ShardOp>().empty())
+      return;
+
     if (!region.hasOneBlock()) {
       funcOp.emitOpError() << "only one block is supported!";
       return signalPassFailure();
     }
-    Block &block = region.front();
 
     LLVM_DEBUG(
         DBGS() << "print all the ops' iterator types and indexing maps in the "
@@ -379,6 +386,7 @@ struct ShardingPropagation
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });
 
+    OpBuilder builder(ctx);
     auto traverse = [&](auto &&range, OpBuilder &builder,
                         const char *order) -> bool {
       for (Operation &op : range) {
