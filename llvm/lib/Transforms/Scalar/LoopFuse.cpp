@@ -252,8 +252,7 @@ struct FusionCandidate {
   BasicBlock *getEntryBlock() const {
     if (GuardBranch)
       return GuardBranch->getParent();
-    else
-      return Preheader;
+    return Preheader;
   }
 
   /// After Peeling the loop is modified quite a bit, hence all of the Blocks
@@ -545,15 +544,13 @@ public:
 
         collectFusionCandidates(LV);
         Changed |= fuseCandidates();
+        // All loops in the candidate sets have a common parent (or no parent).
+        // Next loop vector will correspond to a different parent. It is safe
+        // to remove all the candidates currently in the set.
         FusionCandidates.clear();
       }
 
-      // Finished analyzing candidates at this level.
-      // Descend to the next level and clear all of the candidates currently
-      // collected. Note that it will not be possible to fuse any of the
-      // existing candidates with new candidates because the new candidates will
-      // be at a different nest level and thus not be control flow equivalent
-      // with all of the candidates collected so far.
+      // Finished analyzing candidates at this level. Descend to the next level.
       LLVM_DEBUG(dbgs() << "Descend one level!\n");
       LDT.descend();
     }
@@ -1135,7 +1132,7 @@ private:
 
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       const Loop *ExprL = Expr->getLoop();
-      SmallVector<const SCEV *, 2> Operands;
+      SmallVector<SCEVUse, 2> Operands;
       if (ExprL == &OldL) {
         append_range(Operands, Expr->operands());
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
@@ -1150,7 +1147,7 @@ private:
         return visit(Expr->getStart());
       }
 
-      for (const SCEV *Op : Expr->operands())
+      for (SCEVUse Op : Expr->operands())
         Operands.push_back(visit(Op));
       return SE.getAddRecExpr(Operands, ExprL, Expr->getNoWrapFlags());
     }
@@ -1379,8 +1376,7 @@ private:
     if (FC0.GuardBranch)
       return DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()) &&
              FC0.ExitBlock->getSingleSuccessor() == FC1.getEntryBlock();
-    else
-      return FC0.ExitBlock == FC1.getEntryBlock();
+    return FC0.ExitBlock == FC1.getEntryBlock();
   }
 
   bool isEmptyPreheader(const FusionCandidate &FC) const {

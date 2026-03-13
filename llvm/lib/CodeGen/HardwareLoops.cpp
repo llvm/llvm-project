@@ -210,7 +210,7 @@ namespace {
     Module *M               = nullptr;
     const SCEV *ExitCount   = nullptr;
     Type *CountType         = nullptr;
-    BranchInst *ExitBranch  = nullptr;
+    CondBrInst *ExitBranch = nullptr;
     Value *LoopDecrement    = nullptr;
     bool UsePHICounter      = false;
     bool UseLoopGuard       = false;

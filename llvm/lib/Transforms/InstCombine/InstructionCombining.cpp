@@ -1105,10 +1105,11 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Value *A, *CondVal, *TrueVal, *FalseVal;
   Value *CastOp;
+  Constant *CastTrueVal, *CastFalseVal;
 
   auto MatchSelectAndCast = [&](Value *CastOp, Value *SelectOp) {
-    return match(CastOp, m_ZExtOrSExt(m_Value(A))) &&
-           A->getType()->getScalarSizeInBits() == 1 &&
+    return match(CastOp, m_SelectLike(m_Value(A), m_Constant(CastTrueVal),
+                                      m_Constant(CastFalseVal))) &&
            match(SelectOp, m_Select(m_Value(CondVal), m_Value(TrueVal),
                                     m_Value(FalseVal)));
   };
@@ -1128,20 +1129,10 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
-    bool IsZExt = isa<ZExtInst>(CastOp);
-    Constant *C;
+    Value *CastVal = IsTrueArm ? CastFalseVal : CastTrueVal;
 
-    if (IsTrueArm) {
-      C = Constant::getNullValue(V->getType());
-    } else if (IsZExt) {
-      unsigned BitWidth = V->getType()->getScalarSizeInBits();
-      C = Constant::getIntegerValue(V->getType(), APInt(BitWidth, 1));
-    } else {
-      C = Constant::getAllOnesValue(V->getType());
-    }
-
-    return IsCastOpRHS ? Builder.CreateBinOp(Opc, V, C)
-                       : Builder.CreateBinOp(Opc, C, V);
+    return IsCastOpRHS ? Builder.CreateBinOp(Opc, V, CastVal)
+                       : Builder.CreateBinOp(Opc, CastVal, V);
   };
 
   // If the value used in the zext/sext is the select condition, or the negated
@@ -1151,7 +1142,6 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
     return SelectInst::Create(CondVal, NewTrueVal,
                               NewFoldedConst(true, FalseVal), "", nullptr, SI);
   }
-
   if (match(A, m_Not(m_Specific(CondVal)))) {
     Value *NewTrueVal = NewFoldedConst(true, TrueVal);
     return SelectInst::Create(CondVal, NewTrueVal,
@@ -1455,7 +1445,7 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       SI->swapProfMetadata();
       break;
     }
-    case Instruction::Br: {
+    case Instruction::CondBr: {
       BranchInst *BI = cast<BranchInst>(U);
       BI->swapSuccessors(); // swaps prof metadata too
       if (BPI)
@@ -3491,6 +3481,24 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         BackIndices, GEP.getNoWrapFlags());
   }
 
+  // Canonicalize gep %T to gep [sizeof(%T) x i8]:
+  auto IsCanonicalType = [](Type *Ty) {
+    if (auto *AT = dyn_cast<ArrayType>(Ty))
+      Ty = AT->getElementType();
+    return Ty->isIntegerTy(8);
+  };
+  if (Indices.size() == 1 && !IsCanonicalType(GEPEltType)) {
+    TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
+    assert(!Scale.isScalable() && "Should have been handled earlier");
+    Type *NewElemTy = Builder.getInt8Ty();
+    if (Scale.getFixedValue() != 1)
+      NewElemTy = ArrayType::get(NewElemTy, Scale.getFixedValue());
+    GEP.setSourceElementType(NewElemTy);
+    GEP.setResultElementType(NewElemTy);
+    // Don't bother revisiting the GEP after this change.
+    MadeIRChange = true;
+  }
+
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
     if (Value *NewPtrOp = foldGEPOfPhi(GEP, PN, Builder))
@@ -4189,7 +4197,8 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
     return nullptr;
 
   KnownFPClass KnownClass;
-  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass))
+  if (SimplifyDemandedFPClass(&RI, 0, ~ReturnClass, KnownClass,
+                              SQ.getWithInstruction(&RI)))
     return &RI;
 
   return nullptr;
@@ -4228,9 +4237,7 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
-  assert(BI.isUnconditional() && "Only for unconditional branches.");
-
+Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
   // If this store is the second-to-last instruction in the basic block
   // (excluding debug info) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
@@ -4328,10 +4335,7 @@ void InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
   handlePotentiallyDeadBlocks(Worklist);
 }
 
-Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
-  if (BI.isUnconditional())
-    return visitUnconditionalBranchInst(BI);
-
+Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
   // Change br (not X), label True, label False to: br X, label False, True
   Value *Cond = BI.getCondition();
   Value *X;

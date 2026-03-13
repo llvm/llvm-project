@@ -116,7 +116,8 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
 /// and the expression node.
 static mlir::Value makeBinaryAtomicValue(
     CIRGenFunction &cgf, cir::AtomicFetchKind kind, const CallExpr *expr,
-    mlir::Type *originalArgType, mlir::Value *emittedArgValue = nullptr,
+    mlir::Type *originalArgType = nullptr,
+    mlir::Value *emittedArgValue = nullptr,
     cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent) {
 
   QualType type = expr->getType();
@@ -159,6 +160,8 @@ static mlir::Value makeBinaryAtomicValue(
   // memory location and returns the old value.
   if (emittedArgValue) {
     *emittedArgValue = val;
+    assert(originalArgType != nullptr &&
+           "originalArgType must be provided when emittedArgValue is set");
     *originalArgType = valueType;
   }
 
@@ -167,6 +170,12 @@ static mlir::Value makeBinaryAtomicValue(
       ordering, cir::SyncScopeKind::System, false, /* is volatile */
       true);                                       /* fetch first */
   return rmwi->getResult(0);
+}
+
+static RValue emitBinaryAtomic(CIRGenFunction &cgf,
+                               cir::AtomicFetchKind atomicOpkind,
+                               const CallExpr *e) {
+  return RValue::get(makeBinaryAtomicValue(cgf, atomicOpkind, e));
 }
 
 template <typename BinOp>
@@ -1575,11 +1584,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_alloca_with_align_uninitialized:
   case Builtin::BI__builtin_alloca_with_align:
   case Builtin::BI__builtin_infer_alloc_token:
-  case Builtin::BIbzero:
-  case Builtin::BI__builtin_bzero:
-  case Builtin::BIbcopy:
-  case Builtin::BI__builtin_bcopy:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BIbzero:
+  case Builtin::BI__builtin_bzero: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    Address destPtr = emitPointerWithAlignment(e->getArg(0));
+    Address destPtrCast = destPtr.withElementType(builder, cgm.voidTy);
+    mlir::Value size = emitScalarExpr(e->getArg(1));
+    mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+    assert(!cir::MissingFeatures::sanitizers());
+    builder.createMemSet(loc, destPtrCast, zero, size);
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    return RValue::getIgnored();
+  }
+  case Builtin::BIbcopy:
+  case Builtin::BI__builtin_bcopy: {
+    Address src = emitPointerWithAlignment(e->getArg(0));
+    Address dest = emitPointerWithAlignment(e->getArg(1));
+    mlir::Value sizeVal = emitScalarExpr(e->getArg(2));
+    emitNonNullArgCheck(RValue::get(src.getPointer()), e->getArg(0)->getType(),
+                        e->getArg(0)->getExprLoc(), fd, 0);
+    emitNonNullArgCheck(RValue::get(dest.getPointer()), e->getArg(1)->getType(),
+                        e->getArg(1)->getExprLoc(), fd, 0);
+    builder.createMemMove(getLoc(e->getSourceRange()), dest.getPointer(),
+                          src.getPointer(), sizeVal);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_char_memchr:
   case Builtin::BI__builtin_memchr: {
     Address srcPtr = emitPointerWithAlignment(e->getArg(0));
@@ -1699,36 +1729,43 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_test_and_set:
   case Builtin::BI__sync_lock_release:
   case Builtin::BI__sync_swap:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
   case Builtin::BI__sync_fetch_and_add_4:
   case Builtin::BI__sync_fetch_and_add_8:
   case Builtin::BI__sync_fetch_and_add_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Add, e);
   case Builtin::BI__sync_fetch_and_sub_1:
   case Builtin::BI__sync_fetch_and_sub_2:
   case Builtin::BI__sync_fetch_and_sub_4:
   case Builtin::BI__sync_fetch_and_sub_8:
   case Builtin::BI__sync_fetch_and_sub_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Sub, e);
   case Builtin::BI__sync_fetch_and_or_1:
   case Builtin::BI__sync_fetch_and_or_2:
   case Builtin::BI__sync_fetch_and_or_4:
   case Builtin::BI__sync_fetch_and_or_8:
   case Builtin::BI__sync_fetch_and_or_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Or, e);
   case Builtin::BI__sync_fetch_and_and_1:
   case Builtin::BI__sync_fetch_and_and_2:
   case Builtin::BI__sync_fetch_and_and_4:
   case Builtin::BI__sync_fetch_and_and_8:
   case Builtin::BI__sync_fetch_and_and_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::And, e);
   case Builtin::BI__sync_fetch_and_xor_1:
   case Builtin::BI__sync_fetch_and_xor_2:
   case Builtin::BI__sync_fetch_and_xor_4:
   case Builtin::BI__sync_fetch_and_xor_8:
   case Builtin::BI__sync_fetch_and_xor_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Xor, e);
   case Builtin::BI__sync_fetch_and_nand_1:
   case Builtin::BI__sync_fetch_and_nand_2:
   case Builtin::BI__sync_fetch_and_nand_4:
   case Builtin::BI__sync_fetch_and_nand_8:
   case Builtin::BI__sync_fetch_and_nand_16:
+    return emitBinaryAtomic(*this, cir::AtomicFetchKind::Nand, e);
   case Builtin::BI__sync_fetch_and_min:
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:

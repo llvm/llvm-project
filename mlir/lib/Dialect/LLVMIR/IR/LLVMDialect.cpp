@@ -1000,7 +1000,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1039,7 +1040,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1064,7 +1066,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -1089,7 +1092,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
         /*modular_format=*/nullptr, /*nobuiltins=*/nullptr,
         /*allocsize=*/nullptr, /*optsize=*/nullptr, /*minsize=*/nullptr,
-        /*nobuiltin=*/nullptr, /*save_reg_params=*/nullptr,
+        /*builtin=*/nullptr, /*nobuiltin=*/nullptr,
+        /*save_reg_params=*/nullptr,
         /*zero_call_used_regs=*/nullptr, /*trap_func_name=*/nullptr,
         /*default_func_attrs=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
@@ -3850,6 +3854,22 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (resultType.getAddressSpace() != sourceType.getAddressSpace())
     return emitOpError("cannot cast pointers of different address spaces, "
                        "use 'llvm.addrspacecast' instead");
+
+  return success();
+}
+
+LogicalResult LLVM::PtrToAddrOp::verify() {
+  auto pointerType =
+      cast<LLVM::LLVMPointerType>(extractVectorElementType(getArg().getType()));
+  auto integerType = cast<IntegerType>(extractVectorElementType(getType()));
+
+  auto dataLayout = DataLayout::closest(*this);
+  std::optional<unsigned> width = dataLayout.getTypeIndexBitwidth(pointerType);
+  assert(width && "pointers always return an index bitwidth");
+  if (width != integerType.getWidth())
+    return emitOpError("bit-width of integer result type ")
+           << integerType << " must match the pointer bitwidth (" << *width
+           << ") specified in the datalayout";
 
   return success();
 }

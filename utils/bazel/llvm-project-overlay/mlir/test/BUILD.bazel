@@ -101,6 +101,7 @@ cc_library(
         "//mlir:AffineDialect",
         "//mlir:Analysis",
         "//mlir:CallOpInterfaces",
+        "//mlir:ControlFlowDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:FunctionInterfaces",
@@ -386,6 +387,7 @@ cc_library(
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
         "//mlir:CommonFolders",
+        "//mlir:ControlFlowDialect",
         "//mlir:ControlFlowInterfaces",
         "//mlir:ControlFlowTransforms",
         "//mlir:DLTIDialect",
@@ -458,6 +460,7 @@ cc_library(
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:Support",
+        "//mlir:UBDialect",
     ],
 )
 

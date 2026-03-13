@@ -356,4 +356,23 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   opWithProperty2->destroy();
 }
 
+TEST(OperationCloneTest, CloneWithDifferentResults) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp = createOp(&context, {}, builder.getI32Type());
+  IRMapping map;
+  Operation *cloneOp = useOp->clone(
+      map, Operation::CloneOptions::all().withResultTypes(
+               SmallVector<Type>{builder.getI32Type(), builder.getI16Type()}));
+
+  ASSERT_EQ(cloneOp->getNumResults(), 2u);
+  EXPECT_EQ(cloneOp->getResult(0).getType(), builder.getI32Type());
+  EXPECT_EQ(cloneOp->getResult(1).getType(), builder.getI16Type());
+  EXPECT_FALSE(map.contains(useOp->getResult(0)));
+
+  useOp->destroy();
+  cloneOp->destroy();
+}
+
 } // namespace
