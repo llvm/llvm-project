@@ -235,6 +235,28 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   return FuncInfoOffset;
 }
 
+void FunctionInfo::parseStatistics(
+    DataExtractor &Data, std::map<uint32_t, uint64_t> &FuncInfoStats) {
+  uint64_t Offset = 0;
+  // Skip Size and Name (two uint32_t fields).
+  if (!Data.isValidOffsetForDataOfSize(Offset, 8))
+    return;
+  Offset += 8;
+  while (true) {
+    if (!Data.isValidOffsetForDataOfSize(Offset, 8))
+      return;
+    const uint32_t InfoType = Data.getU32(&Offset);
+    const uint32_t InfoLength = Data.getU32(&Offset);
+    if (InfoType == InfoType::EndOfList)
+      return;
+    if (!Data.isValidOffsetForDataOfSize(Offset, InfoLength))
+      return;
+    // Include the 8 bytes for InfoType and InfoLength.
+    FuncInfoStats[InfoType] += InfoLength + 8;
+    Offset += InfoLength;
+  }
+}
+
 llvm::Expected<LookupResult>
 FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
                      uint64_t FuncAddr, uint64_t Addr,

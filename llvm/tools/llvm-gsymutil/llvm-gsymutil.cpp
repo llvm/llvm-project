@@ -534,57 +534,7 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
 
 static void dumpStatistics(StringRef GSYMPath, GsymReader &Gsym,
                            raw_ostream &OS) {
-  const auto &Hdr = Gsym.getHeader();
-
-  // Get the total file size.
-  uint64_t FileSize = 0;
-  if (auto EC = sys::fs::file_size(GSYMPath, FileSize)) {
-    OS << "error: cannot stat file '" << GSYMPath << "': " << EC.message()
-       << "\n";
-    return;
-  }
-
-  // Header section.
-  const uint64_t HeaderSize = sizeof(Header);
-
-  // Address table: aligned to AddrOffSize, contains NumAddresses entries.
-  const uint64_t AddrTableStart = alignTo(HeaderSize, Hdr.AddrOffSize);
-  const uint64_t AddrTableSize =
-      static_cast<uint64_t>(Hdr.NumAddresses) * Hdr.AddrOffSize;
-
-  // Address info offsets table: aligned to 4 bytes, NumAddresses uint32_t's.
-  const uint64_t AddrInfoOffsetsStart =
-      alignTo(AddrTableStart + AddrTableSize, sizeof(uint32_t));
-  const uint64_t AddrInfoOffsetsSize =
-      static_cast<uint64_t>(Hdr.NumAddresses) * sizeof(uint32_t);
-
-  // File table: immediately follows address info offsets.
-  const uint64_t FileTableStart = AddrInfoOffsetsStart + AddrInfoOffsetsSize;
-  const uint64_t FileTableSize = Hdr.StrtabOffset - FileTableStart;
-
-  // String table: offset and size from header.
-  const uint64_t StrtabSize = Hdr.StrtabSize;
-
-  // Function info data: everything after the string table to end of file.
-  const uint64_t FuncInfoStart =
-      static_cast<uint64_t>(Hdr.StrtabOffset) + Hdr.StrtabSize;
-  const uint64_t FuncInfoSize = FileSize - FuncInfoStart;
-
-  // Padding between sections due to alignment.
-  const uint64_t Padding =
-      (AddrTableStart - HeaderSize) +
-      (AddrInfoOffsetsStart - AddrTableStart - AddrTableSize);
-
-  OS << "GSYM Statistics for \"" << GSYMPath << "\":\n";
-  OS << "  File size:           " << FileSize << " bytes\n";
-  OS << "  Header:              " << HeaderSize << " bytes\n";
-  OS << "  Address table:       " << AddrTableSize << " bytes\n";
-  OS << "  Addr info offsets:   " << AddrInfoOffsetsSize << " bytes\n";
-  OS << "  File table:          " << FileTableSize << " bytes\n";
-  OS << "  String table:        " << StrtabSize << " bytes\n";
-  OS << "  Function info data:  " << FuncInfoSize << " bytes\n";
-  OS << "  Padding:             " << Padding << " bytes\n";
-  OS << "  Number of addresses: " << Hdr.NumAddresses << "\n";
+  Gsym.dumpStatistics(GSYMPath, OS);
 }
 
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {

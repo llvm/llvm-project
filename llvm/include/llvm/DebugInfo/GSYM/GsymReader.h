@@ -180,6 +180,13 @@ public:
   /// \param  OS The output stream to dump to.
   LLVM_ABI void dump(raw_ostream &OS);
 
+  /// Dump statistics about the GSYM data contained in this object.
+  ///
+  /// \param GSYMPath The file path used for display and to get file size.
+  ///
+  /// \param OS The output stream to dump to.
+  LLVM_ABI void dumpStatistics(StringRef GSYMPath, raw_ostream &OS);
+
   /// Dump a FunctionInfo object.
   ///
   /// This function will convert any string table indexes and file indexes

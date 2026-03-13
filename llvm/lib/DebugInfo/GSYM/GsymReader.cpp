@@ -17,6 +17,8 @@
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -433,6 +435,82 @@ void GsymReader::dump(raw_ostream &OS) {
     else
       logAllUnhandledErrors(FI.takeError(), OS, "FunctionInfo:");
   }
+}
+
+void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS) {
+  const auto &Hdr = getHeader();
+
+  // Get the total file size.
+  uint64_t FileSize = 0;
+  if (auto EC = sys::fs::file_size(GSYMPath, FileSize)) {
+    OS << "error: cannot stat file '" << GSYMPath << "': " << EC.message()
+       << "\n";
+    return;
+  }
+
+  // Header section.
+  const uint64_t HeaderSize = sizeof(Header);
+
+  // Address table: aligned to AddrOffSize, contains NumAddresses entries.
+  const uint64_t AddrTableStart = alignTo(HeaderSize, Hdr.AddrOffSize);
+  const uint64_t AddrTableSize =
+      static_cast<uint64_t>(Hdr.NumAddresses) * Hdr.AddrOffSize;
+
+  // Address info offsets table: aligned to 4 bytes, NumAddresses uint32_t's.
+  const uint64_t AddrInfoOffsetsStart =
+      alignTo(AddrTableStart + AddrTableSize, sizeof(uint32_t));
+  const uint64_t AddrInfoOffsetsSize =
+      static_cast<uint64_t>(Hdr.NumAddresses) * sizeof(uint32_t);
+
+  // File table: immediately follows address info offsets.
+  const uint64_t FileTableStart = AddrInfoOffsetsStart + AddrInfoOffsetsSize;
+  const uint64_t FileTableSize = Hdr.StrtabOffset - FileTableStart;
+
+  // String table: offset and size from header.
+  const uint64_t StrtabSize = Hdr.StrtabSize;
+
+  // Function info data: everything after the string table to end of file.
+  const uint64_t FuncInfoStart =
+      static_cast<uint64_t>(Hdr.StrtabOffset) + Hdr.StrtabSize;
+  const uint64_t FuncInfoSize = FileSize - FuncInfoStart;
+
+  // Padding between sections due to alignment.
+  const uint64_t Padding =
+      (AddrTableStart - HeaderSize) +
+      (AddrInfoOffsetsStart - AddrTableStart - AddrTableSize);
+
+  OS << "GSYM Statistics for \"" << GSYMPath << "\":\n";
+  OS << "  File size:           " << FileSize << " bytes\n";
+  OS << "  Header:              " << HeaderSize << " bytes\n";
+  OS << "  Address table:       " << AddrTableSize << " bytes\n";
+  OS << "  Addr info offsets:   " << AddrInfoOffsetsSize << " bytes\n";
+  OS << "  File table:          " << FileTableSize << " bytes\n";
+  OS << "  String table:        " << StrtabSize << " bytes\n";
+  OS << "  Function info data:  " << FuncInfoSize << " bytes\n";
+
+  // Collect per-InfoType statistics across all functions.
+  std::map<uint32_t, uint64_t> InfoTypeStats;
+  for (uint32_t I = 0; I < Hdr.NumAddresses; ++I) {
+    uint64_t FuncStartAddr = 0;
+    if (auto ExpData = getFunctionInfoDataAtIndex(I, FuncStartAddr)) {
+      DataExtractor Data = *ExpData;
+      FunctionInfo::parseStatistics(Data, InfoTypeStats);
+    } else {
+      consumeError(ExpData.takeError());
+    }
+  }
+  auto PrintInfoType = [&](const char *Name, uint32_t Type) {
+    auto It = InfoTypeStats.find(Type);
+    if (It != InfoTypeStats.end())
+      OS << "    " << Name << It->second << " bytes\n";
+  };
+  PrintInfoType("Line table info:   ", 1);
+  PrintInfoType("Inline info:       ", 2);
+  PrintInfoType("Merged func info:  ", 3);
+  PrintInfoType("Call site info:    ", 4);
+
+  OS << "  Padding:             " << Padding << " bytes\n";
+  OS << "  Number of addresses: " << Hdr.NumAddresses << "\n";
 }
 
 void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
