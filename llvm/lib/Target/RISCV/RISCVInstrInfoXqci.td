@@ -1581,7 +1581,7 @@ def : SelectQCbiSFB<SETEQ, simm16nonzero, CCtoQC_E_BccI>;
 def : SelectQCbiSFB<SETGE, simm16nonzero, CCtoQC_E_BccI>;
 def : SelectQCbiSFB<SETLT, simm16nonzero, CCtoQC_E_BccI>;
 def : SelectQCbiSFB<SETNE, simm16nonzero, CCtoQC_E_BccI>;
-def : SelectQCbiSFB<SETUGE, uimm16nonzero, CCtoQC_E_BccI>;
+def : SelectQCbiSFB<SETULT, uimm16nonzero, CCtoQC_E_BccI>;
 def : SelectQCbiSFB<SETUGE, uimm16nonzero, CCtoQC_E_BccI>;
 }
 
@@ -1744,13 +1744,13 @@ def : QCISELECTIICCPat<SETEQ,  QC_SELECTIIEQ>;
 def : QCISELECTIICCPat<SETNE,  QC_SELECTIINE>;
 } // Predicates = [HasVendorXqcics, IsRV32]
 
-let Predicates = [HasVendorXqcics, NoShortForwardBranch, IsRV32] in {
+let Predicates = [HasVendorXqcics, NoShortForwardBranchImm, IsRV32] in {
 def : QCISELECTICCPat<SETEQ,  QC_SELECTIEQ>;
 def : QCISELECTICCPat<SETNE,  QC_SELECTINE>;
 
 def : QCISELECTICCPatInv<SETEQ,  QC_SELECTINE>;
 def : QCISELECTICCPatInv<SETNE,  QC_SELECTIEQ>;
-} // Predicates = [HasVendorXqcics, NoShortForwardBranch, IsRV32]
+} // Predicates = [HasVendorXqcics, NoShortForwardBranchImm, IsRV32]
 
 // Prioritize Xqcicm over these patterns, because Xqcicm is compressible.
 let Predicates = [HasVendorXqcics, NoVendorXqcicm, IsRV32] in {
