@@ -222,6 +222,12 @@ enum RegBankLLTMappingApplyID {
 
   Sgpr32Trunc,
 
+  // Dst only modifiers: dst was assigned VGPR by RegBankSelect but the
+  // instruction produces a uniform result that must be in SGPR. Replace dst
+  // with SGPR, then copy the result back to the original VGPR.
+  ForceVgpr32Dst,
+  ForceVgpr64Dst,
+
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
