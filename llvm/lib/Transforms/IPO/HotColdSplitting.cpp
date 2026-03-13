@@ -112,7 +112,7 @@ void analyzeProfMetadata(BasicBlock *BB,
                          BranchProbability ColdProbThresh,
                          SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks) {
   // TODO: Handle branches with > 2 successors.
-  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!CondBr)
     return;
 

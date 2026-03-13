@@ -216,6 +216,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.free
     libc.src.stdlib.malloc
+    libc.src.stdlib.posix_memalign
     libc.src.stdlib.realloc
 
     # stdio.h entrypoints
@@ -540,6 +541,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf

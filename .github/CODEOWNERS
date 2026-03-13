@@ -194,3 +194,14 @@
 /amd/comgr/ @lamb-j @chinmaydd
 /amd/device-libs/ @b-sumner @lamb-j
 /amd/hipcc/ @david-salinas @lamb-j
+
+# AMDGPU assembler and disassembler
+/llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 
+/llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 
+ 
+# Clang Driver
+/clang/lib/Driver/ToolChains/AMDGPU.cpp @lamb-j
+/clang/lib/Driver/OffloadBundler.cpp @lamb-j @david-salinas
+
+# GlobalIsel
+/llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95

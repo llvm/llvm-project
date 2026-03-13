@@ -1266,6 +1266,17 @@ add_header_library(
 )
 
 add_header_library(
+  fmabf16
+  HDRS
+    fmabf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   floor
   HDRS
     floor.h
