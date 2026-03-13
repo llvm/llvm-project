@@ -1572,25 +1572,6 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // (2) For each reserved register, remove that register and all of its
   // sub- and super-registers from SRegs.
   BitVector Reserved = TRI->getReservedRegs(MF);
-  // Unreserve the stack align register: it is reserved for this function
-  // only, it still needs to be saved/restored.
-  Register AP =
-      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
-  if (AP.isValid()) {
-    Reserved[AP] = false;
-    // Unreserve super-regs if no other subregisters are reserved.
-    for (MCPhysReg SP : TRI->superregs(AP)) {
-      bool HasResSub = false;
-      for (MCPhysReg SB : TRI->subregs(SP)) {
-        if (!Reserved[SB])
-          continue;
-        HasResSub = true;
-        break;
-      }
-      if (!HasResSub)
-        Reserved[SP] = false;
-    }
-  }
 
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x)) {
     Register R = x;

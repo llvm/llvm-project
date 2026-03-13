@@ -1428,11 +1428,22 @@ void HexagonDAGToDAGISel::emitFunctionEntryCode() {
   MachineBasicBlock *EntryBB = &MF->front();
   Align EntryMaxA = MFI.getMaxAlign();
 
-  // Reserve the first non-volatile register.
+  // Reserve a caller-saved register for AP (aligned pointer).
   Register AP = 0;
   auto &HRI = *HST.getRegisterInfo();
   BitVector Reserved = HRI.getReservedRegs(*MF);
-  for (const MCPhysReg *R = HRI.getCalleeSavedRegs(MF); *R; ++R) {
+
+  // Get caller-saved registers and pick the first available one.
+  // We iterate in reverse order to prefer higher-numbered registers and avoid
+  // conflicts with argument passing (R0-R5).
+  const MCPhysReg *CallerSavedRegs =
+      HRI.getCallerSavedRegs(MF, &Hexagon::IntRegsRegClass);
+
+  const MCPhysReg *LastReg = CallerSavedRegs;
+  while (*LastReg)
+    ++LastReg;
+
+  for (const MCPhysReg *R = LastReg - 1; R >= CallerSavedRegs; --R) {
     if (Reserved[*R])
       continue;
     AP = *R;
