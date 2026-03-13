@@ -59,12 +59,12 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
   // Collect the direct and virtual concrete bases of the class.
-  SmallVector<const CXXRecordDecl *, 3> DirectConcreteBases;
+  SmallVector<const CXXRecordDecl *> DirectConcreteBases;
   for (const CXXBaseSpecifier &Base : D.bases())
     if (!Base.isVirtual() && !isInterface(Base))
       DirectConcreteBases.push_back(Base.getType()->getAsCXXRecordDecl());
 
-  SmallVector<const CXXRecordDecl *, 3> VirtualConcreteBases;
+  SmallVector<const CXXRecordDecl *> VirtualConcreteBases;
   for (const CXXBaseSpecifier &VBase : D.vbases())
     if (!isInterface(VBase))
       VirtualConcreteBases.push_back(VBase.getType()->getAsCXXRecordDecl());
