@@ -901,10 +901,12 @@ let Predicates = [HasVendorXAndesVPackFPH],
   defm PseudoNDS_VFPMADB : VPseudoVFPMAD_VF_RM;
 } // Predicates = [HasVendorXAndesVPackFPH]
 
-defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT",
-                               AllFP16Vectors>;
-defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB",
-                               AllFP16Vectors>;
+let Predicates = [HasVendorXAndesVPackFPH] in {
+  defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT",
+                                 AllFP16Vectors>;
+  defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB",
+                                 AllFP16Vectors>;
+} // Predicates = [HasVendorXAndesVPackFPH]
 
 let Predicates = [HasVendorXAndesVDot] in {
   defm PseudoNDS_VD4DOTS  : VPseudoVD4DOT_VV;
