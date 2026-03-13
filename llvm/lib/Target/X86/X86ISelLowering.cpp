@@ -34457,8 +34457,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Amt = N->getOperand(1);
     assert(Subtarget.useAVX512Regs() && "AVX512F required");
     assert(VT == MVT::i512 && "Unexpected VT!");
-    MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
+    unsigned BW = VT.getSizeInBits();
+    unsigned NumElts = BW / 64;
+    MVT VecVT = MVT::getVectorVT(MVT::i64, NumElts);
+    MVT BoolVT = MVT::getVectorVT(MVT::i1, NumElts);
 
     if (!mayFoldIntoVector(Src, DAG, Subtarget))
       return;
@@ -34466,7 +34468,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // Early out if this will fold to a constant shift of whole byte elements.
     // TODO: Directly lower to a shuffle?
     if (auto *AmtC = dyn_cast<ConstantSDNode>(Amt)) {
-      assert(AmtC->getAPIntValue().ult(512) && "Out of bounds shift amount");
+      assert(AmtC->getAPIntValue().ult(BW) && "Out of bounds shift amount");
       if (AmtC->getAPIntValue().urem(8) == 0)
         return;
     }
@@ -34482,7 +34484,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       if ((Opc == ISD::SHL && SrcC->getAPIntValue() == 1) ||
           (Opc == ISD::SRL && SrcC->getAPIntValue().isSignMask())) {
         APInt EltBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 63);
-        APInt LaneBitVal = APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : 7);
+        APInt LaneBitVal =
+            APInt::getOneBitSet(64, Opc == ISD::SHL ? 0 : (NumElts - 1));
         SDValue EltBit = DAG.getConstant(EltBitVal, dl, MVT::i64);
         SDValue LaneBit = DAG.getConstant(LaneBitVal, dl, MVT::i64);
         SDValue AmtMod = DAG.getNode(ISD::AND, dl, MVT::i64,
@@ -34508,29 +34511,30 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
                     DAG.getNode(ISD::SHL, dl, MVT::i32,
                                 DAG.getAllOnesConstant(dl, MVT::i32), AmtLane));
+    Mask = DAG.getBitcast(BoolVT, Mask);
     Src = DAG.getBitcast(VecVT, Src);
 
+    SmallVector<int, 8> ShufMask(NumElts);
     SDValue PassThrough;
     if (Opc == ISD::SRA) {
       // Splat the MSB sign bit across the vector.
+      std::fill(ShufMask.begin(), ShufMask.end(), NumElts - 1);
       PassThrough = DAG.getNode(ISD::SRA, dl, VecVT, Src,
                                 DAG.getShiftAmountConstant(63, VecVT, dl));
-      PassThrough = DAG.getVectorShuffle(VecVT, dl, PassThrough, PassThrough,
-                                         {7, 7, 7, 7, 7, 7, 7, 7});
+      PassThrough =
+          DAG.getVectorShuffle(VecVT, dl, PassThrough, PassThrough, ShufMask);
     } else {
       PassThrough = DAG.getConstant(0, dl, VecVT);
     }
     SDValue A, B;
     if (Opc == ISD::SHL) {
-      A = DAG.getNode(X86ISD::EXPAND, dl, VecVT, Src, PassThrough,
-                      DAG.getBitcast(BoolVT, Mask));
-      B = DAG.getVectorShuffle(VecVT, dl, PassThrough, A,
-                               {7, 8, 9, 10, 11, 12, 13, 14});
+      std::iota(ShufMask.begin(), ShufMask.end(), NumElts - 1);
+      A = DAG.getNode(X86ISD::EXPAND, dl, VecVT, Src, PassThrough, Mask);
+      B = DAG.getVectorShuffle(VecVT, dl, PassThrough, A, ShufMask);
     } else {
-      B = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, Src, PassThrough,
-                      DAG.getBitcast(BoolVT, Mask));
-      A = DAG.getVectorShuffle(VecVT, dl, B, PassThrough,
-                               {1, 2, 3, 4, 5, 6, 7, 8});
+      std::iota(ShufMask.begin(), ShufMask.end(), 1);
+      B = DAG.getNode(X86ISD::COMPRESS, dl, VecVT, Src, PassThrough, Mask);
+      A = DAG.getVectorShuffle(VecVT, dl, B, PassThrough, ShufMask);
     }
     // Funnel shifts use modulo shift amount so no need to explicitly mask it.
     SDValue Res =
