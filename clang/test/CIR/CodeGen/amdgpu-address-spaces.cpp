@@ -42,7 +42,7 @@ static int staticGlobal = 555;
 // Use extern to force emission since const globals are otherwise optimized away.
 extern const int constGlobal = 456;
 
-// CIR-PRE-DAG: cir.global constant external target_address_space(4) @constGlobal = #cir.int<456> : !s32i
+// CIR-PRE-DAG: cir.global constant external lang_address_space(offload_constant) @constGlobal = #cir.int<456> : !s32i
 // CIR-DAG:     cir.global constant external target_address_space(4) @constGlobal = #cir.int<456> : !s32i
 // LLVM-DAG: @constGlobal = addrspace(4) constant i32 456, align 4
 // OGCG-DAG: @constGlobal = addrspace(4) constant i32 456, align 4
@@ -50,7 +50,7 @@ extern const int constGlobal = 456;
 // Test extern const array goes to constant AS.
 extern const int constArray[3] = {10, 20, 30};
 
-// CIR-PRE-DAG: cir.global constant external target_address_space(4) @constArray = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i]> : !cir.array<!s32i x 3>
+// CIR-PRE-DAG: cir.global constant external lang_address_space(offload_constant) @constArray = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i]> : !cir.array<!s32i x 3>
 // CIR-DAG:     cir.global constant external target_address_space(4) @constArray = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i]> : !cir.array<!s32i x 3>
 // LLVM-DAG: @constArray = addrspace(4) constant [3 x i32] [i32 10, i32 20, i32 30], align 4
 // OGCG-DAG: @constArray = addrspace(4) constant [3 x i32] [i32 10, i32 20, i32 30], align 4
