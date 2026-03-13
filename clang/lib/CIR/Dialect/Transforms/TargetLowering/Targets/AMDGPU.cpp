@@ -9,33 +9,32 @@
 #include "../TargetLoweringInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
 
 namespace {
 
+// Address space mapping from:
+// https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+//
+// Indexed by cir::LangAddressSpace enum values.
+constexpr unsigned AMDGPUAddrSpaceMap[] = {
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
+    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // OffloadPrivate
+    llvm::AMDGPUAS::LOCAL_ADDRESS,    // OffloadLocal
+    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // OffloadGlobal
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // OffloadConstant
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // OffloadGeneric
+};
+
 class AMDGPUTargetLoweringInfo : public TargetLoweringInfo {
 public:
-  // Address space mapping from:
-  // https://llvm.org/docs/AMDGPUUsage.html#address-spaces
   unsigned getTargetAddrSpaceFromCIRAddrSpace(
       cir::LangAddressSpace addrSpace) const override {
-    switch (addrSpace) {
-    case cir::LangAddressSpace::Default:
-      return llvm::AMDGPUAS::FLAT_ADDRESS;
-    case cir::LangAddressSpace::OffloadPrivate:
-      return llvm::AMDGPUAS::PRIVATE_ADDRESS;
-    case cir::LangAddressSpace::OffloadLocal:
-      return llvm::AMDGPUAS::LOCAL_ADDRESS;
-    case cir::LangAddressSpace::OffloadGlobal:
-      return llvm::AMDGPUAS::GLOBAL_ADDRESS;
-    case cir::LangAddressSpace::OffloadConstant:
-      return llvm::AMDGPUAS::CONSTANT_ADDRESS;
-    case cir::LangAddressSpace::OffloadGeneric:
-      return llvm::AMDGPUAS::FLAT_ADDRESS;
-    }
-    llvm_unreachable("Unknown CIR address space for AMDGPU target");
+    auto idx = static_cast<unsigned>(addrSpace);
+    assert(idx < std::size(AMDGPUAddrSpaceMap) &&
+           "Unknown CIR address space for AMDGPU target");
+    return AMDGPUAddrSpaceMap[idx];
   }
 };
 
