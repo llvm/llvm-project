@@ -217,6 +217,7 @@ ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy, Benign)
 /// Replace certain message sends with calls to ObjC runtime entrypoints
 CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1, Benign)
 CODEGENOPT(ObjCMsgSendSelectorStubs , 1, 0, Benign) ///< Use per-selector linker stubs for objc_msgSend
+CODEGENOPT(ObjCMsgSendClassSelectorStubs, 1, 0, Benign) ///< Use per-class, per-selector linker stubs for objc_msgSend
 CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0, Benign)
 /// Generate direct method precondition thunks to expose symbols and optimize nil checks.
 CODEGENOPT(ObjCDirectPreconditionThunk, 1, 0, Benign)

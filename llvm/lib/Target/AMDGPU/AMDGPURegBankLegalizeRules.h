@@ -197,6 +197,7 @@ enum RegBankLLTMappingApplyID {
   VgprB512,
   VgprBRC,
   VgprV4S32,
+  VgprV8S32,
   VgprV2S64,
 
   // Dst only modifiers: read-any-lane and truncs
@@ -274,7 +275,8 @@ enum LoweringMethodID {
   AextToS32InIncomingBlockGPHI,
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
-  ApplyINTRIN_IMAGE
+  ApplyINTRIN_IMAGE,
+  SplitFFB64To32
 };
 
 enum FastRulesTypes {

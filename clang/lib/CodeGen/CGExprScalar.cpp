@@ -2322,6 +2322,14 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   unsigned ResElts = cast<llvm::FixedVectorType>(VType)->getNumElements();
 
+  // For column-major matrix types, we insert elements directly at their
+  // column-major positions rather than inserting sequentially and shuffling.
+  const ConstantMatrixType *ColMajorMT = nullptr;
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
+      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+    ColMajorMT = MT;
+
   // Loop over initializers collecting the Value for each, and remembering
   // whether the source was swizzle (ExtVectorElementExpr).  This will allow
   // us to fold the shuffle for the swizzle into the shuffle for the vector
@@ -2376,7 +2384,11 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
           }
         }
       }
-      V = Builder.CreateInsertElement(V, Init, Builder.getInt32(CurIdx),
+      unsigned InsertIdx =
+          ColMajorMT
+              ? ColMajorMT->mapRowMajorToColumnMajorFlattenedIndex(CurIdx)
+              : CurIdx;
+      V = Builder.CreateInsertElement(V, Init, Builder.getInt32(InsertIdx),
                                       "vecinit");
       VIsPoisonShuffle = false;
       ++CurIdx;
@@ -2446,22 +2458,12 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   // Emit remaining default initializers
   for (/* Do not initialize i*/; CurIdx < ResElts; ++CurIdx) {
-    Value *Idx = Builder.getInt32(CurIdx);
+    unsigned InsertIdx =
+        ColMajorMT ? ColMajorMT->mapRowMajorToColumnMajorFlattenedIndex(CurIdx)
+                   : CurIdx;
+    Value *Idx = Builder.getInt32(InsertIdx);
     llvm::Value *Init = llvm::Constant::getNullValue(EltTy);
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
-  }
-
-  // Matrix initializer lists are in row-major order but the memory layout for
-  // codegen is determined by the -fmatrix-memory-layout flag (default:
-  // column-major). When the memory layout is column-major, we need to shuffle
-  // the elements from row-major to column-major order.
-  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                LangOptions::MatrixMemoryLayout::MatrixColMajor) {
-    SmallVector<int, 16> Mask;
-    for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I)
-      Mask.push_back(MT->mapColumnMajorToRowMajorFlattenedIndex(I));
-    V = Builder.CreateShuffleVector(V, Mask, "matrix.rowmajor2colmajor");
   }
 
   return V;

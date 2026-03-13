@@ -6059,6 +6059,7 @@ cc_library(
         "lib/Conversion/GPUCommon/AttrToSPIRVConverter.cpp",
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
         "lib/Conversion/GPUCommon/GPUToLLVMConversion.cpp",
+        "lib/Conversion/GPUCommon/IndexIntrinsicsOpLowering.cpp",
     ],
     hdrs = [
         "include/mlir/Conversion/GPUCommon/AttrToSPIRVConverter.h",
