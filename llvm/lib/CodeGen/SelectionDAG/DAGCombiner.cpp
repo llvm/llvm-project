@@ -6965,7 +6965,12 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
       //    -> (icmp eq Abs(A), C)
       // (icmp ne A, C) & (icmp ne A, -C)
       //    -> (icmp ne Abs(A), C)
-      SDValue AbsOp = DAG.getNode(ISD::ABS, DL, OpVT, LHS0);
+      // Use ABS_MIN_POISON if that node already exists, otherwise ABS.
+      unsigned AbsOpc =
+          DAG.doesNodeExist(ISD::ABS_MIN_POISON, DAG.getVTList(OpVT), {LHS0})
+              ? ISD::ABS_MIN_POISON
+              : ISD::ABS;
+      SDValue AbsOp = DAG.getNode(AbsOpc, DL, OpVT, LHS0);
       return DAG.getNode(ISD::SETCC, DL, VT, AbsOp,
                          DAG.getConstant(C, DL, OpVT), LHS.getOperand(2));
     } else if (TargetPreference &
