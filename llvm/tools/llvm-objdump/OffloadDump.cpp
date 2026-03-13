@@ -46,6 +46,7 @@ static StringRef getImageName(const OffloadBinary &OB) {
 
 std::string Indent(uint64_t Level) { return std::string(Level * 2, ' '); }
 
+/// Print metadata from an OffloadBinary.
 static void printOffloadBinaryMetadata(const OffloadBinary &OB,
                                        uint64_t level) {
   const std::string IndentStr = Indent(level);
@@ -64,13 +65,12 @@ static void printOffloadBinaryMetadata(const OffloadBinary &OB,
 static void printBinary(const OffloadBinary &OB, uint64_t Index,
                         uint64_t Level = 0, std::string ParentIndex = "");
 
-/// Print information about nested OffloadBinary (inner layer)
+/// Print information about nested OffloadBinary (inner layer).
 static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
                                      uint64_t Index, uint64_t Level,
                                      std::string ParentIndex) {
   StringRef ImageData = OuterOB.getImage();
 
-  // Parse inner OffloadBinary
   MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
   llvm::SmallVector<OffloadFile> InnerBinaries;
   auto Err = extractOffloadBinaries(InnerBuffer, InnerBinaries);
@@ -89,7 +89,6 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
   outs() << Indent(Level) << left_justify("nested images", 16)
          << InnerBinaries.size() << "\n";
 
-  // Display information for each inner image
   for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
     const OffloadBinary *InnerOB = InnerBinaries[I].getBinary();
     printBinary(*InnerOB, I, Level + 1, ParentIndex);
@@ -105,7 +104,6 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index, uint64_t Level,
   printOffloadBinaryMetadata(OB, Level);
 
   StringRef ImageData = OB.getImage();
-  // Check for nested OffloadBinary format
   if (identify_magic(ImageData) == file_magic::offload_binary)
     printNestedOffloadBinary(OB, Index, Level,
                              ParentIndex + std::to_string(Index) + ".");
