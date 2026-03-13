@@ -5587,8 +5587,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Op->getType()->getScalarType()->getFltSemantics();
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-
-      if (Self && Opc == Instruction::FAdd) {
+      
+      const FPMathOperator *FPop = cast<FPMathOperator>(Op); 
+      bool HasNSZ = FPop->hasNoSignedZeros();
+      
+      if (!HasNSZ && Self && Opc == Instruction::FAdd) {
         Known = KnownFPClass::fadd_self(KnownLHS, Mode);
       } else {
         // RHS is canonically cheaper to compute. Skip inspecting the LHS if
