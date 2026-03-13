@@ -863,8 +863,6 @@ declare void @use_nxv4i1(<vscale x 4 x i1>)
 declare void @use_nxv4i32(<vscale x 4 x i32>)
 declare void @use_nxv4f32(<vscale x 4 x float>)
 
-declare { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32>, <4 x i32>)
-declare <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32>)
 declare <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32>)
 declare <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float>)
