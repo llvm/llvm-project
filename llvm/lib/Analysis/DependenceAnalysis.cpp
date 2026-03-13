@@ -1561,11 +1561,11 @@ ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
 /// integer, infer the possible range of k based on the known range of the
 /// affine expression. If we know A*k + B is non-negative, i.e.,
 ///
-///   A*k + B >= 0
+///   A*k + B >=s 0
 ///
 /// we can derive the following inequalities for k when A is positive:
 ///
-///   k >= -B / A
+///   k >=s -B / A
 ///
 /// Since k is an integer, it means k is greater than or equal to the
 /// ceil(-B / A).
@@ -1573,11 +1573,11 @@ ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
 /// If the upper bound of the affine expression \p UB is passed, the following
 /// inequality can be derived as well:
 ///
-///   A*k + B <= UB
+///   A*k + B <=s UB
 ///
 /// which leads to:
 ///
-///   k <= (UB - B) / A
+///   k <=s (UB - B) / A
 ///
 /// Again, as k is an integer, it means k is less than or equal to the
 /// floor((UB - B) / A).
@@ -1585,12 +1585,14 @@ ceilingOfQuotient(const OverflowSafeSignedAPInt &OA,
 /// The similar logic applies when A is negative, but the inequalities sign flip
 /// while working with them.
 ///
-/// Preconditions: \p A is non-zero, and we know A*k + B is non-negative.
+/// Preconditions: \p A is non-zero, and we know A*k + B and \p UB are
+/// non-negative.
 static std::pair<OverflowSafeSignedAPInt, OverflowSafeSignedAPInt>
 inferDomainOfAffine(OverflowSafeSignedAPInt A, OverflowSafeSignedAPInt B,
                     OverflowSafeSignedAPInt UB) {
   assert(A && B && "A and B must be available");
   assert(*A != 0 && "A must be non-zero");
+  assert((!UB || UB->isNonNegative()) && "UB must be non-negative");
   OverflowSafeSignedAPInt TL, TU;
   if (A->sgt(0)) {
     TL = ceilingOfQuotient(-B, A);
@@ -1681,8 +1683,11 @@ bool DependenceInfo::exactSIVtest(const SCEVAddRecExpr *Src,
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *CUB =
           collectConstantUpperBound(Src->getLoop(), Delta->getType())) {
-    UM = CUB->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
+    APInt Tmp = CUB->getAPInt();
+    if (Tmp.isNonNegative()) {
+      UM = CUB->getAPInt();
+      LLVM_DEBUG(dbgs() << "\t    UM = " << *UM << "\n");
+    }
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
@@ -2060,16 +2065,22 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   // SrcUM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
           collectConstantUpperBound(SrcLoop, Delta->getType())) {
-    SrcUM = UpperBound->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
+    APInt Tmp = UpperBound->getAPInt();
+    if (Tmp.isNonNegative()) {
+      SrcUM = UpperBound->getAPInt();
+      LLVM_DEBUG(dbgs() << "\t    SrcUM = " << *SrcUM << "\n");
+    }
   }
 
   std::optional<APInt> DstUM;
-  // UM is perhaps unavailable, let's check
+  // DstUM is perhaps unavailable, let's check
   if (const SCEVConstant *UpperBound =
           collectConstantUpperBound(DstLoop, Delta->getType())) {
-    DstUM = UpperBound->getAPInt();
-    LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
+    APInt Tmp = UpperBound->getAPInt();
+    if (Tmp.isNonNegative()) {
+      DstUM = UpperBound->getAPInt();
+      LLVM_DEBUG(dbgs() << "\t    DstUM = " << *DstUM << "\n");
+    }
   }
 
   APInt TU(APInt::getSignedMaxValue(Bits));
