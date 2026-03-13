@@ -14,9 +14,7 @@ define i3 @shl_i3(i3 %a, i3 %b, ptr %p) {
 }
 
 ; CHECK-LABEL: shl_i53:
-; CHECK: i64.const   $push0=, 9007199254740991{{$}}
-; CHECK: i64.and     $push1=, $1, $pop0{{$}}
-; CHECK: i64.shl     $push2=, $0, $pop1{{$}}
+; CHECK: i64.shl     $push0=, $0, $1
 define i53 @shl_i53(i53 %a, i53 %b, ptr %p) {
   %t = shl i53 %a, %b
   ret i53 %t
