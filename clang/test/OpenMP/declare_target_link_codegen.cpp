@@ -24,8 +24,8 @@
 // HOST-DAG: @[[D_PTR:.+]] = weak global ptr @[[D]]
 // DEVICE-NOT: @c =
 // DEVICE: @c_decl_tgt_ref_ptr = weak global ptr null
-// HOST: [[SIZES:@.+]] = private unnamed_addr constant [3 x i64] [i64 4, i64 4, i64 4]
-// HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [3 x i64] [i64 35, i64 531, i64 531]
+// HOST: [[SIZES:@.+]] = private unnamed_addr constant [4 x i64] [i64 4, i64 4, i64 4, i64 0]
+// HOST: [[MAPTYPES:@.+]] = private unnamed_addr constant [4 x i64] [i64 35, i64 531, i64 531, i64 288]
 // HOST: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"c_decl_tgt_ref_ptr\00"
 // HOST: @.offloading.entry.c_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr @c_decl_tgt_ref_ptr, ptr @.offloading.entry_name, i64 8, i64 0, ptr null }, section "llvm_offload_entries"
 // HOST-COFF: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry { {{.*}} }, section "llvm_offload_entries$OE"
@@ -52,34 +52,34 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr {{[^,]+}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
+// DEVICE: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
 // DEVICE: [[C_REF:%.+]] = load ptr, ptr @c_decl_tgt_ref_ptr,
 // DEVICE: [[C:%.+]] = load i32, ptr [[C_REF]],
 // DEVICE: store i32 [[C]], ptr %
 
 // HOST: define {{.*}}i32 @{{.*}}maini1{{.*}}()
-// HOST: [[BASEPTRS:%.+]] = alloca [3 x ptr],
-// HOST: [[PTRS:%.+]] = alloca [3 x ptr],
-// HOST: getelementptr inbounds [3 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// HOST: getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// HOST: [[BASEPTRS:%.+]] = alloca [4 x ptr],
+// HOST: [[PTRS:%.+]] = alloca [4 x ptr],
+// HOST: getelementptr inbounds [4 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// HOST: getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 
-// HOST: [[BP1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+// HOST: [[BP1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // HOST: store ptr @c_decl_tgt_ref_ptr, ptr [[BP1]],
-// HOST: [[P1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
+// HOST: [[P1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // HOST: store ptr @c, ptr [[P1]],
 
-// HOST: [[BP2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
+// HOST: [[BP2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // HOST: store ptr @[[D_PTR]], ptr [[BP2]],
-// HOST: [[P2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
+// HOST: [[P2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // HOST: store ptr @[[D]], ptr [[P2]],
 
-// HOST: [[BP0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// HOST: [[P0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// HOST: [[BP0:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BASEPTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// HOST: [[P0:%.+]] = getelementptr inbounds [4 x ptr], ptr [[PTRS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // HOST: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
-// HOST: call void @__omp_offloading_{{.*}}_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr %{{[^,]+}})
+// HOST: call void @__omp_offloading_{{.*}}_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr %{{[^,]+}}, ptr null)
 // HOST: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 0, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
 
-// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{.*}})
+// HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l44(ptr noundef nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}, ptr {{.*}})
 // HOST: [[C:%.*]] = load i32, ptr @c,
 // HOST: store i32 [[C]], ptr %
 

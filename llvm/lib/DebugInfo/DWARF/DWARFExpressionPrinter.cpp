@@ -11,6 +11,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cassert>
 #include <cstdint>
 
@@ -153,7 +154,7 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
                        static_cast<uint8_t>(Expr->getData()[Offset++]));
       } else {
         if (Signed)
-          OS << format(" %+" PRId64, (int64_t)Op->getRawOperand(Operand));
+          OS << formatv(" {0:+d}", (int64_t)Op->getRawOperand(Operand));
         else if (Op->getCode() != DW_OP_entry_value &&
                  Op->getCode() != DW_OP_GNU_entry_value)
           OS << format(" 0x%" PRIx64, Op->getRawOperand(Operand));
@@ -257,7 +258,7 @@ static bool printCompactDWARFExpr(
       raw_svector_ostream S(Stack.emplace_back().String);
       S << RegName;
       if (Offset)
-        S << format("%+" PRId64, Offset);
+        S << formatv("{0:+d}", Offset);
       break;
     }
     case dwarf::DW_OP_entry_value:
@@ -310,7 +311,7 @@ static bool printCompactDWARFExpr(
         raw_svector_ostream S(Stack.emplace_back().String);
         S << RegName;
         if (Offset)
-          S << format("%+" PRId64, Offset);
+          S << formatv("{0:+d}", Offset);
       } else {
         return UnknownOpcode(OS, Opcode, std::nullopt);
       }
@@ -364,7 +365,7 @@ bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   if (!RegName.empty()) {
     if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
         Opcode == DW_OP_bregx || SubOpcode == DW_OP_LLVM_aspace_bregx)
-      OS << ' ' << RegName << format("%+" PRId64, Operands[OpNum]);
+      OS << ' ' << RegName << formatv("{0:+d}", int64_t(Operands[OpNum]));
     else
       OS << ' ' << RegName.data();
 

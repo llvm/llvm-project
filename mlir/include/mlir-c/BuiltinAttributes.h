@@ -319,9 +319,9 @@ mlirSymbolRefAttrGetNestedReference(MlirAttribute attr, intptr_t pos);
 /// Returns the typeID of an SymbolRef attribute.
 MLIR_CAPI_EXPORTED MlirTypeID mlirSymbolRefAttrGetTypeID(void);
 
-/// Creates a DisctinctAttr with the referenced attribute.
+/// Creates a DistinctAttr with the referenced attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
-mlirDisctinctAttrCreate(MlirAttribute referencedAttr);
+mlirDistinctAttrCreate(MlirAttribute referencedAttr);
 
 //===----------------------------------------------------------------------===//
 // Flat SymbolRef attribute.

@@ -386,6 +386,11 @@ public:
     return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
   }
 
+  bool TraverseDependentNameType(const DependentNameType *T,
+                                 bool /*TraverseQualifier*/) {
+    return TraverseNestedNameSpecifier(T->getQualifier());
+  }
+
   bool TraverseTagType(const TagType *T, bool TraverseQualifier) {
     // T's parent can be dependent while T doesn't have any template arguments.
     // We should have already traversed its qualifier.
