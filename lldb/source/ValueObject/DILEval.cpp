@@ -540,7 +540,8 @@ Interpreter::Visit(const UnaryOpNode &node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::PointerOffset(lldb::ValueObjectSP ptr, lldb::ValueObjectSP offset,
-                           bool positive, uint32_t location) {
+                           BinaryOpKind operation, uint32_t location) {
+  assert(operation == BinaryOpKind::Add || operation == BinaryOpKind::Sub);
   if (ptr->GetCompilerType().IsPointerToVoid())
     return llvm::make_error<DILDiagnosticError>(
         m_expr, "arithmetic on a pointer to void", location);
@@ -562,7 +563,7 @@ Interpreter::PointerOffset(lldb::ValueObjectSP ptr, lldb::ValueObjectSP offset,
           m_exe_ctx_scope.get());
   if (!byte_size)
     return byte_size.takeError();
-  if (!positive)
+  if (operation == BinaryOpKind::Sub)
     offset_int = -offset_int;
   uintptr_t addr = ptr->GetValueAsUnsigned(0) + offset_int * (*byte_size);
 
@@ -634,7 +635,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
                                                 location);
   }
 
-  return PointerOffset(ptr, offset, true, location);
+  return PointerOffset(ptr, offset, BinaryOpKind::Add, location);
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
@@ -658,7 +659,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
 
   // "pointer - integer" operation.
   if (lhs_type.IsPointerType() && rhs_type.IsInteger())
-    return PointerOffset(lhs, rhs, false, location);
+    return PointerOffset(lhs, rhs, BinaryOpKind::Sub, location);
 
   // "pointer - pointer" operation.
   if (lhs_type.IsPointerType() && rhs_type.IsPointerType()) {
@@ -684,7 +685,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     int64_t item_size = *lhs_byte_size;
     int64_t diff = static_cast<int64_t>(lhs->GetValueAsUnsigned(0) -
                                         rhs->GetValueAsUnsigned(0));
-    assert(item_size > 0 && "Pointer size cannot be 0");
+    assert(item_size > 0 && "Pointee size cannot be 0");
     if (diff % item_size != 0) {
       // If address difference isn't divisible by pointee size then performing
       // the operation is undefined behaviour.

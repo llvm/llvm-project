@@ -94,7 +94,7 @@ private:
   /// \returns A new `ValueObject` with a new pointer value.
   llvm::Expected<lldb::ValueObjectSP> PointerOffset(lldb::ValueObjectSP ptr,
                                                     lldb::ValueObjectSP offset,
-                                                    bool positive,
+                                                    BinaryOpKind operation,
                                                     uint32_t location);
   llvm::Expected<lldb::ValueObjectSP> EvaluateScalarOp(BinaryOpKind kind,
                                                        lldb::ValueObjectSP lhs,
