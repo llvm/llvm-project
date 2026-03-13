@@ -231,8 +231,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPReverseDirective(cast<OMPReverseDirective>(*S));
     break;
   case Stmt::OMPSplitDirectiveClass:
-    llvm_unreachable(
-        "OMPSplitDirective handled by EmitSimpleOMPExecutableDirective");
+    EmitOMPSplitDirective(cast<OMPSplitDirective>(*S));
     break;
   case Stmt::OMPInterchangeDirectiveClass:
     EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));

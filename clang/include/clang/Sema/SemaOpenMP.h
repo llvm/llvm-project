@@ -457,6 +457,10 @@ public:
   /// Called on well-formed '#pragma omp reverse'.
   StmtResult ActOnOpenMPReverseDirective(Stmt *AStmt, SourceLocation StartLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed '#pragma omp split' after parsing of its
+  /// associated statement.
+  StmtResult ActOnOpenMPSplitDirective(Stmt *AStmt, SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp interchange' after parsing of its
   /// clauses and the associated statement.
   StmtResult ActOnOpenMPInterchangeDirective(ArrayRef<OMPClause *> Clauses,

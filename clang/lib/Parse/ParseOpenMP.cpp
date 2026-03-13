@@ -3432,6 +3432,10 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     }
     Clause = ParseOpenMPPermutationClause();
     break;
+  case OMPC_counts:
+    // TODO: Implement ParseOpenMPCountsClause() - not yet worked on
+    SkipUntil(tok::r_paren, tok::comma, StopBeforeMatch);
+    break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);
     break;

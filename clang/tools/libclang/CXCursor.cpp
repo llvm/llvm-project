@@ -698,7 +698,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_OMPReverseDirective;
     break;
   case Stmt::OMPSplitDirectiveClass:
-    K = CXCursor_UnexposedStmt;
+    K = CXCursor_OMPSplitDirective;
     break;
   case Stmt::OMPInterchangeDirectiveClass:
     K = CXCursor_OMPInterchangeDirective;
