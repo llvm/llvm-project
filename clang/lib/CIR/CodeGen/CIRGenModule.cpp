@@ -909,8 +909,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
                                    LangAS langAS, const VarDecl *d,
                                    ForDefinition_t isForDefinition) {
 
-  mlir::ptr::MemorySpaceAttrInterface cirAS =
-      cir::toCIRAddressSpaceAttr(getMLIRContext(), langAS);
   // Lookup the entry, lazily creating it if necessary.
   cir::GlobalOp entry;
   if (mlir::Operation *v = getGlobalValue(mangledName)) {
@@ -927,7 +925,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     assert(!cir::MissingFeatures::setDLLStorageClass());
     assert(!cir::MissingFeatures::openMP());
 
-    if (entry.getSymType() == ty && entryCIRAS == cirAS)
+    if (entry.getSymType() == ty &&
+        cir::isMatchingAddressSpace(entryCIRAS, langAS))
       return entry;
 
     // If there are two attempts to define the same mangled name, issue an

@@ -5,6 +5,11 @@
 // RUN:            -I%S/Inputs/ %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR-DEVICE --input-file=%t.cir %s
 
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda \
+// RUN:   -fcuda-is-device -fclangir -emit-cir \
+// RUN:   -mmlir -mlir-print-ir-before=cir-target-lowering %s -o %t.cir 2> %t-pre.cir
+// RUN: FileCheck --check-prefix=CIR-PRE --input-file=%t-pre.cir %s
+
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fclangir \
 // RUN:            -fcuda-is-device -emit-llvm -target-sdk-version=12.3 \
 // RUN:            -I%S/Inputs/ %s -o %t.ll
@@ -19,16 +24,33 @@
 // LLVM-DEVICE: @_ZZ2fnvE1j = internal global i32 undef, align 4
 
 __device__ int a;
-// CIR-DEVICE: cir.global external lang_address_space(offload_global) @[[DEV:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
+// CIR-PRE: cir.global external lang_address_space(offload_global) @a = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
 // LLVM-DEVICE: @[[DEV_LD:.*]] = externally_initialized global i32 0, align 4
 // OGCG-DEVICE: @[[DEV_OD:.*]] = addrspace(1) externally_initialized global i32 0, align 4
 
 __constant__ int c;
-// CIR-DEVICE: cir.global constant external lang_address_space(offload_constant) @[[CONST:.*]] = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
+// CIR-PRE: cir.global constant external lang_address_space(offload_constant) @c = #cir.int<0> : !s32i {alignment = 4 : i64, cu.externally_initialized = #cir.cu.externally_initialized}
 // LLVM-DEVICE: @[[CONST_LL:.*]] = externally_initialized constant i32 0, align 4
 // OGCG-DEVICE: @[[CONST_OD:.*]] = addrspace(4) externally_initialized constant i32 0, align 4
 
+__shared__ int k;
+// CIR-PRE: cir.global external lang_address_space(offload_local) @k = #cir.poison : !s32i
+
+__shared__ float b;
+// CIR-PRE: cir.global external lang_address_space(offload_local) @b = #cir.poison : !cir.float
+
 // OGCG-DEVICE: @_ZZ2fnvE1j = internal addrspace(3) global i32 undef, align 4
+
+__device__ void foo() {
+  // CIR-PRE: cir.get_global @a : !cir.ptr<!s32i, lang_address_space(offload_global)>
+  a++;
+
+  // CIR-PRE: cir.get_global @c : !cir.ptr<!s32i, lang_address_space(offload_constant)>
+  c++;
+
+  // CIR-PRE: cir.get_global @k : !cir.ptr<!s32i, lang_address_space(offload_local)>
+  k++;
+}
 
 __global__ void fn() {
   int i = 0;
