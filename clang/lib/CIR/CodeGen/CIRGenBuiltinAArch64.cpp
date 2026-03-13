@@ -2786,7 +2786,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vrsrad_n_u64:
   case NEON::BI__builtin_neon_vrsrad_n_s64:
   case NEON::BI__builtin_neon_vshld_n_s64:
-  case NEON::BI__builtin_neon_vshld_n_u64:{
+  case NEON::BI__builtin_neon_vshld_n_u64: {
     auto loc = getLoc(expr->getExprLoc());
     std::optional<llvm::APSInt> amt =
         expr->getArg(1)->getIntegerConstantExpr(getContext());
