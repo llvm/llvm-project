@@ -1,4 +1,4 @@
-; RUN: llc -O1 -mtriple=aarch64-linux-gnu %s -o - 2>&1 | FileCheck %s
+; RUN: llc  -mtriple=aarch64-linux-gnu %s | FileCheck %s
 ;
 ; Test ensures that the compiler generates no extra instructions
 ; for __builtin_clzg output type conversion
