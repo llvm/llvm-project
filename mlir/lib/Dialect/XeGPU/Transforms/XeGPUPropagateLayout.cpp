@@ -681,7 +681,9 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
     bool hasUnitDim =
         llvm::any_of(srcShape, [](int64_t dim) { return dim == 1; });
     Operation *srcOp = broadcast.getSource().getDefiningOp();
-    bool produceByShapeCast = srcOp || isa<vector::ShapeCastOp>(srcOp);
+    if (!srcOp)
+      return;
+    bool produceByShapeCast = isa<vector::ShapeCastOp>(srcOp);
     assert(
         hasUnitDim && produceByShapeCast &&
         "When broadcasting from unit-dim, the producer op must be shape_cast!");
