@@ -1351,10 +1351,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
+  bool hasSALUMinimumMaximumInsts = ST->hasSALUMinimumMaximumInsts();
+
   addRulesForGOpcs({G_FMINIMUM, G_FMAXIMUM}, Standard)
-      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUMinimumMaximumInsts)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUMinimumMaximumInsts)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
-      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUMinimumMaximumInsts)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUMinimumMaximumInsts)
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64}})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}})
@@ -1420,6 +1424,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_s_getpc}).Any({{UniS64, _}, {{Sgpr64}, {None}}});
 
   addRulesForIOpcs({amdgcn_groupstaticsize}).Any({{S32}, {{Sgpr32}, {IntrId}}});
+  addRulesForIOpcs({amdgcn_endpgm}).Any({{}, {{}, {}}});
 
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})
@@ -1439,6 +1444,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
             {{},
              {IntrId, Imm, Imm, Vgpr32, Vgpr32, Vgpr32, Vgpr32, Imm,
               SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_lds_param_load}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Imm, Imm, SgprB32_M0}});
 
   addRulesForIOpcs({amdgcn_mbcnt_lo, amdgcn_mbcnt_hi}, Standard)
       .Div(S32, {{}, {Vgpr32, None, Vgpr32, Vgpr32}});
@@ -1544,5 +1552,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivB256}, {{VgprB256}, {IntrId, VgprB256}}})
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
+
+  addRulesForIOpcs({amdgcn_sin, amdgcn_cos}, Standard)
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}});
 
 } // end initialize rules
