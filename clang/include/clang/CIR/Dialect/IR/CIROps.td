@@ -4331,7 +4331,24 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
-class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
+def CIR_ArrayCtor : CIR_Op<"array.ctor"> {
+  let summary = "Initialize array elements with C++ constructors";
+  let description = [{
+    Initialize each array element using the same C++ constructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array element to initialize.
+
+    Example:
+
+    ```mlir
+    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
+  }];
+
   let arguments = (ins
     Arg<CIR_PtrToArray, "array address", [MemWrite, MemRead]>:$addr
   );
@@ -4356,42 +4373,77 @@ class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
   let hasLLVMLowering = false;
 }
 
-def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
-  let summary = "Initialize array elements with C++ constructors";
+def CIR_ArrayDtor : CIR_Op<"array.dtor"> {
+  let summary = "Destroy array elements with C++ destructors";
   let description = [{
-    Initialize each array element using the same C++ constructor. This
-    operation has one region, with one single block. The block has an
-    incoming argument for the current array element to initialize.
+    Destroy each array element using the same C++ destructor. This operation
+    has one region with one block whose argument is a pointer to the current
+    array element.
 
-    Example:
+    When `num_elements` is absent, `addr` must be a pointer to a fixed-size
+    CIR array type and the element count is derived from that array type.
+
+    When `num_elements` is present, `addr` is a pointer to the first element
+    and `num_elements` provides the runtime element count (e.g. from an array
+    cookie for `delete[]`).
+
+    Elements are destroyed in reverse order.
+
+    Examples:
 
     ```mlir
-    cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+    // Fixed-size (stack array, global):
+    cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
-        cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+
+    // Dynamic count (delete[] with destructor):
+    cir.array.dtor %ptr, %n : !cir.ptr<!rec_S>, !u64i {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
     ```
   }];
-}
 
-def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
-  let summary = "Destroy array elements with C++ dtors";
-  let description = [{
-    Destroy each array element using the same C++ destructor. This
-    operation has one region, with one single block. The block has an
-    incoming argument for the current array element to destruct.
+  let arguments = (ins
+    Arg<CIR_AnyPtrType, "array or element address", [MemWrite, MemRead]>:$addr,
+    Optional<CIR_AnyIntType>:$num_elements
+  );
 
-    Example:
+  let regions = (region SizedRegion<1>:$body);
 
-    ```mlir
-    cir.array.dtor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
-      ^bb0(%arg0: !cir.ptr<!rec_S>):
-        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
-        cir.yield
-    }
-    ```
+  let assemblyFormat = [{
+    $addr (`,` $num_elements^)? `:` qualified(type($addr))
+    (`,` type($num_elements)^)? $body attr-dict
   }];
+
+  let builders = [
+    // Static form: addr is ptr<array<T x N>>, no num_elements.
+    OpBuilder<(ins "mlir::Value":$addr,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands(ValueRange{addr});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>,
+    // Dynamic form: addr is ptr<T>, num_elements is the runtime count.
+    OpBuilder<(ins "mlir::Value":$addr, "mlir::Value":$num_elements,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$regionBuilder), [{
+        assert(regionBuilder && "builder callback expected");
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        mlir::Region *r = $_state.addRegion();
+        $_state.addOperands({addr, num_elements});
+        $_builder.createBlock(r);
+        regionBuilder($_builder, $_state.location);
+    }]>
+  ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
