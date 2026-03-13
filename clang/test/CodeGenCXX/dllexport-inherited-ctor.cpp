@@ -250,14 +250,15 @@ struct __declspec(dllexport) CalleeCleanupChild : CalleeCleanupBase {
 
 template <bool B>
 struct ConstrainedBase {
-  ConstrainedBase() requires(!B) = delete;
-  ConstrainedBase() requires(B) {}
+  struct Enabler {};
+  ConstrainedBase(Enabler) requires(B) {}
+  ConstrainedBase() requires(B) : ConstrainedBase(Enabler{}) {}
   ConstrainedBase(int);
 };
 
-// B=false: the default ctor with requires(B) is not satisfied, and the
-// deleted ctor with requires(!B) is satisfied (but deleted). Only the
-// inherited ConstrainedChild(int) should be exported.
+// B=false: both the default ctor and the Enabler ctor have requires(B) which
+// is not satisfied. Only the inherited ConstrainedChild(int) should be
+// exported.
 struct __declspec(dllexport) ConstrainedChild : ConstrainedBase<false> {
   using ConstrainedBase::ConstrainedBase;
 };
@@ -266,7 +267,7 @@ struct __declspec(dllexport) ConstrainedChild : ConstrainedBase<false> {
 // M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ConstrainedChild@@QAE@H@Z"
 // GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN16ConstrainedChildCI115ConstrainedBaseILb0EEEi(
 
-// The constrained default constructor should NOT be exported.
+// The constrained constructors should NOT be exported.
 // MSVC-NOT: dllexport{{.*}}ConstrainedChild@@QEAA@XZ
 // M32-NOT: dllexport{{.*}}ConstrainedChild@@QAE@XZ
 // GNU-NOT: dllexport{{.*}}ConstrainedBaseILb0EEEv
@@ -301,7 +302,7 @@ struct __declspec(dllexport) SelectiveChild : SelectiveBase<char> {
 
 template <typename T>
 struct BaseWithConstrainedMethod {
-  void foo() requires(sizeof(T) > 100) {}
+  void foo() requires(sizeof(T) > 100) { T::nonexistent(); }
   void bar() {}
 };
 

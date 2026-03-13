@@ -11,11 +11,16 @@
 //   1) findInheritingConstructor must skip constrained-out base ctors
 //   2) dllexport propagated to the base template specialization must not
 //      export members whose requires clause is not satisfied
+//
+// The constructor/method bodies are intentionally ill-formed when the
+// constraint is not satisfied, so that forced instantiation via dllexport
+// would produce an error without the correct fix.
 
 template <bool B>
 struct ConstrainedBase {
-  ConstrainedBase() requires(!B) = delete;
-  ConstrainedBase() requires(B) {}
+  struct Enabler {};
+  ConstrainedBase(Enabler) requires(B) {}
+  ConstrainedBase() requires(B) : ConstrainedBase(Enabler{}) {}
   ConstrainedBase(int);
 };
 
@@ -28,7 +33,7 @@ struct __declspec(dllexport) ConstrainedChild : ConstrainedBase<false> {
 // is not satisfied must be skipped.
 template <typename T>
 struct BaseWithConstrainedMethod {
-  void foo() requires(sizeof(T) > 100) {}
+  void foo() requires(sizeof(T) > 100) { T::nonexistent(); }
   void bar() {}
 };
 
