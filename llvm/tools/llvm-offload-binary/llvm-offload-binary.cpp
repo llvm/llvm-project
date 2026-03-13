@@ -146,13 +146,13 @@ static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
   if (identify_magic(ImageData) == file_magic::offload_binary) {
     // Parse nested OffloadBinary.
     MemoryBufferRef InnerBuffer(ImageData, "nested-offload-binary");
-    auto InnerBinaries = OffloadBinary::create(InnerBuffer);
-    if (!InnerBinaries)
-      return InnerBinaries.takeError();
+    SmallVector<OffloadFile> InnerBinaries;
+    if (Error Err = extractOffloadBinaries(InnerBuffer, InnerBinaries))
+      return Err;
 
     // Recursively extract each nested binary.
-    for (const auto &InnerBinary : *InnerBinaries) {
-      if (Error E = extractBinary(InnerBinary.get(), InputFile, Idx, Saver))
+    for (const auto &InnerBinary : InnerBinaries) {
+      if (Error E = extractBinary(InnerBinary.getBinary(), InputFile, Idx, Saver))
         return E;
     }
     return Error::success();

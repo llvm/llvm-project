@@ -18,5 +18,11 @@
 
 ; Test extracting all images without specifying --image filters.
 ; RUN: llvm-offload-binary %t | FileCheck --check-prefix=EXTRACT %s
-
 ; EXTRACT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
+
+; Test extracting nested images.
+; RUN: llvm-offload-binary -o %t5 --image=file=%s,file=%s,arch=abc,triple=x-y-z
+; RUN: llvm-offload-binary -o %t6 --image=file=%t5,arch=nested,triple=x-y-z
+; RUN: llvm-offload-binary %t6 | FileCheck --check-prefix=EXTRACT-NESTED %s
+; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
+; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.1.
