@@ -1476,6 +1476,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
           scripting_fspec.GetPath().c_str());
       return false;
     }
+
     StreamString scripting_stream;
     scripting_fspec.Dump(scripting_stream.AsRawOstream());
     LoadScriptOptions options;
