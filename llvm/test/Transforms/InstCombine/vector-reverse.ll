@@ -785,6 +785,22 @@ define <4 x float> @reverse_binop_reverse_intrinsic_constant_RHS(<4 x float> %a)
   ret <4 x float> %maxnum.rev
 }
 
+define { <4 x i32>, <4 x i1> } @smul_ov_reverse_ops(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define { <4 x i32>, <4 x i1> } @smul_ov_reverse_ops(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[REVX:%.*]] = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[REVY:%.*]] = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> [[Y]])
+; CHECK-NEXT:    [[OV:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> [[REVX]], <4 x i32> [[REVY]])
+; CHECK-NEXT:    ret { <4 x i32>, <4 x i1> } [[OV]]
+;
+entry:
+  %revx = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %x)
+  %revy = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %y)
+  %ov = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %revx, <4 x i32> %revy)
+  ret { <4 x i32>, <4 x i1> } %ov
+}
+
 define <vscale x 4 x i1> @reverse_fcmp_reverse(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: @reverse_fcmp_reverse(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast olt <vscale x 4 x float> [[A:%.*]], [[B:%.*]]
@@ -847,6 +863,8 @@ declare void @use_nxv4i1(<vscale x 4 x i1>)
 declare void @use_nxv4i32(<vscale x 4 x i32>)
 declare void @use_nxv4f32(<vscale x 4 x float>)
 
+declare { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32>)
 declare <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32>)
 declare <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float>)
