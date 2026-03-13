@@ -197,6 +197,7 @@ enum RegBankLLTMappingApplyID {
   VgprB512,
   VgprBRC,
   VgprV4S32,
+  VgprV8S32,
   VgprV2S64,
 
   // Dst only modifiers: read-any-lane and truncs
