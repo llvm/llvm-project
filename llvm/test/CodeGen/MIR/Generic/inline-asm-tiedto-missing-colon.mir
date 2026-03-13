@@ -1,0 +1,11 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Test parsing error for tiedto constraint without colon.
+
+# CHECK: [[@LINE+5]]:{{[0-9]+}}: expected ':' after 'tiedto'
+---
+name: foo
+body: |
+  bb.0:
+    INLINEASM &"", 0 /* attdialect */, regdef:GR32, reguse tiedto 0
+...

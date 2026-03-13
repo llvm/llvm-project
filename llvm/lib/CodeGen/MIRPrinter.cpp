@@ -990,6 +990,10 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
           InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
           OS << ':' << InlineAsm::getMemConstraintName(MCID);
         }
+
+        unsigned TiedTo;
+        if (F.isUseOperandTiedToDef(TiedTo))
+          OS << " tiedto:$" << TiedTo;
         break;
       }
     }
