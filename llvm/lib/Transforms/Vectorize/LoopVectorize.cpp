@@ -8980,11 +8980,12 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   VPBuilder ResumeBuilder(MainScalarPH);
   ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue, ResumePhi);
 
-  // Collect resume values for epilogue bypass fixup. Create
-  // ResumeForEpilogue for scalar preheader phis to keep them alive.
+  // Create ResumeForEpilogue instructions corresponding resume phis for the
+  // VPIRPhis in the scalar header of the main plan and return them so they can
+  // be used as resume values when vectorizing the epilogue.
   return to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
-        assert(isa<VPIRPhi>(&R) &&
+        assert(isa<VPIRPhi>(R) &&
                "only VPIRPhis expected in the scalar preheader");
         return ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           R.getOperand(0));
