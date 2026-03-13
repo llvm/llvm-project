@@ -244,7 +244,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
   const llvm::StringRef name = v.GetName();
-  return !name.empty() ? name : "<null>";
+  return !name.empty() ? name : "<anonymous>";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
@@ -311,9 +311,11 @@ VariableDescription::VariableDescription(
     }
   }
 
-  lldb::SBStream evaluateStream;
-  val.GetExpressionPath(evaluateStream);
-  evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
+  if (!llvm::StringRef(val.GetName()).empty()) {
+    lldb::SBStream evaluateStream;
+    val.GetExpressionPath(evaluateStream);
+    evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
+  }
 }
 
 std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
