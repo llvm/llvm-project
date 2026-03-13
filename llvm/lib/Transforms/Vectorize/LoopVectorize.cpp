@@ -8189,9 +8189,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
           },
           Range);
   // Update the branch in the middle block if a scalar epilogue is required.
-  auto *MiddleVPBB = Plan->getMiddleBlock();
+  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
   if (!RequiresScalarEpilogueCheck && MiddleVPBB->getNumSuccessors() == 2) {
-    auto *MiddleVPBB = Plan->getMiddleBlock();
     auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
     assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
            "second successor must be scalar preheader");
