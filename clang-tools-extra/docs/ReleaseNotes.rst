@@ -347,7 +347,7 @@ Changes in existing checks
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check: fixed a
-  false positive where ``AllowPointerConditions`` and ``AllowIntegerConditions``
+  false positive where `AllowPointerConditions` and `AllowIntegerConditions`
   options did not suppress warnings when the condition expression involved
   temporaries (e.g. passing a string literal to a ``const std::string&``
   parameter)
