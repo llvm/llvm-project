@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_REGISTRIES_MOCKTUSUMMARYBUILDER_H
+#define LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_REGISTRIES_MOCKTUSUMMARYBUILDER_H
+
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -24,3 +27,5 @@ private:
 };
 
 } // namespace clang::ssaf
+
+#endif // LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_REGISTRIES_MOCKTUSUMMARYBUILDER_H

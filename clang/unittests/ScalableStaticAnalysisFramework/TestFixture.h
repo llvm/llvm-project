@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
-#define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
+#ifndef LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_TESTFIXTURE_H
+#define LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_TESTFIXTURE_H
 
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
@@ -41,4 +41,4 @@ void PrintTo(const SummaryName &N, std::ostream *OS);
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
+#endif // LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_TESTFIXTURE_H

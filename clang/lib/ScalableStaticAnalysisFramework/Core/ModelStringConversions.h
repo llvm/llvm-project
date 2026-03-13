@@ -1,4 +1,4 @@
-//===- ModelStringConversions.h -------------------------------------------===//
+//===- ModelStringConversions.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_LIB_ANALYSIS_SCALABLE_MODELSTRINGCONVERSIONS_H
-#define CLANG_LIB_ANALYSIS_SCALABLE_MODELSTRINGCONVERSIONS_H
+#ifndef LLVM_CLANG_LIB_SCALABLESTATICANALYSISFRAMEWORK_CORE_MODELSTRINGCONVERSIONS_H
+#define LLVM_CLANG_LIB_SCALABLESTATICANALYSISFRAMEWORK_CORE_MODELSTRINGCONVERSIONS_H
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
@@ -84,4 +84,4 @@ entityLinkageTypeFromString(llvm::StringRef Str) {
 
 } // namespace clang::ssaf
 
-#endif // CLANG_LIB_ANALYSIS_SCALABLE_MODELSTRINGCONVERSIONS_H
+#endif // LLVM_CLANG_LIB_SCALABLESTATICANALYSISFRAMEWORK_CORE_MODELSTRINGCONVERSIONS_H

@@ -1,4 +1,4 @@
-//===- JSONEntitySummaryEncoding.h ----------------------------------------===//
+//===- JSONEntitySummaryEncoding.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
-#define CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
+#ifndef LLVM_CLANG_LIB_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
+#define LLVM_CLANG_LIB_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
 
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
@@ -49,4 +49,4 @@ private:
 
 } // namespace clang::ssaf
 
-#endif // CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
+#endif // LLVM_CLANG_LIB_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_JSONFORMAT_JSONENTITYSUMMARYENCODING_H
