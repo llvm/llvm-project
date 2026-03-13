@@ -12,16 +12,30 @@ void test_delete_array(int *ptr) {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z17test_delete_arrayPi
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   cir.delete_array %[[PTR]] : !cir.ptr<!s32i> {delete_fn = @_ZdaPv, delete_params = #cir.usual_delete_params<>
+// CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+// CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!s32i>
+// CIR-BEFORE:   cir.if %[[NOT_NULL]] {
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!s32i> {delete_fn = @_ZdaPv, delete_params = #cir.usual_delete_params<>
+// CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z17test_delete_arrayPi
 // CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[VOID_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
-// CIR:   cir.call @_ZdaPv(%[[VOID_PTR]])
+// CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+// CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!s32i>
+// CIR:   cir.if %[[NOT_NULL]] {
+// CIR:     %[[VOID_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CIR:     cir.call @_ZdaPv(%[[VOID_PTR]])
+// CIR:   }
 
 // LLVM: define {{.*}} void @_Z17test_delete_arrayPi
 // LLVM:   %[[PTR:.*]] = load ptr, ptr %{{.*}}
+// LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[PTR]], null
+// LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
+// LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   call void @_ZdaPv(ptr %[[PTR]])
+// LLVM:   br label %[[DELETE_END]]
+// LLVM: [[DELETE_END]]:
+// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z17test_delete_arrayPi
 // OGCG:   %[[PTR:.*]] = load ptr, ptr %{{.*}}
@@ -43,16 +57,30 @@ void test_simple_delete_array(SimpleArrDelete *ptr) {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z24test_simple_delete_arrayP15SimpleArrDelete
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   cir.delete_array %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> {delete_fn = @_ZN15SimpleArrDeletedaEPv, delete_params = #cir.usual_delete_params<>
+// CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SimpleArrDelete>
+// CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SimpleArrDelete>
+// CIR-BEFORE:   cir.if %[[NOT_NULL]] {
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> {delete_fn = @_ZN15SimpleArrDeletedaEPv, delete_params = #cir.usual_delete_params<>
+// CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z24test_simple_delete_arrayP15SimpleArrDelete
 // CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[VOID_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> -> !cir.ptr<!void>
-// CIR:   cir.call @_ZN15SimpleArrDeletedaEPv(%[[VOID_PTR]])
+// CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SimpleArrDelete>
+// CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SimpleArrDelete>
+// CIR:   cir.if %[[NOT_NULL]] {
+// CIR:     %[[VOID_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> -> !cir.ptr<!void>
+// CIR:     cir.call @_ZN15SimpleArrDeletedaEPv(%[[VOID_PTR]])
+// CIR:   }
 
 // LLVM: define {{.*}} void @_Z24test_simple_delete_arrayP15SimpleArrDelete
 // LLVM:   %[[PTR:.*]] = load ptr, ptr %{{.*}}
+// LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[PTR]], null
+// LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
+// LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   call void @_ZN15SimpleArrDeletedaEPv(ptr %[[PTR]])
+// LLVM:   br label %[[DELETE_END]]
+// LLVM: [[DELETE_END]]:
+// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z24test_simple_delete_arrayP15SimpleArrDelete
 // OGCG:   %[[PTR:.*]] = load ptr, ptr %{{.*}}
@@ -75,29 +103,43 @@ void test_sized_array_delete(SizedArrayDelete *ptr) {
 
 // CIR-BEFORE: cir.func {{.*}} @_Z23test_sized_array_deleteP16SizedArrayDelete
 // CIR-BEFORE:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR-BEFORE:   cir.delete_array %[[PTR]] : !cir.ptr<!rec_SizedArrayDelete> {delete_fn = @_ZN16SizedArrayDeletedaEPvm, delete_params = #cir.usual_delete_params<size = true>
+// CIR-BEFORE:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SizedArrayDelete>
+// CIR-BEFORE:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SizedArrayDelete>
+// CIR-BEFORE:   cir.if %[[NOT_NULL]] {
+// CIR-BEFORE:     cir.delete_array %[[PTR]] : !cir.ptr<!rec_SizedArrayDelete> {delete_fn = @_ZN16SizedArrayDeletedaEPvm, delete_params = #cir.usual_delete_params<size = true>
+// CIR-BEFORE:   }
 
 // CIR: cir.func {{.*}} @_Z23test_sized_array_deleteP16SizedArrayDelete
 // CIR:   %[[PTR:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[BYTE_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_SizedArrayDelete> -> !cir.ptr<!u8i>
-// CIR:   %[[NEG_COOKIE:.*]] = cir.const #cir.int<-8> : !s64i
-// CIR:   %[[ALLOC_BYTE_PTR:.*]] = cir.ptr_stride %[[BYTE_PTR]], %[[NEG_COOKIE]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR:   %[[VOID_PTR:.*]] = cir.cast bitcast %[[ALLOC_BYTE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
-// CIR:   %[[COOKIE_PTR:.*]] = cir.cast bitcast %[[ALLOC_BYTE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!u64i>
-// CIR:   %[[NUM_ELEM:.*]] = cir.load align(4) %[[COOKIE_PTR]] : !cir.ptr<!u64i>, !u64i
-// CIR:   %[[ELEM_SIZE:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   %[[ARRAY_SIZE:.*]] = cir.mul %[[ELEM_SIZE]], %[[NUM_ELEM]] : !u64i
-// CIR:   %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:   %[[TOTAL_SIZE:.*]] = cir.add %[[ARRAY_SIZE]], %[[COOKIE_SIZE]] : !u64i
-// CIR:   cir.call @_ZN16SizedArrayDeletedaEPvm(%[[VOID_PTR]], %[[TOTAL_SIZE]])
+// CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_SizedArrayDelete>
+// CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SizedArrayDelete>
+// CIR:   cir.if %[[NOT_NULL]] {
+// CIR:     %[[BYTE_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_SizedArrayDelete> -> !cir.ptr<!u8i>
+// CIR:     %[[NEG_COOKIE:.*]] = cir.const #cir.int<-8> : !s64i
+// CIR:     %[[ALLOC_BYTE_PTR:.*]] = cir.ptr_stride %[[BYTE_PTR]], %[[NEG_COOKIE]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+// CIR:     %[[VOID_PTR:.*]] = cir.cast bitcast %[[ALLOC_BYTE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR:     %[[COOKIE_PTR:.*]] = cir.cast bitcast %[[ALLOC_BYTE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!u64i>
+// CIR:     %[[NUM_ELEM:.*]] = cir.load align(4) %[[COOKIE_PTR]] : !cir.ptr<!u64i>, !u64i
+// CIR:     %[[ELEM_SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:     %[[ARRAY_SIZE:.*]] = cir.mul %[[ELEM_SIZE]], %[[NUM_ELEM]] : !u64i
+// CIR:     %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CIR:     %[[TOTAL_SIZE:.*]] = cir.add %[[ARRAY_SIZE]], %[[COOKIE_SIZE]] : !u64i
+// CIR:     cir.call @_ZN16SizedArrayDeletedaEPvm(%[[VOID_PTR]], %[[TOTAL_SIZE]])
+// CIR:   }
 
 // LLVM: define {{.*}} void @_Z23test_sized_array_deleteP16SizedArrayDelete
 // LLVM:   %[[PTR:.*]] = load ptr, ptr %{{.*}}
+// LLVM:   %[[NOT_NULL:.*]] = icmp ne ptr %[[PTR]], null
+// LLVM:   br i1 %[[NOT_NULL]], label %[[DELETE_NOTNULL:.*]], label %[[DELETE_END:.*]]
+// LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   %[[ALLOC_PTR:.*]] = getelementptr i8, ptr %[[PTR]], i64 -8
 // LLVM:   %[[NUM_ELEM:.*]] = load i64, ptr %[[ALLOC_PTR]], align 4
 // LLVM:   %[[ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
 // LLVM:   %[[TOTAL_SIZE:.*]] = add i64 %[[ARRAY_SIZE]], 8
 // LLVM:   call void @_ZN16SizedArrayDeletedaEPvm(ptr %[[ALLOC_PTR]], i64 %[[TOTAL_SIZE]])
+// LLVM:   br label %[[DELETE_END]]
+// LLVM: [[DELETE_END]]:
+// LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z23test_sized_array_deleteP16SizedArrayDelete
 // OGCG:   %[[PTR:.*]] = load ptr, ptr %{{.*}}
