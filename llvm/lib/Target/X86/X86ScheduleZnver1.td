@@ -201,10 +201,10 @@ defm : ZnWriteResPair<WriteShiftCL,  [ZnALU], 1>;
 defm : ZnWriteResPair<WriteRotate,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteRotateCL, [ZnALU], 1>;
 
-defm : X86WriteRes<WriteSHDrri, [ZnALU], 3, [3], 6>;
-defm : X86WriteRes<WriteSHDrrcl, [ZnALU], 3, [3], 7>; 
-defm : X86WriteRes<WriteSHDmri, [ZnAGU, ZnALU], !add(Znver1Model.LoadLatency, 3), [1, 3], 8>;
-defm : X86WriteRes<WriteSHDmrcl, [ZnAGU, ZnALU], !add(Znver1Model.LoadLatency, 3), [1, 3], 8>;
+defm : X86WriteRes<WriteSHDrri, [ZnALU], 3, [12], 6>;
+defm : X86WriteRes<WriteSHDrrcl, [ZnALU], 3, [12], 7>; 
+defm : X86WriteRes<WriteSHDmri, [ZnAGU, ZnALU], !add(Znver1Model.LoadLatency, 3), [1, 12], 8>;
+defm : X86WriteRes<WriteSHDmrcl, [ZnAGU, ZnALU], !add(Znver1Model.LoadLatency, 3), [1, 12], 8>;
 
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
