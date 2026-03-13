@@ -1016,7 +1016,6 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
     defined in tensor-land, no explicit deallocation is performed. This means that the
     deallocation must be handled by different means, e.g. by the deallocation pipeline.
   }];
-  }];
   let dependentDialects = [
     "affine::AffineDialect",
     "arith::ArithDialect",
