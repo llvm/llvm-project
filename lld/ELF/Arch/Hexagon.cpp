@@ -694,6 +694,7 @@ void Hexagon::finalizeRelocScan() {
                                                 "__tls_get_addr", STB_GLOBAL,
                                                 STV_DEFAULT, STT_NOTYPE});
           tga->isUsedInRegularObj = true;
+          tga->used = true;
           tga->isPreemptible = true;
           tga->setFlags(NEEDS_PLT);
         }

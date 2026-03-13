@@ -3,9 +3,9 @@
 # RUN: ld.lld -shared %t.o --gc-sections -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
 
-## This test verifies that lld handles the case where there's a direct GD_PLT
-## relocation against __tls_get_addr. Previously this would create duplicate
-## R_HEX_JMP_SLOT relocations for __tls_get_addr. Now only one is created.
+## This test verifies that a GD_PLT relocation on a TLS variable does not
+## create a spurious R_HEX_JMP_SLOT for that variable — only
+## __tls_get_addr should get a PLT entry.
 
 # CHECK:      Section ({{.*}}) .rela.dyn {
 # CHECK-NEXT:   R_HEX_DTPMOD_32 foo 0x0
@@ -21,8 +21,7 @@ _start:
   ## Use GD_GOT to set up TLS GOT entry for foo
   r2 = add(pc, ##_GLOBAL_OFFSET_TABLE_@PCREL)
   r0 = add(r2, ##foo@GDGOT)
-  ## This creates GD_PLT relocations against __tls_get_addr directly
-  call ##__tls_get_addr@GDPLT
+  call foo@GDPLT
   jumpr r31
 
 .section .tdata,"awT",@progbits
