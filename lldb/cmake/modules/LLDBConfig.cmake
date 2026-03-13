@@ -163,6 +163,27 @@ if (LLDB_ENABLE_LIBEDIT)
   set(CMAKE_EXTRA_INCLUDE_FILES)
 endif()
 
+if (APPLE)
+  set(default_enable_mte OFF)
+
+  execute_process(
+      COMMAND sysctl -n hw.optional.arm.FEAT_MTE4
+      OUTPUT_VARIABLE SYSCTL_OUTPUT
+      ERROR_QUIET
+      RESULT_VARIABLE SYSCTL_RESULT
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
+    set(default_enable_mte ON)
+  endif()
+
+  option(LLDB_ENABLE_MTE "Run the LLDB test suite with MTE enabled." ${default_enable_mte})
+
+  if (LLDB_ENABLE_MTE)
+    message(STATUS "Running the LLDB test suite with MTE")
+  endif()
+endif()
+
 if (LLDB_ENABLE_PYTHON)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     set(default_embed_python_home ON)

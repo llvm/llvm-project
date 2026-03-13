@@ -19,6 +19,7 @@
 #include "flang/Common/visit.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/match.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
@@ -244,12 +245,18 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
-  const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
+static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
   //    `- std::optional<Expr>      ^->v
-  return DEREF(typedExpr.get()).v;
+  if (auto *wrapper{typedExpr.get()}) {
+    return wrapper->v;
+  }
+  return std::nullopt;
+}
+
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
+  return GetEvaluateExprFromTyped(parserExpr.typedExpr);
 }
 
 std::optional<evaluate::DynamicType> GetDynamicType(
@@ -551,14 +558,223 @@ bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
   return false;
 }
 
-std::optional<int64_t> GetNumGeneratedNestsFrom(
-    const parser::ExecutionPartConstruct &epc,
-    std::optional<int64_t> nestedCount) {
-  if (parser::Unwrap<parser::DoConstruct>(epc)) {
+namespace {
+// Helper class to check if a given evaluate::Expr is an array expression.
+// This does not check any proper subexpressions of the expression (except
+// parentheses).
+struct ArrayExpressionRecognizer {
+  template <TypeCategory C>
+  static bool isArrayExpression(
+      const evaluate::Expr<evaluate::SomeKind<C>> &x) {
+    return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
+  }
+
+  template <TypeCategory C, int K>
+  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C, K>> &x) {
+    return common::visit([](auto &&s) { return isArrayExpression(s); },
+        evaluate::match::deparen(x).u);
+  }
+
+  template <typename T>
+  static bool isArrayExpression(const evaluate::Designator<T> &x) {
+    if (auto *sym{std::get_if<SymbolRef>(&x.u)}) {
+      return (*sym)->Rank() != 0;
+    }
+    if (auto *array{std::get_if<evaluate::ArrayRef>(&x.u)}) {
+      return llvm::any_of(array->subscript(), [](const evaluate::Subscript &s) {
+        // A vector subscript will not be a Triplet, but will have rank > 0.
+        return std::holds_alternative<evaluate::Triplet>(s.u) || s.Rank() > 0;
+      });
+    }
+    return false;
+  }
+
+  template <typename T> static bool isArrayExpression(const T &x) {
+    return false;
+  }
+
+  static bool isArrayExpression(const evaluate::Expr<evaluate::SomeType> &x) {
+    return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
+  }
+};
+
+/// Helper class to check if a given evaluate::Expr contains a subexpression
+/// (not necessarily proper) that is an array expression.
+struct ArrayExpressionFinder
+    : public evaluate::AnyTraverse<ArrayExpressionFinder> {
+  using Base = evaluate::AnyTraverse<ArrayExpressionFinder>;
+  using Base::operator();
+  ArrayExpressionFinder() : Base(*this) {}
+
+  template <typename T>
+  bool operator()(const evaluate::Designator<T> &x) const {
+    return ArrayExpressionRecognizer::isArrayExpression(x);
+  }
+};
+
+/// Helper class to check if any array expressions contained in the given
+/// evaluate::Expr satisfy the criteria for being in "intervening code".
+struct ArrayExpressionChecker {
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::Expr &parserExpr) {
+    // If we have found a prohibited expression, skip the rest of the
+    // traversal.
+    if (!rejected) {
+      if (auto expr{GetEvaluateExpr(parserExpr)}) {
+        rejected = ArrayExpressionFinder{}(*expr);
+      }
+    }
+    return !rejected;
+  }
+
+  bool rejected{false};
+};
+} // namespace
+
+static bool ContainsInvalidArrayExpression(
+    const parser::ExecutionPartConstruct &x) {
+  ArrayExpressionChecker checker;
+  parser::Walk(x, checker);
+  return checker.rejected;
+}
+
+/// Checks if the given construct `x` satisfied OpenMP requirements for
+/// intervening-code. Excludes CYCLE/EXIT statements as well as constructs
+/// likely to result in a runtime loop, e.g. FORALL, WHERE, etc.
+bool IsValidInterveningCode(const parser::ExecutionPartConstruct &x) {
+  static auto isScalar = [](const parser::Variable &variable) {
+    if (auto expr{GetEvaluateExprFromTyped(variable.typedExpr)}) {
+      return expr->Rank() == 0;
+    }
+    return false;
+  };
+
+  auto *exec{parser::Unwrap<parser::ExecutableConstruct>(x)};
+  if (!exec) {
+    // DATA, ENTRY, FORMAT, NAMELIST are not explicitly prohibited in a CLN
+    // although they are likely disallowed due to other requirements.
+    // Return true, they should be rejected elsewhere if necessary.
+    return true;
+  }
+
+  if (auto *action{parser::Unwrap<parser::ActionStmt>(exec->u)}) {
+    if (parser::Unwrap<parser::CycleStmt>(action->u) ||
+        parser::Unwrap<parser::ExitStmt>(action->u) ||
+        parser::Unwrap<parser::ForallStmt>(action->u) ||
+        parser::Unwrap<parser::WhereStmt>(action->u)) {
+      return false;
+    }
+    if (auto *assign{parser::Unwrap<parser::AssignmentStmt>(&action->u)}) {
+      if (!isScalar(std::get<parser::Variable>(assign->t))) {
+        return false;
+      }
+    }
+  } else { // Not ActionStmt
+    if (parser::Unwrap<parser::LabelDoStmt>(exec->u) ||
+        parser::Unwrap<parser::DoConstruct>(exec->u) ||
+        parser::Unwrap<parser::ForallConstruct>(exec->u) ||
+        parser::Unwrap<parser::WhereConstruct>(exec->u)) {
+      return false;
+    }
+    if (auto *omp{parser::Unwrap<parser::OpenMPConstruct>(exec->u)}) {
+      auto dirName{GetOmpDirectiveName(*omp)};
+      if (llvm::omp::getDirectiveCategory(dirName.v) ==
+          llvm::omp::Category::Executable) {
+        return false;
+      }
+    }
+  }
+
+  if (ContainsInvalidArrayExpression(x)) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Checks if the given construct `x` preserves perfect nesting of a loop,
+/// when placed adjacent to the loop in the enclosing (parent) loop.
+/// CONTINUE statements are no-ops, and thus are considered transparent.
+/// Non-OpenMP compiler directives are also considered transparent to
+/// allow legacy applications to pass the semantic checks.
+bool IsTransparentInterveningCode(const parser::ExecutionPartConstruct &x) {
+  // Tolerate compiler directives in perfect nests.
+  return parser::Unwrap<parser::CompilerDirective>(x) ||
+      parser::Unwrap<parser::ContinueStmt>(x);
+}
+
+bool IsTransformableLoop(const parser::DoConstruct &loop) {
+  return loop.IsDoNormal();
+}
+
+bool IsTransformableLoop(const parser::OpenMPLoopConstruct &omp) {
+  return IsLoopTransforming(omp.BeginDir().DirId());
+}
+
+bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(epc)}) {
+    return IsTransformableLoop(*loop);
+  }
+  if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(epc)}) {
+    return IsTransformableLoop(*omp);
+  }
+  return false;
+}
+
+LoopSequence::LoopSequence(
+    const parser::ExecutionPartConstruct &root, bool allowAllLoops)
+    : allowAllLoops_(allowAllLoops) {
+  entry_ = createConstructEntry(root);
+  assert(entry_ && "Expecting loop like code");
+
+  createChildrenFromRange(entry_->location);
+  length_ = calculateLength();
+}
+
+LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops)
+    : allowAllLoops_(allowAllLoops), entry_(std::move(entry)) {
+  createChildrenFromRange(entry_->location);
+  length_ = calculateLength();
+}
+
+std::unique_ptr<LoopSequence::Construct> LoopSequence::createConstructEntry(
+    const parser::ExecutionPartConstruct &code) {
+  if (auto *loop{parser::Unwrap<parser::DoConstruct>(code)}) {
+    if (allowAllLoops_ || IsTransformableLoop(*loop)) {
+      auto &body{std::get<parser::Block>(loop->t)};
+      return std::make_unique<Construct>(body, &code);
+    }
+  } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(code)}) {
+    if (IsTransformableLoop(*omp)) {
+      auto &body{std::get<parser::Block>(omp->t)};
+      return std::make_unique<Construct>(body, &code);
+    }
+  }
+
+  return nullptr;
+}
+
+void LoopSequence::createChildrenFromRange(
+    ExecutionPartIterator::IteratorType begin,
+    ExecutionPartIterator::IteratorType end) {
+  for (auto &code : BlockRange(begin, end, BlockRange::Step::Over)) {
+    if (auto entry{createConstructEntry(code)}) {
+      children_.push_back(LoopSequence(std::move(entry), allowAllLoops_));
+    }
+  }
+}
+
+std::optional<int64_t> LoopSequence::calculateLength() const {
+  if (!entry_->owner) {
+    return sumOfChildrenLengths();
+  }
+  if (parser::Unwrap<parser::DoConstruct>(entry_->owner)) {
     return 1;
   }
 
-  auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(epc))};
+  auto &omp{DEREF(parser::Unwrap<parser::OpenMPLoopConstruct>(*entry_->owner))};
   const parser::OmpDirectiveSpecification &beginSpec{omp.BeginDir()};
   llvm::omp::Directive dir{beginSpec.DirId()};
   if (!IsLoopTransforming(dir)) {
@@ -569,6 +785,8 @@ std::optional<int64_t> GetNumGeneratedNestsFrom(
   if (IsFullUnroll(omp)) {
     return std::nullopt;
   }
+
+  auto nestedCount{sumOfChildrenLengths()};
 
   if (dir == llvm::omp::Directive::OMPD_fuse) {
     // If there are no loops nested inside of FUSE, then the construct is
@@ -607,5 +825,17 @@ std::optional<int64_t> GetNumGeneratedNestsFrom(
 
   // For every other loop construct return 1.
   return 1;
+}
+
+std::optional<int64_t> LoopSequence::sumOfChildrenLengths() const {
+  int64_t sum{0};
+  for (auto &seq : children_) {
+    if (auto len{seq.length()}) {
+      sum += *len;
+    } else {
+      return std::nullopt;
+    }
+  }
+  return sum;
 }
 } // namespace Fortran::semantics::omp

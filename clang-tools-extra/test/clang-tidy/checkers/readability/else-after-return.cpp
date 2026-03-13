@@ -438,3 +438,28 @@ LABEL:
       f(0);
   }
 }
+
+[[noreturn]] void noReturn();
+
+struct NoReturnMember {
+  [[noreturn]] void noReturn();
+};
+
+void testNoReturn() {
+  if (true) {
+    noReturn();
+  } else { // comment-28
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
+    // CHECK-FIXES: {{^}}  } // comment-28
+    f(0);
+  }
+
+  if (true) {
+    NoReturnMember f;
+    f.noReturn();
+  } else { // comment-29
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after calling a function that doesn't return
+    // CHECK-FIXES: {{^}}  } // comment-29
+    f(0);
+  }
+}

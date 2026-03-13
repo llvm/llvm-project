@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
-#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
-#include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
-#include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -51,7 +51,7 @@ enum class SummaryType { TU, LU };
 // Command-Line Options
 //===----------------------------------------------------------------------===//
 
-cl::OptionCategory SsafFormatCategory("ssaf-format options");
+cl::OptionCategory SsafFormatCategory("clang-ssaf-format options");
 
 cl::list<std::string> LoadPlugins("load",
                                   cl::desc("Load a plugin shared library"),

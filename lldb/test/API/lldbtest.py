@@ -55,6 +55,10 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, "-p", testFile]
 
+        launcher = getattr(test.config, "lldb_launcher", None)
+        if launcher:
+            cmd = [launcher] + cmd
+
         if isLuaTest:
             cmd.extend(["--env", "LUA_EXECUTABLE=%s" % test.config.lua_executable])
             cmd.extend(["--env", "LLDB_LUA_CPATH=%s" % test.config.lldb_lua_cpath])
