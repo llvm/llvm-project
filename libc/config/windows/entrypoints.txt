@@ -111,6 +111,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswalnum
     libc.src.wctype.iswgraph
     libc.src.wctype.iswcntrl
+    libc.src.wctype.iswdigit
     libc.src.wctype.iswlower
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
@@ -191,6 +192,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmin
     libc.src.math.fminf

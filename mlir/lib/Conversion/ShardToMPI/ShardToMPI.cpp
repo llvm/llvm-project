@@ -755,14 +755,15 @@ struct ConvertReduceScatterOp : public CommOpPattern<ReduceScatterOp> {
         ib, TypeRange(), mpiInput, output,
         getMPIReductionOp(adaptor.getReductionAttr()), comm);
 
-    // Deallocate the temporary input buffer if we allocated one.
-    if (scatterDim != 0)
-      memref::DeallocOp::create(ib, mpiInput);
-
     // If the destination is a tensor, cast it to a tensor.
     if (isa<RankedTensorType>(op.getType()))
       output =
           bufferization::ToTensorOp::create(ib, op.getType(), output, true);
+    else if (scatterDim != 0) // Deallocate the temporary input buffer
+      memref::DeallocOp::create(ib, mpiInput);
+    // Notice: If this is called from tensor-world, then we assume an extra pass
+    // will take care of deallocating the intermediate buffers.
+
     rewriter.replaceOp(op, output);
     return success();
   }
