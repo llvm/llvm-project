@@ -21,8 +21,8 @@ struct Hypotbf16Checker : public virtual LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   using StorageType = typename FPBits::StorageType;
 
-  uint64_t check(uint16_t x_start, uint16_t x_stop,uint16_t y_start, uint16_t y_stop,mpfr::RoundingMode rounding) {
-    mpfr::ForceRoundingMode r(rounding);
+  uint64_t check(uint16_t x_start, uint16_t x_stop, uint16_t y_start,
+                 uint16_t y_stop, mpfr::RoundingMode rounding) {
     if (!r.success)
       return true;
     uint16_t xbits = x_start;
