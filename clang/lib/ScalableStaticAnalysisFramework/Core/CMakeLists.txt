@@ -26,10 +26,6 @@ add_clang_library(clangScalableStaticAnalysisFrameworkCore
 
   LINK_LIBS
   clangAST
-  clangASTMatchers
-  clangBasic
-  clangLex
-  clangFrontend
   clangUnifiedSymbolResolution
 
   DEPENDS

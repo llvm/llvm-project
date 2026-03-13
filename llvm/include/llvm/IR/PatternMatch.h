@@ -3029,6 +3029,20 @@ m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
 }
 
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
+}
+
 template <typename Opnd0, typename Opnd1, typename Opnd2>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
 m_FShl(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {

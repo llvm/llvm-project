@@ -873,8 +873,8 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
 
   // Expand {5,+,1,+,1}
   auto GetAR3 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
-    SmallVector<const SCEV *, 3> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
-                                        SE.getOne(ARType), SE.getOne(ARType)};
+    SmallVector<SCEVUse, 3> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                   SE.getOne(ARType), SE.getOne(ARType)};
     return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
   };
   TestNoCanonicalIV(GetAR3);
@@ -883,9 +883,9 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
 
   // Expand {5,+,1,+,1,+,1}
   auto GetAR4 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
-    SmallVector<const SCEV *, 4> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
-                                        SE.getOne(ARType), SE.getOne(ARType),
-                                        SE.getOne(ARType)};
+    SmallVector<SCEVUse, 4> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                   SE.getOne(ARType), SE.getOne(ARType),
+                                   SE.getOne(ARType)};
     return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
   };
   TestNoCanonicalIV(GetAR4);
@@ -894,9 +894,9 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
 
   // Expand {5,+,1,+,1,+,1,+,1}
   auto GetAR5 = [&](ScalarEvolution &SE, Loop *L) -> const SCEVAddRecExpr * {
-    SmallVector<const SCEV *, 5> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
-                                        SE.getOne(ARType), SE.getOne(ARType),
-                                        SE.getOne(ARType), SE.getOne(ARType)};
+    SmallVector<SCEVUse, 5> Ops = {SE.getConstant(APInt(ARBitWidth, 5)),
+                                   SE.getOne(ARType), SE.getOne(ARType),
+                                   SE.getOne(ARType), SE.getOne(ARType)};
     return cast<SCEVAddRecExpr>(SE.getAddRecExpr(Ops, L, SCEV::FlagAnyWrap));
   };
   TestNoCanonicalIV(GetAR5);

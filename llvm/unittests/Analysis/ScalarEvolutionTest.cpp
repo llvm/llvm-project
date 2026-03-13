@@ -251,12 +251,12 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
     EXPECT_EQ(SE.getMulExpr(B, C), SE.getMulExpr(C, B));
     EXPECT_EQ(SE.getMulExpr(A, C), SE.getMulExpr(C, A));
 
-    SmallVector<const SCEV *, 3> Ops0 = {A, B, C};
-    SmallVector<const SCEV *, 3> Ops1 = {A, C, B};
-    SmallVector<const SCEV *, 3> Ops2 = {B, A, C};
-    SmallVector<const SCEV *, 3> Ops3 = {B, C, A};
-    SmallVector<const SCEV *, 3> Ops4 = {C, B, A};
-    SmallVector<const SCEV *, 3> Ops5 = {C, A, B};
+    SmallVector<SCEVUse, 3> Ops0 = {A, B, C};
+    SmallVector<SCEVUse, 3> Ops1 = {A, C, B};
+    SmallVector<SCEVUse, 3> Ops2 = {B, A, C};
+    SmallVector<SCEVUse, 3> Ops3 = {B, C, A};
+    SmallVector<SCEVUse, 3> Ops4 = {C, B, A};
+    SmallVector<SCEVUse, 3> Ops5 = {C, A, B};
 
     const SCEV *Mul0 = SE.getMulExpr(Ops0);
     const SCEV *Mul1 = SE.getMulExpr(Ops1);
@@ -542,13 +542,14 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
     auto *L1 = *std::next(LI.begin());
     auto *L0 = *std::next(LI.begin(), 2);
 
-    auto GetAddRec = [&SE](const Loop *L, std::initializer_list<const SCEV *> Ops) {
-      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+    auto GetAddRec = [&SE](const Loop *L,
+                           std::initializer_list<const SCEV *> Ops) {
+      SmallVector<SCEVUse, 4> OpsCopy(Ops.begin(), Ops.end());
       return SE.getAddRecExpr(OpsCopy, L, SCEV::FlagAnyWrap);
     };
 
     auto GetAdd = [&SE](std::initializer_list<const SCEV *> Ops) {
-      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+      SmallVector<SCEVUse, 4> OpsCopy(Ops.begin(), Ops.end());
       return SE.getAddExpr(OpsCopy, SCEV::FlagAnyWrap);
     };
 
@@ -1729,7 +1730,7 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   const SCEV *M0 = SE.getNegativeSCEV(P0);
   const SCEV *M2 = SE.getNegativeSCEV(P2);
 
-  SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  SmallVector<SCEVUse, 6> Ops = {M2, P0, M0, P1, P2};
   // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
   // crash if the comparator has the specific caching bug.
   SE.getAddExpr(Ops);
