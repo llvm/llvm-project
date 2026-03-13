@@ -8,6 +8,7 @@
 
 #include "../TargetLoweringInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -22,17 +23,17 @@ public:
       cir::LangAddressSpace addrSpace) const override {
     switch (addrSpace) {
     case cir::LangAddressSpace::Default:
-      return 0;
+      return llvm::AMDGPUAS::FLAT_ADDRESS;
     case cir::LangAddressSpace::OffloadPrivate:
-      return 5;
+      return llvm::AMDGPUAS::PRIVATE_ADDRESS;
     case cir::LangAddressSpace::OffloadLocal:
-      return 3;
+      return llvm::AMDGPUAS::LOCAL_ADDRESS;
     case cir::LangAddressSpace::OffloadGlobal:
-      return 1;
+      return llvm::AMDGPUAS::GLOBAL_ADDRESS;
     case cir::LangAddressSpace::OffloadConstant:
-      return 4;
+      return llvm::AMDGPUAS::CONSTANT_ADDRESS;
     case cir::LangAddressSpace::OffloadGeneric:
-      return 0;
+      return llvm::AMDGPUAS::FLAT_ADDRESS;
     }
     llvm_unreachable("Unknown CIR address space for AMDGPU target");
   }
