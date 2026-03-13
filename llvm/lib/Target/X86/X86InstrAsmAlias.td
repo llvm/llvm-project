@@ -260,6 +260,9 @@ def : MnemonicAlias<"cqo",  "cqto", "att">;
 // In 64-bit mode lret maps to lretl; it is not ambiguous with lretq.
 def : MnemonicAlias<"lret", "lretw", "att">, Requires<[In16BitMode]>;
 def : MnemonicAlias<"lret", "lretl", "att">, Requires<[Not16BitMode]>;
+def : InstAlias<"lgdtw\t$src", (LGDT16m opaquemem:$src), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"lgdtq16\t$src", (LGDT64m_16 opaquemem:$src), 0>, Requires<[In64BitMode]>;
+def : InstAlias<"retfw", (LRET16), 0>;
 
 def : MnemonicAlias<"leavel", "leave", "att">, Requires<[Not64BitMode]>;
 def : MnemonicAlias<"leaveq", "leave", "att">, Requires<[In64BitMode]>;
@@ -665,6 +668,11 @@ def : InstAlias<"jmpw\t$seg, $off",  (FARJMP16i  i16imm:$off, i16imm:$seg)>, Req
 def : InstAlias<"calll\t$seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 def : InstAlias<"jmpl\t$seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 
+// Near call aliases for data16/data32 prefix support
+def : InstAlias<"callw\t$dst", (CALLpcrel16 i16imm_brtarget:$dst), 0>;
+def : InstAlias<"calll\t$dst", (CALLpcrel32 i32imm_brtarget:$dst), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"callq\t$dst", (CALL64pcrel32 i64i32imm_brtarget:$dst), 0>, Requires<[In64BitMode]>;
+
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;
 // Match 'movX <largeimm>, <reg a>' and its reverse as an alias for movabsX.
@@ -732,6 +740,8 @@ def : InstAlias<"shrd{l}\t{$reg, $mem|$mem, $reg}", (SHRD32mrCL i32mem:$mem, GR3
 def : InstAlias<"shrd{q}\t{$reg, $mem|$mem, $reg}", (SHRD64mrCL i64mem:$mem, GR64:$reg), 0>;
 
 // test: We accept "testX <reg>, <mem>" and "testX <mem>, <reg>" as synonyms.
+def : InstAlias<"ljmpw\t$seg, $off", (FARJMP16i i16imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
+def : InstAlias<"ljmpl\t$seg, $off", (FARJMP32i i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 def : InstAlias<"test{b}\t{$mem, $val|$val, $mem}",
                 (TEST8mr  i8mem :$mem, GR8 :$val), 0>;
 def : InstAlias<"test{w}\t{$mem, $val|$val, $mem}",
