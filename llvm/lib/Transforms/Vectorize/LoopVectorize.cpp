@@ -198,6 +198,13 @@ static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
 
+/// Note: This currently only applies to `llvm.masked.load` and
+/// `llvm.masked.store`. TODO: Extend this to cover other operations as needed.
+static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
+    "force-target-supports-masked-memory-ops", cl::init(false), cl::Hidden,
+    cl::desc("Assume the target supports masked memory operations (used for "
+             "testing)."));
+
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
 // that predication is preferred, and this lists all options. I.e., the
 // vectorizer will try to fold the tail-loop (epilogue) into the vector body
@@ -243,9 +250,6 @@ static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
         clEnumValN(TailFoldingStyle::DataAndControlFlow, "data-and-control",
                    "Create lane mask using active.lane.mask intrinsic, and use "
                    "it for both data and control flow"),
-        clEnumValN(TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck,
-                   "data-and-control-without-rt-check",
-                   "Similar to data-and-control, but remove the runtime check"),
         clEnumValN(TailFoldingStyle::DataWithEVL, "data-with-evl",
                    "Use predicated EVL instructions for tail folding. If EVL "
                    "is unsupported, fallback to data-without-lane-mask.")));
@@ -1182,7 +1186,8 @@ public:
   bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
                           unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace);
+           (ForceTargetSupportsMaskedMemoryOps ||
+            TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
   }
 
   /// Returns true if the target machine supports masked load operation
@@ -1190,7 +1195,8 @@ public:
   bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
                          unsigned AddressSpace) const {
     return Legal->isConsecutivePtr(DataType, Ptr) &&
-           TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+           (ForceTargetSupportsMaskedMemoryOps ||
+            TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
   }
 
   /// Returns true if the target machine can represent \p V as a masked gather
@@ -1327,34 +1333,27 @@ public:
   }
 
   /// Returns the TailFoldingStyle that is best for the current loop.
-  TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
-    if (!ChosenTailFoldingStyle)
-      return TailFoldingStyle::None;
-    return IVUpdateMayOverflow ? ChosenTailFoldingStyle->first
-                               : ChosenTailFoldingStyle->second;
+  TailFoldingStyle getTailFoldingStyle() const {
+    return ChosenTailFoldingStyle;
   }
 
-  /// Selects and saves TailFoldingStyle for 2 options - if IV update may
-  /// overflow or not.
+  /// Selects and saves TailFoldingStyle.
   /// \param IsScalableVF true if scalable vector factors enabled.
   /// \param UserIC User specific interleave count.
-  void setTailFoldingStyles(bool IsScalableVF, unsigned UserIC) {
-    assert(!ChosenTailFoldingStyle && "Tail folding must not be selected yet.");
+  void setTailFoldingStyle(bool IsScalableVF, unsigned UserIC) {
+    assert(ChosenTailFoldingStyle == TailFoldingStyle::None &&
+           "Tail folding must not be selected yet.");
     if (!Legal->canFoldTailByMasking()) {
-      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
       return;
     }
 
     // Default to TTI preference, but allow command line override.
-    ChosenTailFoldingStyle = {
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/true),
-        TTI.getPreferredTailFoldingStyle(/*IVUpdateMayOverflow=*/false)};
+    ChosenTailFoldingStyle = TTI.getPreferredTailFoldingStyle();
     if (ForceTailFoldingStyle.getNumOccurrences())
-      ChosenTailFoldingStyle = {ForceTailFoldingStyle.getValue(),
-                                ForceTailFoldingStyle.getValue()};
+      ChosenTailFoldingStyle = ForceTailFoldingStyle.getValue();
 
-    if (ChosenTailFoldingStyle->first != TailFoldingStyle::DataWithEVL &&
-        ChosenTailFoldingStyle->second != TailFoldingStyle::DataWithEVL)
+    if (ChosenTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
@@ -1366,10 +1365,9 @@ public:
     // if it's allowed, or DataWithoutLaneMask otherwise.
     if (ScalarEpilogueStatus == CM_ScalarEpilogueAllowed ||
         ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate)
-      ChosenTailFoldingStyle = {TailFoldingStyle::None, TailFoldingStyle::None};
+      ChosenTailFoldingStyle = TailFoldingStyle::None;
     else
-      ChosenTailFoldingStyle = {TailFoldingStyle::DataWithoutLaneMask,
-                                TailFoldingStyle::DataWithoutLaneMask};
+      ChosenTailFoldingStyle = TailFoldingStyle::DataWithoutLaneMask;
 
     LLVM_DEBUG(
         dbgs() << "LV: Preference for VP intrinsics indicated. Will "
@@ -1381,8 +1379,6 @@ public:
 
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
-    // TODO: check if it is possible to check for None style independent of
-    // IVUpdateMayOverflow flag in getTailFoldingStyle.
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
 
@@ -1392,9 +1388,7 @@ public:
     if (!EnableWideActiveLaneMask)
       return false;
 
-    TailFoldingStyle TF = getTailFoldingStyle();
-    return TF == TailFoldingStyle::DataAndControlFlow ||
-           TF == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+    return getTailFoldingStyle() == TailFoldingStyle::DataAndControlFlow;
   }
 
   /// Return maximum safe number of elements to be processed per vector
@@ -1606,10 +1600,8 @@ private:
   /// iterations to execute in the scalar loop.
   ScalarEpilogueLowering ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
 
-  /// Control finally chosen tail folding style. The first element is used if
-  /// the IV update may overflow, the second element - if it does not.
-  std::optional<std::pair<TailFoldingStyle, TailFoldingStyle>>
-      ChosenTailFoldingStyle;
+  /// Control finally chosen tail folding style.
+  TailFoldingStyle ChosenTailFoldingStyle = TailFoldingStyle::None;
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
@@ -2098,13 +2090,11 @@ public:
 
 static bool useActiveLaneMask(TailFoldingStyle Style) {
   return Style == TailFoldingStyle::Data ||
-         Style == TailFoldingStyle::DataAndControlFlow ||
-         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+         Style == TailFoldingStyle::DataAndControlFlow;
 }
 
 static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
-  return Style == TailFoldingStyle::DataAndControlFlow ||
-         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
+  return Style == TailFoldingStyle::DataAndControlFlow;
 }
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
@@ -3727,7 +3717,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // by masking.
   // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
   bool ContainsScalableVF = MaxFactors.ScalableVF.isNonZero();
-  setTailFoldingStyles(ContainsScalableVF, UserIC);
+  setTailFoldingStyle(ContainsScalableVF, UserIC);
   if (foldTailByMasking()) {
     if (foldTailWithEVL()) {
       LLVM_DEBUG(
@@ -4297,6 +4287,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
             break;
           }
           case VPInstruction::ExplicitVectorLength:
+          case VPInstruction::AnyOf:
             C += VPI->cost(VF, CostCtx);
             break;
           default:
@@ -5310,7 +5301,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
     Cost += TTI.getScalarizationOverhead(
         VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
         /*Insert=*/false, /*Extract=*/true, CostKind);
-    Cost += TTI.getCFInstrCost(Instruction::Br, CostKind);
+    Cost += TTI.getCFInstrCost(Instruction::CondBr, CostKind);
 
     if (useEmulatedMaskMemRefHack(I, VF))
       // Artificially setting to a high enough value to practically disable
@@ -6171,7 +6162,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // is scalarized or not. Therefore, we handle GEPs with the memory
     // instruction cost.
     return 0;
-  case Instruction::Br: {
+  case Instruction::UncondBr:
+  case Instruction::CondBr: {
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
@@ -6193,16 +6185,16 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       // Return cost for branches around scalarized and predicated blocks.
       auto *VecI1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
-      return (
-          TTI.getScalarizationOverhead(
-              VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
-              /*Insert*/ false, /*Extract*/ true, CostKind) +
-          (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.getFixedValue()));
+      return (TTI.getScalarizationOverhead(
+                  VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
+                  /*Insert*/ false, /*Extract*/ true, CostKind) +
+              (TTI.getCFInstrCost(Instruction::CondBr, CostKind) *
+               VF.getFixedValue()));
     }
 
     if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.
-      return TTI.getCFInstrCost(Instruction::Br, CostKind);
+      return TTI.getCFInstrCost(Instruction::UncondBr, CostKind);
 
     // This branch will be eliminated by if-conversion.
     return 0;
@@ -7479,7 +7471,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()));
+      CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF());
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
@@ -8193,7 +8185,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
-  VPlanTransforms::createLoopRegions(*Plan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *Plan);
+  if (CM.foldTailByMasking())
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8203,7 +8197,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   for (ElementCount VF : Range)
     IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
 
-  TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
+  TailFoldingStyle Style = CM.getTailFoldingStyle();
   // Use NUW for the induction increment if we proved that it won't overflow in
   // the vector loop or when not folding the tail. In the later case, we know
   // that the canonical induction increment will not overflow as the vector trip
@@ -8248,8 +8242,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
-                           CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan);
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
@@ -8342,9 +8335,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: We can't call runPass on these transforms yet, due to verifier
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
-  DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues,
-                                          CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8356,6 +8346,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Optimize FindIV reductions to use sentinel-based approach when possible.
   RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
                  *OrigLoop);
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 CM.foldTailByMasking());
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
@@ -8415,12 +8407,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
     // TailFoldingStyle is visible there.
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
-    bool WithoutRuntimeCheck =
-        Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
-                                       WithoutRuntimeCheck);
+    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8456,13 +8444,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
     return nullptr;
 
-  // TODO: IVEndValues are not used yet in the native path, to optimize exit
-  // values.
-  // TODO: We can't call runPass on the transform yet, due to verifier
-  // failures.
-  DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues,
-                                          /*FoldTail=*/false);
+  // Optimize induction live-out users to use precomputed end values.
+  VPlanTransforms::optimizeInductionLiveOutUsers(*Plan, PSE,
+                                                 /*FoldTail=*/false);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9363,12 +9347,29 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
   // Fix induction resume values from the additional bypass block.
   IRBuilder<> BypassBuilder(BypassBlock, BypassBlock->getFirstInsertionPt());
   for (const auto &[IVPhi, II] : LVL.getInductionVars()) {
-    auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
     Value *V = createInductionAdditionalBypassValues(
         IVPhi, II, BypassBuilder, ExpandedSCEVs, MainVectorTripCount,
         LVL.getPrimaryInduction());
     // TODO: Directly add as extra operand to the VPResumePHI recipe.
-    Inc->setIncomingValueForBlock(BypassBlock, V);
+    if (auto *Inc = dyn_cast<PHINode>(IVPhi->getIncomingValueForBlock(PH))) {
+      if (Inc->getBasicBlockIndex(BypassBlock) != -1)
+        Inc->setIncomingValueForBlock(BypassBlock, V);
+    } else {
+      // If the resume value in the scalar preheader was simplified (e.g., when
+      // narrowInterleaveGroups optimized away the resume PHIs), create a new
+      // PHI to merge the bypass value with the original value.
+      Value *OrigVal = IVPhi->getIncomingValueForBlock(PH);
+      PHINode *NewPhi =
+          PHINode::Create(IVPhi->getType(), pred_size(PH), "bc.resume.val",
+                          PH->getFirstNonPHIIt());
+      for (auto *Pred : predecessors(PH)) {
+        if (Pred == BypassBlock)
+          NewPhi->addIncoming(V, Pred);
+        else
+          NewPhi->addIncoming(OrigVal, Pred);
+      }
+      IVPhi->setIncomingValueForBlock(PH, NewPhi);
+    }
   }
 }
 
@@ -9779,15 +9780,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Override IC if user provided an interleave count.
   IC = UserIC > 0 ? UserIC : IC;
-
-  // FIXME: Enable interleaving for FindLast reductions.
-  if (InterleaveLoop && hasFindLastReductionPhi(LVP.getPlanFor(VF.Width))) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
-    IntDiagMsg = {"FindLastPreventsScalarInterleaving",
-                  "Unable to interleave due to FindLast reduction."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
 
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();

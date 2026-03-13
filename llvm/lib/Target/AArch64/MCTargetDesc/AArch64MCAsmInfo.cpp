@@ -38,9 +38,6 @@ const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
 
 const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64::S_GOT, "GOT"},
-    {AArch64::S_GOTPCREL, "GOTPCREL"},
-    {AArch64::S_PLT, "PLT"},
-    {AArch64::S_FUNCINIT, "FUNCINIT"},
 };
 
 const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
@@ -145,7 +142,7 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   // form when targeting Darwin.
   AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
 
-  PrivateGlobalPrefix = "L";
+  InternalSymbolPrefix = "L";
   PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";
@@ -218,7 +215,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   AlignmentIsInBytes = false;
 
   CommentString = "//";
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
@@ -259,7 +256,7 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
 }
 
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
@@ -289,7 +286,7 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";

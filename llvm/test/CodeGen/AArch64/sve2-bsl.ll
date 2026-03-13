@@ -370,19 +370,74 @@ define <vscale x 2 x i64> @orn(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 
   ret <vscale x 2 x i64> %4
 }
 
+; Commute operands of EON idiom to avoid the copy of z0.
+define <vscale x 2 x i64> @eon_comm(<vscale x 2 x i1> %m, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: eon_comm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z1.d, z0.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %xor = xor <vscale x 2 x i64> %a, %b
+  %eon = xor <vscale x 2 x i64> %xor, splat (i64 -1)
+  %sel = select <vscale x 2 x i1> %m, <vscale x 2 x i64> %a, <vscale x 2 x i64> %eon
+  ret <vscale x 2 x i64> %sel
+}
+
+; As above for NAND idiom.
+define <vscale x 2 x i64> @nand_comm(<vscale x 2 x i1> %m, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: nand_comm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z1.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %and = and <vscale x 2 x i64> %a, %b
+  %nand = xor <vscale x 2 x i64> %and, splat (i64 -1)
+  %sel = select <vscale x 2 x i1> %m, <vscale x 2 x i64> %b, <vscale x 2 x i64> %nand
+  ret <vscale x 2 x i64> %sel
+}
+
+; As above for NOR idiom.
+define <vscale x 2 x i64> @nor_comm(<vscale x 2 x i1> %m, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: nor_comm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z0.d
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+  %or = or <vscale x 2 x i64> %a, %b
+  %nor = xor <vscale x 2 x i64> %or, splat (i64 -1)
+  %sel = select <vscale x 2 x i1> %m, <vscale x 2 x i64> %b, <vscale x 2 x i64> %nor
+  ret <vscale x 2 x i64> %sel
+}
+
+; Neither z0 nor z1 can be clobbered by the EON idiom, so one of them needs copying.
+define <vscale x 2 x i64> @eon_needs_mov(<vscale x 2 x i1> %m1, <vscale x 2 x i1> %m2, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: eon_needs_mov:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z2, z0
+; CHECK-NEXT:    bsl2n z2.d, z2.d, z0.d, z1.d
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
+; CHECK-NEXT:    ret
+  %xor = xor <vscale x 2 x i64> %a, %b
+  %eon = xor <vscale x 2 x i64> %xor, splat (i64 -1)
+  %sel1 = select <vscale x 2 x i1> %m1, <vscale x 2 x i64> %a, <vscale x 2 x i64> %eon
+  %sel2 = select <vscale x 2 x i1> %m2, <vscale x 2 x i64> %b, <vscale x 2 x i64> %sel1
+  ret <vscale x 2 x i64> %sel2
+}
+
 define void @array_or_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; CHECK-LABEL: array_or_not_nxv4i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  .LBB29_1: // %vector.body
+; CHECK-NEXT:  .LBB33_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    bsl2n z1.d, z1.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    incw x8
 ; CHECK-NEXT:    cmp x8, #256
-; CHECK-NEXT:    b.ne .LBB29_1
+; CHECK-NEXT:    b.ne .LBB33_1
 ; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:
@@ -410,15 +465,14 @@ define void @array_xor_not_nxv4i32(ptr %a, <vscale x 4 x i32> %m) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:  .LBB30_1: // %vector.body
+; CHECK-NEXT:  .LBB34_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    mov z2.d, z0.d
-; CHECK-NEXT:    bsl2n z2.d, z2.d, z0.d, z1.d
-; CHECK-NEXT:    st1w { z2.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    bsl2n z1.d, z1.d, z1.d, z0.d
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    incw x8
 ; CHECK-NEXT:    cmp x8, #256
-; CHECK-NEXT:    b.ne .LBB30_1
+; CHECK-NEXT:    b.ne .LBB34_1
 ; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:

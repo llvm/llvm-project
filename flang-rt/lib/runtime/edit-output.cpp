@@ -266,10 +266,23 @@ RT_API_ATTRS bool RealOutputEditingBase::EmitSuffix(const DataEdit &edit) {
   }
 }
 
+static RT_API_ATTRS char IsInfOrNaN(const char *p, std::size_t length) {
+  if (!p || length < 1) {
+    return '\0';
+  }
+  if (*p == '-' || *p == '+') {
+    if (length == 1) {
+      return '\0';
+    }
+    ++p;
+  }
+  return *p == 'I' || *p == 'N' ? *p : '\0';
+}
+
 template <int KIND>
 RT_API_ATTRS decimal::ConversionToDecimalResult
-RealOutputEditing<KIND>::ConvertToDecimal(
-    int significantDigits, enum decimal::FortranRounding rounding, int flags) {
+RealOutputEditing<KIND>::ConvertToDecimal(int significantDigits,
+    enum decimal::FortranRounding rounding, int width, int flags) {
   auto converted{decimal::ConvertToDecimal<binaryPrecision>(buffer_,
       sizeof buffer_, static_cast<enum decimal::DecimalConversionFlags>(flags),
       significantDigits, rounding, x_)};
@@ -277,21 +290,16 @@ RealOutputEditing<KIND>::ConvertToDecimal(
     io_.GetIoErrorHandler().Crash(
         "RealOutputEditing::ConvertToDecimal: buffer size %zd was insufficient",
         sizeof buffer_);
+  } else if (IsInfOrNaN(converted.str, converted.length) == 'I' &&
+      converted.length <= 4 &&
+      static_cast<int>(converted.length + 5) <= width) {
+    // Emit "Infinity" rather than "Inf" (F'2023 13.7.2.3.2 p9), possibly signed
+    std::memcpy(buffer_, converted.str, converted.length);
+    std::memcpy(buffer_ + converted.length, "inity", 5);
+    converted.str = buffer_;
+    converted.length += 5;
   }
   return converted;
-}
-
-static RT_API_ATTRS bool IsInfOrNaN(const char *p, int length) {
-  if (!p || length < 1) {
-    return false;
-  }
-  if (*p == '-' || *p == '+') {
-    if (length == 1) {
-      return false;
-    }
-    ++p;
-  }
-  return *p == 'I' || *p == 'N';
 }
 
 // 13.7.2.3.3 in F'2018
@@ -353,9 +361,9 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
   }
   // In EN editing, multiple attempts may be necessary, so this is a loop.
   while (true) {
-    decimal::ConversionToDecimalResult converted{
-        ConvertToDecimal(significantDigits, edit.modes.round, flags)};
-    if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+    decimal::ConversionToDecimalResult converted{ConvertToDecimal(
+        significantDigits, edit.modes.round, editWidth, flags)};
+    if (IsInfOrNaN(converted.str, converted.length)) {
       return editWidth > 0 &&
               converted.length + trailingBlanks_ >
                   static_cast<std::size_t>(editWidth)
@@ -454,9 +462,9 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
   bool canIncrease{true};
   for (int extraDigits{fracDigits == 0 ? 1 : 0};;) {
     decimal::ConversionToDecimalResult converted{
-        ConvertToDecimal(extraDigits + fracDigits, rounding, flags)};
+        ConvertToDecimal(extraDigits + fracDigits, rounding, editWidth, flags)};
     const char *convertedStr{converted.str};
-    if (IsInfOrNaN(convertedStr, static_cast<int>(converted.length))) {
+    if (IsInfOrNaN(converted.str, converted.length)) {
       return editWidth > 0 &&
               converted.length > static_cast<std::size_t>(editWidth)
           ? EmitRepeated(io_, '*', editWidth)
@@ -585,8 +593,8 @@ RT_API_ATTRS DataEdit RealOutputEditing<KIND>::EditForGOutput(DataEdit edit) {
     flags |= decimal::AlwaysSign;
   }
   decimal::ConversionToDecimalResult converted{
-      ConvertToDecimal(significantDigits, edit.modes.round, flags)};
-  if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+      ConvertToDecimal(significantDigits, edit.modes.round, editWidth, flags)};
+  if (IsInfOrNaN(converted.str, converted.length)) {
     return edit; // Inf/Nan -> Ew.d (same as Fw.d)
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
@@ -619,7 +627,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditListDirectedOutput(
     const DataEdit &edit) {
   decimal::ConversionToDecimalResult converted{
       ConvertToDecimal(1, edit.modes.round)};
-  if (IsInfOrNaN(converted.str, static_cast<int>(converted.length))) {
+  if (IsInfOrNaN(converted.str, converted.length)) {
     DataEdit copy{edit};
     copy.variation = DataEdit::ListDirected;
     return EditEorDOutput(copy);
@@ -652,15 +660,17 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditListDirectedOutput(
 template <int KIND>
 RT_API_ATTRS auto RealOutputEditing<KIND>::ConvertToHexadecimal(
     int significantDigits, enum decimal::FortranRounding rounding,
-    int flags) -> ConvertToHexadecimalResult {
+    int editWidth, int flags) -> ConvertToHexadecimalResult {
   if (x_.IsNaN() || x_.IsInfinite()) {
-    auto converted{ConvertToDecimal(significantDigits, rounding, flags)};
-    return {converted.str, static_cast<int>(converted.length), 0};
+    auto converted{
+        ConvertToDecimal(significantDigits, rounding, editWidth, flags)};
+    return {converted.str, static_cast<int>(converted.length), /*exponent=*/0};
   }
   x_.RoundToBits(4 * significantDigits, rounding);
   if (x_.IsInfinite()) { // rounded away to +/-Inf
-    auto converted{ConvertToDecimal(significantDigits, rounding, flags)};
-    return {converted.str, static_cast<int>(converted.length), 0};
+    auto converted{
+        ConvertToDecimal(significantDigits, rounding, editWidth, flags)};
+    return {converted.str, static_cast<int>(converted.length), /*exponent=*/0};
   }
   int len{0};
   if (x_.IsNegative()) {
@@ -724,8 +734,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEXOutput(const DataEdit &edit) {
         (common::PrecisionOfRealKind(16) + 3) / 4};
     significantDigits = maxSigHexDigits;
   }
-  auto converted{
-      ConvertToHexadecimal(significantDigits, edit.modes.round, flags)};
+  auto converted{ConvertToHexadecimal(
+      significantDigits, edit.modes.round, editWidth, flags)};
   if (IsInfOrNaN(converted.str, converted.length)) {
     return editWidth > 0 && converted.length > editWidth
         ? EmitRepeated(io_, '*', editWidth)

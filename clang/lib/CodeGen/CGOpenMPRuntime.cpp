@@ -3729,9 +3729,7 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
         /*Idx0=*/1);
-    llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGF.SizeTy);
-    llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGF.SizeTy);
-    SizeVal = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
+    SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
   }
@@ -8056,11 +8054,17 @@ private:
           if (!StrideExpr)
             return false;
 
+          assert(StrideExpr->getType()->isIntegerType() &&
+                 "Stride expression must be of integer type");
+
+          // If stride is not evaluatable as a constant, treat as
+          // non-contiguous.
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
-            return false;
+            return true;
 
+          // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();
         });
 

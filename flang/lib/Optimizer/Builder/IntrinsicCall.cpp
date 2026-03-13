@@ -254,7 +254,9 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"cshift",
      &I::genCshift,
-     {{{"array", asAddr}, {"shift", asAddr}, {"dim", asValue}}},
+     {{{"array", asAddr},
+       {"shift", asAddr},
+       {"dim", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"date_and_time",
      &I::genDateAndTime,
@@ -281,7 +283,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"shift", asAddr},
        {"boundary", asBox, handleDynamicOptional},
-       {"dim", asValue}}},
+       {"dim", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"erfc_scaled", &I::genErfcScaled},
     {"etime",
@@ -550,7 +552,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genMatmulTranspose,
      {{{"matrix_a", asAddr}, {"matrix_b", asAddr}}},
      /*isElemental=*/false},
-    {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
+    {"max", &I::genExtremum</*isMax=*/true>},
     {"maxloc",
      &I::genMaxloc,
      {{{"array", asBox},
@@ -567,7 +569,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"merge", &I::genMerge},
     {"merge_bits", &I::genMergeBits},
-    {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
+    {"min", &I::genExtremum</*isMax=*/false>},
     {"minloc",
      &I::genMinloc,
      {{{"array", asBox},
@@ -8547,7 +8549,7 @@ void IntrinsicLibrary::genTokenize(llvm::ArrayRef<fir::ExtendedValue> args) {
   // TOKENS is CHARACTER.  For form 2, FIRST is INTEGER.
   mlir::Type thirdArgEleTy = fir::getElementTypeOf(args[2]);
   bool isForm1 = fir::isa_char(thirdArgEleTy);
-  bool isForm2 = fir::isa_integer(thirdArgEleTy);
+  [[maybe_unused]] bool isForm2 = fir::isa_integer(thirdArgEleTy);
   assert((isForm1 || isForm2) &&
          "TOKENIZE third argument must be CHARACTER or INTEGER");
 
@@ -8729,75 +8731,77 @@ IntrinsicLibrary::genTrim(mlir::Type resultType,
 }
 
 // Compare two FIR values and return boolean result as i1.
-template <Extremum extremum, ExtremumBehavior behavior>
-static mlir::Value createExtremumCompare(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         mlir::Value left, mlir::Value right) {
+template <bool isMax>
+static mlir::Value genExtremumResult(mlir::Location loc,
+                                     fir::FirOpBuilder &builder,
+                                     mlir::Value left, mlir::Value right) {
   mlir::Type type = left.getType();
   mlir::arith::CmpIPredicate integerPredicate =
-      type.isUnsignedInteger()    ? extremum == Extremum::Max
-                                        ? mlir::arith::CmpIPredicate::ugt
-                                        : mlir::arith::CmpIPredicate::ult
-      : extremum == Extremum::Max ? mlir::arith::CmpIPredicate::sgt
-                                  : mlir::arith::CmpIPredicate::slt;
-  static constexpr mlir::arith::CmpFPredicate orderedCmp =
-      extremum == Extremum::Max ? mlir::arith::CmpFPredicate::OGT
-                                : mlir::arith::CmpFPredicate::OLT;
-  mlir::Value result;
+      type.isUnsignedInteger() ? isMax ? mlir::arith::CmpIPredicate::ugt
+                                       : mlir::arith::CmpIPredicate::ult
+      : isMax                  ? mlir::arith::CmpIPredicate::sgt
+                               : mlir::arith::CmpIPredicate::slt;
+  mlir::Value pred;
   if (fir::isa_real(type)) {
-    // Note: the signaling/quit aspect of the result required by IEEE
-    // cannot currently be obtained with LLVM without ad-hoc runtime.
-    if constexpr (behavior == ExtremumBehavior::IeeeMinMaximumNumber) {
-      // Return the number if one of the inputs is NaN and the other is
-      // a number.
-      auto leftIsResult =
-          mlir::arith::CmpFOp::create(builder, loc, orderedCmp, left, right);
-      auto rightIsNan = mlir::arith::CmpFOp::create(
-          builder, loc, mlir::arith::CmpFPredicate::UNE, right, right);
-      result =
-          mlir::arith::OrIOp::create(builder, loc, leftIsResult, rightIsNan);
-    } else if constexpr (behavior == ExtremumBehavior::IeeeMinMaximum) {
-      // Always return NaNs if one the input is NaNs
-      auto leftIsResult =
-          mlir::arith::CmpFOp::create(builder, loc, orderedCmp, left, right);
-      auto leftIsNan = mlir::arith::CmpFOp::create(
-          builder, loc, mlir::arith::CmpFPredicate::UNE, left, left);
-      result =
-          mlir::arith::OrIOp::create(builder, loc, leftIsResult, leftIsNan);
-    } else if constexpr (behavior == ExtremumBehavior::MinMaxss) {
-      // If the left is a NaN, return the right whatever it is.
-      result =
-          mlir::arith::CmpFOp::create(builder, loc, orderedCmp, left, right);
-    } else if constexpr (behavior == ExtremumBehavior::PgfortranLlvm) {
-      // If one of the operand is a NaN, return left whatever it is.
-      static constexpr auto unorderedCmp =
-          extremum == Extremum::Max ? mlir::arith::CmpFPredicate::UGT
-                                    : mlir::arith::CmpFPredicate::ULT;
-      result =
-          mlir::arith::CmpFOp::create(builder, loc, unorderedCmp, left, right);
-    } else {
-      // TODO: ieeeMinNum/ieeeMaxNum
-      static_assert(behavior == ExtremumBehavior::IeeeMinMaxNum,
-                    "ieeeMinNum/ieeeMaxNum behavior not implemented");
+    switch (builder.getFPMaxminBehavior()) {
+    case Fortran::common::FPMaxminBehavior::Portable:
+      // If the left is NaN, return the right whatever it is.
+      // Signed zeros are equal, so max/min(zero, zero) always
+      // returns the second 'zero'.
+      if (mlir::arith::bitEnumContainsAll(
+              builder.getFastMathFlags(),
+              mlir::arith::FastMathFlags::nnan |
+                  mlir::arith::FastMathFlags::nsz)) {
+        // If there are no NaNs and signed zeros, we can use a shorter
+        // arith.max/minnumf representation.
+        if constexpr (isMax)
+          return mlir::arith::MaxNumFOp::create(builder, loc, left, right);
+        else
+          return mlir::arith::MinNumFOp::create(builder, loc, left, right);
+      }
+      [[fallthrough]];
+    case Fortran::common::FPMaxminBehavior::Legacy: {
+      static constexpr mlir::arith::CmpFPredicate pred =
+          isMax ? mlir::arith::CmpFPredicate::OGT
+                : mlir::arith::CmpFPredicate::OLT;
+      mlir::Value cmp =
+          mlir::arith::CmpFOp::create(builder, loc, pred, left, right);
+      return mlir::arith::SelectOp::create(builder, loc, cmp, left, right);
     }
+    case Fortran::common::FPMaxminBehavior::Extremum:
+      if constexpr (isMax)
+        return mlir::arith::MaximumFOp::create(builder, loc, left, right);
+      else
+        return mlir::arith::MinimumFOp::create(builder, loc, left, right);
+    case Fortran::common::FPMaxminBehavior::ExtremeNum:
+      if constexpr (isMax)
+        return mlir::arith::MaxNumFOp::create(builder, loc, left, right);
+      else
+        return mlir::arith::MinNumFOp::create(builder, loc, left, right);
+    }
+
+    llvm_unreachable("unsupported FPMaxminBehavior");
   } else if (fir::isa_integer(type)) {
+    mlir::Value cmpLeft = left;
+    mlir::Value cmpRight = right;
     if (type.isUnsignedInteger()) {
       mlir::Type signlessType = mlir::IntegerType::get(
           builder.getContext(), type.getIntOrFloatBitWidth(),
           mlir::IntegerType::SignednessSemantics::Signless);
-      left = builder.createConvert(loc, signlessType, left);
-      right = builder.createConvert(loc, signlessType, right);
+      cmpLeft = builder.createConvert(loc, signlessType, left);
+      cmpRight = builder.createConvert(loc, signlessType, right);
     }
-    result = mlir::arith::CmpIOp::create(builder, loc, integerPredicate, left,
-                                         right);
+    pred = mlir::arith::CmpIOp::create(builder, loc, integerPredicate, cmpLeft,
+                                       cmpRight);
   } else if (fir::isa_char(type) || fir::isa_char(fir::unwrapRefType(type))) {
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.
     TODO(loc, "intrinsic: min and max for CHARACTER");
   }
-  assert(result && "result must be defined");
-  return result;
+  assert(pred && "pred must be defined");
+
+  return mlir::arith::SelectOp::create(builder, loc, pred, left, right);
 }
 
 // UNLINK
@@ -9097,16 +9101,13 @@ IntrinsicLibrary::genMinval(mlir::Type resultType,
 }
 
 // MIN and MAX
-template <Extremum extremum, ExtremumBehavior behavior>
+template <bool isMax>
 mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
                                           llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() >= 1);
   mlir::Value result = args[0];
-  for (auto arg : args.drop_front()) {
-    mlir::Value mask =
-        createExtremumCompare<extremum, behavior>(loc, builder, result, arg);
-    result = mlir::arith::SelectOp::create(builder, loc, mask, result, arg);
-  }
+  for (auto arg : args.drop_front())
+    result = genExtremumResult<isMax>(loc, builder, result, arg);
   return result;
 }
 
@@ -9168,17 +9169,15 @@ genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genMax(fir::FirOpBuilder &builder, mlir::Location loc,
                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "max requires at least one argument");
-  return IntrinsicLibrary{builder, loc}
-      .genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>(args[0].getType(),
-                                                              args);
+  return IntrinsicLibrary{builder, loc}.genExtremum</*isMax=*/true>(
+      args[0].getType(), args);
 }
 
 mlir::Value genMin(fir::FirOpBuilder &builder, mlir::Location loc,
                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "min requires at least one argument");
-  return IntrinsicLibrary{builder, loc}
-      .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
-                                                              args);
+  return IntrinsicLibrary{builder, loc}.genExtremum</*isMax=*/false>(
+      args[0].getType(), args);
 }
 
 mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,

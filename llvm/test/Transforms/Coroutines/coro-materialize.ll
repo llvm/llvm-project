@@ -2,17 +2,20 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; See that we only spilled one value for f
-; CHECK: %f.Frame = type { ptr, ptr, i32, i1 }
-; CHECK: %f_optnone.Frame = type { ptr, ptr, i32, i32, i1 }
 ; Check other variants where different levels of materialization are achieved
-; CHECK: %f_multiple_remat.Frame = type { ptr, ptr, i32, i1 }
-; CHECK: %f_common_def.Frame = type { ptr, ptr, i32, i1 }
-; CHECK: %f_common_def_multi_result.Frame = type { ptr, ptr, i32, i1 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 ; CHECK-LABEL: @f(
+; CHECK: malloc(i32 24)
 ; CHECK-LABEL: @f_optnone
+; CHECK: malloc(i32 32)
 ; CHECK-LABEL: @f_multiple_remat(
+; CHECK: malloc(i32 24)
 ; CHECK-LABEL: @f_common_def(
+; CHECK: malloc(i32 24)
 ; CHECK-LABEL: @f_common_def_multi_result(
+; CHECK: malloc(i32 24)
 
 define ptr @f(i32 %n) presplitcoroutine {
 entry:

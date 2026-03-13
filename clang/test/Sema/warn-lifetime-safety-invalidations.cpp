@@ -164,12 +164,12 @@ void IteratorInvalidationInAForeachLoop(std::vector<int> v) {
 }  // namespace InvalidationInLoops
 
 namespace StdVectorPopBack {
-void StdVectorPopBackInvalid(std::vector<int> v) {
-  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+void StdVectorPopBackDoesNotInvalidateOthers(std::vector<int> v) {
+  auto it = v.begin();
   if (it == v.end()) return;
-  *it;  // ok
-  v.pop_back(); // expected-note {{invalidated here}}
-  *it;          // expected-note {{later used here}}
+  *it;
+  v.pop_back();
+  *it;
 }
 }  // namespace StdVectorPopBack
 
@@ -374,3 +374,136 @@ void ChangingRegionOwnedByContainerIsOk() {
 }
 
 } // namespace ContainersAsFields
+
+namespace AssociativeContainers {
+void SetInsertDoesNotInvalidate() {
+  std::set<int> s;
+  s.insert(0);
+  auto it = s.begin();
+  s.insert(2);
+  *it;
+}
+
+void MapInsertDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m.insert({1, 2});
+  *it;
+}
+
+void MapEmplaceDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m.emplace(1, 2);
+  *it;
+}
+
+void MultisetInsertDoesNotInvalidate() {
+  std::multiset<int> s;
+  auto it = s.begin();
+  s.insert(1);
+  *it;
+}
+
+void MultimapInsertDoesNotInvalidate() {
+  std::multimap<int, int> m;
+  auto it = m.begin();
+  m.insert({1, 2});
+  *it;
+}
+
+void SetEraseDoesNotInvalidateOthers() {
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  auto it1 = s.begin();
+  auto it2 = it1;
+  ++it2;
+  s.erase(it2);
+  *it1;
+}
+
+void SetExtractDoesNotInvalidateOthers() {
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  auto it1 = s.begin();
+  auto it2 = it1;
+  ++it2;
+  s.extract(it2);
+  *it1;
+}
+
+void SetClearInvalidates() {
+  std::set<int> s;
+  auto it = s.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+  *it; // expected-note {{later used here}}
+}
+
+void MapClearInvalidates() {
+  std::map<int, int> m;
+  auto it = m.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+  m.clear(); // expected-note {{invalidated here}}
+  *it; // expected-note {{later used here}}
+}
+
+void MapSubscriptDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m[1];
+  *it;
+}
+
+void PrintMax(const int& a, const int& b);
+
+void MapSubscriptMultipleCallsDoesNotInvalidate(std::map<int, int> mp, int a, int b) {
+    PrintMax(mp[a], mp[b]);
+}
+
+void FlatMapSubscriptMultipleCallsInvalidate(std::flat_map<int, int> mp, int a, int b) {
+    PrintMax(mp[a], mp[b]); // expected-warning {{object whose reference is captured is later invalidated}} \
+                                 // expected-note {{invalidated here}} \
+                                 // expected-note {{later used here}}
+}
+
+} // namespace AssociativeContainers
+
+namespace lambda_capture_invalidation {
+void captured_view_invalidated_by_owner() {
+  std::string s = "42";
+  std::string_view p = s; // expected-warning {{object whose reference is captured is later invalidated}}
+  auto lambda = [=]() { return p; };
+  s.push_back('c');  // expected-note {{invalidated here}}
+  lambda();  // expected-note {{later used here}}
+}
+
+void multiple_captures_one_invalidated() {
+  std::string s1 = "a", s2 = "b";
+  std::string_view p1 = s1, p2 = s2; // expected-warning {{object whose reference is captured is later invalidated}}
+  auto lambda = [=]() { return p1.size() + p2.size(); };
+  s1.clear();  // expected-note {{invalidated here}}
+  lambda();  // expected-note {{later used here}}
+}
+
+// FIXME: By-ref captures flow only the outermost origin, so
+// invalidation of the captured view's pointee is not propagated.
+void ref_capture_owner_invalidated() {
+  std::string s = "42";
+  std::string_view p = s;
+  auto lambda = [&]() { return p; };
+  s.push_back('c');  // invalidates p
+  lambda();  // should warn: use-after-invalidate
+}
+
+// FIXME: Once inner origins are tracked, this case must remain a no-warning.
+// Reassigning `p` through the by-ref capture should invalidate the link to `s`.
+void ref_capture_reassigned_to_safe() {
+  std::string s = "42", safe = "not modified";
+  std::string_view p = s;
+  auto lambda = [&]() { return p; };
+  p = safe;  // p now points to 'safe', not 's'
+  s.push_back('c');  // does not invalidate p anymore
+  lambda();  // should not warn
+}
+} // namespace lambda_capture_invalidation

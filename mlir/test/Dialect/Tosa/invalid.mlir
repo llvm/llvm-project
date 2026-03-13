@@ -1030,7 +1030,7 @@ func.func @test_conv2d_rank0_zp(%arg0: tensor<1x29x29x4xi8>, %arg1: tensor<16x3x
 // -----
 
 // CHECK-LABEL: test_negate_same_element_type
-func.func @test_negate_same_element_type(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<8x8xf32> {
+func.func @test_negate_same_element_type(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<8x8xi32> {
   // expected-error@+1 {{'tosa.negate' op expect input and output to have same element type, got 'f32' and 'i32'}}
   %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<8x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x8xi32>
   return %0 : tensor<8x8xi32>
@@ -1039,7 +1039,7 @@ func.func @test_negate_same_element_type(%arg0: tensor<8x8xf32>, %arg1: tensor<1
 // -----
 
 // CHECK-LABEL: test_negate_same_shape
-func.func @test_negate_same_shape(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<8x8xf32> {
+func.func @test_negate_same_shape(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<8x6xf32> {
   // expected-error@+1 {{'tosa.negate' op requires the same shape for input1 and output}}
   %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<8x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x6xf32>
   return %0 : tensor<8x6xf32>
@@ -1463,7 +1463,7 @@ func.func @test_rfft2d_width_input_output_match(%arg0: tensor<1x4x8xf16>) -> (te
 
 // -----
 
-func.func @test_argmax_invalid_output_shape(%arg0: tensor<1x2x3xf32>) -> tensor<1x2x3xf32> {
+func.func @test_argmax_invalid_output_shape(%arg0: tensor<1x2x3xf32>) -> tensor<1x2x3xi32> {
   // expected-error@+1 {{'tosa.argmax' op expected output shape '2, 3', got '1, 2, 3'}}
   %0 = tosa.argmax %arg0 {axis = 0 : i32}: (tensor<1x2x3xf32>) -> tensor<1x2x3xi32>
   return %0 : tensor<1x2x3xi32>
