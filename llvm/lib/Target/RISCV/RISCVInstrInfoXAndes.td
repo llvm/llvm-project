@@ -384,7 +384,7 @@ class NDSRVInstVSINTLN<bits<5> funct5, string opcodestr>
   let UseNamedOperandTable = true;
 }
 
-class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
+class NDSRVInstVSINTCvt<bits<5> funct5, string opcodestr>
     : RVInst<(outs VR:$vd), (ins VR:$vs, VMaskOp:$vm),
              opcodestr, "$vd, $vs$vm", [], InstFormatR> {
   bits<5> vs;
@@ -394,7 +394,7 @@ class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
   let Inst{31-26} = 0b000000;
   let Inst{25} = vm;
   let Inst{24-20} = vs;
-  let Inst{19-15} = fucnt5;
+  let Inst{19-15} = funct5;
   let Inst{14-12} = 0b100;
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
