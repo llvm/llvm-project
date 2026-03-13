@@ -3277,8 +3277,12 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 
 void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
-  // Only if needed for call graph section and only for indirect calls.
-  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
+  // Only if needed for call graph section and only for indirect calls that are
+  // visible externally.
+  // TODO: Handle local linkage symbols so they are not left out of call graph
+  // reducing precision.
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall() ||
+      !isExternallyVisible(QT->getLinkage()))
     return;
 
   llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
