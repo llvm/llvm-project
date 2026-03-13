@@ -3523,29 +3523,29 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) half4 QuadReadAcrossX(half4);
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) int16_t QuadReadAcrossX(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) int16_t2 QuadReadAcrossX(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) int16_t3 QuadReadAcrossX(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) int16_t4 QuadReadAcrossX(int16_t4);
 
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) uint16_t QuadReadAcrossX(uint16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) uint16_t2 QuadReadAcrossX(uint16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) uint16_t3 QuadReadAcrossX(uint16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_quad_read_across_x)
 __attribute__((convergent)) uint16_t4 QuadReadAcrossX(uint16_t4);
 #endif
