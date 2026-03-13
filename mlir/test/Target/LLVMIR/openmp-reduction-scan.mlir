@@ -12,14 +12,9 @@ omp.declare_reduction @add_reduction_i32 : i32 init {
 llvm.func @scan_reduction() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {bindc_name = "z"} : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.constant(1 : i64) : i64
-  %3 = llvm.alloca %2 x i32 {bindc_name = "y"} : (i64) -> !llvm.ptr
-  %4 = llvm.mlir.constant(1 : i64) : i64
-  %5 = llvm.alloca %4 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
-  %6 = llvm.mlir.constant(1 : i64) : i64
-  %7 = llvm.alloca %6 x i32 {bindc_name = "k"} : (i64) -> !llvm.ptr
-  %8 = llvm.mlir.constant(0 : index) : i64
-  %9 = llvm.mlir.constant(1 : index) : i64
+  %3 = llvm.alloca %0 x i32 {bindc_name = "y"} : (i64) -> !llvm.ptr
+  %5 = llvm.alloca %0 x i32 {bindc_name = "x"} : (i64) -> !llvm.ptr
+  %7 = llvm.alloca %0 x i32 {bindc_name = "k"} : (i64) -> !llvm.ptr
   %10 = llvm.mlir.constant(100 : i32) : i32
   %11 = llvm.mlir.constant(1 : i32) : i32
   %12 = llvm.mlir.constant(0 : i32) : i32
@@ -61,10 +56,6 @@ llvm.mlir.global internal @_QFEa() {addr_space = 0 : i32} : !llvm.array<100 x i3
 llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i32> {
   %0 = llvm.mlir.zero : !llvm.array<100 x i32>
   llvm.return %0 : !llvm.array<100 x i32>
-}
-llvm.mlir.global internal constant @_QFECn() {addr_space = 0 : i32} : i32 {
-  %0 = llvm.mlir.constant(100 : i32) : i32
-  llvm.return %0 : i32
 }
 //CHECK: %vla = alloca ptr, align 8
 //CHECK: omp_parallel
