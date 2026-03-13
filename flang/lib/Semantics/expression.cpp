@@ -3880,6 +3880,216 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::PercentLoc &x) {
   return MakeFunctionRef(loc, ActualArguments{std::move(*arg)});
 }
 
+// Helper to detect Expr<T> types (have ::Result typedef)
+template <typename T, typename = void>
+struct HasResultType : std::false_type {};
+template <typename T>
+struct HasResultType<T, std::void_t<typename T::Result>> : std::true_type {};
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
+  // Analyze all branches (condition ? value pairs)
+  const auto &branches{
+      std::get<std::list<parser::ConditionalExpr::Branch>>(x.t)};
+  const auto &elseExpr{std::get<common::Indirection<parser::Expr>>(x.t)};
+  std::vector<MaybeExpr> conditions;
+  std::vector<MaybeExpr> values;
+  for (const auto &branch : branches) {
+    const auto &condition{std::get<parser::ScalarLogicalExpr>(branch.t)};
+    const auto &value{std::get<common::Indirection<parser::Expr>>(branch.t)};
+    MaybeExpr condExpr{Analyze(condition.thing.thing.value())};
+    if (!condExpr) {
+      return std::nullopt;
+    }
+    if (!std::get_if<Expr<SomeLogical>>(&condExpr->u)) {
+      if (const auto type{condExpr->GetType()}) {
+        Say("Condition in conditional expression must be LOGICAL; have %s"_err_en_US,
+            type->AsFortran());
+      } else {
+        Say("Condition in conditional expression must be LOGICAL"_err_en_US);
+      }
+      return std::nullopt;
+    }
+    if (condExpr->Rank() != 0) {
+      Say("Condition in conditional expression must be scalar; have rank %d"_err_en_US,
+          condExpr->Rank());
+      return std::nullopt;
+    }
+    conditions.push_back(std::move(condExpr));
+    MaybeExpr valExpr{Analyze(value.value())};
+    if (!valExpr) {
+      return std::nullopt;
+    }
+    if (semantics::IsAssumedRank(*valExpr)) {
+      Say("An assumed-rank dummy argument may not be used as a value in a conditional expression"_err_en_US);
+      return std::nullopt;
+    }
+    values.push_back(std::move(valExpr));
+  }
+
+  // Analyze else expression
+  MaybeExpr elseValue{Analyze(elseExpr.value())};
+  if (!elseValue) {
+    return std::nullopt;
+  }
+  if (semantics::IsAssumedRank(*elseValue)) {
+    Say("An assumed-rank dummy argument may not be used as a value in a conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  values.push_back(std::move(elseValue));
+  CHECK(values.size() == conditions.size() + 1 &&
+      "values must have exactly one more element than conditions");
+
+  // F2023 C1004: Each expr shall have the same declared type, kind type
+  // parameters, and rank Reject typeless expressions (BOZ and NULL)
+  for (const auto &value : values) {
+    // BOZ arrays are auto-converted in array constructors, but bare BOZ are not
+    // allowed
+    if (std::holds_alternative<BOZLiteralConstant>(value->u)) {
+      Say("BOZ literal constant in conditional expression must have explicit "
+          "type "
+          "(e.g., INT(z'FF'), REAL(z'3F800000'))"_err_en_US);
+      return std::nullopt;
+    }
+    if (std::holds_alternative<evaluate::NullPointer>(value->u)) {
+      Say("NULL() not allowed in conditional expression (expressions must have declared type)"_err_en_US);
+      return std::nullopt;
+    }
+  }
+
+  // Determine result type from first value
+  const std::optional<DynamicType> resultType = values[0]->GetType();
+  if (!resultType) {
+    Say("Cannot determine type of conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+
+  // Check that all values have the exact same type and kind (no promotion
+  // allowed)
+  const TypeCategory resultCategory{resultType->category()};
+  const int resultKind{
+      resultCategory != TypeCategory::Derived ? resultType->kind() : 0};
+  const int resultRank = values[0]->Rank();
+  // Check for polymorphic types (not yet supported in lowering)
+  if (resultCategory == TypeCategory::Derived && resultType->IsPolymorphic()) {
+    Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_err_en_US);
+    return std::nullopt;
+  }
+  for (const auto &value : values) {
+    // Check for coindexed objects
+    if (const auto dataRef{ExtractDataRef(value)}) {
+      if (ExtractCoarrayRef(*dataRef)) {
+        Say("Conditional expression values may not be coindexed"_err_en_US);
+        return std::nullopt;
+      }
+    }
+    const auto valueType{value->GetType()};
+    if (!valueType) {
+      Say("Cannot determine type of expression in conditional expression"_err_en_US);
+      return std::nullopt;
+    }
+    const TypeCategory valueCategory{valueType->category()};
+    const int valueKind{
+        valueCategory != TypeCategory::Derived ? valueType->kind() : 0};
+    if (resultCategory != valueCategory ||
+        (resultCategory != TypeCategory::Derived && resultKind != valueKind)) {
+      Say("All values in conditional expression must have the same type and kind; have %s and %s"_err_en_US,
+          resultType->AsFortran(), valueType->AsFortran());
+      return std::nullopt;
+    }
+    // For derived types, check they are the exact same type (not just
+    // compatible)
+    if (resultCategory == TypeCategory::Derived) {
+      if (&resultType->GetDerivedTypeSpec().typeSymbol() !=
+          &valueType->GetDerivedTypeSpec().typeSymbol()) {
+        Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
+            resultType->AsFortran(), valueType->AsFortran());
+        return std::nullopt;
+      }
+    }
+    const int valueRank{value->Rank()};
+    if (resultRank != valueRank) {
+      Say("All values in conditional expression must have the same rank; have rank %d and %d"_err_en_US,
+          resultRank, valueRank);
+      return std::nullopt;
+    }
+  }
+
+  // Dispatch on the runtime type of values[0] to build the appropriately
+  // typed ConditionalExpr, with nested visitation to unwrap category->specific
+  // types.
+  return common::visit(
+      common::visitors{
+          [&](const BOZLiteralConstant &) -> MaybeExpr {
+            DIE("BOZ literal should have been eliminated by type validation");
+          },
+          [&](Expr<SomeDerived> &&derivedExpr) -> MaybeExpr {
+            std::vector<Expr<SomeLogical>> typedConditions;
+            typedConditions.reserve(conditions.size());
+            for (auto &cond : conditions) {
+              auto *logicalExpr{std::get_if<Expr<SomeLogical>>(&cond->u)};
+              CHECK(logicalExpr && "Condition should be SomeLogical");
+              typedConditions.emplace_back(std::move(*logicalExpr));
+            }
+            std::vector<Expr<SomeDerived>> typedValues;
+            typedValues.reserve(values.size());
+            // Use the moved-in first value directly, then process remaining
+            // values
+            typedValues.emplace_back(std::move(derivedExpr));
+            for (auto &val : llvm::drop_begin(values, 1)) {
+              auto *derivedVal{std::get_if<Expr<SomeDerived>>(&val->u)};
+              CHECK(derivedVal && "Value should be SomeDerived");
+              typedValues.emplace_back(std::move(*derivedVal));
+            }
+            return AsGenericExpr(
+                Expr<SomeDerived>{evaluate::ConditionalExpr<SomeDerived>{
+                    std::move(typedConditions), std::move(typedValues)}});
+          },
+          [&](auto &&categoryExpr) -> MaybeExpr {
+            using CategoryType = std::decay_t<decltype(categoryExpr)>;
+            if constexpr (std::is_same_v<CategoryType, TypelessExpression> ||
+                std::is_same_v<CategoryType, Expr<SomeDerived>> ||
+                std::is_same_v<CategoryType, NullPointer> ||
+                std::is_same_v<CategoryType, ProcedureDesignator> ||
+                std::is_same_v<CategoryType, ProcedureRef>) {
+              DIE("Invalid expression type in conditional expression");
+            } else if constexpr (!HasResultType<CategoryType>::value) {
+              DIE("Unexpected bare constant type in conditional expression");
+            } else {
+              return common::visit(
+                  [&](auto &&specificExpr) -> MaybeExpr {
+                    using SpecificType = std::decay_t<decltype(specificExpr)>;
+                    using T = typename SpecificType::Result;
+                    std::vector<Expr<SomeLogical>> typedConditions;
+                    typedConditions.reserve(conditions.size());
+                    for (auto &cond : conditions) {
+                      auto *logicalExpr{
+                          std::get_if<Expr<SomeLogical>>(&cond->u)};
+                      CHECK(logicalExpr && "Condition should be SomeLogical");
+                      typedConditions.emplace_back(std::move(*logicalExpr));
+                    }
+                    std::vector<Expr<T>> typedValues;
+                    typedValues.reserve(values.size());
+                    // Use the moved-in first value directly, then process
+                    // remaining values
+                    typedValues.emplace_back(std::move(specificExpr));
+                    for (auto &val : llvm::drop_begin(values, 1)) {
+                      auto *catExpr{std::get_if<CategoryType>(&val->u)};
+                      CHECK(catExpr && "Value should be CategoryType");
+                      auto *specificVal{std::get_if<Expr<T>>(&catExpr->u)};
+                      CHECK(specificVal && "Value should be Expr<T>");
+                      typedValues.emplace_back(std::move(*specificVal));
+                    }
+                    return AsGenericExpr(CategoryType{Expr<T>{
+                        evaluate::ConditionalExpr<T>{std::move(typedConditions),
+                            std::move(typedValues)}}});
+                  },
+                  categoryExpr.u);
+            }
+          },
+      },
+      std::move(values[0]->u));
+}
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedUnary &x) {
   const auto &name{std::get<parser::DefinedOpName>(x.t).v};
   ArgumentAnalyzer analyzer{*this, name.source};
@@ -5144,6 +5354,12 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
     }
     context_.SayAt(expr.source,
         "TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
+  } else if (isProcedureCall_ &&
+      std::holds_alternative<parser::ConditionalExpr>(expr.u)) {
+    // Check parse tree before analysis to avoid wasted work
+    context_.SayAt(expr.source,
+        "Conditional expressions are not yet supported as actual arguments"_err_en_US);
+    return std::nullopt;
   } else if (MaybeExpr argExpr{AnalyzeExprOrWholeAssumedSizeArray(expr)}) {
     if (isProcedureCall_ || !IsProcedureDesignator(*argExpr)) {
       // Pad Hollerith actual argument with spaces up to a multiple of 8

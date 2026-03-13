@@ -92,6 +92,23 @@ public:
                 !sym.attrs().test(semantics::Attr::VALUE)));
   }
 
+  template <typename T>
+  bool operator()(const ConditionalExpr<T> &conditional) const {
+    // A conditional expression is constant if all its conditions and values are
+    // constant
+    for (const auto &condition : conditional.conditions()) {
+      if (!(*this)(condition)) {
+        return false;
+      }
+    }
+    for (const auto &value : conditional.values()) {
+      if (!(*this)(value)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   bool operator()(const ImpliedDoIndex &ido) const {
     return acImpliedDos_.find(ido.name) != acImpliedDos_.end() || !context_ ||
         context_->GetImpliedDo(ido.name).has_value();
@@ -229,6 +246,20 @@ struct IsActuallyConstantHelper {
   template <typename T> bool operator()(const Parentheses<T> &x) {
     return (*this)(x.left());
   }
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) {
+    // A conditional expression is actually constant if all its parts are
+    for (const auto &condition : x.conditions()) {
+      if (!(*this)(condition)) {
+        return false;
+      }
+    }
+    for (const auto &value : x.values()) {
+      if (!(*this)(value)) {
+        return false;
+      }
+    }
+    return true;
+  }
   template <typename T> bool operator()(const Expr<T> &x) {
     return common::visit([=](const auto &y) { return (*this)(y); }, x.u);
   }
@@ -356,6 +387,10 @@ public:
   bool operator()(const StructureConstructor &) const { return false; }
   template <typename D, typename R, typename... O>
   bool operator()(const Operation<D, R, O...> &) const {
+    return false;
+  }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    // A conditional expression cannot be an initial data target
     return false;
   }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
@@ -492,6 +527,21 @@ public:
     }
     return (*this)(x.left());
   }
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    // Check all conditions and values in the conditional expression for
+    // suspicious literals
+    for (const auto &cond : x.conditions()) {
+      if ((*this)(cond)) {
+        return true;
+      }
+    }
+    for (const auto &value : x.values()) {
+      if ((*this)(value)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
 private:
   int kind_;
@@ -529,6 +579,16 @@ public:
   bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
     auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
     mut.set_isFromInexactLiteralConversion(false);
+    return false;
+  }
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    // Clear flags in all conditions and values of the conditional expression
+    for (const auto &cond : x.conditions()) {
+      (*this)(cond);
+    }
+    for (const auto &value : x.values()) {
+      (*this)(value);
+    }
     return false;
   }
 };
@@ -794,6 +854,20 @@ public:
       return (*this)(inq.base());
     } else if (!IsConstantExpr(inq, &context_)) {
       return "non-constant type parameter inquiry not allowed for local object";
+    }
+    return std::nullopt;
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    for (const auto &cond : x.conditions()) {
+      if (auto result{(*this)(cond)}) {
+        return result;
+      }
+    }
+    for (const auto &val : x.values()) {
+      if (auto result{(*this)(val)}) {
+        return result;
+      }
     }
     return std::nullopt;
   }
@@ -1193,6 +1267,31 @@ public:
 
   Result operator()(const NullPointer &) const { return true; }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
+    // Track contiguity across all possible runtime branches
+    bool hasContiguous{false};
+    bool hasNonContiguous{false};
+    bool hasUnknown{false};
+    for (const auto &val : x.values()) {
+      auto result{(*this)(val)};
+      if (!result) {
+        hasUnknown = true;
+      } else if (*result) {
+        hasContiguous = true;
+      } else {
+        hasNonContiguous = true;
+      }
+    }
+    // Return definite result only if all values have uniform contiguity
+    if (hasUnknown || (hasContiguous && hasNonContiguous)) {
+      return std::nullopt;
+    } else if (hasContiguous) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
 private:
   // Returns "true" for a provably empty or simply contiguous array section;
   // return "false" for a provably nonempty discontiguous section or for use
@@ -1386,6 +1485,20 @@ struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {
   bool operator()(const SpecificIntrinsic &x) {
     return x.name == IntrinsicProcTable::InvalidName;
   }
+
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) {
+    for (const auto &cond : x.conditions()) {
+      if ((*this)(cond)) {
+        return true;
+      }
+    }
+    for (const auto &val : x.values()) {
+      if ((*this)(val)) {
+        return true;
+      }
+    }
+    return false;
+  }
 };
 
 template <typename A> bool IsErrorExpr(const A &x) {
@@ -1496,6 +1609,20 @@ public:
               "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
               sf_.name()});
         }
+      }
+    }
+    return std::nullopt;
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
+    for (const auto &cond : x.conditions()) {
+      if (auto result{(*this)(cond)}) {
+        return result;
+      }
+    }
+    for (const auto &val : x.values()) {
+      if (auto result{(*this)(val)}) {
+        return result;
       }
     }
     return std::nullopt;
@@ -1758,6 +1885,18 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    Result result;
+    for (const auto &cond : condExpr.conditions()) {
+      result = Combine(std::move(result), (*this)(cond));
+    }
+    for (const auto &val : condExpr.values()) {
+      result = Combine(std::move(result), (*this)(val));
+    }
+    return result;
   }
 
 private:

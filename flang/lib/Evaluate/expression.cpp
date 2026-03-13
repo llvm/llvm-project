@@ -64,6 +64,24 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
             }
             return std::nullopt;
           },
+          [](const ConditionalExpr<Result> &c) -> T {
+            // Return max of all branch lengths. If all have same constant
+            // length, max folds to constant; otherwise signals deferred-length.
+            std::optional<Expr<SubscriptInteger>> maxLen;
+            for (const auto &value : c.values()) {
+              if (auto len{value.LEN()}) {
+                if (maxLen) {
+                  maxLen = Expr<SubscriptInteger>{Extremum<SubscriptInteger>{
+                      Ordering::Greater, std::move(*maxLen), std::move(*len)}};
+                } else {
+                  maxLen = std::move(len);
+                }
+              } else {
+                return std::nullopt;
+              }
+            }
+            return maxLen;
+          },
           [](const Designator<Result> &dr) { return dr.LEN(); },
           [](const FunctionRef<Result> &fr) { return fr.LEN(); },
           [](const SetLength<KIND> &x) -> T { return x.right(); },
@@ -139,6 +157,11 @@ template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
 
 template <typename A> bool Extremum<A>::operator==(const Extremum &that) const {
   return ordering == that.ordering && Base::operator==(that);
+}
+
+template <typename A>
+bool ConditionalExpr<A>::operator==(const ConditionalExpr &that) const {
+  return conditions_ == that.conditions_ && values_ == that.values_;
 }
 
 template <int KIND>

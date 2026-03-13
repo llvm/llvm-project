@@ -111,6 +111,21 @@ struct DeviceExprChecker
     return parser::MessageFormattedText(
         "'%s' may not be called in device code"_err_en_US, x.GetName());
   }
+  template <typename T>
+  Result operator()(const evaluate::ConditionalExpr<T> &x) const {
+    // Check all conditions and values for device code violations
+    for (const auto &cond : x.conditions()) {
+      if (Result msg{(*this)(cond)}) {
+        return msg;
+      }
+    }
+    for (const auto &val : x.values()) {
+      if (Result msg{(*this)(val)}) {
+        return msg;
+      }
+    }
+    return Result{};
+  }
 
   SemanticsContext &context_;
 };
@@ -146,6 +161,21 @@ struct FindHostArray
                   *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
         return &symbol;
+      }
+    }
+    return nullptr;
+  }
+  template <typename T>
+  Result operator()(const evaluate::ConditionalExpr<T> &x) const {
+    // Check all conditions and values for host arrays
+    for (const auto &cond : x.conditions()) {
+      if (Result hostArray{(*this)(cond)}) {
+        return hostArray;
+      }
+    }
+    for (const auto &val : x.values()) {
+      if (Result hostArray{(*this)(val)}) {
+        return hostArray;
       }
     }
     return nullptr;

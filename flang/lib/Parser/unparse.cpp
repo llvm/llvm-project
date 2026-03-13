@@ -900,6 +900,18 @@ public:
   void Unparse(const Expr::OR &x) { Walk(x.t, ".OR."); }
   void Unparse(const Expr::EQV &x) { Walk(x.t, ".EQV."); }
   void Unparse(const Expr::NEQV &x) { Walk(x.t, ".NEQV."); }
+  void Unparse(const ConditionalExpr &x) { // F2023: R1002
+    Put("( ");
+    const auto &branches{std::get<std::list<ConditionalExpr::Branch>>(x.t)};
+    for (const auto &branch : branches) {
+      Walk(std::get<ScalarLogicalExpr>(branch.t));
+      Put(" ? ");
+      Walk(std::get<common::Indirection<Expr>>(branch.t));
+      Put(" : ");
+    }
+    Walk(std::get<common::Indirection<Expr>>(x.t));
+    Put(" )");
+  }
   void Unparse(const Expr::ComplexConstructor &x) {
     Put('('), Walk(x.t, ","), Put(')');
   }

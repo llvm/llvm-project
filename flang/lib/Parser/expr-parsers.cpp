@@ -70,6 +70,7 @@ TYPE_PARSER(construct<AcImpliedDoControl>(
 constexpr auto primary{instrumented("primary"_en_US,
     first(construct<Expr>(indirect(charLiteralConstantSubstring)),
         construct<Expr>(literalConstant),
+        construct<Expr>(Parser<ConditionalExpr>{}),
         construct<Expr>(construct<Expr::Parentheses>("(" >>
             expr / !","_tok / recovery(")"_tok, SkipPastNested<'(', ')'>{}))),
         construct<Expr>(indirect(functionReference) / !"("_tok / !"%"_tok),
@@ -93,6 +94,17 @@ constexpr auto primary{instrumented("primary"_en_US,
 constexpr auto level1Expr{sourced(
     primary || // must come before define op to resolve .TRUE._8 ambiguity
     construct<Expr>(construct<Expr::DefinedUnary>(definedOpName, primary)))};
+
+// F2023: R1002 conditional-expr ->
+//   ( scalar-logical-expr ? expr
+//     [ : scalar-logical-expr ? expr ]...
+//     : expr )
+TYPE_PARSER(conditionalExprLookahead >>
+    parenthesized(construct<ConditionalExpr>(
+        some(construct<ConditionalExpr::Branch>(
+                 scalarLogicalExpr / "?", indirect(expr)) /
+            ":"),
+        indirect(expr))))
 
 // R1004 mult-operand -> level-1-expr [power-op mult-operand]
 // R1007 power-op -> **

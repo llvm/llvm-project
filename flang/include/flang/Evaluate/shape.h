@@ -189,6 +189,16 @@ public:
   Result operator()(const ArrayConstructor<T> &aconst) const {
     return Shape{GetArrayConstructorExtent(aconst)};
   }
+  template <typename T>
+  Result operator()(const ConditionalExpr<T> &conditional) const {
+    // Per F2023 10.1.4(7), the shape is determined by the selected branch,
+    // so return unknown extents for the rank.
+    if (!conditional.values().empty()) {
+      int rank{conditional.values().front().Rank()};
+      return Shape(rank, std::nullopt);
+    }
+    return ScalarShape();
+  }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {
     if (int rr{operation.right().Rank()}; rr > 0) {

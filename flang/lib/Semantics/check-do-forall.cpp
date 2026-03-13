@@ -1143,6 +1143,17 @@ struct CollectActualArgumentsHelper
     return Combine(ActualArgumentSet{arg},
         CollectActualArgumentsHelper{}(arg.UnwrapExpr()));
   }
+  template <typename T>
+  ActualArgumentSet operator()(const evaluate::ConditionalExpr<T> &x) const {
+    ActualArgumentSet result;
+    for (const auto &cond : x.conditions()) {
+      result = Combine(std::move(result), (*this)(cond));
+    }
+    for (const auto &val : x.values()) {
+      result = Combine(std::move(result), (*this)(val));
+    }
+    return result;
+  }
 };
 
 template <typename A> ActualArgumentSet CollectActualArguments(const A &x) {

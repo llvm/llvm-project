@@ -587,6 +587,20 @@ llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
   return o << ']';
 }
 
+template <typename T>
+llvm::raw_ostream &ConditionalExpr<T>::AsFortran(llvm::raw_ostream &o) const {
+  o << '(';
+  for (std::size_t i = 0; i < conditions_.size(); ++i) {
+    conditions_[i].AsFortran(o);
+    o << " ? ";
+    values_[i].AsFortran(o);
+    o << " : ";
+  }
+  // Last value is the else clause
+  values_.back().AsFortran(o);
+  return o << ')';
+}
+
 template <typename RESULT>
 std::string ExpressionBase<RESULT>::AsFortran() const {
   std::string buf;

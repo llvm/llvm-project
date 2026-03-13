@@ -390,6 +390,36 @@ struct LogicalOperation
   LogicalOperator logicalOperator;
 };
 
+// Fortran 2023 conditional expression: (cond ? val : cond ? val : ... : else)
+// All branches have the same type and rank (verified during semantic analysis).
+template <typename T> class ConditionalExpr {
+public:
+  using Result = T;
+  CLASS_BOILERPLATE(ConditionalExpr)
+  ConditionalExpr(
+      std::vector<Expr<SomeLogical>> &&conds, std::vector<Expr<Result>> &&vals)
+      : conditions_{std::move(conds)}, values_{std::move(vals)} {
+    CHECK(values_.size() == conditions_.size() + 1);
+  }
+  bool operator==(const ConditionalExpr &) const;
+  const std::vector<Expr<SomeLogical>> &conditions() const {
+    return conditions_;
+  }
+  std::vector<Expr<SomeLogical>> &conditions() { return conditions_; }
+  const std::vector<Expr<Result>> &values() const { return values_; }
+  std::vector<Expr<Result>> &values() { return values_; }
+  int Rank() const { return values_.empty() ? 0 : values_.front().Rank(); }
+  std::optional<DynamicType> GetType() const {
+    return values_.empty() ? std::nullopt : values_.front().GetType();
+  }
+  static constexpr int Corank() { return 0; }
+  llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+
+private:
+  std::vector<Expr<SomeLogical>> conditions_; // size N
+  std::vector<Expr<Result>> values_; // size N+1 (includes else)
+};
+
 // Array constructors
 template <typename RESULT> class ArrayConstructorValues;
 
@@ -536,7 +566,7 @@ private:
       Convert<Result, TypeCategory::Unsigned>>;
   using Operations = std::tuple<Parentheses<Result>, Negate<Result>,
       Add<Result>, Subtract<Result>, Multiply<Result>, Divide<Result>,
-      Power<Result>, Extremum<Result>>;
+      Power<Result>, Extremum<Result>, ConditionalExpr<Result>>;
   using Indices = std::conditional_t<KIND == ImpliedDoIndex::Result::kind,
       std::tuple<ImpliedDoIndex>, std::tuple<>>;
   using TypeParamInquiries =
@@ -568,7 +598,7 @@ private:
       Convert<Result, TypeCategory::Unsigned>>;
   using Operations = std::tuple<Parentheses<Result>, Negate<Result>,
       Add<Result>, Subtract<Result>, Multiply<Result>, Divide<Result>,
-      Power<Result>, Extremum<Result>>;
+      Power<Result>, Extremum<Result>, ConditionalExpr<Result>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -594,7 +624,8 @@ private:
       Convert<Result, TypeCategory::Unsigned>>;
   using Operations = std::variant<ComplexComponent<KIND>, Parentheses<Result>,
       Negate<Result>, Add<Result>, Subtract<Result>, Multiply<Result>,
-      Divide<Result>, Power<Result>, RealToIntPower<Result>, Extremum<Result>>;
+      Divide<Result>, Power<Result>, RealToIntPower<Result>, Extremum<Result>,
+      ConditionalExpr<Result>>;
   using Others = std::variant<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -612,7 +643,7 @@ public:
   using Operations = std::variant<Parentheses<Result>, Negate<Result>,
       Convert<Result, TypeCategory::Complex>, Add<Result>, Subtract<Result>,
       Multiply<Result>, Divide<Result>, Power<Result>, RealToIntPower<Result>,
-      ComplexConstructor<KIND>>;
+      ComplexConstructor<KIND>, ConditionalExpr<Result>>;
   using Others = std::variant<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -638,7 +669,7 @@ public:
 
   std::variant<Constant<Result>, ArrayConstructor<Result>, Designator<Result>,
       FunctionRef<Result>, Parentheses<Result>, Convert<Result>, Concat<KIND>,
-      Extremum<Result>, SetLength<KIND>>
+      Extremum<Result>, SetLength<KIND>, ConditionalExpr<Result>>
       u;
 };
 
@@ -710,7 +741,7 @@ public:
 
 private:
   using Operations = std::tuple<Convert<Result>, Parentheses<Result>, Not<KIND>,
-      LogicalOperation<KIND>>;
+      LogicalOperation<KIND>, ConditionalExpr<Result>>;
   using Relations = std::conditional_t<KIND == LogicalResult::kind,
       std::tuple<Relational<SomeType>>, std::tuple<>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
@@ -788,7 +819,8 @@ public:
   using Result = SomeDerived;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   std::variant<Constant<Result>, ArrayConstructor<Result>, StructureConstructor,
-      Designator<Result>, FunctionRef<Result>, Parentheses<Result>>
+      Designator<Result>, FunctionRef<Result>, Parentheses<Result>,
+      ConditionalExpr<Result>>
       u;
 };
 
@@ -929,6 +961,7 @@ FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
   template class Relational<SomeType>; \
   FOR_EACH_TYPE_AND_KIND(template class ExpressionBase, ) \
   FOR_EACH_INTRINSIC_KIND(template class ArrayConstructorValues, ) \
-  FOR_EACH_INTRINSIC_KIND(template class ArrayConstructor, )
+  FOR_EACH_INTRINSIC_KIND(template class ArrayConstructor, ) \
+  FOR_EACH_INTRINSIC_KIND(template class ConditionalExpr, )
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_EXPRESSION_H_

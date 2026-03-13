@@ -224,6 +224,10 @@ public:
   Result operator()(const StructureConstructor &x) const {
     return visitor_.Combine(visitor_(x.derivedTypeSpec()), CombineContents(x));
   }
+  // Conditional expressions (Fortran 2023)
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    return Combine(x.conditions(), x.values());
+  }
 
   // Operations and wrappers
   // Have a single operator() for all Operations.
