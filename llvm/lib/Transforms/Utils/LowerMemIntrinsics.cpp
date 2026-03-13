@@ -1307,62 +1307,103 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
                                     IsVolatile);
 }
 
-static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
-                             Value *CopyLen, Value *SetValue, Align DstAlign,
-                             std::optional<uint64_t> AverageTripCount,
-                             bool IsVolatile) {
-  // Currently no longer used for memset, only for memset.pattern.
-  // TODO: Update the memset.pattern lowering to also use the loop expansion
-  //       framework and remove this function.
-  Type *TypeOfCopyLen = CopyLen->getType();
-  BasicBlock *OrigBB = InsertBefore->getParent();
-  Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getDataLayout();
-  BasicBlock *NewBB =
-      OrigBB->splitBasicBlock(InsertBefore, "split");
-  BasicBlock *LoopBB
-    = BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
+static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
+                                    Value *Len, Value *SetValue, Align DstAlign,
+                                    bool IsVolatile,
+                                    const TargetTransformInfo *TTI,
+                                    std::optional<uint64_t> AverageTripCount) {
+  // No need to expand zero length memset.pattern.
+  if (auto *CLen = dyn_cast<ConstantInt>(Len))
+    if (CLen->isZero())
+      return;
 
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
-  IRBuilder<> Builder(OrigBB->getTerminator());
-  Builder.SetCurrentDebugLocation(DbgLoc);
+  BasicBlock *PreLoopBB = InsertBefore->getParent();
+  Function *ParentFunc = PreLoopBB->getParent();
+  const DataLayout &DL = ParentFunc->getDataLayout();
+  LLVMContext &Ctx = PreLoopBB->getContext();
 
-  auto *ToLoopBR = Builder.CreateCondBr(
-      Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,
-      LoopBB);
-  MDBuilder MDB(F->getContext());
-  if (AverageTripCount.has_value())
-    ToLoopBR->setMetadata(LLVMContext::MD_prof,
-                          MDB.createLikelyBranchWeights());
-  else
-    setExplicitlyUnknownBranchWeightsIfProfiled(*ToLoopBR, DEBUG_TYPE);
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  OrigBB->getTerminator()->eraseFromParent();
+  Type *PreferredLoopOpType = SetValue->getType();
+  if (TTI) {
+    PreferredLoopOpType = TTI->getMemcpyLoopLoweringType(
+        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
+  }
+  TypeSize PreferredLoopOpStoreSize = DL.getTypeStoreSize(PreferredLoopOpType);
+  assert(PreferredLoopOpStoreSize.isFixed() &&
+         "PreferredLoopOpType cannot be a scalable vector type");
 
-  TypeSize PartSize = DL.getTypeStoreSize(SetValue->getType());
-  Align PartAlign(commonAlignment(DstAlign, PartSize));
+  TypeSize PreferredLoopOpAllocSize = DL.getTypeAllocSize(PreferredLoopOpType);
 
-  IRBuilder<> LoopBuilder(LoopBB);
-  LoopBuilder.SetCurrentDebugLocation(DbgLoc);
-  PHINode *LoopIndex = LoopBuilder.CreatePHI(TypeOfCopyLen, 0);
-  LoopIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), OrigBB);
+  Type *OriginalType = SetValue->getType();
+  TypeSize OriginalTypeStoreSize = DL.getTypeStoreSize(OriginalType);
+  TypeSize OriginalTypeAllocSize = DL.getTypeAllocSize(OriginalType);
 
-  LoopBuilder.CreateAlignedStore(
-      SetValue,
-      LoopBuilder.CreateInBoundsGEP(SetValue->getType(), DstAddr, LoopIndex),
-      PartAlign, IsVolatile);
+  // The semantics of memset.pattern restrict what vectorization we can do: It
+  // has to behave like a series of stores of the SetValue type at offsets that
+  // are spaced by the alloc size of the SetValue type. If store and alloc size
+  // of the SetValue type don't match, the bytes that aren't covered by these
+  // stores must not be overwritten. We therefore only vectorize memset.pattern
+  // if the store and alloc sizes of the SetValue are equal and properly divide
+  // the size of the preferred lowering type (and only if store and alloc size
+  // for the preferred lowering type are also equal).
 
-  Value *NewIndex =
-      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1));
-  LoopIndex->addIncoming(NewIndex, LoopBB);
+  unsigned MainLoopStep = 1;
+  Type *MainLoopType = OriginalType;
+  TypeSize MainLoopAllocSize = OriginalTypeAllocSize;
+  unsigned ResidualLoopStep = 0;
+  Type *ResidualLoopType = nullptr;
 
-  auto *LoopBR = LoopBuilder.CreateCondBr(
-      LoopBuilder.CreateICmpULT(NewIndex, CopyLen), LoopBB, NewBB);
-  if (AverageTripCount.has_value())
-    setFittedBranchWeights(*LoopBR, {AverageTripCount.value(), 1},
-                           /*IsExpected=*/false);
-  else
-    setExplicitlyUnknownBranchWeightsIfProfiled(*LoopBR, DEBUG_TYPE);
+  if (PreferredLoopOpStoreSize == PreferredLoopOpAllocSize &&
+      OriginalTypeStoreSize == OriginalTypeAllocSize &&
+      OriginalTypeStoreSize < PreferredLoopOpStoreSize &&
+      PreferredLoopOpStoreSize % OriginalTypeStoreSize == 0) {
+    // Multiple instances of SetValue can be combined to reach the preferred
+    // loop op size.
+    MainLoopStep = PreferredLoopOpStoreSize / OriginalTypeStoreSize;
+    MainLoopType = PreferredLoopOpType;
+    MainLoopAllocSize = PreferredLoopOpStoreSize;
+
+    ResidualLoopStep = 1;
+    ResidualLoopType = OriginalType;
+  }
+
+  // The step arguments here are in terms of the alloc size of the SetValue, not
+  // in terms of bytes.
+  LoopExpansionInfo LEI =
+      insertLoopExpansion(InsertBefore, Len, MainLoopStep, ResidualLoopStep,
+                          "memset.pattern", AverageTripCount);
+
+  Align PartDstAlign(commonAlignment(DstAlign, MainLoopAllocSize));
+
+  if (LEI.MainLoopIP) {
+    // Create the loop-invariant splat value before the loop.
+    IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
+    Value *MainLoopSetValue = SetValue;
+    if (MainLoopType != OriginalType)
+      MainLoopSetValue =
+          createMemSetSplat(DL, PreLoopBuilder, SetValue, MainLoopType);
+
+    // Fill MainLoopBB
+    IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
+    Value *DstGEP = MainLoopBuilder.CreateInBoundsGEP(MainLoopType, DstAddr,
+                                                      LEI.MainLoopIndex);
+    MainLoopBuilder.CreateAlignedStore(MainLoopSetValue, DstGEP, PartDstAlign,
+                                       IsVolatile);
+  }
+
+  if (!LEI.ResidualLoopIP)
+    return;
+
+  // Fill ResidualLoopBB
+  Align ResDstAlign(
+      commonAlignment(PartDstAlign, DL.getTypeAllocSize(ResidualLoopType)));
+
+  IRBuilder<> ResLoopBuilder(LEI.ResidualLoopIP);
+  Value *ResDstGEP = ResLoopBuilder.CreateInBoundsGEP(ResidualLoopType, DstAddr,
+                                                      LEI.ResidualLoopIndex);
+  ResLoopBuilder.CreateAlignedStore(SetValue, ResDstGEP, ResDstAlign,
+                                    IsVolatile);
 }
 
 template <typename T>
@@ -1501,14 +1542,22 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
   expandMemSetAsLoop(MemSet, &TTI);
 }
 
-void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
-  createMemSetLoop(/*InsertBefore=*/Memset,
-                   /*DstAddr=*/Memset->getRawDest(),
-                   /*CopyLen=*/Memset->getLength(),
-                   /*SetValue=*/Memset->getValue(),
-                   /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
-                   /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset),
-                   /*IsVolatile=*/Memset->isVolatile());
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,
+                                     const TargetTransformInfo *TTI) {
+  createMemSetPatternLoop(
+      /*InsertBefore=*/Memset,
+      /*DstAddr=*/Memset->getRawDest(),
+      /*Len=*/Memset->getLength(),
+      /*SetValue=*/Memset->getValue(),
+      /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
+      /*IsVolatile=*/Memset->isVolatile(),
+      /*TTI=*/TTI,
+      /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset));
+}
+
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
+                                     const TargetTransformInfo &TTI) {
+  expandMemSetPatternAsLoop(MemSet, &TTI);
 }
 
 void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
