@@ -19,22 +19,21 @@ using namespace clang::CIRGen;
 
 std::optional<mlir::Value>
 CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
+  if (builtinID == Builtin::BI__builtin_cpu_supports ||
+      builtinID == Builtin::BI__builtin_cpu_init ||
+      builtinID == Builtin::BI__builtin_cpu_is) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("unimplemented RISC-V builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
   switch (builtinID) {
   default:
-    return std::nullopt;
+    llvm_unreachable("unexpected builtin ID");
 
-  // Zihintpause
-  case RISCV::BI__builtin_riscv_pause:
-  // Zihintntl
-  case RISCV::BI__builtin_riscv_ntl_load:
-  case RISCV::BI__builtin_riscv_ntl_store:
   // Zbb
   case RISCV::BI__builtin_riscv_orc_b_32:
   case RISCV::BI__builtin_riscv_orc_b_64:
-  case RISCV::BI__builtin_riscv_clz_32:
-  case RISCV::BI__builtin_riscv_clz_64:
-  case RISCV::BI__builtin_riscv_ctz_32:
-  case RISCV::BI__builtin_riscv_ctz_64:
   // Zbc
   case RISCV::BI__builtin_riscv_clmul_32:
   case RISCV::BI__builtin_riscv_clmul_64:
@@ -42,16 +41,16 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   case RISCV::BI__builtin_riscv_clmulh_64:
   case RISCV::BI__builtin_riscv_clmulr_32:
   case RISCV::BI__builtin_riscv_clmulr_64:
-  // Zbkb
-  case RISCV::BI__builtin_riscv_brev8_32:
-  case RISCV::BI__builtin_riscv_brev8_64:
-  case RISCV::BI__builtin_riscv_zip_32:
-  case RISCV::BI__builtin_riscv_unzip_32:
   // Zbkx
   case RISCV::BI__builtin_riscv_xperm4_32:
   case RISCV::BI__builtin_riscv_xperm4_64:
   case RISCV::BI__builtin_riscv_xperm8_32:
   case RISCV::BI__builtin_riscv_xperm8_64:
+  // Zbkb
+  case RISCV::BI__builtin_riscv_brev8_32:
+  case RISCV::BI__builtin_riscv_brev8_64:
+  case RISCV::BI__builtin_riscv_zip_32:
+  case RISCV::BI__builtin_riscv_unzip_32:
   // Zknh
   case RISCV::BI__builtin_riscv_sha256sig0:
   case RISCV::BI__builtin_riscv_sha256sig1:
@@ -63,6 +62,16 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   // Zksh
   case RISCV::BI__builtin_riscv_sm3p0:
   case RISCV::BI__builtin_riscv_sm3p1:
+  // Zbb
+  case RISCV::BI__builtin_riscv_clz_32:
+  case RISCV::BI__builtin_riscv_clz_64:
+  case RISCV::BI__builtin_riscv_ctz_32:
+  case RISCV::BI__builtin_riscv_ctz_64:
+  // Zihintntl
+  case RISCV::BI__builtin_riscv_ntl_load:
+  case RISCV::BI__builtin_riscv_ntl_store:
+  // Zihintpause
+  case RISCV::BI__builtin_riscv_pause:
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
   case RISCV::BI__builtin_riscv_cv_alu_addRN:
