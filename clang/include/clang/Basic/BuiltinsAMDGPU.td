@@ -828,9 +828,9 @@ def __builtin_amdgcn_wmma_i32_16x16x32_iu4_w64_gfx12 : AMDGPUBuiltin<"_ExtVector
   let ArgNames = ["a_sign", "a", "b_sign", "b", "c", "clamp"];
 }
 
-def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, __fp16>, _ExtVector<16, __fp16>, _ExtVector<8, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_f32_16x16x32_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<8, short>, _ExtVector<16, short>, _ExtVector<8, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
-def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, _Float16>(_ExtVector<8, _Float16>, _ExtVector<16, _Float16>, _ExtVector<8, _Float16>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
+def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w32 : AMDGPUBuiltin<"_ExtVector<8, __fp16>(_ExtVector<8, __fp16>, _ExtVector<16, __fp16>, _ExtVector<8, __fp16>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w32 : AMDGPUBuiltin<"_ExtVector<8, short>(_ExtVector<8, short>, _ExtVector<16, short>, _ExtVector<8, short>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_i32_16x16x32_iu8_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, _ExtVector<2, int>, _Constant bool, _ExtVector<4, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_i32_16x16x32_iu4_w32 : AMDGPUBuiltin<"_ExtVector<8, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<8, int>, int, _Constant bool)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
@@ -840,9 +840,9 @@ def __builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w32 : AMDGPUBuiltin<"_ExtVector
 def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
 def __builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32 : AMDGPUBuiltin<"_ExtVector<8, float>(_ExtVector<2, int>, _ExtVector<4, int>, _ExtVector<8, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize32">;
 
-def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, _Float16>, _ExtVector<8, _Float16>, _ExtVector<4, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f32_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, __fp16>, _ExtVector<8, __fp16>, _ExtVector<4, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
 def __builtin_amdgcn_swmmac_f32_16x16x32_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, float>(_ExtVector<4, short>, _ExtVector<8, short>, _ExtVector<4, float>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
-def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, _Float16>(_ExtVector<4, _Float16>, _ExtVector<8, _Float16>, _ExtVector<4, _Float16>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
+def __builtin_amdgcn_swmmac_f16_16x16x32_f16_w64 : AMDGPUBuiltin<"_ExtVector<4, __fp16>(_ExtVector<4, __fp16>, _ExtVector<8, __fp16>, _ExtVector<4, __fp16>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
 def __builtin_amdgcn_swmmac_bf16_16x16x32_bf16_w64 : AMDGPUBuiltin<"_ExtVector<4, short>(_ExtVector<4, short>, _ExtVector<8, short>, _ExtVector<4, short>, int)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
 def __builtin_amdgcn_swmmac_i32_16x16x32_iu8_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, _ExtVector<2, int>, _ExtVector<4, int>, int, _Constant bool)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
 def __builtin_amdgcn_swmmac_i32_16x16x32_iu4_w64 : AMDGPUBuiltin<"_ExtVector<4, int>(_Constant bool, int, _Constant bool, int, _ExtVector<4, int>, int, _Constant bool)", [Const], "swmmac-gfx1200-insts,wavefrontsize64">;
