@@ -30,25 +30,6 @@ JSONTraceBundleDescription::GetCpuIds() {
   return cpu_ids;
 }
 
-json::Value toJSON(const JSONModule &module) {
-  json::Object json_module;
-  json_module["systemPath"] = module.system_path;
-  if (module.file)
-    json_module["file"] = *module.file;
-  json_module["loadAddress"] = toJSON(module.load_address, true);
-  if (module.uuid)
-    json_module["uuid"] = *module.uuid;
-  return std::move(json_module);
-}
-
-bool fromJSON(const json::Value &value, JSONModule &module, Path path) {
-  ObjectMapper o(value, path);
-  return o && o.map("systemPath", module.system_path) &&
-         o.map("file", module.file) &&
-         o.map("loadAddress", module.load_address) &&
-         o.map("uuid", module.uuid);
-}
-
 json::Value toJSON(const JSONThread &thread) {
   json::Object obj{{"tid", thread.tid}};
   if (thread.ipt_trace)

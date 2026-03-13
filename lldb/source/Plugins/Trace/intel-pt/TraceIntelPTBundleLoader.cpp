@@ -24,47 +24,6 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-FileSpec TraceIntelPTBundleLoader::NormalizePath(const std::string &path) {
-  FileSpec file_spec(path);
-  if (file_spec.IsRelative())
-    file_spec.PrependPathComponent(m_bundle_dir);
-  return file_spec;
-}
-
-Error TraceIntelPTBundleLoader::ParseModule(Target &target,
-                                            const JSONModule &module) {
-  auto do_parse = [&]() -> Error {
-    FileSpec system_file_spec(module.system_path);
-
-    FileSpec local_file_spec(module.file.has_value() ? *module.file
-                                                     : module.system_path);
-
-    ModuleSpec module_spec;
-    module_spec.GetFileSpec() = local_file_spec;
-    module_spec.GetPlatformFileSpec() = system_file_spec;
-
-    if (module.uuid.has_value())
-      module_spec.GetUUID().SetFromStringRef(*module.uuid);
-
-    Status error;
-    ModuleSP module_sp =
-        target.GetOrCreateModule(module_spec, /*notify*/ false, &error);
-
-    if (error.Fail())
-      return error.ToError();
-
-    bool load_addr_changed = false;
-    module_sp->SetLoadAddress(target, module.load_address.value, false,
-                              load_addr_changed);
-    return Error::success();
-  };
-  if (Error err = do_parse())
-    return createStringError(
-        inconvertibleErrorCode(), "Error when parsing module %s. %s",
-        module.system_path.c_str(), toString(std::move(err)).c_str());
-  return Error::success();
-}
-
 Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
                                                 const json::Value &value) {
   std::string err;
@@ -88,31 +47,6 @@ TraceIntelPTBundleLoader::ParseThread(Process &process,
       std::make_shared<ThreadPostMortemTrace>(process, tid, trace_file);
   process.GetThreadList().AddThread(thread_sp);
   return thread_sp;
-}
-
-Expected<TraceIntelPTBundleLoader::ParsedProcess>
-TraceIntelPTBundleLoader::CreateEmptyProcess(lldb::pid_t pid,
-                                             llvm::StringRef triple) {
-  TargetSP target_sp;
-  Status error = m_debugger.GetTargetList().CreateTarget(
-      m_debugger, /*user_exe_path*/ StringRef(), triple, eLoadDependentsNo,
-      /*platform_options*/ nullptr, target_sp);
-
-  if (!target_sp)
-    return error.ToError();
-
-  ParsedProcess parsed_process;
-  parsed_process.target_sp = target_sp;
-
-  ProcessTrace::Initialize();
-  ProcessSP process_sp = target_sp->CreateProcess(
-      /*listener*/ nullptr, "trace",
-      /*crash_file*/ nullptr,
-      /*can_connect*/ false);
-
-  process_sp->SetID(static_cast<lldb::pid_t>(pid));
-
-  return parsed_process;
 }
 
 Expected<TraceIntelPTBundleLoader::ParsedProcess>

@@ -9,6 +9,7 @@ set(LLDB_LIBS_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
 
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_BUILD_ARM_ETM
   LLDB_HAS_LIBCXX
 )
 

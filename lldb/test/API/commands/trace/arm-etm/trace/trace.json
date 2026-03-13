@@ -1,0 +1,22 @@
+{
+  "type": "arm-etm",
+  "processes": [
+    {
+      "pid": 0,
+      "triple": "arm-none-elf",
+      "threads": [
+        {
+          "tid": 0,
+          "etmTrace": "0.trace"
+        }
+      ],
+      "modules": [
+        {
+          "file": "picow_wifi_scan.elf",
+          "systemPath": "picow_wifi_scan.elf",
+          "loadAddress": "0x10000000"
+        }
+      ]
+    }
+  ]
+}

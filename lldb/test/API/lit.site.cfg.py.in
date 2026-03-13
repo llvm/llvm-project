@@ -51,6 +51,9 @@ config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb
 lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'
 if lldb_build_intel_pt == '1':
     config.enabled_plugins.append('intel-pt')
+lldb_build_arm_etm = '@LLDB_BUILD_ARM_ETM@'
+if lldb_build_arm_etm == '1':
+    config.enabled_plugins.append('arm-etm')
 
 # Additional dotest arguments can be passed to lit by providing a
 # semicolon-separates list: --param dotest-args="arg;arg".
