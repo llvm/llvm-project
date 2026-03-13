@@ -25,9 +25,12 @@ define void @test_01(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; INTRINSIC_FORM-NEXT:    [[C2:%.*]] = icmp ult i32 [[IV]], [[B_GW_FR]]
 ; INTRINSIC_FORM-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C1]], [[C2]]
 ; INTRINSIC_FORM-NEXT:    [[C3:%.*]] = icmp ult i32 [[IV]], [[C_GW_FR]]
-; INTRINSIC_FORM-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[WIDE_CHK]], [[C3]]
+; INTRINSIC_FORM-NEXT:    [[TMP0:%.*]] = and i1 [[C2]], [[C1]]
+; INTRINSIC_FORM-NEXT:    [[WIDE_CHK1:%.*]] = and i1 [[TMP0]], [[C3]]
 ; INTRINSIC_FORM-NEXT:    [[C4:%.*]] = icmp ult i32 [[IV]], [[D_GW_FR]]
-; INTRINSIC_FORM-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[WIDE_CHK1]], [[C4]]
+; INTRINSIC_FORM-NEXT:    [[TMP1:%.*]] = and i1 [[C3]], [[C1]]
+; INTRINSIC_FORM-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[C2]]
+; INTRINSIC_FORM-NEXT:    [[WIDE_CHK2:%.*]] = and i1 [[TMP2]], [[C4]]
 ; INTRINSIC_FORM-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; INTRINSIC_FORM-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK2]], [[WIDENABLE_COND]]
 ; INTRINSIC_FORM-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
@@ -52,13 +55,13 @@ define void @test_01(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; BRANCH_FORM-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; BRANCH_FORM-NEXT:    [[C1:%.*]] = icmp ult i32 [[IV]], [[A]]
 ; BRANCH_FORM-NEXT:    [[C2:%.*]] = icmp ult i32 [[IV]], [[B_GW_FR]]
-; BRANCH_FORM-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C1]], [[C2]]
 ; BRANCH_FORM-NEXT:    [[C3:%.*]] = icmp ult i32 [[IV]], [[C_GW_FR]]
-; BRANCH_FORM-NEXT:    [[WIDE_CHK13:%.*]] = and i1 [[WIDE_CHK]], [[C3]]
 ; BRANCH_FORM-NEXT:    [[C4:%.*]] = icmp ult i32 [[IV]], [[D_GW_FR]]
-; BRANCH_FORM-NEXT:    [[WIDE_CHK14:%.*]] = and i1 [[WIDE_CHK13]], [[C4]]
 ; BRANCH_FORM-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; BRANCH_FORM-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK14]], [[WIDENABLE_COND]]
+; BRANCH_FORM-NEXT:    [[WIDE_CHECK14:%.*]] = and i1 [[C4]], [[WIDENABLE_COND]]
+; BRANCH_FORM-NEXT:    [[WIDE_CHECK13:%.*]] = and i1 [[C3]], [[WIDE_CHECK14]]
+; BRANCH_FORM-NEXT:    [[WIDE_CHECK:%.*]] = and i1 [[C2]], [[WIDE_CHECK13]]
+; BRANCH_FORM-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[C1]], [[WIDE_CHECK]]
 ; BRANCH_FORM-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
 ; BRANCH_FORM:       deopt:
 ; BRANCH_FORM-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
@@ -87,13 +90,13 @@ define void @test_01(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; BRANCH_FORM_LICM-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; BRANCH_FORM_LICM-NEXT:    [[C1:%.*]] = icmp ult i32 [[IV]], [[A]]
 ; BRANCH_FORM_LICM-NEXT:    [[C2:%.*]] = icmp ult i32 [[IV]], [[B_GW_FR]]
-; BRANCH_FORM_LICM-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C1]], [[C2]]
 ; BRANCH_FORM_LICM-NEXT:    [[C3:%.*]] = icmp ult i32 [[IV]], [[C_GW_FR]]
-; BRANCH_FORM_LICM-NEXT:    [[WIDE_CHK13:%.*]] = and i1 [[WIDE_CHK]], [[C3]]
 ; BRANCH_FORM_LICM-NEXT:    [[C4:%.*]] = icmp ult i32 [[IV]], [[D_GW_FR]]
-; BRANCH_FORM_LICM-NEXT:    [[WIDE_CHK14:%.*]] = and i1 [[WIDE_CHK13]], [[C4]]
 ; BRANCH_FORM_LICM-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; BRANCH_FORM_LICM-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[WIDE_CHK14]], [[WIDENABLE_COND]]
+; BRANCH_FORM_LICM-NEXT:    [[WIDE_CHECK14:%.*]] = and i1 [[C4]], [[WIDENABLE_COND]]
+; BRANCH_FORM_LICM-NEXT:    [[WIDE_CHECK13:%.*]] = and i1 [[C3]], [[WIDE_CHECK14]]
+; BRANCH_FORM_LICM-NEXT:    [[WIDE_CHECK:%.*]] = and i1 [[C2]], [[WIDE_CHECK13]]
+; BRANCH_FORM_LICM-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[C1]], [[WIDE_CHECK]]
 ; BRANCH_FORM_LICM-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]], !prof [[PROF0:![0-9]+]]
 ; BRANCH_FORM_LICM:       deopt:
 ; BRANCH_FORM_LICM-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]

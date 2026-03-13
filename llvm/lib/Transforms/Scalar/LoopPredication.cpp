@@ -970,7 +970,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
 
 /// If we can (cheaply) find a widenable branch which controls entry into the
 /// loop, return it.
-static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
+static IntrinsicInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   // Walk back through any unconditional executed blocks and see if we can find
   // a widenable condition which seems to control execution of this loop.  Note
   // that we predict that maythrow calls are likely untaken and thus that it's
@@ -989,11 +989,11 @@ static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
     break;
   } while (true);
 
-  if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+  if (BasicBlock *Pred = BB->getSinglePredecessor())
     if (auto *BI = dyn_cast<BranchInst>(Pred->getTerminator()))
-      if (BI->getSuccessor(0) == BB && isWidenableBranch(BI))
-        return BI;
-  }
+      if (BI->getSuccessor(0) == BB)
+        if (auto WC = extractWidenableCondition(BI))
+          return cast<IntrinsicInst>(WC);
   return nullptr;
 }
 
@@ -1056,8 +1056,8 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (!Latch)
     return false;
 
-  auto *WidenableBR = FindWidenableTerminatorAboveLoop(L, *LI);
-  if (!WidenableBR)
+  auto *WidenableCondition = FindWidenableTerminatorAboveLoop(L, *LI);
+  if (!WidenableCondition)
     return false;
 
   const SCEV *LatchEC = SE->getExitCount(L, Latch);
@@ -1091,11 +1091,6 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (ChangedLoop)
     SE->forgetLoop(L);
 
-  // The insertion point for the widening should be at the widenably call, not
-  // at the WidenableBR. If we do this at the widenableBR, we can incorrectly
-  // change a loop-invariant condition to a loop-varying one.
-  auto *IP = cast<Instruction>(WidenableBR->getCondition());
-
   // The use of umin(all analyzeable exits) instead of latch is subtle, but
   // important for profitability.  We may have a loop which hasn't been fully
   // canonicalized just yet.  If the exit we chose to widen is provably never
@@ -1105,11 +1100,11 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   const SCEV *MinEC = getMinAnalyzeableBackedgeTakenCount(*SE, *DT, L);
   if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
       !SE->isLoopInvariant(MinEC, L) ||
-      !Rewriter.isSafeToExpandAt(MinEC, IP))
+      !Rewriter.isSafeToExpandAt(MinEC, WidenableCondition))
     return ChangedLoop;
 
-  Rewriter.setInsertPoint(IP);
-  IRBuilder<> B(IP);
+  Rewriter.setInsertPoint(WidenableCondition);
+  IRBuilder<> B(WidenableCondition);
 
   bool InvalidateLoop = false;
   Value *MinECV = nullptr; // lazily generated if needed
@@ -1132,7 +1127,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount) ||
         ExitCount->getType()->isPointerTy() ||
-        !Rewriter.isSafeToExpandAt(ExitCount, WidenableBR))
+        !Rewriter.isSafeToExpandAt(ExitCount, WidenableCondition))
       continue;
 
     const bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
@@ -1164,7 +1159,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // context.
     NewCond = B.CreateFreeze(NewCond);
 
-    widenWidenableBranch(WidenableBR, NewCond);
+    widenWidenableCondition(WidenableCondition, NewCond);
 
     Value *OldCond = BI->getCondition();
     BI->setCondition(ConstantInt::get(OldCond->getType(), !ExitIfTrue));
@@ -1178,7 +1173,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // should be removed next time the CFG is modified.
     SE->forgetLoop(L);
 
-  // Always return `true` since we have moved the WidenableBR's condition.
+  // Always return `true` since we have moved WidenableCondition.
   return true;
 }
 
