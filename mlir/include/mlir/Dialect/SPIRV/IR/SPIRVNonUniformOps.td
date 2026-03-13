@@ -270,17 +270,18 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
 // -----
 
 def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFirst",
-  [Pure, AllTypesMatch<["value", "result"]>]> {
+  [Pure, SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">, AllTypesMatch<["value", "result"]>]> {
   let summary = [{
-    Result is the Value of the invocation from the active invocations with 
-    the lowest id in the group to all active invocations in the group.
+    Result is the Value of the invocation from the active invocations with
+    the lowest id within the Execution scope to all active invocations
+    within the Execution scope.
   }];
 
   let description = [{
-    Result Type  must be a scalar or vector of floating-point type, integer
+    Result Type must be a scalar or vector of floating-point type, integer
     type, or Boolean type.
 
-    Execution must be Workgroup or Subgroup Scope.
+    Execution must be Subgroup Scope.
 
     The type of Value must be the same as Result Type.
 
@@ -290,8 +291,7 @@ def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFi
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %0 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %scalar_value : f32
-    %1 = spirv.GroupNonUniformBroadcastFirst <Workgroup> %vector_value :
-      vector<4xf32>, i32 i32
+    %1 = spirv.GroupNonUniformBroadcastFirst <Subgroup> %vector_value : vector<4xf32>
     ```
   }];
 
@@ -304,12 +304,14 @@ def SPIRV_GroupNonUniformBroadcastFirstOp : SPIRV_Op<"GroupNonUniformBroadcastFi
 
   let arguments = (ins
     SPIRV_ScopeAttr:$execution_scope,
-    SPIRV_Type:$value
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value
   );
 
   let results = (outs
-    SPIRV_Type:$result
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
   );
+
+  let hasVerifier = 0;
 
   let assemblyFormat = [{
     $execution_scope operands attr-dict `:` type($value)
