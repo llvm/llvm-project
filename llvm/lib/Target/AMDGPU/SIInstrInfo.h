@@ -1457,6 +1457,11 @@ public:
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
+  /// Returns true if moveToVALU would fall through to legalizeOperands for
+  /// this instruction, resulting in a readlane insertion at the use site
+  /// rather than a genuine VALU conversion.
+  bool needsReadlaneOnVALUConversion(const MachineInstr &MI) const;
+
   /// Copy a value from a VGPR (\p SrcReg) to SGPR. The desired register class
   /// for the dst register (\p DstRC) can be optionally supplied. This function
   /// can only be used when it is know that the value in SrcReg is same across

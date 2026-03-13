@@ -70,6 +70,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -98,6 +99,12 @@ public:
   // Actual count of v_readfirstlane_b32
   // which need to be inserted to keep SChain SALU
   unsigned NumReadfirstlanes = 0;
+  // Count of v_readfirstlane_b32 that legalizeOperands would insert at
+  // unconvertible use sites if the chain is moved to VALU.
+  unsigned NumUnavoidableReadfirstlanes = 0;
+  // Penalty for unavoidable readfirstlanes placed inside a loop when the
+  // original COPY was outside.
+  unsigned LoopDepthPenalty = 0;
   // Current score state. To speedup selection V2SCopyInfos for processing
   bool NeedToBeConvertedToVALU = false;
   // Unique ID. Used as a key for mapping to keep permanent order.
@@ -114,6 +121,8 @@ public:
   void dump() const {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()
            << "\n\tSV:" << NumSVCopies << "\n\tSP: " << SiblingPenalty
+           << "\n\tURFL: " << NumUnavoidableReadfirstlanes
+           << "\n\tLDP: " << LoopDepthPenalty
            << "\nScore: " << Score << "\n";
   }
 #endif
@@ -121,6 +130,7 @@ public:
 
 class SIFixSGPRCopies {
   MachineDominatorTree *MDT;
+  MachineLoopInfo *MLI;
   SmallVector<MachineInstr*, 4> SCCCopies;
   SmallVector<MachineInstr*, 4> RegSequences;
   SmallVector<MachineInstr*, 4> PHINodes;
@@ -135,7 +145,8 @@ public:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
-  SIFixSGPRCopies(MachineDominatorTree *MDT) : MDT(MDT) {}
+  SIFixSGPRCopies(MachineDominatorTree *MDT, MachineLoopInfo *MLI)
+      : MDT(MDT), MLI(MLI) {}
 
   bool run(MachineFunction &MF);
   void fixSCCCopies(MachineFunction &MF);
@@ -170,7 +181,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     MachineDominatorTree *MDT =
         &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    SIFixSGPRCopies Impl(MDT);
+    MachineLoopInfo *MLI =
+        &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    SIFixSGPRCopies Impl(MDT, MLI);
     return Impl.run(MF);
   }
 
@@ -178,7 +191,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -189,6 +204,7 @@ public:
 INITIALIZE_PASS_BEGIN(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
                     false, false)
 
@@ -1010,6 +1026,22 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
     for (auto *U : Users) {
       if (TII->isSALU(*U))
         Info.SChain.insert(U);
+
+      if (TII->needsReadlaneOnVALUConversion(*U)) {
+        unsigned SrcIdx = U->getOpcode() == AMDGPU::SI_INIT_M0 ? 0 : 1;
+        MachineOperand &Src = U->getOperand(SrcIdx);
+        unsigned Width = Src.isReg() && Src.getReg().isVirtual()
+            ? TRI->getRegSizeInBits(*MRI->getRegClass(Src.getReg()))
+            : 32;
+        unsigned RFLCount = Width / 32;
+        Info.NumUnavoidableReadfirstlanes += RFLCount;
+
+        unsigned CopyDepth = MLI->getLoopDepth(Info.Copy->getParent());
+        unsigned UseDepth = MLI->getLoopDepth(U->getParent());
+        if (UseDepth > CopyDepth)
+          Info.LoopDepthPenalty += RFLCount * (UseDepth - CopyDepth) * 10;
+      }
+
       AnalysisWorklist.push_back(U);
     }
   }
@@ -1050,7 +1082,8 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
 
   unsigned Penalty =
       Info->NumSVCopies + Info->SiblingPenalty + Info->NumReadfirstlanes;
-  unsigned Profit = Info->SChain.size();
+  unsigned Profit = Info->SChain.size() +
+      Info->NumUnavoidableReadfirstlanes + Info->LoopDepthPenalty;
   Info->Score = Penalty > Profit ? 0 : Profit - Penalty;
   Info->NeedToBeConvertedToVALU = Info->Score < 3;
   return Info->NeedToBeConvertedToVALU;
@@ -1212,7 +1245,8 @@ PreservedAnalyses
 SIFixSGPRCopiesPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  SIFixSGPRCopies Impl(&MDT);
+  MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  SIFixSGPRCopies Impl(&MDT, &MLI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
