@@ -3,7 +3,7 @@
 // RUN:  {readability-implicit-bool-conversion.AllowIntegerConditions: true, \
 // RUN:   readability-implicit-bool-conversion.AllowPointerConditions: true}}'
 
-namespace std { struct string { string(const char*); }; }
+#include <string>
 
 template<typename T>
 void functionTaking(T);
