@@ -48,7 +48,7 @@ subroutine acc_host_data()
     a = 1.0
   !$acc end host_data
 
-! CHECK-NOT: acc.host_data
-! CHECK: hlfir.assign %{{.*}} to %[[DECLA]]#0
+! CHECK: acc.host_data if(%{{.*}})
+! CHECK: hlfir.assign %{{.*}} to %{{.*}}#0
 
 end subroutine

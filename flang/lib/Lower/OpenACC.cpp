@@ -2849,10 +2849,6 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
         if (boolAttr.getValue()) {
           // get rid of the if condition if it is always true.
           ifCond = mlir::Value();
-        } else {
-          // Do not generate the acc.host_data op if the if condition is always
-          // false.
-          return;
         }
       }
   }
