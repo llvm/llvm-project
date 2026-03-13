@@ -180,8 +180,7 @@ const uint8_t *SBModule::GetUUIDBytes() const {
 size_t SBModule::GetUUIDLength() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const ModuleSP module_sp(GetSP());
-  if (module_sp)
+  if (ModuleSP module_sp = GetSP())
     return module_sp->GetUUID().GetBytes().size();
 
   return 0;
