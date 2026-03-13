@@ -2724,10 +2724,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vset_lane_mf8:
   case NEON::BI__builtin_neon_vsetq_lane_mf8:
   case NEON::BI__builtin_neon_vsetq_lane_f64:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
   case NEON::BI__builtin_neon_vget_lane_i8:
   case NEON::BI__builtin_neon_vdupb_lane_i8:
   case NEON::BI__builtin_neon_vgetq_lane_i8:
@@ -2756,15 +2752,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdups_laneq_f32:
   case NEON::BI__builtin_neon_vgetq_lane_f64:
   case NEON::BI__builtin_neon_vdupd_laneq_f64:
-  case NEON::BI__builtin_neon_vget_lane_bf16:
-  case NEON::BI__builtin_neon_vduph_lane_bf16:
-  case NEON::BI__builtin_neon_vduph_lane_f16:
-  case NEON::BI__builtin_neon_vgetq_lane_bf16:
-  case NEON::BI__builtin_neon_vduph_laneq_bf16:
-  case NEON::BI__builtin_neon_vduph_laneq_f16: {
-    uint64_t index = getZExtIntValueFromConstOp(ops[1]);
-    return builder.createExtractElement(loc, ops[0], index);
-  }
   case NEON::BI__builtin_neon_vaddh_f16:
   case NEON::BI__builtin_neon_vsubh_f16:
   case NEON::BI__builtin_neon_vmulh_f16:
@@ -2814,6 +2801,24 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vqdmlals_laneq_s32:
   case NEON::BI__builtin_neon_vqdmlsls_lane_s32:
   case NEON::BI__builtin_neon_vqdmlsls_laneq_s32:
+  case NEON::BI__builtin_neon_vget_lane_bf16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vduph_lane_bf16: {
+    return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
+  }
+  case NEON::BI__builtin_neon_vduph_lane_f16:
+  case NEON::BI__builtin_neon_vgetq_lane_bf16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vduph_laneq_bf16: {
+    return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
+  }
+  case NEON::BI__builtin_neon_vduph_laneq_f16:
   case NEON::BI__builtin_neon_vcvt_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_high_bf16_f32:
