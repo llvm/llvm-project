@@ -1,7 +1,7 @@
 include(GetLibraryName)
 
 if(LLVM_ENABLE_LIBXML2)
-  if(TARGET LibXml2::LibXml2Static AND LLVM_USE_STATIC_LIBXML2)
+  if(LLVM_USE_STATIC_LIBXML2)
     set(imported_libs LibXml2::LibXml2Static)
   else()
     set(imported_libs LibXml2::LibXml2)
