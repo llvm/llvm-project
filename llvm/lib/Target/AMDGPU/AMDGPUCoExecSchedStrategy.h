@@ -177,7 +177,7 @@ private:
   /// / MFMA instructions may take multiple cycles, which may be overlapped with
   /// instructions on other HardwareUnits.
   bool ProducesCoexecWindow = false;
-  /// How many instructons can be held simultaneously for this HardwareUnit.
+  /// How many instructions can be held simultaneously for this HardwareUnit.
   /// A value of 0 or 1 means that there is no buffer.
   unsigned BufferSize = 0;
   /// How many cycles it takes for an instruction to clear the buffer.
