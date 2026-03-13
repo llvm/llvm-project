@@ -28,7 +28,17 @@
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP0]], metadata [[META2:![0-9]+]])
 // AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[LOR_LHS_FALSE:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE]]:
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP1]], metadata [[META3:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL1:%.*]] = icmp ne i1 [[TMP1]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL1]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE2:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE2]]:
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP2]], metadata [[META4:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL3:%.*]] = icmp ne i1 [[TMP2]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL3]], label %[[IF_THEN]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
@@ -36,7 +46,9 @@
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void foo() {
-    if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_permlanex16))
+    if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_permlanex16) ||
+        (__builtin_amdgcn_is_invocable(__builtin_amdgcn_permlanex16_var)) ||
+        (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ashr_pk_i8_i32)))
         return __builtin_trap();
 }
 //.
@@ -58,4 +70,6 @@ void foo() {
 // AMDGCNSPIRV: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGCNSPIRV: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // AMDGCNSPIRV: [[META2]] = !{!"has.gfx10-insts"}
+// AMDGCNSPIRV: [[META3]] = !{!"has.gfx12-insts"}
+// AMDGCNSPIRV: [[META4]] = !{!"has.ashr-pk-insts"}
 //.

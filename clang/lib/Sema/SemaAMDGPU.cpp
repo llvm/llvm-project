@@ -742,7 +742,8 @@ void SemaAMDGPU::handleAMDGPUMaxNumWorkGroupsAttr(Decl *D,
   addAMDGPUMaxNumWorkGroupsAttr(D, AL, AL.getArgAsExpr(0), YExpr, ZExpr);
 }
 
-Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
+Expr *SemaAMDGPU::ExpandAMDGPUPredicateBuiltIn(Expr *E) {
+  CallExpr *CE = cast<CallExpr>(E->IgnoreParens());
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
   llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));

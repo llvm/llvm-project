@@ -27,7 +27,27 @@
 // AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP0]], metadata [[META2:![0-9]+]])
 // AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
-// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[LOR_LHS_FALSE:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE]]:
+// AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP1]], metadata [[META3:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL1:%.*]] = icmp ne i1 [[TMP1]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL1]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE2:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE2]]:
+// AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP2]], metadata [[META4:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL3:%.*]] = icmp ne i1 [[TMP2]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL3]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE4:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE4]]:
+// AMDGCNSPIRV-NEXT:    [[TMP3:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP3]], metadata [[META5:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL5:%.*]] = icmp ne i1 [[TMP3]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL5]], label %[[IF_THEN]], label %[[LOR_LHS_FALSE6:.*]]
+// AMDGCNSPIRV:       [[LOR_LHS_FALSE6]]:
+// AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
+// AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.spv.assign.name.i1(i1 [[TMP4]], metadata [[META6:![0-9]+]])
+// AMDGCNSPIRV-NEXT:    [[TOBOOL7:%.*]] = icmp ne i1 [[TMP4]], false
+// AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL7]], label %[[IF_THEN]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
 // AMDGCNSPIRV-NEXT:    br label %[[IF_END]]
@@ -35,7 +55,11 @@
 // AMDGCNSPIRV-NEXT:    ret void
 //
 void foo() {
-    if (__builtin_amdgcn_processor_is("gfx900"))
+    if (__builtin_amdgcn_processor_is("gfx900") ||
+        __builtin_amdgcn_processor_is("gfx906") ||
+        __builtin_amdgcn_processor_is("gfx90c") ||
+        (__builtin_amdgcn_processor_is("gfx90a")) ||
+        (__builtin_amdgcn_processor_is("gfx942")))
         return __builtin_trap();
 }
 //.
@@ -57,4 +81,8 @@ void foo() {
 // AMDGCNSPIRV: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGCNSPIRV: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // AMDGCNSPIRV: [[META2]] = !{!"is.gfx900"}
+// AMDGCNSPIRV: [[META3]] = !{!"is.gfx906"}
+// AMDGCNSPIRV: [[META4]] = !{!"is.gfx90c"}
+// AMDGCNSPIRV: [[META5]] = !{!"is.gfx90a"}
+// AMDGCNSPIRV: [[META6]] = !{!"is.gfx942"}
 //.
