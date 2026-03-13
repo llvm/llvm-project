@@ -181,15 +181,17 @@ Status Platform::GetSharedModule(
       resolved_spec = spec;
       resolved_spec.GetFileSpec().PrependPathComponent(m_sdk_sysroot);
       // Try to get shared module with resolved spec.
-      error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr, false);
+      error = ModuleList::GetSharedModule(
+          resolved_spec, module_sp, old_modules, did_create_ptr,
+          /*invoke_locate_callback=*/false);
     }
     // If we don't have sysroot or it didn't work then
     // try original module spec.
     if (!error.Success()) {
       resolved_spec = spec;
-      error = ModuleList::GetSharedModule(resolved_spec, module_sp, old_modules,
-                                          did_create_ptr, false);
+      error = ModuleList::GetSharedModule(
+          resolved_spec, module_sp, old_modules, did_create_ptr,
+          /*invoke_locate_callback=*/false);
     }
     if (error.Success() && module_sp)
       module_sp->SetPlatformFileSpec(resolved_spec.GetFileSpec());
