@@ -4689,6 +4689,18 @@ static void TryConstructorInitialization(Sema &S,
     }
   }
 
+  // if the initialization is direct-initialization, or if it is
+  // copy-initialization where the cv-unqualified version of the source type is
+  // the same as or is derived from the class of the destination type,
+  // constructors are considered.
+  if ((Kind.getKind() == InitializationKind::IK_Direct ||
+       Kind.getKind() == InitializationKind::IK_Copy) &&
+      Args.size() == 1 &&
+      S.getASTContext().hasSameUnqualifiedType(
+          Args[0]->getType().getNonReferenceType(),
+          DestType.getNonReferenceType()))
+    RequireActualConstructor = true;
+
   // C++11 [over.match.list]p1:
   //   - If no viable initializer-list constructor is found, overload resolution
   //     is performed again, where the candidate functions are all the

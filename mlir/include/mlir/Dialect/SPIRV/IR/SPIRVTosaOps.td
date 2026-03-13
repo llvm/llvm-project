@@ -1597,4 +1597,149 @@ def SPIRV_TosaFloorOp : SPIRV_TosaFloatElementwiseUnaryOp<"Floor", 37> {
 }
 
 
+def SPIRV_TosaLogOp : SPIRV_TosaFloatElementwiseUnaryOp<"Log", 38> {
+  let summary = "Log operator.";
+
+  let description = [{
+    Elementwise Natural Logarithm operation. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_log
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_log
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Log %arg0 : !spirv.arm.tensor<45x43x36xf16> -> !spirv.arm.tensor<45x43x36xf16>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaLogicalNotOp : SPIRV_TosaElementwiseUnaryOp<"LogicalNot", 39, [Pure]> {
+  let summary = "Logical NOT operator.";
+
+  let description = [{
+    Elementwise Logical NOT of input. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_logical_not
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_logical_not
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.LogicalNot %arg0 : !spirv.arm.tensor<54x26x10xi1> -> !spirv.arm.tensor<54x26x10xi1>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaNegateOp : SPIRV_TosaElementwiseUnaryOp<"Negate", 40, [NoMemoryEffect,
+  AllElementTypesMatch<["input1", "output", "input1_zp", "output_zp"]>]> {
+  let summary = "Negate operator.";
+
+  let description = [{
+    Elementwise Negation operation. Input and Output types must match. Integer
+    element types are always interpreted as signed. The behaviour is undefined
+    if the input value is min_value<si32>.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_negate
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_negate
+
+    #### Example:
+    ```mlir
+    %2 = spirv.Tosa.Negate %arg0, %0, %1 : !spirv.arm.tensor<3x1x65540x1xi8>, !spirv.arm.tensor<1xi8>, !spirv.arm.tensor<1xi8> -> !spirv.arm.tensor<3x1x65540x1xi8>
+    %2 = spirv.Tosa.Negate %arg0, %0, %1 : !spirv.arm.tensor<2x7x15x13xf16>, !spirv.arm.tensor<1xf16>, !spirv.arm.tensor<1xf16> -> !spirv.arm.tensor<2x7x15x13xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumerical_TensorArm: $input1,
+    SPIRV_TosaNumerical_1DTensorArmOfLength1: $input1_zp,
+    SPIRV_TosaNumerical_1DTensorArmOfLength1: $output_zp
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input1_zp `,`
+    $output_zp
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+
+def SPIRV_TosaReciprocalOp : SPIRV_TosaFloatElementwiseUnaryOp<"Reciprocal", 41> {
+  let summary = "Reciprocal operator.";
+
+  let description = [{
+    Elementwise Reciprocal operation. Input and Output types must match. For
+    integer operation, a table should be used with the appropriate ranges.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_reciprocal
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_reciprocal
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Reciprocal %arg0 : !spirv.arm.tensor<38x47x44xf32> -> !spirv.arm.tensor<38x47x44xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaRsqrtOp : SPIRV_TosaFloatElementwiseUnaryOp<"Rsqrt", 42> {
+  let summary = "Reverse Square Root operator.";
+
+  let description = [{
+    Elementwise Reciprocal Square Root operation ($ 1/sqrt $). Input and
+    Output types must match. For integer operation, a table should be used
+    with the appropriate ranges.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_rsqrt
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_rsqrt
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Rsqrt %arg0 : !spirv.arm.tensor<40x57x56xf32> -> !spirv.arm.tensor<40x57x56xf32>
+    ```
+  }];
+}
+
+
+def SPIRV_TosaSinOp : SPIRV_TosaFloatElementwiseUnaryOp<"Sin", 43> {
+  let summary = "Sin operator.";
+
+  let description = [{
+    Elementwise Sine operation for values given in radians. Input and Output types must match.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_sin
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_sin
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Sin %arg0 : !spirv.arm.tensor<49x38x58xf16> -> !spirv.arm.tensor<49x38x58xf16>
+    ```
+  }];
+}
+
+
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_OPS
