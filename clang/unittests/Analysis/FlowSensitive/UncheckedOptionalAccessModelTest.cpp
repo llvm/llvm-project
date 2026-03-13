@@ -2944,6 +2944,25 @@ TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
 	EXPECT_EQ(*opt, 42); // [[unsafe]]
     }
   )cc");
+
+
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    namespace BloombergLP::bdlb {
+      template <typename T>
+      struct NullableValue : $ns::$optional<T> {
+	bool isNull() const;
+      };
+    }
+
+    void target() {
+	BloombergLP::bdlb::NullableValue<int> opt;
+
+	ASSERT_FALSE(opt.isNull());
+	EXPECT_EQ(*opt, 42);
+    }
+  )cc");
 }
 
 // FIXME: Add support for:
