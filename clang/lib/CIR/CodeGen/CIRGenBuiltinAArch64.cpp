@@ -2780,17 +2780,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vqdmlslh_s16:
   case NEON::BI__builtin_neon_vqshlud_n_s64: {
 
-      auto loc = getLoc(expr->getExprLoc());
       const cir::IntType intType = builder.getSInt64Ty();
+      auto loc = getLoc(expr->getExprLoc());
+
+      ops.push_back(builder.getSInt64(apsInt->getZExtValue(), loc));
 
       std::optional<llvm::APSInt> apsInt =
           expr->getArg(1)->getIntegerConstantExpr(getContext());
       assert(apsInt && "Expected argument to be a Constant");
 
-      ops.push_back(builder.getSInt64(apsInt->getZExtValue(), loc));
+      ops[1] = builder.getSInt64(apsInt->getZExtValue(), loc);
 
       const StringRef intrinsicName = "aarch64.neon.sqshlu";
-
       return emitNeonCall(builder, {intType, intType}, ops, intrinsicName, intType, loc);
   }
   case NEON::BI__builtin_neon_vqshld_n_u64:
@@ -2799,11 +2800,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
       const cir::IntType intType = (builtinID == NEON::BI__builtin_neon_vqshld_n_u64) ? builder.getUInt64Ty(): builder.getSInt64Ty();
 
+
       const StringRef intrinsicName = (builtinID == NEON::BI__builtin_neon_vqshld_n_u64) ? "aarch64.neon.uqshl": "aarch64.neon.sqshl";
 
-      // Emit and cast the argument and then push directly to avoid indexing issues
-      mlir::Value arg1 = emitScalarExpr(expr->getArg(1));
-      ops.push_back(builder.createIntCast(arg1,intType));
+      ops.push_back(emitScalarExpr(expr->getArg(1)));
+      ops[1] = builder.createIntCast(ops[1], intType);
 
       return emitNeonCall(builder, {intType, intType}, ops, intrinsicName, intType, loc);
   }
