@@ -505,7 +505,7 @@ define void @test_interleave_group_epilogue_with_preheader_phi(ptr %src, ptr %ds
 ; CHECK-LABEL: define void @test_interleave_group_epilogue_with_preheader_phi(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC1:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    [[SRC1:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    br label %[[ITER_CHECK:.*]]
 ; CHECK:       [[ITER_CHECK]]:
 ; CHECK-NEXT:    [[DST_PRE:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ]
