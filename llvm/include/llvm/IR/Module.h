@@ -588,21 +588,21 @@ public:
 
   void insertGUID(const Value *V, GlobalValue::GUID GUID) {
     const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
-    
+
     (void)It, (void)WasInserted;
-  #ifndef NDEBUG
+#ifndef NDEBUG
     if (!WasInserted) {
       assert((It->second == GUID) && "insertGUID called with different value");
     }
-  #endif
+#endif
   }
 
 private:
   DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
 
-/// @}
-/// @name Direct access to the globals list, functions list, and symbol table
-/// @{
+  /// @}
+  /// @name Direct access to the globals list, functions list, and symbol table
+  /// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }

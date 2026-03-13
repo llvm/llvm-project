@@ -978,7 +978,7 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// Callback to ask whether a symbol is the prevailing copy when invoked
   /// during combined index building.
   std::function<bool(StringRef)> IsPrevailing = nullptr;
-  
+
   /// Callback invoked whenever a new ValueInfo is generated.
   std::function<void(ValueInfo)> OnValueInfo = nullptr;
 
