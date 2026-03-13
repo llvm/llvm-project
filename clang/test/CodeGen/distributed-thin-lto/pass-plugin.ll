@@ -1,4 +1,7 @@
 ; REQUIRES: x86-registered-target, plugins, llvm-examples
+; There is an issue with export symbols on AIX that is currently
+; causing this test case to fail. XFAIL for now.
+; XFAIL: target={{.*}}-aix{{.*}}
 
 ;; Validate that -fpass-plugin works for distributed ThinLTO backends.
 

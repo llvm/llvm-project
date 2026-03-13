@@ -160,6 +160,35 @@ struct StructType : PyConcreteType<StructType> {
 };
 
 //===--------------------------------------------------------------------===//
+// ArrayType
+//===--------------------------------------------------------------------===//
+
+struct ArrayType : PyConcreteType<ArrayType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsALLVMArrayType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLLVMArrayTypeGetTypeID;
+  static constexpr const char *pyClassName = "ArrayType";
+  static inline const MlirStringRef name = mlirLLVMArrayTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyType &elementType, unsigned numElements) {
+          return ArrayType(elementType.getContext(),
+                           mlirLLVMArrayTypeGet(elementType, numElements));
+        },
+        "element_type"_a, "num_elements"_a);
+    c.def_prop_ro("element_type", [](const ArrayType &type) {
+      return mlirLLVMArrayTypeGetElementType(type);
+    });
+    c.def_prop_ro("num_elements", [](const ArrayType &type) {
+      return mlirLLVMArrayTypeGetNumElements(type);
+    });
+  }
+};
+
+//===--------------------------------------------------------------------===//
 // PointerType
 //===--------------------------------------------------------------------===//
 
@@ -195,6 +224,7 @@ struct PointerType : PyConcreteType<PointerType> {
 
 static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   StructType::bind(m);
+  ArrayType::bind(m);
   PointerType::bind(m);
 
   m.def(
