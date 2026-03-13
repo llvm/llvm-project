@@ -558,8 +558,9 @@ const Expr *getterReturnExpr(const CXXMethodDecl *CMD) {
 //   void foo(T arg) { FieldName = std::move(arg); }
 //   R* foo(T arg) { FieldName = std::move(arg); return this; }
 //   R& foo(T arg) { FieldName = std::move(arg); return *this; }
-// returns the LHS expression (FieldName) of the assignment in a trivial setter body, or
-// nullptr if the method does not match the pattern of a trivial setter.
+// returns the LHS expression (FieldName) of the assignment in a trivial setter
+// body, or nullptr if the method does not match the pattern of a trivial
+// setter.
 const Expr *setterLHS(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
   if (CMD->isConst() || CMD->getNumParams() != 1 || CMD->isVariadic())
@@ -636,16 +637,16 @@ std::string synthesizeDocumentation(const ASTContext &Ctx,
   if (const Expr *RetVal = getterReturnExpr(CMD)) {
     if (const auto GetterField = fieldName(RetVal)) {
       if (const auto Comment = fieldComment(Ctx, RetVal))
-        return llvm::formatv("Trivial accessor for `{0}`.\n\n{1}",
-                              *GetterField, *Comment);
+        return llvm::formatv("Trivial accessor for `{0}`.\n\n{1}", *GetterField,
+                             *Comment);
       return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
     }
   }
   if (const auto *const SetterLHS = setterLHS(CMD)) {
-    if(const auto FieldName = fieldName(SetterLHS)) {
+    if (const auto FieldName = fieldName(SetterLHS)) {
       if (const auto Comment = fieldComment(Ctx, SetterLHS))
         return llvm::formatv("Trivial setter for `{0}`.\n\n{1}", *FieldName,
-                            *Comment);
+                             *Comment);
       return llvm::formatv("Trivial setter for `{0}`.", *FieldName);
     }
   }
