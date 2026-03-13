@@ -112,7 +112,7 @@ private:
 
   void markUseAsWrite(const DeclRefExpr *DRE);
 
-  bool isEscapingOrigin(OriginID OID) const;
+  bool escapesViaReturn(OriginID OID) const;
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;
