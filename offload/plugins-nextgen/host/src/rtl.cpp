@@ -98,6 +98,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
                    KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
+    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "Incompatible kernel argument version for plugin");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
     Func(LaunchParams.Data);
