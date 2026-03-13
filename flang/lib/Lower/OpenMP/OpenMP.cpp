@@ -3839,8 +3839,8 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
     }
 
     lower::StatementContext stmtCtx;
-    mlir::Type eleTy = isByRef ? fir::unwrapRefType(lhs.getType())
-                               : lhs.getType();
+    mlir::Type eleTy =
+        isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
     bool isDerived = fir::isa_derived(eleTy);
 
     mlir::Value result = common::visit(
@@ -3880,11 +3880,9 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
               if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
                       exprResult.getType())) {
                 mlir::Type expectedType =
-                    isByRef ? fir::unwrapRefType(lhs.getType())
-                            : lhs.getType();
+                    isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
                 if (expectedType == refType.getElementType())
-                  exprResult =
-                      fir::LoadOp::create(builder, loc, exprResult);
+                  exprResult = fir::LoadOp::create(builder, loc, exprResult);
               }
               return exprResult;
             }},

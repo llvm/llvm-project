@@ -465,15 +465,21 @@ bool ClauseProcessor::processInitializer(
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
 
                 // For derived types in by-ref reductions, the init value
-                // (e.g. t(0)) must be stored into omp_priv explicitly.
+                // must be stored into omp_priv explicitly.
                 // populateByRefInitAndCleanupRegions doesn't handle
                 // scalarInitValue for unboxed derived types, so we store
                 // here and return null to prevent a redundant store attempt.
-                if (ompPrivVar &&
-                    fir::isa_ref_type(ompPrivVar.getType()) &&
+                if (ompPrivVar && fir::isa_ref_type(ompPrivVar.getType()) &&
                     fir::isa_derived(
                         fir::unwrapRefType(ompPrivVar.getType()))) {
-                  fir::StoreOp::create(builder, loc, exprResult, ompPrivVar);
+                  // Only store if the expression result type matches the
+                  // whole derived type. For component-level initializers
+                  // (e.g. omp_priv%i=0), the assignment was already
+                  // performed as a side effect during expression lowering.
+                  mlir::Type privEleTy =
+                      fir::unwrapRefType(ompPrivVar.getType());
+                  if (exprResult.getType() == privEleTy)
+                    fir::StoreOp::create(builder, loc, exprResult, ompPrivVar);
                   return mlir::Value{};
                 }
                 return exprResult;
