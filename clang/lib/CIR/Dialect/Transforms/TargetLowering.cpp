@@ -71,7 +71,20 @@ public:
 
     mlir::OperationState loweredOpState(op->getLoc(), op->getName());
     loweredOpState.addOperands(operands);
-    loweredOpState.addAttributes(op->getAttrs());
+
+    // Copy attributes, converting any TypeAttr through the type converter so
+    // that address-space-bearing types (e.g. AllocaOp's allocaType) stay in
+    // sync with the converted result types.
+    for (mlir::NamedAttribute attr : op->getAttrs()) {
+      if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr.getValue())) {
+        mlir::Type converted = typeConverter->convertType(typeAttr.getValue());
+        loweredOpState.addAttribute(attr.getName(),
+                                    mlir::TypeAttr::get(converted));
+      } else {
+        loweredOpState.addAttribute(attr.getName(), attr.getValue());
+      }
+    }
+
     loweredOpState.addSuccessors(op->getSuccessors());
 
     llvm::SmallVector<mlir::Type> loweredResultTypes;
