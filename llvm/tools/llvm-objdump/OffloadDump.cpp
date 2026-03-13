@@ -72,15 +72,14 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
 
   // Parse inner OffloadBinary
   MemoryBufferRef InnerBuffer(ImageData, "inner-offload-binary");
-  auto InnerBinariesOrErr = OffloadBinary::create(InnerBuffer);
-  if (!InnerBinariesOrErr) {
-    reportWarning("failed to parse nested OffloadBinary: " +
-                      toString(InnerBinariesOrErr.takeError()),
+  llvm::SmallVector<OffloadFile> InnerBinaries;
+  auto Err = extractOffloadBinaries(InnerBuffer, InnerBinaries);
+  if (Err) {
+    reportWarning("failed to extract nested OffloadBinary: " +
+                      toString(std::move(Err)),
                   OuterOB.getFileName());
     return;
   }
-
-  auto &InnerBinaries = *InnerBinariesOrErr;
   if (InnerBinaries.empty()) {
     reportWarning("nested OffloadBinary contains no entries",
                   OuterOB.getFileName());
@@ -92,7 +91,7 @@ static void printNestedOffloadBinary(const OffloadBinary &OuterOB,
 
   // Display information for each inner image
   for (uint64_t I = 0, E = InnerBinaries.size(); I != E; ++I) {
-    const OffloadBinary *InnerOB = InnerBinaries[I].get();
+    const OffloadBinary *InnerOB = InnerBinaries[I].getBinary();
     printBinary(*InnerOB, I, Level + 1, ParentIndex);
   }
 }
