@@ -346,7 +346,7 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check: fixed a
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by fixing a
   false positive where `AllowPointerConditions` and `AllowIntegerConditions`
   options did not suppress warnings when the condition expression involved
   temporaries (e.g. passing a string literal to a ``const std::string&``
