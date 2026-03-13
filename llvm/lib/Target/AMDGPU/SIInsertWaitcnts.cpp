@@ -507,8 +507,8 @@ public:
 private:
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
   DenseMap<MachineBasicBlock *, PreheaderFlushFlags> PreheadersToFlush;
-  MachineLoopInfo *MLI;
-  MachinePostDominatorTree *PDT;
+  MachineLoopInfo &MLI;
+  MachinePostDominatorTree &PDT;
   AliasAnalysis *AA = nullptr;
   MachineFunction &MF;
 
@@ -535,7 +535,7 @@ private:
   AMDGPU::HardwareLimits Limits;
 
 public:
-  SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
+  SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
                    AliasAnalysis *AA, MachineFunction &MF)
       : MLI(MLI), PDT(PDT), AA(AA), MF(MF) {
     (void)ForceExpCounter;
@@ -2526,7 +2526,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         if (Memop->isStore()) {
           if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
             addWait(Wait, SmemAccessCounter, 0);
-            if (PDT->dominates(MI.getParent(), It->second))
+            if (PDT.dominates(MI.getParent(), It->second))
               SLoadAddresses.erase(It);
           }
         }
@@ -3381,7 +3381,7 @@ SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
   if (!Succ)
     return PreheaderFlushFlags();
 
-  MachineLoop *Loop = MLI->getLoopFor(Succ);
+  MachineLoop *Loop = MLI.getLoopFor(Succ);
   if (!Loop)
     return PreheaderFlushFlags();
 
@@ -3596,9 +3596,9 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
 }
 
 bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  auto *PDT =
-      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &PDT =
+      getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   AliasAnalysis *AA = nullptr;
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
@@ -3609,8 +3609,8 @@ bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 SIInsertWaitcntsPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto *PDT = &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &PDT = MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                  .getManager()
                  .getCachedResult<AAManager>(MF.getFunction());
