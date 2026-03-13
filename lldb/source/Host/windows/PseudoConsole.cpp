@@ -126,6 +126,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   m_conpty_handle = hPC;
   m_conpty_output = hOutputRead;
   m_conpty_input = hInputWrite;
+  m_mode = Mode::ConPTY;
 
   if (auto error = DrainInitSequences()) {
     Log *log = GetLog(LLDBLog::Host);
@@ -137,6 +138,9 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 }
 
 bool PseudoConsole::IsConnected() const {
+  if (m_mode == Mode::Pipe)
+    return m_conpty_input != INVALID_HANDLE_VALUE &&
+           m_conpty_output != INVALID_HANDLE_VALUE;
   return m_conpty_handle != INVALID_HANDLE_VALUE &&
          m_conpty_input != INVALID_HANDLE_VALUE &&
          m_conpty_output != INVALID_HANDLE_VALUE;
@@ -160,6 +164,64 @@ void PseudoConsole::ClosePipes() {
 
   m_conpty_input = INVALID_HANDLE_VALUE;
   m_conpty_output = INVALID_HANDLE_VALUE;
+}
+
+void PseudoConsole::CloseChildHandles() {
+  if (m_pipe_child_stdin != INVALID_HANDLE_VALUE)
+    CloseHandle(m_pipe_child_stdin);
+  if (m_pipe_child_stdout != INVALID_HANDLE_VALUE)
+    CloseHandle(m_pipe_child_stdout);
+
+  m_pipe_child_stdin = INVALID_HANDLE_VALUE;
+  m_pipe_child_stdout = INVALID_HANDLE_VALUE;
+}
+
+llvm::Error PseudoConsole::OpenAnonymousPipes() {
+  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+  HANDLE hStdinRead = INVALID_HANDLE_VALUE;
+  HANDLE hStdinWrite = INVALID_HANDLE_VALUE;
+  if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0))
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+  // Parent write end must not be inherited by the child.
+  SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0);
+
+  wchar_t pipe_name[MAX_PATH];
+  swprintf(pipe_name, MAX_PATH, L"\\\\.\\pipe\\pipes-lldb-%d-%p",
+           GetCurrentProcessId(), this);
+
+  HANDLE hStdoutRead =
+      CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, NULL);
+  if (hStdoutRead == INVALID_HANDLE_VALUE) {
+    CloseHandle(hStdinRead);
+    CloseHandle(hStdinWrite);
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+  }
+
+  SECURITY_ATTRIBUTES child_security_attributes = {sizeof(SECURITY_ATTRIBUTES),
+                                                   NULL, TRUE};
+  HANDLE hStdoutWrite =
+      CreateFileW(pipe_name, GENERIC_WRITE, 0, &child_security_attributes,
+                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (hStdoutWrite == INVALID_HANDLE_VALUE) {
+    CloseHandle(hStdinRead);
+    CloseHandle(hStdinWrite);
+    CloseHandle(hStdoutRead);
+    return llvm::errorCodeToError(
+        std::error_code(GetLastError(), std::system_category()));
+  }
+
+  DWORD mode = PIPE_NOWAIT;
+  SetNamedPipeHandleState(hStdoutRead, &mode, NULL, NULL);
+
+  m_conpty_input = hStdinWrite;
+  m_conpty_output = hStdoutRead;
+  m_pipe_child_stdin = hStdinRead;
+  m_pipe_child_stdout = hStdoutWrite;
+  m_mode = Mode::Pipe;
+  return llvm::Error::success();
 }
 
 llvm::Error PseudoConsole::DrainInitSequences() {

@@ -22,6 +22,8 @@ namespace lldb_private {
 class PseudoConsole {
 
 public:
+  enum Mode { ConPTY, Pipe, None };
+
   PseudoConsole() = default;
   ~PseudoConsole();
 
@@ -40,13 +42,24 @@ public:
   ///     otherwise.
   llvm::Error OpenPseudoConsole();
 
+  /// Creates a pair of anonymous pipes to use for stdio instead of a ConPTY.
+  ///
+  /// \return
+  ///     An llvm::Error if the pipes could not be created.
+  llvm::Error OpenAnonymousPipes();
+
   /// Closes the ConPTY and invalidates its handle, without closing the STDIN
   /// and STDOUT pipes. Closing the ConPTY signals EOF to any process currently
   /// attached to it.
   void Close();
 
-  /// Closes the STDIN and STDOUT pipe handles and invalidates them
+  /// Closes the STDIN and STDOUT pipe handles and invalidates them.
   void ClosePipes();
+
+  /// Closes the child-side pipe handles (stdin read end and stdout/stderr write
+  /// end) that were passed to CreateProcessW. Must be called after a successful
+  /// CreateProcessW to avoid keeping the pipes alive indefinitely.
+  void CloseChildHandles();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
   bool IsConnected() const;
@@ -77,6 +90,14 @@ public:
   ///     The STDIN write HANDLE, or INVALID_HANDLE_VALUE if it is currently
   ///     invalid.
   HANDLE GetSTDINHandle() const { return m_conpty_input; };
+
+  /// The child-side stdin read HANDLE (pipe mode only).
+  HANDLE GetChildStdinHandle() const { return m_pipe_child_stdin; };
+
+  /// The child-side stdout/stderr write HANDLE (pipe mode only).
+  HANDLE GetChildStdoutHandle() const { return m_pipe_child_stdout; };
+
+  Mode GetMode() const { return m_mode; };
 
   /// Drains initialization sequences from the ConPTY output pipe.
   ///
@@ -112,6 +133,10 @@ protected:
   HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
   HANDLE m_conpty_output = ((HANDLE)(long long)-1);
   HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  // Pipe mode: child-side handles passed to CreateProcessW, closed after launch
+  HANDLE m_pipe_child_stdin = ((HANDLE)(long long)-1);
+  HANDLE m_pipe_child_stdout = ((HANDLE)(long long)-1);
+  Mode m_mode = Mode::None;
   std::mutex m_mutex{};
   std::condition_variable m_cv{};
   std::atomic<bool> m_stopping = false;
