@@ -102,6 +102,9 @@ Improvements to clang-tidy
   manages the creation of temporary header files and ensures that diagnostics
   and fixes are verified for the specified headers.
 
+- bugprone-derived-method-shadowing-base-method now correctly ignores function
+  templates.
+
 New checks
 ^^^^^^^^^^
 
