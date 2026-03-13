@@ -213,13 +213,17 @@ static void visit(BasicBlock &Start, std::function<bool(BasicBlock *)> op) {
 // associated merge instruction gets updated accordingly.
 static void replaceIfBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
                                    BasicBlock *NewTarget) {
-  auto *BI = cast<CondBrInst>(BB->getTerminator());
+  auto *BI = cast<BranchInst>(BB->getTerminator());
 
   // 1. Replace all matching successors.
   for (size_t i = 0; i < BI->getNumSuccessors(); i++) {
     if (BI->getSuccessor(i) == OldTarget)
       BI->setSuccessor(i, NewTarget);
   }
+
+  // Branch was unconditional, no fixup required.
+  if (BI->isUnconditional())
+    return;
 
   // Branch had 2 successors, maybe now both are the same?
   if (BI->getSuccessor(0) != BI->getSuccessor(1))
@@ -259,13 +263,8 @@ static void replaceBranchTargets(BasicBlock *BB, BasicBlock *OldTarget,
   auto *T = BB->getTerminator();
   if (isa<ReturnInst>(T))
     return;
-  if (auto *BI = dyn_cast<UncondBrInst>(T)) {
-    if (BI->getSuccessor() == OldTarget)
-      BI->setSuccessor(NewTarget);
-    return;
-  }
 
-  if (isa<CondBrInst>(T))
+  if (isa<BranchInst>(T))
     return replaceIfBranchTargets(BB, OldTarget, NewTarget);
 
   if (auto *SI = dyn_cast<SwitchInst>(T)) {
@@ -520,15 +519,18 @@ class SPIRVStructurizer : public FunctionPass {
     auto *T = BB->getTerminator();
     if (isa<ReturnInst>(T))
       return nullptr;
-    if (auto *BI = dyn_cast<UncondBrInst>(T))
-      return TargetToValue.lookup(BI->getSuccessor());
 
     IRBuilder<> Builder(BB);
     Builder.SetInsertPoint(T);
 
-    if (auto *BI = dyn_cast<CondBrInst>(T)) {
-      Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
-      Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
+    if (auto *BI = dyn_cast<BranchInst>(T)) {
+
+      BasicBlock *LHSTarget = BI->getSuccessor(0);
+      BasicBlock *RHSTarget =
+          BI->isConditional() ? BI->getSuccessor(1) : nullptr;
+
+      Value *LHS = TargetToValue.lookup(LHSTarget);
+      Value *RHS = TargetToValue.lookup(RHSTarget);
 
       if (LHS == nullptr || RHS == nullptr)
         return LHS == nullptr ? RHS : LHS;
@@ -578,7 +580,9 @@ class SPIRVStructurizer : public FunctionPass {
       // do however is to make is legal on the SPIR-V point of view, hence
       // adding an unreachable merge block.
       if (Merge == nullptr) {
-        UncondBrInst *Br = cast<UncondBrInst>(BB.getTerminator());
+        BranchInst *Br = cast<BranchInst>(BB.getTerminator());
+        assert(Br->isUnconditional());
+
         Merge = CreateUnreachable(F);
         Builder.SetInsertPoint(Br);
         Builder.CreateCondBr(Builder.getFalse(), Merge, Br->getSuccessor(0));
@@ -705,11 +709,11 @@ class SPIRVStructurizer : public FunctionPass {
         if (getDesignatedContinueBlock(MergeInstructions[0]) == nullptr) {
           BasicBlock *Unreachable = CreateUnreachable(F);
 
-          Instruction *Term = Header->getTerminator();
+          BranchInst *BI = cast<BranchInst>(Header->getTerminator());
           IRBuilder<> Builder(Header);
-          Builder.SetInsertPoint(Term);
+          Builder.SetInsertPoint(BI);
           Builder.CreateCondBr(Builder.getTrue(), NewBlock, Unreachable);
-          Term->eraseFromParent();
+          BI->eraseFromParent();
         }
 
         Header = NewBlock;
