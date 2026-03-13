@@ -981,6 +981,12 @@ let SMETargetGuard = "sme-lutv2" in {
   def SVLUTI4_ZT_X4 : SInst<"svluti4_zt_{d}_x4", "4i2.u", "cUc", MergeNone, "aarch64_sme_luti4_zt_x4", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
 }
 
+let SMETargetGuard = "sme2p3" in {
+  def SVLUTI6_ZT      : SInst<"svluti6_zt_{d}", "diu", "cUcm", MergeNone, "aarch64_sme_luti6_zt", [IsOverloadNone, IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
+  def SVLUTI6_ZT_X4   : SInst<"svluti6_zt_{d}_x4", "4i3.u", "cUcm", MergeNone, "aarch64_sme_luti6_zt_x4", [IsOverloadNone, IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>]>;
+  def SVLUTI6_LANE_X4 : SInst<"svluti6_lane[_{d}_x4]", "42.d2.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
+}
+
 let SMETargetGuard = "sme-f8f32" in {
   def SVMOPA_FP8_ZA32 : Inst<"svmopa_za32[_mf8]_m", "viPPdd>", "m", MergeNone, "aarch64_sme_fp8_fmopa_za32",
                              [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_3>]>;
