@@ -696,6 +696,8 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   }
 };
 
+/// Distributes a subgroup-level ConvertLayout op to workitem-level. This currently
+/// only supports folding for compatible lane layouts.
 struct SgToWiConvertLayout
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
@@ -705,9 +707,6 @@ struct SgToWiConvertLayout
                   ConversionPatternRewriter &rewriter) const override {
     auto inputLayout = op.getInputLayoutAttr();
     auto targetLayout = op.getTargetLayoutAttr();
-
-    if (!inputLayout || !targetLayout)
-      return rewriter.notifyMatchFailure(op, "missing layout attributes");
 
     if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
       return rewriter.notifyMatchFailure(
