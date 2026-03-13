@@ -1141,7 +1141,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   int32_t getOMPTeamsThreadLimit() const { return OMP_TeamsThreadLimit; }
 
   uint32_t getDebugKind() const { return OMPX_DebugKind; }
-  uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   virtual uint32_t getOMPXGenericSpmdTeamsPerCU() const {
@@ -1403,7 +1402,6 @@ private:
 
   /// Environment variables defined by the LLVM OpenMP implementation.
   Int32Envar OMPX_DebugKind;
-  UInt32Envar OMPX_SharedMemorySize;
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
 

@@ -124,17 +124,26 @@ std::optional<uint64_t> getAverageMemOpLoopTripCount(const MemIntrinsic &I) {
 /// to \p MainLoopStep.
 /// The generated \c MainLoopIP, \c MainLoopIndex, \c ResidualLoopIP, and
 /// \c ResidualLoopIndex are returned in a \c LoopExpansionInfo object.
+///
+/// If provided, \p ExpectedUnits is used as the expected number of units
+/// handled by the loop expansion when computing branch weights.
 static LoopExpansionInfo
 insertLoopExpansion(Instruction *InsertBefore, Value *Len,
                     unsigned MainLoopStep, unsigned ResidualLoopStep,
                     StringRef BBNamePrefix,
-                    std::optional<uint64_t> AverageTripCount) {
+                    std::optional<uint64_t> ExpectedUnits) {
   assert((ResidualLoopStep == 0 || MainLoopStep % ResidualLoopStep == 0) &&
          "ResidualLoopStep must divide MainLoopStep if specified");
   assert(ResidualLoopStep <= MainLoopStep &&
          "ResidualLoopStep cannot be larger than MainLoopStep");
   assert(MainLoopStep > 0 && "MainLoopStep must be non-zero");
   LoopExpansionInfo LEI;
+
+  // If the length is known to be zero, there is nothing to do.
+  if (auto *CLen = dyn_cast<ConstantInt>(Len))
+    if (CLen->isZero())
+      return LEI;
+
   BasicBlock *PreLoopBB = InsertBefore->getParent();
   BasicBlock *PostLoopBB = PreLoopBB->splitBasicBlock(
       InsertBefore, BBNamePrefix + "-post-expansion");
@@ -149,12 +158,21 @@ insertLoopExpansion(Instruction *InsertBefore, Value *Len,
   Type *LenType = Len->getType();
   IntegerType *ILenType = cast<IntegerType>(LenType);
   ConstantInt *CIMainLoopStep = ConstantInt::get(ILenType, MainLoopStep);
+  ConstantInt *Zero = ConstantInt::get(ILenType, 0U);
+
+  // We can avoid conditional branches and/or entire loops if we know any of the
+  // following:
+  // - that the main loop must be executed at least once
+  // - that the main loop will not be executed at all
+  // - that the residual loop must be executed at least once
+  // - that the residual loop will not be executed at all
+  bool MustTakeMainLoop = false;
+  bool MayTakeMainLoop = true;
+  bool MustTakeResidualLoop = false;
+  bool MayTakeResidualLoop = true;
 
   Value *LoopUnits = Len;
   Value *ResidualUnits = nullptr;
-  // We can make a conditional branch unconditional if we know that the
-  // MainLoop must be executed at least once.
-  bool MustTakeMainLoop = false;
   if (MainLoopStep != 1) {
     if (auto *CLen = dyn_cast<ConstantInt>(Len)) {
       uint64_t TotalUnits = CLen->getZExtValue();
@@ -163,11 +181,12 @@ insertLoopExpansion(Instruction *InsertBefore, Value *Len,
       LoopUnits = ConstantInt::get(LenType, LoopEndCount);
       ResidualUnits = ConstantInt::get(LenType, ResidualCount);
       MustTakeMainLoop = LoopEndCount > 0;
-      // As an optimization, we could skip generating the residual loop if
-      // ResidualCount is known to be 0. However, current uses of this function
-      // don't request a residual loop if the length is constant (they generate
-      // a (potentially empty) sequence of loads and stores instead), so this
-      // optimization would have no effect here.
+      MayTakeMainLoop = MustTakeMainLoop;
+      MustTakeResidualLoop = ResidualCount > 0;
+      MayTakeResidualLoop = MustTakeResidualLoop;
+      // TODO: This could also use known bits to check if a non-constant loop
+      // count is guaranteed to be a multiple of MainLoopStep, in which case we
+      // could omit the residual loop. It's unclear if that is worthwhile.
     } else {
       ResidualUnits = getRuntimeLoopRemainder(PreLoopBuilder, Len,
                                               CIMainLoopStep, MainLoopStep);
@@ -176,113 +195,195 @@ insertLoopExpansion(Instruction *InsertBefore, Value *Len,
     }
   } else if (auto *CLen = dyn_cast<ConstantInt>(Len)) {
     MustTakeMainLoop = CLen->getZExtValue() > 0;
+    MayTakeMainLoop = MustTakeMainLoop;
   }
 
-  BasicBlock *MainLoopBB = BasicBlock::Create(
-      Ctx, BBNamePrefix + "-expansion-main-body", ParentFunc, PostLoopBB);
-  IRBuilder<> LoopBuilder(MainLoopBB);
-  LoopBuilder.SetCurrentDebugLocation(DbgLoc);
+  // The case where both loops are omitted (i.e., the length is known zero) is
+  // already handled at the beginning of this function.
+  assert((MayTakeMainLoop || MayTakeResidualLoop) &&
+         "At least one of the loops must be generated");
 
-  PHINode *LoopIndex = LoopBuilder.CreatePHI(LenType, 2, "loop-index");
-  LEI.MainLoopIndex = LoopIndex;
-  LoopIndex->addIncoming(ConstantInt::get(LenType, 0U), PreLoopBB);
+  BasicBlock *MainLoopBB = nullptr;
+  BranchInst *MainLoopBr = nullptr;
 
-  Value *NewIndex =
-      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(LenType, MainLoopStep));
-  LoopIndex->addIncoming(NewIndex, MainLoopBB);
+  // Construct the main loop unless we statically known that it is not taken.
+  if (MayTakeMainLoop) {
+    MainLoopBB = BasicBlock::Create(Ctx, BBNamePrefix + "-expansion-main-body",
+                                    ParentFunc, PostLoopBB);
+    IRBuilder<> LoopBuilder(MainLoopBB);
+    LoopBuilder.SetCurrentDebugLocation(DbgLoc);
 
-  // One argument of the addition is a loop-variant PHI, so it must be an
-  // Instruction (i.e., it cannot be a Constant).
-  LEI.MainLoopIP = cast<Instruction>(NewIndex);
+    PHINode *LoopIndex = LoopBuilder.CreatePHI(LenType, 2, "loop-index");
+    LEI.MainLoopIndex = LoopIndex;
+    LoopIndex->addIncoming(ConstantInt::get(LenType, 0U), PreLoopBB);
 
-  if (ResidualLoopStep > 0 && ResidualLoopStep < MainLoopStep) {
-    // Loop body for the residual accesses.
-    BasicBlock *ResLoopBB =
+    Value *NewIndex = LoopBuilder.CreateAdd(
+        LoopIndex, ConstantInt::get(LenType, MainLoopStep));
+    LoopIndex->addIncoming(NewIndex, MainLoopBB);
+
+    // One argument of the addition is a loop-variant PHI, so it must be an
+    // Instruction (i.e., it cannot be a Constant).
+    LEI.MainLoopIP = cast<Instruction>(NewIndex);
+
+    // Stay in the MainLoop until we have handled all the LoopUnits. The False
+    // target is adjusted below if a residual is generated.
+    MainLoopBr = LoopBuilder.CreateCondBr(
+        LoopBuilder.CreateICmpULT(NewIndex, LoopUnits), MainLoopBB, PostLoopBB);
+
+    if (ExpectedUnits.has_value()) {
+      uint64_t BackedgeTakenCount = ExpectedUnits.value() / MainLoopStep;
+      if (BackedgeTakenCount > 0)
+        BackedgeTakenCount -= 1; // The last iteration goes to the False target.
+      MDBuilder MDB(ParentFunc->getContext());
+      setFittedBranchWeights(*MainLoopBr, {BackedgeTakenCount, 1},
+                             /*IsExpected=*/false);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*MainLoopBr, DEBUG_TYPE);
+    }
+  }
+
+  // Construct the residual loop if it is requested from the caller unless we
+  // statically know that it won't be taken.
+  bool ResidualLoopRequested =
+      ResidualLoopStep > 0 && ResidualLoopStep < MainLoopStep;
+  BasicBlock *ResidualLoopBB = nullptr;
+  BasicBlock *ResidualCondBB = nullptr;
+  if (ResidualLoopRequested && MayTakeResidualLoop) {
+    ResidualLoopBB =
         BasicBlock::Create(Ctx, BBNamePrefix + "-expansion-residual-body",
                            PreLoopBB->getParent(), PostLoopBB);
-    // BB to check if the residual loop is needed.
-    BasicBlock *ResidualCondBB =
-        BasicBlock::Create(Ctx, BBNamePrefix + "-expansion-residual-cond",
-                           PreLoopBB->getParent(), ResLoopBB);
 
-    // Enter the MainLoop unless no main loop iteration is required.
-    ConstantInt *Zero = ConstantInt::get(ILenType, 0U);
-    if (MustTakeMainLoop)
-      PreLoopBuilder.CreateBr(MainLoopBB);
-    else {
-      auto *BR = PreLoopBuilder.CreateCondBr(
-          PreLoopBuilder.CreateICmpNE(LoopUnits, Zero), MainLoopBB,
-          ResidualCondBB);
-      if (AverageTripCount.has_value()) {
-        MDBuilder MDB(ParentFunc->getContext());
-        setFittedBranchWeights(*BR,
-                               {AverageTripCount.value() % MainLoopStep, 1},
-                               /*IsExpected=*/false);
+    // The residual loop body is either reached from the ResidualCondBB (which
+    // checks if the residual loop needs to be executed), from the main loop
+    // body if we know statically that the residual must be executed, or from
+    // the pre-loop BB (conditionally or unconditionally) if the main loop is
+    // omitted.
+    BasicBlock *PredOfResLoopBody = PreLoopBB;
+    if (MainLoopBB) {
+      // If it's statically known that the residual must be executed, we don't
+      // need to create a preheader BB.
+      if (MustTakeResidualLoop) {
+        MainLoopBr->setSuccessor(1, ResidualLoopBB);
+        PredOfResLoopBody = MainLoopBB;
       } else {
-        setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+        // Construct a preheader BB to check if the residual loop is executed.
+        ResidualCondBB =
+            BasicBlock::Create(Ctx, BBNamePrefix + "-expansion-residual-cond",
+                               PreLoopBB->getParent(), ResidualLoopBB);
+
+        // Determine if we need to branch to the residual loop or bypass it.
+        IRBuilder<> RCBuilder(ResidualCondBB);
+        RCBuilder.SetCurrentDebugLocation(DbgLoc);
+        auto *BR =
+            RCBuilder.CreateCondBr(RCBuilder.CreateICmpNE(ResidualUnits, Zero),
+                                   ResidualLoopBB, PostLoopBB);
+        if (ExpectedUnits.has_value()) {
+          MDBuilder MDB(ParentFunc->getContext());
+          BR->setMetadata(LLVMContext::MD_prof,
+                          MDB.createLikelyBranchWeights());
+        } else {
+          setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+        }
+
+        MainLoopBr->setSuccessor(1, ResidualCondBB);
+        PredOfResLoopBody = ResidualCondBB;
       }
     }
-    PreLoopBB->getTerminator()->eraseFromParent();
 
-    // Stay in the MainLoop until we have handled all the LoopUnits. Then go to
-    // the residual condition BB.
-    LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpULT(NewIndex, LoopUnits),
-                             MainLoopBB, ResidualCondBB);
-
-    // Determine if we need to branch to the residual loop or bypass it.
-    IRBuilder<> RCBuilder(ResidualCondBB);
-    RCBuilder.SetCurrentDebugLocation(DbgLoc);
-    RCBuilder.CreateCondBr(RCBuilder.CreateICmpNE(ResidualUnits, Zero),
-                           ResLoopBB, PostLoopBB);
-
-    IRBuilder<> ResBuilder(ResLoopBB);
+    IRBuilder<> ResBuilder(ResidualLoopBB);
     ResBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *ResidualIndex =
         ResBuilder.CreatePHI(LenType, 2, "residual-loop-index");
-    ResidualIndex->addIncoming(Zero, ResidualCondBB);
+    ResidualIndex->addIncoming(Zero, PredOfResLoopBody);
 
     // Add the offset at the end of the main loop to the loop counter of the
-    // residual loop to get the proper index.
-    Value *FullOffset = ResBuilder.CreateAdd(LoopUnits, ResidualIndex);
-    LEI.ResidualLoopIndex = FullOffset;
+    // residual loop to get the proper index. If the main loop was omitted, we
+    // can also omit the addition.
+    if (MainLoopBB)
+      LEI.ResidualLoopIndex = ResBuilder.CreateAdd(LoopUnits, ResidualIndex);
+    else
+      LEI.ResidualLoopIndex = ResidualIndex;
 
     Value *ResNewIndex = ResBuilder.CreateAdd(
         ResidualIndex, ConstantInt::get(LenType, ResidualLoopStep));
-    ResidualIndex->addIncoming(ResNewIndex, ResLoopBB);
+    ResidualIndex->addIncoming(ResNewIndex, ResidualLoopBB);
 
     // One argument of the addition is a loop-variant PHI, so it must be an
     // Instruction (i.e., it cannot be a Constant).
     LEI.ResidualLoopIP = cast<Instruction>(ResNewIndex);
 
     // Stay in the residual loop until all ResidualUnits are handled.
-    ResBuilder.CreateCondBr(
-        ResBuilder.CreateICmpULT(ResNewIndex, ResidualUnits), ResLoopBB,
+    BranchInst *BR = ResBuilder.CreateCondBr(
+        ResBuilder.CreateICmpULT(ResNewIndex, ResidualUnits), ResidualLoopBB,
         PostLoopBB);
-  } else {
-    // There is no need for a residual loop after the main loop. We do however
-    // need to patch up the control flow by creating the terminators for the
-    // preloop block and the main loop.
 
-    // Enter the MainLoop unless no main loop iteration is required.
-    if (MustTakeMainLoop) {
-      PreLoopBuilder.CreateBr(MainLoopBB);
-    } else {
-      ConstantInt *Zero = ConstantInt::get(ILenType, 0U);
-      MDBuilder B(ParentFunc->getContext());
-      PreLoopBuilder.CreateCondBr(PreLoopBuilder.CreateICmpNE(LoopUnits, Zero),
-                                  MainLoopBB, PostLoopBB,
-                                  B.createLikelyBranchWeights());
-    }
-    PreLoopBB->getTerminator()->eraseFromParent();
-    // Stay in the MainLoop until we have handled all the LoopUnits.
-    auto *Br = LoopBuilder.CreateCondBr(
-        LoopBuilder.CreateICmpULT(NewIndex, LoopUnits), MainLoopBB, PostLoopBB);
-    if (AverageTripCount.has_value())
-      setFittedBranchWeights(*Br, {AverageTripCount.value() / MainLoopStep, 1},
+    if (ExpectedUnits.has_value()) {
+      uint64_t BackedgeTakenCount =
+          (ExpectedUnits.value() % MainLoopStep) / ResidualLoopStep;
+      if (BackedgeTakenCount > 0)
+        BackedgeTakenCount -= 1; // The last iteration goes to the False target.
+      MDBuilder MDB(ParentFunc->getContext());
+      setFittedBranchWeights(*BR, {BackedgeTakenCount, 1},
                              /*IsExpected=*/false);
-    else
-      setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+    }
   }
+
+  // Create the branch in the pre-loop block.
+  if (MustTakeMainLoop) {
+    // Go unconditionally to the main loop if it's statically known that it must
+    // be executed.
+    assert(MainLoopBB);
+    PreLoopBuilder.CreateBr(MainLoopBB);
+  } else if (!MainLoopBB && ResidualLoopBB) {
+    if (MustTakeResidualLoop) {
+      // If the main loop is omitted and the residual loop is statically known
+      // to be executed, go there unconditionally.
+      PreLoopBuilder.CreateBr(ResidualLoopBB);
+    } else {
+      // If the main loop is omitted and we don't know if the residual loop is
+      // executed, go there if necessary. The PreLoopBB takes the role of the
+      // preheader for the residual loop in this case.
+      auto *BR = PreLoopBuilder.CreateCondBr(
+          PreLoopBuilder.CreateICmpNE(ResidualUnits, Zero), ResidualLoopBB,
+          PostLoopBB);
+      if (ExpectedUnits.has_value()) {
+        MDBuilder MDB(ParentFunc->getContext());
+        BR->setMetadata(LLVMContext::MD_prof, MDB.createLikelyBranchWeights());
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+      }
+    }
+  } else {
+    // Otherwise, go conditionally to the main loop or its successor.
+    // If there is no residual loop, the successor is the post-loop BB.
+    BasicBlock *FalseBB = PostLoopBB;
+    if (ResidualCondBB) {
+      // If we constructed a pre-header for the residual loop, that is the
+      // successor.
+      FalseBB = ResidualCondBB;
+    } else if (ResidualLoopBB) {
+      // If there is a residual loop but the preheader is omitted (because the
+      // residual loop is statically known to be executed), the successor
+      // is the residual loop body.
+      assert(MustTakeResidualLoop);
+      FalseBB = ResidualLoopBB;
+    }
+
+    auto *BR = PreLoopBuilder.CreateCondBr(
+        PreLoopBuilder.CreateICmpNE(LoopUnits, Zero), MainLoopBB, FalseBB);
+
+    if (ExpectedUnits.has_value()) {
+      MDBuilder MDB(ParentFunc->getContext());
+      BR->setMetadata(LLVMContext::MD_prof, MDB.createLikelyBranchWeights());
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+    }
+  }
+  // Delete the unconditional branch inserted by splitBasicBlock.
+  PreLoopBB->getTerminator()->eraseFromParent();
+
   return LEI;
 }
 
@@ -330,6 +431,8 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
     LoopExpansionInfo LEI =
         insertLoopExpansion(InsertBefore, CopyLen, LoopOpSize, 0,
                             "static-memcpy", AverageTripCount);
+    assert(LEI.MainLoopIP && LEI.MainLoopIndex &&
+           "Main loop should be generated for non-zero loop count");
 
     // Fill MainLoopBB
     IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
@@ -450,6 +553,8 @@ void llvm::createMemCpyLoopUnknownSize(
   LoopExpansionInfo LEI =
       insertLoopExpansion(InsertBefore, CopyLen, LoopOpSize, ResidualLoopOpSize,
                           "dynamic-memcpy", AverageTripCount);
+  assert(LEI.MainLoopIP && LEI.MainLoopIndex &&
+         "Main loop should be generated for unknown size copy");
 
   // Fill MainLoopBB
   IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
@@ -1087,6 +1192,8 @@ createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
     // straight-line code.
     LoopExpansionInfo LEI = insertLoopExpansion(
         InsertBefore, Len, LoopOpSize, 0, "static-memset", AverageTripCount);
+    assert(LEI.MainLoopIP && LEI.MainLoopIndex &&
+           "Main loop should be generated for non-zero loop count");
 
     // Fill MainLoopBB
     IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
@@ -1174,6 +1281,8 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
   LoopExpansionInfo LEI =
       insertLoopExpansion(InsertBefore, Len, LoopOpSize, ResidualLoopOpSize,
                           "dynamic-memset", AverageTripCount);
+  assert(LEI.MainLoopIP && LEI.MainLoopIndex &&
+         "Main loop should be generated for unknown size memset");
 
   // Fill MainLoopBB
   IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
@@ -1198,62 +1307,103 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
                                     IsVolatile);
 }
 
-static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
-                             Value *CopyLen, Value *SetValue, Align DstAlign,
-                             std::optional<uint64_t> AverageTripCount,
-                             bool IsVolatile) {
-  // Currently no longer used for memset, only for memset.pattern.
-  // TODO: Update the memset.pattern lowering to also use the loop expansion
-  //       framework and remove this function.
-  Type *TypeOfCopyLen = CopyLen->getType();
-  BasicBlock *OrigBB = InsertBefore->getParent();
-  Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getDataLayout();
-  BasicBlock *NewBB =
-      OrigBB->splitBasicBlock(InsertBefore, "split");
-  BasicBlock *LoopBB
-    = BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
+static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
+                                    Value *Len, Value *SetValue, Align DstAlign,
+                                    bool IsVolatile,
+                                    const TargetTransformInfo *TTI,
+                                    std::optional<uint64_t> AverageTripCount) {
+  // No need to expand zero length memset.pattern.
+  if (auto *CLen = dyn_cast<ConstantInt>(Len))
+    if (CLen->isZero())
+      return;
 
-  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
-  IRBuilder<> Builder(OrigBB->getTerminator());
-  Builder.SetCurrentDebugLocation(DbgLoc);
+  BasicBlock *PreLoopBB = InsertBefore->getParent();
+  Function *ParentFunc = PreLoopBB->getParent();
+  const DataLayout &DL = ParentFunc->getDataLayout();
+  LLVMContext &Ctx = PreLoopBB->getContext();
 
-  auto *ToLoopBR = Builder.CreateCondBr(
-      Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,
-      LoopBB);
-  MDBuilder MDB(F->getContext());
-  if (AverageTripCount.has_value())
-    ToLoopBR->setMetadata(LLVMContext::MD_prof,
-                          MDB.createLikelyBranchWeights());
-  else
-    setExplicitlyUnknownBranchWeightsIfProfiled(*ToLoopBR, DEBUG_TYPE);
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  OrigBB->getTerminator()->eraseFromParent();
+  Type *PreferredLoopOpType = SetValue->getType();
+  if (TTI) {
+    PreferredLoopOpType = TTI->getMemcpyLoopLoweringType(
+        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
+  }
+  TypeSize PreferredLoopOpStoreSize = DL.getTypeStoreSize(PreferredLoopOpType);
+  assert(PreferredLoopOpStoreSize.isFixed() &&
+         "PreferredLoopOpType cannot be a scalable vector type");
 
-  TypeSize PartSize = DL.getTypeStoreSize(SetValue->getType());
-  Align PartAlign(commonAlignment(DstAlign, PartSize));
+  TypeSize PreferredLoopOpAllocSize = DL.getTypeAllocSize(PreferredLoopOpType);
 
-  IRBuilder<> LoopBuilder(LoopBB);
-  LoopBuilder.SetCurrentDebugLocation(DbgLoc);
-  PHINode *LoopIndex = LoopBuilder.CreatePHI(TypeOfCopyLen, 0);
-  LoopIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), OrigBB);
+  Type *OriginalType = SetValue->getType();
+  TypeSize OriginalTypeStoreSize = DL.getTypeStoreSize(OriginalType);
+  TypeSize OriginalTypeAllocSize = DL.getTypeAllocSize(OriginalType);
 
-  LoopBuilder.CreateAlignedStore(
-      SetValue,
-      LoopBuilder.CreateInBoundsGEP(SetValue->getType(), DstAddr, LoopIndex),
-      PartAlign, IsVolatile);
+  // The semantics of memset.pattern restrict what vectorization we can do: It
+  // has to behave like a series of stores of the SetValue type at offsets that
+  // are spaced by the alloc size of the SetValue type. If store and alloc size
+  // of the SetValue type don't match, the bytes that aren't covered by these
+  // stores must not be overwritten. We therefore only vectorize memset.pattern
+  // if the store and alloc sizes of the SetValue are equal and properly divide
+  // the size of the preferred lowering type (and only if store and alloc size
+  // for the preferred lowering type are also equal).
 
-  Value *NewIndex =
-      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1));
-  LoopIndex->addIncoming(NewIndex, LoopBB);
+  unsigned MainLoopStep = 1;
+  Type *MainLoopType = OriginalType;
+  TypeSize MainLoopAllocSize = OriginalTypeAllocSize;
+  unsigned ResidualLoopStep = 0;
+  Type *ResidualLoopType = nullptr;
 
-  auto *LoopBR = LoopBuilder.CreateCondBr(
-      LoopBuilder.CreateICmpULT(NewIndex, CopyLen), LoopBB, NewBB);
-  if (AverageTripCount.has_value())
-    setFittedBranchWeights(*LoopBR, {AverageTripCount.value(), 1},
-                           /*IsExpected=*/false);
-  else
-    setExplicitlyUnknownBranchWeightsIfProfiled(*LoopBR, DEBUG_TYPE);
+  if (PreferredLoopOpStoreSize == PreferredLoopOpAllocSize &&
+      OriginalTypeStoreSize == OriginalTypeAllocSize &&
+      OriginalTypeStoreSize < PreferredLoopOpStoreSize &&
+      PreferredLoopOpStoreSize % OriginalTypeStoreSize == 0) {
+    // Multiple instances of SetValue can be combined to reach the preferred
+    // loop op size.
+    MainLoopStep = PreferredLoopOpStoreSize / OriginalTypeStoreSize;
+    MainLoopType = PreferredLoopOpType;
+    MainLoopAllocSize = PreferredLoopOpStoreSize;
+
+    ResidualLoopStep = 1;
+    ResidualLoopType = OriginalType;
+  }
+
+  // The step arguments here are in terms of the alloc size of the SetValue, not
+  // in terms of bytes.
+  LoopExpansionInfo LEI =
+      insertLoopExpansion(InsertBefore, Len, MainLoopStep, ResidualLoopStep,
+                          "memset.pattern", AverageTripCount);
+
+  Align PartDstAlign(commonAlignment(DstAlign, MainLoopAllocSize));
+
+  if (LEI.MainLoopIP) {
+    // Create the loop-invariant splat value before the loop.
+    IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
+    Value *MainLoopSetValue = SetValue;
+    if (MainLoopType != OriginalType)
+      MainLoopSetValue =
+          createMemSetSplat(DL, PreLoopBuilder, SetValue, MainLoopType);
+
+    // Fill MainLoopBB
+    IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
+    Value *DstGEP = MainLoopBuilder.CreateInBoundsGEP(MainLoopType, DstAddr,
+                                                      LEI.MainLoopIndex);
+    MainLoopBuilder.CreateAlignedStore(MainLoopSetValue, DstGEP, PartDstAlign,
+                                       IsVolatile);
+  }
+
+  if (!LEI.ResidualLoopIP)
+    return;
+
+  // Fill ResidualLoopBB
+  Align ResDstAlign(
+      commonAlignment(PartDstAlign, DL.getTypeAllocSize(ResidualLoopType)));
+
+  IRBuilder<> ResLoopBuilder(LEI.ResidualLoopIP);
+  Value *ResDstGEP = ResLoopBuilder.CreateInBoundsGEP(ResidualLoopType, DstAddr,
+                                                      LEI.ResidualLoopIndex);
+  ResLoopBuilder.CreateAlignedStore(SetValue, ResDstGEP, ResDstAlign,
+                                    IsVolatile);
 }
 
 template <typename T>
@@ -1392,14 +1542,22 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
   expandMemSetAsLoop(MemSet, &TTI);
 }
 
-void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
-  createMemSetLoop(/*InsertBefore=*/Memset,
-                   /*DstAddr=*/Memset->getRawDest(),
-                   /*CopyLen=*/Memset->getLength(),
-                   /*SetValue=*/Memset->getValue(),
-                   /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
-                   /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset),
-                   /*IsVolatile=*/Memset->isVolatile());
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,
+                                     const TargetTransformInfo *TTI) {
+  createMemSetPatternLoop(
+      /*InsertBefore=*/Memset,
+      /*DstAddr=*/Memset->getRawDest(),
+      /*Len=*/Memset->getLength(),
+      /*SetValue=*/Memset->getValue(),
+      /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
+      /*IsVolatile=*/Memset->isVolatile(),
+      /*TTI=*/TTI,
+      /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset));
+}
+
+void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
+                                     const TargetTransformInfo &TTI) {
+  expandMemSetPatternAsLoop(MemSet, &TTI);
 }
 
 void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,

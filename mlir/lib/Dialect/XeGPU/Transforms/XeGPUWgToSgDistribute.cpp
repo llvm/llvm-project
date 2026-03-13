@@ -1173,11 +1173,12 @@ struct WgToSgVectorShapeCastOp
 
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
-            op, "The ShapeCast op only expands dimensions, the result layout "
-                "must be a slice of the input layout, or vice versa.");
-      layoutToDistribute = layoutToDistribute.setUnitDimData(expandedUnitDims);
-      layoutToDistribute =
-          layoutToDistribute.setUnitDimLayout(expandedUnitDims);
+            op, "The ShapeCast op only expands dimensions, the input layout "
+                "must be a slice of the result layout.");
+
+      assert(layoutToDistribute.isEqualTo(
+                 layoutToDistribute.setUnitDimData(expandedUnitDims)) &&
+             "The sg_data for unit dimensions should be set as 1");
     }
 
     SmallVector<int64_t> sgShape =
