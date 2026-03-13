@@ -3524,7 +3524,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
 }
 
 void LSRInstance::CollectFixupsAndInitialFormulae() {
-  BranchInst *ExitBranch = nullptr;
+  CondBrInst *ExitBranch = nullptr;
   bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &TLI);
 
   // For calculating baseline cost
