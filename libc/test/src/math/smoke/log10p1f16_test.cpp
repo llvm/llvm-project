@@ -1,4 +1,4 @@
-//===-- Unittests for log10p1f16 -------------------------------------------===//
+//===-- Unittests for log10p1f16 ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ TEST_F(LlvmLibcLog10p1f16Test, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::log10p1f16(sNaN),
-                               FE_INVALID);
+                              FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::log10p1f16(inf));
@@ -37,14 +37,12 @@ TEST_F(LlvmLibcLog10p1f16Test, SpecialNumbers) {
 
   EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
       neg_inf,
-      LIBC_NAMESPACE::log10p1f16(
-          LIBC_NAMESPACE::fputil::cast<float16>(-1.0)),
+      LIBC_NAMESPACE::log10p1f16(LIBC_NAMESPACE::fputil::cast<float16>(-1.0)),
       FE_DIVBYZERO);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(
       aNaN,
-      LIBC_NAMESPACE::log10p1f16(
-          LIBC_NAMESPACE::fputil::cast<float16>(-2.0)));
+      LIBC_NAMESPACE::log10p1f16(LIBC_NAMESPACE::fputil::cast<float16>(-2.0)));
   EXPECT_MATH_ERRNO(EDOM);
 }
