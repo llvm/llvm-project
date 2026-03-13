@@ -1840,6 +1840,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_mul)
 matrix<T, R, C> mul(matrix<T, R, K>, matrix<T, K, C>);
 
 //===----------------------------------------------------------------------===//
+// transpose builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn matrix<T, C, R> transpose(matrix<T, R, C> x)
+/// \brief Returns the transpose of the input matrix.
+/// \param x [in] The input matrix.
+
+template <int R, int C>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_transpose) matrix<half, C, R> transpose(
+    matrix<half, R, C>);
+
+template <typename T, int R, int C>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_transpose)
+matrix<T, C, R> transpose(matrix<T, R, C>);
+
+//===----------------------------------------------------------------------===//
 // normalize builtins
 //===----------------------------------------------------------------------===//
 
