@@ -17,6 +17,12 @@ Options
    Flag functions with Cognitive Complexity exceeding this number.
    The default is `25`.
 
+.. option:: IgnoreAboveThreshold
+
+   Do not flag functions with Cognitive Complexity at or above this number.
+   This can be used to skip "hopelessly" complex functions that would be too
+   costly to refactor. The default is none (option disabled).
+
 .. option:: DescribeBasicIncrements
 
    If set to `true`, then for each function exceeding the complexity threshold
