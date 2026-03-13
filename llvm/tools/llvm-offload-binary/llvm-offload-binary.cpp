@@ -137,29 +137,6 @@ static Error bundleImages() {
   return Error::success();
 }
 
-// Recursively unwrap nested OffloadBinaries to get the actual device image.
-static Expected<StringRef> unwrapImage(StringRef ImageData) {
-  // Check if the image contains a nested OffloadBinary.
-  if (identify_magic(ImageData) == file_magic::offload_binary) {
-    // Parse nested OffloadBinary.
-    MemoryBufferRef InnerBuffer(ImageData, "nested-offload-binary");
-    auto InnerBinaries = OffloadBinary::create(InnerBuffer);
-    if (!InnerBinaries)
-      return InnerBinaries.takeError();
-
-    // For single entry, recursively unwrap.
-    if (InnerBinaries->size() == 1)
-      return unwrapImage((*InnerBinaries)[0]->getImage());
-
-    // Multiple entries not supported for single file extraction.
-    return createStringError(inconvertibleErrorCode(),
-                             "nested OffloadBinary contains multiple entries");
-  }
-
-  // Base case: return the actual device image.
-  return ImageData;
-}
-
 // Extract a single OffloadBinary, recursively handling nested OffloadBinaries.
 static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
                            uint64_t &Idx, StringSaver &Saver) {
@@ -271,12 +248,7 @@ static Error unbundleImages() {
         WithColor::warning(errs(), PackagerExecutable)
             << "Multiple inputs match to a single file, '" << It->second
             << "'\n";
-      const OffloadBinary *Binary = Extracted.back();
-      // Recursively unwrap any nested OffloadBinaries.
-      auto ImageOrErr = unwrapImage(Binary->getImage());
-      if (!ImageOrErr)
-        return ImageOrErr.takeError();
-      if (Error E = writeFile(It->second, *ImageOrErr))
+      if (Error E = writeFile(It->second, Extracted.back()->getImage()))
         return E;
     } else {
       uint64_t Idx = 0;
