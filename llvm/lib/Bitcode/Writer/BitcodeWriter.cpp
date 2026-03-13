@@ -4621,7 +4621,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       /*WriteContextSizeInfoIndex*/ true, CallStackPos, CallStackCount);
 }
 
-static GlobalValue::GUID getOrComputeGUID(const GlobalValue& V) {
+static GlobalValue::GUID getOrComputeGUID(const GlobalValue &V) {
   auto MaybeGUID = V.getGUIDIfAssigned();
   return MaybeGUID ? *MaybeGUID
                    : GlobalValue::getGUIDAssumingExternalLinkage(V.getName());
