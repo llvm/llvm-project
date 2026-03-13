@@ -128,14 +128,13 @@ struct StructType : PyConcreteType<StructType> {
         "name"_a, "elements"_a, nb::kw_only(), "packed"_a = false,
         "context"_a = nb::none());
 
-    c.def_prop_ro(
-        "name", [](const StructType &type) -> std::optional<std::string> {
-          if (mlirLLVMStructTypeIsLiteral(type))
-            return std::nullopt;
+    c.def_prop_ro("name",
+                  [](const StructType &type) -> std::optional<MlirStringRef> {
+                    if (mlirLLVMStructTypeIsLiteral(type))
+                      return std::nullopt;
 
-          MlirStringRef stringRef = mlirLLVMStructTypeGetIdentifier(type);
-          return std::string(stringRef.data, stringRef.length);
-        });
+                    return mlirLLVMStructTypeGetIdentifier(type);
+                  });
 
     c.def_prop_ro("body", [](const StructType &type) -> nb::object {
       // Don't crash in absence of a body.

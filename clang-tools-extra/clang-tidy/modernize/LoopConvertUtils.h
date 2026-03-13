@@ -15,8 +15,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -32,29 +30,26 @@ enum LoopFixerKind {
 };
 
 /// A map used to walk the AST in reverse: maps child Stmt to parent Stmt.
-using StmtParentMap = llvm::DenseMap<const clang::Stmt *, const clang::Stmt *>;
+using StmtParentMap = llvm::DenseMap<const Stmt *, const Stmt *>;
 
 /// A map used to walk the AST in reverse:
 ///  maps VarDecl to the to parent DeclStmt.
-using DeclParentMap =
-    llvm::DenseMap<const clang::VarDecl *, const clang::DeclStmt *>;
+using DeclParentMap = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
 /// A map used to track which variables have been removed by a refactoring pass.
 /// It maps the parent ForStmt to the removed index variable's VarDecl.
-using ReplacedVarsMap =
-    llvm::DenseMap<const clang::ForStmt *, const clang::VarDecl *>;
+using ReplacedVarsMap = llvm::DenseMap<const ForStmt *, const VarDecl *>;
 
 /// A map used to remember the variable names generated in a Stmt
-using StmtGeneratedVarNameMap =
-    llvm::DenseMap<const clang::Stmt *, std::string>;
+using StmtGeneratedVarNameMap = llvm::DenseMap<const Stmt *, std::string>;
 
 /// A vector used to store the AST subtrees of an Expr.
-using ComponentVector = llvm::SmallVector<const clang::Expr *, 16>;
+using ComponentVector = SmallVector<const Expr *, 16>;
 
 /// Class used build the reverse AST properties needed to detect
 /// name conflicts and free variables.
 class StmtAncestorASTVisitor
-    : public clang::RecursiveASTVisitor<StmtAncestorASTVisitor> {
+    : public RecursiveASTVisitor<StmtAncestorASTVisitor> {
 public:
   StmtAncestorASTVisitor() { StmtStack.push_back(nullptr); }
 
@@ -72,50 +67,50 @@ public:
   /// Accessor for DeclParents.
   const DeclParentMap &getDeclToParentStmtMap() { return DeclParents; }
 
-  friend class clang::RecursiveASTVisitor<StmtAncestorASTVisitor>;
+  friend class RecursiveASTVisitor<StmtAncestorASTVisitor>;
 
 private:
   StmtParentMap StmtAncestors;
   DeclParentMap DeclParents;
-  llvm::SmallVector<const clang::Stmt *, 16> StmtStack;
+  SmallVector<const Stmt *, 16> StmtStack;
 
-  bool TraverseStmt(clang::Stmt *Statement);
-  bool VisitDeclStmt(clang::DeclStmt *Statement);
+  bool TraverseStmt(Stmt *Statement);
+  bool VisitDeclStmt(DeclStmt *Statement);
 };
 
 /// Class used to find the variables and member expressions on which an
 /// arbitrary expression depends.
 class ComponentFinderASTVisitor
-    : public clang::RecursiveASTVisitor<ComponentFinderASTVisitor> {
+    : public RecursiveASTVisitor<ComponentFinderASTVisitor> {
 public:
   ComponentFinderASTVisitor() = default;
 
   /// Find the components of an expression and place them in a ComponentVector.
-  void findExprComponents(const clang::Expr *SourceExpr) {
-    TraverseStmt(const_cast<clang::Expr *>(SourceExpr));
+  void findExprComponents(const Expr *SourceExpr) {
+    TraverseStmt(const_cast<Expr *>(SourceExpr));
   }
 
   /// Accessor for Components.
   const ComponentVector &getComponents() { return Components; }
 
-  friend class clang::RecursiveASTVisitor<ComponentFinderASTVisitor>;
+  friend class RecursiveASTVisitor<ComponentFinderASTVisitor>;
 
 private:
   ComponentVector Components;
 
-  bool VisitDeclRefExpr(clang::DeclRefExpr *E);
-  bool VisitMemberExpr(clang::MemberExpr *Member);
+  bool VisitDeclRefExpr(DeclRefExpr *E);
+  bool VisitMemberExpr(MemberExpr *Member);
 };
 
 /// Class used to determine if an expression is dependent on a variable declared
 /// inside of the loop where it would be used.
 class DependencyFinderASTVisitor
-    : public clang::RecursiveASTVisitor<DependencyFinderASTVisitor> {
+    : public RecursiveASTVisitor<DependencyFinderASTVisitor> {
 public:
   DependencyFinderASTVisitor(const StmtParentMap *StmtParents,
                              const DeclParentMap *DeclParents,
                              const ReplacedVarsMap *ReplacedVars,
-                             const clang::Stmt *ContainingStmt)
+                             const Stmt *ContainingStmt)
       : StmtParents(StmtParents), DeclParents(DeclParents),
         ContainingStmt(ContainingStmt), ReplacedVars(ReplacedVars) {}
 
@@ -149,31 +144,30 @@ public:
   /// In order to avoid this, this class looks at the container expression
   /// `arr[k]` and decides whether or not it contains a sub-expression declared
   /// within the loop body.
-  bool dependsOnInsideVariable(const clang::Stmt *Body) {
+  bool dependsOnInsideVariable(const Stmt *Body) {
     DependsOnInsideVariable = false;
-    TraverseStmt(const_cast<clang::Stmt *>(Body));
+    TraverseStmt(const_cast<Stmt *>(Body));
     return DependsOnInsideVariable;
   }
 
-  friend class clang::RecursiveASTVisitor<DependencyFinderASTVisitor>;
+  friend class RecursiveASTVisitor<DependencyFinderASTVisitor>;
 
 private:
   const StmtParentMap *StmtParents;
   const DeclParentMap *DeclParents;
-  const clang::Stmt *ContainingStmt;
+  const Stmt *ContainingStmt;
   const ReplacedVarsMap *ReplacedVars;
   bool DependsOnInsideVariable;
 
-  bool VisitVarDecl(clang::VarDecl *V);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *D);
+  bool VisitVarDecl(VarDecl *V);
+  bool VisitDeclRefExpr(DeclRefExpr *D);
 };
 
 /// Class used to determine if any declarations used in a Stmt would conflict
 /// with a particular identifier. This search includes the names that don't
 /// actually appear in the AST (i.e. created by a refactoring tool) by including
 /// a map from Stmts to generated names associated with those stmts.
-class DeclFinderASTVisitor
-    : public clang::RecursiveASTVisitor<DeclFinderASTVisitor> {
+class DeclFinderASTVisitor : public RecursiveASTVisitor<DeclFinderASTVisitor> {
 public:
   DeclFinderASTVisitor(const StringRef &Name,
                        const StmtGeneratedVarNameMap *GeneratedDecls)
@@ -182,13 +176,13 @@ public:
   /// Attempts to find any usages of variables name Name in Body, returning
   /// true when it is used in Body. This includes the generated loop variables
   /// of ForStmts which have already been transformed.
-  bool findUsages(const clang::Stmt *Body) {
+  bool findUsages(const Stmt *Body) {
     Found = false;
-    TraverseStmt(const_cast<clang::Stmt *>(Body));
+    TraverseStmt(const_cast<Stmt *>(Body));
     return Found;
   }
 
-  friend class clang::RecursiveASTVisitor<DeclFinderASTVisitor>;
+  friend class RecursiveASTVisitor<DeclFinderASTVisitor>;
 
 private:
   std::string Name;
@@ -197,10 +191,10 @@ private:
   const StmtGeneratedVarNameMap *GeneratedDecls;
   bool Found = false;
 
-  bool VisitForStmt(clang::ForStmt *);
-  bool VisitNamedDecl(clang::NamedDecl *);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *);
-  bool VisitTypeLoc(clang::TypeLoc);
+  bool VisitForStmt(ForStmt *);
+  bool VisitNamedDecl(NamedDecl *);
+  bool VisitDeclRefExpr(DeclRefExpr *);
+  bool VisitTypeLoc(TypeLoc);
 };
 
 /// The information needed to describe a valid convertible usage
@@ -270,7 +264,7 @@ private:
 };
 
 // The main computational result of ForLoopIndexVisitor.
-using UsageResult = llvm::SmallVector<Usage, 8>;
+using UsageResult = SmallVector<Usage, 8>;
 
 // General functions used by ForLoopIndexUseVisitor and LoopConvertCheck.
 const Expr *digThroughConstructorsConversions(const Expr *E);
@@ -385,7 +379,7 @@ private:
   ///
   /// If any of these expressions are encountered outside of an acceptable usage
   /// of the loop element, lower our confidence level.
-  llvm::SmallVector<std::pair<const Expr *, llvm::FoldingSetNodeID>, 16>
+  SmallVector<std::pair<const Expr *, llvm::FoldingSetNodeID>, 16>
       DependentExprs;
 
   /// The parent-in-waiting. Will become the real parent once we traverse down
@@ -435,10 +429,9 @@ public:
   };
 
   VariableNamer(StmtGeneratedVarNameMap *GeneratedDecls,
-                const StmtParentMap *ReverseAST, const clang::Stmt *SourceStmt,
-                const clang::VarDecl *OldIndex,
-                const clang::ValueDecl *TheContainer,
-                const clang::ASTContext *Context, NamingStyle Style)
+                const StmtParentMap *ReverseAST, const Stmt *SourceStmt,
+                const VarDecl *OldIndex, const ValueDecl *TheContainer,
+                const ASTContext *Context, NamingStyle Style)
       : GeneratedDecls(GeneratedDecls), ReverseAST(ReverseAST),
         SourceStmt(SourceStmt), OldIndex(OldIndex), TheContainer(TheContainer),
         Context(Context), Style(Style) {}
@@ -453,15 +446,15 @@ public:
 private:
   StmtGeneratedVarNameMap *GeneratedDecls;
   const StmtParentMap *ReverseAST;
-  const clang::Stmt *SourceStmt;
-  const clang::VarDecl *OldIndex;
-  const clang::ValueDecl *TheContainer;
-  const clang::ASTContext *Context;
+  const Stmt *SourceStmt;
+  const VarDecl *OldIndex;
+  const ValueDecl *TheContainer;
+  const ASTContext *Context;
   const NamingStyle Style;
 
   // Determine whether or not a declaration that would conflict with Symbol
   // exists in an outer context or in any statement contained in SourceStmt.
-  bool declarationExists(llvm::StringRef Symbol);
+  bool declarationExists(StringRef Symbol);
 };
 
 } // namespace clang::tidy::modernize

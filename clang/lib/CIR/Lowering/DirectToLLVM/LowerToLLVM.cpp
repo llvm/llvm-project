@@ -2626,6 +2626,13 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
 
+  // Mark externally_initialized for __device__ and __constant__
+  if (auto extInit =
+          op->getAttr(CUDAExternallyInitializedAttr::getMnemonic())) {
+    attributes.push_back(rewriter.getNamedAttr("externally_initialized",
+                                               rewriter.getUnitAttr()));
+  }
+
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
       GlobalInitAttrRewriter initRewriter(llvmType, rewriter);
