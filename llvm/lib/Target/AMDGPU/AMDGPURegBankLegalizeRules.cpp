@@ -1549,4 +1549,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
       .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
+  addRulesForIOpcs({amdgcn_sin, amdgcn_cos}, Standard)
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}});
+
 } // end initialize rules
