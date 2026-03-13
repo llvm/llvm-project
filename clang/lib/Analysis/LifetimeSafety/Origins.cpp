@@ -51,7 +51,19 @@ private:
 } // namespace
 
 bool hasOrigins(QualType QT) {
-  return QT->isPointerOrReferenceType() || isGslPointerType(QT);
+  if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
+    return true;
+  const auto *RD = QT->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+  // TODO: Limit to lambdas for now. This will be extended to user-defined
+  // structs with pointer-like fields.
+  if (!RD->isLambda())
+    return false;
+  for (const auto *FD : RD->fields())
+    if (hasOrigins(FD->getType()))
+      return true;
+  return false;
 }
 
 /// Determines if an expression has origins that need to be tracked.

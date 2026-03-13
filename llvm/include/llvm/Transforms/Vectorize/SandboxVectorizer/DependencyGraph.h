@@ -143,11 +143,10 @@ public:
   bool ready() const { return UnscheduledSuccs == 0; }
   /// \Returns true if this node has been scheduled.
   bool scheduled() const { return Scheduled; }
-  void setScheduled(bool NewVal) {
-    Scheduled = NewVal;
-    if (Scheduled)
-      // UnscheduledSuccs is meaningless from this point on, so prohibit its use
-      UnscheduledSuccs = std::nullopt;
+  void setScheduled() {
+    Scheduled = true;
+    // UnscheduledSuccs is meaningless from this point on, so prohibit its use.
+    UnscheduledSuccs = std::nullopt;
   }
   /// \Returns the scheduling bundle that this node belongs to, or nullptr.
   SchedBundle *getSchedBundle() const { return SB; }

@@ -71,3 +71,33 @@ add_libc_test(
   DEPENDS
     libc.src.wctype.iswblank
 )
+
+add_libc_test(
+  iswxdigit_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswxdigit_test.cpp
+  DEPENDS
+    libc.src.wctype.iswxdigit
+)
+
+add_libc_test(
+  iswalnum_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswalnum_test.cpp
+  DEPENDS
+    libc.src.wctype.iswalnum
+)
+
+add_libc_test(
+  iswupper_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswupper_test.cpp
+  DEPENDS
+    libc.src.wctype.iswupper
+)

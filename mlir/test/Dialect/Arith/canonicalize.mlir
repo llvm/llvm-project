@@ -3527,3 +3527,29 @@ func.func @cmpi_dynamic_shape_no_fold(%arg0: tensor<?xi32>) -> tensor<?xi1> {
   return %0 : tensor<?xi1>
 }
 
+// -----
+
+// arith.truncf of infinity to a FiniteOnly float type (f4E2M1FN) must not fold,
+// since the type has no infinity representation. Previously this would crash
+// inside APFloat::convert with llvm_unreachable("semantics don't support inf!").
+
+// CHECK-LABEL: @truncf_inf_to_finite_only_no_fold
+//       CHECK:   arith.truncf
+func.func @truncf_inf_to_finite_only_no_fold() -> f4E2M1FN {
+  %inf = arith.constant 0x7F800000 : f32
+  %result = arith.truncf %inf : f32 to f4E2M1FN
+  return %result : f4E2M1FN
+}
+
+// -----
+
+// arith.truncf of negative infinity to a FiniteOnly float type must not fold.
+
+// CHECK-LABEL: @truncf_neg_inf_to_finite_only_no_fold
+//       CHECK:   arith.truncf
+func.func @truncf_neg_inf_to_finite_only_no_fold() -> f4E2M1FN {
+  %neg_inf = arith.constant 0xFF800000 : f32
+  %result = arith.truncf %neg_inf : f32 to f4E2M1FN
+  return %result : f4E2M1FN
+}
+
