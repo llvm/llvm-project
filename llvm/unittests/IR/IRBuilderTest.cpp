@@ -547,7 +547,7 @@ TEST_F(IRBuilderTest, CreateCondBr) {
   BasicBlock *TBB = BasicBlock::Create(Ctx, "", F);
   BasicBlock *FBB = BasicBlock::Create(Ctx, "", F);
 
-  BranchInst *BI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
+  CondBrInst *BI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB);
   Instruction *TI = BB->getTerminator();
   EXPECT_EQ(BI, TI);
   EXPECT_EQ(2u, TI->getNumSuccessors());
@@ -1229,7 +1229,7 @@ TEST_F(IRBuilderTest, DebugLoc) {
   DebugLoc DL2 = DILocation::get(Ctx, 3, 0, SP);
 
   auto BB2 = BasicBlock::Create(Ctx, "bb2", F);
-  auto Br = BranchInst::Create(BB2, BB);
+  auto Br = UncondBrInst::Create(BB2, BB);
   Br->setDebugLoc(DL1);
 
   IRBuilder<> Builder(Ctx);
