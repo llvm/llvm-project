@@ -2626,7 +2626,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // We enforce this condition for all callers to handleBitwiseAnd(); callers
     // with non-integer types should call CreateAppToShadowCast() themselves.
     assert(V1->getType()->isIntOrIntVectorTy());
-    assert(V2->getType()->isIntOrIntVectorTy());
     assert(V1->getType() == V2->getType());
 
     // Conveniently, getShadowTy() of Int/IntVector returns the original type.
@@ -2674,7 +2673,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // "The two arguments to the ‘or’ instruction must be integer or vector
     //  of integer values. Both arguments must have identical types."
     assert(V1->getType()->isIntOrIntVectorTy());
-    assert(V2->getType()->isIntOrIntVectorTy());
     assert(V1->getType() == V2->getType());
 
     // Conveniently, getShadowTy() of Int/IntVector returns the original type.
