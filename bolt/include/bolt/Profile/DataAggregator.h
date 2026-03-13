@@ -493,11 +493,10 @@ private:
   /// based on how it was collected by Linux Perf.
   ///
   /// Example how you can generate pre-parsed profile for 'basic' aggregation:
-  /// perf2bolt -p perf.data BINARY -o perf.text --ba --generate-perf-text-data
+  /// perf2bolt -p perf.data BINARY -o perf.text --ba --generate-perf-script
   ///
   /// This is how a pre-parsed profile data looks like for Basic Aggregation:
-  /// PERFTEXT;BUILDIDS=0x0000000000000032;MMAP=0x000000000002DC6C0;MAIN=0x00000000000001388;
-  /// TASK=0x00000000000055730;MEM=0x0000000000000128;
+  /// PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;
   /// abcd1234 /example/bin1
   /// ...
   /// bin1   1234 ... PERF_RECORD_MMAP2 1234/1234: ... r-xp /example/bin1
