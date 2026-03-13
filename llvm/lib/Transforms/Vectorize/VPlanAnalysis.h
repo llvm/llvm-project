@@ -46,6 +46,7 @@ class VPTypeAnalysis {
   /// count).
   Type *CanonicalIVTy;
   LLVMContext &Ctx;
+  const DataLayout &DL;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
@@ -60,6 +61,9 @@ public:
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
+
+  /// Return the index type for \p V.
+  Type *getIndexType(const VPValue *V);
 
   /// Return the LLVMContext used by the analysis.
   LLVMContext &getContext() { return Ctx; }

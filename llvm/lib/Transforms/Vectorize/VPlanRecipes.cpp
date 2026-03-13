@@ -2704,9 +2704,7 @@ void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
   VPlan &Plan = *getParent()->getPlan();
   VPValue *VFVal = getVFValue();
   VPTypeAnalysis TypeInfo(Plan);
-  const DataLayout &DL =
-      Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(getPointer()));
+  Type *IndexTy = TypeInfo.getIndexType(this);
   VPValue *Stride =
       Plan.getConstantInt(IndexTy, getStride(), /*IsSigned=*/true);
   Type *VFTy = TypeInfo.inferScalarType(VFVal);

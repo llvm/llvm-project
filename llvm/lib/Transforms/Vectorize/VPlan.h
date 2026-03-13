@@ -4802,6 +4802,11 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
+  /// Get the DataLayout from the scalar header, which is guaranteed to exist.
+  const DataLayout &getDataLayout() const {
+    return getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  }
+
   /// Gets the live-in VPIRValue for \p V or adds a new live-in (if none exists
   ///  yet) for \p V.
   VPIRValue *getOrAddLiveIn(Value *V) {
