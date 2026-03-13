@@ -1574,6 +1574,9 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
       auto *Enum = dyn_cast_or_null<DICompositeType>(Op);
       CheckDI(Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type,
               "invalid enum type", &N, N.getEnumTypes(), Op);
+      CheckDI(!Enum->getScope() || !isa<DILocalScope>(Enum->getScope()),
+              "function-local enum in a DICompileUnit's enum list", &N,
+              N.getEnumTypes(), Op);
     }
   }
   if (auto *Array = N.getRawRetainedTypes()) {

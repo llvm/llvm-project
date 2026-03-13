@@ -14,7 +14,6 @@
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
-#include <cstddef>
 #include <machine/pcb.h>
 #endif
 

@@ -83,20 +83,20 @@ _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ldexp(__CLC_EP_PAIR a,
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
                                                               __CLC_GENTYPE b);
 
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_omul(__CLC_EP_PAIR a,
-                                                               __CLC_GENTYPE b);
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
+__clc_ep_mul_overflow(__CLC_EP_PAIR a, __CLC_GENTYPE b);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_GENTYPE a,
                                                               __CLC_EP_PAIR b);
 
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_omul(__CLC_GENTYPE a,
-                                                               __CLC_EP_PAIR b);
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
+__clc_ep_mul_overflow(__CLC_GENTYPE a, __CLC_EP_PAIR b);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
                                                               __CLC_EP_PAIR b);
 
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_omul(__CLC_EP_PAIR a,
-                                                               __CLC_EP_PAIR b);
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
+__clc_ep_mul_overflow(__CLC_EP_PAIR a, __CLC_EP_PAIR b);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_div(__CLC_GENTYPE a,
                                                               __CLC_GENTYPE b);
