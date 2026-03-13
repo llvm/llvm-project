@@ -2374,6 +2374,10 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // Cache
   FileCache Cache;
 
+  // Optional callback to add backend object files directly to linker-owned
+  // memory buffers.
+  AddBufferFn AddBuffer;
+
 public:
   OutOfProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
@@ -2384,7 +2388,8 @@ public:
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
       ArrayRef<StringRef> RemoteCompilerPrependArgs,
-      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
+      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+      AddBufferFn AddBuffer)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
@@ -2392,7 +2397,7 @@ public:
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
         RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps),
-        Cache(std::move(CacheFn)) {}
+        Cache(std::move(CacheFn)), AddBuffer(std::move(AddBuffer)) {}
 
   void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
              llvm::Triple Triple) override {
@@ -2723,11 +2728,12 @@ public:
                   Job.NativeObjectPath + ": " + EC.message(),
               inconvertibleErrorCode());
 
-        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
         if (Cache.isValid()) {
           // Cache hits are taken care of earlier. At this point, we could only
           // have cache misses.
           assert(Job.CacheAddStream);
+          MemoryBufferRef ObjFileMbRef =
+              ObjFileMbOrErr->get()->getMemBufferRef();
           // Obtain a file stream for a storing a cache entry.
           auto CachedFileStreamOrErr =
               Job.CacheAddStream(Job.Task, Job.ModuleID);
@@ -2742,7 +2748,11 @@ public:
           *(CacheStream.OS) << ObjFileMbRef.getBuffer();
           if (Error Err = CacheStream.commit())
             return Err;
+        } else if (AddBuffer) {
+          AddBuffer(Job.Task, Job.ModuleID, std::move(*ObjFileMbOrErr));
         } else {
+          MemoryBufferRef ObjFileMbRef =
+              ObjFileMbOrErr->get()->getMemBufferRef();
           auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
           if (Error Err = StreamOrErr.takeError())
             report_fatal_error(std::move(Err));
@@ -2764,7 +2774,8 @@ ThinBackend lto::createOutOfProcessThinBackend(
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
     ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
+    AddBufferFn AddBuffer) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
@@ -2774,7 +2785,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
             ShouldEmitImportsFiles, LinkerOutputFile, Distributor,
             DistributorArgs, RemoteCompiler, RemoteCompilerPrependArgs,
-            RemoteCompilerArgs, SaveTemps);
+            RemoteCompilerArgs, SaveTemps, AddBuffer);
       };
   return ThinBackend(Func, Parallelism);
 }
