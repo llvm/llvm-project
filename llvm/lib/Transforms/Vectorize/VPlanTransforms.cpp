@@ -6491,11 +6491,6 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
                                                  VPCostContext &CostCtx) {
-  // Filter out scalar VPlan.
-  if (LoopVectorizationPlanner::getDecisionAndClampRange(
-          [](ElementCount VF) { return VF.isScalar(); }, Range))
-    return;
-
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -6526,9 +6521,15 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
       VPI->eraseFromParent();
     };
 
+    // Note: we must do that for scalar VPlan as well.
     if (RecipeBuilder.replaceWithFinalIfReductionStore(FinalRedStoresBuilder,
                                                        VPI))
       continue;
+
+    // Filter out scalar VPlan for the remaining memory operations.
+    if (LoopVectorizationPlanner::getDecisionAndClampRange(
+            [](ElementCount VF) { return VF.isScalar(); }, Range))
+      return;
 
     if (VPHistogramRecipe *Histogram = RecipeBuilder.widenIfHistogram(VPI)) {
       ReplaceWith(Histogram);
