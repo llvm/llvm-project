@@ -23,7 +23,8 @@ def C1UltraModel : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
-                                                     HasCPA, HasCSSC]);
+                                                     HasCPA, HasMTE, HasCSSC,
+                                                     HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
