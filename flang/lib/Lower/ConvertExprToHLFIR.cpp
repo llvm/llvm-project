@@ -1827,6 +1827,194 @@ private:
     llvm_unreachable("unknown descriptor inquiry");
   }
 
+  /// Build nested if-then-else chain for conditional expressions with lazy
+  /// evaluation. The assignValue callback generates and assigns each value to
+  /// avoid evaluating non-taken branches.
+  template <typename T>
+  void buildConditionalIfChain(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      const std::function<void(int valueIndex)> &assignValue) {
+    const mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    std::function<void(int)> buildIfChain = [&](int i) {
+      if (i >= static_cast<int>(condExpr.conditions().size())) {
+        // All conditions false: assign final else value.
+        getStmtCtx().pushScope();
+        assignValue(static_cast<int>(condExpr.values().size()) - 1);
+        getStmtCtx().finalizeAndPop();
+      } else {
+        getStmtCtx().pushScope();
+        const hlfir::EntityWithAttributes condEntity =
+            gen(condExpr.conditions()[i]);
+        mlir::Value condition =
+            hlfir::loadTrivialScalar(loc, builder, condEntity);
+        condition = builder.createConvert(loc, builder.getI1Type(), condition);
+        builder.genIfOp(loc, {}, condition, /*withElseRegion=*/true)
+            .genThen([&]() {
+              getStmtCtx().pushScope();
+              assignValue(i);
+              getStmtCtx().finalizeAndPop();
+            })
+            .genElse([&]() { buildIfChain(i + 1); })
+            .end();
+        getStmtCtx().finalizeAndPop();
+      }
+    };
+    buildIfChain(0);
+  }
+
+  /// Generate scalar conditional with lazy evaluation using assignment.
+  /// Creates a temporary and assigns the selected branch value to it.
+  template <typename T>
+  hlfir::Entity genScalarConditionalLazy(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      mlir::Type elementType,
+      const llvm::SmallVector<mlir::Value, 1> &typeParams) {
+    const mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    const mlir::Value tempStorage = builder.createTemporary(
+        loc, elementType, ".cond.scalar",
+        /*shape=*/mlir::ValueRange{}, /*typeParams=*/typeParams);
+    const hlfir::DeclareOp tempDecl = hlfir::DeclareOp::create(
+        builder, loc, tempStorage, ".cond.result",
+        /*shape=*/mlir::Value{}, /*typeParams=*/typeParams);
+    const hlfir::Entity temp{tempDecl};
+    buildConditionalIfChain(condExpr, [&](int valueIndex) {
+      hlfir::Entity entity = gen(condExpr.values()[valueIndex]);
+      auto [exv, cleanup] = hlfir::convertToValue(loc, builder, entity);
+      hlfir::Entity value{fir::getBase(exv)};
+      if (cleanup) {
+        getStmtCtx().attachCleanup(*cleanup);
+      }
+      hlfir::AssignOp::create(builder, loc, value, temp);
+    });
+    return temp;
+  }
+
+  /// Generate conditional expression using an allocatable temporary with lazy
+  /// evaluation. Creates an unallocated allocatable, then uses assignment to
+  /// set the value from the chosen branch (allocation/reallocation handled by
+  /// runtime).
+  template <typename T>
+  hlfir::Entity genAllocatableConditionalLazy(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      mlir::Type resultType, llvm::StringRef debugName) {
+    const mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    const mlir::Type heapType = fir::HeapType::get(resultType);
+    const mlir::Type boxHeapType = fir::BoxType::get(heapType);
+    const mlir::Value tempStorage =
+        builder.createTemporary(loc, boxHeapType, debugName);
+    const mlir::Value unallocBox = fir::factory::createUnallocatedBox(
+        builder, loc, boxHeapType, /*nonDeferredParams=*/{});
+    builder.createStoreWithConvert(loc, unallocBox, tempStorage);
+    const hlfir::DeclareOp tempDecl =
+        hlfir::DeclareOp::create(builder, loc, tempStorage, ".cond.result");
+    const hlfir::Entity temp{tempDecl};
+    // Lazy evaluation: only the selected branch is evaluated and assigned.
+    buildConditionalIfChain(condExpr, [&](int valueIndex) {
+      const hlfir::Entity entity = gen(condExpr.values()[valueIndex]);
+      hlfir::AssignOp::create(builder, loc, entity, temp,
+                              /*isWholeAllocatableAssignment=*/true,
+                              /*keepLhsLengthIfRealloc=*/false,
+                              /*temporary_lhs=*/true);
+    });
+    return temp;
+  }
+
+  /// Generate scalar CHARACTER conditional with deferred-length using lazy
+  /// evaluation. Only the chosen branch is evaluated; the result gets that
+  /// branch's length.
+  template <typename T>
+  hlfir::Entity genScalarDeferredCharConditionalLazy(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr,
+      mlir::Type elementType) {
+    return genAllocatableConditionalLazy(condExpr, elementType, ".cond.char");
+  }
+
+  /// Generate array conditional expression with lazy evaluation using
+  /// assignment. Per F2023 10.1.4(7), the shape is determined by the chosen
+  /// branch.
+  template <typename T>
+  hlfir::Entity genArrayConditionalLazy(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
+    mlir::Type condResultType = Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr));
+    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(condResultType)) {
+      condResultType = fir::unwrapRefType(boxTy.getEleTy());
+    }
+    return genAllocatableConditionalLazy(condExpr, condResultType,
+                                         ".cond.array");
+  }
+
+  /// Generate scalar CHARACTER conditional with proper length handling.
+  template <typename T>
+  std::optional<hlfir::EntityWithAttributes> genCharacterConditional(
+      const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
+    const mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    const mlir::Type resultType = Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr));
+    const mlir::Type elementType = hlfir::getFortranElementType(resultType);
+    if (auto charType = mlir::dyn_cast<fir::CharacterType>(elementType)) {
+      if (charType.hasConstantLen()) {
+        llvm::SmallVector<mlir::Value, 1> typeParams;
+        const mlir::Value len = builder.createIntegerConstant(
+            loc, builder.getCharacterLengthType(), charType.getLen());
+        typeParams.push_back(len);
+        return hlfir::EntityWithAttributes{
+            genScalarConditionalLazy(condExpr, elementType, typeParams)};
+      }
+      // Non-constant/varying length: use allocatable conditional to get length
+      // from selected branch.
+      return hlfir::EntityWithAttributes{
+          genScalarDeferredCharConditionalLazy(condExpr, elementType)};
+    }
+    return std::nullopt;
+  }
+
+  /// Conditional expression (Fortran 2023)
+  template <typename T>
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::ConditionalExpr<T> &condExpr) {
+    assert(!condExpr.conditions().empty() &&
+           "conditional expression must have conditions");
+    assert(!condExpr.values().empty() &&
+           "conditional expression must have values");
+    assert(condExpr.values().size() == condExpr.conditions().size() + 1 &&
+           "values must have exactly one more element than conditions");
+    const int rank = condExpr.Rank();
+
+    // Arrays: handle early to avoid unnecessary type checks.
+    // Per F2023 10.1.4(7), the shape is determined by the chosen branch.
+    if (rank != 0) {
+      return hlfir::EntityWithAttributes{genArrayConditionalLazy(condExpr)};
+    }
+    // CHARACTER scalars require special handling for type parameters.
+    if constexpr (T::category == Fortran::common::TypeCategory::Character) {
+      if (auto result = genCharacterConditional(condExpr)) {
+        return *result;
+      }
+    }
+    // Derived type scalars require special handling for type parameters.
+    if constexpr (T::category == Fortran::common::TypeCategory::Derived) {
+      const mlir::Type resultType = Fortran::lower::translateSomeExprToFIRType(
+          converter, toEvExpr(condExpr));
+      const mlir::Type elementType = hlfir::getFortranElementType(resultType);
+      return hlfir::EntityWithAttributes{
+          genScalarConditionalLazy(condExpr, elementType, {})};
+    }
+    // Other scalar types (INTEGER, REAL, COMPLEX, LOGICAL, UNSIGNED).
+    mlir::Type condResultType = Fortran::lower::translateSomeExprToFIRType(
+        converter, toEvExpr(condExpr));
+    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(condResultType)) {
+      condResultType = fir::unwrapRefType(boxTy.getEleTy());
+    }
+    const mlir::Type resultType = hlfir::getFortranElementType(condResultType);
+    return hlfir::EntityWithAttributes{
+        genScalarConditionalLazy(condExpr, resultType, {})};
+  }
+
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::ImpliedDoIndex &var) {
     mlir::Value value = symMap.lookupImpliedDo(toStringRef(var.name));
