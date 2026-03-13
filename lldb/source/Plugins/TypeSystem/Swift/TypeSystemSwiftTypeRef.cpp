@@ -5442,11 +5442,15 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       // typedefs such as CFString in the REPL. More investigation is
       // needed.
       if (auto swift_ast_context =
-              GetSwiftASTContext(GetSymbolContext(exe_scope)))
-        return swift_ast_context->DumpTypeValue(
-            ReconstructType(type, exe_scope), s, format, data, data_offset,
-            data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
-            is_base_class);
+              GetSwiftASTContext(GetSymbolContext(exe_scope))) {
+        if (swift_ast_context->DumpTypeValue(
+                ReconstructType(type, exe_scope), s, format, data, data_offset,
+                data_byte_size, bitfield_bit_size, bitfield_bit_offset,
+                exe_scope, is_base_class)) {
+          DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          return true;
+        }
+      }
       return false;
     }
     case Node::Kind::ConstrainedExistential:
@@ -5474,11 +5478,16 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     bool unresolved_typealias = false;
     CollectTypeInfo(dem, node, flavor, unresolved_typealias);
     if (!node || unresolved_typealias) {
-      if (auto swift_ast_ctx = GetSwiftASTContext(GetSymbolContext(exe_scope)))
-        return swift_ast_ctx->DumpTypeValue(
-            ReconstructType(type, exe_scope), s, format, data, data_offset,
-            data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
-            is_base_class);
+      if (auto swift_ast_ctx =
+              GetSwiftASTContext(GetSymbolContext(exe_scope))) {
+        if (swift_ast_ctx->DumpTypeValue(
+                ReconstructType(type, exe_scope), s, format, data, data_offset,
+                data_byte_size, bitfield_bit_size, bitfield_bit_offset,
+                exe_scope, is_base_class)) {
+          DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+          return true;
+        }
+      }
       return false;
     }
   }
