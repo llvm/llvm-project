@@ -2743,7 +2743,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     // the read-write list. This allows us to vectorize expressions
     // such as A[i] += x;  Because the address of A[i] is a read-write
     // pointer. This only works if the index of A[i] is strictly monotonic. We
-    // approximate (conservately) that by checking for a constant stride and
+    // approximate (conservatively) that by checking for a constant stride and
     // filtering out the case of a uniform/not-strictly monotonic pointer (zero
     // stride) in the check for uniform stores below. If the address of i is
     // unknown (for example A[B[i]]) then we may read a few words, modify, and
