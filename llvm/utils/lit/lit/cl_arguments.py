@@ -235,6 +235,14 @@ def parse_args():
         help="Do not use curses based progress bar (default)",
         action="store_false",
     )
+    format_group.add_argument(
+        "--min-output-interval",
+        dest="minOutputInterval",
+        help="Limit updates to progressbar to at most once per INTERVAL, in seconds. Set to 0 to disable ratelimit (default 0.2 seconds).",
+        default=0.2,
+        metavar="INTERVAL",
+        type=_non_negative_float,
+    )
 
     # Note: this does not generate flags for user-defined result codes.
     success_codes = [c for c in lit.Test.ResultCode.all_codes() if not c.isFailure]
@@ -546,6 +554,21 @@ def _int(arg, kind, pred):
     if not pred(i):
         raise _error(desc, kind, arg)
     return i
+
+
+def _non_negative_float(arg):
+    return _float(arg, "non-negative", lambda f: f >= 0.0)
+
+
+def _float(arg, kind, pred):
+    desc = "requires {} float, but found '{}'"
+    try:
+        f = float(arg)
+    except ValueError:
+        raise _error(desc, kind, arg)
+    if not pred(f):
+        raise _error(desc, kind, arg)
+    return f
 
 
 def _case_insensitive_regex(arg):
