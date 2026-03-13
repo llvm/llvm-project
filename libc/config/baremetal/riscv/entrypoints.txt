@@ -299,6 +299,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswgraph
     libc.src.wctype.iswcntrl
     libc.src.wctype.iswdigit
+    libc.src.wctype.iswalnum
     libc.src.wctype.iswlower
     libc.src.wctype.iswspace
     libc.src.wctype.iswblank
