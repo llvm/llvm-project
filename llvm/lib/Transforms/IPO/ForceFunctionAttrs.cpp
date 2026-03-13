@@ -78,14 +78,12 @@ static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
 }
 
 static void addRequiredFnAttrs(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::OptimizeNone &&
-      !F.hasFnAttribute(Attribute::NoInline))
+  if (Kind == Attribute::OptimizeNone && !F.hasFnAttribute(Attribute::NoInline))
     F.addFnAttr(Attribute::NoInline);
 }
 
 static bool wouldRemoveRequiredFnAttr(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::NoInline &&
-      F.hasFnAttribute(Attribute::OptimizeNone))
+  if (Kind == Attribute::NoInline && F.hasFnAttribute(Attribute::OptimizeNone))
     return true;
   return false;
 }
