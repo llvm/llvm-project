@@ -6806,8 +6806,8 @@ Threads can synchronize execution by performing barrier operations on barrier *o
       * When an operation causes *arrive count* to be equal to *expected count*, the barrier is completed,
         and the *arrive count* is reset to zero.
 
-* *Barrier-mutually-exclusive* is a symmetric relation between barrier *objects* that represents barrier
-  *objects* that share resources in a way that prevents a thread from using them at the same time.
+* *Barrier-mutually-exclusive* is a symmetric relation between barrier *objects* that share resources
+  in a way that restricts how a thread can use them at the same time.
 * Barrier operations are performed on barrier *objects*. A barrier operation is a dynamic instance
   of one of the following:
 
@@ -6857,23 +6857,23 @@ Threads can synchronize execution by performing barrier operations on barrier *o
     the behavior is undefined.
 
 * *barrier-participates-in* relates barrier operations to the barrier *waits* that depend on them
-  to complete. A barrier operation ``X`` may *barrier-participates-in* a barrier *wait* ``W``
+  to complete. A barrier operation ``X`` *barrier-participates-in* a barrier *wait* ``W``
   if and only if all of the following is true:
 
   * ``X`` and ``W`` are both performed on the same barrier *object* ``BO``.
   * ``X`` is a barrier *arrive* or *drop* operation.
-  * ``X`` does not *barrier-participate-in<BO>* another distinct barrier *wait* ``W'`` in the same thread as ``W``.
+  * ``X`` does not *barrier-participate-in* another distinct barrier *wait* ``W'`` in the same thread as ``W``.
   * ``W -> X`` not in *thread-barrier-order<BO>*.
   * All dependent constraint and relations are satisfied as well. [0]_
 
-* For the set ``S`` consisting of all barrier operations that *barrier-participate-in<BO>* a barrier *wait* ``W`` for some
+* For the set ``S`` consisting of all barrier operations that *barrier-participate-in* a barrier *wait* ``W`` for some
   barrier *object* ``BO``:
 
   * The elements of ``S`` all exist in a continuous, uninterrupted interval of *barrier-modification-order<BO>*.
   * The *arrive count* of ``BO`` is zero before the first operation of ``S`` in *barrier-modification-order<BO>*.
   * The *arrive count* and *expected count* of ``BO`` are equal after the last operation of ``S`` in
-    *barrier-modification-order<BO>*. The *arrive count* and *expected count* of ``BO`` can never be
-    equal at any point point in ``S``.
+    *barrier-modification-order<BO>*. The *arrive count* and *expected count* of ``BO`` cannot
+    equal at any other point in ``S``.
 
 * A barrier *join* ``J`` is *barrier-joined-before* a barrier operation ``X`` if and only if all
   of the following is true:
@@ -6901,7 +6901,7 @@ Threads can synchronize execution by performing barrier operations on barrier *o
   * ``D`` cannot cause the *expected count* of ``BO`` to become negative; otherwise, the behavior is undefined.
 
 * For every pair of barrier *arrive* ``A`` and barrier *drop* ``D`` performed on a barrier *object*
-  ``BO``, such that ``A -> D`` in *thread-barrier-ordered<BO>*, one of the following must be true:
+  ``BO``, such that ``A -> D`` in *thread-barrier-order<BO>*, one of the following must be true:
 
   * ``A`` does not *barrier-participates-in* any barrier *wait*.
   * ``A`` *barrier-participates-in at least one barrier *wait* ``W``
@@ -6909,21 +6909,18 @@ Threads can synchronize execution by performing barrier operations on barrier *o
 
 * For every barrier *wait* ``W`` performed on a barrier *object* ``BO``:
 
-  * There is at least one barrier operation that *barrier-participates-in* ``W``.
-  * There is a barrier *join* ``J`` such that ``J -> W`` in *barrier-joined-before*.
-  * ``J`` must *barrier-executes-before* at least one operation ``X`` that
+  * There is a barrier *join* ``J`` such that ``J -> W`` in *barrier-joined-before*, and
+    ``J`` must *barrier-executes-before* at least one operation ``X`` that
     *barrier-participates-in* ``W``; otherwise, the behavior is undefined.
+
+* For every barrier operation ``A`` that *barrier-participates-in* a barrier *wait* ``W`` on a barrier *object* ``BO``:
+
+  * There is no barrier operation ``X`` on ``BO`` such that ``A -> X -> B`` in
+    *barrier-executes-before*, and ``X`` *barrier-participates-in* a non-empty set of operations
+    that does not include ``W``.
 
 * *barrier-phase-with* is a symmetric relation over barrier operations defined as the
   transitive closure of: *barrier-participates-in* and its inverse relation.
-* For every barrier operation ``A`` that *barrier-executes-before* another barrier operation ``B``,
-  at least one of the following statements is true; otherwise, the behavior is undefined:
-
-  * ``A`` and ``B`` are performed on different barrier *objects*.
-  * ``A`` *barrier-phase-with* ``B``.
-  * Either ``A`` or ``B`` are not *barrier-phase-with* another barrier operation.
-  * There is no barrier operation ``X`` such that ``B -> X`` in *barrier-executes-before* and
-    ``A -> X`` in *barrier-phase-with*.
 
 .. note::
 
