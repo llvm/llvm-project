@@ -4642,6 +4642,15 @@ void IEEEFloat::makeZero(bool Negative) {
   APInt::tcSet(significandParts(), 0, partCount());
 }
 
+ExponentType IEEEFloat::getExponent() const { return exponent; }
+
+APInt IEEEFloat::getSignificand() const {
+  APInt result(semantics->precision,
+               ArrayRef<integerPart>(significandParts(), partCount()));
+
+  return result;
+}
+
 void IEEEFloat::makeQuiet() {
   assert(isNaN());
   if (semantics->nonFiniteBehavior != fltNonfiniteBehavior::NanOnly)
@@ -7623,6 +7632,97 @@ HexFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
   return opOK;
 }
 
+opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
+                               bool *losesInfo) {
+  opStatus fs = opOK;
+  int ieee_sign = ieee.isNegative();
+
+  auto set_to_infinity = [&]() {
+    sign = ieee_sign;
+    exponent = 63;
+    significand.setAllBits();
+  };
+
+  if (ieee.isZero()) {
+    makeZero(ieee_sign);
+    *losesInfo = false;
+  } else if (ieee.isInfinity()) {
+    set_to_infinity();
+    *losesInfo = false;
+  } else if (ieee.isNaN()) {
+    set_to_infinity();
+    *losesInfo = false;
+  } else if (ieee.isDenormal()) {
+    llvm_unreachable(
+        "TODO: HexFloat::convertFrom: denomral IEEE not handled yet");
+  } else {
+    // Recall that our precision is in terms of hexits,
+    // each of which needs 4 bits.
+    int BitsInOurPrecision = 4 * semantics->precision;
+    ExponentType ieee_exponent = ieee.getExponent();
+    APInt ieee_significand = ieee.getSignificand();
+    int ieee_precision = ieee_significand.getBitWidth();
+
+    // All Hex variants have the same sized exponents in the range -64 .. +63.
+    // The IEEE exponent needs to be a multiple of 4 before the significand
+    // can be dealt with.
+    // In IEEE the leftmost bit of the significand is to the left of
+    // of the binary/radix point.  (In the in-memory representation, this
+    // leading bit is implicit and not stored.)  With HexFloat, there is
+    // no implicit bit, and the entire significand is to the right of
+    // the hex/radix point.
+    // Thus in IEEE we have 1 <= significand < 2.
+    // To treat the significand as 0 <= significand < 1 the exponent
+    // must be incremented by 1.
+    ieee_exponent++;
+
+    // The IEEE exponent must be multiple of 4 to allow the conversion.
+    // Shift the significand and adjust the exponent.
+    // Need the extra mod in the expression below in case the result of the
+    // first mod is negative.
+    if (int shift_by = ((4 - (ieee_exponent % 4)) % 4)) {
+      ieee_significand = ieee_significand.zext(ieee_precision + shift_by);
+      ieee_exponent += shift_by;
+      ieee_precision = ieee_significand.getBitWidth();
+    }
+    assert((0 == ieee_exponent % 4) && "exponent is not a multiple of 4");
+
+    *losesInfo = false;
+    if (ieee_exponent > 252) {
+      // The IEEE exponent is too large to be represented in HexFloat.
+      // We know the significand is non-zero.
+      // FIXME: we should also check that whether the value could be
+      //        be represented if is denormalized.
+      set_to_infinity();
+      *losesInfo = true;
+    } else if (ieee_exponent < -256) {
+      // The IEEE exponent is too small to be represented in HexFloat
+      // FIXME: see above about whether the value can be denormalzed.
+      makeZero(ieee_sign);
+      *losesInfo = true;
+    } else {
+      sign = ieee_sign;
+      exponent = ieee_exponent / 4;
+      if (BitsInOurPrecision >= ieee_precision) {
+        significand = ieee_significand.zext(BitsInOurPrecision);
+        significand <<= (BitsInOurPrecision - ieee_precision);
+      } else if (BitsInOurPrecision < ieee_precision) {
+        // Also need to check that no precision is lost
+        int pos_of_right_most_one = ieee_significand.countTrailingZeros();
+        if (pos_of_right_most_one < (ieee_precision - BitsInOurPrecision))
+          *losesInfo = true;
+        ieee_significand =
+            ieee_significand.lshr(ieee_precision - BitsInOurPrecision);
+        significand = ieee_significand.trunc(BitsInOurPrecision);
+      } else {
+        significand = ieee_significand;
+      }
+    }
+  }
+
+  return fs;
+}
+
 APInt HexFloat::bitcastToAPInt() const {
   auto get_sign_exponent_byte = [](int s, int e) {
     return s << 7 | ((e + 64) & 0x7f);
@@ -8034,6 +8134,18 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
       usesLayout<HexFloat>(ToSemantics)) {
     return U.Hex.convert(ToSemantics, RM, losesInfo);
   }
+  if (usesLayout<IEEEFloat>(getSemantics()) &&
+      usesLayout<HexFloat>(ToSemantics)) {
+    // Used by functions like isExactlyValue(double) &
+    // getConstantFP(double) to create hex float at
+    // compile time.
+    HexFloat Hex(ToSemantics);
+    auto Ret = Hex.convertFrom(U.IEEE, RM, losesInfo);
+    if (opOK == Ret)
+      *this = APFloat(ToSemantics, Hex.bitcastToAPInt());
+    return Ret;
+  }
+
   llvm_unreachable("Unexpected semantics");
 }
 

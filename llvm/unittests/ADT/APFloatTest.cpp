@@ -3547,6 +3547,58 @@ TEST(APFloatTest, Float8UZConvert) {
   }
 }
 
+TEST(APFloatTest, convertIEEEToHexFloat) {
+  // clang-format off
+  const char *tests[] = {
+    "0", "-0", "+0", "0.25", "-0.25", "+0.25", "0.5", "-0.5", "+0.5",
+    /* sixteenth */ "0.0625", "-0.0625", "+0.0625",
+    /* thirty-second */ "0.03125", "-0.03125", "+0.03125",
+    "16.0", "-16.0", "+16.0", "32.0", "-32.0", "+32.0",
+  };
+  // clang-format on
+
+  const fltSemantics *IEEEFloatSemantics[] = {
+      &APFloat::IEEEsingle(), &APFloat::IEEEdouble(), &APFloat::IEEEquad()};
+
+  for (const auto test : tests) {
+    for (const auto *IEEEsemantics : IEEEFloatSemantics) {
+      for (const auto *HexSemantics : HexFloatSemantics) {
+        bool losesInfo = false;
+        APFloat IEEE(*IEEEsemantics, test);
+        APFloat Expected(*HexSemantics, test);
+        APFloat Val(IEEE);
+
+        EXPECT_FALSE(Val.isHexFloat())
+            << "Test: " << test
+            << ", IEEE Semantics: " << APFloat::semanticsName(*IEEEsemantics)
+            << ", HexFloat Semantics: " << APFloat::semanticsName(*HexSemantics)
+            << "\n";
+        Val.convert(*HexSemantics, APFloat::rmTowardZero, &losesInfo);
+        EXPECT_FALSE(losesInfo)
+            << "Test: " << test
+            << ", IEEE Semantics: " << APFloat::semanticsName(*IEEEsemantics)
+            << ", HexFloat Semantics: " << APFloat::semanticsName(*HexSemantics)
+            << "\n";
+        EXPECT_TRUE(Val.isHexFloat())
+            << "Test: " << test
+            << ", IEEE Semantics: " << APFloat::semanticsName(*IEEEsemantics)
+            << ", HexFloat Semantics: " << APFloat::semanticsName(*HexSemantics)
+            << "\n";
+        EXPECT_EQ(Val, Expected)
+            << "Test: " << test
+            << ", IEEE Semantics: " << APFloat::semanticsName(*IEEEsemantics)
+            << ", HexFloat Semantics: " << APFloat::semanticsName(*HexSemantics)
+            << "\n";
+        EXPECT_TRUE(Expected.bitwiseIsEqual(Val))
+            << "Test: " << test
+            << ", IEEE Semantics: " << APFloat::semanticsName(*IEEEsemantics)
+            << ", HexFloat Semantics: " << APFloat::semanticsName(*HexSemantics)
+            << "\n";
+      }
+    }
+  }
+}
+
 struct DD {
   double Hi;
   double Lo;
