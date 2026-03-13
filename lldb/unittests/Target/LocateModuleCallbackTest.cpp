@@ -16,6 +16,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Target.h"
 #include "gmock/gmock.h"
 
