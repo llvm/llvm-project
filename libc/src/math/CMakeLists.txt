@@ -93,6 +93,7 @@ add_math_entrypoint_object(iscanonicalbf16)
 
 add_math_entrypoint_object(cbrt)
 add_math_entrypoint_object(cbrtf)
+add_math_entrypoint_object(cbrtbf16)
 
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
@@ -228,6 +229,7 @@ add_math_entrypoint_object(floorf128)
 add_math_entrypoint_object(floorbf16)
 
 add_math_entrypoint_object(fma)
+add_math_entrypoint_object(fmabf16)
 add_math_entrypoint_object(fmaf)
 add_math_entrypoint_object(fmaf16)
 

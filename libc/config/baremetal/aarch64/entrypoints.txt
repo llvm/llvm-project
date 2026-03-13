@@ -355,6 +355,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalizel
     libc.src.math.cbrt
     libc.src.math.cbrtf
+    libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -399,6 +400,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.floorf
     libc.src.math.floorl
     libc.src.math.fma
+    libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf

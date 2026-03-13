@@ -597,7 +597,7 @@ private:
   void verifyDominatesUse(Instruction &I, unsigned i);
   void visitInstruction(Instruction &I);
   void visitTerminator(Instruction &I);
-  void visitBranchInst(BranchInst &BI);
+  void visitCondBrInst(CondBrInst &BI);
   void visitReturnInst(ReturnInst &RI);
   void visitSwitchInst(SwitchInst &SI);
   void visitIndirectBrInst(IndirectBrInst &BI);
@@ -1574,6 +1574,9 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
       auto *Enum = dyn_cast_or_null<DICompositeType>(Op);
       CheckDI(Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type,
               "invalid enum type", &N, N.getEnumTypes(), Op);
+      CheckDI(!Enum->getScope() || !isa<DILocalScope>(Enum->getScope()),
+              "function-local enum in a DICompileUnit's enum list", &N,
+              N.getEnumTypes(), Op);
     }
   }
   if (auto *Array = N.getRawRetainedTypes()) {
@@ -3443,11 +3446,9 @@ void Verifier::visitTerminator(Instruction &I) {
   visitInstruction(I);
 }
 
-void Verifier::visitBranchInst(BranchInst &BI) {
-  if (BI.isConditional()) {
-    Check(BI.getCondition()->getType()->isIntegerTy(1),
-          "Branch condition is not 'i1' type!", &BI, BI.getCondition());
-  }
+void Verifier::visitCondBrInst(CondBrInst &BI) {
+  Check(BI.getCondition()->getType()->isIntegerTy(1),
+        "Branch condition is not 'i1' type!", &BI, BI.getCondition());
   visitTerminator(BI);
 }
 
@@ -5257,7 +5258,7 @@ void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   auto GetBranchingTerminatorNumOperands = [&]() {
     unsigned ExpectedNumOperands = 0;
-    if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(&I))
       ExpectedNumOperands = BI->getNumSuccessors();
     else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
       ExpectedNumOperands = SI->getNumSuccessors();
@@ -6868,6 +6869,25 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "write argument to llvm.aarch64.range.prefetch must be 0 or 1", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
           "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
+          Call);
+    break;
+  }
+  case Intrinsic::aarch64_stshh_atomic_store: {
+    uint64_t Order = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    Check(Order == static_cast<uint64_t>(AtomicOrderingCABI::relaxed) ||
+              Order == static_cast<uint64_t>(AtomicOrderingCABI::release) ||
+              Order == static_cast<uint64_t>(AtomicOrderingCABI::seq_cst),
+          "order argument to llvm.aarch64.stshh.atomic.store must be 0, 3 or 5",
+          Call);
+
+    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
+          "policy argument to llvm.aarch64.stshh.atomic.store must be 0 or 1",
+          Call);
+
+    uint64_t Size = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
+    Check(Size == 8 || Size == 16 || Size == 32 || Size == 64,
+          "size argument to llvm.aarch64.stshh.atomic.store must be 8, 16, "
+          "32 or 64",
           Call);
     break;
   }

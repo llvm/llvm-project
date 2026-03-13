@@ -446,8 +446,7 @@ static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::ZeroOrMore,
-    cl::callback([](const unsigned &AddrSpace) {
+    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
       SrcAddrSpaces.insert(AddrSpace);
     }));
 
@@ -576,7 +575,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       else
         Mapping.Offset = (kSmallX86_64ShadowOffsetBase &
                           (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
-    } else if (IsWindows && IsX86_64) {
+    } else if (IsWindows && (IsX86_64 || IsAArch64)) {
       Mapping.Offset = kWindowsShadowOffset64;
     } else if (IsMIPS64)
       Mapping.Offset = kMIPS64_ShadowOffset64;
