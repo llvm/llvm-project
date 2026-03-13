@@ -48,36 +48,16 @@ using namespace llvm::offload::debug;
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 namespace llvm::omp::target::plugin {
 
-// Parse OffloadBinary and extract all inner images with metadata
-static Expected<SmallVector<std::pair<OffloadBinMetadataTy, StringRef>>>
-parseOffloadBinary(MemoryBufferRef Buffer) {
-  auto BinariesOrErr = llvm::object::OffloadBinary::create(Buffer);
-  if (!BinariesOrErr)
-    return BinariesOrErr.takeError();
-
-  auto &Binaries = *BinariesOrErr;
-
-  SmallVector<std::pair<OffloadBinMetadataTy, StringRef>> Results;
-  Results.reserve(Binaries.size());
-
-  for (const auto &BinaryPtr : Binaries) {
-    const llvm::object::OffloadBinary *Binary = BinaryPtr.get();
-
-    // Extract metadata for this entry
-    OffloadBinMetadataTy Metadata;
-    Metadata.ImageKind = Binary->getImageKind();
-    Metadata.OffloadKind = Binary->getOffloadKind();
-    Metadata.Triple = Binary->getTriple().str();
-    Metadata.Arch = Binary->getArch().str();
-    for (auto [Key, Value] : Binary->strings())
-      Metadata.StringData[Key] = Value.str();
-
-    StringRef InnerImage = Binary->getImage();
-
-    Results.emplace_back(std::move(Metadata), InnerImage);
-  }
-
-  return Results;
+static OffloadBinMetadataTy
+extractOffloadBinaryMetadata(const llvm::object::OffloadBinary &Binary) {
+  OffloadBinMetadataTy Metadata;
+  Metadata.ImageKind = Binary.getImageKind();
+  Metadata.OffloadKind = Binary.getOffloadKind();
+  Metadata.Triple = Binary.getTriple().str();
+  Metadata.Arch = Binary.getArch().str();
+  for (auto [Key, Value] : Binary.strings())
+    Metadata.StringData[Key] = Value.str();
+  return Metadata;
 }
 
 struct RecordReplayTy {
@@ -1004,16 +984,19 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   } else if (identify_magic(InputTgtImage) == file_magic::offload_binary) {
     MemoryBufferRef InputBuffer(InputTgtImage, "offload_binary");
 
-    auto ParsedOrErr = parseOffloadBinary(InputBuffer);
-    if (!ParsedOrErr)
-      return ParsedOrErr.takeError();
-
-    auto &InnerImages = *ParsedOrErr;
+    llvm::SmallVector<OffloadFile> InnerBinaries;
+    auto Err = extractOffloadBinaries(InputBuffer, InnerBinaries);
+    if (Err)
+      return Err;
 
     DeviceImageTy *FirstLoadedImage = nullptr;
     Error LoadErrors = Error::success();
 
-    for (auto &[ExtractedMetadata, InnerImage] : InnerImages) {
+    for (auto &Binary : InnerBinaries) {
+      const OffloadBinary *OB = Binary.getBinary();
+      StringRef InnerImage = OB->getImage();
+      OffloadBinMetadataTy Metadata = extractOffloadBinaryMetadata(*OB);
+
       if (identify_magic(InnerImage) == file_magic::offload_binary) {
         auto ImageOrErr = loadBinary(Plugin, InnerImage);
         if (ImageOrErr) {
@@ -1031,10 +1014,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
         continue; // Not compatible, skip
 
       auto InnerBuffer = MemoryBuffer::getMemBufferCopy(InnerImage);
-      const OffloadBinMetadataTy *MetadataPtr = &ExtractedMetadata;
-
       auto ImageOrErr = loadBinaryImpl(std::move(InnerBuffer),
-                                       LoadedImages.size(), MetadataPtr);
+                                       LoadedImages.size(), &Metadata);
       if (ImageOrErr) {
         DeviceImageTy *LoadedImage = *ImageOrErr;
 
@@ -1832,14 +1813,17 @@ int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
   }
   case file_magic::offload_binary: {
     // Unwrap OffloadBinary and check if ANY inner image is compatible
-    auto ParsedOrErr =
-        parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
-    if (Error Err = ParsedOrErr.takeError())
+    llvm::SmallVector<OffloadFile> InnerBinaries;
+    auto Err = extractOffloadBinaries(MemoryBufferRef(Image, "offload_binary"),
+                                      InnerBinaries);
+    if (Err)
       return HandleError(std::move(Err));
 
-    auto &InnerImages = *ParsedOrErr;
+    for (auto &Binary : InnerBinaries) {
+      const OffloadBinary *OB = Binary.getBinary();
+      StringRef InnerImage = OB->getImage();
+      OffloadBinMetadataTy Metadata = extractOffloadBinaryMetadata(*OB);
 
-    for (auto &[Metadata, InnerImage] : InnerImages) {
       // First check if metadata is compatible
       auto MetadataMatchOrErr = isMetadataCompatible(Metadata);
       if (Error Err = MetadataMatchOrErr.takeError())
@@ -1894,22 +1878,24 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
     return *MatchOrErr;
   }
   case file_magic::offload_binary: {
-    auto ParsedOrErr =
-        parseOffloadBinary(MemoryBufferRef(Image, "offload_binary"));
-    if (Error Err = ParsedOrErr.takeError())
+    // Unwrap OffloadBinary and check if ANY inner image is compatible
+    llvm::SmallVector<OffloadFile> InnerBinaries;
+    auto Err = extractOffloadBinaries(MemoryBufferRef(Image, "offload_binary"),
+                                      InnerBinaries);
+    if (Err)
       return HandleError(std::move(Err));
 
-    auto &InnerImages = *ParsedOrErr;
+    for (auto &Binary : InnerBinaries) {
+      const OffloadBinary *OB = Binary.getBinary();
+      StringRef InnerImage = OB->getImage();
+      OffloadBinMetadataTy Metadata = extractOffloadBinaryMetadata(*OB);
 
-    for (auto &[Metadata, InnerImage] : InnerImages) {
-      // First check if metadata is compatible
       auto MetadataMatchOrErr = isMetadataCompatible(Metadata);
       if (Error Err = MetadataMatchOrErr.takeError())
         return HandleError(std::move(Err));
       if (!*MetadataMatchOrErr)
-        continue; // Metadata not compatible, skip this image
+        continue;
 
-      // Metadata compatible, check inner image recursively
       if (isDeviceCompatible(DeviceId, InnerImage))
         return true;
     }
