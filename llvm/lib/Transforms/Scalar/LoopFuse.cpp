@@ -1268,6 +1268,13 @@ private:
 
       assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
+      if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
+                             "dependency\n");
+        NumDA++;
+        return true;
+      }
+
       unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
 
       // Check if the direction vector does not include greater direction. In
@@ -1288,7 +1295,6 @@ private:
         LLVM_DEBUG(
             dbgs() << "TODO: Implement pred/succ dependence handling!\n");
 
-      // TODO: Can we actually use the dependence info analysis here?
       return false;
     }
 
