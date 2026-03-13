@@ -124,17 +124,18 @@ private:
     lldb::addr_t hit_addr;  // Address at which last watchpoint trigger
                             // exception occurred.
     lldb::addr_t real_addr; // Address value that should cause target to stop.
-    uint32_t control;       // Breakpoint/watchpoint control value.
-    uint32_t refcount;      // Serves as enable/disable and reference counter.
-    long slot;              // Saves the value returned from PTRACE_SETHWDEBUG.
+    int size;               // Saves watchpoint size
+    long slot_occupied;     // Reserves slot for watchpoint
     int mode;               // Defines if watchpoint is read/write/access.
   };
 
-  std::array<DREG, 4> m_hwp_regs;
+  std::array<DREG, 1> m_hwp_regs; // Keeping it this way to keep it extendable
 
-  // 16 is just a maximum value, query hardware for actual watchpoint count
-  uint32_t m_max_hwp_supported = 16;
-  uint32_t m_max_hbp_supported = 16;
+  uint32_t m_max_hwp_supported;
+  uint32_t m_max_hbp_supported;
+  unsigned int m_max_wp_size;
+  unsigned int m_min_wp_size;
+  unsigned int m_alignment;
   bool m_refresh_hwdebug_info = true;
 };
 

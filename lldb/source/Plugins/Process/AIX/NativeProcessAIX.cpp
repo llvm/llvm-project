@@ -13,6 +13,7 @@
 #include <cstring>
 #include <unistd.h>
 
+#include <procinfo.h>
 #include <fstream>
 #include <mutex>
 #include <optional>
@@ -554,14 +555,34 @@ void NativeProcessAIX::MonitorSIGTRAP(const WaitStatus status,
   RegisterValue pc_value;
 
   switch (status.status) {
-  case SIGTRAP:
-    // Determine the source of SIGTRAP by checking current instruction:
-    // if that is trap instruction, then this is breakpoint, otherwise
-    // this is watchpoint.
-    reg_ctx.ReadRegister(pc_info, pc_value);
-
-    MonitorBreakpoint(thread);
-    break;
+  case SIGTRAP: {
+        reg_ctx.ReadRegister(pc_info, pc_value);
+        struct thrdentry64 entry;
+        tid64_t cursor = 0;
+        int count = getthrds64(GetID(), &entry, sizeof(entry), &cursor, 1);
+        if (count <= 0) {
+            Status error;
+            LLDB_LOG(log, "Failed to fetch thread info");
+            if (count == 0)
+                error = Status::FromErrorStringWithFormat(
+                    "getthrds64 returned 0 threads for pid %" PRIu64, GetID());
+            else {
+                error = Status::FromErrno();
+                LLDB_LOG(log, "getthrds64 failed for pid {0}: {1}", 
+                         GetID(), error);
+            }
+            // Since error case does not set ti_watch, we will automatically
+            // fallback to regular breakpoint
+        }
+        // The kernel sets T_WP when a process-level hardware watchpoint fires.
+        // T_WP_SVC means it fired during a system call.
+        if ((entry.ti_watch & T_WP) || (entry.ti_watch & T_WP_SVC)) {
+            MonitorWatchpoint(thread, 0);
+            break;
+        }
+        MonitorBreakpoint(thread);
+        break;
+    }
   default:
     LLDB_LOG(log, "received unknown SIGTRAP stop event ({0}, pid {1} tid {2}",
              status.status, GetID(), thread.GetID());
@@ -1842,6 +1863,14 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
         LLDB_LOG(log,"NativeProcessAIX::pthread_sigmask(SIG_UNBLOCK) Failed");
       break;
     }
+
+    case PT_QUERY:
+      ptrace64(req, pid, 0, (int)data_size, (int *)data);
+      break;
+
+    case PT_WATCH:
+      ptrace64(req, pid, (long long)addr, (int)data_size, 0);
+      break;
 
     case PT_DETACH:
     case PT_KILL:
