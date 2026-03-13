@@ -622,4 +622,12 @@ def BubbleDownMemorySpaceCasts :
   }];
 }
 
+def NormalizePass : InterfacePass<"normalize", "FunctionOpInterface"> {
+  let summary = "Transforms IR into a normal form that's easier to diff.";
+  let description = [{
+    This pass attempts to relocate the defining ops of operands for any
+    side-effecting or terminator operation to their nearest dominating positions.
+  }];
+}
+
 #endif // MLIR_TRANSFORMS_PASSES
