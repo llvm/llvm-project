@@ -470,10 +470,28 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
   }
 }
 
+bool FactsGenerator::isEscapingOrigin(OriginID OID) const {
+  return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
+    if (const auto *EF = F->getAs<OriginEscapesFact>())
+      return EF->getEscapedOriginID() == OID;
+    return false;
+  });
+}
+
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  // In loops, the back-edge can make a dead origin appear live at its
+  // pointee's ExpireFact. Expiring the origin prevents that.
+  std::optional<OriginID> ExpiredOID;
+  if (OriginList *List = getOriginsList(*LifetimeEndsVD)) {
+    OriginID OID = List->getOuterOriginID();
+    // Skip if this origin escapes. Its loans are still needed
+    // for the escape checker.
+    if (!isEscapingOrigin(OID))
+      ExpiredOID = OID;
+  }
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
@@ -483,7 +501,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       const ValueDecl *Path = AP.getAsValueDecl();
       if (Path == LifetimeEndsVD)
         CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc(),
+            ExpiredOID));
     }
   }
 }

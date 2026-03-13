@@ -1931,3 +1931,51 @@ auto capture_multilevel_pointer() {
   return lambda; // expected-note 3 {{returned here}}
 }
 } // namespace lambda_captures
+
+namespace LoopLocalPointers {
+
+void conditional_assignment_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* view;
+    if (i > 5) {
+      view = &obj;
+    }
+    (void)*view;
+  }
+}
+
+void unconditional_assignment_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* view = &obj;
+    (void)*view;
+  }
+}
+
+// FIXME: False positive. Requires modeling flow-sensitive aliased origins
+// to properly expire pp's inner origin when p's lifetime ends.
+void multi_level_pointer_in_loop() {
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    MyObj* p;
+    MyObj** pp;
+    if (i > 5) {
+      p = &obj; // expected-warning {{object whose reference is captured does not live long enough}}
+      pp = &p;
+    }
+    (void)**pp; // expected-note {{later used here}}
+  }             // expected-note {{destroyed here}}
+}
+
+void outer_pointer_outlives_inner_pointee() {
+  MyObj safe;
+  MyObj* view = &safe;
+  for (int i = 0; i < 10; ++i) {
+    MyObj obj;
+    view = &obj;     // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)*view;       // expected-note {{later used here}}
+}
+
+} // namespace LoopLocalPointers
