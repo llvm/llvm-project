@@ -1203,16 +1203,6 @@ def OMP_EndSingle : Directive<[Spelling<"end single">]> {
   let category = OMP_Single.category;
   let languages = [L_Fortran];
 }
-def OMP_Split : Directive<[Spelling<"split">]> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Apply, 60>,
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Counts, 60>,
-  ];
-  let association = AS_LoopNest;
-  let category = CA_Executable;
-}
 def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
