@@ -209,24 +209,12 @@ FunctionPass *llvm::createInterleavedAccessPass() {
 ///     <1, 3, 5, 7>    (mask of index 1 to extract odd elements)
 static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
                                unsigned &Index, unsigned MaxFactor,
-                               unsigned NumLoadElements,
-                               SmallVector<ShuffleVectorInst *, 4> Shuffles) {
+                               unsigned NumLoadElements) {
   if (Mask.size() < 2)
     return false;
 
   // Check potential Factors.
   for (Factor = 2; Factor <= MaxFactor; Factor++) {
-    // Make sure we don't produce a load wider than the input load.
-    if (Mask.size() * Factor > NumLoadElements) {
-      if (Shuffles.empty())
-        return false;
-      for (unsigned i = 0; i < Shuffles.size(); i++) {
-        for (unsigned j = 0; j < Mask.size(); j++) {
-          if ((unsigned)Shuffles[i]->getShuffleMask()[j] > NumLoadElements)
-            return false;
-        }
-      }
-    }
     if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index))
       return true;
   }
@@ -342,7 +330,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   auto *FirstSVI = Shuffles.size() > 0 ? Shuffles[0] : BinOpShuffles[0];
   // Check if the first shufflevector is DE-interleave shuffle.
   if (!isDeInterleaveMask(FirstSVI->getShuffleMask(), Factor, Index, MaxFactor,
-                          NumLoadElements, Shuffles))
+                          NumLoadElements))
     return false;
 
   // Holds the corresponding index for each DE-interleave shuffle.
@@ -359,7 +347,14 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
             Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
-    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
+    ArrayRef<int> Mask = Shuffle->getShuffleMask();
+    if (Mask.size() * Factor > NumLoadElements) {
+      for (unsigned i = 0; i < Mask.size(); i++) {
+        if (static_cast<unsigned>(Mask[i]) >= NumLoadElements)
+          return false;
+      }
+    }
+
     Indices.push_back(Index);
   }
   for (auto *Shuffle : BinOpShuffles) {
@@ -369,7 +364,13 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
             Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
-    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
+    ArrayRef<int> Mask = Shuffle->getShuffleMask();
+    if (Mask.size() * Factor > NumLoadElements) {
+      for (unsigned i = 0; i < Mask.size(); i++) {
+        if (static_cast<unsigned>(Mask[i]) >= NumLoadElements)
+          return false;
+      }
+    }
 
     if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(0) == Load)
       Indices.push_back(Index);
@@ -581,7 +582,7 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
     bool AllZero = true;
     for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
       Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
-      if (!C->isNullValue()) {
+      if (C && !C->isNullValue()) {
         AllZero = false;
         break;
       }
