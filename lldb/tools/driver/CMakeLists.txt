@@ -16,7 +16,9 @@ if(APPLE)
     set(LLVM_CODESIGNING_IDENTITY "-")
   endif()
 
-  if (LLDB_ENABLE_MTE)
+  # If we're building with assertions and LLDB_ENABLE_MTE is set to ON,
+  # build the driver to always run under MTE.
+  if (LLDB_ENABLE_MTE AND LLVM_ENABLE_ASSERTIONS)
     set(ENTITLEMENTS ENTITLEMENTS ${CMAKE_CURRENT_SOURCE_DIR}/lldb-mte-entitlements.plist)
   endif()
 endif()
