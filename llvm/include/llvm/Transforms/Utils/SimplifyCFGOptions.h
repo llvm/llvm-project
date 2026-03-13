@@ -90,6 +90,22 @@ struct SimplifyCFGOptions {
     SpeculateUnpredictables = B;
     return *this;
   }
+
+  bool isCompatibleWith(const SimplifyCFGOptions &LastOptions) const {
+    return BonusInstThreshold == LastOptions.BonusInstThreshold &&
+           ForwardSwitchCondToPhi == LastOptions.ForwardSwitchCondToPhi &&
+           ConvertSwitchRangeToICmp == LastOptions.ConvertSwitchRangeToICmp &&
+           ConvertSwitchToLookupTable ==
+               LastOptions.ConvertSwitchToLookupTable &&
+           NeedCanonicalLoop == LastOptions.NeedCanonicalLoop &&
+           HoistCommonInsts == LastOptions.HoistCommonInsts &&
+           HoistLoadsStoresWithCondFaulting ==
+               LastOptions.HoistLoadsStoresWithCondFaulting &&
+           SinkCommonInsts == LastOptions.SinkCommonInsts &&
+           SimplifyCondBranch == LastOptions.SimplifyCondBranch &&
+           SpeculateBlocks == LastOptions.SpeculateBlocks &&
+           SpeculateUnpredictables == LastOptions.SpeculateUnpredictables;
+  }
 };
 
 } // namespace llvm

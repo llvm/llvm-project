@@ -28,6 +28,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
@@ -373,18 +374,30 @@ void SimplifyCFGPass::printPipeline(
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
+  auto &LRT = AM.getResult<LastRunTrackingAnalysis>(F);
+  // No changes since last SimplifyCFGPass pass, exit early.
+  if (LRT.shouldSkip(&ID, Options))
+    return PreservedAnalyses::all();
+
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   Options.AC = &AM.getResult<AssumptionAnalysis>(F);
   DominatorTree *DT = nullptr;
   if (RequireAndPreserveDomTree)
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  if (!simplifyFunctionCFG(F, TTI, DT, Options))
+  if (!simplifyFunctionCFG(F, TTI, DT, Options)) {
+    LRT.update(&ID, /*Changed=*/false, Options);
     return PreservedAnalyses::all();
+  }
+
   PreservedAnalyses PA;
   if (RequireAndPreserveDomTree)
     PA.preserve<DominatorTreeAnalysis>();
+  LRT.update(&ID, /*Changed=*/true, Options);
+  PA.preserve<LastRunTrackingAnalysis>();
   return PA;
 }
+
+char SimplifyCFGPass::ID = 0;
 
 namespace {
 struct CFGSimplifyPass : public FunctionPass {
