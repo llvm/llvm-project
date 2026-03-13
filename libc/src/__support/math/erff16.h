@@ -137,8 +137,8 @@ LIBC_INLINE float16 erff16(float16 x) {
       return is_neg ? -1.0f16 : 1.0f16;
     }
 
-    return fputil::cast<float16>(is_neg ? -1.0 - xf * 0x1.0p-28f
-                                        : 1.0 - xf * 0x1.0p-28f);
+    return fputil::cast<float16>(is_neg ? -1.0f - xf * 0x1.0p-28f
+                                        : 1.0f - xf * 0x1.0p-28f);
   }
 
   // Polynomial approximation:
