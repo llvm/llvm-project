@@ -66,9 +66,8 @@ public:
     if (operandsAndResultsLegal && regionsLegal)
       return mlir::failure();
 
-    assert(op->getNumRegions() == 0 &&
-           "CIRGenericTargetLoweringPattern cannot "
-           "deal with operations with regions");
+    assert(op->getNumRegions() == 0 && "CIRGenericTargetLoweringPattern cannot "
+                                       "deal with operations with regions");
 
     mlir::OperationState loweredOpState(op->getLoc(), op->getName());
     loweredOpState.addOperands(operands);
@@ -104,10 +103,10 @@ class CIRGlobalOpTargetLowering
 
 public:
   CIRGlobalOpTargetLowering(mlir::MLIRContext *context,
-                             const mlir::TypeConverter &typeConverter,
-                             const cir::TargetLoweringInfo &targetInfo)
+                            const mlir::TypeConverter &typeConverter,
+                            const cir::TargetLoweringInfo &targetInfo)
       : mlir::OpConversionPattern<cir::GlobalOp>(typeConverter, context,
-                                                  /*benefit=*/1),
+                                                 /*benefit=*/1),
         targetInfo(targetInfo) {}
 
   mlir::LogicalResult
@@ -119,14 +118,14 @@ public:
 
     // Convert the addr_space attribute.
     mlir::ptr::MemorySpaceAttrInterface addrSpace = op.getAddrSpaceAttr();
-    if (auto langAS = mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(
-            addrSpace)) {
+    if (auto langAS =
+            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace)) {
       unsigned targetAS =
           targetInfo.getTargetAddrSpaceFromCIRAddrSpace(langAS.getValue());
-      addrSpace = targetAS == 0
-                      ? nullptr
-                      : cir::TargetAddressSpaceAttr::get(op.getContext(),
-                                                         targetAS);
+      addrSpace =
+          targetAS == 0
+              ? nullptr
+              : cir::TargetAddressSpaceAttr::get(op.getContext(), targetAS);
     }
 
     // Only rewrite if something actually changed.
@@ -142,8 +141,7 @@ public:
 };
 
 /// Pattern to lower FuncOp types that contain address spaces.
-class CIRFuncOpTargetLowering
-    : public mlir::OpConversionPattern<cir::FuncOp> {
+class CIRFuncOpTargetLowering : public mlir::OpConversionPattern<cir::FuncOp> {
 public:
   using mlir::OpConversionPattern<cir::FuncOp>::OpConversionPattern;
 
@@ -178,9 +176,9 @@ public:
     loweredFuncOp.setFunctionType(loweredFuncType);
     rewriter.inlineRegionBefore(op.getBody(), loweredFuncOp.getBody(),
                                 loweredFuncOp.end());
-    if (mlir::failed(rewriter.convertRegionTypes(
-            &loweredFuncOp.getBody(), *getTypeConverter(),
-            &signatureConversion)))
+    if (mlir::failed(rewriter.convertRegionTypes(&loweredFuncOp.getBody(),
+                                                 *getTypeConverter(),
+                                                 &signatureConversion)))
       return mlir::failure();
 
     rewriter.eraseOp(op);
@@ -210,25 +208,23 @@ prepareTargetLoweringTypeConverter(mlir::TypeConverter &converter,
                                    const cir::TargetLoweringInfo &targetInfo) {
   converter.addConversion([](mlir::Type type) { return type; });
 
-  converter.addConversion(
-      [&converter, &targetInfo](cir::PointerType type) -> mlir::Type {
-        mlir::Type pointee = converter.convertType(type.getPointee());
-        if (!pointee)
-          return {};
-        auto addrSpace = type.getAddrSpace();
-        if (auto langAS =
-                mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(
-                    addrSpace)) {
-          unsigned targetAS =
-              targetInfo.getTargetAddrSpaceFromCIRAddrSpace(langAS.getValue());
-          addrSpace =
-              targetAS == 0
-                  ? nullptr
-                  : cir::TargetAddressSpaceAttr::get(type.getContext(),
-                                                     targetAS);
-        }
-        return cir::PointerType::get(type.getContext(), pointee, addrSpace);
-      });
+  converter.addConversion([&converter,
+                           &targetInfo](cir::PointerType type) -> mlir::Type {
+    mlir::Type pointee = converter.convertType(type.getPointee());
+    if (!pointee)
+      return {};
+    auto addrSpace = type.getAddrSpace();
+    if (auto langAS =
+            mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace)) {
+      unsigned targetAS =
+          targetInfo.getTargetAddrSpaceFromCIRAddrSpace(langAS.getValue());
+      addrSpace =
+          targetAS == 0
+              ? nullptr
+              : cir::TargetAddressSpaceAttr::get(type.getContext(), targetAS);
+    }
+    return cir::PointerType::get(type.getContext(), pointee, addrSpace);
+  });
 
   converter.addConversion([&converter](cir::ArrayType type) -> mlir::Type {
     mlir::Type loweredElementType =
@@ -254,18 +250,18 @@ prepareTargetLoweringTypeConverter(mlir::TypeConverter &converter,
   });
 }
 
-static void populateTargetLoweringConversionTarget(
-    mlir::ConversionTarget &target, const mlir::TypeConverter &tc) {
+static void
+populateTargetLoweringConversionTarget(mlir::ConversionTarget &target,
+                                       const mlir::TypeConverter &tc) {
   target.addLegalOp<mlir::ModuleOp>();
 
   target.addDynamicallyLegalDialect<cir::CIRDialect>(
       [&tc](mlir::Operation *op) {
         if (!tc.isLegal(op))
           return false;
-        return std::all_of(op->getRegions().begin(), op->getRegions().end(),
-                           [&tc](mlir::Region &region) {
-                             return tc.isLegal(&region);
-                           });
+        return std::all_of(
+            op->getRegions().begin(), op->getRegions().end(),
+            [&tc](mlir::Region &region) { return tc.isLegal(&region); });
       });
 
   target.addDynamicallyLegalOp<cir::FuncOp>(
