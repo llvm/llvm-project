@@ -1467,13 +1467,18 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
       continue;
 
     if (should_load == eLoadScriptFromSymFileWarn) {
-      feedback_stream.Printf(
-          "warning: '%s' contains a debug script. To run this script in this "
-          "debug session:\n\n    command script import \"%s\"\n\nTo run all "
-          "discovered debug scripts in this session:\n\nsettings set "
-          "target.load-script-from-symbol-file true\n",
-          GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-          scripting_fspec.GetPath().c_str());
+      feedback_stream.Format(R"(
+warning: '{0}' contains a debug script. To run this script in this debug session:
+
+    command script import "{1}"
+
+To run all discovered debug scripts in this session:
+
+    settings set target.load-script-from-symbol-file true
+)",
+                             GetFileSpec().GetFileNameStrippingExtension(),
+                             scripting_fspec.GetPath());
+
       return false;
     }
 
