@@ -94,6 +94,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_fract.cl
   math/clc_frexp.cl
   math/clc_frexp_exp.cl
+  math/clc_get_twobypi_bits.cl
   math/clc_half_cos.cl
   math/clc_half_divide.cl
   math/clc_half_exp.cl
