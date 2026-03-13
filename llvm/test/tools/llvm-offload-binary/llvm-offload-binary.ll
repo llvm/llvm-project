@@ -16,7 +16,7 @@
 ; RUN: llvm-offload-binary %t3 --image=file=%t4
 ; RUN: diff %s %t4
 
-; Test nested OffloadBinary construction with mulitiple inner images
+; Test nested OffloadBinary construction with multiple inner images.
 ; RUN: llvm-offload-binary -o %t5 --image=file=%s,arch=abc,triple=x-y-z --image=file=%s,arch=def,triple=x-y-z
 ; RUN: llvm-offload-binary -o %t6 --image=file=%t5,arch=nested,triple=x-y-z
 ; RUN: llvm-objdump --offloading %t6 | FileCheck %s --check-prefix=NESTED
