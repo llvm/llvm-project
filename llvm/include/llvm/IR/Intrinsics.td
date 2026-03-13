@@ -237,32 +237,64 @@ def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 // via 3 cooperating components:
 //
 // 1. Token definitions: IIT_* records below assign a numeric code to each type 
-// or type modifier. (e.g. IIT_I32 = 4, IIT_I64 = 5; see defs below)
-// TypeInfoGen<> walks each Intrinsic<> record and builds a flat byte
-// sequence 'TypeSig' of IIT_* codes: return types first, then params.
-// For example, an intrinsic returning i64 and taking (i32, i32, i8) as
-// input params gives:
-// TypeSig = [IIT_I64, IIT_I32, IIT_I32, IIT_I8, IIT_Done]
-// TypeSig = [5, 4, 4, 2, 0]
+//    or type modifier. 
+//    TypeInfoGen<> walks each Intrinsic<> record and builds a flat byte
+//    sequence 'TypeSig' of IIT_* codes: return types first, then params.
+//    Each type position in the signature is encoded as a variable-length byte
+//    sequence. The first byte is always one of the IIT_* opcodes defined below
+//    and determines how subsequent bytes (if any) should be interpreted.
+//
+//    - Simple scalar types are self-contained in a single opcode byte:
+//        i32 -> IIT_I32 (= 4), i64 -> IIT_I64 (= 5)
+//    - Vector types encode the opcode for the vector width, immediately
+//      followed by the recursive encoding of the element type:
+//        <4 x i32>  -> [IIT_V4, IIT_I32] (= 10, 4)
+//    - Overloaded positions are encoded as IIT_ARG (= 15) followed by an
+//      ArgInfo byte where bits[7:5] identify the accepted type family.
+//        llvm_anyint_ty at overload-index 0  -> [IIT_ARG, 0x20]
+//    - For constraints that are dependent on types of other arguments, the
+//      ArgInfo byte encodes both which previously-seen type position this must
+//      match (bits[4:0] = argument index) and how it relates to that type
+//      (bits[7:5] = kind: 0=same, 1=extend, 2=trunc, 3=sext, 4=zext, 5=any, 
+//      6=ptr_to, 7=vec_of). 
+//        LLVMMatchType<0>  -> [IIT_ARG, 0x00]
+//    - Multi-value returns are prefixed with IIT_STRUCT (= 21) and a count 
+//      byte encoding N-2 (minimum 2 fields -> 0, maximum 257 fields -> 255), 
+//      followed by the encoding of each field type:
+//        {i32, i64}  -> [IIT_STRUCT, 0, IIT_I32, IIT_I64]
+//
+//     TypeInfoGen<> concatenates type encodings for all return types first,
+//     then all parameter types in declaration order. 
+//     The return section has three forms:
+//      - Void return:         starts with IIT_Done (= 0).
+//      - Single return:       no prefix; the return type encoding starts directly.
+//      - Multi-value return:  starts with IIT_STRUCT + count byte as above.
+//
+//    For example, intrinsic with i64 return and (i32, i32, i8) parameters:
+//    TypeSig = [IIT_I64(5), IIT_I32(4), IIT_I32(4), IIT_I8(2)]
 // 
-// 2. Encoding: For each intrinsic ComputeTypeSignature() in IntrinsicEmitter.cpp
-// gets TypeSig and encodePacked() encodes TypeSig into packed nibbles.
-// The encodings are stored in 2 generated tables inside IntrinsicImpl.inc
-// by EmitGenerator(): (Refer IntrinsicEmitter.cpp for more details).
-//  IIT_Table[]             – one entry per intrinsic ID (uint16_t or uint32_t)
-//  IIT_LongEncodingTable[] – shared byte array for signatures that don't fit
-//                            in a single IIT_Table word.
-// The example above packs LSB-first to 0x2445 (bit 15 = 0) in uint16_t and
-// stores in IIT_Table[].
+// 2. Encoding Optimization: For each intrinsic ComputeTypeSignature() in 
+//    IntrinsicEmitter.cpp gets TypeSig byte sequence.
+//    EmitGenerator() then decides how to store this sequence in the generated
+//    tables in IntrinsicImpl.inc file. If the sequence is short and all IIT
+//    codes are less than 16, encodePacked() compresses it into packed nibbles
+//    and stores it directly in the IIT_Table entry for that intrinsic.
+//    Otherwise the full byte sequence is placed in IIT_LongEncodingTable[],
+//    and IIT_Table[] stores an offset into that table.
+//
+//    The example above (TypeSig [5,4,4,2]) packs to 0x2445 with bit 15 = 0,
+//    so it is inlined directly into IIT_Table[]. (Refer to EmitGenerator() in
+//    IntrinsicEmitter.cpp for the full details.)
 // 
 // 3. Decoding: getIntrinsicInfoTableEntries() in Intrinsics.cpp reads
-// IIT_Table[id-1]. 
-// The MSB selects one of the tables accordingly, unpacks the byte stream, and
-// calls DecodeIITType() to build the IITDescriptor vector. Each IITDescriptor
-// entry describes one type position in the signature. For the example above,
-// the result is [Integer(64), Integer(32), Integer(32), Integer(8)], 
-// which is used by getType() to reconstruct the intrinsic's FunctionType and
-// by matchIntrinsicSignature() to verify call sites at runtime.  
+//    IIT_Table[id-1]. 
+//    The MSB selects one of the tables accordingly, unpacks the byte stream,
+//    and calls DecodeIITType() to build the IITDescriptor vector. Each
+//    IITDescriptor entry describes one type position in the signature. 
+//    For the example above, the result is [Integer(64), Integer(32),  
+//    Integer(32), Integer(8)], which is used by getType() to reconstruct the
+//    intrinsic's FunctionType and by matchIntrinsicSignature() to verify 
+//    call sites at runtime.
 
 // llvm::Intrinsic::IITDescriptor::ArgKind::AK_%
 def ArgKind {
@@ -716,14 +748,6 @@ class TypeInfoGen<
   list<LLVMType> Types = !foreach(ty, AllTypes,
     !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
 
-  // TypeSig layout (See an example in comments above):
-  //   - If the intrinsic returns multiple values (struct return), the first 
-  //     code is IIT_STRUCT followed by a count byte, then the element types.
-  //   - If it returns a single void, the first code is IIT_Done (0).
-  //   - Otherwise the first code(s) describe the single return type.
-  //   - Parameter type codes follow in order.
-  //   - The sequence is implicitly terminated: in LongEncodingTable by 0 byte
-  //     (IIT_Done), and in the fixed encoding by the natural end of nibbles.
   list<int> TypeSig = !listflatten(!listconcat(
     [!cond(
       !eq(!size(RetTypes), 0): [IIT_Done.Number],
