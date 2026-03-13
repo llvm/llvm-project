@@ -19,6 +19,7 @@ projects="${1}"
 targets="${2}"
 runtimes="${3}"
 runtimes_targets="${4}"
+libclc_targets="${5}"
 
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
@@ -45,6 +46,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D LIBCLC_TARGETS_TO_BUILD="${libclc_targets}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
