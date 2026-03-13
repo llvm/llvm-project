@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/float/definitions.h>
+#include <clc/math/clc_ep.h>
 #include <clc/math/clc_fabs.h>
 #include <clc/math/clc_fma.h>
+#include <clc/math/clc_frexp.h>
+#include <clc/math/clc_ldexp.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/math.h>
 #include <clc/relational/clc_isinf.h>
@@ -176,129 +180,52 @@ __clc_log(float x)
 
 _CLC_OVERLOAD _CLC_DEF double
 #if defined(COMPILING_LOG2)
-__clc_log2(double x)
+__clc_log2(double a)
 #elif defined(COMPILING_LOG10)
-__clc_log10(double x)
+__clc_log10(double a)
 #else
-__clc_log(double x)
+__clc_log(double a)
 #endif
 {
+  int a_exp;
+  double m = __clc_frexp(a, &a_exp);
+  int b = m < (2.0 / 3.0);
+  m = __clc_ldexp(m, b);
+  int e = a_exp - b;
 
-#ifndef COMPILING_LOG2
-  // log2_lead and log2_tail sum to an extra-precise version of ln(2)
-  const double log2_lead = 6.93147122859954833984e-01; /* 0x3fe62e42e0000000 */
-  const double log2_tail = 5.76999904754328540596e-08; /* 0x3e6efa39ef35793c */
-#endif
+  double2 x = __clc_ep_div(m - 1.0, __clc_ep_fast_add(1.0, m));
+  double s = x.hi * x.hi;
+  double p = __clc_mad(s, __clc_mad(s, __clc_mad(s,
+             __clc_mad(s, __clc_mad(s, __clc_mad(s, 0x1.3ab76bf559e2bp-3, 0x1.385386b47b09ap-3),
+               0x1.7474dd7f4df2ep-3), 0x1.c71c016291751p-3),
+               0x1.249249b27acf1p-2), 0x1.99999998ef7b6p-2), 0x1.5555555555780p-1);
+  double2 r = __clc_ep_fast_add(__clc_ep_ldexp(x, 1), s * x.hi * p);
 
-#if defined(COMPILING_LOG10)
-  // log10e_lead and log10e_tail sum to an extra-precision version of log10(e)
-  // (19 bits in lead)
-  const double log10e_lead =
-      4.34293746948242187500e-01; /* 0x3fdbcb7800000000 */
-  const double log10e_tail =
-      7.3495500964015109100644e-7; /* 0x3ea8a93728719535 */
-#elif defined(COMPILING_LOG2)
-  // log2e_lead and log2e_tail sum to an extra-precision version of log2(e) (19
-  // bits in lead)
-  const double log2e_lead = 1.44269180297851562500E+00; /* 0x3FF7154400000000 */
-  const double log2e_tail = 3.23791044778235969970E-06; /* 0x3ECB295C17F0BBBE */
-#endif
-
-  // log_thresh1 = 9.39412117004394531250e-1 = 0x3fee0faa00000000
-  // log_thresh2 = 1.06449508666992187500 = 0x3ff1082c00000000
-  const double log_thresh1 = 0x1.e0faap-1;
-  const double log_thresh2 = 0x1.1082cp+0;
-
-  bool is_near = x >= log_thresh1 && x <= log_thresh2;
-
-  // Near 1 code
-  double r = x - 1.0;
-  double u = r / (2.0 + r);
-  double correction = r * u;
-  u = u + u;
-  double v = u * u;
-  double r1 = r;
-
-  const double ca_1 = 8.33333333333317923934e-02; /* 0x3fb55555555554e6 */
-  const double ca_2 = 1.25000000037717509602e-02; /* 0x3f89999999bac6d4 */
-  const double ca_3 = 2.23213998791944806202e-03; /* 0x3f62492307f1519f */
-  const double ca_4 = 4.34887777707614552256e-04; /* 0x3f3c8034c85dfff0 */
-
-  double r2 = __clc_fma(
-      u * v, __clc_fma(v, __clc_fma(v, __clc_fma(v, ca_4, ca_3), ca_2), ca_1),
-      -correction);
-
-#if defined(COMPILING_LOG10)
-  r = r1;
-  r1 = __clc_as_double(__clc_as_ulong(r1) & 0xffffffff00000000);
-  r2 = r2 + (r - r1);
-  double ret_near = __clc_fma(
-      log10e_lead, r1,
-      __clc_fma(log10e_lead, r2, __clc_fma(log10e_tail, r1, log10e_tail * r2)));
-#elif defined(COMPILING_LOG2)
-  r = r1;
-  r1 = __clc_as_double(__clc_as_ulong(r1) & 0xffffffff00000000);
-  r2 = r2 + (r - r1);
-  double ret_near = __clc_fma(
-      log2e_lead, r1,
-      __clc_fma(log2e_lead, r2, __clc_fma(log2e_tail, r1, log2e_tail * r2)));
+#if defined COMPILING_LOG2
+  r = __clc_ep_add(
+      (double)e,
+      __clc_ep_mul(
+          __clc_ep_make_pair(0x1.71547652b82fep+0, 0x1.777d0ffda0d24p-56), r));
+#elif defined COMPILING_LOG10
+  r = __clc_ep_add(
+      __clc_ep_mul(
+          __clc_ep_make_pair(0x1.34413509f79ffp-2, -0x1.9dc1da994fd21p-59),
+          (double)e),
+      __clc_ep_mul(
+          __clc_ep_make_pair(0x1.bcb7b1526e50ep-2, 0x1.95355baaafad3p-57), r));
 #else
-  double ret_near = r1 + r2;
+  r = __clc_ep_add(__clc_ep_mul(__clc_ep_make_pair(0x1.62e42fefa39efp-1,
+                                                   0x1.abc9e3b39803fp-56),
+                                (double)e),
+                   r);
 #endif
 
-  // This is the far from 1 code
+  double ret = r.hi;
 
-  // Deal with subnormal
-  ulong ux = __clc_as_ulong(x);
-  ulong uxs =
-      __clc_as_ulong(__clc_as_double(0x03d0000000000000UL | ux) - 0x1.0p-962);
-  int c = ux < IMPBIT_DP64;
-  ux = c ? uxs : ux;
-  int expadjust = c ? 60 : 0;
+  ret = __clc_isinf(a) ? a : ret;
+  ret = a < 0.0 ? DBL_NAN : ret;
+  ret = a == 0.0 ? -INFINITY : ret;
 
-  int xexp = ((__clc_as_int2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64 - expadjust;
-  double f = __clc_as_double(HALFEXPBITS_DP64 | (ux & MANTBITS_DP64));
-  int index = __clc_as_int2(ux).hi >> 13;
-  index = ((0x80 | (index & 0x7e)) >> 1) + (index & 0x1);
-
-  double z1 = __CLC_USE_TABLE(ln_tbl_lo, index - 64);
-  double q = __CLC_USE_TABLE(ln_tbl_hi, index - 64);
-
-  double f1 = index * 0x1.0p-7;
-  double f2 = f - f1;
-  u = f2 / __clc_fma(f2, 0.5, f1);
-  v = u * u;
-
-  const double cb_1 = 8.33333333333333593622e-02; /* 0x3fb5555555555557 */
-  const double cb_2 = 1.24999999978138668903e-02; /* 0x3f89999999865ede */
-  const double cb_3 = 2.23219810758559851206e-03; /* 0x3f6249423bd94741 */
-
-  double poly = v * __clc_fma(v, __clc_fma(v, cb_3, cb_2), cb_1);
-  double z2 = q + __clc_fma(u, poly, u);
-
-  double dxexp = (double)xexp;
-#if defined(COMPILING_LOG10)
-  // Add xexp * log(2) to z1,z2 to get log(x)
-  r1 = __clc_fma(dxexp, log2_lead, z1);
-  r2 = __clc_fma(dxexp, log2_tail, z2);
-  double ret_far = __clc_fma(
-      log10e_lead, r1,
-      __clc_fma(log10e_lead, r2, __clc_fma(log10e_tail, r1, log10e_tail * r2)));
-#elif defined(COMPILING_LOG2)
-  r1 = __clc_fma(log2e_lead, z1, dxexp);
-  r2 = __clc_fma(log2e_lead, z2, __clc_fma(log2e_tail, z1, log2e_tail * z2));
-  double ret_far = r1 + r2;
-#else
-  r1 = __clc_fma(dxexp, log2_lead, z1);
-  r2 = __clc_fma(dxexp, log2_tail, z2);
-  double ret_far = r1 + r2;
-#endif
-
-  double ret = is_near ? ret_near : ret_far;
-
-  ret = __clc_isinf(x) ? __clc_as_double(PINFBITPATT_DP64) : ret;
-  ret = (__clc_isnan(x) | (x < 0.0)) ? __clc_as_double(QNANBITPATT_DP64) : ret;
-  ret = x == 0.0 ? __clc_as_double(NINFBITPATT_DP64) : ret;
   return ret;
 }
 

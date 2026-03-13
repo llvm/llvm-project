@@ -2539,7 +2539,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
                                       QualType DestTy, SourceLocation Loc) {
   SmallVector<LValue, 16> LoadList;
   CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
-  // Dest is either a vector or a builtin?
+  // Dest is either a vector, constant matrix, or a builtin
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = DestTy->getAs<VectorType>()) {
     assert(LoadList.size() >= VecTy->getNumElements() &&
@@ -2564,20 +2564,26 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
+    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
-    // V is an allocated temporary to build the truncated matrix into.
-    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
-      unsigned ColMajorIndex =
-          (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
-          (I / MatTy->getNumRows());
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[ColMajorIndex], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast = CGF.EmitScalarConversion(
-          RVal.getScalarVal(), LoadList[ColMajorIndex].getType(),
-          MatTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    // V is an allocated temporary for constructing the matrix.
+    for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
+      for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
+        // When interpreted as a matrix, \p LoadList is *always* row-major order
+        // regardless of the default matrix memory layout.
+        unsigned LoadIdx = MatTy->getRowMajorFlattenedIndex(Row, Col);
+        RValue RVal = CGF.EmitLoadOfLValue(LoadList[LoadIdx], Loc);
+        assert(RVal.isScalar() &&
+               "All flattened source values should be scalars.");
+        llvm::Value *Cast = CGF.EmitScalarConversion(
+            RVal.getScalarVal(), LoadList[LoadIdx].getType(),
+            MatTy->getElementType(), Loc);
+        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
+      }
     }
     return V;
   }
@@ -4187,7 +4193,9 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
-      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType()) {
+      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType() &&
+      !CGF.getContext().isTypeIgnoredBySanitizer(
+          SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
 
     llvm::Value *IntMin =

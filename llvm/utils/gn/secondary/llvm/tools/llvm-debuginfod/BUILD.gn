@@ -30,6 +30,7 @@ driver_executable("llvm-debuginfod") {
     "//llvm/lib/Debuginfod",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/Support/HTTP",
   ]
   sources = [ "llvm-debuginfod.cpp" ]
 }

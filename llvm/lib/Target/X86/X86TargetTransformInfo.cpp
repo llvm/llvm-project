@@ -5479,7 +5479,7 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
+    InstructionCost BranchCost = getCFInstrCost(Instruction::CondBr, CostKind);
     InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
     InstructionCost ValueSplitCost = getScalarizationOverhead(
         SrcVTy, DemandedElts, IsLoad, IsStore, CostKind);

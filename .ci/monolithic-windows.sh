@@ -48,7 +48,8 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D LLVM_PARALLEL_LINK_JOBS=16
 
 start-group "ninja"
 
