@@ -16,6 +16,3 @@ entry:
   %ov = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %revx, <4 x i32> %revy)
   ret { <4 x i32>, <4 x i1> } %ov
 }
-
-declare <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32>)
-declare { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32>, <4 x i32>)
