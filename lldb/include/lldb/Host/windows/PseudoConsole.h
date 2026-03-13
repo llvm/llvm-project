@@ -22,7 +22,7 @@ namespace lldb_private {
 class PseudoConsole {
 
 public:
-  enum Mode { ConPTY, Pipe, None };
+  enum class Mode { ConPTY, Pipe, None };
 
   PseudoConsole() = default;
   ~PseudoConsole();
@@ -31,6 +31,13 @@ public:
   PseudoConsole(PseudoConsole &&) = delete;
   PseudoConsole &operator=(const PseudoConsole &) = delete;
   PseudoConsole &operator=(PseudoConsole &&) = delete;
+
+  /// Creates a named pipe pair for overlapped I/O. The read end is set to
+  /// non-blocking (PIPE_NOWAIT).
+  /// On failure any handles that were successfully opened are closed and an
+  /// error is returned.
+  llvm::Error CreateOverlappedPipePair(HANDLE &out_read, HANDLE &out_write,
+                                       bool inheritable);
 
   /// Creates and opens a new ConPTY instance with a default console size of
   /// 80x25. Also sets up the associated STDIN/STDOUT pipes and drains any
