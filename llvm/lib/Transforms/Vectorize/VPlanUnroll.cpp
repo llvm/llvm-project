@@ -337,8 +337,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     }
     if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
       VPBuilder Builder(VPR);
-      const DataLayout &DL = Plan.getDataLayout();
-      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
+      Type *IndexTy =
+          Plan.getDataLayout().getIndexType(TypeInfo.inferScalarType(VPR));
       Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
@@ -347,6 +347,16 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
       Copy->setOperand(0, VPR->getOperand(0));
+      Copy->addOperand(VFxPart);
+      continue;
+    }
+    if (match(&R, m_CanonicalIVIncrement())) {
+      VPBuilder Builder(&R);
+      VPValue *VFxPart = Builder.createOverflowingOp(
+          Instruction::Mul, {&Plan.getVF(), getConstantInt(Part)},
+          {true, true});
+      Copy->setOperand(0, R.getOperand(0));
+      Copy->setOperand(1, R.getOperand(1));
       Copy->addOperand(VFxPart);
       continue;
     }
@@ -379,19 +389,15 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // requiring it.
     if (isa<VPWidenCanonicalIVRecipe>(Copy))
       Copy->addOperand(getConstantInt(Part));
-
-    if (match(Copy,
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
-      VPBuilder Builder(Copy);
-      VPValue *ScaledByPart = Builder.createOverflowingOp(
-          Instruction::Mul, {Copy->getOperand(1), getConstantInt(Part)});
-      Copy->setOperand(1, ScaledByPart);
-    }
   }
-  if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
-    // Materialize Part0 offset for VectorEndPointer.
+  // Materialize Part0 offset for various recipes.
+  if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R))
+    VPR->addOperand(Plan.getZero(
+        Plan.getDataLayout().getIndexType(TypeInfo.inferScalarType(VPR))));
+  if (match(&R, m_CanonicalIVIncrement()))
+    R.addOperand(getConstantInt(0));
+  if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R))
     VEPR->materializeOffset();
-  }
 }
 
 void UnrollState::unrollBlock(VPBlockBase *VPB) {
@@ -488,20 +494,6 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   assert(UF > 0 && "Unroll factor must be positive");
   Plan.setUF(UF);
   llvm::scope_exit Cleanup([&Plan, UF]() {
-    auto Iter = vp_depth_first_deep(Plan.getEntry());
-    // Remove recipes that are redundant after unrolling.
-    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
-      for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-        auto *VPI = dyn_cast<VPInstruction>(&R);
-        if (VPI &&
-            VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getOperand(1) == &Plan.getVF()) {
-          VPI->replaceAllUsesWith(VPI->getOperand(0));
-          VPI->eraseFromParent();
-        }
-      }
-    }
-
     Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
     Plan.getUF().replaceAllUsesWith(Plan.getConstantInt(TCTy, UF));
   });

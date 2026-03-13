@@ -1620,11 +1620,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
-  // Simplify unrolled VectorPointer without offset, or with zero offset, to
-  // just the pointer operand.
+  // Simplify unrolled VectorPointer with no offset or zero offset.
   if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
     if (!VPR->getOffset() || match(VPR->getOffset(), m_ZeroInt()))
       return VPR->replaceAllUsesWith(VPR->getOperand(0));
+
+  // Simplify unrolled CanonicalIVIncrement with no offset or zero offset.
+  if (match(Def, m_CanonicalIVIncrement()))
+    if (Def->getNumOperands() == 2 || match(Def->getOperand(2), m_ZeroInt()))
+      return Def->replaceAllUsesWith(Def->getOperand(0));
 
   // VPScalarIVSteps after unrolling can be replaced by their start value, if
   // the start index is zero and only the first lane 0 is demanded.
@@ -2064,18 +2068,18 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
           m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
     assert(Index && "Expected index from ActiveLaneMask instruction");
 
-    uint64_t Part;
     if (match(Index,
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                  m_VPValue(), m_Mul(m_VPValue(), m_ConstantInt(Part)))))
-      Phis[Part] = Phi;
-    else {
-      // Anything other than a CanonicalIVIncrementForPart is part 0
-      assert(!match(
-          Index,
-          m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()));
+              m_CanonicalIVIncrement(m_VPValue(), m_VPValue(), m_ZeroInt()))) {
+      // Part 0 CanonicalIVIncrement.
       Phis[0] = Phi;
+      continue;
     }
+    uint64_t Part;
+    VPValue *VF;
+    assert(match(Index, m_CanonicalIVIncrement(
+                            m_VPValue(), m_VPValue(VF),
+                            m_c_Mul(m_Deferred(VF), m_ConstantInt(Part)))));
+    Phis[Part] = Phi;
   }
 
   assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
@@ -3986,6 +3990,24 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         ToRemove.push_back(Blend);
       }
 
+      // Materialize Part0 offsets for various recipes when UF = 1. When UF > 1,
+      // the unroller would have added Part0 offsets.
+      if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
+        if (!VPR->getOffset()) {
+          assert(Plan.getConcreteUF() == 1 &&
+                 "Expected unroller to have materialized offset for UF != 1");
+          VPR->addOperand(Plan.getZero(Plan.getDataLayout().getIndexType(
+              TypeInfo.inferScalarType(VPR))));
+        }
+      }
+      if (match(&R, m_CanonicalIVIncrement())) {
+        if (R.getNumOperands() == 2) {
+          assert(Plan.getConcreteUF() == 1 &&
+                 "Expected unroller to have materialized offset for UF != 1");
+          R.addOperand(
+              Plan.getZero(Plan.getVectorLoopRegion()->getCanonicalIVType()));
+        }
+      }
       if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
         if (!VEPR->getOffset()) {
           assert(Plan.getConcreteUF() == 1 &&

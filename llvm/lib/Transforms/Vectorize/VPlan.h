@@ -1211,7 +1211,10 @@ public:
     ActiveLaneMask,
     ExplicitVectorLength,
     CalculateTripCountMinusVF,
-    // Increment the canonical IV separately for each unrolled part.
+    // Increment the canonical IV separately for each unrolled part. Meant to be
+    // constructed with two operands, namely the Start value and VF. Unrolling
+    // and conversion to concrete recipes add an extra Offset operand and the
+    // recipe produces `add Start, Offset`. The offset for unrolled part 0 is 0.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
     // lowered to ICmp + BranchOnCond during VPlan to VPlan transformation.
@@ -2192,8 +2195,9 @@ protected:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of \p
-/// SourceElementTy. Unrolling adds an extra offset operand for unrolled parts >
-/// 0 and it produces `GEP Ptr, Offset`. The offset for unrolled part 0 is 0.
+/// SourceElementTy. Unrolling and conversion to concrete recipes add an extra
+/// offset operand and the recipe produces `GEP Ptr, Offset`. The offset for
+/// unrolled part 0 is 0.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 

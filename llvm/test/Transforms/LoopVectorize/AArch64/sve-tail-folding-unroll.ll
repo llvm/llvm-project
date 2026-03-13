@@ -13,10 +13,10 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP61:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP61]], 2
 ; CHECK-NEXT:    [[TMP62:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP28:%.*]] = shl nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP30:%.*]] = mul nuw nsw i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP28:%.*]] = shl i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[INDEX_PART_NEXT1:%.*]] = add i64 0, [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[INDEX_PART_NEXT2:%.*]] = add i64 0, [[TMP30]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[UMAX]])
@@ -79,10 +79,10 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP28:%.*]] = shl nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP30:%.*]] = mul nuw nsw i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP28:%.*]] = shl i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[INDEX_PART_NEXT1:%.*]] = add i64 0, [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = mul i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[INDEX_PART_NEXT2:%.*]] = add i64 0, [[TMP30]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_PART_NEXT]], i64 [[UMAX]])

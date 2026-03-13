@@ -403,8 +403,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
   if (VPBB &&
       (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
-    if (match(V->getDefiningRecipe(),
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
+    if (match(V->getDefiningRecipe(), m_CanonicalIVIncrement()))
       return false;
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }

@@ -866,6 +866,17 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
+inline auto m_CanonicalIVIncrement() {
+  return VPInstruction_match<VPInstruction::CanonicalIVIncrementForPart>();
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline auto m_CanonicalIVIncrement(const Op0_t &Op0, const Op1_t &Op1,
+                                   const Op2_t &Op2) {
+  return VPInstruction_match<VPInstruction::CanonicalIVIncrementForPart, Op0_t,
+                             Op1_t, Op2_t>(Op0, Op1, Op2);
+}
+
 inline auto m_CanonicalIV() { return class_match<VPCanonicalIVPHIRecipe>(); }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
