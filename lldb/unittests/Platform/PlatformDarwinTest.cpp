@@ -390,9 +390,8 @@ TEST_F(PlatformDarwinLocateTest,
       (m_tmp_dsym_dwarf_dir + "/../Python/import.py").str();
   std::string expected = llvm::formatv(
       "debug script '{0}' cannot be loaded because 'import.py' "
-      "conflicts with the keyword 'import'. Loading '_import.py' instead. "
-      "Consider removing the file with the malformed name to eliminate this "
-      "warning.\n",
+      "conflicts with the keyword 'import'. Ignoring 'import.py' and loading "
+      "'_import.py' instead.\n",
       orig_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
@@ -492,10 +491,9 @@ TEST_F(
   std::string orig_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/TestModule-1.1 1.py").str();
   std::string expected = llvm::formatv(
-      "debug script '{0}' cannot be loaded because 'TestModule-1.1 1.py' "
-      "contains reserved characters. Loading 'TestModule_1_1_1.py' "
-      "instead. Consider removing the file with the malformed name to "
-      "eliminate this warning.\n",
+      "debug script '{0}' cannot be loaded because"
+      " 'TestModule-1.1 1.py' contains reserved characters. Ignoring"
+      " 'TestModule-1.1 1.py' and loading 'TestModule_1_1_1.py' instead.\n",
       orig_script);
   EXPECT_EQ(ss.GetString(), expected);
 }
@@ -586,9 +584,8 @@ TEST_F(
               ss, module_fspec, *m_target_sp, dsym_module_fpec);
   EXPECT_EQ(fspecs.GetSize(), 1u);
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_mykeyword_1_1_1.py");
-  EXPECT_TRUE(
-      ss.GetString().contains("Consider removing the file with the malformed "
-                              "name to eliminate this warning."));
+  EXPECT_TRUE(ss.GetString().contains("Ignoring 'mykeyword-1.1 1.py' and "
+                                      "loading '_mykeyword_1_1_1.py' instead"));
 }
 
 TEST_F(

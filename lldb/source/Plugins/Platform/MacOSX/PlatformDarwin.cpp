@@ -296,8 +296,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
       if (FileSystem::Instance().Exists(script_fspec))
         feedback_stream.Format(
             "debug script '{0}' cannot be loaded because '{1}' {2}. "
-            "Loading '{3}' instead. Consider removing the file with the "
-            "malformed name to eliminate this warning.\n",
+            "Ignoring '{1}' and loading '{3}' instead.\n",
             original_path_string.GetString(), orig_script_fspec.GetFilename(),
             std::move(reason_for_complaint), script_fspec.GetFilename());
       else
