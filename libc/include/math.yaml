@@ -876,14 +876,6 @@ functions:
       - type: float
       - type: float
       - type: float
-  - name: fmabf16
-    standards:
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-      - type: _Float16
   - name: fmaf16
     standards:
       - stdc
