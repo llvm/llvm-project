@@ -1685,7 +1685,7 @@ void State::addInfoFor(BasicBlock &BB) {
         }
       }
 
-      auto *StartV = IV->getStart();
+      SCEVUse StartV = IV->getStart();
       bool NeedZExt;
       Value *V;
       std::tie(V, NeedZExt) = getValueOrConstant(StartV, L, SE);
