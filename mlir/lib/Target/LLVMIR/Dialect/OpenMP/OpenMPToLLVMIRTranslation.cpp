@@ -95,8 +95,10 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPLoopInfoStackFrame)
   /// For constructs like scan, one LoopInfo frame can contain multiple
   /// Canonical Loops as a single openmpLoopNestOp will be split into input
-  /// loop and scan loop.
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
+  /// loop and scan loop. In case of scan loop, loopInfo holds the input
+  /// loop info and scanInfo holds the scan loop info
+  llvm::CanonicalLoopInfo *loopInfo = nullptr;
+  llvm::CanonicalLoopInfo *scanloopInfo = nullptr;
   llvm::ScanInfo *scanInfo = nullptr;
   /// Map reduction variables to their LLVM types.
   std::unique_ptr<llvm::DenseMap<llvm::Value *, llvm::Type *>>
@@ -382,10 +384,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
-    if (op.getReductionMod()) {
+    if (op.getReductionMod() &&
+        op.getReductionMod().value() != omp::ReductionModifier::defaultmod) {
       if (isa<omp::WsloopOp>(op)) {
         if (op.getReductionMod().value() == omp::ReductionModifier::task)
           result = todo("reduction with task modifier");
+      } else {
+        result = todo("reduction with modifier");
       }
     }
   };
@@ -548,15 +553,30 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
 /// Find the loop information structure for the loop nest being translated. It
 /// will return a `null` value unless called from the translation function for
 /// a loop wrapper operation after successfully translating its body.
-static SmallVector<llvm::CanonicalLoopInfo *>
-findCurrentLoopInfos(LLVM::ModuleTranslation &moduleTranslation) {
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
+static llvm::CanonicalLoopInfo *
+findCurrentLoopInfo(LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::CanonicalLoopInfo *loopInfo;
   moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
       [&](OpenMPLoopInfoStackFrame &frame) {
-        loopInfos = frame.loopInfos;
+        loopInfo = frame.loopInfo;
         return WalkResult::interrupt();
       });
-  return loopInfos;
+  return loopInfo;
+}
+
+/// Find the scan loop information structure for the scan loop nest being
+/// translated. It will return a `null` value unless called from the translation
+/// function for a loop wrapper operation after successfully translating its
+/// body.
+static llvm::CanonicalLoopInfo *
+findCurrentScanLoopInfo(LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::CanonicalLoopInfo *scanLoopInfo;
+  moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+      [&](OpenMPLoopInfoStackFrame &frame) {
+        scanLoopInfo = frame.scanloopInfo;
+        return WalkResult::interrupt();
+      });
+  return scanLoopInfo;
 }
 
 // LoopFrame stores the scaninfo which is used for scan reduction.
@@ -3204,9 +3224,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(handleError(regionBlock, opInst)))
     return failure();
 
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos =
-      findCurrentLoopInfos(moduleTranslation);
-
   const auto &&wsloopCodeGen = [&](llvm::CanonicalLoopInfo *loopInfo,
                                    bool noLoopMode, bool inputScanLoop) {
     // Emit Initialization and Update IR for linear variables
@@ -3238,7 +3255,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     // Emit finalization and in-place rewrites for linear vars.
     if (!wsloopOp.getLinearVars().empty()) {
       llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
-      if (loopInfo->getLastIter())
+      if (!loopInfo->getLastIter())
         return failure();
       llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
           linearClauseProcessor.finalizeLinearVar(builder, moduleTranslation,
@@ -3256,12 +3273,13 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return llvm::success();
   };
 
+  llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
   if (isInScanRegion) {
-    auto inputLoopFinishIp = loopInfos.front()->getAfterIP();
+    auto inputLoopFinishIp = loopInfo->getAfterIP();
     builder.restoreIP(inputLoopFinishIp);
     SmallVector<OwningReductionGen> owningReductionGens;
     SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
-    SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
+    SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> reductionInfos;
     SmallVector<OwningDataPtrPtrReductionGen> owningReductionGenRefDataPtrGens;
     ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionByref());
     collectReductionInfo(wsloopOp, builder, moduleTranslation, reductionDecls,
@@ -3305,14 +3323,16 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // For Scan loops input loop need not pop cancellation CB and hence, it is set
   // false for the first loop
   bool inputScanLoop = isInScanRegion;
-  for (llvm::CanonicalLoopInfo *loopInfo : loopInfos) {
-    // TODO: Linear clause support needs to be enabled for scan reduction.
-    if (failed(wsloopCodeGen(loopInfo, noLoopMode, inputScanLoop)))
-      return failure();
-    inputScanLoop = false;
-  }
+  // TODO: Linear clause support needs to be enabled for scan reduction.
+  if (failed(wsloopCodeGen(loopInfo, noLoopMode, inputScanLoop)))
+    return failure();
+  inputScanLoop = false;
 
   if (isInScanRegion) {
+    llvm::CanonicalLoopInfo *scanLoopInfo =
+        findCurrentScanLoopInfo(moduleTranslation);
+    if (failed(wsloopCodeGen(scanLoopInfo, noLoopMode, inputScanLoop)))
+      return failure();
     SmallVector<Region *> reductionRegions;
     llvm::transform(reductionDecls, std::back_inserter(reductionRegions),
                     [](omp::DeclareReductionOp reductionDecl) {
@@ -3366,6 +3386,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           return WalkResult::interrupt();
         }
         foundParallelOp = true;
+        return WalkResult::skip();
       });
   auto bodyGenCB = [&](InsertPointTy allocaIP,
                        InsertPointTy codeGenIP) -> llvm::Error {
@@ -3670,9 +3691,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(handleError(regionBlock, opInst)))
     return failure();
 
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos =
-      findCurrentLoopInfos(moduleTranslation);
-  llvm::CanonicalLoopInfo *loopInfo = loopInfos.front();
+  llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
   // Emit Initialization for linear variables
   if (simdOp.getLinearVars().size()) {
     linearClauseProcessor.initLinearVar(builder, moduleTranslation,
@@ -3682,13 +3701,11 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                                           loopInfo->getIndVar());
   }
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
-  for (llvm::CanonicalLoopInfo *loopInfo : loopInfos) {
-    ompBuilder->applySimd(
-        loopInfo, alignedVars,
-        simdOp.getIfExpr() ? moduleTranslation.lookupValue(simdOp.getIfExpr())
-                           : nullptr,
-        order, simdlen, safelen);
-  }
+  ompBuilder->applySimd(loopInfo, alignedVars,
+                        simdOp.getIfExpr()
+                            ? moduleTranslation.lookupValue(simdOp.getIfExpr())
+                            : nullptr,
+                        order, simdlen, safelen);
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
 
@@ -3886,8 +3903,8 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
       llvm::CanonicalLoopInfo *scanLoop = loopResults.get().back();
       moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
           [&](OpenMPLoopInfoStackFrame &frame) {
-            frame.loopInfos.push_back(inputLoop);
-            frame.loopInfos.push_back(scanLoop);
+            frame.loopInfo = inputLoop;
+            frame.scanloopInfo = scanLoop;
             return WalkResult::interrupt();
           });
       builder.restoreIP(scanLoop->getAfterIP());
@@ -3942,7 +3959,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   assert(newTopLoopInfo && "New top loop information is missing");
   moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
       [&](OpenMPLoopInfoStackFrame &frame) {
-        frame.loopInfos.push_back(newTopLoopInfo);
+        frame.loopInfo = newTopLoopInfo;
         return WalkResult::interrupt();
       });
 
@@ -6110,20 +6127,18 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
       llvm::Value *chunk = moduleTranslation.lookupValue(
           distributeOp.getDistScheduleChunkSize());
 
-      SmallVector<llvm::CanonicalLoopInfo *> loopInfos =
-          findCurrentLoopInfos(moduleTranslation);
-      for (llvm::CanonicalLoopInfo *loopInfo : loopInfos) {
-        llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
-            ompBuilder->applyWorkshareLoop(
-                ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
-                convertToScheduleKind(schedule), chunk, isSimd,
-                scheduleMod == omp::ScheduleModifier::monotonic,
-                scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-                workshareLoopType);
+      llvm::CanonicalLoopInfo *loopInfo =
+          findCurrentLoopInfo(moduleTranslation);
+      llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
+          ompBuilder->applyWorkshareLoop(
+              ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
+              convertToScheduleKind(schedule), chunk, isSimd,
+              scheduleMod == omp::ScheduleModifier::monotonic,
+              scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
+              workshareLoopType, false, hasDistSchedule, chunk);
 
-        if (!wsloopIP)
-          return wsloopIP.takeError();
-      }
+      if (!wsloopIP)
+        return wsloopIP.takeError();
     }
     if (failed(cleanupPrivateVars(builder, moduleTranslation,
                                   distributeOp.getLoc(), privVarsInfo.llvmVars,
