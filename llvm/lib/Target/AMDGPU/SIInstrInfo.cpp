@@ -2609,8 +2609,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I, Register DestReg,
-                                unsigned SubIdx,
-                                const MachineInstr &Orig,
+                                unsigned SubIdx, const MachineInstr &Orig,
                                 LaneBitmask UsedLanes) const {
 
   // Try shrinking the instruction to remat only the part needed for current

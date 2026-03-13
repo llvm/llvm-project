@@ -650,8 +650,8 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
             if (SR.liveAt(UseIdx))
               UsedLanes |= SR.LaneMask;
         }
-        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late,
-                                              0, nullptr, UsedLanes);
+        SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late, 0,
+                                              nullptr, UsedLanes);
         ++NumRemats;
         // Define the value in Reg.
         return defValue(RegIdx, ParentVNI, Def, false);
