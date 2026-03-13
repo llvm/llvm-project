@@ -52,7 +52,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 // CHECK: define weak_odr protected amdgpu_kernel void @[[FUNC0:.*]](
-// CHECK-SAME: ptr %[[TMP:.*]], ptr %[[TMP0:.*]]) #{{[0-9]+}} {
+// CHECK-SAME: ptr %[[TMP0:.*]], ptr %[[TMP:.*]]) #{{[0-9]+}} {
 // CHECK:         %[[TMP1:.*]] = alloca [1 x ptr], align 8, addrspace(5)
 // CHECK:         %[[TMP4:.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{.*}} to ptr), ptr %[[TMP]])
 // CHECK:         %[[EXEC_USER_CODE:.*]] = icmp eq i32 %[[TMP4]], -1
@@ -96,7 +96,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // is passed as a param to kmpc_parallel_60 function
 
 // CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(
-// CHECK-SAME: ptr {{.*}}, ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]]) #{{[0-9]+}} {
+// CHECK-SAME: ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]], ptr {{.*}}) #{{[0-9]+}} {
 // CHECK:         store ptr %[[IFCOND_ARG2]], ptr %[[IFCOND_TMP1:.*]], align 8
 // CHECK:         %[[IFCOND_TMP2:.*]] = load i32, ptr %[[IFCOND_TMP1]], align 4
 // CHECK:         %[[IFCOND_TMP3:.*]] = icmp ne i32 %[[IFCOND_TMP2]], 0

@@ -97,23 +97,23 @@ int main() {
 
 #endif
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo1v_l12
-// CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SUM:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[SUM:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[N:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[__VLA_EXPR0:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[I1:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SUM_ADDR]] to ptr
+// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[N_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N]] to ptr
 // CHECK-NEXT:    [[__VLA_EXPR0_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[__VLA_EXPR0]] to ptr
 // CHECK-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // CHECK-NEXT:    [[I1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I1]] to ptr
-// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8, !nonnull [[META8:![0-9]+]], !align [[META9:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo1v_l12_kernel_environment to ptr), ptr [[DYN_PTR]])
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -145,7 +145,7 @@ int main() {
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[I_ASCAST]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP12]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[I_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
 // CHECK:       for.end:
@@ -169,7 +169,7 @@ int main() {
 // CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[I1_ASCAST]], align 4
 // CHECK-NEXT:    [[INC8:%.*]] = add nsw i32 [[TMP18]], 1
 // CHECK-NEXT:    store i32 [[INC8]], ptr [[I1_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND2]], !llvm.loop [[LOOP13:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND2]], !llvm.loop [[LOOP12:![0-9]+]]
 // CHECK:       for.end9:
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[A]], i64 [[TMP7]])
 // CHECK-NEXT:    call void @__kmpc_target_deinit()
@@ -177,12 +177,12 @@ int main() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo2v_l30
-// CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[M:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: (i64 noundef [[M:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -194,10 +194,10 @@ int main() {
 // CHECK-NEXT:    [[__VLA_EXPR0:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[J9:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[M_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[M_ADDR]] to ptr
 // CHECK-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // CHECK-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
+// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_]] to ptr
 // CHECK-NEXT:    [[DOTCAPTURE_EXPR_1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCAPTURE_EXPR_1]] to ptr
@@ -209,12 +209,12 @@ int main() {
 // CHECK-NEXT:    [[__VLA_EXPR0_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[__VLA_EXPR0]] to ptr
 // CHECK-NEXT:    [[J_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J]] to ptr
 // CHECK-NEXT:    [[J9_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J9]] to ptr
-// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[M]], ptr [[M_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    call void @__kmpc_specialized_kernel_init()
 // CHECK-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[M_ADDR_ASCAST]], align 4
@@ -281,7 +281,7 @@ int main() {
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP24]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[J_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP14:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    store i32 0, ptr [[J9_ASCAST]], align 4
 // CHECK-NEXT:    br label [[FOR_COND10:%.*]]
@@ -306,7 +306,7 @@ int main() {
 // CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr [[J9_ASCAST]], align 4
 // CHECK-NEXT:    [[INC19:%.*]] = add nsw i32 [[TMP31]], 1
 // CHECK-NEXT:    store i32 [[INC19]], ptr [[J9_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND10]], !llvm.loop [[LOOP15:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND10]], !llvm.loop [[LOOP14:![0-9]+]]
 // CHECK:       for.end20:
 // CHECK-NEXT:    [[TMP32:%.*]] = load ptr addrspace(5), ptr [[SAVED_STACK_ASCAST]], align 4
 // CHECK-NEXT:    call void @llvm.stackrestore.p5(ptr addrspace(5) [[TMP32]])
@@ -319,34 +319,34 @@ int main() {
 // CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP37:%.*]] = add i32 [[TMP35]], [[TMP36]]
 // CHECK-NEXT:    store i32 [[TMP37]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK:       for.end23:
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo3v_l52
-// CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[M:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i64 noundef [[M:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[M_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[M_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[M_ADDR]] to ptr
 // CHECK-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // CHECK-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
+// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[M_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[M_CASTED]] to ptr
 // CHECK-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 // CHECK-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[M]], ptr [[M_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo3v_l52_kernel_environment to ptr), ptr [[DYN_PTR]])
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -409,7 +409,7 @@ int main() {
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[N:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[M_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -504,7 +504,7 @@ int main() {
 // CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP36]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[J_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP17:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[A]], i64 [[TMP21]])
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -565,9 +565,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
@@ -682,33 +682,33 @@ int main() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo4v_l76
-// CHECK-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[M:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (i64 noundef [[M:%.*]], i64 noundef [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RESULT:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[VLA_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[M_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[N_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[M_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[M_ADDR]] to ptr
 // CHECK-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // CHECK-NEXT:    [[VLA_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA_ADDR]] to ptr
 // CHECK-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
+// CHECK-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-NEXT:    [[M_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[M_CASTED]] to ptr
 // CHECK-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
 // CHECK-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 // CHECK-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
-// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[M]], ptr [[M_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z4foo4v_l76_kernel_environment to ptr), ptr [[DYN_PTR]])
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -777,7 +777,7 @@ int main() {
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[N1:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[N1]], align 4
@@ -873,7 +873,7 @@ int main() {
 // CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[J_ASCAST]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP37]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[J_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP18:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP17:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[A]], i64 [[TMP22]])
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -934,9 +934,9 @@ int main() {
 // CHECK-NEXT:    store ptr [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR__ASCAST]], align 4

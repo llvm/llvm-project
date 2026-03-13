@@ -1286,6 +1286,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  erff16
+  SRCS
+    erff16.cpp
+  HDRS
+    ../erff16.h
+  DEPENDS
+    libc.src.__support.math.erff16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   exp
   SRCS
     exp.cpp
@@ -1834,6 +1845,17 @@ add_entrypoint_object(
     ../log10f16.h
   DEPENDS
     libc.src.__support.math.log10f16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  log10p1f16
+  SRCS
+    log10p1f16.cpp
+  HDRS
+    ../log10p1f16.h
+  DEPENDS
+    libc.src.__support.math.log10p1f16
     libc.src.errno.errno
 )
 
@@ -3018,6 +3040,16 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.division_and_remainder_operations
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  hypotbf16
+  SRCS
+    hypotbf16.cpp
+  HDRS
+    ../hypotbf16.h
+  DEPENDS
+    libc.src.__support.math.hypotbf16
 )
 
 add_entrypoint_object(

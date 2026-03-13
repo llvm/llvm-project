@@ -1,0 +1,11 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Test parsing error for tiedto constraint with invalid operand number.
+
+# CHECK: [[@LINE+5]]:{{[0-9]+}}: invalid operand number in tiedto constraint
+---
+name: foo
+body: |
+  bb.0:
+    INLINEASM &"", 0 /* attdialect */, regdef:GR32, reguse tiedto:$abc
+...

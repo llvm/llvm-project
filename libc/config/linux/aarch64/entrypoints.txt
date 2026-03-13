@@ -373,6 +373,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswgraph
     libc.src.wctype.iswcntrl
     libc.src.wctype.iswdigit
+    libc.src.wctype.iswupper
     libc.src.wctype.iswalnum
     libc.src.wctype.iswlower
     libc.src.wctype.iswspace
@@ -682,6 +683,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cospif16
+    libc.src.math.erff16
     libc.src.math.expf16
     libc.src.math.f16add
     libc.src.math.f16addf
@@ -731,6 +733,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
+    libc.src.math.log10p1f16
     libc.src.math.logbf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
@@ -896,6 +899,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
   libc.src.math.issignalingbf16
