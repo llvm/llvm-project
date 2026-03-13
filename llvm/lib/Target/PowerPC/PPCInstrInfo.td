@@ -2130,7 +2130,7 @@ def : Pat<(PPCatomicCmpSwap_16 ForceXForm:$ptr, i32:$old, i32:$new),
         (ATOMIC_CMP_SWAP_I16 ForceXForm:$ptr, i32:$old, i32:$new)>;
 
 // Instructions to support atomic operations
-let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
 def LBARX : XForm_1_memOp<31,  52, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
                     "lbarx $RST, $addr", IIC_LdStLWARX, []>,
                     Requires<[HasPartwordAtomics]>;
@@ -2176,7 +2176,7 @@ def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
     "#LWAT_COND_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc))]>;
 
-let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
+let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
                     "stbcx. $RST, $addr", IIC_LdStSTWCX, []>,
                     isRecordForm, Requires<[HasPartwordAtomics]>;
