@@ -161,8 +161,8 @@ static mlir::Value makeBinaryAtomicValue(
   if (emittedArgValue) {
     *emittedArgValue = val;
     assert(originalArgType != nullptr &&
-           "originalArgType must be provided when emittedArgValue is set")
-        *originalArgType = valueType;
+           "originalArgType must be provided when emittedArgValue is set");
+    *originalArgType = valueType;
   }
 
   auto rmwi = cir::AtomicFetchOp::create(
