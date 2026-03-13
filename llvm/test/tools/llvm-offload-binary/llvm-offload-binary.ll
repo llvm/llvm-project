@@ -20,6 +20,17 @@
 ; RUN: llvm-offload-binary %t | FileCheck --check-prefix=EXTRACT %s
 ; EXTRACT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
 
+; Test nested OffloadBinary construction with mulitiple inner images
+; RUN: llvm-offload-binary -o %t5 --image=file=%s,arch=abc,triple=x-y-z --image=file=%s,arch=def,triple=x-y-z
+; RUN: llvm-offload-binary -o %t6 --image=file=%t5,arch=nested,triple=x-y-z
+; RUN: llvm-objdump --offloading %t6 | FileCheck %s --check-prefix=NESTED
+
+; NESTED: OFFLOADING IMAGE [0]:
+; NESTED: arch            nested
+; NESTED: nested images   2
+; NESTED:   OFFLOADING IMAGE [0.0]:
+; NESTED:   OFFLOADING IMAGE [0.1]:
+
 ; Test extracting nested images.
 ; RUN: llvm-offload-binary -o %t5 --image=file=%s,file=%s,arch=abc,triple=x-y-z
 ; RUN: llvm-offload-binary -o %t6 --image=file=%t5,arch=nested,triple=x-y-z
