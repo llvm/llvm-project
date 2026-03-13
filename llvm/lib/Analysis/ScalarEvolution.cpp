@@ -6682,14 +6682,16 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
 // calls, and the interaction with createSCEVIter could cause a stack overflow
 // in some cases (see issue #148253).
 //
-// FIXME: The way this is implemented is overly conservative.
-static bool RangeRefPHIAllowedOperands(DominatorTree &DT, PHINode *PH) {
+// FIXME: The way this is implemented is overly conservative; this checks
+// for a few obviously safe patterns, but anything that doesn't lead to
+// recursion is fine.
+static bool RangeRefPHIAllowedOperands(DominatorTree &DT, PHINode *PHI) {
   Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
-  if (getOperandsForSelectLikePHI(DT, PH, Cond, LHS, RHS))
+  if (getOperandsForSelectLikePHI(DT, PHI, Cond, LHS, RHS))
     return true;
 
-  if (all_of(PH->operands(),
-             [&](Value *Operand) { return DT.dominates(Operand, PH); }))
+  if (all_of(PHI->operands(),
+             [&](Value *Operand) { return DT.dominates(Operand, PHI); }))
     return true;
 
   return false;
