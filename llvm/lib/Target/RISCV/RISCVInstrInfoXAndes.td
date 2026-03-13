@@ -722,14 +722,14 @@ let Predicates = [HasVendorXAndesBFHCvt] in {
 // XAndesVBFHCvt
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
-    mayRaiseFPException = true in {
+let Predicates = [HasVendorXAndesVBFHCvt],
+    Constraints = "@earlyclobber $vd" in {
   let VS1VS2Constraint = VS2Constraint, DestEEW = EEWSEWx2 in
   def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
-  let Uses = [FRM, VL, VTYPE] in
+  let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in
   def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
-} // Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
-  // mayRaiseFPException = true
+} // Predicates = [HasVendorXAndesVBFHCvt],
+  // Constraints = "@earlyclobber $vd"
 
 //===----------------------------------------------------------------------===//
 // XAndesVSIntH
