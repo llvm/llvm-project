@@ -152,7 +152,8 @@ static Error extractBinary(const OffloadBinary *Binary, StringRef InputFile,
 
     // Recursively extract each nested binary.
     for (const auto &InnerBinary : InnerBinaries) {
-      if (Error E = extractBinary(InnerBinary.getBinary(), InputFile, Idx, Saver))
+      if (Error E =
+              extractBinary(InnerBinary.getBinary(), InputFile, Idx, Saver))
         return E;
     }
     return Error::success();
