@@ -8930,14 +8930,10 @@ ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
   if (getTok().isNot(AsmToken::Integer))
     return ParseStatus::NoMatch;
 
-  const MCExpr *Ex;
-  if (getParser().parseExpression(Ex))
+  int64_t Imm;
+  if (parseImmExpr(Imm))
     return ParseStatus::NoMatch;
 
-  const MCConstantExpr *Value = dyn_cast<MCConstantExpr>(Ex);
-  if(check(!Value, S, "expected constant expression"))
-    return ParseStatus::Failure;
-  int64_t Imm = Value->getValue();
   if (IsNegative)
     Imm = -Imm;
 
