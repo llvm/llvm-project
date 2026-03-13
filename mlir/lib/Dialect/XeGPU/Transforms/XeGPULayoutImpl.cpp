@@ -143,13 +143,8 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
                                   ArrayRef<int64_t> srcShape) {
 
   SmallVector<int64_t> bcastDims;
-
-  // Handling broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
   size_t dimDiff = resShape.size() - srcShape.size();
-  // for (size_t i = 0; i < dimDiff; i++)
-  //   bcastDims.push_back(i);
-
-  auto returnLayout = resLayout;
+  auto bcastSourceLayout = resLayout;
   for (size_t i = dimDiff; i < resShape.size(); i++) {
     if ((srcShape[i - dimDiff] == 1) && (resShape[i] != 1))
       bcastDims.push_back(i);
@@ -158,17 +153,17 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // the sg_layout and lane_layout for unit dimensions are preserved so it can
   // be propagate to producer op so potentially used by the multi-reduction op.
   if (!bcastDims.empty())
-    returnLayout = returnLayout.setUnitDimData(bcastDims);
+    bcastSourceLayout = bcastSourceLayout.setUnitDimData(bcastDims);
 
   if (dimDiff > 0) {
     SmallVector<int64_t> sliceDims;
     for (size_t i = 0; i < dimDiff; i++)
       sliceDims.push_back(i);
-    returnLayout = xegpu::SliceAttr::get(
-        resLayout.getContext(), returnLayout,
+    bcastSourceLayout = xegpu::SliceAttr::get(
+        resLayout.getContext(), bcastSourceLayout,
         DenseI64ArrayAttr::get(resLayout.getContext(), sliceDims));
   }
-  return returnLayout;
+  return bcastSourceLayout;
 }
 
 /// Infers the source layout attribute for a reduction operation given the
