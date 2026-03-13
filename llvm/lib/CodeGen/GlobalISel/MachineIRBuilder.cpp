@@ -1458,6 +1458,10 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
              (uint64_t)SrcOps[2].getImm()) <=
                 DstTy.getElementCount().getKnownMinValue()) &&
            "Insert subvector overflow!");
+    assert((uint64_t)SrcOps[2].getImm() %
+                   SubVecTy.getElementCount().getKnownMinValue() ==
+               0 &&
+           "Insert index is not a multiple of the subvector length");
     break;
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {

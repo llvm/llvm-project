@@ -590,4 +590,8 @@ TEST_F(AArch64GISelMITest, BuildInsertSubvector) {
   // Insertion index causes overflow (2 + 4 > 4).
   EXPECT_DEBUG_DEATH(B.buildInsertSubvector(Vec4x32, BigVec, SubVec, 4),
                      "Insert subvector overflow!");
+
+  // Index must be a multiple of the subvector length (1 % 2 != 0).
+  EXPECT_DEBUG_DEATH(B.buildInsertSubvector(Vec4x32, BigVec, SubVec, 1),
+                     "Insert index is not a multiple of the subvector length");
 }
