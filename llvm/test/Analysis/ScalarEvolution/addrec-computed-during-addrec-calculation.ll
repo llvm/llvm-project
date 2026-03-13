@@ -20,7 +20,7 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    %iv2.ext = sext i32 %iv2 to i64
 ; CHECK-NEXT:    --> (sext i32 {%iv,+,1}<%loop2> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Computable, %loop3: Invariant }
 ; CHECK-NEXT:    %iv3 = phi i64 [ %iv2.ext, %loop2.end ], [ %iv3.next, %loop3 ]
-; CHECK-NEXT:    --> {(sext i32 {%iv,+,1}<%loop2> to i64),+,1}<nsw><%loop3> U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 {%iv,+,1}<%loop2> to i64) LoopDispositions: { %loop3: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {(sext i32 {%iv,+,1}<%loop2> to i64),+,1}<nuw><nsw><%loop3> U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 {%iv,+,1}<%loop2> to i64) LoopDispositions: { %loop3: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv3.next = add nsw i64 %iv3, 1
 ; CHECK-NEXT:    --> {(1 + (sext i32 {%iv,+,1}<%loop2> to i64))<nsw>,+,1}<nsw><%loop3> U: [-2147483647,2147483649) S: [-2147483647,2147483649) Exits: (1 + (sext i32 {%iv,+,1}<%loop2> to i64))<nsw> LoopDispositions: { %loop3: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv.next = trunc i64 %iv3 to i32
