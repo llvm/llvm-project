@@ -1321,17 +1321,29 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
         cast<vector::MultiDimReductionOp>(yieldOperand->get().getDefiningOp());
     unsigned operandIdx = yieldOperand->getOperandNumber();
     VectorType sourceType = reductionOp.getSourceVectorType();
-    // Only 2D vectors are supported.
-    if (sourceType.getRank() != 2)
+    int64_t sourceRank = sourceType.getRank();
+    // Need at least a 2D source vector.
+    if (sourceRank < 2)
       return rewriter.notifyMatchFailure(warpOp,
-                                         "Only 2D reductions are supported.");
+                                         "Only 2D+ reductions are supported.");
+    // Leading dimensions (first rank-2) must be unit (size 1).
+    for (int64_t i = 0; i < sourceRank - 2; ++i) {
+      if (sourceType.getShape()[i] != 1)
+        return rewriter.notifyMatchFailure(
+            warpOp, "Only unit dimensions allowed for the leading dimensions.");
+    }
+    // Effective dimension indices (last 2 dims of the source).
+    int64_t rowIdx = sourceRank - 2;
+    int64_t columnIdx = sourceRank - 1;
     ArrayRef<int64_t> reductionDims = reductionOp.getReductionDims();
-    // Only 1 reduction dimension supported. This also ensures that the result
-    // is vector type.
     if (reductionDims.size() != 1)
-      return rewriter.notifyMatchFailure(
-          warpOp, "Only 1 reduction dimension is supported.");
+      return rewriter.notifyMatchFailure(warpOp,
+                                         "Only 1 reduction dim is supported.");
     int64_t reductionDim = reductionDims[0];
+    // The reduction dim must be among the last 2 dims.
+    if (reductionDim != rowIdx && reductionDim != columnIdx)
+      return rewriter.notifyMatchFailure(
+          warpOp, "Reduction dim must be among the last 2 dimensions.");
     VectorType distributedResultType =
         cast<VectorType>(warpOp.getResult(operandIdx).getType());
     VectorType resultType = cast<VectorType>(reductionOp.getType());
@@ -1344,15 +1356,16 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           warpOp, "Failed to distribute the source vector type.");
     VectorType sourceDistType = sourceDistTypeOrFailure.value();
-    // Only single dimension distribution is supported.
-    bool dim0Distributed =
-        sourceDistType.getShape()[0] != sourceType.getShape()[0];
-    bool dim1Distributed =
-        sourceDistType.getShape()[1] != sourceType.getShape()[1];
-    if (dim0Distributed && dim1Distributed)
+    // Only single dimension distribution among the last 2 dims is supported.
+    bool rowDistributed =
+        sourceDistType.getShape()[rowIdx] != sourceType.getShape()[rowIdx];
+    bool columnDistributed = sourceDistType.getShape()[columnIdx] !=
+                             sourceType.getShape()[columnIdx];
+    if (rowDistributed && columnDistributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting source to be distributed in a single dimension.");
-    int64_t sourceDistDim = dim0Distributed ? 0 : (dim1Distributed ? 1 : -1);
+    int64_t sourceDistDim =
+        rowDistributed ? rowIdx : (columnDistributed ? columnIdx : -1);
     if (sourceDistDim == -1)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed source vector.");
@@ -1371,8 +1384,9 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
     // |  dim-1 distributed   |       0        | distributed    |
     // |  dim-1 distributed   |       1        | broadcasted    |
 
-    bool isReductionLaneLocal = (sourceDistDim == 0 && reductionDim == 1) ||
-                                (sourceDistDim == 1 && reductionDim == 0);
+    bool isReductionLaneLocal =
+        (sourceDistDim == rowIdx && reductionDim == columnIdx) ||
+        (sourceDistDim == columnIdx && reductionDim == rowIdx);
     if (isReductionLaneLocal && !resultDistributed)
       return rewriter.notifyMatchFailure(
           warpOp, "Expecting a distributed result for lane-local reduction.");
