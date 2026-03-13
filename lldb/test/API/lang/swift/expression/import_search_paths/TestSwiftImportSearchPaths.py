@@ -9,10 +9,12 @@ class TestSwiftImportSearchPaths(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @skipIfWindows
     def test_positive(self):
         self.do_test('true')
 
     @swiftTest
+    @skipIfWindows
     def test_negative(self):
         self.do_test('false')
         

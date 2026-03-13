@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropTypedefType(TestBase):
 
     @swiftTest
+    @skipIfWindows
     def test_class(self):
         self.build()
         

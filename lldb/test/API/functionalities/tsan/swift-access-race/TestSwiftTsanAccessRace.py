@@ -26,6 +26,7 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @skipIfWindows
     @skipIfLinux
     @skipUnlessSwiftThreadSanitizer
     @skipIfAsan # This test does not behave reliable with an ASANified LLDB.

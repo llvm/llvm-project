@@ -8,6 +8,7 @@ class TestSwiftInlineArray(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     
     @swiftTest
+    @skipIfWindows
     def test(self):
         """Test the inline array synthetic child provider and summary"""
         self.build()

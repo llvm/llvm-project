@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftWeakGenericSelf(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Confirms that expression evaluation works with a generic class
         type within a closure that weakly captures it"""

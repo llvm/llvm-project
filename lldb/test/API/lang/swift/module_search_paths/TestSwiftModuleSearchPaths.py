@@ -26,6 +26,7 @@ class TestSwiftModuleSearchPaths(TestBase):
 
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_module_search_paths(self):
         """
         Tests that we can import modules located using

@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestExpressionOpenResilientClass(TestBase):
     NO_DEBUG_INFO_TEST = True
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Tests calling an open resilient function"""
         self.build()

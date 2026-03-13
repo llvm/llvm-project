@@ -9,6 +9,7 @@ class TestSwiftHealthCheck(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
+    @skipIfWindows
     @skipIfDarwinEmbedded
     def test_run_healthcheck(self):
         """Test that an underspecified triple is upgraded with a version number.
@@ -37,6 +38,7 @@ class TestSwiftHealthCheck(TestBase):
         self.assertEqual(bad, 0)
 
     @swiftTest
+    @skipIfWindows
     @skipIfDarwinEmbedded
     def test_help_healthcheck(self):
         self.expect("help swift-healthcheck",

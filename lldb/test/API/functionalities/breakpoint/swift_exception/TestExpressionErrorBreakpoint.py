@@ -22,30 +22,35 @@ import os
 class TestSwiftErrorBreakpoint(TestBase):
     @decorators.skipIfLinux  # <rdar://problem/30909618>
     @swiftTest
+    @expectedFailureWindows
     def test_swift_error_no_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests(None)
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_error_matching_base_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests("EnumError")
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_error_matching_full_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests("a.EnumError")
 
     @swiftTest
+    @skipIfWindows
     def test_swift_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests_in_mode("NoSuchErrorHere", mode="untyped", should_stop=False)
 
     @swiftTest
+    @skipIfWindows
     @expectedFailureAll(bugnumber="rdar://148033473")
     def test_swift_typed_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""

@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftProtocolCompositionExpr(lldbtest.TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test that expression evaluation can call functions in protocol composition existentials"""
 

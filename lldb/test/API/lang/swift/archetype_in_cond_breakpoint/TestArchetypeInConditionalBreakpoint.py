@@ -4,6 +4,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfWindows
 class TestArchetypeInConditionalBreakpoint(TestBase):
     @swiftTest
     def test_stops_free_function(self):

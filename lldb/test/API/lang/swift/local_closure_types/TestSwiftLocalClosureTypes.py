@@ -15,5 +15,5 @@ from lldbsuite.test.decorators import *
 lldbinline.MakeInlineTest(
     __file__,
     globals(),
-    decorators=[swiftTest,
+    decorators=[swiftTest, expectedFailureWindows,
                 skipIf(oslist=["macosx"],bugnumber="rdar://26051759")])

@@ -9,6 +9,7 @@ class TestStepIntoOverride(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_stepping(self):
         self.build()
         self.do_test()

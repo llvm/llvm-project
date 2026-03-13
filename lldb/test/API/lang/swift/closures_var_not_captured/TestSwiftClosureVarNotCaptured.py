@@ -52,6 +52,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         return (target, process, thread)
 
     @swiftTest
+    @expectedFailureWindows
     def test_simple_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_simple_closure")
@@ -60,6 +61,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
+    @expectedFailureWindows
     def test_nested_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_double_closure_1")
@@ -84,6 +86,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
+    @expectedFailureWindows
     # Async variable inspection on Linux/Windows are still problematic.
     @skipIf(oslist=["windows", "linux"])
     def test_async_closure(self):
@@ -107,6 +110,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
+    @expectedFailureWindows
     # Async variable inspection on Linux/Windows are still problematic.
     @skipIf(oslist=["windows", "linux"])
     def test_task_inside_non_async_func(self):
@@ -119,6 +123,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         )
 
     @swiftTest
+    @expectedFailureWindows
     def test_ctor_class_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_ctor_class")
@@ -176,6 +181,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
+    @expectedFailureWindows
     def test_ctor_struct_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_ctor_struct")
@@ -233,6 +239,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
+    @expectedFailureWindows
     def test_ctor_enum_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_ctor_enum")

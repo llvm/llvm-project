@@ -935,9 +935,9 @@ def swiftTest(func):
 
         if "i386" == self.getArchitecture():
             return "skipping Swift test because i386 is not a supported architecture"
-        elif not (any(x in sys.platform for x in ["darwin", "linux"])):
+        elif not (any(x in sys.platform for x in ["darwin", "linux", "win32"])):
             return (
-                "skipping Swift test because only Darwin and Linux are supported OSes"
+                "skipping Swift test because only Darwin, Linux and Windows are supported OSes"
             )
         else:
             # This configuration is Swift-compatible

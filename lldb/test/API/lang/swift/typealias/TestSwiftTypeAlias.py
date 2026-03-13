@@ -4,6 +4,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftTypeAlias(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test type aliases are only searched in the debug info once"""
         self.build()

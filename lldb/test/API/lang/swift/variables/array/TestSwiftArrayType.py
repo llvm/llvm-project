@@ -24,6 +24,7 @@ class TestSwiftArrayType(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @expectedFailureWindows
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()

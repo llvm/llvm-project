@@ -19,6 +19,7 @@ import os
 
 class TestInOutVariables(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_in_out_variables(self):
         """Test that @inout variables display reasonably"""
         self.build()

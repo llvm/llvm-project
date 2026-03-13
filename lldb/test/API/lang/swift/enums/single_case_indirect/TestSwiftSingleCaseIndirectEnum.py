@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftSingleCaseIndirectEnum(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test single-case indirect enum projection"""
         self.build()

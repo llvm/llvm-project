@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftOriginallyDefinedIn(lldbtest.TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test that types with the @_originallyDefinedIn attribute can still be found in metadata"""
 
@@ -37,6 +38,7 @@ class TestSwiftOriginallyDefinedIn(lldbtest.TestBase):
         )
     
     @swiftTest
+    @expectedFailureWindows
     def test_expr(self):
         """Test that types with the @_originallyDefinedIn attribute can still be found in metadata"""
     
@@ -65,6 +67,7 @@ class TestSwiftOriginallyDefinedIn(lldbtest.TestBase):
         )
     
     @swiftTest
+    @expectedFailureWindows
     def test_expr_from_generic(self):
          """Test that types with the @_originallyDefinedIn attribute can still be found in metadata"""
 

@@ -24,6 +24,7 @@ import os
 
 class TestSwiftStaticStringVariables(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_static_string_variables(self):
         """Test that Swift.String formats properly"""
         self.build()

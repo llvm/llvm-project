@@ -20,6 +20,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestFunctionVariables(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_function_variables(self):
         """Tests that function type variables display correctly"""
         self.build()

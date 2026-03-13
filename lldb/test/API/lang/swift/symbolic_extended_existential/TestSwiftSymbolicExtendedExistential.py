@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftSymbolicExtendedExistential(lldbtest.TestBase):
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test symbolic extended existentials"""
         self.build()

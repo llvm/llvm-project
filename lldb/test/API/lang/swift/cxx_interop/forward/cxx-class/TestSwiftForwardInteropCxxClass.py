@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropCxxClass(TestBase):
 
     @swiftTest
+    @skipIfWindows
     def test_class(self):
         self.build()
         _, _, _, _= lldbutil.run_to_source_breakpoint(

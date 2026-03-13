@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftCTypeIvar(TestBase):
     @swiftTest
+    @expectedFailureWindows
     @skipIf(setting=("symbols.use-swift-clangimporter", "false"))
     def test(self):
         """Test that the extra inhabitants are correctly computed for various

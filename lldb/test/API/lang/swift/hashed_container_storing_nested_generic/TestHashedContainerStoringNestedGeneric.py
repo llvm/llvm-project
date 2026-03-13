@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class SwiftGenericClassInHashedContainerTest(TestBase):
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Tests that the type of hashed container whose value type is a non-generic class declared inside a generic class can be read from instance metadata"""
         self.build()

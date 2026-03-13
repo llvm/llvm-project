@@ -21,6 +21,7 @@ import os
 
 class TestSwiftExpressionScopes(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_expression_scopes(self):
         """Tests that swift expressions resolve scoped variables correctly"""
         self.build()

@@ -7,6 +7,7 @@ class TestSwiftExpressionLanguageVersion(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test changing the Swift language version"""
         self.build()

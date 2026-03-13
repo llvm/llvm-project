@@ -10,6 +10,7 @@ class TestCxxForwardInteropNestedClasses(TestBase):
 
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
+    @skipIfWindows
     def test(self):
         self.build()
         

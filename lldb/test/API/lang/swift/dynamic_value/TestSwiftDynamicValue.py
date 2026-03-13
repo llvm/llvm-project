@@ -20,6 +20,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class SwiftDynamicValueTest(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_dynamic_value(self):
         """Tests that dynamic values work correctly for Swift"""
         self.build()

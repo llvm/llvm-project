@@ -8,6 +8,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestCase(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     @swiftTest
+    @skipIfWindows
     def test_missing_explicit_modules(self):
         """Test missing explicit Swift modules and fallback to implicit modules."""
         self.build()
@@ -31,6 +32,7 @@ class TestCase(lldbtest.TestBase):
         # CHECK: Explicit modules : false (downgraded
 
     @swiftTest
+    @skipIfWindows
     def test_sanity(self):
         """Check the normal behavior."""
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
@@ -58,6 +60,7 @@ class TestCase(lldbtest.TestBase):
         # CHECK-SANITY: Turning on implicit modules
 
     @swiftTest
+    @skipIfWindows
     def test_setting(self):
         """Check the normal behavior."""
         self.build()

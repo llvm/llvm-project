@@ -21,6 +21,7 @@ import os
 
 class TestDefiningOverloadedFunctions(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_simple_overload_expressions(self):
         """Test defining overloaded functions"""
         self.build()

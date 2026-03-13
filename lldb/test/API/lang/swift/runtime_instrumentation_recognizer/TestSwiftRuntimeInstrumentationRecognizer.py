@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftRuntimeInstrumentationRecognizer(lldbtest.TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test Swift Runtime Instrumentation Recognizer"""
         self.build()

@@ -32,6 +32,7 @@ class TestSwiftExprInProtocolExtension(TestBase):
         self.target.BreakpointDelete(bkpt.GetID())
 
     @swiftTest
+    @expectedFailureWindows
     def test_protocol_extension(self):
         """Tests that swift expressions in protocol extension functions behave correctly"""
         self.build()

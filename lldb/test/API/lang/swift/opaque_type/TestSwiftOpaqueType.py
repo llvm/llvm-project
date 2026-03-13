@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftOpaque(TestBase):
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test opaque types in parameter positions"""         
         self.build()

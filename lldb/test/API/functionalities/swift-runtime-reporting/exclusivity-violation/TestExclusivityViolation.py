@@ -26,6 +26,7 @@ class SwiftRuntimeReportingExclusivityViolationTestCase(lldbtest.TestBase):
 
     @decorators.swiftTest
     @decorators.skipIfLinux
+    @decorators.expectedFailureWindows
     def test_swift_runtime_reporting(self):
         self.build()
         self.do_test()

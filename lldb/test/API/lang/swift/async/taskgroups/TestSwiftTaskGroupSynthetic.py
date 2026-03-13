@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
 
     @swiftTest
+    @expectedFailureWindows
     def test_print_task_group(self):
         """Print a TaskGroup and verify its children."""
         self.build()
@@ -17,6 +18,7 @@ class TestCase(TestBase):
         self.do_test_print()
 
     @swiftTest
+    @expectedFailureWindows
     def test_print_throwing_task_group(self):
         """Print a ThrowingTaskGroup and verify its children."""
         self.build()
@@ -60,6 +62,7 @@ class TestCase(TestBase):
         )
 
     @swiftTest
+    @expectedFailureWindows
     def test_api_task_group(self):
         """Verify a TaskGroup contains its expected children."""
         self.build()
@@ -69,6 +72,7 @@ class TestCase(TestBase):
         self.do_test_api(process)
 
     @swiftTest
+    @expectedFailureWindows
     def test_api_throwing_task_group(self):
         """Verify a ThrowingTaskGroup contains its expected children."""
         self.build()

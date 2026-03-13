@@ -30,6 +30,7 @@ class TestFilePrivate(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test that we find the right file-local private decls using the discriminator"""
         self.build()

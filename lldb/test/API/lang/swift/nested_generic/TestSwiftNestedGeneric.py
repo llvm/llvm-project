@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftNestedGeneric(lldbtest.TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test the inline array synthetic child provider and summary"""
         self.build()

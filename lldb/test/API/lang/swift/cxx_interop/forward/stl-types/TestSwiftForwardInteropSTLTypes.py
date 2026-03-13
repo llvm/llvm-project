@@ -11,6 +11,7 @@ class TestSwiftForwardInteropSTLTypes(TestBase):
     @skipIfLinux # rdar://106532498
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106438227 (TestSTLTypes fails when clang importer is disabled)
     @swiftTest
+    @skipIfWindows
     def test(self):
         self.build()
         log = self.getBuildArtifact("types.log")

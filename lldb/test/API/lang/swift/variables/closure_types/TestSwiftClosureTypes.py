@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftClosureTypes(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         self.build()
 

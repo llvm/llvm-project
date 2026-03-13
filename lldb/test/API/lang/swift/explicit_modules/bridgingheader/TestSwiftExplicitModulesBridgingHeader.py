@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExplicitModules(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     @swiftTest
+    @skipIfWindows
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'), bugnumber='rdar://157258485')
     def test_with_deleted_header(self):
         """Test explicit Swift modules with bridging headers"""
@@ -33,6 +34,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         # CHECK: Import 
 
     @swiftTest
+    @skipIfWindows
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'), bugnumber='rdar://157258485')
     def test(self):
         """Test explicit Swift modules with bridging headers"""
