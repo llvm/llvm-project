@@ -29960,8 +29960,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
          (SVT == MVT::f16 || SVT == MVT::f32 || SVT == MVT::f64) &&
          "Unexpected type in LowerFMINIMUM_FMAXIMUM");
 
-  bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
-                   Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
+  bool IgnoreNaN = Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
 
   // If we did no ordering operands for signed zero handling and we need
   // to process NaN and we know that one of the operands is not NaN then:
@@ -43058,6 +43057,12 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         }
       }
     }
+
+    // Attempt to convert to VZEXT_MOVL if all upper elements are known zero.
+    if (32 <= EltBits &&
+        DAG.MaskedVectorIsZero(N, APInt::getHighBitsSet(NumElts, NumElts - 1)))
+      return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT,
+                         N.getConstantOperandVal(2) & 1 ? N1 : N0);
     return SDValue();
   }
   case X86ISD::SHUFP: {
@@ -56239,8 +56244,7 @@ static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == X86ISD::FMIN || N->getOpcode() == X86ISD::FMAX);
 
   // FMIN/FMAX are commutative if no NaNs and no negative zeros are allowed.
-  if ((!DAG.getTarget().Options.NoNaNsFPMath && !N->getFlags().hasNoNaNs()) ||
-      !N->getFlags().hasNoSignedZeros())
+  if (!N->getFlags().hasNoNaNs() || !N->getFlags().hasNoSignedZeros())
     return SDValue();
 
   // If we run in unsafe-math mode, then convert the FMAX and FMIN nodes
@@ -56284,7 +56288,7 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 
   // If we don't have to respect NaN inputs, this is a direct translation to x86
   // min/max instructions.
-  if (DAG.getTarget().Options.NoNaNsFPMath || N->getFlags().hasNoNaNs())
+  if (N->getFlags().hasNoNaNs())
     return DAG.getNode(MinMaxOp, DL, VT, Op0, Op1, N->getFlags());
 
   // If one of the operands is known non-NaN use the native min/max instructions
