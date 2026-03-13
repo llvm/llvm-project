@@ -1,8 +1,8 @@
 executable("clang-ssaf-linker") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
-    "//clang/lib/Analysis/Scalable",
     "//clang/lib/Basic",
+    "//clang/lib/ScalableStaticAnalysisFramework/Core",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
