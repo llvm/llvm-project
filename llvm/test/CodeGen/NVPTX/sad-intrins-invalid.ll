@@ -5,11 +5,14 @@
 ; RUN: not llc -mtriple=nvptx64 -mcpu=sm_50 < %t/parser-bad-count.ll 2>&1 | FileCheck %s --check-prefix=PARSER-COUNT
 
 ; CHECK: Intrinsic has incorrect return type!
-; CHECK-NEXT: declared return type is 'i16', expected 'i32' in canonical signature 'i32 (i32, i32, i32)'
+; CHECK-SAME: declared return type is 'i16', expected 'i32' in canonical signature 'i32 (i32, i32, i32)'
+; CHECK-NEXT: @llvm.nvvm.sad.i
 ; CHECK: Intrinsic called with incompatible signature
-; CHECK-NEXT: argument 3 type mismatch (expected i32, got i16)
+; CHECK-SAME: expected signature: i32 (i32, i32, i32), got: i32 (i32, i32, i16)
+; CHECK-NEXT: @llvm.nvvm.sad.ui
 ; CHECK: Intrinsic called with incompatible signature
-; CHECK-NEXT: wrong number of arguments (expected 3, got 4), expected signature: i64 (i64, i64, i64), got signature: i64 (i64, i64, i64, i64)
+; CHECK-SAME: expected signature: i64 (i64, i64, i64), got: i64 (i64, i64, i64, i64)
+; CHECK-NEXT: @llvm.nvvm.sad.ull
 
 ; PARSER-RET: invalid intrinsic signature
 ; PARSER-RET-NEXT: for 'llvm.nvvm.sad.i': got i16 (i32, i32, i32), expected i32 (i32, i32, i32)

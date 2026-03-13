@@ -36,7 +36,6 @@ add_llvm_component_library(LLVMCore
   Globals.cpp
   Intrinsics.cpp
   IntrinsicDiagnostics.cpp
-  NVVMIntrinsicDiagnostics.cpp
   NVVMIntrinsicUtils.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
