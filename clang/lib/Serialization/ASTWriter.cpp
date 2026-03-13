@@ -4192,6 +4192,10 @@ void ASTWriter::handleVTable(CXXRecordDecl *RD) {
   PendingEmittingVTables.push_back(RD);
 }
 
+void ASTWriter::addTouchedModuleFile(serialization::ModuleFile *MF) {
+  TouchedModuleFiles.insert(MF);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -4236,6 +4240,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4433,14 +4438,6 @@ static bool isTULocalInNamedModules(NamedDecl *D) {
   return D->getLinkageInternal() == Linkage::Internal;
 }
 
-static NamedDecl *getLocalRedecl(NamedDecl *D) {
-  for (auto *RD : D->redecls())
-    if (!RD->isFromASTFile())
-      return cast<NamedDecl>(RD);
-
-  return D;
-}
-
 class ASTDeclContextNameLookupTrait
     : public ASTDeclContextNameTrivialLookupTrait {
 public:
@@ -4513,13 +4510,6 @@ public:
     auto AddDecl = [this](NamedDecl *D) {
       NamedDecl *DeclForLocalLookup =
           getDeclForLocalLookup(Writer.getLangOpts(), D);
-
-      // Namespace may have many redeclarations in many TU.
-      // Also, these namespaces are symmetric. So that we try to use
-      // the local redecl if any.
-      if (isa<NamespaceDecl>(DeclForLocalLookup) &&
-          DeclForLocalLookup->isFromASTFile())
-        DeclForLocalLookup = getLocalRedecl(DeclForLocalLookup);
 
       if (Writer.getDoneWritingDeclsAndTypes() &&
           !Writer.wasDeclEmitted(DeclForLocalLookup))
@@ -4642,6 +4632,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4740,16 +4731,7 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
     Generator.insert(HashValue, Trait.getData(Specs, ExisitingSpecs), Trait);
   }
 
-  // Reduced BMI may not emit everything in the lookup table,
-  // If Reduced BMI **partially** emits some decls,
-  // then the generator may not emit the corresponding entry for the
-  // corresponding name is already there. See
-  // MultiOnDiskHashTableGenerator::insert and
-  // MultiOnDiskHashTableGenerator::emit for details.
-  // So we won't emit the lookup table if we're generating reduced BMI.
-  auto *ToEmitMaybeMergedLookupTable =
-      (!isGeneratingReducedBMI() && Lookups) ? &Lookups->Table : nullptr;
-  Generator.emit(LookupTable, Trait, ToEmitMaybeMergedLookupTable);
+  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
 }
 
 uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
@@ -4946,16 +4928,7 @@ void ASTWriter::GenerateNameLookupTable(
   // Create the on-disk hash table. Also emit the existing imported and
   // merged table if there is one.
   auto *Lookups = Chain ? Chain->getLoadedLookupTables(DC) : nullptr;
-  // Reduced BMI may not emit everything in the lookup table,
-  // If Reduced BMI **partially** emits some decls,
-  // then the generator may not emit the corresponding entry for the
-  // corresponding name is already there. See
-  // MultiOnDiskHashTableGenerator::insert and
-  // MultiOnDiskHashTableGenerator::emit for details.
-  // So we won't emit the lookup table if we're generating reduced BMI.
-  auto *ToEmitMaybeMergedLookupTable =
-      (!isGeneratingReducedBMI() && Lookups) ? &Lookups->Table : nullptr;
-  Generator.emit(LookupTable, Trait, ToEmitMaybeMergedLookupTable);
+  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
 
   const auto &ModuleLocalDecls = Trait.getModuleLocalDecls();
   if (!ModuleLocalDecls.empty()) {
@@ -4971,15 +4944,11 @@ void ASTWriter::GenerateNameLookupTable(
                                         ModuleLocalTrait);
     }
 
-    // See the above comment. We won't emit the merged table if we're generating
-    // reduced BMI.
     auto *ModuleLocalLookups =
-        (isGeneratingReducedBMI() && Chain &&
-         Chain->getModuleLocalLookupTables(DC))
-            ? &Chain->getModuleLocalLookupTables(DC)->Table
-            : nullptr;
-    ModuleLocalLookupGenerator.emit(ModuleLocalLookupTable, ModuleLocalTrait,
-                                    ModuleLocalLookups);
+        Chain ? Chain->getModuleLocalLookupTables(DC) : nullptr;
+    ModuleLocalLookupGenerator.emit(
+        ModuleLocalLookupTable, ModuleLocalTrait,
+        ModuleLocalLookups ? &ModuleLocalLookups->Table : nullptr);
   }
 
   const auto &TULocalDecls = Trait.getTULocalDecls();
@@ -4995,13 +4964,9 @@ void ASTWriter::GenerateNameLookupTable(
       TULookupGenerator.insert(Key, TULocalTrait.getData(IDs), TULocalTrait);
     }
 
-    // See the above comment. We won't emit the merged table if we're generating
-    // reduced BMI.
-    auto *TULocalLookups =
-        (isGeneratingReducedBMI() && Chain && Chain->getTULocalLookupTables(DC))
-            ? &Chain->getTULocalLookupTables(DC)->Table
-            : nullptr;
-    TULookupGenerator.emit(TULookupTable, TULocalTrait, TULocalLookups);
+    auto *TULocalLookups = Chain ? Chain->getTULocalLookupTables(DC) : nullptr;
+    TULookupGenerator.emit(TULookupTable, TULocalTrait,
+                           TULocalLookups ? &TULocalLookups->Table : nullptr);
   }
 }
 
