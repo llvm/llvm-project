@@ -349,6 +349,7 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
   } else {
     // If Vec is a constant then it should be safe to emit the unpacks at the
     // top of the block.
+    // Note: Extracts from constants are usually folded to constants.
     assert(isa<Constant>(Vec) && "Expected constant!");
     assert(isa<Instruction>(Bndl[0]) &&
            "A widened Bndl should contain instrs!");

@@ -25,6 +25,29 @@ define void @external_users(ptr %ptr) {
   %user = fneg float %sub0
   ret void
 }
+
+; The zexts get vectorized into a constant zero-initializer so the external
+; user is extracting from the constant. Such extracts though get folded.
+define void @external_user_of_constant(ptr %ptr, ptr %ptrX) {
+; CHECK-LABEL: define void @external_user_of_constant(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[PTR0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    store i32 0, ptr [[PTRX]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %zext0 = zext i16 0 to i32
+  %zext1 = zext i16 0 to i32
+  store i32 %zext0, ptr %ptr0
+  store i32 %zext1, ptr %ptr1
+
+  store i32 %zext0, ptr %ptrX   ; External user
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
 ;.
