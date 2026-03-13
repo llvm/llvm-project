@@ -14,8 +14,8 @@ unittest("ClangScalableAnalysisTests") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "ASTEntityMappingTest.cpp",
     "Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp",
+    "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
@@ -35,7 +35,7 @@ unittest("ClangScalableAnalysisTests") {
     "Serialization/JSONFormatTest/TUSummaryTest.cpp",
     "SummaryData/SummaryDataTest.cpp",
     "SummaryNameTest.cpp",
-    "TUSummaryBuilderTest.cpp",
     "TestFixture.cpp",
+    "TUSummaryBuilderTest.cpp",
   ]
 }
