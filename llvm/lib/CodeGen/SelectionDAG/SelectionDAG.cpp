@@ -4147,6 +4147,11 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = KnownBits::computeForAddSub(
         Op.getOpcode() == ISD::ADD, Flags.hasNoSignedWrap(),
         Flags.hasNoUnsignedWrap(), Known, Known2);
+    // ADD(X,X) is equivalent to SHL(X,1), the low bit is always zero.
+    if (Op.getOpcode() == ISD::ADD && Op.getOperand(0) == Op.getOperand(1) &&
+        isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts, false,
+                                         Depth + 1))
+      Known.Zero.setBit(0);
     break;
   }
   case ISD::USUBO:
