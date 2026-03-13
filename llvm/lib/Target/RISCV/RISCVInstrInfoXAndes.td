@@ -575,7 +575,6 @@ multiclass VPatConversionS_BF16<string intrinsic, string instruction> {
   foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
-    let Predicates = [HasVendorXAndesVBFHCvt] in
     def : VPatUnaryNoMask<intrinsic, instruction, "BF16",
                           fwti.Vector, fvti.Vector,
                           fvti.Log2SEW, fvti.LMul,
@@ -587,7 +586,6 @@ multiclass VPatConversionBF16_S<string intrinsic, string instruction> {
   foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
-    let Predicates = [HasVendorXAndesVBFHCvt] in
     def : VPatUnaryNoMaskRoundingMode<intrinsic, instruction, "S",
                                       fvti.Vector, fwti.Vector,
                                       fvti.Log2SEW, fvti.LMul,
@@ -885,10 +883,12 @@ let Predicates = [HasVendorXAndesVBFHCvt] in {
   defm PseudoNDS_VFNCVT_BF16_S : VPseudoVNCVT_BF16_S;
 } // Predicates = [HasVendorXAndesVBFHCvt]
 
-defm : VPatConversionS_BF16<"int_riscv_nds_vfwcvt_s_bf16",
-                            "PseudoNDS_VFWCVT_S">;
-defm : VPatConversionBF16_S<"int_riscv_nds_vfncvt_bf16_s",
-                            "PseudoNDS_VFNCVT_BF16">;
+let Predicates = [HasVendorXAndesVBFHCvt] in {
+  defm : VPatConversionS_BF16<"int_riscv_nds_vfwcvt_s_bf16",
+                              "PseudoNDS_VFWCVT_S">;
+  defm : VPatConversionBF16_S<"int_riscv_nds_vfncvt_bf16_s",
+                              "PseudoNDS_VFNCVT_BF16">;
+} // Predicates = [HasVendorXAndesVBFHCvt]
 
 let Predicates = [HasVendorXAndesVSIntLoad] in {
   defm PseudoNDS_VLN8  : VPseudoVLN8<0>;
