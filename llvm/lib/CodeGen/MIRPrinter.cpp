@@ -74,6 +74,7 @@ static cl::opt<bool> SimplifyMIR(
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
 
+// TODO: Remove once the transition to the symbolic form is over.
 static cl::opt<bool>
     PrintSymbolicInlineAsmOps("print-symbolic-inline-asm-ops", cl::Hidden,
                               cl::init(false),
@@ -987,7 +988,7 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
 
         if (F.isMemKind()) {
           InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
-          OS << ":" << InlineAsm::getMemConstraintName(MCID);
+          OS << ':' << InlineAsm::getMemConstraintName(MCID);
         }
         break;
       }

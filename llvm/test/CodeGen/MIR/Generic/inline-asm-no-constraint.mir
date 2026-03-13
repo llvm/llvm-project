@@ -2,10 +2,6 @@
 
 # Test parsing error when a register class or memory constraint name is expected after ':'.
 
---- |
-  define void @foo() { ret void }
-...
-
 # CHECK: [[@LINE+5]]:{{[0-9]+}}: expected register class or memory constraint name after ':'
 ---
 name: foo

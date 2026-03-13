@@ -1904,13 +1904,8 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
 }
 
 bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
-  if (Token.is(MIToken::IntegerLiteral))
-    return parseImmediateOperand(Dest);
-
   // Parse symbolic form: kind[:constraint].
-  assert(Token.is(MIToken::Identifier) &&
-         "expected inline asm operand kind or integer literal");
-
+  assert(Token.is(MIToken::Identifier) && "expected inline asm operand kind");
   StringRef KindStr = Token.stringValue();
   constexpr auto InvalidKind = static_cast<InlineAsm::Kind>(0);
   InlineAsm::Kind K =
@@ -1941,7 +1936,6 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
     return error("expected register class or memory constraint name after ':'");
 
   StringRef ConstraintStr = Token.stringValue();
-
   if (K == InlineAsm::Kind::Mem) {
     InlineAsm::ConstraintCode CC =
         StringSwitch<InlineAsm::ConstraintCode>(ConstraintStr)
@@ -1974,10 +1968,8 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
             .Case("ZS", InlineAsm::ConstraintCode::ZS)
             .Case("ZT", InlineAsm::ConstraintCode::ZT)
             .Default(InlineAsm::ConstraintCode::Unknown);
-
     if (CC == InlineAsm::ConstraintCode::Unknown)
       return error("unknown memory constraint '" + ConstraintStr + "'");
-
     F.setMemConstraint(CC);
   } else if (K == InlineAsm::Kind::RegDef || K == InlineAsm::Kind::RegUse ||
              K == InlineAsm::Kind::RegDefEarlyClobber) {
@@ -1985,7 +1977,6 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
         PFS.Target.getRegClass(ConstraintStr.lower());
     if (!RC)
       return error("unknown register class '" + ConstraintStr + "'");
-
     F.setRegClass(RC->getID());
   }
 
@@ -3074,17 +3065,6 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
 bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                                    MachineOperand &Dest,
                                    std::optional<unsigned> &TiedDefIdx) {
-  bool IsInlineAsmOperand = (OpCode == TargetOpcode::INLINEASM ||
-                             OpCode == TargetOpcode::INLINEASM_BR) &&
-                            OpIdx >= InlineAsm::MIOp_FirstOperand;
-
-  if (IsInlineAsmOperand && Token.is(MIToken::Identifier)) {
-    StringRef Id = Token.stringValue();
-    if (Id == "regdef" || Id == "reguse" || Id == "regdef-ec" ||
-        Id == "clobber" || Id == "imm" || Id == "mem")
-      return parseInlineAsmOperand(Dest);
-  }
-
   switch (Token.kind()) {
   case MIToken::kw_implicit:
   case MIToken::kw_implicit_define:
@@ -3102,8 +3082,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::NamedVirtualRegister:
     return parseRegisterOperand(Dest, TiedDefIdx);
   case MIToken::IntegerLiteral:
-    if (IsInlineAsmOperand)
-      return parseInlineAsmOperand(Dest);
+    // TODO: Forbid numeric operands for INLINEASM once the transition to the
+    // symbolic form is over.
     return parseImmediateOperand(Dest);
   case MIToken::kw_half:
   case MIToken::kw_bfloat:
@@ -3172,16 +3152,25 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseDbgInstrRefOperand(Dest);
   case MIToken::Error:
     return true;
-  case MIToken::Identifier:
-    if (const auto *RegMask = PFS.Target.getRegMask(Token.stringValue())) {
+  case MIToken::Identifier: {
+    StringRef Id = Token.stringValue();
+    bool IsInlineAsmOperand = (OpCode == TargetOpcode::INLINEASM ||
+                               OpCode == TargetOpcode::INLINEASM_BR) &&
+                              OpIdx >= InlineAsm::MIOp_FirstOperand;
+    if (IsInlineAsmOperand &&
+        (Id == "regdef" || Id == "reguse" || Id == "regdef-ec" ||
+         Id == "clobber" || Id == "imm" || Id == "mem"))
+      return parseInlineAsmOperand(Dest);
+    if (const auto *RegMask = PFS.Target.getRegMask(Id)) {
       Dest = MachineOperand::CreateRegMask(RegMask);
       lex();
       break;
-    } else if (Token.stringValue() == "CustomRegMask") {
+    } else if (Id == "CustomRegMask") {
       return parseCustomRegisterMaskOperand(Dest);
     } else {
       return parseTypedImmediateOperand(Dest);
     }
+  }
   case MIToken::dot: {
     const auto *TII = MF.getSubtarget().getInstrInfo();
     if (const auto *Formatter = TII->getMIRFormatter()) {

@@ -2,10 +2,6 @@
 
 # Test parsing error for unknown register class.
 
---- |
-  define void @foo() { ret void }
-...
-
 # CHECK: [[@LINE+5]]:{{[0-9]+}}: unknown register class 'badreg'
 ---
 name: foo

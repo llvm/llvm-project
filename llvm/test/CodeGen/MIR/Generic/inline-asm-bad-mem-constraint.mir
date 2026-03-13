@@ -2,10 +2,6 @@
 
 # Test parsing error for unknown memory constraint.
 
---- |
-  define void @foo() { ret void }
-...
-
 # CHECK: [[@LINE+5]]:{{[0-9]+}}: unknown memory constraint 'badmem'
 ---
 name: foo
