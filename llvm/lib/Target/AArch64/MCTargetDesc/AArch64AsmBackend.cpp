@@ -580,6 +580,10 @@ public:
     if (FI->IsMTETaggedFrame)
       return CU::UNWIND_ARM64_MODE_DWARF;
 
+    // Signal frames cannot be encoded in compact unwind.
+    if (FI->IsSignalFrame)
+      return CU::UNWIND_ARM64_MODE_DWARF;
+
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
     if (Instrs.empty())
       return CU::UNWIND_ARM64_MODE_FRAMELESS;

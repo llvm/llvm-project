@@ -9,9 +9,6 @@
 
 // Ensure that functions marked as signal frames are reported as such.
 
-// TODO: Investigate this failure on Apple
-// XFAIL: target={{.+}}-apple-{{.+}}
-
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
