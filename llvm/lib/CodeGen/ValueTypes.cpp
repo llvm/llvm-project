@@ -234,6 +234,10 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::externref: return Type::getWasm_ExternrefTy(Context);
   case MVT::funcref: return Type::getWasm_FuncrefTy(Context);
   case MVT::Metadata: return Type::getMetadataTy(Context);
+  case MVT::c64:
+    return SizedCapabilityType::get(Context, 64);
+  case MVT::c128:
+    return SizedCapabilityType::get(Context, 128);
 #define GET_VT_EVT(Ty, EVT) case MVT::Ty: return EVT;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_EVT
@@ -256,6 +260,8 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
     return MVT::isVoid;
   case Type::IntegerTyID:
     return getIntegerVT(cast<IntegerType>(Ty)->getBitWidth());
+  case Type::SizedCapabilityTyID:
+    return getCheriCapabilityVT(cast<SizedCapabilityType>(Ty)->getBitWidth());
   case Type::HalfTyID:      return MVT(MVT::f16);
   case Type::BFloatTyID:    return MVT(MVT::bf16);
   case Type::FloatTyID:     return MVT(MVT::f32);

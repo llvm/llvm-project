@@ -1259,6 +1259,8 @@ void ModuleBitcodeWriter::writeTypeTable() {
     }
     case Type::TypedPointerTyID:
       llvm_unreachable("Typed pointers cannot be added to IR modules");
+    case Type::SizedCapabilityTyID:
+      llvm_unreachable("Fixed-size capabilities cannot be added to IR modules");
     }
 
     // Emit the finished record.
