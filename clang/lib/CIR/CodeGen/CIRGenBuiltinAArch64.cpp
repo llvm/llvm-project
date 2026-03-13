@@ -2772,8 +2772,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     ops[0] = builder.createFNeg(ops[0]);
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
                                            convertType(expr->getType()), ops);
-
-  case NEON::BI__builtin_neon_vqshlud_n_s64:{
+  case NEON::BI__builtin_neon_vqshlud_n_s64: {
 
       auto loc = getLoc(expr->getExprLoc());
       const cir::IntType intType = builder.getSInt64Ty();
@@ -2788,13 +2787,20 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
       return emitNeonCall(builder, {intType, intType}, ops, intrinsicName, intType, loc);
   }
+  case NEON::BI__builtin_neon_vqshld_n_u64:
+  case NEON::BI__builtin_neon_vqshld_n_s64: {
+      auto loc = getLoc(expr->getExprLoc());
 
+      const cir::IntType intType = (builtinID == NEON::BI__builtin_neon_vqshld_n_u64) ? builder.getUInt64Ty(): builder.getSInt64Ty();
 
+      const StringRef intrinsicName = (builtinID == NEON::BI__builtin_neon_vqshld_n_u64) ? "aarch64.neon.uqshl": "aarch64.neon.sqshl";
 
+      // Emit and cast the arugment and then push directly to avoid indexing issues
+      mlir::Value arg1 = emitScalarExpr(expr->getArg(1));
+      ops.push_back(builder.createIntCast(arg1,intType));
 
-  case NEON::BI_builtin_neon_vqshld_n_u64:
-
-  case NEON::BI_builtin_neon_vqshld_n_s64:
+      return emitNeonCall(builder, {intType, intType}, ops, intrinsicName, intType, loc);
+  }
 
 
   case NEON::BI__builtin_neon_vaddd_s64:
