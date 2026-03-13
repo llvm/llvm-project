@@ -553,11 +553,12 @@ const Expr *getterReturnExpr(const CXXMethodDecl *CMD) {
 
 // If CMD is one of the forms:
 //   void foo(T arg) { FieldName = arg; }
-//   R foo(T arg) { FieldName = arg; return *this; }
+//   R* foo(T arg) { FieldName = arg; return this; }
+//   R& foo(T arg) { FieldName = arg; return *this; }
 //   void foo(T arg) { FieldName = std::move(arg); }
-//   R foo(T arg) { FieldName = std::move(arg); return *this; }
-// then returns "FieldName"
-// Returns the LHS expression of the assignment in a trivial setter body, or
+//   R* foo(T arg) { FieldName = std::move(arg); return this; }
+//   R& foo(T arg) { FieldName = std::move(arg); return *this; }
+// returns the LHS expression (FieldName) of the assignment in a trivial setter body, or
 // nullptr if the method does not match the pattern of a trivial setter.
 const Expr *setterLHS(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
@@ -620,31 +621,36 @@ const Expr *setterLHS(const CXXMethodDecl *CMD) {
 
 std::string synthesizeDocumentation(const ASTContext &Ctx,
                                     const NamedDecl *ND) {
-  if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-    // Is this an ordinary, non-static method whose definition is visible?
-    if (CMD->getDeclName().isIdentifier() && !CMD->isStatic() &&
-        (CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition())) &&
-        CMD->hasBody()) {
-      if (const Expr *RetVal = getterReturnExpr(CMD)) {
-        if (const auto GetterField = fieldName(RetVal)) {
-          const auto Comment = fieldComment(Ctx, RetVal);
-          if (Comment)
-            return llvm::formatv("Trivial accessor for `{0}`.\n\n{1}",
-                                 *GetterField, *Comment);
-          return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
-        }
-      }
-      if (const auto *const SetterLHS = setterLHS(CMD)) {
-        const auto Comment = fieldComment(Ctx, SetterLHS);
-        const auto FieldName = fieldName(SetterLHS);
-        if (Comment)
-          return llvm::formatv("Trivial setter for `{0}`.\n\n{1}", *FieldName,
-                               *Comment);
-        return llvm::formatv("Trivial setter for `{0}`.", *FieldName);
-      }
+  const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(ND);
+  if (!CMD)
+    return {};
+
+  // Is this an ordinary, non-static method whose definition is visible?
+  if (!CMD->getDeclName().isIdentifier() || CMD->isStatic())
+    return {};
+
+  CMD = llvm::dyn_cast_or_null<CXXMethodDecl>(CMD->getDefinition());
+  if (!CMD || !CMD->hasBody())
+    return {};
+
+  if (const Expr *RetVal = getterReturnExpr(CMD)) {
+    if (const auto GetterField = fieldName(RetVal)) {
+      if (const auto Comment = fieldComment(Ctx, RetVal))
+        return llvm::formatv("Trivial accessor for `{0}`.\n\n{1}",
+                              *GetterField, *Comment);
+      return llvm::formatv("Trivial accessor for `{0}`.", *GetterField);
     }
   }
-  return "";
+  if (const auto *const SetterLHS = setterLHS(CMD)) {
+    if(const auto FieldName = fieldName(SetterLHS)) {
+      if (const auto Comment = fieldComment(Ctx, SetterLHS))
+        return llvm::formatv("Trivial setter for `{0}`.\n\n{1}", *FieldName,
+                            *Comment);
+      return llvm::formatv("Trivial setter for `{0}`.", *FieldName);
+    }
+  }
+
+  return {};
 }
 
 /// Generate a \p Hover object given the declaration \p D.

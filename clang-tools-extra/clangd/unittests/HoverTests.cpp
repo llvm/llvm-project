@@ -1018,7 +1018,7 @@ class Foo final {})cpp";
        }},
       {// Getter with comment
        R"cpp(
-          struct X { 
+          struct X {
             // An int named Y
             int Y;
             float [[^y]]() { return Y; }
@@ -1098,7 +1098,7 @@ class Foo final {})cpp";
        R"cpp(
           struct X {
             // An int named Y
-            int Y; 
+            int Y;
             void [[^setY]](float v) { Y = v; }
           };
           )cpp",
