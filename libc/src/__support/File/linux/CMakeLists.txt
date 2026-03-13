@@ -22,36 +22,6 @@ add_object_library(
 )
 
 add_object_library(
-  stdout
-  SRCS
-    stdout.cpp
-  DEPENDS
-    .file
-    libc.hdr.types.FILE
-    libc.hdr.stdio_macros
-)
-
-add_object_library(
-  stdin
-  SRCS
-    stdin.cpp
-  DEPENDS
-    .file
-    libc.hdr.types.FILE
-    libc.hdr.stdio_macros
-)
-
-add_object_library(
-  stderr
-  SRCS
-    stderr.cpp
-  DEPENDS
-    .file
-    libc.hdr.types.FILE
-    libc.hdr.stdio_macros
-)
-
-add_object_library(
   linux_dir
   SRCS
     dir.cpp

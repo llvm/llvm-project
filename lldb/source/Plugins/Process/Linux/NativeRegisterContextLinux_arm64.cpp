@@ -73,15 +73,25 @@
 #define NT_ARM_GCS 0x410 /* Guarded Control Stack control registers */
 #endif
 
+#ifndef HWCAP_PACA
 #define HWCAP_PACA (1 << 30)
+#endif
 
+#ifndef HWCAP_GCS
 #define HWCAP_GCS (1UL << 32)
+#endif
 
+#ifndef HWCAP2_MTE
 #define HWCAP2_MTE (1 << 18)
+#endif
 
+#ifndef HWCAP2_FPMR
 #define HWCAP2_FPMR (1UL << 48)
+#endif
 
+#ifndef HWCAP2_POE
 #define HWCAP2_POE (1ULL << 63)
+#endif
 
 using namespace lldb;
 using namespace lldb_private;

@@ -570,7 +570,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   New->splice(New->end(), this, I, end());
 
   // Add a branch instruction to the newly formed basic block.
-  BranchInst *BI = BranchInst::Create(New, this);
+  UncondBrInst *BI = UncondBrInst::Create(New, this);
   BI->setDebugLoc(Loc);
 
   // Now we must loop through all of the successors of the New block (which
@@ -615,7 +615,7 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
     this->replacePhiUsesWith(Pred, New);
   }
   // Add a branch instruction from  "New" to "this" Block.
-  BranchInst *BI = BranchInst::Create(this, New);
+  UncondBrInst *BI = UncondBrInst::Create(this, New);
   BI->setDebugLoc(Loc);
 
   return New;

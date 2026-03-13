@@ -89,8 +89,8 @@ TEST_F(MemorySSATest, CreateALoad) {
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
   B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -308,8 +308,8 @@ TEST_F(MemorySSATest, MoveAStore) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   StoreInst *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
@@ -343,8 +343,8 @@ TEST_F(MemorySSATest, MoveAStoreUpdater) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
@@ -388,8 +388,8 @@ TEST_F(MemorySSATest, MoveAStoreUpdaterMove) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
@@ -431,8 +431,8 @@ TEST_F(MemorySSATest, MoveAStoreAllAround) {
   B.CreateCondBr(B.getTrue(), Left, Right);
   B.SetInsertPoint(Left);
   auto *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   auto *MergeLoad = B.CreateLoad(B.getInt8Ty(), PointerArg);
   setupAnalyses();
@@ -484,8 +484,8 @@ TEST_F(MemorySSATest, RemoveAPhi) {
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
   StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
@@ -528,8 +528,8 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
   B.SetInsertPoint(Left);
   Argument *PointerArg = &*F->arg_begin();
   StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Merge, Left);
-  BranchInst::Create(Merge, Right);
+  UncondBrInst::Create(Merge, Left);
+  UncondBrInst::Create(Merge, Right);
   B.SetInsertPoint(Merge);
   LoadInst *LoadInst = B.CreateLoad(B.getInt8Ty(), PointerArg);
 
@@ -1310,13 +1310,13 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiNotOpt) {
   BasicBlock *Body(BasicBlock::Create(C, "body", F));
   BasicBlock *Exit(BasicBlock::Create(C, "exit", F));
   B.SetInsertPoint(Entry);
-  BranchInst::Create(Header, Entry);
+  UncondBrInst::Create(Header, Entry);
   B.SetInsertPoint(Header);
   B.CreateStore(B.getInt8(16), PointerArg);
   B.CreateCondBr(B.getTrue(), Exit, Body);
   B.SetInsertPoint(Body);
   B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(Exit, Body);
+  UncondBrInst::Create(Exit, Body);
   B.SetInsertPoint(Exit);
   StoreInst *S1 = B.CreateStore(B.getInt8(16), PointerArg);
 
@@ -1368,7 +1368,7 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiOpt) {
 
   B.SetInsertPoint(Entry);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
-  BranchInst::Create(Header, Entry);
+  UncondBrInst::Create(Header, Entry);
 
   B.SetInsertPoint(Header);
   StoreInst *S1 = B.CreateStore(B.getInt8(16), PointerArg);
@@ -1376,7 +1376,7 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithPhiOpt) {
 
   B.SetInsertPoint(Body);
   B.CreateStore(ConstantInt::get(Int8, 0), Alloca);
-  BranchInst::Create(Exit, Body);
+  UncondBrInst::Create(Exit, Body);
 
   B.SetInsertPoint(Exit);
   StoreInst *S2 = B.CreateStore(B.getInt8(16), PointerArg);
@@ -1444,14 +1444,14 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithNoPhiAddNewPhis) {
   B.SetInsertPoint(ABlock);
   B.CreateCondBr(B.getTrue(), BBlock, CBlock);
   B.SetInsertPoint(BBlock);
-  BranchInst::Create(DBlock, BBlock);
+  UncondBrInst::Create(DBlock, BBlock);
   B.SetInsertPoint(CBlock);
-  BranchInst::Create(DBlock, CBlock);
+  UncondBrInst::Create(DBlock, CBlock);
   B.SetInsertPoint(DBlock);
-  BranchInst::Create(EBlock, DBlock);
+  UncondBrInst::Create(EBlock, DBlock);
   B.SetInsertPoint(FBlock);
   B.CreateStore(B.getInt8(16), PointerArg);
-  BranchInst::Create(EBlock, FBlock);
+  UncondBrInst::Create(EBlock, FBlock);
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1703,8 +1703,8 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
     // %preheader.i, label %other.i`
     BB->getTerminator()->eraseFromParent();
     ConstantInt *BoolTrue = ConstantInt::getTrue(F->getContext());
-    BranchInst::Create(getBasicBlockByName(*F, "preheader.i"),
-                       getBasicBlockByName(*F, "other.i"), BoolTrue, BB);
+    CondBrInst::Create(BoolTrue, getBasicBlockByName(*F, "preheader.i"),
+                       getBasicBlockByName(*F, "other.i"), BB);
     SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
     DTUpdates.push_back(DominatorTree::UpdateType(
         DominatorTree::Insert, BB, getBasicBlockByName(*F, "other.i")));

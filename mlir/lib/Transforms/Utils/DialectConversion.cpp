@@ -1306,6 +1306,11 @@ void ReplaceOperationRewrite::commit(RewriterBase &rewriter) {
 
   // Do not erase the operation yet. It may still be referenced in `mapping`.
   // Just unlink it for now and erase it during cleanup.
+  if (!op->getBlock())
+    llvm::reportFatalInternalError(
+        "dialect conversion attempted to replace a root operation that has no "
+        "parent block; the pass must ensure its target op is nested in a "
+        "block");
   op->getBlock()->getOperations().remove(op);
 }
 
@@ -3459,6 +3464,7 @@ LogicalResult ConversionPatternRewriter::legalize(Region *r) {
 LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
   // Convert each operation and discard rewrites on failure.
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
+
   LogicalResult status = legalizeOperations(ops, /*onFailure=*/[&]() {
     // Dialect conversion failed.
     if (rewriterImpl.config.allowPatternRollback) {

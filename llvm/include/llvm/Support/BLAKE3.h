@@ -42,6 +42,12 @@ public:
   /// Reinitialize the internal state
   void init() { llvm_blake3_hasher_init(&Hasher); }
 
+  /// Reinitialize the internal state with the given key.
+  void init_keyed(ArrayRef<uint8_t> Key) {
+    // TODO: maybe assert on the size of the key?
+    llvm_blake3_hasher_init_keyed(&Hasher, Key.data());
+  }
+
   /// Digest more data.
   void update(ArrayRef<uint8_t> Data) {
     llvm_blake3_hasher_update(&Hasher, Data.data(), Data.size());

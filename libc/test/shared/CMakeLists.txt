@@ -73,6 +73,7 @@ add_fp_unittest(
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
     libc.src.__support.math.erff
+    libc.src.__support.math.erff16
     libc.src.__support.math.exp
     libc.src.__support.math.exp2
     libc.src.__support.math.exp2f
@@ -129,6 +130,7 @@ add_fp_unittest(
     libc.src.__support.math.floorf128
     libc.src.__support.math.floorf16
     libc.src.__support.math.floorl
+    libc.src.__support.math.fmabf16
     libc.src.__support.math.fmax
     libc.src.__support.math.fmaxbf16
     libc.src.__support.math.fmaxf
@@ -148,6 +150,7 @@ add_fp_unittest(
     libc.src.__support.math.getpayloadf16
     libc.src.__support.math.getpayloadl
     libc.src.__support.math.hypotf
+    libc.src.__support.math.hypotbf16
     libc.src.__support.math.hypotf16
     libc.src.__support.math.ilogb
     libc.src.__support.math.ilogbf

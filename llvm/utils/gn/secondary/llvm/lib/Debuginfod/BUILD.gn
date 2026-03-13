@@ -3,12 +3,11 @@ static_library("Debuginfod") {
   deps = [
     "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/Support",
+    "//llvm/lib/Support/HTTP",
     "//llvm/utils/gn/build/libs/curl",
   ]
   sources = [
     "BuildIDFetcher.cpp",
     "Debuginfod.cpp",
-    "HTTPClient.cpp",
-    "HTTPServer.cpp",
   ]
 }

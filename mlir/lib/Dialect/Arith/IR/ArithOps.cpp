@@ -2810,9 +2810,10 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     OpBuilder &builder, Location loc,
                                     bool useOnlyFiniteValue) {
-  auto attr =
-      getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
-  return arith::ConstantOp::create(builder, loc, attr);
+  if (auto attr =
+getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue))
+    return arith::ConstantOp::create(builder, loc, attr);
+  return {};
 }
 
 /// Return the value obtained by applying the reduction operation kind

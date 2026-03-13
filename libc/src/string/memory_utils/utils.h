@@ -233,13 +233,18 @@ LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
   if constexpr (sizeof...(TS) > 0) {
-    constexpr size_t SHIFT = sizeof(T) * 8;
     const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
-    if constexpr (Endian::IS_LITTLE)
+    if constexpr (Endian::IS_LITTLE) {
+      // T goes at the bottom of the output, so shift up everything
+      // else by the number of bits in T.
+      constexpr size_t SHIFT = sizeof(T) * 8;
       return value | (next << SHIFT);
-    else if constexpr (Endian::IS_BIG)
+    } else if constexpr (Endian::IS_BIG) {
+      // T goes at the top of the output, so shift it up by the number
+      // of bits in everything else that goes below it.
+      constexpr size_t SHIFT = (0 + ... + sizeof(TS)) * 8;
       return (value << SHIFT) | next;
-    else
+    } else
       static_assert(cpp::always_false<T>, "Invalid endianness");
   } else {
     return value;

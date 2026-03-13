@@ -27,4 +27,3 @@ add_clang_unittest(ClangAnalysisTests
   )
 
 add_subdirectory(FlowSensitive)
-add_subdirectory(Scalable)

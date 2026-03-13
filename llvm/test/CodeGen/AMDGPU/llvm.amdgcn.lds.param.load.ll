@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GCN,GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 ; GCN-LABEL: {{^}}lds_param_load:
 ; GCN: s_mov_b32 m0

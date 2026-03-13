@@ -727,32 +727,33 @@ public:
                             const ExecutionContext &exe_ctx, CompilerType type);
 
   /// Create a value object containing the given APInt value.
-  static lldb::ValueObjectSP CreateValueObjectFromAPInt(lldb::TargetSP target,
-                                                        const llvm::APInt &v,
-                                                        CompilerType type,
-                                                        llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromAPInt(const ExecutionContext &exe_ctx,
+                             const llvm::APInt &v, CompilerType type,
+                             llvm::StringRef name);
 
   /// Create a value object containing the given APFloat value.
   static lldb::ValueObjectSP
-  CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
-                               CompilerType type, llvm::StringRef name);
+  CreateValueObjectFromAPFloat(const ExecutionContext &exe_ctx,
+                               const llvm::APFloat &v, CompilerType type,
+                               llvm::StringRef name);
 
   /// Create a value object containing the given Scalar value.
-  static lldb::ValueObjectSP CreateValueObjectFromScalar(lldb::TargetSP target,
-                                                         Scalar &s,
-                                                         CompilerType type,
-                                                         llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromScalar(const ExecutionContext &exe_ctx, Scalar &s,
+                              CompilerType type, llvm::StringRef name);
 
   /// Create a value object containing the given boolean value.
-  static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
-                                                       bool value,
-                                                       llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromBool(const ExecutionContext &exe_ctx,
+                            lldb::TypeSystemSP typesystem, bool value,
+                            llvm::StringRef name);
 
   /// Create a nullptr value object with the specified type (must be a
   /// nullptr type).
-  static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
-                                                          CompilerType type,
-                                                          llvm::StringRef name);
+  static lldb::ValueObjectSP
+  CreateValueObjectFromNullptr(const ExecutionContext &exe_ctx,
+                               CompilerType type, llvm::StringRef name);
 
   lldb::ValueObjectSP Persist();
 

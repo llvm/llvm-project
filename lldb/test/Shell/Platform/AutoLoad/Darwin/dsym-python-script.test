@@ -1,0 +1,42 @@
+# REQUIRES: python, system-darwin
+#
+# Tests that we loading a Python script from a dSYM and the various
+# ways target.load-script-from-symbol-file controls that behaviour.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: cp %t/dsym_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file false' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=DSYM_SCRIPT --implicit-check-not=warning
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=DSYM_SCRIPT --check-prefix=CHECK-WARN --strict-whitespace
+#
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix=CHECK-LOADED
+
+# CHECK-WARN:      warning: 'TestModule' contains a debug script. To run this script in this debug session:
+# CHECK-WARN-EMPTY:
+# CHECK-WARN-NEXT:{{^}}    command script import "{{.*}}/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py"
+# CHECK-WARN-EMPTY:
+# CHECK-WARN-NEXT: To run all discovered debug scripts in this session:
+# CHECK-WARN-EMPTY:
+# CHECK-WARN-NEXT:{{^}}    settings set target.load-script-from-symbol-file true
+
+# CHECK-LOADED: DSYM_SCRIPT
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("DSYM_SCRIPT", file=sys.stderr)

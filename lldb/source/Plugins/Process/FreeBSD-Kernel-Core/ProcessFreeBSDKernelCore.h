@@ -64,6 +64,8 @@ protected:
   lldb::addr_t FindSymbol(const char *name);
 
 private:
+  void SetKernelDisplacement();
+
   void PrintUnreadMessage();
 
   const char *GetError();

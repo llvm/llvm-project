@@ -1040,7 +1040,10 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-      std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
+      std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+          CI.getFileManager(), CI.getHeaderSearchOpts().ModuleCachePath,
+          CI.getHeaderSearchOpts().DisableModuleHash,
+          CI.getInvocation().computeContextHash());
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {

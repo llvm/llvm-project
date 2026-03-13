@@ -1573,13 +1573,29 @@ entry:
 }
 
 define <8 x i16> @umull_and256_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
-; CHECK-LABEL: umull_and256_v8i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: umull_and256_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umull_and256_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SVE-NEXT:    and z1.h, z1.h, #0x100
+; CHECK-SVE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: umull_and256_v8i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>

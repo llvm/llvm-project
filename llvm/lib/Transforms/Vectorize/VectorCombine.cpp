@@ -2757,8 +2757,8 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
                                 nullptr, {T1, T2});
   NewCost += TTI.getShuffleCost(SK, DstVecTy, SrcVecTy, Mask, CostKind, 0,
                                 nullptr, {F1, F2});
-  auto *C1C2ShuffledVecTy = cast<FixedVectorType>(
-      toVectorTy(Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements()));
+  auto *C1C2ShuffledVecTy = FixedVectorType::get(
+      Type::getInt1Ty(I.getContext()), DstVecTy->getNumElements());
   NewCost += TTI.getCmpSelInstrCost(SelOp, DstVecTy, C1C2ShuffledVecTy,
                                     CmpInst::BAD_ICMP_PREDICATE, CostKind);
 

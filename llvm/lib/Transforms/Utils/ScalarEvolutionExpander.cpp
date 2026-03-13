@@ -563,7 +563,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
     if (isa<PointerType>(Sum->getType())) {
       // The running sum expression is a pointer. Try to form a getelementptr
       // at this level with that as the base.
-      SmallVector<const SCEV *, 4> NewOps;
+      SmallVector<SCEVUse, 4> NewOps;
       for (; I != E && I->first == CurLoop; ++I) {
         // If the operand is SCEVUnknown and not instructions, peek through
         // it, to enable more of it to be folded into the GEP.
@@ -1336,7 +1336,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   if (CanonicalIV &&
       SE.getTypeSizeInBits(CanonicalIV->getType()) > SE.getTypeSizeInBits(Ty) &&
       !S->getType()->isPointerTy()) {
-    SmallVector<const SCEV *, 4> NewOps(S->getNumOperands());
+    SmallVector<SCEVUse, 4> NewOps(S->getNumOperands());
     for (unsigned i = 0, e = S->getNumOperands(); i != e; ++i)
       NewOps[i] = SE.getAnyExtendExpr(S->getOperand(i), CanonicalIV->getType());
     Value *V = expand(SE.getAddRecExpr(NewOps, S->getLoop(),
@@ -1360,7 +1360,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
                             S->getNoWrapFlags(SCEV::FlagNUW));
     }
 
-    SmallVector<const SCEV *, 4> NewOps(S->operands());
+    SmallVector<SCEVUse, 4> NewOps(S->operands());
     NewOps[0] = SE.getConstant(Ty, 0);
     const SCEV *Rest = SE.getAddRecExpr(NewOps, L,
                                         S->getNoWrapFlags(SCEV::FlagNW));

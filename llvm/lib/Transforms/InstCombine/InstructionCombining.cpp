@@ -4237,9 +4237,7 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
-  assert(BI.isUnconditional() && "Only for unconditional branches.");
-
+Instruction *InstCombinerImpl::visitUncondBrInst(UncondBrInst &BI) {
   // If this store is the second-to-last instruction in the basic block
   // (excluding debug info) and if the block ends with
   // an unconditional branch, try to move the store to the successor block.
@@ -4337,10 +4335,7 @@ void InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
   handlePotentiallyDeadBlocks(Worklist);
 }
 
-Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
-  if (BI.isUnconditional())
-    return visitUnconditionalBranchInst(BI);
-
+Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
   // Change br (not X), label True, label False to: br X, label False, True
   Value *Cond = BI.getCondition();
   Value *X;

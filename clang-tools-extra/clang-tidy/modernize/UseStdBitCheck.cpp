@@ -72,7 +72,20 @@ void UseStdBitCheck::registerMatchers(MatchFinder *Finder) {
                  LogicalNot(BitwiseAnd(
                      BoundDeclRef("v"),
                      Sub(BoundDeclRef("v"), integerLiteral(equals(1))))))
-          .bind("expr"),
+          .bind("has_one_bit_expr"),
+      this);
+
+  // Computing popcount with following pattern:
+  // std::bitset<N>(val).count()
+  Finder->addMatcher(
+      cxxMemberCallExpr(
+          argumentCountIs(0),
+          callee(cxxMethodDecl(
+              hasName("count"),
+              ofClass(cxxRecordDecl(hasName("bitset"), isInStdNamespace())))),
+          on(cxxConstructExpr(
+              hasArgument(0, expr(hasType(isUnsignedInteger())).bind("v")))))
+          .bind("popcount_expr"),
       this);
 }
 
@@ -90,18 +103,46 @@ void UseStdBitCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
 
-  const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
-  const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("expr");
+  if (const auto *MatchedExpr =
+          Result.Nodes.getNodeAs<BinaryOperator>("has_one_bit_expr")) {
+    const auto *MatchedVarDecl = Result.Nodes.getNodeAs<VarDecl>("v");
 
-  auto Diag =
-      diag(MatchedExpr->getBeginLoc(), "use 'std::has_one_bit' instead");
-  if (auto R = MatchedExpr->getSourceRange();
-      !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
-    Diag << FixItHint::CreateReplacement(
-                MatchedExpr->getSourceRange(),
-                ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
-         << IncludeInserter.createIncludeInsertion(
-                Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+    auto Diag =
+        diag(MatchedExpr->getBeginLoc(), "use 'std::has_one_bit' instead");
+    if (auto R = MatchedExpr->getSourceRange();
+        !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
+      Diag << FixItHint::CreateReplacement(
+                  MatchedExpr->getSourceRange(),
+                  ("std::has_one_bit(" + MatchedVarDecl->getName() + ")").str())
+           << IncludeInserter.createIncludeInsertion(
+                  Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+    }
+  } else if (const auto *MatchedExpr =
+                 Result.Nodes.getNodeAs<CXXMemberCallExpr>("popcount_expr")) {
+    const auto *BitsetInstantiatedDecl =
+        cast<ClassTemplateSpecializationDecl>(MatchedExpr->getRecordDecl());
+    const llvm::APSInt BitsetSize =
+        BitsetInstantiatedDecl->getTemplateArgs()[0].getAsIntegral();
+    const auto *MatchedArg = Result.Nodes.getNodeAs<Expr>("v");
+    const uint64_t MatchedVarSize = Context.getTypeSize(MatchedArg->getType());
+    if (BitsetSize < MatchedVarSize)
+      return;
+    auto Diag = diag(MatchedExpr->getBeginLoc(), "use 'std::popcount' instead");
+    if (auto R = MatchedExpr->getSourceRange();
+        !R.getBegin().isMacroID() && !R.getEnd().isMacroID()) {
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+                  MatchedArg->getEndLoc().getLocWithOffset(1),
+                  MatchedExpr->getRParenLoc().getLocWithOffset(-1)))
+           << FixItHint::CreateReplacement(
+                  CharSourceRange::getTokenRange(
+                      MatchedExpr->getBeginLoc(),
+                      MatchedArg->getBeginLoc().getLocWithOffset(-1)),
+                  "std::popcount(")
+           << IncludeInserter.createIncludeInsertion(
+                  Source.getFileID(MatchedExpr->getBeginLoc()), "<bit>");
+    }
+  } else {
+    llvm_unreachable("unexpected match");
   }
 }
 

@@ -32,6 +32,7 @@ add_entrypoint_object(
   HDRS
     ../chown.h
   DEPENDS
+    libc.hdr.fcntl_macros
     libc.hdr.types.uid_t
     libc.hdr.types.gid_t
     libc.include.sys_syscall

@@ -2934,6 +2934,9 @@ bool QualType::isBitwiseCloneableType(const ASTContext &Context) const {
   if (!RD)
     return true;
 
+  if (RD->isInvalidDecl())
+    return false;
+
   // Never allow memcpy when we're adding poisoned padding bits to the struct.
   // Accessing these posioned bits will trigger false alarms on
   // SanitizeAddressFieldPadding etc.

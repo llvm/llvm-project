@@ -91,3 +91,13 @@ add_libc_test(
   DEPENDS
     libc.src.wctype.iswalnum
 )
+
+add_libc_test(
+  iswupper_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswupper_test.cpp
+  DEPENDS
+    libc.src.wctype.iswupper
+)

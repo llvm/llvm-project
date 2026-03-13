@@ -1252,6 +1252,46 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   return nullptr;
 }
 
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+  if (MDNode *LoopID = L->getLoopID())
+    return GetUnrollMetadata(LoopID, Name);
+  return nullptr;
+}
+
+// Returns true if the loop has an unroll(full) pragma.
+bool llvm::hasUnrollFullPragma(const Loop *L) {
+  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.full");
+}
+
+// Returns true if the loop has an unroll(enable) pragma. This metadata is used
+// for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
+bool llvm::hasUnrollEnablePragma(const Loop *L) {
+  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
+}
+
+// Returns true if the loop has an runtime unroll(disable) pragma.
+bool llvm::hasRuntimeUnrollDisablePragma(const Loop *L) {
+  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
+}
+
+// If loop has an unroll_count pragma return the (necessarily
+// positive) value from the pragma.  Otherwise return 0.
+unsigned llvm::unrollCountPragmaValue(const Loop *L) {
+  MDNode *MD = getUnrollMetadataForLoop(L, "llvm.loop.unroll.count");
+  if (MD) {
+    assert(MD->getNumOperands() == 2 &&
+           "Unroll count hint metadata should have two operands.");
+    unsigned Count =
+        mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+    assert(Count >= 1 && "Unroll count must be positive.");
+    return Count;
+  }
+  return 0;
+}
+
 std::optional<RecurrenceDescriptor>
 llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                            ScalarEvolution *SE) {

@@ -6477,44 +6477,96 @@ define void @vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2(ptr %
 ; AVX1-NEXT:    vmovdqa %xmm1, 32(%rcx)
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX2-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
-; AVX2-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX2-NEXT:    vmovdqa %ymm0, (%rcx)
-; AVX2-NEXT:    vmovdqa %ymm1, 32(%rcx)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX2-SLOW-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX2-SLOW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX2-SLOW-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX2-SLOW-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX2-SLOW-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX2-SLOW-NEXT:    vzeroupper
+; AVX2-SLOW-NEXT:    retq
 ;
-; AVX512F-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
-; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
-; AVX512F-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX512F-NEXT:    vmovdqa %ymm0, (%rcx)
-; AVX512F-NEXT:    vmovdqa %ymm1, 32(%rcx)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
+; AVX2-FAST-PERLANE-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
+; AVX2-FAST-PERLANE-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX2-FAST-PERLANE-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX2-FAST-PERLANE-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
-; AVX512DQ-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
-; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512DQ-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
-; AVX512DQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
-; AVX512DQ-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
-; AVX512DQ-NEXT:    vmovdqa %ymm0, (%rcx)
-; AVX512DQ-NEXT:    vmovdqa %ymm1, 32(%rcx)
-; AVX512DQ-NEXT:    vzeroupper
-; AVX512DQ-NEXT:    retq
+; AVX2-FAST-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
+; AVX2-FAST-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX2-FAST-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX2-FAST-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX2-FAST-NEXT:    vzeroupper
+; AVX2-FAST-NEXT:    retq
+;
+; AVX512F-SLOW-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX512F-SLOW:       # %bb.0:
+; AVX512F-SLOW-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512F-SLOW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
+; AVX512F-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX512F-SLOW-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX512F-SLOW-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX512F-SLOW-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX512F-SLOW-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX512F-SLOW-NEXT:    vzeroupper
+; AVX512F-SLOW-NEXT:    retq
+;
+; AVX512F-FAST-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX512F-FAST:       # %bb.0:
+; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512F-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX512F-FAST-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
+; AVX512F-FAST-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512F-FAST-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX512F-FAST-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX512F-FAST-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX512F-FAST-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX512F-FAST-NEXT:    vzeroupper
+; AVX512F-FAST-NEXT:    retq
+;
+; AVX512DQ-SLOW-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX512DQ-SLOW:       # %bb.0:
+; AVX512DQ-SLOW-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512DQ-SLOW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
+; AVX512DQ-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512DQ-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX512DQ-SLOW-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX512DQ-SLOW-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX512DQ-SLOW-NEXT:    vzeroupper
+; AVX512DQ-SLOW-NEXT:    retq
+;
+; AVX512DQ-FAST-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
+; AVX512DQ-FAST:       # %bb.0:
+; AVX512DQ-FAST-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX512DQ-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
+; AVX512DQ-FAST-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
+; AVX512DQ-FAST-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512DQ-FAST-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm1
+; AVX512DQ-FAST-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
+; AVX512DQ-FAST-NEXT:    vmovdqa %ymm0, (%rcx)
+; AVX512DQ-FAST-NEXT:    vmovdqa %ymm1, 32(%rcx)
+; AVX512DQ-FAST-NEXT:    vzeroupper
+; AVX512DQ-FAST-NEXT:    retq
 ;
 ; AVX512BW-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
 ; AVX512BW:       # %bb.0:

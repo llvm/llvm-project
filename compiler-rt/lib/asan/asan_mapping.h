@@ -171,6 +171,13 @@
 // || `[0x36000000, 0x39ffffff]` || ShadowGap  ||
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
+//
+// Default Hexagon/Linux mapping (32-bit, 4 GB VA):
+// || `[0x40000000, 0xffffffff]` || HighMem    ||
+// || `[0x28000000, 0x3fffffff]` || HighShadow ||
+// || `[0x24000000, 0x27ffffff]` || ShadowGap  ||
+// || `[0x20000000, 0x23ffffff]` || LowShadow  ||
+// || `[0x00000000, 0x1fffffff]` || LowMem     ||
 
 #define ASAN_SHADOW_SCALE 3
 
@@ -189,6 +196,8 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x30000000
 #  elif SANITIZER_IOS
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif defined(__hexagon__)
+#    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  else
 #    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  endif

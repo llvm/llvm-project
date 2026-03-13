@@ -10,7 +10,7 @@
 #define __CLC_MATH_CLC_EXP_HELPER
 
 #define __CLC_DOUBLE_ONLY
-#define __CLC_BODY <clc/math/clc_exp_helper.inc>
+#define __CLC_BODY <clc/math/clc_exp_helper_decl.inc>
 
 #include <clc/math/gentype.inc>
 

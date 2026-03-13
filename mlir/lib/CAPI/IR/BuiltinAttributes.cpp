@@ -559,8 +559,13 @@ bool mlirAttributeIsADenseFPElements(MlirAttribute attr) {
   return llvm::isa<DenseFPElementsAttr>(unwrap(attr));
 }
 
+MlirTypeID mlirDenseTypedElementsAttrGetTypeID(void) {
+  return wrap(DenseTypedElementsAttr::getTypeID());
+}
+
+// Deprecated API. Will be removed in the future.
 MlirTypeID mlirDenseIntOrFPElementsAttrGetTypeID(void) {
-  return wrap(DenseIntOrFPElementsAttr::getTypeID());
+  return mlirDenseTypedElementsAttrGetTypeID();
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-//===- IndexIntrinsicsOpLowering.h - GPU IndexOps Lowering class *- C++ -*-===//
+//===- IndexIntrinsicsOpLowering.h - GPU Index Op Lowering ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include <limits>
 
 namespace mlir {
 namespace gpu {
@@ -23,6 +22,16 @@ enum class IntrType : uint32_t {
   Id = 1,
   Dim = 2,
 };
+
+/// Returns a ConstantRangeAttr for a GPU index op, or nullptr if no bounds
+/// are found. `bitWidth` controls the width of the returned range.
+/// Checks the provided upper_bound from the op (highest priority), inherent
+/// attrs on enclosing `gpu.func`s, and discardable attributes on other
+/// enclosing function ops (lowest priority).
+LLVM::ConstantRangeAttr getIndexOpRange(Operation *op, gpu::Dimension dim,
+                                        std::optional<uint32_t> opUpperBound,
+                                        IndexKind indexKind, IntrType intrType,
+                                        unsigned bitWidth);
 
 // Rewriting that replaces Op with XOp, YOp, or ZOp depending on the dimension
 // that Op operates on.  Op is assumed to return an `index` value and
@@ -54,7 +63,7 @@ public:
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = op->getLoc();
+    Location loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
     Operation *newOp;
     switch (op.getDimension()) {
@@ -69,70 +78,13 @@ public:
       break;
     }
 
-    // Order of priority for bounds:
-    // 1. The upper_bound attribute
-    // 2. Inherent attributes on a surrounding gpu.func
-    // 3. Discardable attributes on a surrounding function of any kind
-    // The below code handles these in reverse order so that more important
-    // sources overwrite less important ones.
-    DenseI32ArrayAttr funcBounds = nullptr;
-    if (auto funcOp = op->template getParentOfType<FunctionOpInterface>()) {
-      switch (indexKind) {
-      case IndexKind::Block: {
-        auto blockHelper =
-            gpu::GPUDialect::KnownBlockSizeAttrHelper(op.getContext());
-        if (blockHelper.isAttrPresent(funcOp))
-          funcBounds = blockHelper.getAttr(funcOp);
-        break;
-      }
-      case IndexKind::Grid: {
-        auto gridHelper =
-            gpu::GPUDialect::KnownGridSizeAttrHelper(op.getContext());
-        if (gridHelper.isAttrPresent(funcOp))
-          funcBounds = gridHelper.getAttr(funcOp);
-        break;
-      }
-      case IndexKind::Cluster: {
-        auto clusterHelper =
-            gpu::GPUDialect::KnownClusterSizeAttrHelper(op.getContext());
-        if (clusterHelper.isAttrPresent(funcOp))
-          funcBounds = clusterHelper.getAttr(funcOp);
-        break;
-      }
-      case IndexKind::Other:
-        break;
-      }
-    }
-    if (auto gpuFunc = op->template getParentOfType<gpu::GPUFuncOp>()) {
-      switch (indexKind) {
-      case IndexKind::Block:
-        funcBounds = gpuFunc.getKnownBlockSizeAttr();
-        break;
-      case IndexKind::Grid:
-        funcBounds = gpuFunc.getKnownGridSizeAttr();
-        break;
-      case IndexKind::Cluster:
-        funcBounds = gpuFunc.getKnownClusterSizeAttr();
-        break;
-      case IndexKind::Other:
-        break;
-      }
-    }
-    std::optional<int32_t> upperBound;
-    if (funcBounds)
-      upperBound =
-          funcBounds.asArrayRef()[static_cast<uint32_t>(op.getDimension())];
-    if (auto opBound = op.getUpperBound())
-      upperBound = opBound->getZExtValue();
+    std::optional<uint32_t> opBound;
+    if (auto bound = op.getUpperBound())
+      opBound = static_cast<uint32_t>(bound->getZExtValue());
+    if (auto range = getIndexOpRange(op, op.getDimension(), opBound, indexKind,
+                                     intrType, /*bitWidth=*/32))
+      newOp->setAttr("range", range);
 
-    if (upperBound && intrType != IntrType::None) {
-      int32_t min = (intrType == IntrType::Dim ? 1 : 0);
-      int32_t max = *upperBound == std::numeric_limits<int32_t>::max()
-                        ? *upperBound
-                        : *upperBound + (intrType == IntrType::Id ? 0 : 1);
-      newOp->setAttr("range", LLVM::ConstantRangeAttr::get(
-                                  rewriter.getContext(), 32, min, max));
-    }
     if (indexBitwidth > 32) {
       newOp = LLVM::SExtOp::create(rewriter, loc,
                                    IntegerType::get(context, indexBitwidth),

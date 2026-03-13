@@ -645,7 +645,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetPatternInst(
     MemSetPatternInst &MSPI) {
   if (MSPI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetPatternAsLoop(&MSPI);
+  llvm::expandMemSetPatternAsLoop(
+      &MSPI, TM->getTargetTransformInfo(*MSPI.getFunction()));
   MSPI.eraseFromParent();
   return true;
 }

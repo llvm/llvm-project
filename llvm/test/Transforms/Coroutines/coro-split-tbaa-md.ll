@@ -87,14 +87,16 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    [[X_RELOAD:%.*]] = load i32, ptr [[X_RELOAD_ADDR]], align 4, !tbaa [[F_FRAME_SLOT_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    call void @print(i32 [[X_RELOAD]])
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal fastcc void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;

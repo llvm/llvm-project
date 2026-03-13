@@ -337,8 +337,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     }
     if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
       VPBuilder Builder(VPR);
-      const DataLayout &DL =
-          Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+      const DataLayout &DL = Plan.getDataLayout();
       Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
       Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
       VPValue *VF = Builder.createScalarZExtOrTrunc(

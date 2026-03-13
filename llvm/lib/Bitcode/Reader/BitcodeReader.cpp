@@ -5653,7 +5653,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid br record");
 
       if (Record.size() == 1) {
-        I = BranchInst::Create(TrueDest);
+        I = UncondBrInst::Create(TrueDest);
         InstructionList.push_back(I);
       }
       else {
@@ -5663,7 +5663,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
                                getVirtualTypeID(CondType), CurBB);
         if (!FalseDest || !Cond)
           return error("Invalid br record");
-        I = BranchInst::Create(TrueDest, FalseDest, Cond);
+        I = CondBrInst::Create(Cond, TrueDest, FalseDest);
         InstructionList.push_back(I);
       }
       break;
@@ -7011,7 +7011,7 @@ OutOfRecordLoop:
     BasicBlock *From = Pair.first.first;
     BasicBlock *To = Pair.first.second;
     BasicBlock *EdgeBB = Pair.second;
-    BranchInst::Create(To, EdgeBB);
+    UncondBrInst::Create(To, EdgeBB);
     From->getTerminator()->replaceSuccessorWith(To, EdgeBB);
     To->replacePhiUsesWith(From, EdgeBB);
     EdgeBB->moveBefore(To);
@@ -7113,8 +7113,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (ProfName != MDProfLabels::BranchWeights)
           continue;
         unsigned ExpectedNumOperands = 0;
-        if (BranchInst *BI = dyn_cast<BranchInst>(&I))
-          ExpectedNumOperands = BI->getNumSuccessors();
+        if (isa<CondBrInst>(&I))
+          ExpectedNumOperands = 2;
         else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
           ExpectedNumOperands = SI->getNumSuccessors();
         else if (isa<CallInst>(&I))

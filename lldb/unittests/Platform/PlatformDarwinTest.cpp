@@ -631,3 +631,52 @@ TEST_F(
   EXPECT_EQ(fspecs.GetFileSpecAtIndex(0).GetFilename(), "_mykeyword_1_1_1.py");
   EXPECT_TRUE(ss.Empty());
 }
+
+struct SpecialCharTestCase {
+  char special_char;
+  char replacement;
+};
+struct PlatformDarwinLocateWithSpecialCharsTestFixture
+    : public testing::WithParamInterface<SpecialCharTestCase>,
+      public PlatformDarwinLocateTest {};
+
+TEST_P(PlatformDarwinLocateWithSpecialCharsTestFixture,
+       LocateExecutableScriptingResourcesFromDSYM_SpecialCharacters) {
+  // Tests the various special characters that `ScriptInterpreterPython`
+  // disallows in module names.
+
+  auto [special_char, replacement] = GetParam();
+
+  std::string module_name = llvm::formatv("TestModule{0}.o", special_char);
+  std::string script_name = llvm::formatv("TestModule{0}.py", special_char);
+  std::string recommended_script_name =
+      llvm::formatv("TestModule{0}.py", replacement);
+
+  // Create dummy module file at <test-root>/<module-name>
+  FileSpec module_fspec(CreateFile(module_name, m_tmp_root_dir));
+  ASSERT_TRUE(module_fspec);
+
+  // Create dummy module file at
+  // <test-root>/.dSYM/Contents/Resources/DWARF/<module-name>
+  FileSpec dsym_module_fpec(CreateFile(module_name, m_tmp_dsym_dwarf_dir));
+  ASSERT_TRUE(dsym_module_fpec);
+
+  CreateFile(script_name, m_tmp_dsym_python_dir);
+
+  StreamString ss;
+  FileSpecList fspecs =
+      std::static_pointer_cast<PlatformDarwin>(m_platform_sp)
+          ->LocateExecutableScriptingResourcesFromDSYM(
+              ss, module_fspec, *m_target_sp, dsym_module_fpec);
+  EXPECT_EQ(fspecs.GetSize(), 0u);
+
+  std::string expected =
+      llvm::formatv("please rename '{0}/../Python/{1}' to '{0}/../Python/{2}'",
+                    m_tmp_dsym_dwarf_dir, script_name, recommended_script_name);
+  EXPECT_TRUE(ss.GetString().contains(expected));
+}
+
+INSTANTIATE_TEST_SUITE_P(PlatformDarwinLocateWithSpecialCharsTest,
+                         PlatformDarwinLocateWithSpecialCharsTestFixture,
+                         testing::ValuesIn(std::vector<SpecialCharTestCase>{
+                             {' ', '_'}, {'.', '_'}, {'-', '_'}, {'+', 'x'}}));

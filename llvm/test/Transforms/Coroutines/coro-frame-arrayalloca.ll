@@ -81,14 +81,16 @@ declare void @free(ptr)
 ; CHECK-NEXT:    call void @consume.double.ptr(ptr [[PREFIX_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @consume.i32.ptr(ptr [[DATA_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @consume.double.ptr(ptr [[SUFFIX_RELOAD_ADDR]])
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal fastcc void @f.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(56) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
-; CHECK-NEXT:    call void @free(ptr [[HDL]])
+; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
+; CHECK-NEXT:    call void @free(ptr [[MEM]])
 ; CHECK-NEXT:    ret void
 ;
 ;

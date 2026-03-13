@@ -4298,16 +4298,14 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         break;
       }
     }
-    // Check comparison of [minnum/maxnum with constant] with other constant.
+    // Check FCmp of [min/maxnum or min/maximumnum with const] with other const.
     const APFloat *C2;
-    if ((match(LHS, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(C2))) &&
-         *C2 < *C) ||
-        (match(LHS, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_APFloat(C2))) &&
-         *C2 > *C)) {
-      bool IsMaxNum =
-          cast<IntrinsicInst>(LHS)->getIntrinsicID() == Intrinsic::maxnum;
-      // The ordered relationship and minnum/maxnum guarantee that we do not
-      // have NaN constants, so ordered/unordered preds are handled the same.
+    bool IsMax = match(LHS, m_FMaxNum_or_FMaximumNum(m_Value(), m_APFloat(C2)));
+    bool IsMin = match(LHS, m_FMinNum_or_FMinimumNum(m_Value(), m_APFloat(C2)));
+    if ((IsMax && *C2 > *C) || (IsMin && *C2 < *C)) {
+      // The ordered relationship and min/maxnum or min/maximumnum guarantee
+      // that we do not have NaN constants, so ordered/unordered preds are
+      // handled the same.
       switch (Pred) {
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_UEQ:
@@ -4327,7 +4325,7 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // minnum(X, LesserC)  >  C --> false
         // maxnum(X, GreaterC) >= C --> true
         // maxnum(X, GreaterC) >  C --> true
-        return ConstantInt::get(RetTy, IsMaxNum);
+        return ConstantInt::get(RetTy, IsMax);
       case FCmpInst::FCMP_OLE:
       case FCmpInst::FCMP_ULE:
       case FCmpInst::FCMP_OLT:
@@ -4336,7 +4334,7 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
         // minnum(X, LesserC)  <  C --> true
         // maxnum(X, GreaterC) <= C --> false
         // maxnum(X, GreaterC) <  C --> false
-        return ConstantInt::get(RetTy, !IsMaxNum);
+        return ConstantInt::get(RetTy, !IsMax);
       default:
         // TRUE/FALSE/ORD/UNO should be handled before this.
         llvm_unreachable("Unexpected fcmp predicate");

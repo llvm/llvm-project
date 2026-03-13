@@ -10,7 +10,7 @@ func.func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : i
   %r = fir.do_loop %j = %p to %m step %c1 iter_args(%v1 = %vIn) -> !fir.array<?x?xf32> {
     // CHECK: = icmp sgt
     %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
-      // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
+      // CHECK: %[[AOFF:.*]] = getelementptr nusw nuw float, ptr %[[A]], i64
       // CHECK: store float %[[F]], ptr %[[AOFF]]
       %r = fir.array_update %v, %f, %i, %j : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
       fir.result %r : !fir.array<?x?xf32>
@@ -35,7 +35,7 @@ func.func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
     %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
       %x = fir.array_fetch %wIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %y = arith.addf %x, %f : f32
-      // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
+      // CHECK: %[[AOFF:.*]] = getelementptr nusw nuw float, ptr %[[A]], i64
       %r = fir.array_update %v, %y, %i, %j : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
       fir.result %r : !fir.array<?x?xf32>
     }
@@ -59,7 +59,7 @@ func.func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
     %r = fir.do_loop %i = %o to %n step %c1 iter_args(%v = %v1) -> !fir.array<?x?xf32> {
       %x = fir.array_fetch %wIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %y = arith.addf %x, %f : f32
-      // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
+      // CHECK: %[[AOFF:.*]] = getelementptr nusw nuw float, ptr %[[A]], i64
       %i2 = arith.addi %i, %c1 : index
       %r = fir.array_update %v, %y, %i2, %j : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
       fir.result %r : !fir.array<?x?xf32>
@@ -86,7 +86,7 @@ func.func @f4(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf
       %x = fir.array_fetch %wIn, %i, %j : (!fir.array<?x?xf32>, index, index) -> f32
       %y = arith.addf %x, %f : f32
       %y2 = arith.addf %y, %x2 : f32
-      // CHECK: %[[AOFF:.*]] = getelementptr float, ptr %[[A]], i64
+      // CHECK: %[[AOFF:.*]] = getelementptr nusw nuw float, ptr %[[A]], i64
       %i2 = arith.addi %i, %c1 : index
       %r = fir.array_update %v, %y2, %i2, %j : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
       fir.result %r : !fir.array<?x?xf32>
@@ -114,11 +114,11 @@ func.func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf
   %4 = fir.do_loop %arg3 = %c0 to %1 step %c1 iter_args(%arg4 = %2) -> (!fir.array<?xf32>) {
     // CHECK: %[[B_STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[B]], i32 0, i32 7, i32 0, i32 2
     // CHECK: %[[B_STRIDE:.*]] = load i64, ptr %[[B_STRIDE_GEP]]
-    // CHECK: %[[B_DIM_OFFSET:.*]] = mul nsw i64 %{{.*}}, %[[B_STRIDE]]
-    // CHECK: %[[B_OFFSET:.*]] =  add nsw i64 %[[B_DIM_OFFSET]], 0
+    // CHECK: %[[B_DIM_OFFSET:.*]] = mul nuw nsw i64 %{{.*}}, %[[B_STRIDE]]
+    // CHECK: %[[B_OFFSET:.*]] =  add nuw nsw i64 %[[B_DIM_OFFSET]], 0
     // CHECK: %[[B_BASE_GEP:.*]] = getelementptr {{.*}}, ptr %{{.*}}, i32 0, i32 0
     // CHECK: %[[B_BASE:.*]] = load ptr, ptr %[[B_BASE_GEP]]
-    // CHECK: %[[B_VOID_ADDR:.*]] = getelementptr i8, ptr %[[B_BASE]], i64 %[[B_OFFSET]]
+    // CHECK: %[[B_VOID_ADDR:.*]] = getelementptr nusw nuw i8, ptr %[[B_BASE]], i64 %[[B_OFFSET]]
     // CHECK: %[[B_VAL:.*]] = load float, ptr %[[B_VOID_ADDR]]
     // CHECK: fadd float %[[B_VAL]], %[[F]]
     %5 = fir.array_fetch %3, %arg3 : (!fir.array<?xf32>, index) -> f32
@@ -174,7 +174,7 @@ func.func @f7(%arg0: !fir.ref<f32>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %0 = fir.shift %c4 : (index) -> !fir.shift<1>
   // CHECK: %[[STRIDE_GEP:.*]] = getelementptr {{.*}}, ptr %[[Y]], i32 0, i32 7, i32 0, i32 2
   // CHECK: %[[STRIDE:.*]] = load i64, ptr %[[STRIDE_GEP]]
-  // CHECK: mul nsw i64 96, %[[STRIDE]]
+  // CHECK: mul nuw nsw i64 96, %[[STRIDE]]
   %1 = fir.array_coor %arg1(%0) %c100 : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
   %2 = fir.load %1 : !fir.ref<f32>
   fir.store %2 to %arg0 : !fir.ref<f32>
@@ -191,7 +191,7 @@ func.func @f8(%a : !fir.ref<!fir.array<2x2x!fir.type<t{i:i32}>>>, %i : i32) {
   %1 = fir.field_index i, !fir.type<t{i:i32}>
   %2 = fir.shape %c2, %c2 : (index, index) -> !fir.shape<2>
   %3 = fir.slice %c1, %c2, %c1, %c1, %c2, %c1 path %1 : (index, index, index, index, index, index, !fir.field) -> !fir.slice<2>
-  // CHECK: %[[GEP:.*]] = getelementptr %t, ptr %[[A]], i64 0, i32 0
+  // CHECK: %[[GEP:.*]] = getelementptr nusw nuw %t, ptr %[[A]], i64 0, i32 0
   %4 = fir.array_coor %a(%2) [%3] %c1, %c1 : (!fir.ref<!fir.array<2x2x!fir.type<t{i:i32}>>>, !fir.shape<2>, !fir.slice<2>, index, index) -> !fir.ref<i32>
   // CHECK: store i32 %[[I]], ptr %[[GEP]], align 4
   fir.store %i to %4 : !fir.ref<i32>
@@ -204,8 +204,8 @@ func.func @f8(%a : !fir.ref<!fir.array<2x2x!fir.type<t{i:i32}>>>, %i : i32) {
 func.func @f9(%i: i32, %e : i64, %j: i64, %c: !fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>> {
   %s = fir.shape %e, %e : (i64, i64) -> !fir.shape<2>
   // CHECK: %[[CAST:.*]] = sext i32 %[[I]] to i64
-  // CHECK: %[[OFFSET:.*]] = mul nsw i64 %{{.*}}, %[[CAST]]
-  // CHECK: getelementptr i8, ptr %[[C]], i64 %[[OFFSET]]
+  // CHECK: %[[OFFSET:.*]] = mul nuw nsw i64 %{{.*}}, %[[CAST]]
+  // CHECK: getelementptr nusw nuw i8, ptr %[[C]], i64 %[[OFFSET]]
   %a = fir.array_coor %c(%s) %j, %j typeparams %i : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i64, i64, i32) -> !fir.ref<!fir.char<1,?>>
   return %a :  !fir.ref<!fir.char<1,?>>
 }

@@ -175,6 +175,8 @@ class LVSymbolVisitor final : public SymbolVisitorCallbacks {
     Symbol->setIsVariable();
   }
 
+  void setLocalVariableType(LVSymbol *Symbol, TypeIndex TI);
+
 public:
   LVSymbolVisitor(LVCodeViewReader *Reader, ScopedPrinter &W,
                   LVLogicalVisitor *LogicalVisitor,

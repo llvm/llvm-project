@@ -1233,12 +1233,6 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   }
 
   if (e->isArrayForm()) {
-    // This will be handled in CXXABILowering, but we can emit a better
-    // diagnostic here.
-    if (deleteTy.isDestructedType()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXDeleteExpr: array delete of destructed type");
-    }
     const FunctionDecl *operatorDelete = e->getOperatorDelete();
     cir::FuncOp operatorDeleteFn = cgm.getAddrOfFunction(operatorDelete);
     auto deleteFn =
@@ -1247,8 +1241,24 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
     auto deleteParams = cir::UsualDeleteParamsAttr::get(
         builder.getContext(), udp.Size, isAlignedAllocation(udp.Alignment),
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
+
+    mlir::FlatSymbolRefAttr elementDtor;
+    if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
+      if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
+        const CXXDestructorDecl *dtor = rd->getDestructor();
+        if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
+          cgm.errorNYI(e->getSourceRange(),
+                       "emitCXXDeleteExpr: throwing destructor");
+        cir::FuncOp dtorFn =
+            cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
+        elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
+                                                   dtorFn.getSymNameAttr());
+      }
+    }
+
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
-                               ptr.getPointer(), deleteFn, deleteParams);
+                               ptr.getPointer(), deleteFn, deleteParams,
+                               elementDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }

@@ -733,7 +733,6 @@ variables is defined below.
     * ``LIBOMPTARGET_INFO=<Num>``
     * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
     * ``LIBOMPTARGET_STACK_SIZE=<Num>``
-    * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
     * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
     * ``LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS=[TRUE/FALSE] (default FALSE)``
     * ``LIBOMPTARGET_JIT_OPT_LEVEL={0,1,2,3} (default 3)``
@@ -1059,14 +1058,6 @@ allocated using ``malloc`` and ``free`` for the CUDA plugin. This is necessary
 for some applications that allocate too much memory either through the user or
 globalization.
 
-LIBOMPTARGET_SHARED_MEMORY_SIZE
-"""""""""""""""""""""""""""""""
-
-This environment variable sets the amount of dynamic shared memory in bytes used
-by the kernel once it is launched. A pointer to the dynamic memory buffer can be
-accessed using the ``llvm_omp_target_dynamic_shared_alloc`` function. An example
-is shown in :ref:`libomptarget_dynamic_shared`.
-
 .. toctree::
    :hidden:
    :maxdepth: 1
@@ -1233,7 +1224,6 @@ Environment Variables
 
 There are several environment variables to change the behavior of the plugins:
 
-* ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
 * ``LIBOMPTARGET_STACK_SIZE``
 * ``LIBOMPTARGET_HEAP_SIZE``
 * ``LIBOMPTARGET_NUM_INITIAL_STREAMS``
@@ -1247,8 +1237,8 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
 * ``LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT``
 
-The environment variables ``LIBOMPTARGET_SHARED_MEMORY_SIZE``,
-``LIBOMPTARGET_STACK_SIZE`` and ``LIBOMPTARGET_HEAP_SIZE`` are described in
+The environment variables ``LIBOMPTARGET_STACK_SIZE`` and
+``LIBOMPTARGET_HEAP_SIZE`` are described in
 :ref:`libopenmptarget_environment_vars`.
 
 LIBOMPTARGET_NUM_INITIAL_STREAMS
@@ -1401,6 +1391,10 @@ LIBOMPTARGET_RPC_LATENCY
 """"""""""""""""""""""""
 This is the maximum amount of time the client will wait for a response from the server.
 
+.. warning::
+    The ``LIBOMPTARGET_SHARED_MEMORY_SIZE`` environment variable is not
+    supported anymore. Please use the ``dyn_groupprivate`` clause instead, as
+    shown in :ref:`libomptarget_dynamic_shared`.
 
 .. _libomptarget_libc:
 
@@ -1463,35 +1457,21 @@ IR during compilation.
 Dynamic Shared Memory
 ^^^^^^^^^^^^^^^^^^^^^
 
-The target device runtime contains a pointer to the dynamic shared memory
-buffer. This pointer can be obtained using the
+The OpenMP implementation provides access to dynamic shared memory in ``target``
+regions through the ``dyn_groupprivate`` clause, introduced in OpenMP 6.1. This
+is the preferred method to obtain dynamic shared memory. Please refer to
+the OpenMP standard documentation for more information.
+
+As an alternative, the target device runtime contains a pointer to the native
+dynamic shared memory buffer. This pointer can be obtained using the
 ``llvm_omp_target_dynamic_shared_alloc`` extension. If this function is called
 from the host it will simply return a null pointer. In order to use this buffer
 the kernel must be launched with an adequate amount of dynamic shared memory
-allocated. This can be done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
-environment variable or the ``ompx_dyn_cgroup_mem(<N>)`` target directive
-clause. Examples for both are given below.
+allocated. This can be done using the ``ompx_dyn_cgroup_mem(<N>)`` target
+directive clause. An example is given below.
 
-.. code-block:: c++
-
-    void foo() {
-      int x;
-    #pragma omp target parallel map(from : x)
-      {
-        int *buf = llvm_omp_target_dynamic_shared_alloc();
-        if (omp_get_thread_num() == 0)
-          *buf = 1;
-    #pragma omp barrier
-        if (omp_get_thread_num() == 1)
-          x = *buf;
-      }
-      assert(x == 1);
-    }
-
-.. code-block:: console
-
-    $ clang++ -fopenmp --offload-arch=sm_80 -O3 shared.c
-    $ env LIBOMPTARGET_SHARED_MEMORY_SIZE=256 ./shared
+Please notice that the ``LIBOMPTARGET_SHARED_MEMORY_SIZE`` environment variable
+is not supported anymore.
 
 .. code-block:: c++
 
@@ -1508,11 +1488,6 @@ clause. Examples for both are given below.
       }
       assert(x == 1);
     }
-
-.. code-block:: console
-
-    $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
-    $ env ./shared
 
 .. _libomptarget_device_allocator:
 

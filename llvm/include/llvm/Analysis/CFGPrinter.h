@@ -235,9 +235,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   static std::string getEdgeSourceLabel(const BasicBlock *Node,
                                         const_succ_iterator I) {
     // Label source of conditional branches with "T" or "F"
-    if (const BranchInst *BI = dyn_cast<BranchInst>(Node->getTerminator()))
-      if (BI->isConditional())
-        return (I == succ_begin(Node)) ? "T" : "F";
+    if (isa<CondBrInst>(Node->getTerminator()))
+      return (I == succ_begin(Node)) ? "T" : "F";
 
     // Label source of switch edges with the associated value.
     if (const SwitchInst *SI = dyn_cast<SwitchInst>(Node->getTerminator())) {

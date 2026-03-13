@@ -335,6 +335,22 @@ MPFRNumber MPFRNumber::log10() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::log10p1() const {
+  // TODO: Only use mpfr_log10p1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  MPFRNumber result(*this);
+  mpfr_log10p1(result.value, value, mpfr_rounding);
+  return result;
+#else
+  unsigned int prec = mpfr_precision * 3;
+  MPFRNumber result(*this, prec);
+  MPFRNumber one(1.0f, prec);
+  mpfr_add(result.value, value, one.value, mpfr_rounding);
+  mpfr_log10(result.value, result.value, mpfr_rounding);
+  return result;
+#endif
+}
+
 MPFRNumber MPFRNumber::log1p() const {
   MPFRNumber result(*this);
   mpfr_log1p(result.value, value, mpfr_rounding);

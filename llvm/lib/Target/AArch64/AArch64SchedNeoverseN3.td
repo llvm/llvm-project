@@ -1814,7 +1814,8 @@ def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[N3Write_4c_2V0], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
+def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$",
+                                         "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[N3Write_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;

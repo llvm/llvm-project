@@ -120,12 +120,10 @@ bool returnsBool() {
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
   // CHECK-FIXES: if (intSet.empty())
-  // CHECK-MESSAGES: :21:8: note: method 'set'::empty() defined here
   if (intSet == std::set<int>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness
   // CHECK-FIXES: if (intSet.empty())
-  // CHECK-MESSAGES: :21:8: note: method 'set'::empty() defined here
   if (s_func() == "")
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
@@ -459,7 +457,6 @@ class ConstructWithBoolField {
 public:
   ConstructWithBoolField(const std::vector<int> &C) : B(C.size()) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:57: warning: the 'empty' method should be used
-// CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
 // CHECK-FIXES: ConstructWithBoolField(const std::vector<int> &C) : B(!C.empty()) {}
 };
 
@@ -467,21 +464,18 @@ struct StructWithNSDMI {
   std::vector<int> C;
   bool B = C.size();
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: the 'empty' method should be used
-// CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
 // CHECK-FIXES: bool B = !C.empty();
 };
 
 int func(const std::vector<int> &C) {
   return C.size() ? 0 : 1;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
-// CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
 // CHECK-FIXES: return !C.empty() ? 0 : 1;
 }
 
 constexpr Lazy L;
 static_assert(!L.size(), "");
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: the 'empty' method should be used
-// CHECK-MESSAGES: :94:18: note: method 'Lazy'::empty() defined here
 // CHECK-FIXES: static_assert(L.empty(), "");
 
 struct StructWithLazyNoexcept {
@@ -496,7 +490,6 @@ template <typename T> void f() {
   if (v.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (!v.empty())
   if (v == std::vector<T>())
     ;
@@ -505,35 +498,29 @@ template <typename T> void f() {
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(v);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: CHECKSIZE(v);
 
   TemplatedContainer<T> templated_container;
   if (templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (!templated_container.empty())
   if (templated_container != TemplatedContainer<T>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (!templated_container.empty())
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(templated_container);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: CHECKSIZE(templated_container);
   std::basic_string<T> s;
   if (s.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: string:{{[0-9]+}}:8: note: method 'basic_string'::empty() defined here
   // CHECK-FIXES: if (!s.empty())
   if (s.length())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'length' [readability-container-size-empty]
-  // CHECK-MESSAGES: string:{{[0-9]+}}:8: note: method 'basic_string'::empty() defined here
   // CHECK-FIXES: if (!s.empty())
 }
 
@@ -549,7 +536,6 @@ bool neverInstantiatedTemplate() {
   if (v.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (!v.empty())
 
   if (v == std::vector<T>())
@@ -560,22 +546,18 @@ bool neverInstantiatedTemplate() {
   if (v.size() == 0)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (v.empty())
   if (v.size() != 0)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (!v.empty())
   if (v.size() < 1)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (v.empty())
   if (v.size() > 0)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (!v.empty())
   if (v.size() == 1)
     ;
@@ -589,91 +571,75 @@ bool neverInstantiatedTemplate() {
   if (static_cast<bool>(v.size()))
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:25: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (static_cast<bool>(!v.empty()))
   if (v.size() && false)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (!v.empty() && false)
   if (!v.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: if (v.empty())
 
   TemplatedContainer<T> templated_container;
   if (templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (!templated_container.empty())
   if (templated_container != TemplatedContainer<T>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (!templated_container.empty())
   // CHECK-FIXES-NEXT: ;
   while (templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: while (!templated_container.empty())
 
   do {
   }
   while (templated_container.size());
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: while (!templated_container.empty());
 
   for (; templated_container.size();)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:10: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: for (; !templated_container.empty();)
 
   if (true && templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (true && !templated_container.empty())
 
   if (true || templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (true || !templated_container.empty())
 
   if (!templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: if (templated_container.empty())
 
   bool b1 = templated_container.size();
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: bool b1 = !templated_container.empty();
 
   bool b2(templated_container.size());
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: bool b2(!templated_container.empty());
 
   auto b3 = static_cast<bool>(templated_container.size());
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: auto b3 = static_cast<bool>(!templated_container.empty());
 
   auto b4 = (bool)templated_container.size();
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: auto b4 = (bool)!templated_container.empty();
 
   auto b5 = bool(templated_container.size());
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: auto b5 = bool(!templated_container.empty());
 
   takesBool(templated_container.size());
@@ -682,7 +648,6 @@ bool neverInstantiatedTemplate() {
 
   return templated_container.size();
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :37:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: return !templated_container.empty();
 }
 
@@ -728,14 +693,12 @@ struct unique_ptr {
 bool call_through_unique_ptr(const std::unique_ptr<std::vector<int>> &ptr) {
   return ptr->size() > 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: return !ptr->empty();
 }
 
 bool call_through_unique_ptr_deref(const std::unique_ptr<std::vector<int>> &ptr) {
   return (*ptr).size() > 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: :12:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: return !(*ptr).empty();
 }
 
@@ -784,7 +747,6 @@ bool testArraySize(const Array& value) {
   return value.size() == 0U;
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
 // CHECK-FIXES: return value.empty();
-// CHECK-MESSAGES: :[[@LINE-25]]:8: note: method 'array'::empty() defined here
 }
 
 bool testArrayCompareToEmpty(const Array& value) {
@@ -795,7 +757,6 @@ bool testDummyType(const DummyType& value) {
   return value == DummyType();
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: the 'empty' method should be used to check for emptiness instead of comparing to an empty object [readability-container-size-empty]
 // CHECK-FIXES: return value.empty();
-// CHECK-MESSAGES: :[[@LINE-26]]:8: note: method 'DummyType'::empty() defined here
 }
 
 bool testIgnoredDummyType(const IgnoredDummyType& value) {

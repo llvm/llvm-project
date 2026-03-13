@@ -2468,11 +2468,10 @@ struct br_match {
   br_match(BasicBlock *&Succ) : Succ(Succ) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isUnconditional()) {
-        Succ = BI->getSuccessor(0);
-        return true;
-      }
+    if (auto *BI = dyn_cast<UncondBrInst>(V)) {
+      Succ = BI->getSuccessor();
+      return true;
+    }
     return false;
   }
 };
@@ -2489,8 +2488,8 @@ struct brc_match {
       : Cond(C), T(t), F(f) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isConditional() && Cond.match(BI->getCondition()))
+    if (auto *BI = dyn_cast<CondBrInst>(V))
+      if (Cond.match(BI->getCondition()))
         return T.match(BI->getSuccessor(0)) && F.match(BI->getSuccessor(1));
     return false;
   }
@@ -3028,6 +3027,20 @@ template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
 m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>

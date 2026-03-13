@@ -816,11 +816,11 @@ end subroutine mapType_common_block_members
 !CHECK: %[[GEP_DESC_PTR:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ALLOCA_0]], i32 0, i32 0
 !CHECK: %[[SZ_CALC_1:.*]] = load ptr, ptr %[[GEP_DESC_PTR]], align 8
 !CHECK: %[[SZ_CALC_2:.*]] = sub nsw i64 2, %[[LOAD_LB]]
-!CHECK: %[[SZ_CALC_3:.*]] = mul nsw i64 %[[SZ_CALC_2]], 1
-!CHECK: %[[SZ_CALC_4:.*]] = mul nsw i64 %[[SZ_CALC_3]], 1
-!CHECK: %[[SZ_CALC_5:.*]] = add nsw i64 %[[SZ_CALC_4]], 0
-!CHECK: %[[SZ_CALC_6:.*]] = mul nsw i64 1, %[[LOAD_UB]]
-!CHECK: %[[SZ_CALC_7:.*]] = getelementptr %_QFmaptype_nested_derived_type_member_idxTvertexes, ptr %[[SZ_CALC_1]], i64 %[[SZ_CALC_5]]
+!CHECK: %[[SZ_CALC_3:.*]] = mul nuw nsw i64 %[[SZ_CALC_2]], 1
+!CHECK: %[[SZ_CALC_4:.*]] = mul nuw nsw i64 %[[SZ_CALC_3]], 1
+!CHECK: %[[SZ_CALC_5:.*]] = add nuw nsw i64 %[[SZ_CALC_4]], 0
+!CHECK: %[[SZ_CALC_6:.*]] = mul nuw nsw i64 1, %[[LOAD_UB]]
+!CHECK: %[[SZ_CALC_7:.*]] = getelementptr nusw nuw %_QFmaptype_nested_derived_type_member_idxTvertexes, ptr %[[SZ_CALC_1]], i64 %[[SZ_CALC_5]]
 !CHECK: %[[SZ_CALC_8:.*]] = getelementptr %_QFmaptype_nested_derived_type_member_idxTvertexes, ptr %[[SZ_CALC_7]], i32 0, i32 2
 !CHECK: %[[OFF_PTR_4:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[SZ_CALC_8]], i32 0, i32 0
 !CHECK: %[[OFF_PTR_CALC_1:.*]] = sub i64 %[[OFF_PTR_CALC_0]], 0

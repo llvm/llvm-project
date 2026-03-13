@@ -2471,3 +2471,31 @@ void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
     llvm::sys::path::remove_dots(NormalizedPath);
   }
 }
+
+static std::string createSpecificModuleCachePathImpl(
+    FileManager &FileMgr, StringRef ModuleCachePath, bool DisableModuleHash,
+    std::string ContextHash, size_t &NormalizedModuleCachePathLen) {
+  SmallString<256> SpecificModuleCachePath;
+  normalizeModuleCachePath(FileMgr, ModuleCachePath, SpecificModuleCachePath);
+  NormalizedModuleCachePathLen = SpecificModuleCachePath.size();
+  if (!SpecificModuleCachePath.empty() && !DisableModuleHash)
+    llvm::sys::path::append(SpecificModuleCachePath, ContextHash);
+  return std::string(SpecificModuleCachePath);
+}
+
+void HeaderSearch::initializeModuleCachePath(std::string NewContextHash) {
+  ContextHash = std::move(NewContextHash);
+  SpecificModuleCachePath = createSpecificModuleCachePathImpl(
+      FileMgr, HSOpts.ModuleCachePath, HSOpts.DisableModuleHash, ContextHash,
+      NormalizedModuleCachePathLen);
+}
+
+std::string clang::createSpecificModuleCachePath(FileManager &FileMgr,
+                                                 StringRef ModuleCachePath,
+                                                 bool DisableModuleHash,
+                                                 std::string ContextHash) {
+  size_t NormalizedModuleCachePathLen;
+  return createSpecificModuleCachePathImpl(
+      FileMgr, ModuleCachePath, DisableModuleHash, std::move(ContextHash),
+      NormalizedModuleCachePathLen);
+}

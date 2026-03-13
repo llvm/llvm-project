@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -341,6 +342,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   //===--------------------------------------------------------------------===//
   // Transformation Hooks
   //===--------------------------------------------------------------------===//
+
+  /// Handle the given inlined terminator by replacing it with a new operation
+  /// as necessary (multi-block inlining case: replace test.return with a
+  /// branch to the successor block that carries the inlined results).
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    auto returnOp = dyn_cast<TestReturnOp>(op);
+    if (!returnOp)
+      return;
+    OpBuilder builder(op);
+    cf::BranchOp::create(builder, op->getLoc(), newDest,
+                         returnOp.getOperands());
+    op->erase();
+  }
 
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.

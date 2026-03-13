@@ -274,7 +274,8 @@ enum LoweringMethodID {
   AextToS32InIncomingBlockGPHI,
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
-  ApplyINTRIN_IMAGE
+  ApplyINTRIN_IMAGE,
+  SplitFFB64To32
 };
 
 enum FastRulesTypes {

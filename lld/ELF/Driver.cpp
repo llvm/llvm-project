@@ -3020,6 +3020,13 @@ static void readSecurityNotes(Ctx &ctx) {
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
     }
+    if (ctx.arg.zGcs == GcsPolicy::Always &&
+        !(features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)) {
+      if (ctx.arg.zGcsReport == ReportPolicy::None)
+        Warn(ctx) << f
+                  << ": -z gcs: file does not have "
+                     "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
+    }
     if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
                              (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
       Warn(ctx) << f

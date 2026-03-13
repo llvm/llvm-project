@@ -7780,7 +7780,7 @@ bool LLParser::parseBr(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   if (BasicBlock *BB = dyn_cast<BasicBlock>(Op0)) {
-    Inst = BranchInst::Create(BB);
+    Inst = UncondBrInst::Create(BB);
     return false;
   }
 
@@ -7793,7 +7793,7 @@ bool LLParser::parseBr(Instruction *&Inst, PerFunctionState &PFS) {
       parseTypeAndBasicBlock(Op2, Loc2, PFS))
     return true;
 
-  Inst = BranchInst::Create(Op1, Op2, Op0);
+  Inst = CondBrInst::Create(Op0, Op1, Op2);
   return false;
 }
 

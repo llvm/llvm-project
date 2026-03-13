@@ -14,4 +14,5 @@ Expression                     Replacement
 ``x && !(x & (x - 1))``        ``std::has_one_bit(x)``
 ``(x != 0) && !(x & (x - 1))`` ``std::has_one_bit(x)``
 ``(x > 0) && !(x & (x - 1))``  ``std::has_one_bit(x)``
+``std::bitset<N>(x).count()``  ``std::popcount(x)``
 ============================== =======================

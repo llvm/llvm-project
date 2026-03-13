@@ -1546,7 +1546,8 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 /// If all arguments of the intrinsic are reverses, try to pull the reverse
 /// after the intrinsic.
 Value *InstCombinerImpl::foldReversedIntrinsicOperands(IntrinsicInst *II) {
-  if (!isTriviallyVectorizable(II->getIntrinsicID()))
+  if (!II->getType()->isVectorTy() ||
+      !isTriviallyVectorizable(II->getIntrinsicID()))
     return nullptr;
 
   // At least 1 operand must be a reverse with 1 use because we are creating 2

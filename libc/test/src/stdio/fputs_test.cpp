@@ -8,6 +8,8 @@
 
 #include "src/__support/File/file.h"
 #include "src/stdio/fputs.h"
+#include "src/stdio/stderr.h"
+#include "src/stdio/stdout.h"
 
 #include "test/UnitTest/Test.h"
 

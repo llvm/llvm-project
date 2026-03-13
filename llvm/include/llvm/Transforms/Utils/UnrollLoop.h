@@ -119,6 +119,25 @@ LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
 LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+LLVM_ABI MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name);
+
+// Returns true if the loop has an unroll(full) pragma.
+LLVM_ABI bool hasUnrollFullPragma(const Loop *L);
+
+// Returns true if the loop has an unroll(enable) pragma. This metadata is used
+// for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
+LLVM_ABI bool hasUnrollEnablePragma(const Loop *L);
+
+// Returns true if the loop has an runtime unroll(disable) pragma.
+LLVM_ABI bool hasRuntimeUnrollDisablePragma(const Loop *L);
+
+// If loop has an unroll_count pragma return the (necessarily
+// positive) value from the pragma.  Otherwise return 0.
+LLVM_ABI unsigned unrollCountPragmaValue(const Loop *L);
+
 LLVM_ABI TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
     BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,

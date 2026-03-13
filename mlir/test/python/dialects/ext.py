@@ -43,7 +43,7 @@ def testMyInt():
     # CHECK:     irdl.results(res: %0)
     # CHECK:   }
     # CHECK: }
-    with Context(), Location.unknown():
+    with Context():
         MyInt.load()
         print(MyInt._mlir_module)
 
@@ -51,13 +51,14 @@ def testMyInt():
         print([i._op_name for i in MyInt.operations])
         i32 = IntegerType.get_signless(32)
 
-        module = Module.create()
-        with InsertionPoint(module.body):
-            two = ConstantOp(IntegerAttr.get(i32, 2))
-            three = ConstantOp(IntegerAttr.get(i32, 3))
-            add1 = AddOp(two, three)
-            add2 = AddOp(add1, two)
-            add3 = AddOp(add2, three)
+        with Location.unknown():
+            module = Module.create()
+            with InsertionPoint(module.body):
+                two = ConstantOp(IntegerAttr.get(i32, 2))
+                three = ConstantOp(IntegerAttr.get(i32, 3))
+                add1 = AddOp(two, three)
+                add2 = AddOp(add1, two)
+                add3 = AddOp(add2, three)
 
         # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
         # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32

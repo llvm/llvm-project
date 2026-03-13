@@ -68,6 +68,24 @@ cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
   return cuf::getDataAttribute(mlirContext, cudaAttr);
 }
 
+mlir::Value Fortran::lower::genCUFAlloc(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Type type,
+                                        llvm::StringRef uniqName,
+                                        llvm::StringRef bindcName,
+                                        cuf::DataAttributeAttr dataAttr,
+                                        mlir::ValueRange lenParams,
+                                        mlir::ValueRange extents) {
+  llvm::SmallVector<mlir::Value> elidedExtents =
+      fir::factory::elideExtentsAlreadyInType(type, extents);
+  llvm::SmallVector<mlir::Value> elidedLenParams =
+      fir::factory::elideLengthsAlreadyInType(type, lenParams);
+  auto idxTy = builder.getIndexType();
+  for (mlir::Value &ext : elidedExtents)
+    ext = builder.createConvert(loc, idxTy, ext);
+  return cuf::AllocOp::create(builder, loc, type, uniqName, bindcName, dataAttr,
+                              elidedLenParams, elidedExtents);
+}
+
 std::pair<hlfir::ElementalOp, hlfir::ElementalOp>
 Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
   auto isCopyElementalOp = [](hlfir::ElementalOp elOp) {

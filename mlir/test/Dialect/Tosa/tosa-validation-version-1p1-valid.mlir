@@ -215,6 +215,102 @@ func.func @test_scatter_bool_i32(%arg0: tensor<13x52x3xi1>, %arg1: tensor<13x26x
 
 // -----
 
+// CHECK-LABEL: test_gather_i8_i32_indices
+func.func @test_gather_i8_i32_indices(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi8> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi8>, tensor<13x26xi32>) -> tensor<13x26x3xi8>
+  return %0 : tensor<13x26x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i8_i32_indices
+func.func @test_scatter_i8_i32_indices(%arg0: tensor<13x27x3xi8>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi8>) -> tensor<13x27x3xi8> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi8>, tensor<13x26xi32>, tensor<13x26x3xi8>) -> tensor<13x27x3xi8>
+  return %0 : tensor<13x27x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i16_i32_indices
+func.func @test_gather_i16_i32_indices(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi16> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi16>, tensor<13x26xi32>) -> tensor<13x26x3xi16>
+  return %0 : tensor<13x26x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i16_i32_indices
+func.func @test_scatter_i16_i32_indices(%arg0: tensor<13x27x3xi16>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi16>) -> tensor<13x27x3xi16> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi16>, tensor<13x26xi32>, tensor<13x26x3xi16>) -> tensor<13x27x3xi16>
+  return %0 : tensor<13x27x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i32_i32_indices
+func.func @test_gather_i32_i32_indices(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi32> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x26xi32>) -> tensor<13x26x3xi32>
+  return %0 : tensor<13x26x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i32_i32_indices
+func.func @test_scatter_i32_i32_indices(%arg0: tensor<13x27x3xi32>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi32>) -> tensor<13x27x3xi32> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi32>, tensor<13x26xi32>, tensor<13x26x3xi32>) -> tensor<13x27x3xi32>
+  return %0 : tensor<13x27x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i8_i64_indices
+func.func @test_gather_i8_i64_indices(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi8> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi8>, tensor<13x26xi64>) -> tensor<13x26x3xi8>
+  return %0 : tensor<13x26x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i8_i64_indices
+func.func @test_scatter_i8_i64_indices(%arg0: tensor<13x27x3xi8>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi8>) -> tensor<13x27x3xi8> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi8>, tensor<13x26xi64>, tensor<13x26x3xi8>) -> tensor<13x27x3xi8>
+  return %0 : tensor<13x27x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i16_i64_indices
+func.func @test_gather_i16_i64_indices(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi16> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi16>, tensor<13x26xi64>) -> tensor<13x26x3xi16>
+  return %0 : tensor<13x26x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i16_i64_indices
+func.func @test_scatter_i16_i64_indices(%arg0: tensor<13x27x3xi16>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi16>) -> tensor<13x27x3xi16> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi16>, tensor<13x26xi64>, tensor<13x26x3xi16>) -> tensor<13x27x3xi16>
+  return %0 : tensor<13x27x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i32_i64_indices
+func.func @test_gather_i32_i64_indices(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi32> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x26xi64>) -> tensor<13x26x3xi32>
+  return %0 : tensor<13x26x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i32_i64_indices
+func.func @test_scatter_i32_i64_indices(%arg0: tensor<13x27x3xi32>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi32>) -> tensor<13x27x3xi32> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi32>, tensor<13x26xi64>, tensor<13x26x3xi32>) -> tensor<13x27x3xi32>
+  return %0 : tensor<13x27x3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: test_cast_bool_fp32
 func.func @test_cast_bool_fp32(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xf32> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xf32>

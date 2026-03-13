@@ -450,4 +450,29 @@ def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
+def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
+  let summary = "Specialize `acc routine` functions for device";
+  let description = [{
+    This pass handles `acc routine` directive by creating specialized
+    functions with appropriate parallelism information that can be used for
+    eventual creation of device function.
+
+    For each acc.routine that is not bound by name, the pass creates a new
+    function (the "device" copy) whose body is a single acc.compute_region
+    containing a clone of the original (host) function body. Parallelism is
+    expressed by one acc.par_width derived from the routine's clauses (seq,
+    vector, worker, gang). The pass does not use acc.kernel_environment. It
+    sets acc.specialized_routine on the new function and updates the
+    acc.routine's func_name to point to it. For nohost routines, all uses of
+    the host symbol are replaced with the device symbol and the host function
+    is erased. Routines with bind(name) and external functions are skipped.
+  }];
+  let dependentDialects = [
+    "mlir::acc::OpenACCDialect",
+    "mlir::func::FuncDialect",
+    "mlir::scf::SCFDialect"
+  ];
+  let options = [ AccDeviceTypeOption ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

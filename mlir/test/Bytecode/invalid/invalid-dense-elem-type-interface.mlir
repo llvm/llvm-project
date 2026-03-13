@@ -2,9 +2,9 @@
 
 // Regression test: test-kind=2 replaces i32 with !test.i32 (a type that does
 // not implement DenseElementTypeInterface). This should produce a proper error
-// instead of an assertion failure when deserializing DenseIntOrFPElementsAttr.
+// instead of an assertion failure when deserializing DenseTypedElementsAttr.
 
-// CHECK: DenseIntOrFPElementsAttr element type must implement DenseElementTypeInterface, but got: '!test.i32'
+// CHECK: DenseTypedElementsAttr element type must implement DenseElementTypeInterface, but got: '!test.i32'
 // CHECK: failed to read bytecode
 
 module {

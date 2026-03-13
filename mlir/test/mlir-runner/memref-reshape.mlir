@@ -2,6 +2,7 @@
 // RUN: | mlir-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils \
 // RUN: | FileCheck %s
+// XFAIL: system-aix
 
 
 func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }

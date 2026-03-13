@@ -28,19 +28,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include <cstdint>
+#include <cstddef>
 #include <memory>
 
 namespace clang::lifetimes {
-
-// TODO: Deprecate and remove Confidence as this is no more used as a
-// differentiator between strict and permissive warnings.
-/// Enum to track the confidence level of a potential error.
-enum class Confidence : uint8_t {
-  None,
-  Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
-  Definite // Reported as a definite error (-Wlifetime-safety-permissive)
-};
 
 struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
@@ -70,14 +61,13 @@ public:
   virtual ~LifetimeSafetySemaHelper() = default;
 
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  const Expr *MovedExpr, SourceLocation FreeLoc,
-                                  Confidence Confidence) {}
+                                  const Expr *MovedExpr,
+                                  SourceLocation FreeLoc) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
                                     const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc,
-                                    Confidence Confidence) {}
+                                    SourceLocation ExpiryLoc) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,

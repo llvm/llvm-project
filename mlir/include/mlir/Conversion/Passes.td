@@ -1005,12 +1005,16 @@ def ConvertMemRefToSPIRVPass : Pass<"convert-memref-to-spirv"> {
 def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
   let summary = "Convert Shard dialect to MPI dialect.";
   let description = [{
-    This pass converts communication operations from the Shard dialect to the
-    MPI dialect.
-    If it finds the DLTI attribute "MPI:comm_world-rank" on the module it will
-    use that integer value instead of calling MPI_Comm_rank. This allows
-    optimizations like constant shape propagation and fusion because
-    shard/partition sizes depend on the rank.
+    This pass lowers communication operations from the Shard dialect to the MPI dialect.
+    If the module contains the DLTI attribute "MPI:comm_world-rank", its integer value is
+    used as the rank instead of calling MPI_Comm_rank. This enables optimizations such as
+    constant shape propagation and fusion, since shard and partition sizes can be
+    determined from the rank.
+    For some operations the conversion may require intermediate memref allocations.
+    For compatibility with the buffer deallocation pipeline, these allocations are only
+    deallocated when the lowered operations return buffers. When the operation was
+    defined in tensor-land, no explicit deallocation is performed. This means that the
+    deallocation must be handled by different means, e.g. by the deallocation pipeline.
   }];
   let dependentDialects = [
     "affine::AffineDialect",

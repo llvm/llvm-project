@@ -897,17 +897,15 @@ void Interpreter::visitUnreachableInst(UnreachableInst &I) {
   report_fatal_error("Program executed an 'unreachable' instruction!");
 }
 
-void Interpreter::visitBranchInst(BranchInst &I) {
+void Interpreter::visitUncondBrInst(UncondBrInst &I) {
   ExecutionContext &SF = ECStack.back();
-  BasicBlock *Dest;
+  SwitchToNewBasicBlock(I.getSuccessor(), SF);
+}
 
-  Dest = I.getSuccessor(0);          // Uncond branches have a fixed dest...
-  if (!I.isUnconditional()) {
-    Value *Cond = I.getCondition();
-    if (getOperandValue(Cond, SF).IntVal == 0) // If false cond...
-      Dest = I.getSuccessor(1);
-  }
-  SwitchToNewBasicBlock(Dest, SF);
+void Interpreter::visitCondBrInst(CondBrInst &I) {
+  ExecutionContext &SF = ECStack.back();
+  bool Cond = getOperandValue(I.getCondition(), SF).IntVal != 0;
+  SwitchToNewBasicBlock(I.getSuccessor(Cond ? 0 : 1), SF);
 }
 
 void Interpreter::visitSwitchInst(SwitchInst &I) {

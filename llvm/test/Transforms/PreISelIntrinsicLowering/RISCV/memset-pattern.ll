@@ -4,14 +4,14 @@
 define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_1(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 1
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -22,14 +22,14 @@ define void @memset_pattern_i128_1(ptr %a, i128 %value) nounwind {
 define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_16(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    br i1 false, label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    br label %[[LOADSTORELOOP:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LOADSTORELOOP]], label %[[SPLIT:.*]]
 ; CHECK:       [[SPLIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -40,8 +40,8 @@ define void @memset_pattern_i128_16(ptr %a, i128 %value) nounwind {
 define void @memset_pattern_i127_x(ptr %a, i127 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i127_x(
 ; CHECK-SAME: ptr [[A:%.*]], i127 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i127, ptr [[A]], i64 [[TMP3]]
@@ -59,8 +59,8 @@ define void @memset_pattern_i127_x(ptr %a, i127 %value, i64 %x) nounwind {
 define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i128_x(
 ; CHECK-SAME: ptr [[A:%.*]], i128 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP2]]
@@ -78,8 +78,8 @@ define void @memset_pattern_i128_x(ptr %a, i128 %value, i64 %x) nounwind {
 define void @memset_pattern_i256_x(ptr %a, i256 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i256_x(
 ; CHECK-SAME: ptr [[A:%.*]], i256 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP6:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i256, ptr [[A]], i64 [[TMP2]]
@@ -99,8 +99,8 @@ define void @memset_pattern_i256_x(ptr %a, i256 %value, i64 %x) nounwind {
 define void @memset_pattern_i15_x_alignment(ptr %a, i15 %value, i64 %x) nounwind {
 ; CHECK-LABEL: define void @memset_pattern_i15_x_alignment(
 ; CHECK-SAME: ptr [[A:%.*]], i15 [[VALUE:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SPLIT:.*]], label %[[LOADSTORELOOP:.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i15, ptr [[A]], i64 [[TMP3]]
@@ -109,8 +109,8 @@ define void @memset_pattern_i15_x_alignment(ptr %a, i15 %value, i64 %x) nounwind
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], [[X]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[LOADSTORELOOP]], label %[[SPLIT]]
 ; CHECK:       [[SPLIT]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 0, [[X]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[SPLIT1:.*]], label %[[LOADSTORELOOP2:.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOADSTORELOOP2:.*]], label %[[SPLIT1:.*]]
 ; CHECK:       [[LOADSTORELOOP2]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi i64 [ 0, %[[SPLIT]] ], [ [[TMP9:%.*]], %[[LOADSTORELOOP2]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i15, ptr [[A]], i64 [[TMP11]]

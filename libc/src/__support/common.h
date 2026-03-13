@@ -22,6 +22,10 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+#ifndef LLVM_LIBC_VARIABLE_ATTR
+#define LLVM_LIBC_VARIABLE_ATTR
+#endif
+
 // clang-format off
 // Allow each function `func` to have extra attributes specified by defining:
 // `LLVM_LIBC_FUNCTION_ATTR_func` macro, which should always start with
@@ -63,6 +67,31 @@
 // This extra layer of macro allows `name` to be a macro to rename a function.
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
+
+// At the moment, [[gnu::alias()]] is not supported on MacOS, and it is needed
+// to cleanly export and alias the C++ symbol `LIBC_NAMESPACE::func` with the C
+// symbol `func`.  So for public packaging on MacOS, we will only export the C
+// symbol.  Moreover, a C symbol `func` in macOS is mangled as `_func`.
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_COMPILER_IS_MSVC)
+#ifndef __APPLE__
+#define LLVM_LIBC_VARIABLE_IMPL(type, name)                                    \
+  LLVM_LIBC_ATTR(name)                                                         \
+  extern LLVM_LIBC_VARIABLE_ATTR decltype(LIBC_NAMESPACE::name)                \
+      __##name##_impl__ asm(#name);                                            \
+  extern decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];            \
+  type __##name##_impl__
+#else // __APPLE__
+#define LLVM_LIBC_VARIABLE_IMPL(type, name)                                    \
+  LLVM_LIBC_ATTR(name)                                                         \
+  extern LLVM_LIBC_VARIABLE_ATTR decltype(LIBC_NAMESPACE::name) name asm(      \
+      "_" #name);                                                              \
+  type name
+#endif // __APPLE__
+#else  // LIBC_COPT_PUBLIC_PACKAGING
+#define LLVM_LIBC_VARIABLE_IMPL(type, name) type name
+#endif // LIBC_COPT_PUBLIC_PACKAGING
+
+#define LLVM_LIBC_VARIABLE(type, name) LLVM_LIBC_VARIABLE_IMPL(type, name)
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
