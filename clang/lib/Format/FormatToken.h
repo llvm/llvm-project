@@ -593,9 +593,6 @@ public:
   /// The first token in set of column elements.
   bool StartsColumn = false;
 
-  /// This notes the start of the line of an array initializer.
-  bool ArrayInitializerLineStart = false;
-
   /// This starts an array initializer.
   bool IsArrayInitializer = false;
 
@@ -882,6 +879,11 @@ public:
   /// list that should be indented with a block indent.
   [[nodiscard]] bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
 
+  /// Returns \c true if this tokens starts an array initializer that needs to
+  /// have it's elements be aligned
+  [[nodiscard]] bool
+  opensAlignedArrayInitializer(const FormatStyle &Style) const;
+
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
   bool isCppStructuredBinding(bool IsCpp) const {
@@ -900,6 +902,11 @@ public:
     if (is(TT_TemplateString) && closesScope())
       return true;
     return MatchingParen && MatchingParen->opensBlockOrBlockTypeList(Style);
+  }
+
+  /// Same as opensAlignedArrayInitializer, but for the closing token.
+  bool closesAlignedArrayInitializer(const FormatStyle &Style) const {
+    return MatchingParen && MatchingParen->opensAlignedArrayInitializer(Style);
   }
 
   /// Return the actual namespace token, if this token starts a namespace
