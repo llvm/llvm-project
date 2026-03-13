@@ -1499,12 +1499,7 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
 }
 
 bool WebAssemblyFastISel::selectBr(const Instruction *I) {
-  const auto *Br = cast<BranchInst>(I);
-  if (Br->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.getMBB(Br->getSuccessor(0));
-    fastEmitBranch(MSucc, Br->getDebugLoc());
-    return true;
-  }
+  const auto *Br = cast<CondBrInst>(I);
 
   MachineBasicBlock *TBB = FuncInfo.getMBB(Br->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(Br->getSuccessor(1));

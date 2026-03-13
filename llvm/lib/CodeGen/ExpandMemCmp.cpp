@@ -390,17 +390,14 @@ void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
     // next LoadCmpBlock,
     Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, Diff,
                                     ConstantInt::get(Diff->getType(), 0));
-    BranchInst *CmpBr =
-        BranchInst::Create(EndBlock, LoadCmpBlocks[BlockIndex + 1], Cmp);
-    Builder.Insert(CmpBr);
+    Builder.CreateCondBr(Cmp, EndBlock, LoadCmpBlocks[BlockIndex + 1]);
     if (DTU)
       DTU->applyUpdates(
           {{DominatorTree::Insert, BB, EndBlock},
            {DominatorTree::Insert, BB, LoadCmpBlocks[BlockIndex + 1]}});
   } else {
     // The last block has an unconditional branch to EndBlock.
-    BranchInst *CmpBr = BranchInst::Create(EndBlock);
-    Builder.Insert(CmpBr);
+    Builder.CreateBr(EndBlock);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, BB, EndBlock}});
   }
@@ -488,7 +485,7 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // Early exit branch if difference found to ResultBlock. Otherwise,
   // continue to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
+  CondBrInst *CmpBr = CondBrInst::Create(Cmp, ResBlock.BB, NextBB);
   setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
                                               CI->getFunction());
   Builder.Insert(CmpBr);
@@ -554,7 +551,7 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // Early exit branch if difference found to ResultBlock. Otherwise, continue
   // to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
-  BranchInst *CmpBr = BranchInst::Create(NextBB, ResBlock.BB, Cmp);
+  CondBrInst *CmpBr = CondBrInst::Create(Cmp, NextBB, ResBlock.BB);
   setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
                                               CI->getFunction());
   Builder.Insert(CmpBr);
@@ -582,7 +579,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
     Builder.SetInsertPoint(ResBlock.BB, InsertPt);
     Value *Res = ConstantInt::get(Type::getInt32Ty(CI->getContext()), 1);
     PhiRes->addIncoming(Res, ResBlock.BB);
-    BranchInst *NewBr = BranchInst::Create(EndBlock);
+    UncondBrInst *NewBr = UncondBrInst::Create(EndBlock);
     Builder.Insert(NewBr);
     if (DTU)
       DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
@@ -601,7 +598,7 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
                                               DEBUG_TYPE, CI->getFunction());
 
   PhiRes->addIncoming(Res, ResBlock.BB);
-  BranchInst *NewBr = BranchInst::Create(EndBlock);
+  UncondBrInst *NewBr = UncondBrInst::Create(EndBlock);
   Builder.Insert(NewBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, ResBlock.BB, EndBlock}});
