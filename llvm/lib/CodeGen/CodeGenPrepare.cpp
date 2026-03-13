@@ -854,8 +854,7 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
     if (DT && !DT->isReachableFromEntry(BB))
       continue;
 
-    BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
-    if (Term && !Term->isConditional()) {
+    if (isa<UncondBrInst>(SinglePred->getTerminator())) {
       Changed = true;
       LLVM_DEBUG(dbgs() << "To merge:\n" << *BB << "\n\n\n");
 
@@ -885,8 +884,8 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
 /// Find a destination block from BB if BB is mergeable empty block.
 BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
   // If this block doesn't end with an uncond branch, ignore it.
-  BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isUnconditional())
+  UncondBrInst *BI = dyn_cast<UncondBrInst>(BB->getTerminator());
+  if (!BI)
     return nullptr;
 
   // If the instruction before the branch (skipping debug info) isn't a phi
@@ -899,7 +898,7 @@ BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
   }
 
   // Do not break infinite loops.
-  BasicBlock *DestBB = BI->getSuccessor(0);
+  BasicBlock *DestBB = BI->getSuccessor();
   if (DestBB == BB)
     return nullptr;
 
@@ -1121,8 +1120,8 @@ static void replaceAllUsesWith(Value *Old, Value *New,
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
 void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
-  BranchInst *BI = cast<BranchInst>(BB->getTerminator());
-  BasicBlock *DestBB = BI->getSuccessor(0);
+  UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
+  BasicBlock *DestBB = BI->getSuccessor();
 
   LLVM_DEBUG(dbgs() << "MERGING MOSTLY EMPTY BLOCKS - BEFORE:\n"
                     << *BB << *DestBB);
@@ -1939,10 +1938,10 @@ static bool foldICmpWithDominatingICmp(CmpInst *Cmp,
   if (Pred != ICmpInst::ICMP_EQ)
     return false;
 
-  // If icmp eq has users other than BranchInst and SelectInst, converting it to
+  // If icmp eq has users other than CondBrInst and SelectInst, converting it to
   // icmp slt/sgt would introduce more redundant LLVM IR.
   for (User *U : Cmp->users()) {
-    if (isa<BranchInst>(U))
+    if (isa<CondBrInst>(U))
       continue;
     if (isa<SelectInst>(U) && cast<SelectInst>(U)->getCondition() == Cmp)
       continue;
@@ -1981,8 +1980,7 @@ static bool foldICmpWithDominatingICmp(CmpInst *Cmp,
   // Res = (a < b) ? <LT_RES> : (a > b)  ? <GT_RES> : <EQ_RES>;
   // And similarly for branches.
   for (User *U : Cmp->users()) {
-    if (auto *BI = dyn_cast<BranchInst>(U)) {
-      assert(BI->isConditional() && "Must be conditional");
+    if (auto *BI = dyn_cast<CondBrInst>(U)) {
       BI->swapSuccessors();
       continue;
     }
@@ -3087,8 +3085,8 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   for (auto const &TailCallBB : TailCallBBs) {
     // Make sure the call instruction is followed by an unconditional branch to
     // the return block.
-    BranchInst *BI = dyn_cast<BranchInst>(TailCallBB->getTerminator());
-    if (!BI || !BI->isUnconditional() || BI->getSuccessor(0) != BB)
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(TailCallBB->getTerminator());
+    if (!BI || BI->getSuccessor() != BB)
       continue;
 
     // Duplicate the return into TailCallBB.
@@ -7793,28 +7791,28 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   BasicBlock *TrueBlock = nullptr;
   BasicBlock *FalseBlock = nullptr;
   BasicBlock *EndBlock = nullptr;
-  BranchInst *TrueBranch = nullptr;
-  BranchInst *FalseBranch = nullptr;
+  UncondBrInst *TrueBranch = nullptr;
+  UncondBrInst *FalseBranch = nullptr;
   if (TrueInstrs.size() == 0) {
-    FalseBranch = cast<BranchInst>(SplitBlockAndInsertIfElse(
+    FalseBranch = cast<UncondBrInst>(SplitBlockAndInsertIfElse(
         CondFr, SplitPt, false, nullptr, nullptr, LI));
     FalseBlock = FalseBranch->getParent();
     EndBlock = cast<BasicBlock>(FalseBranch->getOperand(0));
   } else if (FalseInstrs.size() == 0) {
-    TrueBranch = cast<BranchInst>(SplitBlockAndInsertIfThen(
+    TrueBranch = cast<UncondBrInst>(SplitBlockAndInsertIfThen(
         CondFr, SplitPt, false, nullptr, nullptr, LI));
     TrueBlock = TrueBranch->getParent();
-    EndBlock = cast<BasicBlock>(TrueBranch->getOperand(0));
+    EndBlock = TrueBranch->getSuccessor();
   } else {
     Instruction *ThenTerm = nullptr;
     Instruction *ElseTerm = nullptr;
     SplitBlockAndInsertIfThenElse(CondFr, SplitPt, &ThenTerm, &ElseTerm,
                                   nullptr, nullptr, LI);
-    TrueBranch = cast<BranchInst>(ThenTerm);
-    FalseBranch = cast<BranchInst>(ElseTerm);
+    TrueBranch = cast<UncondBrInst>(ThenTerm);
+    FalseBranch = cast<UncondBrInst>(ElseTerm);
     TrueBlock = TrueBranch->getParent();
     FalseBlock = FalseBranch->getParent();
-    EndBlock = cast<BasicBlock>(TrueBranch->getOperand(0));
+    EndBlock = TrueBranch->getSuccessor();
   }
 
   EndBlock->setName("select.end");
@@ -9304,7 +9302,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
                m_Br(m_OneUse(m_Instruction(LogicOp)), TBB, FBB)))
       continue;
 
-    auto *Br1 = cast<BranchInst>(BB.getTerminator());
+    auto *Br1 = cast<CondBrInst>(BB.getTerminator());
     if (Br1->getMetadata(LLVMContext::MD_unpredictable))
       continue;
 

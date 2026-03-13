@@ -167,8 +167,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
       // if region and potentially even PHI itself, saving on both divergence
       // and registers used for the PHI.
       // Add a small bonus for each of such "if" statements.
-      if (const BranchInst *Br = dyn_cast<BranchInst>(&I)) {
-        if (UP.Threshold < MaxBoost && Br->isConditional()) {
+      if (const CondBrInst *Br = dyn_cast<CondBrInst>(&I)) {
+        if (UP.Threshold < MaxBoost) {
           BasicBlock *Succ0 = Br->getSuccessor(0);
           BasicBlock *Succ1 = Br->getSuccessor(1);
           if ((L->contains(Succ0) && L->isLoopExiting(Succ0)) ||
