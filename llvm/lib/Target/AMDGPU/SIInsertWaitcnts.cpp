@@ -510,6 +510,7 @@ private:
   MachineLoopInfo &MLI;
   MachinePostDominatorTree &PDT;
   AliasAnalysis *AA = nullptr;
+  MachineFunction &MF;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -535,8 +536,8 @@ private:
 
 public:
   SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
-                   AliasAnalysis *AA)
-      : MLI(MLI), PDT(PDT), AA(AA) {
+                   AliasAnalysis *AA, MachineFunction &MF)
+      : MLI(MLI), PDT(PDT), AA(AA), MF(MF) {
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
@@ -551,7 +552,7 @@ public:
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool isDSRead(const MachineInstr &MI) const;
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
-  bool run(MachineFunction &MF);
+  bool run();
 
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
@@ -3602,7 +3603,7 @@ bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
 
-  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
+  return SIInsertWaitcnts(MLI, PDT, AA, MF).run();
 }
 
 PreservedAnalyses
@@ -3614,7 +3615,7 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
                  .getManager()
                  .getCachedResult<AAManager>(MF.getFunction());
 
-  if (!SIInsertWaitcnts(MLI, PDT, AA).run(MF))
+  if (!SIInsertWaitcnts(MLI, PDT, AA, MF).run())
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()
@@ -3622,7 +3623,7 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
       .preserve<AAManager>();
 }
 
-bool SIInsertWaitcnts::run(MachineFunction &MF) {
+bool SIInsertWaitcnts::run() {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
