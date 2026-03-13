@@ -726,7 +726,7 @@ protected:
       Builder.defineMacro("__STDC_NO_THREADS__");
     }
 
-    if (Opts.EnableAIXExtendedAltivecABI)
+    if (this->getABI() == "vec-extabi")
       Builder.defineMacro("__EXTABI__");
 
     VersionTuple OsVersion = Triple.getOSVersion();

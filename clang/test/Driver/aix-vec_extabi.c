@@ -9,8 +9,8 @@
 // RUN:  %clang -### -target powerpc-unknown-aix -S -maltivec -mabi=vec-extabi %s 2>&1 | \
 // RUN:  FileCheck %s --check-prefix=EXTABI
 /
-// EXTABI:       "-cc1"
-// EXTABI-SAME:  "-mabi=vec-extabi"
+// EXTABI:       "-target-abi"
+// EXTABI-SAME:  "vec-extabi"
 
-// DFLTABI:      "-cc1"
-// DFLTABI-NOT:  "-mabi=vec-extabi"
+// DFLTABI-NOT:  "-target-abi"
+// DFLTABI-NOT:  "vec-extabi"
