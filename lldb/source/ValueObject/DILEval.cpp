@@ -667,12 +667,9 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
           m_expr, "arithmetic on pointers to void", location);
     }
     // Compare canonical unqualified pointer types.
-    CompilerType lhs_unqualified_type =
-        lhs_type.GetCanonicalType().GetFullyUnqualifiedType();
-    CompilerType rhs_unqualified_type =
-        rhs_type.GetCanonicalType().GetFullyUnqualifiedType();
-    bool comparable = lhs_unqualified_type.CompareTypes(rhs_unqualified_type);
-    if (!comparable) {
+    CompilerType lhs_unqualified_type = lhs_type.GetCanonicalType();
+    CompilerType rhs_unqualified_type = rhs_type.GetCanonicalType();
+    if (!lhs_unqualified_type.CompareTypes(rhs_unqualified_type)) {
       std::string errMsg = llvm::formatv(
           "'{0}' and '{1}' are not pointers to compatible types",
           orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
@@ -687,6 +684,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     int64_t item_size = *lhs_byte_size;
     int64_t diff = static_cast<int64_t>(lhs->GetValueAsUnsigned(0) -
                                         rhs->GetValueAsUnsigned(0));
+    assert(item_size > 0 && "Pointer size cannot be 0");
     if (diff % item_size != 0) {
       // If address difference isn't divisible by pointee size then performing
       // the operation is undefined behaviour.
@@ -699,14 +697,14 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
         GetTypeSystemFromCU(m_exe_ctx_scope);
     if (!type_system)
       return type_system.takeError();
-    CompilerType ptrdiff_t = type_system.get()->GetPointerDiffType(true);
-    if (!ptrdiff_t)
+    CompilerType ptrdiff_type = type_system.get()->GetPointerDiffType(true);
+    if (!ptrdiff_type)
       return llvm::make_error<DILDiagnosticError>(
           m_expr, "unable to determine pointer diff type", location);
 
     Scalar scalar(diff);
     return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
-                                                    ptrdiff_t, "result");
+                                                    ptrdiff_type, "result");
   }
 
   std::string errMsg =
