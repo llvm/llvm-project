@@ -59,7 +59,7 @@ def OpenMP_MyFirstClause : OpenMP_Clause<
 // CHECK-NEXT:   ::mlir::IntegerAttr complexOptIntAttr;
 
 // CHECK-NEXT:   ::mlir::ElementsAttr elementsAttr;
-// CHECK-NEXT:   ::mlir::DenseElementsAttr stringElementsAttr;
+// CHECK-NEXT:   ::mlir::DenseStringElementsAttr stringElementsAttr;
 // CHECK-NEXT: }
 
 def OpenMP_MySecondClause : OpenMP_Clause<

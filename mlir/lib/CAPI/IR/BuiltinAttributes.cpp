@@ -551,6 +551,10 @@ bool mlirAttributeIsADenseElements(MlirAttribute attr) {
   return llvm::isa<DenseElementsAttr>(unwrap(attr));
 }
 
+bool mlirAttributeIsADenseStringElements(MlirAttribute attr) {
+  return llvm::isa<DenseStringElementsAttr>(unwrap(attr));
+}
+
 bool mlirAttributeIsADenseIntElements(MlirAttribute attr) {
   return llvm::isa<DenseIntElementsAttr>(unwrap(attr));
 }
@@ -720,16 +724,16 @@ MlirAttribute mlirDenseElementsAttrFloat16Get(MlirType shapedType,
   return mlirDenseElementsAttrRawBufferGet(shapedType, bufferSize, buffer);
 }
 
-MlirAttribute mlirDenseElementsAttrStringGet(MlirType shapedType,
-                                             intptr_t numElements,
-                                             MlirStringRef *strs) {
+MlirAttribute mlirDenseStringElementsAttrStringGet(MlirType shapedType,
+                                                   intptr_t numElements,
+                                                   MlirStringRef *strs) {
   SmallVector<StringRef, 8> values;
   values.reserve(numElements);
   for (intptr_t i = 0; i < numElements; ++i)
     values.push_back(unwrap(strs[i]));
 
-  return wrap(DenseElementsAttr::get(llvm::cast<ShapedType>(unwrap(shapedType)),
-                                     values));
+  return wrap(DenseStringElementsAttr::get(
+      llvm::cast<ShapedType>(unwrap(shapedType)), values));
 }
 
 MlirAttribute mlirDenseElementsAttrReshapeGet(MlirAttribute attr,
@@ -745,10 +749,16 @@ MlirAttribute mlirDenseElementsAttrReshapeGet(MlirAttribute attr,
 bool mlirDenseElementsAttrIsSplat(MlirAttribute attr) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).isSplat();
 }
-
+bool mlirDenseStringElementsAttrIsSplat(MlirAttribute attr) {
+  return llvm::cast<DenseStringElementsAttr>(unwrap(attr)).isSplat();
+}
 MlirAttribute mlirDenseElementsAttrGetSplatValue(MlirAttribute attr) {
-  return wrap(
-      llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<Attribute>());
+  return wrap(llvm::cast<DenseElementsAttr>(unwrap(attr))
+                  .getSplatValue<mlir::Attribute>());
+}
+MlirAttribute mlirDenseStringElementsAttrGetSplatValue(MlirAttribute attr) {
+  return wrap(llvm::cast<DenseStringElementsAttr>(unwrap(attr))
+                  .getSplatValue<mlir::Attribute>());
 }
 int mlirDenseElementsAttrGetBoolSplatValue(MlirAttribute attr) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<bool>();
@@ -777,9 +787,10 @@ float mlirDenseElementsAttrGetFloatSplatValue(MlirAttribute attr) {
 double mlirDenseElementsAttrGetDoubleSplatValue(MlirAttribute attr) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<double>();
 }
-MlirStringRef mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr) {
-  return wrap(
-      llvm::cast<DenseElementsAttr>(unwrap(attr)).getSplatValue<StringRef>());
+MlirStringRef
+mlirDenseStringElementsAttrGetStringSplatValue(MlirAttribute attr) {
+  return wrap(llvm::cast<DenseStringElementsAttr>(unwrap(attr))
+                  .getSplatValue<llvm::StringRef>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -822,10 +833,10 @@ float mlirDenseElementsAttrGetFloatValue(MlirAttribute attr, intptr_t pos) {
 double mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos) {
   return llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<double>()[pos];
 }
-MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
-                                                  intptr_t pos) {
-  return wrap(
-      llvm::cast<DenseElementsAttr>(unwrap(attr)).getValues<StringRef>()[pos]);
+MlirStringRef mlirDenseStringElementsAttrGetStringValue(MlirAttribute attr,
+                                                        intptr_t pos) {
+  return wrap(llvm::cast<DenseStringElementsAttr>(unwrap(attr))
+                  .getValues<StringRef>()[pos]);
 }
 
 //===----------------------------------------------------------------------===//
