@@ -6,10 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This header is unguarded on purpose. This header is an implementation detail of function_ref.h
+// and generates multiple versions of std::function_ref
+
 #include <__assert>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__memory/addressof.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_function.h>
@@ -17,6 +21,7 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_pointer.h>
@@ -28,6 +33,10 @@
 #  pragma GCC system_header
 #endif
 
+#ifndef _LIBCPP___FUNCTIONAL_FUNCTION_REF_H
+#  error This header should only be included from function_ref.h
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
@@ -35,16 +44,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class...>
 class function_ref;
 
-template <class _Rp, class... _ArgTypes>
-class function_ref<_Rp(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT)> {
+template <class _Rp, class... _ArgTypes, bool __is_noexcept>
+class function_ref<_Rp(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(__is_noexcept)> {
 private:
-#  if _LIBCPP_FUNCTION_REF_NOEXCEPT == true
   template <class... _Tp>
-  static constexpr bool __is_invocable_using = is_nothrow_invocable_r_v<_Rp, _Tp..., _ArgTypes...>;
-#  else
-  template <class... _Tp>
-  static constexpr bool __is_invocable_using = is_invocable_r_v<_Rp, _Tp..., _ArgTypes...>;
-#  endif
+  static constexpr bool __is_invocable_using =
+      _If<__is_noexcept, is_nothrow_invocable_r<_Rp, _Tp..., _ArgTypes...>, is_invocable_r<_Rp, _Tp..., _ArgTypes...>>::
+          value;
 
   // use a union instead of a plain `void*` to avoid dropping const qualifiers and casting function pointers to data
   // pointers
@@ -84,7 +90,7 @@ private:
     }
   }
 
-  using __call_t _LIBCPP_NODEBUG = _Rp (*)(__storage_t, _ArgTypes&&...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);
+  using __call_t _LIBCPP_NODEBUG = _Rp (*)(__storage_t, _ArgTypes&&...) noexcept(__is_noexcept);
   __call_t __call_;
 
 public:
@@ -92,26 +98,26 @@ public:
     requires is_function_v<_Fp> && __is_invocable_using<_Fp>
   _LIBCPP_HIDE_FROM_ABI function_ref(_Fp* __fn_ptr) noexcept
       : __storage_(__fn_ptr),
-        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {
           return __get<_Fp>(__storage)(std::forward<_ArgTypes>(__args)...);
         }) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__fn_ptr != nullptr, "the function pointer should not be a nullptr");
+    _LIBCPP_ASSERT_NON_NULL(__fn_ptr != nullptr, "the function pointer should not be a nullptr");
   }
 
-  template <class _Fp, class _Tp = remove_reference_t<_Fp>>
-    requires(!__is_function_ref<remove_cvref_t<_Fp>> && !is_member_pointer_v<_Tp> &&
+  template <class _Fn, class _Tp = remove_reference_t<_Fn>>
+    requires(!is_same_v<remove_cvref_t<_Fn>, function_ref> && !is_member_pointer_v<_Tp> &&
              __is_invocable_using<_LIBCPP_FUNCTION_REF_CV _Tp&>)
-  _LIBCPP_HIDE_FROM_ABI function_ref(_Fp&& __obj) noexcept
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(_Fn&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
-        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {
           _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
           return __obj(std::forward<_ArgTypes>(__args)...);
         }) {}
 
   template <auto _Fn>
-    requires __is_invocable_using<decltype(_Fn)>
+    requires __is_invocable_using<const decltype(_Fn)&>
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>) noexcept
-      : __call_([](__storage_t, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+      : __call_([](__storage_t, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {
           return std::invoke_r<_Rp>(_Fn, std::forward<_ArgTypes>(__args)...);
         }) {
     if constexpr (is_pointer_v<decltype(_Fn)> || is_member_pointer_v<decltype(_Fn)>) {
@@ -123,7 +129,7 @@ public:
     requires(!is_rvalue_reference_v<_Up &&>) && __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp&>
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>, _Up&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
-        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {
           _LIBCPP_FUNCTION_REF_CV _Tp& __obj = *__get<_Tp>(__storage);
           return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
         }) {
@@ -136,7 +142,7 @@ public:
     requires __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp*>
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
       : __storage_(__obj_ptr),
-        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) -> _Rp {
+        __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {
           auto __obj = __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
           return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
         }) {
@@ -154,24 +160,22 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref& operator=(const function_ref&) noexcept = default;
 
   template <class _Tp>
-    requires(!__is_function_ref<_Tp>) && (!is_pointer_v<_Tp>) && (!__is_constant_arg_t<_Tp>)
+    requires(!is_same_v<_Tp, function_ref>) && (!is_pointer_v<_Tp>) && (!__is_constant_arg_t<_Tp>)
   _LIBCPP_HIDE_FROM_ABI function_ref& operator=(_Tp) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Rp operator()(_ArgTypes... __args) const noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT) {
+  _LIBCPP_HIDE_FROM_ABI constexpr _Rp operator()(_ArgTypes... __args) const noexcept(__is_noexcept) {
     return __call_(__storage_, std::forward<_ArgTypes>(__args)...);
   }
 };
 
-template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
-struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT),
-                           _Tp> {
-  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);
+template <class _Tp, class _Rp, class _Gp, class... _ArgTypes, bool __is_noexcept>
+struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV noexcept(__is_noexcept), _Tp> {
+  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept(__is_noexcept);
 };
 
-template <class _Tp, class _Rp, class _Gp, class... _ArgTypes>
-struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV & noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT),
-                           _Tp> {
-  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept(_LIBCPP_FUNCTION_REF_NOEXCEPT);
+template <class _Tp, class _Rp, class _Gp, class... _ArgTypes, bool __is_noexcept>
+struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV & noexcept(__is_noexcept), _Tp> {
+  using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept(__is_noexcept);
 };
 
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF

@@ -20,28 +20,13 @@
 // NOLINTBEGIN(readability-duplicate-include)
 
 #define _LIBCPP_FUNCTION_REF_CV
-#define _LIBCPP_FUNCTION_REF_NOEXCEPT false
 #include <__functional/function_ref_impl.h>
 #undef _LIBCPP_FUNCTION_REF_CV
-#undef _LIBCPP_FUNCTION_REF_NOEXCEPT
 
-#define _LIBCPP_FUNCTION_REF_CV
-#define _LIBCPP_FUNCTION_REF_NOEXCEPT true
-#include <__functional/function_ref_impl.h>
-#undef _LIBCPP_FUNCTION_REF_CV
-#undef _LIBCPP_FUNCTION_REF_NOEXCEPT
 
 #define _LIBCPP_FUNCTION_REF_CV const
-#define _LIBCPP_FUNCTION_REF_NOEXCEPT false
 #include <__functional/function_ref_impl.h>
 #undef _LIBCPP_FUNCTION_REF_CV
-#undef _LIBCPP_FUNCTION_REF_NOEXCEPT
-
-#define _LIBCPP_FUNCTION_REF_CV const
-#define _LIBCPP_FUNCTION_REF_NOEXCEPT true
-#include <__functional/function_ref_impl.h>
-#undef _LIBCPP_FUNCTION_REF_CV
-#undef _LIBCPP_FUNCTION_REF_NOEXCEPT
 
 // NOLINTEND(readability-duplicate-include)
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF

@@ -27,12 +27,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class...>
 class function_ref;
 
-template <class>
-inline constexpr bool __is_function_ref = false;
-
-template <class _Rp, class... _ArgTypes>
-inline constexpr bool __is_function_ref<function_ref<_Rp, _ArgTypes...>> = true;
-
 template <class _Fp, class _Tp>
 struct __function_ref_bind {};
 
