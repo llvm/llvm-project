@@ -36,4 +36,6 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   LLVMTestingSupport
 
   LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
   )
