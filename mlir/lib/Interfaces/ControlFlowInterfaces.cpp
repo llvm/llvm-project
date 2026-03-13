@@ -931,6 +931,14 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
   }
 };
 
+/// Return the "owner" of a value: the parent block for block arguments, the
+/// defining op for op results.
+static void *getOwnerOfValue(Value value) {
+  if (auto arg = dyn_cast<BlockArgument>(value))
+    return arg.getOwner();
+  return value.getDefiningOp();
+}
+
 /// Get the block argument or op result number of the given value.
 static unsigned getArgOrResultNumber(Value value) {
   if (auto opResult = llvm::dyn_cast<OpResult>(value))
@@ -1034,12 +1042,7 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
         sig.emplace_back(operand->getOwner(), operand->get());
       llvm::sort(sig, sigEntryLess);
 
-      // Determine the owner (block for block args, defining op for results).
-      void *owner;
-      if (auto arg = dyn_cast<BlockArgument>(input))
-        owner = arg.getOwner();
-      else
-        owner = input.getDefiningOp();
+      void *owner = getOwnerOfValue(input);
 
       auto [it, inserted] = signatureToCanonical.try_emplace(
           MapKey{std::move(sig), owner}, input);
