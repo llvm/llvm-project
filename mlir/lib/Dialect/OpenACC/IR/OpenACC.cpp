@@ -1550,7 +1550,7 @@ static LogicalResult createInitRegion(OpBuilder &builder, Location loc,
                                       Region &initRegion, Value hostVar,
                                       StringRef varName, ValueRange bounds,
                                       bool &needsFree,
-                                      acc::VariableInfo &varInfo) {
+                                      acc::VariableInfoAttr &varInfo) {
   Type varType = hostVar.getType();
 
   // Create init block with arguments: original value + bounds
@@ -1648,7 +1648,7 @@ static LogicalResult createCopyRegion(OpBuilder &builder, Location loc,
 static LogicalResult createDestroyRegion(OpBuilder &builder, Location loc,
                                          Region &destroyRegion, Type varType,
                                          Value allocRes, ValueRange bounds,
-                                         const acc::VariableInfo &varInfo) {
+                                         acc::VariableInfoAttr varInfo) {
   // Create destroy block with arguments: original value + privatized value +
   // bounds
   SmallVector<Type> destroyArgTypes{varType, varType};
@@ -1748,7 +1748,7 @@ PrivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
 
   // Populate the init region
   bool needsFree = false;
-  acc::VariableInfo varInfo;
+  acc::VariableInfoAttr varInfo;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
                               varName, bounds, needsFree, varInfo))) {
     recipe.erase();
@@ -1845,7 +1845,7 @@ FirstprivateRecipeOp::createAndPopulate(OpBuilder &builder, Location loc,
 
   // Populate the init region
   bool needsFree = false;
-  acc::VariableInfo varInfo;
+  acc::VariableInfoAttr varInfo;
   if (failed(createInitRegion(builder, loc, recipe.getInitRegion(), hostVar,
                               varName, bounds, needsFree, varInfo))) {
     recipe.erase();

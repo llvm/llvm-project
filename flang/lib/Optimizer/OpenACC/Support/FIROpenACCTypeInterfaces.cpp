@@ -24,7 +24,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
-#include "flang/Optimizer/OpenACC/Support/FortranVariableInfo.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -544,26 +543,26 @@ OpenACCMappableModel<fir::PointerType>::getTypeCategory(mlir::Type type,
                                                         mlir::Value var) const;
 
 template <typename Ty>
-mlir::acc::VariableInfo OpenACCMappableModel<Ty>::genPrivateVariableInfo(
+mlir::acc::VariableInfoAttr OpenACCMappableModel<Ty>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const {
   hlfir::Entity entity{var};
-  return mlir::acc::VariableInfo(
-      std::make_unique<FortranVariableInfo>(entity.mayBeOptional()));
+  return fir::OpenACCFortranVariableInfoAttr::get(var.getContext(),
+                                                  entity.mayBeOptional());
 }
 
-template mlir::acc::VariableInfo
+template mlir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::BaseBoxType>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
 
-template mlir::acc::VariableInfo
+template mlir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::ReferenceType>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
 
-template mlir::acc::VariableInfo
+template mlir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::HeapType>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
 
-template mlir::acc::VariableInfo
+template mlir::acc::VariableInfoAttr
 OpenACCMappableModel<fir::PointerType>::genPrivateVariableInfo(
     mlir::Type type, mlir::TypedValue<mlir::acc::MappableType> var) const;
 
@@ -743,7 +742,7 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange bounds, mlir::Value initVal,
-    const mlir::acc::VariableInfo &varInfo, bool &needsDestroy) const {
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const {
   mlir::ModuleOp mod = mlirBuilder.getInsertionBlock()
                            ->getParent()
                            ->getParentOfType<mlir::ModuleOp>();
@@ -927,34 +926,34 @@ OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange extents, mlir::Value initVal,
-    const mlir::acc::VariableInfo &varInfo, bool &needsDestroy) const;
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange extents, mlir::Value initVal,
-    const mlir::acc::VariableInfo &varInfo, bool &needsDestroy) const;
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange extents, mlir::Value initVal,
-    const mlir::acc::VariableInfo &varInfo, bool &needsDestroy) const;
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template mlir::Value
 OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange extents, mlir::Value initVal,
-    const mlir::acc::VariableInfo &varInfo, bool &needsDestroy) const;
+    mlir::acc::VariableInfoAttr varInfo, bool &needsDestroy) const;
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::generateCopy(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> src,
     mlir::TypedValue<mlir::acc::MappableType> dest, mlir::ValueRange bounds,
-    const mlir::acc::VariableInfo &varInfo) const {
+    mlir::acc::VariableInfoAttr varInfo) const {
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   assert(mod && "failed to retrieve parent module");
@@ -992,22 +991,22 @@ template bool OpenACCMappableModel<fir::BaseBoxType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
     mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    const mlir::acc::VariableInfo &) const;
+    mlir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
     mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    const mlir::acc::VariableInfo &) const;
+    mlir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::PointerType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
     mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    const mlir::acc::VariableInfo &) const;
+    mlir::acc::VariableInfoAttr) const;
 template bool OpenACCMappableModel<fir::HeapType>::generateCopy(
     mlir::Type, mlir::OpBuilder &, mlir::Location,
     mlir::TypedValue<mlir::acc::MappableType>,
     mlir::TypedValue<mlir::acc::MappableType>, mlir::ValueRange,
-    const mlir::acc::VariableInfo &) const;
+    mlir::acc::VariableInfoAttr) const;
 
 template <typename Op>
 static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
@@ -1210,7 +1209,7 @@ template <typename Ty>
 bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &mlirBuilder, mlir::Location loc,
     mlir::Value privatized, mlir::ValueRange bounds,
-    const mlir::acc::VariableInfo &varInfo) const {
+    mlir::acc::VariableInfoAttr varInfo) const {
   hlfir::Entity inputVar = hlfir::Entity{privatized};
   mlir::ModuleOp mod =
       mlirBuilder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
@@ -1246,19 +1245,19 @@ bool OpenACCMappableModel<Ty>::generatePrivateDestroy(
 template bool OpenACCMappableModel<fir::BaseBoxType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value privatized, mlir::ValueRange bounds,
-    const mlir::acc::VariableInfo &varInfo) const;
+    mlir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value privatized, mlir::ValueRange bounds,
-    const mlir::acc::VariableInfo &varInfo) const;
+    mlir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::HeapType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value privatized, mlir::ValueRange bounds,
-    const mlir::acc::VariableInfo &varInfo) const;
+    mlir::acc::VariableInfoAttr varInfo) const;
 template bool OpenACCMappableModel<fir::PointerType>::generatePrivateDestroy(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value privatized, mlir::ValueRange bounds,
-    const mlir::acc::VariableInfo &varInfo) const;
+    mlir::acc::VariableInfoAttr varInfo) const;
 
 template <typename Ty>
 mlir::Value OpenACCPointerLikeModel<Ty>::genAllocate(

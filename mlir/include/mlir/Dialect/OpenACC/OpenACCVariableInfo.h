@@ -1,5 +1,4 @@
-//===- OpenACCVariableInfo.h - OpenACC Variable Info -------------*- C++
-//-*-===//
+//===- OpenACCVariableInfo.h - OpenACC Variable Info Attr -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,72 +6,41 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the VariableInfo classes used to carry language-specific
-// variable metadata through the OpenACC type interfaces. The OpenACC dialect
-// type interface methods (e.g., generatePrivateInit, generateCopy,
-// generatePrivateDestroy) receive a VariableInfo that language implementations
-// can dyn_cast to their own subclass to recover information not available from
-// the type system alone (e.g., whether a Fortran variable is OPTIONAL).
+// This file defines the VariableInfoAttr base class and the IsVariableInfo
+// trait.
+//
+// Any dialect can define Language-specific variable metadata attribute by
+// manually attaching the IsVariableInfo trait and using VariableInfoAttr as
+// the baseCppClass.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_OPENACC_OPENACCVARIABLEINFO_H
 #define MLIR_DIALECT_OPENACC_OPENACCVARIABLEINFO_H
 
-#include <memory>
+#include "mlir/IR/Attributes.h"
 
-namespace mlir::acc {
+namespace mlir {
+namespace acc {
+namespace AttributeTrait {
+/// Trait attached to attributes that are OpenACC variable info attributes.
+template <typename ConcreteType>
+struct IsVariableInfo
+    : public mlir::AttributeTrait::TraitBase<ConcreteType, IsVariableInfo> {};
+} // namespace AttributeTrait
 
-/// Base class for language-specific variable information.
-///
-/// Languages should derive from this class and use LLVM-style RTTI
-/// (via a `classof` static method and the `getLanguage()` discriminator) so
-/// that consumers can dyn_cast to the concrete type.
-///
-/// See llvm/docs/HowToSetUpLLVMStyleRTTI.rst for details on the pattern.
-class VariableInfoBase {
+/// Base attribute class for language-specific variable information carried
+/// through the OpenACC type interface helpers.
+class VariableInfoAttr : public mlir::Attribute {
 public:
-  enum Language { Fortran, C, CPP };
+  using Attribute::Attribute;
 
-  Language getLanguage() const { return lang; }
-  virtual ~VariableInfoBase() = default;
-
-protected:
-  explicit VariableInfoBase(Language lang) : lang(lang) {}
-
-private:
-  Language lang;
-};
-
-/// A type-erased, move-only wrapper for language-specific variable
-/// information. This is modeled after the PointerUnion discrimination pattern:
-/// language implementations can use `dyn_cast<ConcreteType>()` to recover
-/// their specific metadata.
-///
-/// A default-constructed VariableInfo is null and carries no information.
-class VariableInfo {
-public:
-  VariableInfo() = default;
-  VariableInfo(std::nullptr_t) {}
-  explicit VariableInfo(std::unique_ptr<VariableInfoBase> impl)
-      : impl(std::move(impl)) {}
-
-  VariableInfo(VariableInfo &&) = default;
-  VariableInfo &operator=(VariableInfo &&) = default;
-
-  template <typename T>
-  const T *dyn_cast() const {
-    if (!impl || !T::classof(impl.get()))
-      return nullptr;
-    return static_cast<const T *>(impl.get());
+  static bool classof(mlir::Attribute attr) {
+    return attr.hasTrait<::mlir::acc::AttributeTrait::IsVariableInfo>();
   }
-
-  explicit operator bool() const { return impl != nullptr; }
-
-private:
-  std::unique_ptr<VariableInfoBase> impl;
 };
 
-} // namespace mlir::acc
+} // namespace acc
+} // namespace mlir
 
 #endif // MLIR_DIALECT_OPENACC_OPENACCVARIABLEINFO_H

@@ -366,12 +366,12 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
 
         The default implementation returns a null `VariableInfo`.
       }],
-      /*retTy=*/"::mlir::acc::VariableInfo",
+      /*retTy=*/"::mlir::acc::VariableInfoAttr",
       /*methodName=*/"genPrivateVariableInfo",
       /*args=*/(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::acc::VariableInfo();
+        return ::mlir::acc::VariableInfoAttr();
       }]
     >,
     InterfaceMethod<
@@ -411,7 +411,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::llvm::StringRef":$varName,
                     "::mlir::ValueRange":$extents,
                     "::mlir::Value":$initVal,
-                    "const ::mlir::acc::VariableInfo &":$varInfo,
+                    "::mlir::acc::VariableInfoAttr":$varInfo,
                     "bool &":$needsDestroy),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -434,7 +434,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$from,
                     "::mlir::TypedValue<::mlir::acc::MappableType>":$to,
                     "::mlir::ValueRange":$bounds,
-                    "const ::mlir::acc::VariableInfo &":$varInfo),
+                    "::mlir::acc::VariableInfoAttr":$varInfo),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
@@ -485,7 +485,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
                     "::mlir::Location":$loc,
                     "::mlir::Value":$privatized,
                     "::mlir::ValueRange":$extents,
-                    "const ::mlir::acc::VariableInfo &":$varInfo),
+                    "::mlir::acc::VariableInfoAttr":$varInfo),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return true;

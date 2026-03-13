@@ -493,7 +493,8 @@ static RecipeOp genRecipeOp(
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
   auto initArg = mlir::cast<MappableValue>(initBlock->getArgument(0));
-  mlir::acc::VariableInfo varInfo = mappableTy.genPrivateVariableInfo(initArg);
+  mlir::acc::VariableInfoAttr varInfo =
+      mappableTy.genPrivateVariableInfo(initArg);
   bool needsDestroy = false;
   llvm::SmallVector<mlir::Value> initBounds =
       getRecipeBounds(builder, loc, dataOperationBounds,
@@ -578,7 +579,7 @@ mlir::SymbolRefAttr fir::acc::createOrGetFirstprivateRecipe(
   auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(ty);
   assert(mappableTy &&
          "Expected that all variable types are considered mappable");
-  mlir::acc::VariableInfo copyVarInfo =
+  mlir::acc::VariableInfoAttr copyVarInfo =
       mappableTy.genPrivateVariableInfo(source);
   [[maybe_unused]] bool success = mappableTy.generateCopy(
       builder, loc, source, destination, copyBounds, copyVarInfo);
