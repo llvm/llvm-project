@@ -6294,7 +6294,12 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             .addImm(0x1E0)      // swizzle offset (i16)
             .addImm(0x0);       // gds (i1)
         auto ClampInstr =
-            BuildMI(BB, MI, DL, TII->get(TII->getVALUOp(Opc)), RowBcast15)
+            BuildMI(BB, MI, DL,
+                    TII->get(TII->getVALUOp(
+                        Opc == AMDGPU::S_SUB_I32
+                            ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
+                            : Opc)),
+                    RowBcast15)
                 .addReg(DPPRowShr8)
                 .addReg(SwizzledValue);
         if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
@@ -6347,8 +6352,13 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
               .addReg(RowBcast15)        // data
               .addImm(0);                // offset
           auto ClampInstr =
-              BuildMI(BB, MI, DL, TII->get(TII->getVALUOp(Opc)), RowBcast31)
-                  .addReg(DPPRowShr8)
+              BuildMI(BB, MI, DL,
+                      TII->get(TII->getVALUOp(
+                          Opc == AMDGPU::S_SUB_I32
+                              ? static_cast<unsigned>(AMDGPU::S_ADD_I32)
+                              : Opc)),
+                      RowBcast31)
+                  .addReg(RowBcast15)
                   .addReg(PermutedValue);
           if (TII->hasIntClamp(*ClampInstr) || TII->hasFPClamp(*ClampInstr))
             ClampInstr.addImm(0);

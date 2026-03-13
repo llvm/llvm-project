@@ -174,8 +174,8 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX12-NEXT:    v_max_u32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX12-NEXT:    ds_swizzle_b32 v1, v0 offset:swizzle(BROADCAST,32,15)
 ; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_max_u32_e32 v1, v0, v1
-; GFX12-NEXT:    ds_permute_b32 v1, v2, v1
+; GFX12-NEXT:    v_max_u32_e32 v0, v0, v1
+; GFX12-NEXT:    ds_permute_b32 v1, v2, v0
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_max_u32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -370,8 +370,8 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-NEXT:    v_max_u32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX12-NEXT:    ds_swizzle_b32 v1, v0 offset:swizzle(BROADCAST,32,15)
 ; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_max_u32_e32 v1, v0, v1
-; GFX12-NEXT:    ds_permute_b32 v1, v2, v1
+; GFX12-NEXT:    v_max_u32_e32 v0, v0, v1
+; GFX12-NEXT:    ds_permute_b32 v1, v2, v0
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_max_u32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_mov_b64 exec, s[0:1]
@@ -579,8 +579,8 @@ define amdgpu_cs_chain void @test_call_and_alloca_var(i32 %count) {
 ; GFX12-NEXT:    v_max_u32_dpp v0, v0, v0 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX12-NEXT:    ds_swizzle_b32 v1, v0 offset:swizzle(BROADCAST,32,15)
 ; GFX12-NEXT:    s_wait_dscnt 0x0
-; GFX12-NEXT:    v_max_u32_e32 v1, v0, v1
-; GFX12-NEXT:    ds_permute_b32 v1, v2, v1
+; GFX12-NEXT:    v_max_u32_e32 v0, v0, v1
+; GFX12-NEXT:    ds_permute_b32 v1, v2, v0
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_max_u32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_mov_b64 exec, s[0:1]

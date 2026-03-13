@@ -596,8 +596,8 @@ define amdgpu_kernel void @divergent_value_dpp(ptr addrspace(1) %out) {
 ; GFX1064DAGISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1064DAGISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1064DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064DAGISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1064DAGISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1064DAGISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1064DAGISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1064DAGISEL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1064DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -625,8 +625,8 @@ define amdgpu_kernel void @divergent_value_dpp(ptr addrspace(1) %out) {
 ; GFX1064GISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1064GISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1064GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064GISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1064GISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1064GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1064GISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1064GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX1064GISEL-NEXT:    s_mov_b64 exec, s[0:1]
@@ -704,8 +704,8 @@ define amdgpu_kernel void @divergent_value_dpp(ptr addrspace(1) %out) {
 ; GFX1164DAGISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164DAGISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1164DAGISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1164DAGISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1164DAGISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1164DAGISEL-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -739,8 +739,8 @@ define amdgpu_kernel void @divergent_value_dpp(ptr addrspace(1) %out) {
 ; GFX1164GISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164GISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1164GISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1164GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1164GISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
@@ -929,8 +929,8 @@ define amdgpu_kernel void @default_stratergy(ptr addrspace(1) %out) {
 ; GFX1064DAGISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1064DAGISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1064DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064DAGISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1064DAGISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1064DAGISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1064DAGISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1064DAGISEL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1064DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
@@ -958,8 +958,8 @@ define amdgpu_kernel void @default_stratergy(ptr addrspace(1) %out) {
 ; GFX1064GISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1064GISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1064GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064GISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1064GISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1064GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1064GISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1064GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX1064GISEL-NEXT:    s_mov_b64 exec, s[0:1]
@@ -1037,8 +1037,8 @@ define amdgpu_kernel void @default_stratergy(ptr addrspace(1) %out) {
 ; GFX1164DAGISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1164DAGISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1164DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164DAGISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1164DAGISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1164DAGISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1164DAGISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1164DAGISEL-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -1072,8 +1072,8 @@ define amdgpu_kernel void @default_stratergy(ptr addrspace(1) %out) {
 ; GFX1164GISEL-NEXT:    v_or_b32_dpp v1, v1, v1 row_shr:8 row_mask:0xf bank_mask:0xf
 ; GFX1164GISEL-NEXT:    ds_swizzle_b32 v2, v1 offset:swizzle(BROADCAST,32,15)
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1164GISEL-NEXT:    v_or_b32_e32 v2, v1, v2
-; GFX1164GISEL-NEXT:    ds_permute_b32 v2, v3, v2
+; GFX1164GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX1164GISEL-NEXT:    ds_permute_b32 v2, v3, v1
 ; GFX1164GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX1164GISEL-NEXT:    s_mov_b64 exec, s[0:1]
