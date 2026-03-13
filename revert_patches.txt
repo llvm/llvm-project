@@ -8,3 +8,6 @@ breaks build of hipblaslt
 break build of aomp, srock rock
 [copmiler-rt] Initial support for building profile  library on the GPU (#185552)
 ---
+breaks 535.weather build
+[flang][OpenMP] Implement nest depth calculation in LoopSequence (#185298)
+---

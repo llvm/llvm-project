@@ -57,9 +57,6 @@ enum GPUKind : uint32_t {
   GK_CAYMAN,
   GK_TURKS,
 
-  GK_R600_FIRST = GK_R600,
-  GK_R600_LAST = GK_TURKS,
-
   // AMDGCN-based processors.
   GK_GFX600,
   GK_GFX601,
@@ -118,9 +115,6 @@ enum GPUKind : uint32_t {
   GK_GFX1251,
 
   GK_GFX1310,
-
-  GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1310,
 
   GK_GFX9_GENERIC,
   GK_GFX10_1_GENERIC,

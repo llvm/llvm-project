@@ -111,6 +111,44 @@ class SPIRV_TosaElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> tra
     AllElementTypesMatch<["input1", "output"]>])> {
 }
 
+class SPIRV_TosaIntegerElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaElementwiseBinaryOp<mnemonic, opcode, traits> {
+
+  let arguments = (ins
+    SPIRV_TosaInteger_TensorArm: $input1,
+    SPIRV_TosaInteger_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_TosaInteger_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
+class SPIRV_TosaBoolElementwiseBinaryOp<string mnemonic, int opcode, list<Trait> traits = []> :
+  SPIRV_TosaElementwiseBinaryOp<mnemonic, opcode, !listconcat(traits, [Pure])> {
+
+  let arguments = (ins
+    SPIRV_Bool_TensorArm: $input1,
+    SPIRV_Bool_TensorArm: $input2
+  );
+
+  let results = (outs
+    SPIRV_Bool_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input1 `,`
+    $input2
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+}
+
 class SPIRV_TosaConvolutionOp<string mnemonic, int opcode, list<Trait> traits = []> :
   SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [Pure,
     TypeConstraintImplicationOn<"input", I8, "output", [I32]>,
@@ -917,7 +955,7 @@ def SPIRV_TosaArithmeticRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"Arithmetic
 }
 
 
-def SPIRV_TosaBitwiseAndOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseAnd", 16, [Pure]> {
+def SPIRV_TosaBitwiseAndOp : SPIRV_TosaIntegerElementwiseBinaryOp<"BitwiseAnd", 16, [Pure]> {
   let summary = "Bitwise AND operator.";
 
   let description = [{
@@ -934,25 +972,10 @@ def SPIRV_TosaBitwiseAndOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseAnd", 16, [Pu
     %0 = spirv.Tosa.BitwiseAnd %arg0, %arg1 : !spirv.arm.tensor<4x1x7x12xi16>, !spirv.arm.tensor<4x13x7x12xi16> -> !spirv.arm.tensor<4x13x7x12xi16>
     ```
   }];
-
-  let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
-  }];
 }
 
 
-def SPIRV_TosaBitwiseOrOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseOr", 17, [Pure]> {
+def SPIRV_TosaBitwiseOrOp : SPIRV_TosaIntegerElementwiseBinaryOp<"BitwiseOr", 17, [Pure]> {
   let summary = "Bitwise OR operator.";
 
   let description = [{
@@ -969,25 +992,10 @@ def SPIRV_TosaBitwiseOrOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseOr", 17, [Pure
     %0 = spirv.Tosa.BitwiseOr %arg0, %arg1 : !spirv.arm.tensor<11x30x23xi32>, !spirv.arm.tensor<1x30x23xi32> -> !spirv.arm.tensor<11x30x23xi32>
     ```
   }];
-
-  let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
-  }];
 }
 
 
-def SPIRV_TosaBitwiseXorOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseXor", 18, [Pure]> {
+def SPIRV_TosaBitwiseXorOp : SPIRV_TosaIntegerElementwiseBinaryOp<"BitwiseXor", 18, [Pure]> {
   let summary = "Bitwise XOR operator.";
 
   let description = [{
@@ -1003,21 +1011,6 @@ def SPIRV_TosaBitwiseXorOp : SPIRV_TosaElementwiseBinaryOp<"BitwiseXor", 18, [Pu
     ```mlir
     %0 = spirv.Tosa.BitwiseXor %arg0, %arg1 : !spirv.arm.tensor<4x8x13x9xi16>, !spirv.arm.tensor<4x8x1x9xi16> -> !spirv.arm.tensor<4x8x13x9xi16>
     ```
-  }];
-
-  let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
   }];
 }
 
@@ -1064,7 +1057,7 @@ def SPIRV_TosaIntDivOp : SPIRV_TosaElementwiseBinaryOp<"IntDiv", 19, [NoMemoryEf
 }
 
 
-def SPIRV_TosaLogicalAndOp : SPIRV_TosaElementwiseBinaryOp<"LogicalAnd", 20, [Pure]> {
+def SPIRV_TosaLogicalAndOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalAnd", 20> {
   let summary = "Logical AND operator.";
 
   let description = [{
@@ -1080,25 +1073,10 @@ def SPIRV_TosaLogicalAndOp : SPIRV_TosaElementwiseBinaryOp<"LogicalAnd", 20, [Pu
     %0 = spirv.Tosa.LogicalAnd %arg0, %arg1 : !spirv.arm.tensor<2x1x7x11xi1>, !spirv.arm.tensor<2x4x7x11xi1> -> !spirv.arm.tensor<2x4x7x11xi1>
     ```
   }];
-
-  let arguments = (ins
-    SPIRV_Bool_TensorArm: $input1,
-    SPIRV_Bool_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_Bool_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
-  }];
 }
 
 
-def SPIRV_TosaLogicalLeftShiftOp : SPIRV_TosaElementwiseBinaryOp<"LogicalLeftShift", 21, [NoMemoryEffect]> {
+def SPIRV_TosaLogicalLeftShiftOp : SPIRV_TosaIntegerElementwiseBinaryOp<"LogicalLeftShift", 21, [NoMemoryEffect]> {
   let summary = "Logical Left Shift operator.";
 
   let description = [{
@@ -1117,25 +1095,10 @@ def SPIRV_TosaLogicalLeftShiftOp : SPIRV_TosaElementwiseBinaryOp<"LogicalLeftShi
     %0 = spirv.Tosa.LogicalLeftShift %arg0, %arg1 : !spirv.arm.tensor<7x1x11x4xi8>, !spirv.arm.tensor<7x8x11x4xi8> -> !spirv.arm.tensor<7x8x11x4xi8>
     ```
   }];
-
-  let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
-  }];
 }
 
 
-def SPIRV_TosaLogicalRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"LogicalRightShift", 22, [NoMemoryEffect]> {
+def SPIRV_TosaLogicalRightShiftOp : SPIRV_TosaIntegerElementwiseBinaryOp<"LogicalRightShift", 22, [NoMemoryEffect]> {
   let summary = "Logical Right Shift operator.";
 
   let description = [{
@@ -1154,25 +1117,10 @@ def SPIRV_TosaLogicalRightShiftOp : SPIRV_TosaElementwiseBinaryOp<"LogicalRightS
     %0 = spirv.Tosa.LogicalRightShift %arg0, %arg1 : !spirv.arm.tensor<6x13x1x19xi8>, !spirv.arm.tensor<6x13x6x19xi8> -> !spirv.arm.tensor<6x13x6x19xi8>
     ```
   }];
-
-  let arguments = (ins
-    SPIRV_TosaInteger_TensorArm: $input1,
-    SPIRV_TosaInteger_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_TosaInteger_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
-  }];
 }
 
 
-def SPIRV_TosaLogicalOrOp : SPIRV_TosaElementwiseBinaryOp<"LogicalOr", 23, [Pure]> {
+def SPIRV_TosaLogicalOrOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalOr", 23> {
   let summary = "Logical OR operator.";
 
   let description = [{
@@ -1188,25 +1136,10 @@ def SPIRV_TosaLogicalOrOp : SPIRV_TosaElementwiseBinaryOp<"LogicalOr", 23, [Pure
     %0 = spirv.Tosa.LogicalOr %arg0, %arg1 : !spirv.arm.tensor<3x6x12x5xi1>, !spirv.arm.tensor<3x6x1x5xi1> -> !spirv.arm.tensor<3x6x12x5xi1>
     ```
   }];
-
-  let arguments = (ins
-    SPIRV_Bool_TensorArm: $input1,
-    SPIRV_Bool_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_Bool_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
-  }];
 }
 
 
-def SPIRV_TosaLogicalXorOp : SPIRV_TosaElementwiseBinaryOp<"LogicalXor", 24, [Pure]> {
+def SPIRV_TosaLogicalXorOp : SPIRV_TosaBoolElementwiseBinaryOp<"LogicalXor", 24> {
   let summary = "Logical XOR operator.";
 
   let description = [{
@@ -1221,21 +1154,6 @@ def SPIRV_TosaLogicalXorOp : SPIRV_TosaElementwiseBinaryOp<"LogicalXor", 24, [Pu
     ```mlir
     %0 = spirv.Tosa.LogicalXor %arg0, %arg1 : !spirv.arm.tensor<11x4x9x12xi1>, !spirv.arm.tensor<11x4x9x1xi1> -> !spirv.arm.tensor<11x4x9x12xi1>
     ```
-  }];
-
-  let arguments = (ins
-    SPIRV_Bool_TensorArm: $input1,
-    SPIRV_Bool_TensorArm: $input2
-  );
-
-  let results = (outs
-    SPIRV_Bool_TensorArm: $output
-  );
-
-  let assemblyFormat = [{
-    $input1 `,`
-    $input2
-    attr-dict `:` type(operands) `->` type(results)
   }];
 }
 
