@@ -1433,27 +1433,31 @@ NativeProcessAIX::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                       size_t &bytes_read) {
   unsigned char *dst = static_cast<unsigned char *>(buf);
-  size_t remainder;
-  long data;
+  constexpr size_t kMaxPtraceBlockSize = IPCDATA;
+  bytes_read = 0;
 
   Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
-  for (bytes_read = 0; bytes_read < size; bytes_read += remainder) {
+  while (bytes_read < size) {
+    size_t remainder = size - bytes_read;
+    remainder = remainder > kMaxPtraceBlockSize ? kMaxPtraceBlockSize : remainder;
+
+    size_t n_long = (remainder + sizeof(int) - 1) / sizeof(int);
+    std::vector<long> data(n_long);
+
     Status error = NativeProcessAIX::PtraceWrapper(
-        PT_READ_BLOCK, GetCurrentThreadID(), (void *)addr, nullptr, sizeof(data), &data);
+        PT_READ_BLOCK, GetCurrentThreadID(), reinterpret_cast<void *>(addr),
+        nullptr, remainder, data.data());
+
     if (error.Fail())
       return error;
 
-    remainder = size - bytes_read;
-    remainder = remainder > k_ptrace_word_size ? k_ptrace_word_size : remainder;
+    memcpy(dst, data.data(), remainder);
 
-    // Copy the data into our buffer
-    memcpy(dst, &data, remainder);
-
-    LLDB_LOG(log, "[{0:x}]:{1:x}", addr, data);
-    addr += k_ptrace_word_size;
-    dst += k_ptrace_word_size;
+    addr += remainder;
+    dst += remainder;
+    bytes_read += remainder;
   }
   return Status();
 }
@@ -1718,9 +1722,9 @@ void NativeProcessAIX::ThreadWasCreated(NativeThreadAIX &thread) {
 #include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
-static void GetSPRs(int req, lldb::tid_t tid, void *gpr_t) {
-    GPR_PPC64 *gpr = static_cast<GPR_PPC64 *>(gpr_t);
-    struct ptxsprs sprs;
+template<typename GPR_T, typename PTSPRS_T>
+static void GetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+    PTSPRS_T sprs;
 
     ptrace64(req, tid, (long long)&sprs, 0, 0);
 
@@ -1732,9 +1736,9 @@ static void GetSPRs(int req, lldb::tid_t tid, void *gpr_t) {
     gpr->pc = sprs.pt_iar;
 }
 
-static void SetSPRs(int req, lldb::tid_t tid, void *gpr_t) {
-    GPR_PPC64 *gpr = static_cast<GPR_PPC64 *>(gpr_t);
-    struct ptxsprs sprs;
+template<typename GPR_T, typename PTSPRS_T>
+static void SetSPRs(int req, lldb::tid_t tid, GPR_T *gpr) {
+    PTSPRS_T sprs;
 
     sprs.pt_cr = gpr->cr;
     sprs.pt_msr = gpr->msr;
@@ -1782,12 +1786,18 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
   switch (req) {
     case PTT_READ_GPRS:
       ptrace64(req, tid, (long long)data, 0, 0);
-      GetSPRs(PTT_READ_SPRS, tid, data);
+      if(data_size == sizeof(GPR_PPC))
+        GetSPRs<GPR_PPC,ptsprs>(PTT_READ_SPRS, tid, static_cast<GPR_PPC *>(data));
+      else if(data_size == sizeof(GPR_PPC64))
+        GetSPRs<GPR_PPC64,ptxsprs>(PTT_READ_SPRS, tid, static_cast<GPR_PPC64 *>(data));
       break;
 
     case PTT_WRITE_GPRS:
       ptrace64(req, tid, (long long)data, 0, 0);
-      SetSPRs(PTT_WRITE_SPRS, tid, data);
+      if(data_size == sizeof(GPR_PPC))
+        SetSPRs<GPR_PPC,ptsprs>(PTT_WRITE_SPRS, tid, static_cast<GPR_PPC *>(data));
+      else if(data_size == sizeof(GPR_PPC64))
+        SetSPRs<GPR_PPC64,ptxsprs>(PTT_WRITE_SPRS, tid, static_cast<GPR_PPC64 *>(data));
       break;
 
     case PTT_READ_FPRS:

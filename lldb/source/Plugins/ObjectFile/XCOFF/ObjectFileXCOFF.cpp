@@ -136,6 +136,17 @@ ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
   return nullptr;
 }
 
+uint16_t ObjectFileXCOFF::GetMagicBytes(DataExtractorSP &extractor_sp,
+                                      lldb::addr_t data_offset,
+                                      lldb::addr_t data_length) {
+  DataExtractorSP magic_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
+  // Need to set this as XCOFF is only compatible with Big Endian
+  magic_extractor_sp->SetByteOrder(eByteOrderBig);
+  lldb::offset_t offset = 0;
+  return magic_extractor_sp->GetU16(&offset);
+}
+
 size_t ObjectFileXCOFF::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
@@ -147,10 +158,13 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
 
   if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
+    const uint16_t magic = GetMagicBytes(extractor_sp, 0, extractor_sp->GetByteSize());
+    const uint32_t cpu_type = (magic == XCOFF::XCOFF64) ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
+
     ArchSpec arch_spec =
-        ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+        ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
-    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
+    spec.GetArchitecture().SetArchitecture(eArchTypeXCOFF, cpu_type,
                                            LLDB_INVALID_CPUTYPE,
                                            llvm::Triple::AIX);
     specs.Append(spec);
@@ -454,8 +468,9 @@ void ObjectFileXCOFF::CreateSectionsWithBitness(
 void ObjectFileXCOFF::Dump(Stream *s) {}
 
 ArchSpec ObjectFileXCOFF::GetArchitecture() {
+  const uint32_t cpu_type = m_binary->is64Bit() ? XCOFF::TCPU_PPC64 : XCOFF::TCPU_PPC;
   ArchSpec arch_spec =
-      ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+      ArchSpec(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE);
   return arch_spec;
 }
 

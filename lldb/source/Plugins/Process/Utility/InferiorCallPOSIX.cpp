@@ -51,7 +51,7 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
       ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
 #else
   process->GetTarget().GetImages().FindFunctions(
-      ConstString("mmap64"), eFunctionNameTypeFull, function_options, sc_list);
+      ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
   SymbolContextList toc_list;
   process->GetTarget().GetImages().FindSymbolsWithNameAndType(
       ConstString("TOC"), lldb::eSymbolTypeAny, toc_list);

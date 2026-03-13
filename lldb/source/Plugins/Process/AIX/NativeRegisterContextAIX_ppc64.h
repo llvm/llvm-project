@@ -29,7 +29,7 @@ class NativeProcessAIX;
 class NativeRegisterContextAIX_ppc64 : public NativeRegisterContextAIX {
 public:
   NativeRegisterContextAIX_ppc64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread);
+                                 NativeThreadProtocol &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -80,14 +80,22 @@ protected:
 
   Status WriteVSX();
 
-  void *GetGPRBuffer() override { return &m_gpr_ppc64; }
+  void *GetGPRBuffer() override { return m_gpr; }
 
   void *GetFPRBuffer() override { return &m_fpr_ppc64; }
 
   size_t GetFPRSize() override { return sizeof(m_fpr_ppc64); }
 
 private:
-  GPR_PPC64 m_gpr_ppc64; // 64-bit general purpose registers.
+  union GPRStorage {
+    GPR_PPC gpr32;   // 32-bit general purpose registers.
+    GPR_PPC64 gpr64; // 64-bit general purpose registers.
+  };
+
+  GPRStorage m_gpr_storage;
+
+  void *m_gpr = nullptr;
+
   FPR_PPC64 m_fpr_ppc64; // floating-point registers including extended register.
   VMX_PPC64 m_vmx_ppc64; // VMX registers.
   VSX_PPC64 m_vsx_ppc64; // Last lower bytes from first VSX registers.
@@ -133,6 +141,6 @@ private:
 } // namespace process_aix
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTECONTXTAIX_PPC64_H 
+#endif // #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTECONTXTAIX_PPC64_H
 
 #endif // defined(__powerpc64__)

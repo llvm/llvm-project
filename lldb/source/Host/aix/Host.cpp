@@ -17,6 +17,14 @@
 #include <sys/proc.h>
 #include <sys/procfs.h>
 
+#include "lldb/Host/FileSystem.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+
+using namespace llvm;
+using namespace llvm::object;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -81,6 +89,35 @@ static bool GetStatusInfo(::pid_t pid, ProcessInstanceInfo &processInfo,
   return true;
 }
 
+static bool GetXCOFFProcessType(llvm::StringRef exe_path) {
+  Log *log = GetLog(LLDBLog::Host);
+
+  auto file_buffer = MemoryBuffer::getFile(exe_path);
+  if (!file_buffer) {
+    LLDB_LOG(log, "Failed to open file: {0}", exe_path);
+    return false;
+  }
+
+  llvm::Expected<std::unique_ptr<llvm::object::ObjectFile>> obj_or_err =
+      llvm::object::ObjectFile::createObjectFile(
+          (*file_buffer)->getMemBufferRef());
+
+  if (!obj_or_err)
+    return false;
+
+  llvm::object::ObjectFile *obj = obj_or_err->get();
+
+  // Check if it's an XCOFF binary
+  const llvm::object::XCOFFObjectFile *xcoff_obj =
+      llvm::dyn_cast<llvm::object::XCOFFObjectFile>(obj);
+  if (!xcoff_obj) {
+    LLDB_LOG(log, "Not an XCOFF object file: {0}", exe_path);
+    return false;
+  }
+
+  return xcoff_obj->is64Bit();
+}
+
 static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
   struct psinfo psinfoData;
   auto BufferOrError = getProcFile(pid, "psinfo");
@@ -101,8 +138,13 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
 
   process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
   ArchSpec arch_spec = ArchSpec();
-  arch_spec.SetArchitecture(eArchTypeXCOFF, llvm::XCOFF::TCPU_PPC64,
-                            LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
+
+  bool is64Bit = GetXCOFFProcessType(PathRef);
+  const uint32_t cpu_type =
+      is64Bit ? llvm::XCOFF::TCPU_PPC64 : llvm::XCOFF::TCPU_PPC;
+
+  arch_spec.SetArchitecture(eArchTypeXCOFF, cpu_type, LLDB_INVALID_CPUTYPE,
+                            llvm::Triple::AIX);
   process_info.SetArchitecture(arch_spec);
   process_info.SetParentProcessID(psinfoData.pr_ppid);
   process_info.SetGroupID(psinfoData.pr_gid);

@@ -1569,8 +1569,9 @@ RegisterContextUnwind::SavedLocationForRegister(
           UnwindLLDB::ConcreteRegisterLocation::eRegisterInLiveRegisterContext;
       regloc.location.register_number = regnum.GetAsKind(eRegisterKindLLDB);
 #ifdef _AIX
+      // FIXME: hack - assign the LR register number
       if (UGLY_HACK_NULL_TOPFRAME && regloc.location.register_number == 0x20) {
-        regloc.location.register_number = 0x24;
+        regloc.location.register_number = 0x23;
       }
 #endif
       m_registers[regnum.GetAsKind(eRegisterKindLLDB)] = regloc;

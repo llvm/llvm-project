@@ -115,6 +115,7 @@ std::unique_ptr<NativeRegisterContextAIX>
 NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
     const ArchSpec &target_arch, NativeThreadAIX &native_thread) {
   switch (target_arch.GetMachine()) {
+  case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
     return std::make_unique<NativeRegisterContextAIX_ppc64>(target_arch,
                                                                  native_thread);
@@ -128,11 +129,16 @@ NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     : NativeRegisterContextRegisterInfo(
           native_thread, new RegisterInfoPOSIX_ppc64(target_arch)),
       NativeRegisterContextAIX(native_thread) {
-  if (target_arch.GetMachine() != llvm::Triple::ppc64) {
-    llvm_unreachable("Unhandled target architecture.");
+  switch (target_arch.GetMachine()) {
+      case llvm::Triple::ppc:
+          m_gpr = &m_gpr_storage.gpr32;
+          break;
+      case llvm::Triple::ppc64:
+          m_gpr = &m_gpr_storage.gpr64;
+          break;
+      default:
+          llvm_unreachable("Unhandled target architecture.");
   }
-
-  ::memset(&m_gpr_ppc64, 0, sizeof(m_gpr_ppc64));
   ::memset(&m_fpr_ppc64, 0, sizeof(m_fpr_ppc64));
   ::memset(&m_vmx_ppc64, 0, sizeof(m_vmx_ppc64));
   ::memset(&m_vsx_ppc64, 0, sizeof(m_vsx_ppc64));
@@ -230,7 +236,7 @@ Status NativeRegisterContextAIX_ppc64::ReadRegister(
     if (error.Fail())
       return error;
 
-    uint8_t *src = (uint8_t *) &m_gpr_ppc64 + reg_info->byte_offset;
+    const uint8_t *src = reinterpret_cast<const uint8_t *>(GetGPRBuffer()) + reg_info->byte_offset;
     reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                                 eByteOrderBig, error);
   } else {
@@ -258,7 +264,7 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
     if (error.Fail())
       return error;
 
-    uint8_t *dst = (uint8_t *)&m_gpr_ppc64 + reg_info->byte_offset;
+    uint8_t *dst = reinterpret_cast< uint8_t *>(GetGPRBuffer()) + reg_info->byte_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
 
     error = WriteGPR();
@@ -370,7 +376,7 @@ Status NativeRegisterContextAIX_ppc64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  ::memcpy(dst, &m_gpr_ppc64, GetGPRSize());
+  ::memcpy(dst, GetGPRBuffer(), GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, &m_fpr_ppc64, GetFPRSize());
   dst += GetFPRSize();
@@ -409,7 +415,7 @@ Status NativeRegisterContextAIX_ppc64::WriteAllRegisterValues(
     return error;
   }
 
-  ::memcpy(&m_gpr_ppc64, src, GetGPRSize());
+  ::memcpy(GetGPRBuffer(), src, GetGPRSize());
   error = WriteGPR();
 
   if (error.Fail())
