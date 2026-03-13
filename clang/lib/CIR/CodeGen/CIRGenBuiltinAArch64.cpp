@@ -2772,6 +2772,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     ops[0] = builder.createFNeg(ops[0]);
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
                                            convertType(expr->getType()), ops);
+  case NEON::BI__builtin_neon_vaddd_s64:
+  case NEON::BI__builtin_neon_vaddd_u64:
+  case NEON::BI__builtin_neon_vsubd_s64:
+  case NEON::BI__builtin_neon_vsubd_u64:
+  case NEON::BI__builtin_neon_vqdmlalh_s16:
+  case NEON::BI__builtin_neon_vqdmlslh_s16:
   case NEON::BI__builtin_neon_vqshlud_n_s64: {
 
       auto loc = getLoc(expr->getExprLoc());
@@ -2795,23 +2801,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
       const StringRef intrinsicName = (builtinID == NEON::BI__builtin_neon_vqshld_n_u64) ? "aarch64.neon.uqshl": "aarch64.neon.sqshl";
 
-      // Emit and cast the arugment and then push directly to avoid indexing issues
+      // Emit and cast the argument and then push directly to avoid indexing issues
       mlir::Value arg1 = emitScalarExpr(expr->getArg(1));
       ops.push_back(builder.createIntCast(arg1,intType));
 
       return emitNeonCall(builder, {intType, intType}, ops, intrinsicName, intType, loc);
   }
-
-
-  case NEON::BI__builtin_neon_vaddd_s64:
-  case NEON::BI__builtin_neon_vaddd_u64:
-  case NEON::BI__builtin_neon_vsubd_s64:
-  case NEON::BI__builtin_neon_vsubd_u64:
-  case NEON::BI__builtin_neon_vqdmlalh_s16:
-  case NEON::BI__builtin_neon_vqdmlslh_s16:
-  case NEON::BI__builtin_neon_vqshlud_n_s64:
-  case NEON::BI__builtin_neon_vqshld_n_u64:
-  case NEON::BI__builtin_neon_vqshld_n_s64:
   case NEON::BI__builtin_neon_vrshrd_n_u64:
   case NEON::BI__builtin_neon_vrshrd_n_s64:
   case NEON::BI__builtin_neon_vrsrad_n_u64:
