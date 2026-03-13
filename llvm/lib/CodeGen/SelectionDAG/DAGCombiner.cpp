@@ -19140,9 +19140,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
         AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
       }
-    } else if (sd_match(N1, m_UnaryOp(ISD::FP_ROUND,
-                                      m_AllowContract(m_UnaryOp(
-                                          ISD::FSQRT, m_Value(SqrtOp)))))) {
+    } else if (sd_match(N1, m_BinOp(ISD::FP_ROUND,
+                                    m_AllowContract(
+                                        m_UnaryOp(ISD::FSQRT, m_Value(SqrtOp))),
+                                    m_Value()))) {
       if (SDValue RV =
               buildRsqrtEstimate(SqrtOp, N1.getOperand(0)->getFlags())) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
