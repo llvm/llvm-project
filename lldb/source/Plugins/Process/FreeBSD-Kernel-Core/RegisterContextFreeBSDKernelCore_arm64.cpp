@@ -19,7 +19,6 @@
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__aarch64__)
-#include <cstddef>
 #include <machine/pcb.h>
 #include <sys/param.h>
 #endif

@@ -15,7 +15,6 @@
 #include "llvm/Support/Endian.h"
 
 #if defined(__FreeBSD__) && defined(__arm__)
-#include <cstddef>
 #include <machine/frame.h>
 #endif
 
