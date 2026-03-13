@@ -519,7 +519,7 @@ private:
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
-  bool ForceEmitWaitcnt[NUM_INST_CNTS];
+  bool ForceEmitWaitcnt[NUM_INST_CNTS] = {};
 
   std::unique_ptr<WaitcntGenerator> WCG;
 
@@ -3653,12 +3653,8 @@ bool SIInsertWaitcnts::run() {
                                                      &Limits);
   }
 
-  for (auto T : inst_counter_types())
-    ForceEmitWaitcnt[T] = false;
-
   SmemAccessCounter = getCounterFromEvent(SMEM_ACCESS);
 
-  BlockInfos.clear();
   bool Modified = false;
 
   MachineBasicBlock &EntryBB = MF.front();
@@ -3885,12 +3881,6 @@ bool SIInsertWaitcnts::run() {
       }
     }
   }
-
-  CallInsts.clear();
-  ReturnInsts.clear();
-  EndPgmInsts.clear();
-  PreheadersToFlush.clear();
-  SLoadAddresses.clear();
 
   return Modified;
 }
