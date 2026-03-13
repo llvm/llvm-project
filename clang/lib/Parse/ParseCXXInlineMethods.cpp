@@ -753,7 +753,8 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
 
   if (LA.Decls.size() > 0) {
     Decl *D = LA.Decls[0];
-
+    bool HasFuncScope =
+        EnterScope && LA.Decls.size() == 1 && D->isFunctionOrFunctionTemplate();
     if (getLangOpts().CPlusPlus) {
       NamedDecl *ND = dyn_cast<NamedDecl>(D);
       RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
@@ -762,42 +763,33 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
       Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
                                        ND && ND->isCXXInstanceMember());
 
-      if (LA.Decls.size() == 1) {
-        // If the Decl is templatized, add template parameters to scope.
-        ReenterTemplateScopeRAII InDeclScope(*this, D, EnterScope);
+      // If the Decl is templatized, add template parameters to the scope.
+      ReenterTemplateScopeRAII InDeclScope(*this, D, EnterScope);
 
-        // If the Decl is on a function, add function parameters to the scope.
-        bool HasFunScope = EnterScope && D->isFunctionOrFunctionTemplate();
-        if (HasFunScope) {
-          InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
-                                   Scope::CompoundStmtScope);
-          Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
-        }
-
-        ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                              nullptr, SourceLocation(),
-                              ParsedAttr::Form::GNU(), nullptr);
-
-        if (HasFunScope)
-          Actions.ActOnExitFunctionContext();
-      } else {
-        // If there are multiple decls, then the decl cannot be within the
-        // function scope.
-        ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                              nullptr, SourceLocation(),
-                              ParsedAttr::Form::GNU(), nullptr);
+      // If the Decl is on a function, add function parameters to the scope.
+      if (HasFuncScope) {
+        InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
+                                 Scope::CompoundStmtScope);
+        Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
       }
+
+        ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
+                              nullptr, SourceLocation(),
+                              ParsedAttr::Form::GNU(), nullptr);
+
+        if (HasFuncScope)
+          Actions.ActOnExitFunctionContext();
+
     } else {
-      bool HasFunScope = EnterScope && D->isFunctionOrFunctionTemplate();
-      ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope, HasFunScope);
-      if (HasFunScope)
+      ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope, HasFuncScope);
+      if (HasFuncScope)
         Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
 
       ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
                             nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
                             nullptr);
 
-      if (HasFunScope)
+      if (HasFuncScope)
         Actions.ActOnExitFunctionContext();
     }
   } else if (OutAttrs) {
