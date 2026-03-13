@@ -1,0 +1,14 @@
+// Test this without pch.
+// RUN: %clang_cc1 -include %S/pragma-redefine-extname.h %s -verify -emit-llvm -o - | FileCheck %s
+
+// Test with pch.
+// RUN: %clang_cc1 -x c-header -emit-pch -o %t %S/pragma-redefine-extname.h
+// RUN: %clang_cc1 -include-pch %t %s -verify -emit-llvm -o - | FileCheck %s
+
+// CHECK-DAG: define void @"\01redeffunc2_ext"
+// CHECK-DAG: call void @"\01redeffunc1_ext"
+
+///////////// Issue #186742: check that #pragma redefine_extname exports into PCHs even if the header contains no declaration of the symbol
+void undecfunc1(void);
+void undecfunc2(void) { undecfunc1(); }
+static void undecfunc3(void) {} // expected-warning {{#pragma redefine_extname is applicable to external C declarations only; not applied to function 'undecfunc3'}}
