@@ -2627,9 +2627,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // with non-integer types should call CreateAppToShadowCast() themselves.
     assert(V1->getType()->isIntOrIntVectorTy());
     assert(V2->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
 
     // Conveniently, getShadowTy() of Int/IntVector returns the original type.
-    assert(V1->getType() == V2->getType());
     assert(V1->getType() == S1->getType());
     assert(V2->getType() == S2->getType());
 
@@ -2675,9 +2675,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //  of integer values. Both arguments must have identical types."
     assert(V1->getType()->isIntOrIntVectorTy());
     assert(V2->getType()->isIntOrIntVectorTy());
+    assert(V1->getType() == V2->getType());
 
     // Conveniently, getShadowTy() of Int/IntVector returns the original type.
-    assert(V1->getType() == V2->getType());
     assert(V1->getType() == S1->getType());
     assert(V2->getType() == S2->getType());
 
