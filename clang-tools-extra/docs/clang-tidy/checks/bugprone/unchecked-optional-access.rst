@@ -310,7 +310,7 @@ advantages:
     scope. This gives the user the best of both worlds -- the safety of a
     dynamic check, but without incurring redundant costs.
 
-GTEST awareness
+GoogleTest awareness
 -------
 
 The check recognizes common macros like `ASSERT_TRUE` and `ASSERT_FALSE`:

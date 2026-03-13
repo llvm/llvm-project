@@ -946,11 +946,11 @@ static auto isAssertionResultConstructFromOptionalCall() {
 void transferAssertionResultOperatorBoolCall(const CXXMemberCallExpr *Expr,
                                              const MatchFinder::MatchResult &,
                                              LatticeTransferState &State) {
-  auto *OptionalLoc = getImplicitObjectLocation(*Expr, State.Env);
-  if (OptionalLoc == nullptr)
+  auto *RecordLoc = getImplicitObjectLocation(*Expr, State.Env);
+  if (RecordLoc == nullptr)
     return;
 
-  BoolValue *HasVal = getHasValue(State.Env, OptionalLoc);
+  BoolValue *HasVal = getHasValue(State.Env, RecordLoc);
   if (HasVal == nullptr)
     return;
 
