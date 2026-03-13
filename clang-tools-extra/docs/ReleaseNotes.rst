@@ -210,11 +210,6 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
-- Improved :doc:`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
-  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
-  number of false positives in test code.
-
 - Improved :doc:`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` check by fixing
   false positives when extending the standard library with a specialization of
@@ -224,6 +219,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
   string constructor calls when the string class constructor has a default
   allocator argument.
+
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
+  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
+  number of false positives in test code.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
