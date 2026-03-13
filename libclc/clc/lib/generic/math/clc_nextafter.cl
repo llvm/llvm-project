@@ -12,5 +12,5 @@
 #include "clc/math/clc_nextup.h"
 #include "clc/relational/clc_isunordered.h"
 
-#define __CLC_BODY <clc_nextafter.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_nextafter.inc"
+#include "clc/math/gentype.inc"

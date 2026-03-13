@@ -33,5 +33,5 @@ _CLC_DEF _CLC_OVERLOAD _CLC_CONST static double ep_high_fp_bits(double x) {
 }
 #endif
 
-#define __CLC_BODY <clc_ep.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_ep.inc"
+#include "clc/math/gentype.inc"
