@@ -26,6 +26,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   CLANG_LIBS
   clangAST
   clangASTMatchers
+  clangBasic
   clangFrontend
   clangScalableStaticAnalysisFrameworkCore
   clangSerialization
