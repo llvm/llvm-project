@@ -9631,7 +9631,8 @@ bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
     Flags.copyFMF(*FPOp);
   fp::ExceptionBehavior EB = I.getExceptionBehavior();
   if (DAG.getMachineFunction().getFunction().getAttributes().hasFnAttr(
-    llvm::Attribute::StrictFP) && EB == fp::ExceptionBehavior::ebIgnore) {
+          llvm::Attribute::StrictFP) &&
+      EB == fp::ExceptionBehavior::ebIgnore) {
     Flags.setNoFPExcept(true);
   }
 

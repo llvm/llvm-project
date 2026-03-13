@@ -842,8 +842,9 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
     // with the floating-point environment. These memory effects depend on
     // the attributes of the containing function.
     if (auto FPME = Call->getFloatingPointMemoryEffects())
-      FuncME = FuncME.getWithModRef(IRMemLocation::InaccessibleMem,
-                                FPME->getModRef(IRMemLocation::InaccessibleMem));
+      FuncME =
+          FuncME.getWithModRef(IRMemLocation::InaccessibleMem,
+                               FPME->getModRef(IRMemLocation::InaccessibleMem));
 
     // Operand bundles on the call may also read or write memory, in addition
     // to the behavior of the called function.
@@ -871,7 +872,7 @@ MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
     // inaccessible memory to model control dependence.
     return MemoryEffects::readOnly() |
            MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
-#define FUNCTION(NAME,R,D) case Intrinsic::NAME:
+#define FUNCTION(NAME, R, D) case Intrinsic::NAME:
 #include "llvm/IR/FloatingPointOps.def"
     // Floating-point operations may have or may not have side effects due to
     // the interaction with floating-point environment. Which case is realized,
