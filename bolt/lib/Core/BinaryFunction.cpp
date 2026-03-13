@@ -1327,6 +1327,7 @@ Error BinaryFunction::disassemble() {
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
 
   uint64_t Size = 0; // instruction size
+  bool SeenTerminator = false; // PPC64: track if we passed a return/branch
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
@@ -1345,6 +1346,18 @@ Error BinaryFunction::disassemble() {
       if (isZeroPaddingAt(Offset))
         break;
 
+      // PPC64 ELFv2: Function symbol size may include non-code bytes after the
+      // final blr/return instruction (e.g. metadata or exception pointers).
+      // Once a terminator instruction is seen, treat remaining undecodable
+      // bytes as trailing data and stop disassembly.
+      if (BC.isPPC64() && SeenTerminator) {
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: PPC64: treating bytes at offset 0x"
+                          << Twine::utohexstr(Offset)
+                          << " as trailing data after terminator in "
+                          << *this << "\n");
+        break;
+      }
+
       BC.errs()
           << "BOLT-WARNING: unable to disassemble instruction at offset 0x"
           << Twine::utohexstr(Offset) << " (address 0x"
@@ -1359,6 +1372,12 @@ Error BinaryFunction::disassemble() {
       }
 
       break;
+    }
+
+    // PPC64: track terminator instructions (blr, bctr, unconditional branch)
+    if (BC.isPPC64() &&
+        (MIB->isReturn(Instruction) || MIB->isUnconditionalBranch(Instruction))) {
+      SeenTerminator = true;
     }
 
     // Check integrity of LLVM assembler/disassembler.
