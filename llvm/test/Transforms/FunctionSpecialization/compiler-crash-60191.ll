@@ -60,7 +60,7 @@ define i32 @f2(i32 %offset) {
 }
 
 ; Tests that `func` has been specialized and it didn't cause compiler crash.
+; CHECK-DAG: func.specialized.4
+; CHECK-DAG: func.specialized.5
 ; CHECK-DAG: func.specialized.1
-; CHECK-DAG: func.specialized.2
-; CHECK-DAG: func.specialized.3
 
