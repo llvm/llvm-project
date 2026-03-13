@@ -2003,26 +2003,27 @@ Expected<bool> FunctionImporter::importFunctions(
         bool ImportDefinition =
             MaybeImportType == GlobalValueSummary::Definition;
 
-       LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
-                         << " importing alias"
-                         << (ImportDefinition
-                                 ? " definition "
-                                 : (MaybeImportType ? " declaration " : " "))
-                         << GUID << " " << GA.getName() << " from "
-                         << SrcModule->getSourceFileName() << "\n");
-       if (ImportDefinition) {
-         if (Error Err = GA.materialize())
-           return std::move(Err);
-         // Import alias as a copy of its aliasee.
-         GlobalObject *GO = GA.getAliaseeObject();
-         if (Error Err = GO->materialize())
-           return std::move(Err);
-         auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
-         assert(Fn);
-         (void)Fn;
-         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << getGUIDOrFallback(*GO) << " "
-                           << GO->getName() << " from "
+        LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                          << " importing alias"
+                          << (ImportDefinition
+                                  ? " definition "
+                                  : (MaybeImportType ? " declaration " : " "))
+                          << GUID << " " << GA.getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
+        if (ImportDefinition) {
+          if (Error Err = GA.materialize())
+            return std::move(Err);
+          // Import alias as a copy of its aliasee.
+          GlobalObject *GO = GA.getAliaseeObject();
+          if (Error Err = GO->materialize())
+            return std::move(Err);
+          auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
+          assert(Fn);
+          (void)Fn;
+          LLVM_DEBUG(dbgs()
+                     << "Is importing aliasee fn " << getGUIDOrFallback(*GO)
+                     << " " << GO->getName() << " from "
+                     << SrcModule->getSourceFileName() << "\n");
           if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
             // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
             // statistics and debugging.
