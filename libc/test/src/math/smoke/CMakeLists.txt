@@ -4457,6 +4457,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log10p1f16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log10p1f16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.log10p1f16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   log1p_test
   SUITE
     libc-math-smoke-tests

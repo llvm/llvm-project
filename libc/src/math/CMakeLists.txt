@@ -385,6 +385,7 @@ add_math_entrypoint_object(ldexpbf16)
 add_math_entrypoint_object(log10)
 add_math_entrypoint_object(log10f)
 add_math_entrypoint_object(log10f16)
+add_math_entrypoint_object(log10p1f16)
 
 add_math_entrypoint_object(log1p)
 add_math_entrypoint_object(log1pf)
