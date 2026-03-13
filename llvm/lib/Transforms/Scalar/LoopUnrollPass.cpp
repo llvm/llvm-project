@@ -329,15 +329,6 @@ struct EstimatedUnrollCost {
   unsigned RolledDynamicCost;
 };
 
-struct PragmaInfo {
-  PragmaInfo(const Loop *L);
-  const bool UserUnrollCount;
-  const bool PragmaFullUnroll;
-  const unsigned PragmaCount;
-  const bool PragmaEnableUnroll;
-  const bool ExplicitUnroll;
-};
-
 } // end anonymous namespace
 
 /// Figure out if the loop is worth full unrolling.
@@ -752,15 +743,6 @@ uint64_t UnrollCostEstimator::getUnrolledLoopSize(
     return static_cast<uint64_t>(LS - UP.BEInsns) * UP.Count + UP.BEInsns;
 }
 
-// Returns the loop hint metadata node with the given name (for example,
-// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
-// returned.
-static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
-  if (MDNode *LoopID = L->getLoopID())
-    return GetUnrollMetadata(LoopID, Name);
-  return nullptr;
-}
-
 // Returns true if the loop has an unroll(full) pragma.
 static bool hasUnrollFullPragma(const Loop *L) {
   return getUnrollMetadataForLoop(L, "llvm.loop.unroll.full");
@@ -792,11 +774,12 @@ static unsigned unrollCountPragmaValue(const Loop *L) {
   return 0;
 }
 
-PragmaInfo::PragmaInfo(const Loop *L)
+UnrollPragmaInfo::UnrollPragmaInfo(const Loop *L)
     : UserUnrollCount(UnrollCount.getNumOccurrences() > 0),
       PragmaFullUnroll(hasUnrollFullPragma(L)),
       PragmaCount(unrollCountPragmaValue(L)),
       PragmaEnableUnroll(hasUnrollEnablePragma(L)),
+      PragmaRuntimeUnrollDisable(hasRuntimeUnrollDisablePragma(L)),
       ExplicitUnroll(PragmaCount > 0 || PragmaFullUnroll ||
                      PragmaEnableUnroll || UserUnrollCount) {}
 
@@ -818,7 +801,7 @@ static unsigned getFullUnrollBoostingFactor(const EstimatedUnrollCost &Cost,
 }
 
 static std::optional<unsigned>
-shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
+shouldPragmaUnroll(Loop *L, const UnrollPragmaInfo &PInfo,
                    const unsigned TripMultiple, const unsigned TripCount,
                    unsigned MaxTripCount, const UnrollCostEstimator UCE,
                    const TargetTransformInfo::UnrollingPreferences &UP) {
@@ -1016,7 +999,7 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                               << (MaxOrZero ? " (MaxOrZero)" : "")
                               << ", TripMultiple=" << TripMultiple << "\n");
 
-  PragmaInfo PInfo(L);
+  UnrollPragmaInfo PInfo(L);
   LLVM_DEBUG({
     if (PInfo.ExplicitUnroll) {
       dbgs().indent(1) << "Explicit unroll requested:";
@@ -1168,7 +1151,7 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   // 7th priority is runtime unrolling.
   LLVM_DEBUG(dbgs().indent(1) << "Trying runtime unroll...\n");
   // Don't unroll a runtime trip count loop when it is disabled.
-  if (hasRuntimeUnrollDisablePragma(L)) {
+  if (PInfo.PragmaRuntimeUnrollDisable) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Not runtime unrolling: disabled by pragma.\n");
     UP.Count = 0;
@@ -1496,7 +1479,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.
   if (UnrollResult != LoopUnrollResult::FullyUnrolled &&
-      PragmaInfo(L).ExplicitUnroll)
+      UnrollPragmaInfo(L).ExplicitUnroll)
     L->setLoopAlreadyUnrolled();
 
   return UnrollResult;
