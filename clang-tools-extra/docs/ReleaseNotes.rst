@@ -101,7 +101,7 @@ Improvements to clang-tidy
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to recognize common
-  GoogleTest macros such as `ASSERT_TRUE` and `ASSERT_FALSE`, reducing the
+  GoogleTest macros such as ``ASSERT_TRUE`` and ``ASSERT_FALSE``, reducing the
   number of false positives in test code.
 
 New checks
