@@ -6957,7 +6957,9 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
     // case this is just a compare).
     if (APLhs == (-APRhs) &&
         ((TargetPreference & AndOrSETCCFoldKind::ABS) ||
-         DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0}))) {
+         DAG.doesNodeExist(ISD::ABS, DAG.getVTList(OpVT), {LHS0}) ||
+         DAG.doesNodeExist(ISD::ABS_MIN_POISON, DAG.getVTList(OpVT),
+                           {LHS0}))) {
       const APInt &C = APLhs.isNegative() ? APRhs : APLhs;
       // (icmp eq A, C) | (icmp eq A, -C)
       //    -> (icmp eq Abs(A), C)

@@ -154,20 +154,15 @@ define i1 @abs_eq_pow2(i32 %0) nounwind {
 ; X86-LABEL: abs_eq_pow2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmpl $4, %eax
+; X86-NEXT:    addl $4, %eax
+; X86-NEXT:    testl $-9, %eax
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abs_eq_pow2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    negl %eax
-; X64-NEXT:    cmovsl %edi, %eax
-; X64-NEXT:    cmpl $4, %eax
+; X64-NEXT:    addl $4, %edi
+; X64-NEXT:    testl $-9, %edi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %2 = tail call i32 @llvm.abs.i32(i32 %0, i1 true)
@@ -179,24 +174,18 @@ define i1 @abs_ne_pow2(i64 %0) nounwind {
 ; X86-LABEL: abs_ne_pow2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %ecx, %edx
-; X86-NEXT:    subl %ecx, %edx
-; X86-NEXT:    sbbl %ecx, %eax
-; X86-NEXT:    xorl $2, %edx
-; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl $2, %eax
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    andl $-5, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abs_ne_pow2:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    cmovsq %rdi, %rax
-; X64-NEXT:    cmpq $2, %rax
+; X64-NEXT:    addq $2, %rdi
+; X64-NEXT:    testq $-5, %rdi
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %2 = tail call i64 @llvm.abs.i64(i64 %0, i1 true)
