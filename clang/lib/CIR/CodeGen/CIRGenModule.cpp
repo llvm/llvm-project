@@ -931,7 +931,7 @@ CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
     ty = getTypes().convertTypeForMem(astTy);
 
   StringRef mangledName = getMangledName(d);
-  return getOrCreateCIRGlobal(mangledName, ty, astTy.getAddressSpace(), d,
+  return getOrCreateCIRGlobal(mangledName, ty, getGlobalVarAddressSpace(d), d,
                               isForDefinition);
 }
 
