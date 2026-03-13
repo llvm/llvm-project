@@ -196,7 +196,6 @@ class Analysis : public BinaryFunctionPass {
   std::mutex AnalysisResultsMutex;
 
 public:
-  /// Constructs the analysis pass.
   explicit Analysis(opts::GadgetKindBitmask EnabledDetectors);
 
   const char *getName() const override { return "pauth-gadget-scanner"; }

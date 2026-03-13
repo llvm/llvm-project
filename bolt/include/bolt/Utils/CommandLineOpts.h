@@ -130,7 +130,7 @@ bool processAllFunctions();
 /// Return true if we should dump dot graphs for the given function.
 bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
-/// Bitmask representing a subset of possible gadget scanner kinds.
+/// Bitmask representing a subset of possible gadget kinds.
 enum GadgetKindBitmask : unsigned {
   /// Scan for unprotected backward control-flow (return instructions).
   GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
