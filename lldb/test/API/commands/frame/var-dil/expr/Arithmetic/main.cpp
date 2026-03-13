@@ -33,9 +33,11 @@ int main(int argc, char **argv) {
   int int_max = std::numeric_limits<int>::max();
   int int_min = std::numeric_limits<int>::min();
   unsigned int uint_max = std::numeric_limits<unsigned int>::max();
+  unsigned int uint_zero = 0;
   long long ll_max = std::numeric_limits<long long>::max();
   long long ll_min = std::numeric_limits<long long>::min();
   unsigned long long ull_max = std::numeric_limits<unsigned long long>::max();
+  unsigned long long ull_zero = 0;
 
   return 0; // Set a breakpoint here
 }

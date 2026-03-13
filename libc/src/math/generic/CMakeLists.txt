@@ -290,7 +290,9 @@ add_entrypoint_object(
   HDRS
     ../cos.h
   DEPENDS
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.cos
+    libc.src.__support.math.cos_integer_eval
 )
 
 add_entrypoint_object(
@@ -340,7 +342,9 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
+    libc.src.__support.macros.properties.cpu_features
     libc.src.__support.math.sin
+    libc.src.__support.math.sin_integer_eval
 )
 
 add_entrypoint_object(
@@ -3165,8 +3169,7 @@ add_entrypoint_object(
   HDRS
     ../ffmaf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.fma
+    libc.src.__support.math.ffmaf128
 )
 
 add_entrypoint_object(
@@ -4383,6 +4386,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmabf16
+  SRCS
+    fmabf16.cpp
+  HDRS
+    ../fmabf16.h
+  DEPENDS
+    libc.src.__support.math.fmabf16
+)
+
+add_entrypoint_object(
   totalorder
   SRCS
     totalorder.cpp
@@ -4942,6 +4955,20 @@ add_entrypoint_object(
     ../cbrt.h
   DEPENDS
     libc.src.__support.math.cbrt
+)
+
+add_entrypoint_object (
+  cbrtbf16
+  SRCS
+    cbrtbf16.cpp
+  HDRS
+    ../cbrtbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.generic.cbrt
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(

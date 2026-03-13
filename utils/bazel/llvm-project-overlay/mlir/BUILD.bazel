@@ -15,7 +15,6 @@ load(
     "cc_headers_only",
     "if_cuda_available",
     "mlir_c_api_cc_library",
-    "nanobind_pyi_genrule",
 )
 load(":linalggen.bzl", "genlinalg")
 load(":tblgen.bzl", "gentbl_cc_library", "td_library")
@@ -29,7 +28,6 @@ licenses(["notice"])
 
 exports_files([
     "LICENSE.TXT",
-    "run_lit.sh",
     "utils/lldb-scripts/mlirDataFormatters.py",
     "utils/pygments/mlir_lexer.py",
     "utils/textmate/mlir.json",
@@ -1332,29 +1330,6 @@ cc_binary(
 )
 
 ##---------------------------------------------------------------------------##
-# Python stub generation for native extensions.
-##---------------------------------------------------------------------------##
-
-py_binary(
-    name = "stubgen_runner",
-    srcs = ["lib/Bindings/Python/stubgen_runner.py"],
-    data = ["@nanobind//:src/stubgen.py"],
-    deps = ["@rules_python//python/runfiles"],
-)
-
-nanobind_pyi_genrule(
-    name = "_mlir_pyi",
-    outs = [
-        "_mlir/__init__.pyi",
-        "_mlir/ir.pyi",
-        "_mlir/passmanager.pyi",
-        "_mlir/rewrite.pyi",
-    ],
-    module_name = "_mlir",
-    deps = [":_mlir.so"],
-)
-
-##---------------------------------------------------------------------------##
 
 td_library(
     name = "AttrTdFiles",
@@ -2597,6 +2572,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
         ":ConvertToLLVMInterface",
         ":IR",
         ":LLVMCommonConversion",
@@ -3346,6 +3322,7 @@ cc_library(
         ":ShardingInterface",
         ":Support",
         ":TensorDialect",
+        ":TransformUtils",
         ":Transforms",
         "//llvm:Support",
     ],
@@ -4520,6 +4497,7 @@ cc_library(
     hdrs = ["include/mlir/Interfaces/LoopLikeInterface.h"],
     includes = ["include"],
     deps = [
+        ":ControlFlowInterfaces",
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterfaceIncGen",
@@ -8303,6 +8281,7 @@ cc_library(
         ":TransformUtils",
         ":Transforms",
         ":VectorDialect",
+        ":VectorToGPU",
         ":XeGPUDialect",
         ":XeGPUUtils",
         "//llvm:Support",
@@ -10248,6 +10227,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":AtomicInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -10362,6 +10342,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
+        ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":LLVMDialect",
@@ -10372,6 +10353,7 @@ cc_library(
         ":OpenACCOpsInterfacesIncGen",
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
@@ -10420,6 +10402,7 @@ cc_library(
         ":ArithUtils",
         ":DataLayoutInterfaces",
         ":DialectUtils",
+        ":FuncDialect",
         ":FunctionInterfaces",
         ":IR",
         ":OpenACCDialect",
@@ -10446,14 +10429,18 @@ cc_library(
     deps = [
         ":Analysis",
         ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":IR",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
+        ":OpenACCUtils",
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -13550,6 +13537,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ControlFlowDialect",
         ":ConvertToLLVMInterface",
         ":DLTIDialect",
         ":IR",
@@ -14276,7 +14264,10 @@ cc_library(
     srcs = [
         "lib/Dialect/UB/IR/UBOps.cpp",
     ],
-    hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
+    hdrs = [
+        "include/mlir/Dialect/UB/IR/UBMatchers.h",
+        "include/mlir/Dialect/UB/IR/UBOps.h",
+    ],
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",

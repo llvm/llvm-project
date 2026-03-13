@@ -18,7 +18,6 @@ add_lldb_unittest(TargetTests
 
   LINK_COMPONENTS
       Support
-      TestingSupport
   LINK_LIBS
       lldbCore
       lldbHost
@@ -33,6 +32,7 @@ add_lldb_unittest(TargetTests
       lldbSymbol
       lldbUtility
       lldbUtilityHelpers
+      LLVMTestingSupport
   )
 
 set(test_inputs

@@ -15,7 +15,7 @@ define <2 x ptr> @testa(<2 x ptr> %a) {
 
 define <8 x ptr> @vgep_s_v8i64(ptr %a, <8 x i64>%i) {
 ; CHECK-LABEL: @vgep_s_v8i64(
-; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr double, ptr [[A:%.*]], <8 x i64> [[I:%.*]]
+; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr [8 x i8], ptr [[A:%.*]], <8 x i64> [[I:%.*]]
 ; CHECK-NEXT:    ret <8 x ptr> [[VECTORGEP]]
 ;
   %VectorGep = getelementptr double, ptr %a, <8 x i64> %i
@@ -25,7 +25,7 @@ define <8 x ptr> @vgep_s_v8i64(ptr %a, <8 x i64>%i) {
 define <8 x ptr> @vgep_s_v8i32(ptr %a, <8 x i32>%i) {
 ; CHECK-LABEL: @vgep_s_v8i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i32> [[I:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr double, ptr [[A:%.*]], <8 x i64> [[TMP1]]
+; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr [8 x i8], ptr [[A:%.*]], <8 x i64> [[TMP1]]
 ; CHECK-NEXT:    ret <8 x ptr> [[VECTORGEP]]
 ;
   %VectorGep = getelementptr double, ptr %a, <8 x i32> %i
