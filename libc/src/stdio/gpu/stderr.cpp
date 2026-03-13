@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/stdin.h"
+#include "src/stdio/stderr.h"
 
 #include "hdr/types/FILE.h"
 #include "src/__support/common.h"
