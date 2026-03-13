@@ -1253,13 +1253,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     Value *Op = EmitScalarExpr(E->getArg(0));
     assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
-           "Intrinsic WaveActiveBitOr operand must have a unsigned integer "
+           "Intrinsic WaveActiveBitOr operand must have an unsigned integer "
            "representation");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitOrIntrinsic();
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), ID, {Op->getType()}),
                            ArrayRef{Op}, "hlsl.wave.active.bit.or");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_xor: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
+           "Intrinsic WaveActiveBitXor operand must have an unsigned integer "
+           "representation");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitXorIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {Op->getType()}),
+                           ArrayRef{Op}, "hlsl.wave.active.bit.xor");
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));

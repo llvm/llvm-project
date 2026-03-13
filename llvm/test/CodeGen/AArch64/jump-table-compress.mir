@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64-linux-gnu %s -run-pass=aarch64-jump-tables -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu %s -passes=aarch64-jump-tables -o - | FileCheck %s
 --- |
   define i32 @test_jumptable(i32 %in) {
     unreachable
