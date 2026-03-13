@@ -6295,6 +6295,31 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     break;
   }
 
+  case ISD::VECTOR_SHUFFLE: {
+    assert(!Op.getValueType().isScalableVector());
+    unsigned NumElts = DemandedElts.getBitWidth();
+    // Collect the known bits that are shared by every vector element referenced
+    // by the shuffle.
+    APInt DemandedLHS, DemandedRHS;
+    const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
+    assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      return false;
+
+    for (int i = 0; i < (int)NumElts; ++i)
+	    if (DemandedElts[i] && SVN->getMaskElt(i) < 0)
+		    return false;
+
+    if (!!DemandedLHS && !isKnownNeverZero(Op.getOperand(0), DemandedLHS, Depth + 1))
+	    return false;
+
+    if (!!DemandedRHS && !isKnownNeverZero(Op.getOperand(1), DemandedRHS, Depth + 1))
+	    return false;
+    
+    return true;
+  }
+
   case ISD::UADDSAT:
   case ISD::UMAX:
     return isKnownNeverZero(Op.getOperand(1), DemandedElts, Depth + 1) ||
