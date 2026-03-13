@@ -717,11 +717,6 @@ public:
     return T == Context->SmemAccessCounter || T == X_CNT;
   }
 
-  unsigned getSgprScoresIdx(InstCounterType T) const {
-    assert(isSmemCounter(T) && "Invalid SMEM counter");
-    return T == X_CNT ? 1 : 0;
-  }
-
   unsigned getOutstanding(InstCounterType T) const {
     return ScoreUBs[T] - ScoreLBs[T];
   }
@@ -750,7 +745,7 @@ private:
 
   unsigned getSGPRScore(MCRegUnit RU, InstCounterType T) const {
     auto It = SGPRs.find(RU);
-    return It != SGPRs.end() ? It->second.Scores[getSgprScoresIdx(T)] : 0;
+    return It != SGPRs.end() ? It->second.get(T, *this) : 0;
   }
 
   unsigned getVMemScore(VMEMID TID, InstCounterType T) const {
@@ -923,9 +918,8 @@ private:
       for (MCRegUnit RU : regunits(Reg))
         VMem[toVMEMID(RU)].Scores[T] = Val;
     } else if (TRI.isSGPRReg(Context->MRI, Reg)) {
-      auto STy = getSgprScoresIdx(T);
       for (MCRegUnit RU : regunits(Reg))
-        SGPRs[RU].Scores[STy] = Val;
+        SGPRs[RU].get(T, *this) = Val;
     } else {
       llvm_unreachable("Register cannot be tracked/unknown register!");
     }
@@ -970,14 +964,25 @@ private:
     bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
   };
 
-  struct SGPRInfo {
-    // Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
-    // pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
-    // Row 0 represents the score for either DS_CNT or KM_CNT and row 1 keeps
-    // the X_CNT score.
-    std::array<unsigned, 2> Scores = {0};
+  /// Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
+  /// pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
+  class SGPRInfo {
+    /// ScoreDsCnt represents the score for either DS_CNT or KM_CNT.
+    unsigned ScoreDsCnt = 0;
+    /// ScoreXCnt keeps the X_CNT score.
+    unsigned ScoreXCnt = 0;
 
-    bool empty() const { return !Scores[0] && !Scores[1]; }
+  public:
+    unsigned get(InstCounterType T, const WaitcntBrackets &Ctx) const {
+      assert(Ctx.isSmemCounter(T) && "Invalid SMEM counter");
+      return T == X_CNT ? ScoreXCnt : ScoreDsCnt;
+    }
+    unsigned &get(InstCounterType T, const WaitcntBrackets &Ctx) {
+      assert(Ctx.isSmemCounter(T) && "Invalid SMEM counter");
+      return T == X_CNT ? ScoreXCnt : ScoreDsCnt;
+    }
+
+    bool empty() const { return ScoreDsCnt == 0 && ScoreXCnt == 0; }
   };
 
   DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
@@ -1352,7 +1357,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
         SmallVector<MCRegUnit> SortedSMEMIDs(SGPRs.keys());
         sort(SortedSMEMIDs);
         for (auto ID : SortedSMEMIDs) {
-          unsigned RegScore = SGPRs.at(ID).Scores[getSgprScoresIdx(T)];
+          unsigned RegScore = SGPRs.at(ID).get(T, *this);
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
@@ -3072,12 +3077,11 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       StrictDom |= mergeScore(M, Info.Scores[T], Other.getVMemScore(RegID, T));
 
     if (isSmemCounter(T)) {
-      unsigned Idx = getSgprScoresIdx(T);
       for (auto &[RegID, Info] : SGPRs) {
         auto It = Other.SGPRs.find(RegID);
         unsigned OtherScore =
-            (It != Other.SGPRs.end()) ? It->second.Scores[Idx] : 0;
-        StrictDom |= mergeScore(M, Info.Scores[Idx], OtherScore);
+            (It != Other.SGPRs.end()) ? It->second.get(T, *this) : 0;
+        StrictDom |= mergeScore(M, Info.get(T, *this), OtherScore);
       }
     }
   }
