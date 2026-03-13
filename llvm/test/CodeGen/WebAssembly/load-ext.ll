@@ -69,7 +69,7 @@ define i32 @global_sext_i8_i32() {
 ; WASM64-FAST-MVP-NEXT:    i64.const $push1=, 0
 ; WASM64-FAST-MVP-NEXT:    i32.load8_s $push0=, gv8($pop1)
 ; WASM64-FAST-MVP-NEXT:    return $pop0
-  %ld = load i8, ptr @gv8, align 1
+  %ld = load i8, ptr @gv8
   %conv = sext i8 %ld to i32
   ret i32 %conv
 }
@@ -93,14 +93,14 @@ define i32 @global_sext_i16_i32() {
 ; WASM32-FAST:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-FAST-NEXT:  # %bb.0:
 ; WASM32-FAST-NEXT:    i32.const $push1=, 0
-; WASM32-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1):p2align=0
+; WASM32-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1)
 ; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: global_sext_i16_i32:
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
 ; WASM32-FAST-MVP-NEXT:    i32.const $push1=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_s $push0=, gv16($pop1):p2align=0
+; WASM32-FAST-MVP-NEXT:    i32.load16_s $push0=, gv16($pop1)
 ; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
 ; WASM64-DAG-LABEL: global_sext_i16_i32:
@@ -121,16 +121,16 @@ define i32 @global_sext_i16_i32() {
 ; WASM64-FAST:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-FAST-NEXT:  # %bb.0:
 ; WASM64-FAST-NEXT:    i64.const $push1=, 0
-; WASM64-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1):p2align=0
+; WASM64-FAST-NEXT:    i32.load16_s $push0=, gv16($pop1)
 ; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: global_sext_i16_i32:
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i32 () -> (i32)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
 ; WASM64-FAST-MVP-NEXT:    i64.const $push1=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_s $push0=, gv16($pop1):p2align=0
+; WASM64-FAST-MVP-NEXT:    i32.load16_s $push0=, gv16($pop1)
 ; WASM64-FAST-MVP-NEXT:    return $pop0
-  %ld = load i16, ptr @gv16, align 1
+  %ld = load i16, ptr @gv16
   %conv = sext i16 %ld to i32
   ret i32 %conv
 }
@@ -197,7 +197,7 @@ define i64 @global_sext_i8_i64() {
 ; WASM64-FAST-MVP-NEXT:    i32.load8_s $push1=, gv8($pop2)
 ; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
 ; WASM64-FAST-MVP-NEXT:    return $pop0
-  %ld = load i8, ptr @gv8, align 1
+  %ld = load i8, ptr @gv8
   %conv = sext i8 %ld to i64
   ret i64 %conv
 }
@@ -221,7 +221,7 @@ define i64 @global_sext_i16_i64() {
 ; WASM32-FAST:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-FAST-NEXT:  # %bb.0:
 ; WASM32-FAST-NEXT:    i32.const $push3=, 0
-; WASM32-FAST-NEXT:    i32.load16_u $push2=, gv16($pop3):p2align=0
+; WASM32-FAST-NEXT:    i32.load16_u $push2=, gv16($pop3)
 ; WASM32-FAST-NEXT:    i64.extend_i32_u $push0=, $pop2
 ; WASM32-FAST-NEXT:    i64.extend16_s $push1=, $pop0
 ; WASM32-FAST-NEXT:    return $pop1
@@ -230,7 +230,7 @@ define i64 @global_sext_i16_i64() {
 ; WASM32-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM32-FAST-MVP-NEXT:  # %bb.0:
 ; WASM32-FAST-MVP-NEXT:    i32.const $push2=, 0
-; WASM32-FAST-MVP-NEXT:    i32.load16_s $push1=, gv16($pop2):p2align=0
+; WASM32-FAST-MVP-NEXT:    i32.load16_s $push1=, gv16($pop2)
 ; WASM32-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
 ; WASM32-FAST-MVP-NEXT:    return $pop0
 ;
@@ -252,7 +252,7 @@ define i64 @global_sext_i16_i64() {
 ; WASM64-FAST:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
 ; WASM64-FAST-NEXT:    i64.const $push3=, 0
-; WASM64-FAST-NEXT:    i32.load16_u $push2=, gv16($pop3):p2align=0
+; WASM64-FAST-NEXT:    i32.load16_u $push2=, gv16($pop3)
 ; WASM64-FAST-NEXT:    i64.extend_i32_u $push0=, $pop2
 ; WASM64-FAST-NEXT:    i64.extend16_s $push1=, $pop0
 ; WASM64-FAST-NEXT:    return $pop1
@@ -261,10 +261,10 @@ define i64 @global_sext_i16_i64() {
 ; WASM64-FAST-MVP:         .functype global_sext_i16_i64 () -> (i64)
 ; WASM64-FAST-MVP-NEXT:  # %bb.0:
 ; WASM64-FAST-MVP-NEXT:    i64.const $push2=, 0
-; WASM64-FAST-MVP-NEXT:    i32.load16_s $push1=, gv16($pop2):p2align=0
+; WASM64-FAST-MVP-NEXT:    i32.load16_s $push1=, gv16($pop2)
 ; WASM64-FAST-MVP-NEXT:    i64.extend_i32_s $push0=, $pop1
 ; WASM64-FAST-MVP-NEXT:    return $pop0
-  %ld= load i16, ptr @gv16, align 1
+  %ld= load i16, ptr @gv16
   %conv = sext i16 %ld to i64
   ret i64 %conv
 }
