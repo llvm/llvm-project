@@ -910,8 +910,7 @@
 ! CHECK:               %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<100x10xi32>>, index, index) -> !fir.ref<i32>
 ! CHECK:               %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<i32>
 ! CHECK:               %[[LOAD_1:.*]] = fir.load %[[DESIGNATE_1]] : !fir.ref<i32>
-! CHECK:               %[[CMPI_0:.*]] = arith.cmpi sgt, %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:               %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[LOAD_1]], %[[LOAD_0]] : i32
+! CHECK:               %[[SELECT_0:.*]] = arith.maxsi %[[LOAD_1]], %[[LOAD_0]] : i32
 ! CHECK:               hlfir.assign %[[SELECT_0]] to %[[DESIGNATE_1]] : i32, !fir.ref<i32>
 ! CHECK:             }
 ! CHECK:           }
@@ -929,8 +928,7 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>, %[[VAL_1:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
-! CHECK:           %[[CMPI_0:.*]] = arith.cmpi sgt, %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[LOAD_1]], %[[LOAD_0]] : i32
+! CHECK:           %[[SELECT_0:.*]] = arith.maxsi %[[LOAD_1]], %[[LOAD_0]] : i32
 ! CHECK:           hlfir.assign %[[SELECT_0]] to %[[VAL_0]] : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
@@ -1023,8 +1021,7 @@
 ! CHECK:             %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_2]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:             %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<i32>
 ! CHECK:             %[[LOAD_1:.*]] = fir.load %[[DESIGNATE_1]] : !fir.ref<i32>
-! CHECK:             %[[CMPI_0:.*]] = arith.cmpi slt, %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:             %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[LOAD_1]], %[[LOAD_0]] : i32
+! CHECK:             %[[SELECT_0:.*]] = arith.minsi %[[LOAD_1]], %[[LOAD_0]] : i32
 ! CHECK:             hlfir.assign %[[SELECT_0]] to %[[DESIGNATE_1]] : i32, !fir.ref<i32>
 ! CHECK:           }
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<100xi32>>
@@ -1041,8 +1038,7 @@
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>, %[[VAL_1:.*]]: !fir.ref<i32>):
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:           %[[LOAD_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
-! CHECK:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[LOAD_1]], %[[LOAD_0]] : i32
-! CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[LOAD_1]], %[[LOAD_0]] : i32
+! CHECK:           %[[SELECT_0:.*]] = arith.minsi %[[LOAD_1]], %[[LOAD_0]] : i32
 ! CHECK:           hlfir.assign %[[SELECT_0]] to %[[VAL_0]] : i32, !fir.ref<i32>
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:         }
