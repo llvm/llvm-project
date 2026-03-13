@@ -17,3 +17,7 @@ target_link_libraries(23cnt7_ksenia_igonina_lab1 PRIVATE
   clangASTMatchers
   clangRewrite
 )
+
+add_lit_testsuite(check-23cnt7 "Running lit tests for 23cnt7 plugin"
+  ${CMAKE_CURRENT_SOURCE_DIR}/test
+)
