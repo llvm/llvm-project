@@ -37,12 +37,12 @@
 // CK25: [[CA01:%.+]] = type { ptr }
 
 // CK25-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK25: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK25: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 33, i64 288]
+// CK25: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK25: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
 // CK25-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK25: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK25: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 33, i64 288]
+// CK25: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK25: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
 // CK25-LABEL: explicit_maps_with_inner_lambda{{.*}}(
 
@@ -67,7 +67,7 @@ struct CC {
 // CK25-DAG: store ptr [[SEC0:%.+]], ptr [[P0]]
 // CK25-DAG: [[SEC0]] = getelementptr {{.*}}ptr [[VAR0:%.+]], i{{.+}} 0, i{{.+}} 0
 
-// CK25: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
+// CK25: call void [[CALL00:@.+]](ptr {{[^,]+}})
 #pragma omp target map(to \
                        : A)
     {
@@ -90,7 +90,7 @@ struct CC {
 // CK25-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK25-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK25: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
+// CK25: call void [[CALL01:@.+]](ptr {{[^,]+}})
 #pragma omp target map(to \
                        : arg)
     {
@@ -108,7 +108,7 @@ int explicit_maps_with_inner_lambda(int a){
   return c.foo(a);
 }
 
-// CK25: define {{.+}}[[CALL00]](ptr noundef [[VAL:%.+]], ptr {{[^)]*}})
+// CK25: define {{.+}}[[CALL00]](ptr noundef [[VAL:%.+]])
 // CK25: store ptr [[VAL]], ptr [[VALADDR:%[^,]+]],
 // CK25: [[VAL1:%.+]] = load ptr, ptr [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds nuw [[CA00]], ptr [[CA:%[^,]+]], i32 0, i32 0
@@ -117,7 +117,7 @@ int explicit_maps_with_inner_lambda(int a){
 
 // CK25: define {{.+}}[[LAMBDA]]
 
-// CK25: define {{.+}}[[CALL01]](ptr {{[^,]*}} [[VAL:%.+]], ptr {{[^)]*}})
+// CK25: define {{.+}}[[CALL01]](ptr {{.*}}[[VAL:%.+]])
 // CK25: store ptr [[VAL]], ptr [[VALADDR:%[^,]+]],
 // CK25: [[VAL1:%.+]] = load ptr, ptr [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds nuw [[CA01]], ptr [[CA:%[^,]+]], i32 0, i32 0

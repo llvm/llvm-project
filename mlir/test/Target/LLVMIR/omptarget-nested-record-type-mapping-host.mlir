@@ -29,8 +29,8 @@ llvm.func @_QQmain() {
   }
 }
 
-// CHECK: @.offload_sizes = private unnamed_addr constant [5 x i64] [i64 0, i64 4, i64 4, i64 16, i64 0]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710659, i64 288]
+// CHECK: @.offload_sizes = private unnamed_addr constant [4 x i64] [i64 0, i64 4, i64 4, i64 16]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710659, i64 281474976710659, i64 281474976710659]
 
 // CHECK: define void @_QQmain()
 // CHECK: %[[ALLOCA:.*]] = alloca { float, [10 x i32], { float, i32 }, i32 }, i64 1, align 8
@@ -44,24 +44,24 @@ llvm.func @_QQmain() {
 // CHECK: %[[SECOND_MEMBER_OFF:.*]] = ptrtoaddr ptr %[[LAST_MEMBER]] to i64
 // CHECK: %[[OFFLOAD_SIZE:.*]] = sub i64 %[[FIRST_MEMBER_OFF]], %[[SECOND_MEMBER_OFF]]
 
-// CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+// CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
-// CHECK: %[[PTR_ARR:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+// CHECK: %[[PTR_ARR:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK: store ptr %[[LAST_MEMBER]], ptr %[[PTR_ARR]], align 8
-// CHECK: %[[SIZE_ARR:.*]] = getelementptr inbounds [5 x i64], ptr %.offload_sizes, i32 0, i32 0
+// CHECK: %[[SIZE_ARR:.*]] = getelementptr inbounds [4 x i64], ptr %.offload_sizes, i32 0, i32 0
 // CHECK: store i64 %[[OFFLOAD_SIZE]], ptr %[[SIZE_ARR]], align 8
 
-// CHECK: %[[BASE_PTR_ARR_2:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+// CHECK: %[[BASE_PTR_ARR_2:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_2]], align 8
-// CHECK: %[[PTR_ARR_2:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+// CHECK: %[[PTR_ARR_2:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 // CHECK: store ptr %[[MEMBER_ACCESS_1]], ptr %[[PTR_ARR_2]], align 8
 
-// CHECK: %[[BASE_PTR_ARR_3:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
+// CHECK: %[[BASE_PTR_ARR_3:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_3]], align 8
-// CHECK: %[[PTR_ARR_3:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_ptrs, i32 0, i32 2
+// CHECK: %[[PTR_ARR_3:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 2
 // CHECK: store ptr %[[MEMBER_ACCESS_2]], ptr %[[PTR_ARR_3]], align 8
 
-// CHECK: %[[BASE_PTR_ARR_4:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
+// CHECK: %[[BASE_PTR_ARR_4:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 3
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_4]], align 8
-// CHECK: %[[PTR_ARR_4:.*]] = getelementptr inbounds [5 x ptr], ptr %.offload_ptrs, i32 0, i32 3
+// CHECK: %[[PTR_ARR_4:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 3
 // CHECK: store ptr %[[LAST_MEMBER]], ptr %[[PTR_ARR_4]], align 8

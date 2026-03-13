@@ -35,20 +35,20 @@
 // CK26: [[ST:%.+]] = type { i32, ptr, i32, ptr }
 
 // CK26-LABEL: @.__omp_offloading_{{.*}}CC{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK26: [[SIZE00:@.+]] = private {{.*}}constant [3 x i64] [i64 {{32|16}}, i64 4, i64 0]
-// CK26: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 547, i64 35, i64 288]
+// CK26: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 {{32|16}}, i64 4]
+// CK26: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 547, i64 35]
 
 // CK26-LABEL: @.__omp_offloading_{{.*}}CC{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK26: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 {{32|16}}, i64 4, i64 0]
-// CK26: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 547, i64 35, i64 288]
+// CK26: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 {{32|16}}, i64 4]
+// CK26: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 547, i64 35]
 
 // CK26-LABEL: @.__omp_offloading_{{.*}}CC{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK26: [[SIZE02:@.+]] = private {{.*}}constant [3 x i64] [i64 {{32|16}}, i64 4, i64 0]
-// CK26: [[MTYPE02:@.+]] = private {{.*}}constant [3 x i64] [i64 547, i64 35, i64 288]
+// CK26: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 {{32|16}}, i64 4]
+// CK26: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 547, i64 35]
 
 // CK26-LABEL: @.__omp_offloading_{{.*}}CC{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK26: [[SIZE03:@.+]] = private {{.*}}constant [3 x i64] [i64 {{32|16}}, i64 4, i64 0]
-// CK26: [[MTYPE03:@.+]] = private {{.*}}constant [3 x i64] [i64 547, i64 35, i64 288]
+// CK26: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 {{32|16}}, i64 4]
+// CK26: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 547, i64 35]
 
 // CK26-LABEL: explicit_maps_with_private_class_members{{.*}}(
 
@@ -85,7 +85,7 @@ struct CC {
 // CK26-DAG: [[VAR1]] = load ptr, ptr [[PVT:%.+]],
 // CK26-DAG: [[SEC1]] = load ptr, ptr [[PVT]],
 
-// CK26: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
+// CK26: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}})
 #pragma omp target map(fA)
       {
         ++fA;
@@ -112,7 +112,7 @@ struct CC {
 // CK26-DAG: [[VAR1]] = load ptr, ptr [[PVT:%.+]],
 // CK26-DAG: [[SEC1]] = load ptr, ptr [[PVT]],
 
-// CK26: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
+// CK26: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}})
 #pragma omp target map(fB)
       {
         fB += 1.0;
@@ -139,7 +139,7 @@ struct CC {
 // CK26-DAG: [[VAR1]] = load ptr, ptr [[PVT:%.+]],
 // CK26-DAG: [[SEC1]] = load ptr, ptr [[PVT]],
 
-// CK26: call void [[CALL02:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
+// CK26: call void [[CALL02:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}})
 #pragma omp target map(pA)
       {
         ++pA;
@@ -166,7 +166,7 @@ struct CC {
 // CK26-DAG: [[VAR1]] = load ptr, ptr [[PVT:%.+]],
 // CK26-DAG: [[SEC1]] = load ptr, ptr [[PVT]],
 
-// CK26: call void [[CALL03:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}}, ptr null)
+// CK26: call void [[CALL03:@.+]](ptr {{[^,]+}}, ptr {{[^,]+}})
 #pragma omp target map(pB)
       {
         pB += 1.0;
@@ -180,7 +180,7 @@ struct CC {
 };
 
 // Make sure the private instance is used in all target regions.
-// CK26: define {{.+}}[[CALL00]]({{.*}}ptr{{[^,]*}} [[PVTARG:%.+]], ptr {{[^)]*}})
+// CK26: define {{.+}}[[CALL00]]({{.*}}ptr{{.*}}[[PVTARG:%.+]])
 // CK26: store ptr [[PVTARG]], ptr [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load ptr, ptr [[PVTADDR]],
 // CK26: store ptr [[ADDR]], ptr [[PVTADDR:%.+]],
@@ -188,7 +188,7 @@ struct CC {
 // CK26: [[VAL:%.+]] = load i32, ptr [[ADDR]],
 // CK26: add nsw i32 [[VAL]], 1
 
-// CK26: define {{.+}}[[CALL01]]({{.*}}ptr{{[^,]*}} [[PVTARG:%.+]], ptr {{[^)]*}})
+// CK26: define {{.+}}[[CALL01]]({{.*}}ptr{{.*}}[[PVTARG:%.+]])
 // CK26: store ptr [[PVTARG]], ptr [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load ptr, ptr [[PVTADDR]],
 // CK26: store ptr [[ADDR]], ptr [[PVTADDR:%.+]],
@@ -197,7 +197,7 @@ struct CC {
 // CK26: [[EXT:%.+]] = fpext float [[VAL]] to double
 // CK26: fadd double [[EXT]], 1.000000e+00
 
-// CK26: define {{.+}}[[CALL02]]({{.*}}ptr{{[^,]*}} [[PVTARG:%.+]], ptr {{[^)]*}})
+// CK26: define {{.+}}[[CALL02]]({{.*}}ptr{{.*}}[[PVTARG:%.+]])
 // CK26: store ptr [[PVTARG]], ptr [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load ptr, ptr [[PVTADDR]],
 // CK26: store ptr [[ADDR]], ptr [[PVTADDR:%.+]],
@@ -205,7 +205,7 @@ struct CC {
 // CK26: [[VAL:%.+]] = load i32, ptr [[ADDR]],
 // CK26: add nsw i32 [[VAL]], 1
 
-// CK26: define {{.+}}[[CALL03]]({{.*}}ptr{{[^,]*}} [[PVTARG:%.+]], ptr {{[^)]*}})
+// CK26: define {{.+}}[[CALL03]]({{.*}}ptr{{.*}}[[PVTARG:%.+]])
 // CK26: store ptr [[PVTARG]], ptr [[PVTADDR:%.+]],
 // CK26: [[ADDR:%.+]] = load ptr, ptr [[PVTADDR]],
 // CK26: store ptr [[ADDR]], ptr [[PVTADDR:%.+]],

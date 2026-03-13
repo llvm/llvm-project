@@ -35,16 +35,16 @@ public:
   void foo();
 };
 
-// CK34-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [5 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}, i64 0]
+// CK34-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | IMPLICIT | TO = 0x1000000000201
-// CK34-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000201]], i64 288]
-// CK34-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [5 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}, i64 0]
+// CK34-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000201]]]
+// CK34-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | FROM = 0x1000000000002
 // MEMBER_OF_1 | IMPLICIT | FROM = 0x1000000000202
-// CK34-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000002]], i64 [[#0x1000000000002]], i64 [[#0x1000000000202]], i64 288]
+// CK34-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000002]], i64 [[#0x1000000000002]], i64 [[#0x1000000000202]]]
 
 void default_mapper() {
   S s;

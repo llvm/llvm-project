@@ -12,4 +12,4 @@ void foo(void) {
 
 // Check presence of foo() and the outlined target region
 // CHECK: define{{.*}} void [[FOO:@.+]]()
-// CHECK: define internal void [[OUTLINEDTARGET:@.+]](ptr {{[^)]*}})
+// CHECK: define internal void [[OUTLINEDTARGET:@.+]]()

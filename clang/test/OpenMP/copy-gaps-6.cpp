@@ -49,26 +49,26 @@ int main() {
   return 0;
 }
 
-// CHECK: [[CSTSZ0:@.+]] = private {{.*}}constant [5 x i64] [i64 0, i64 0, i64 4, i64 4, i64 0]
-// CHECK: [[CSTTY0:@.+]] = private {{.*}}constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 288]
+// CHECK: [[CSTSZ0:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 4, i64 4]
+// CHECK: [[CSTTY0:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]]]
 
-// CHECK: [[CSTSZ1:@.+]] = private {{.*}}constant [6 x i64] [i64 0, i64 0, i64 4, i64 4, i64 8, i64 0]
-// CHECK: [[CSTTY1:@.+]] = private {{.*}}constant [6 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x3]], i64 [[#0x4000]], i64 288]
+// CHECK: [[CSTSZ1:@.+]] = private {{.*}}constant [5 x i64] [i64 0, i64 0, i64 4, i64 4, i64 8]
+// CHECK: [[CSTTY1:@.+]] = private {{.*}}constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000003]], i64 [[#0x1000000000003]], i64 [[#0x3]], i64 [[#0x4000]]]
 
-// CHECK: [[CSTSZ2:@.+]] = private {{.*}}constant [4 x i64] [i64 24, i64 4, i64 8, i64 0]
-// CHECK: [[CSTTY2:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x4000]], i64 288]
+// CHECK: [[CSTSZ2:@.+]] = private {{.*}}constant [3 x i64] [i64 24, i64 4, i64 8]
+// CHECK: [[CSTTY2:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x4000]]]
 
 // CHECK-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CHECK-DAG: [[KSIZE:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
 // CHECK-DAG: store ptr [[SZBASE:%.+]], ptr [[KSIZE]], align 8
-// CHECK-DAG: [[SZBASE]] = getelementptr inbounds [5 x i64], ptr [[SIZES:%[^,]*]], i32 0, i32 0
+// CHECK-DAG: [[SZBASE]] = getelementptr inbounds [4 x i64], ptr [[SIZES:%[^,]*]], i32 0, i32 0
 
 // Fill two non-constant size elements here: the whole struct size, and the
 // region covering v.arr and v.y.
 
-// CHECK-DAG: [[STR:%.+]] = getelementptr inbounds [5 x i64], ptr [[SIZES]], i32 0, i32 0
+// CHECK-DAG: [[STR:%.+]] = getelementptr inbounds [4 x i64], ptr [[SIZES]], i32 0, i32 0
 // CHECK-DAG: store i64 %{{.+}}, ptr [[STR]], align 8
-// CHECK-DAG: [[ARRY:%.+]] = getelementptr inbounds [5 x i64], ptr [[SIZES]], i32 0, i32 1
+// CHECK-DAG: [[ARRY:%.+]] = getelementptr inbounds [4 x i64], ptr [[SIZES]], i32 0, i32 1
 // CHECK-DAG: store i64 %{{.+}}, ptr [[ARRY]], align 8
 
 // CHECK: call void
@@ -76,14 +76,14 @@ int main() {
 // CHECK-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CHECK-DAG: [[KSIZE:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
 // CHECK-DAG: store ptr [[SZBASE:%.+]], ptr [[KSIZE]], align 8
-// CHECK-DAG: [[SZBASE]] = getelementptr inbounds [6 x i64], ptr [[SIZES:%[^,]*]], i32 0, i32 0
+// CHECK-DAG: [[SZBASE]] = getelementptr inbounds [5 x i64], ptr [[SIZES:%[^,]*]], i32 0, i32 0
 
 // Fill two non-constant size elements here: the whole struct size, and the
 // region covering v.arr, v.y and v.z.
 
-// CHECK-DAG: [[STR:%.+]] = getelementptr inbounds [6 x i64], ptr [[SIZES]], i32 0, i32 0
+// CHECK-DAG: [[STR:%.+]] = getelementptr inbounds [5 x i64], ptr [[SIZES]], i32 0, i32 0
 // CHECK-DAG: store i64 %{{.+}}, ptr [[STR]], align 8
-// CHECK-DAG: [[ARRYZ:%.+]] = getelementptr inbounds [6 x i64], ptr [[SIZES]], i32 0, i32 1
+// CHECK-DAG: [[ARRYZ:%.+]] = getelementptr inbounds [5 x i64], ptr [[SIZES]], i32 0, i32 1
 // CHECK-DAG: store i64 %{{.+}}, ptr [[ARRYZ]], align 8
 
 // CHECK: call void

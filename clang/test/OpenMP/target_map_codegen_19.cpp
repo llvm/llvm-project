@@ -34,20 +34,20 @@
 #ifdef CK20
 
 // CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK20: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK20: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 33, i64 288]
+// CK20: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK20: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
 // CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK20: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 20, i64 0]
-// CK20: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 33, i64 288]
+// CK20: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 20]
+// CK20: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
 
 // CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK20: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK20: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 288]
+// CK20: [[SIZE02:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK20: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
 // CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK20: [[SIZE03:@.+]] = private {{.*}}constant [3 x i64] [i64 12, i64 {{4|8}}, i64 0]
-// CK20: [[MTYPE03:@.+]] = private {{.*}}constant [3 x i64] [i64 34, i64 16384, i64 288]
+// CK20: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 12, i64 {{4|8}}]
+// CK20: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 16384]
 
 // CK20-LABEL: explicit_maps_references_and_function_args{{.*}}(
 void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], float *d){
@@ -73,7 +73,7 @@ void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], f
 // CK20-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
 // CK20-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
-// CK20: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
+// CK20: call void [[CALL00:@.+]](ptr {{[^,]+}})
 #pragma omp target map(to \
                        : aa)
   {
@@ -97,7 +97,7 @@ void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], f
 // CK20-DAG: [[RVAR0]] = load ptr, ptr [[VAR0:%[^,]+]]
 // CK20-DAG: [[RVAR00]] = load ptr, ptr [[VAR0]]
 
-// CK20: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
+// CK20: call void [[CALL01:@.+]](ptr {{[^,]+}})
 #pragma omp target map(to \
                        : cc[:5])
   {
@@ -118,7 +118,7 @@ void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], f
 // CK20-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK20-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK20: call void [[CALL02:@.+]](ptr {{[^,]+}}, ptr null)
+// CK20: call void [[CALL02:@.+]](ptr {{[^,]+}})
 #pragma omp target map(from \
                        : b)
   {
@@ -153,7 +153,7 @@ void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], f
 // CK20-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 2
 // CK20-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
 
-// CK20: call void [[CALL03:@.+]](ptr {{[^,]+}}, ptr null)
+// CK20: call void [[CALL03:@.+]](ptr {{[^,]+}})
 #pragma omp target map(from \
                        : d [2:3])
   {

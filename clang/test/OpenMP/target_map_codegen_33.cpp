@@ -19,8 +19,8 @@
 // SIMD-ONLY32-NOT: {{__kmpc|__tgt}}
 #ifdef CK32
 
-// CK32-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [3 x i64] [i64 33, i64 16384, i64 288]
-// CK32-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [3 x i64] [i64 34, i64 16384, i64 288]
+// CK32-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [2 x i64] [i64 33, i64 16384]
+// CK32-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [2 x i64] [i64 34, i64 16384]
 
 void array_shaping(float *f, int sa) {
 

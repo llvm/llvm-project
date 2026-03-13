@@ -31,12 +31,12 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: store i32 %[[LOAD_VAL]], ptr %[[BYCOPY_ALLOCA]], align 4
 // CHECK: %[[BYCOPY_LOAD:.*]] = load ptr, ptr %[[BYCOPY_ALLOCA]], align 8
 
-// CHECK: %[[BASEPTR_BYREF:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+// CHECK: %[[BASEPTR_BYREF:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr @_QFEsp, ptr %[[BASEPTR_BYREF]], align 8
-// CHECK: %[[OFFLOADPTR_BYREF:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+// CHECK: %[[OFFLOADPTR_BYREF:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 // CHECK: store ptr @_QFEsp, ptr %[[OFFLOADPTR_BYREF]], align 8
 
-// CHECK: %[[BASEPTR_BYCOPY:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+// CHECK: %[[BASEPTR_BYCOPY:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr %[[BYCOPY_LOAD]], ptr %[[BASEPTR_BYCOPY]], align 8
-// CHECK: %[[OFFLOADPTR_BYREF:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+// CHECK: %[[OFFLOADPTR_BYREF:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 // CHECK: store ptr %[[BYCOPY_LOAD]], ptr %[[OFFLOADPTR_BYREF]], align 8

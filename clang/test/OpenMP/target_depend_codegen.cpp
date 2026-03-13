@@ -43,8 +43,8 @@
 
 // TCHECK: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
-// CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [4 x i64] [i64 0, i64 4, i64 {{16|12}}, i64 0]
-// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [4 x i64] [i64 544, i64 800, i64 3, i64 288]
+// CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 {{16|12}}]
+// CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 800, i64 3]
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
@@ -79,7 +79,7 @@ int foo(int n) {
 // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 0
 // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
 // CHECK:       store i32 [[DEV]], ptr [[GEP]],
-// CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[GTID:%.+]], i32 1, i[[SZ:32|64]] {{36|64}}, i[[SZ]] 4, ptr [[TASK_ENTRY0:@.+]])
+// CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[GTID:%.+]], i32 1, i[[SZ:32|64]] {{20|40}}, i[[SZ]] 4, ptr [[TASK_ENTRY0:@.+]])
 // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START:%.+]], i[[SZ]] 1
 // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START]], i[[SZ]] 2
 // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START]], i[[SZ]] 3
@@ -99,60 +99,60 @@ int foo(int n) {
   // CHECK:       [[BOOL:%.+]] = icmp ne i32 %{{.+}}, 0
   // CHECK:       br i1 [[BOOL]], label %[[THEN:.+]], label %[[ELSE:.+]]
   // CHECK:       [[THEN]]:
-  // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BP:%.+]], i32 0, i32 0
-  // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [4 x ptr], ptr [[P:%.+]], i32 0, i32 0
-  // CHECK-DAG:   [[MADDR0:%.+]] = getelementptr inbounds [4 x ptr], ptr [[M:%.+]], i[[SZ]] 0, i[[SZ]] 0
+  // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP:%.+]], i32 0, i32 0
+  // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P:%.+]], i32 0, i32 0
+  // CHECK-DAG:   [[MADDR0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[M:%.+]], i[[SZ]] 0, i[[SZ]] 0
   // CHECK-DAG:   store ptr [[BP0:%[^,]+]], ptr [[BPADDR0]]
   // CHECK-DAG:   store ptr [[BP0]], ptr [[PADDR0]]
   // CHECK-DAG:   store ptr null, ptr [[MADDR0]],
 
-  // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BP]], i32 0, i32 1
-  // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[P]], i32 0, i32 1
-  // CHECK-DAG:   [[MADDR1:%.+]] = getelementptr inbounds [4 x ptr], ptr [[M]], i[[SZ]] 0, i[[SZ]] 1
+  // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP]], i32 0, i32 1
+  // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P]], i32 0, i32 1
+  // CHECK-DAG:   [[MADDR1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[M]], i[[SZ]] 0, i[[SZ]] 1
   // CHECK-DAG:   store i[[SZ]] [[BP1:%[^,]+]], ptr [[BPADDR1]]
   // CHECK-DAG:   store i[[SZ]] [[BP1]], ptr [[PADDR1]]
   // CHECK-DAG:   store ptr null, ptr [[MADDR1]],
 
-  // CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BP]], i32 0, i32 2
-  // CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[P]], i32 0, i32 2
-  // CHECK-DAG:   [[MADDR2:%.+]] = getelementptr inbounds [4 x ptr], ptr [[M]], i[[SZ]] 0, i[[SZ]] 2
+  // CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP]], i32 0, i32 2
+  // CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P]], i32 0, i32 2
+  // CHECK-DAG:   [[MADDR2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[M]], i[[SZ]] 0, i[[SZ]] 2
   // CHECK-DAG:   store ptr [[D_ADDR:%.+]], ptr [[BPADDR2]]
   // CHECK-DAG:   store ptr [[D_ADDR]], ptr [[PADDR2]]
   // CHECK-DAG:   store ptr [[MAPPER_ID:@.+]], ptr [[MADDR2]],
 
-  // CHECK-DAG:   [[BP_START:%.+]] = getelementptr inbounds [4 x ptr], ptr [[BP]], i32 0, i32 0
-  // CHECK-DAG:   [[P_START:%.+]] = getelementptr inbounds [4 x ptr], ptr [[P]], i32 0, i32 0
+  // CHECK-DAG:   [[BP_START:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP]], i32 0, i32 0
+  // CHECK-DAG:   [[P_START:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P]], i32 0, i32 0
   // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
   // CHECK:       [[DEV1:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       [[DEV2:%.+]] = sext i32 [[DEV1]] to i64
 
-  // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{.*}}, i32 [[GTID]], i32 1, i[[SZ]] {{184|108}}, i[[SZ]] {{16|12}}, ptr [[TASK_ENTRY1_:@.+]], i64 [[DEV2]])
+  // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{.*}}, i32 [[GTID]], i32 1, i[[SZ]] {{152|88}}, i[[SZ]] {{16|12}}, ptr [[TASK_ENTRY1_:@.+]], i64 [[DEV2]])
   // CHECK:       [[BASE:%.+]] = getelementptr inbounds nuw [[TASK_TY1_:%.+]], ptr [[TASK]], i32 0, i32 1
   // CHECK-64:    [[BP_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 1
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BP_BASE]], ptr align 8 [[BP_START]], i64 32, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BP_BASE]], ptr align 8 [[BP_START]], i64 24, i1 false)
   // CHECK-64:    [[P_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 2
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P_BASE]], ptr align 8 [[P_START]], i64 32, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P_BASE]], ptr align 8 [[P_START]], i64 24, i1 false)
   // CHECK-64:    [[SZ_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 3
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SZ_BASE]], ptr align 8 [[SIZET]], i64 32, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SZ_BASE]], ptr align 8 [[SIZET]], i64 24, i1 false)
   // CHECK-64:    [[M_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[M_BASE]], ptr align 8 [[M]], i64 32, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[M_BASE]], ptr align 8 [[M]], i64 24, i1 false)
   // CHECK-32:    [[SZ_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 0
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SZ_BASE]], ptr align 4 [[SIZET]], i32 32, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SZ_BASE]], ptr align 4 [[SIZET]], i32 24, i1 false)
   // CHECK-32:    [[BP_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 3
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BP_BASE]], ptr align 4 [[BP_START]], i32 16, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BP_BASE]], ptr align 4 [[BP_START]], i32 12, i1 false)
   // CHECK-32:    [[P_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[P_BASE]], ptr align 4 [[P_START]], i32 16, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[P_BASE]], ptr align 4 [[P_START]], i32 12, i1 false)
   // CHECK-32:    [[M_BASE:%.+]] = getelementptr inbounds nuw [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 5
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[M_BASE]], ptr align 4 [[M]], i32 16, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[M_BASE]], ptr align 4 [[M]], i32 12, i1 false)
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START:%.+]], i[[SZ]] 1
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START]], i[[SZ]] 2
   // CHECK:       call i32 @__kmpc_omp_task_with_deps(ptr @1, i32 [[GTID]], ptr [[TASK]], i32 3, ptr [[DEP_START]], i32 0, ptr null)
   // CHECK:       br label %[[EXIT:.+]]
 
   // CHECK:       [[ELSE]]:
-  // CHECK-NOT:   getelementptr inbounds [4 x ptr], ptr
+  // CHECK-NOT:   getelementptr inbounds [2 x ptr], ptr
   // CHECK:       [[GEP:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr %{{.+}}, i32 0, i32 2
   // CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
   // CHECK:       store i32 [[DEV]], ptr [[GEP]],
@@ -192,22 +192,23 @@ int foo(int n) {
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions in foo().
 
-// CHECK:       define internal void [[HVT0:@.+]](ptr {{[^)]*}})
+// CHECK:       define internal void [[HVT0:@.+]]()
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY0]](i32{{.*}}, ptr noalias noundef %1)
-// CHECK:       call void {{%.*}}(
-// CHECK:       [[DEV:%.+]] = load i32,
+// CHECK:       store ptr null, ptr %
+// CHECK:       [[DEVICE_CAP:%.+]] = load ptr,
+// CHECK:       [[DEV:%.+]] = load i32, ptr [[DEVICE_CAP]],
 // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
 // CHECK:       [[RET:%.+]] = call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 [[DEVICE]], i32 -1, i32 0, ptr @.[[TGT_REGION:.+]].region_id, ptr %[[KERNEL_ARGS:.+]])
 // CHECK:       [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK:       br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
-// CHECK:       call void [[HVT0]](ptr null)
+// CHECK:       call void [[HVT0]]()
 // CHECK:       br label %[[END]]
 // CHECK:       [[END]]
 // CHECK:       ret i32 0
 
-// CHECK:       define internal void [[HVT1:@.+]](ptr noundef %{{.+}}, i[[SZ]] noundef %{{.+}}, ptr {{[^)]*}})
+// CHECK:       define internal void [[HVT1:@.+]](ptr noundef %{{.+}}, i[[SZ]] noundef %{{.+}})
 
 // CHECK:       define internal void [[MAPPER_ID]](ptr noundef %{{.+}}, ptr noundef %{{.+}}, ptr noundef %{{.+}}, i64 noundef %{{.+}}, i64 noundef %{{.+}})
 
@@ -230,7 +231,7 @@ int foo(int n) {
 // CHECK-64:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],
 // CHECK-32:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],
 // CHECK:       [[BP1:%.+]] = load i[[SZ]], ptr [[BP1_PTR]],
-// CHECK:       call void [[HVT1]](ptr [[BP0]], i[[SZ]] [[BP1]], ptr null)
+// CHECK:       call void [[HVT1]](ptr [[BP0]], i[[SZ]] [[BP1]])
 // CHECK:       br label %[[END]]
 // CHECK:       [[END]]
 // CHECK:       ret i32 0
@@ -243,10 +244,10 @@ int foo(int n) {
 // CHECK-64:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],
 // CHECK-32:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],
 // CHECK:       [[BP1:%.+]] = load i[[SZ]], ptr [[BP1_PTR]],
-// CHECK:       call void [[HVT1]](ptr [[BP0]], i[[SZ]] [[BP1]], ptr null)
+// CHECK:       call void [[HVT1]](ptr [[BP0]], i[[SZ]] [[BP1]])
 // CHECK:       ret i32 0
 
-// CHECK:       define internal void [[HVT2:@.+]](i[[SZ]] noundef %{{.+}}, ptr {{[^)]*}})
+// CHECK:       define internal void [[HVT2:@.+]](i[[SZ]] noundef %{{.+}})
 // Create stack storage and store argument in there.
 // CHECK:       [[AA_ADDR:%.+]] = alloca i[[SZ]], align
 // CHECK:       store i[[SZ]] %{{.+}}, ptr [[AA_ADDR]], align
@@ -259,7 +260,7 @@ int foo(int n) {
 // CHECK-64:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],
 // CHECK-32:    store i32 [[BP1_I32]], ptr [[BP1_PTR:%[^,]+]],
 // CHECK:       [[BP1:%.+]] = load i[[SZ]], ptr [[BP1_PTR]],
-// CHECK:       call void [[HVT2]](i[[SZ]] [[BP1]], ptr null)
+// CHECK:       call void [[HVT2]](i[[SZ]] [[BP1]])
 // CHECK:       ret i32 0
 
 #endif

@@ -38,7 +38,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
 // CHECK: omp_offload.failed:
-// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr null)
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
 // CHECK: omp_offload.cont:
 
 // CHECK: define void @omp_target_no_map()
@@ -46,14 +46,14 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
 // CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
 // CHECK: omp_offload.failed:
-// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]](ptr null)
+// CHECK: call void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]]()
 // CHECK: omp_offload.cont:
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]], ptr %{{.*}})
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE1]](ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
 // CHECK: %[[VAL_A:.*]] = load i32, ptr %[[ADDR_A]], align 4
 // CHECK: %[[VAL_B:.*]] = load i32, ptr %[[ADDR_B]], align 4
 // CHECK: %[[SUM:.*]] = add i32 %[[VAL_A]], %[[VAL_B]]
 // CHECK: store i32 %[[SUM]], ptr %[[ADDR_C]], align 4
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]](ptr %{{.*}})
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_no_map_l[[LINE2]]()
 // CHECK: ret void

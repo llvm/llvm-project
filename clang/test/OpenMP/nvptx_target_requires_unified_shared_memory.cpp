@@ -43,8 +43,8 @@ int bar(int n){
 // CHECK-HOST: [[TO_VAR:@.+]] ={{.*}} global double 2.000000e+01
 // CHECK-HOST: [[VAR_DECL_TGT_TO_PTR:@.+]] = weak{{.*}} global ptr [[TO_VAR]]
 
-// CHECK-HOST: [[OFFLOAD_SIZES:@.+]] = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 0]
-// CHECK-HOST: [[OFFLOAD_MAPTYPES:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 288]
+// CHECK-HOST: [[OFFLOAD_SIZES:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 8]
+// CHECK-HOST: [[OFFLOAD_MAPTYPES:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
 
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME:@.+]] = internal unnamed_addr constant [21 x i8]
 // CHECK-HOST: [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR:@.+]] = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr [[VAR_DECL_TGT_LINK_PTR]], ptr [[OMP_OFFLOAD_ENTRY_LINK_VAR_PTR_NAME]], i64 8, i64 0, ptr null }, section "llvm_offload_entries"
@@ -55,24 +55,24 @@ int bar(int n){
 // CHECK-HOST: [[N_CASTED:%.+]] = alloca i64
 // CHECK-HOST: [[SUM_CASTED:%.+]] = alloca i64
 
-// CHECK-HOST: [[OFFLOAD_BASEPTRS:%.+]] = alloca [3 x ptr]
-// CHECK-HOST: [[OFFLOAD_PTRS:%.+]] = alloca [3 x ptr]
+// CHECK-HOST: [[OFFLOAD_BASEPTRS:%.+]] = alloca [2 x ptr]
+// CHECK-HOST: [[OFFLOAD_PTRS:%.+]] = alloca [2 x ptr]
 
 // CHECK-HOST: [[LOAD1:%.+]] = load i64, ptr [[N_CASTED]]
 // CHECK-HOST: [[LOAD2:%.+]] = load i64, ptr [[SUM_CASTED]]
 
-// CHECK-HOST: [[BPTR1:%.+]] = getelementptr inbounds [3 x ptr], ptr [[OFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK-HOST: [[BPTR1:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-HOST: store i64 [[LOAD1]], ptr [[BPTR1]]
-// CHECK-HOST: [[BPTR2:%.+]] = getelementptr inbounds [3 x ptr], ptr [[OFFLOAD_PTRS]], i32 0, i32 0
+// CHECK-HOST: [[BPTR2:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_PTRS]], i32 0, i32 0
 // CHECK-HOST: store i64 [[LOAD1]], ptr [[BPTR2]]
 
-// CHECK-HOST: [[BPTR3:%.+]] = getelementptr inbounds [3 x ptr], ptr [[OFFLOAD_BASEPTRS]], i32 0, i32 1
+// CHECK-HOST: [[BPTR3:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_BASEPTRS]], i32 0, i32 1
 // CHECK-HOST: store i64 [[LOAD2]], ptr [[BPTR3]]
-// CHECK-HOST: [[BPTR4:%.+]] = getelementptr inbounds [3 x ptr], ptr [[OFFLOAD_PTRS]], i32 0, i32 1
+// CHECK-HOST: [[BPTR4:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_PTRS]], i32 0, i32 1
 // CHECK-HOST: store i64 [[LOAD2]], ptr [[BPTR4]]
 
-// CHECK-HOST: [[BPTR7:%.+]] = getelementptr inbounds [3 x ptr], ptr [[OFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK-HOST: [[BPTR8:%.+]] = getelementptr inbounds [3 x ptr], ptr [[OFFLOAD_PTRS]], i32 0, i32 0
+// CHECK-HOST: [[BPTR7:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_BASEPTRS]], i32 0, i32 0
+// CHECK-HOST: [[BPTR8:%.+]] = getelementptr inbounds [2 x ptr], ptr [[OFFLOAD_PTRS]], i32 0, i32 0
 
 // CHECK-HOST: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr %{{.+}})
 

@@ -34,35 +34,35 @@
 #ifdef CK27
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE00:@.+]] = private {{.*}}constant [2 x i64] zeroinitializer
-// CK27: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 544, i64 288]
+// CK27: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
+// CK27: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 544]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 {{8|4}}, i64 0]
-// CK27: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
+// CK27: [[SIZE01:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 {{8|4}}]
+// CK27: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE02:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64  {{8|4}}, i64 0]
-// CK27: [[MTYPE02:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
+// CK27: [[SIZE02:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64  {{8|4}}]
+// CK27: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE03:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64  {{8|4}}, i64 0]
-// CK27: [[MTYPE03:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16384, i64 288]
-
-// CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE05:@.+]] = private {{.*}}constant [2 x i64] zeroinitializer
-// CK27: [[MTYPE05:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 288]
+// CK27: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64  {{8|4}}]
+// CK27: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE07:@.+]] = private {{.*}}constant [2 x i64] [i64 4, i64 0]
-// CK27: [[MTYPE07:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 288]
+// CK27: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
+// CK27: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 288]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK27: [[SIZE09:@.+]] = private {{.*}}constant [2 x i64] [i64 40, i64 0]
-// CK27: [[MTYPE09:@.+]] = private {{.*}}constant [2 x i64] [i64 161, i64 288]
+// CK27: [[SIZE07:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
+// CK27: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 288]
+
+// CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK27: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 40]
+// CK27: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 161]
 
 // CK27-LABEL: zero_size_section_and_private_maps{{.*}}(
 void zero_size_section_and_private_maps (int ii){
@@ -90,7 +90,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK27-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK27: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
+// CK27: call void [[CALL00:@.+]](ptr {{[^,]+}})
 #pragma omp target
   {
     pa[50]++;
@@ -124,7 +124,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 0
 // CK27-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
 
-// CK27: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
+// CK27: call void [[CALL01:@.+]](ptr {{[^,]+}})
 #pragma omp target map(pa[:0])
   {
     pa[50]++;
@@ -158,7 +158,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 0
 // CK27-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
 
-// CK27: call void [[CALL02:@.+]](ptr {{[^,]+}}, ptr null)
+// CK27: call void [[CALL02:@.+]](ptr {{[^,]+}})
 #pragma omp target map(pa [0:0])
   {
     pa[50]++;
@@ -192,7 +192,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} %{{.+}}
 // CK27-DAG: [[RVAR1]] = load ptr, ptr [[VAR0]]
 
-// CK27: call void [[CALL03:@.+]](ptr {{[^,]+}}, ptr null)
+// CK27: call void [[CALL03:@.+]](ptr {{[^,]+}})
 #pragma omp target map(pa [ii:0])
   {
     pa[50]++;
@@ -204,7 +204,7 @@ void zero_size_section_and_private_maps (int ii){
 
 // Region 04
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
-// CK27: call void [[CALL04:@.+]](ptr null)
+// CK27: call void [[CALL04:@.+]]()
 #pragma omp target private(pvtPtr)
   {
     pvtPtr[5]++;
@@ -224,7 +224,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK27-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK27: call void [[CALL05:@.+]](ptr {{[^,]+}}, ptr null)
+// CK27: call void [[CALL05:@.+]](ptr {{[^,]+}})
 #pragma omp target firstprivate(pvtPtr)
   {
     pvtPtr[5]++;
@@ -232,7 +232,7 @@ void zero_size_section_and_private_maps (int ii){
 
 // Region 06
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
-// CK27: call void [[CALL06:@.+]](ptr null)
+// CK27: call void [[CALL06:@.+]]()
 #pragma omp target private(pvtScl)
   {
     pvtScl++;
@@ -253,7 +253,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: [[VAL]] = load i[[Z]], ptr [[ADDR:%.+]],
 // CK27-64-DAG: store i32 {{.+}}, ptr [[ADDR]],
 
-// CK27: call void [[CALL07:@.+]](i[[Z]] [[VAL]], ptr null)
+// CK27: call void [[CALL07:@.+]](i[[Z]] [[VAL]])
 #pragma omp target firstprivate(pvtScl)
   {
     pvtScl++;
@@ -261,7 +261,7 @@ void zero_size_section_and_private_maps (int ii){
 
 // Region 08
 // CK27-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
-// CK27: call void [[CALL08:@.+]](ptr null)
+// CK27: call void [[CALL08:@.+]]()
 #pragma omp target private(pvtArr)
   {
     pvtArr[5]++;
@@ -281,7 +281,7 @@ void zero_size_section_and_private_maps (int ii){
 // CK27-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK27-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK27: call void [[CALL09:@.+]](ptr {{[^,]+}}, ptr null)
+// CK27: call void [[CALL09:@.+]](ptr {{[^,]+}})
 #pragma omp target firstprivate(pvtArr)
   {
     pvtArr[5]++;

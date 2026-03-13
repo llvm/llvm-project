@@ -10639,11 +10639,8 @@ emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
       CapturedVars.clear();
       CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
     }
-    llvm::SmallVector<llvm::Value *, 16> Args(CapturedVars.begin(),
-                                              CapturedVars.end());
-    Args.push_back(llvm::Constant::getNullValue(CGF.Builder.getPtrTy()));
     OMPRuntime->emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn,
-                                         Args);
+                                         CapturedVars);
   }
 }
 
@@ -10879,22 +10876,6 @@ static void emitTargetCallKernelLaunch(
   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
   CGOpenMPRuntime::TargetDataInfo Info;
   genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
-
-  // Append a null entry for the implicit dyn_ptr argument.
-  using OpenMPOffloadMappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
-  auto *NullPtr = llvm::Constant::getNullValue(CGF.Builder.getPtrTy());
-  CombinedInfo.BasePointers.push_back(NullPtr);
-  CombinedInfo.Pointers.push_back(NullPtr);
-  CombinedInfo.DevicePointers.push_back(
-      llvm::OpenMPIRBuilder::DeviceInfoTy::None);
-  CombinedInfo.Sizes.push_back(CGF.Builder.getInt64(0));
-  CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
-                               OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
-  if (!CombinedInfo.Names.empty())
-    CombinedInfo.Names.push_back(NullPtr);
-  CombinedInfo.Exprs.push_back(nullptr);
-  CombinedInfo.Mappers.push_back(nullptr);
-  CombinedInfo.DevicePtrDecls.push_back(nullptr);
 
   emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);
