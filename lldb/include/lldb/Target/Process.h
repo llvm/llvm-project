@@ -1526,8 +1526,9 @@ public:
   /// Provide arguments of a command that triggered a core dump.
   ///
   /// \return
-  ///   The arguments that created the core dump. 
-  ///   If this process is a live debug session, returns an empty list of arguments.
+  ///   The arguments that created the core dump.
+  ///   If this process is a live debug session, returns an empty list of
+  ///   arguments.
   Args GetCoreFileArgs() {
     if (!GetCoreFile())
       return {};

@@ -440,8 +440,7 @@ protected:
               msg += " (command might be truncated).";
             msg += ".";
             if (!cmd.empty())
-              result.AppendMessageWithFormatv(msg.c_str(),
-                                              cmd);
+              result.AppendMessageWithFormatv(msg.c_str(), cmd);
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
             on_error.release();
           }
