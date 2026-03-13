@@ -255,7 +255,7 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
   cached_module_spec.GetPlatformFileSpec() = module_spec.GetFileSpec();
 
   error = ModuleList::GetSharedModule(cached_module_spec, cached_module_sp,
-                                      nullptr, did_create_ptr);
+                                      nullptr, did_create_ptr, false);
   if (error.Fail())
     return error;
 
