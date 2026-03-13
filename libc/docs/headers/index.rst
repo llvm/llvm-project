@@ -24,6 +24,7 @@ Implementation Status
    search
    setjmp
    signal
+   spawn
    stdbit
    stdfix
    stdio

@@ -58,6 +58,7 @@ if (SPHINX_FOUND)
       # pthread
       setjmp
       signal
+      spawn
       stdbit
       stdio
       stdlib
