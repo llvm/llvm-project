@@ -351,9 +351,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         verify_locals["argc"]["equals"]["value"] = "123"
         verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:25"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:27"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:29"] = {"equals": {"type": "int", "value": "72"}}
+        verify_locals["x @ main.cpp:26"] = {"equals": {"type": "int", "value": "89"}}
+        verify_locals["x @ main.cpp:28"] = {"equals": {"type": "int", "value": "42"}}
+        verify_locals["x @ main.cpp:30"] = {"equals": {"type": "int", "value": "72"}}
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -361,22 +361,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(self.set_local("x2", 9)["success"])
         self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(self.set_local("x @ main.cpp:25", 19)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:27", 21)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:29", 23)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:26", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:28", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:30", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(self.set_local("x @ main.cpp:29", "invalid")["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:30", "invalid")["success"])
 
-        verify_locals["x @ main.cpp:25"]["equals"]["value"] = "19"
-        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "21"
-        verify_locals["x @ main.cpp:29"]["equals"]["value"] = "23"
+        verify_locals["x @ main.cpp:26"]["equals"]["value"] = "19"
+        verify_locals["x @ main.cpp:28"]["equals"]["value"] = "21"
+        verify_locals["x @ main.cpp:30"]["equals"]["value"] = "23"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
         self.assertTrue(self.set_local("x", 22)["success"])
-        verify_locals["x @ main.cpp:29"]["equals"]["value"] = "22"
+        verify_locals["x @ main.cpp:30"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -393,9 +393,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
         verify_locals["x"] = {"equals": {"type": "int", "value": "19"}}
-        self.assertNotIn("x @ main.cpp:25", names)
-        self.assertNotIn("x @ main.cpp:27", names)
-        self.assertNotIn("x @ main.cpp:29", names)
+        self.assertNotIn("x @ main.cpp:26", names)
+        self.assertNotIn("x @ main.cpp:28", names)
+        self.assertNotIn("x @ main.cpp:30", names)
 
         self.verify_variables(verify_locals, locals)
 
@@ -614,7 +614,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "my_var": {
                     "equals": {
                         "type": "(unnamed struct)",
-                        "value": "(unnamed struct)",
+                        "value": '{name:"hello world!", x:42, y:7}'
+                        if enableAutoVariableSummaries
+                        else "(unnamed struct)",
                         "evaluateName": "my_var",
                     },
                     "readOnly": True,
@@ -649,9 +651,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(
             {
                 "<anonymous>": {
-                    "equals": {
-                        "type": "MySock::(anonymous union)",
-                        "value": "MySock::(anonymous union)",
+                    "equals": {"type": "MySock::(anonymous union)"},
+                    "matches": {
+                        "value": r"{ipv4:.*, ipv6:.*}"
+                        if enableAutoVariableSummaries
+                        else r"MySock::\(anonymous union\)",
                     },
                     "readOnly": True,
                     "missing": ["evaluateName"],

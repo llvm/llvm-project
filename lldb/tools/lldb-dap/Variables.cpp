@@ -45,8 +45,8 @@ template <typename T> StringMap<uint32_t> DistinctNames(T &container) {
   return variable_name_counts;
 }
 
-protocol::Scope CreateScope(ScopeKind kind, var_ref_t variablesReference,
-                            bool expensive) {
+protocol::Scope MakeScope(ScopeKind kind, var_ref_t variablesReference,
+                          bool expensive) {
   protocol::Scope scope;
   scope.variablesReference = variablesReference;
   scope.expensive = expensive;
@@ -66,6 +66,21 @@ protocol::Scope CreateScope(ScopeKind kind, var_ref_t variablesReference,
   }
 
   return scope;
+}
+
+std::optional<VariablePresentationHint>
+MakeVariablePresentationHints(bool is_readonly, bool is_internal) {
+  if (!is_readonly && !is_internal)
+    return std::nullopt;
+
+  VariablePresentationHint hint;
+
+  if (is_readonly)
+    hint.attributes.push_back("readOnly");
+  if (is_internal)
+    hint.visibility = "internal";
+
+  return hint;
 }
 
 class VariableStoreImpl : public VariableStore {
@@ -120,6 +135,11 @@ public:
     }
 
     const bool is_internal = var.name == "[raw]" || m_is_internal;
+    const bool is_readonly = is_internal || v.GetType().IsAggregateType() ||
+                             v.GetValueType() == lldb::eValueTypeRegisterSet;
+
+    var.presentationHint =
+        MakeVariablePresentationHints(is_readonly, is_internal);
 
     const var_ref_t var_ref =
         HasInnerVarref(v)
@@ -138,20 +158,6 @@ public:
 
     if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
       var.memoryReference = addr;
-
-    bool is_readonly = is_internal || v.GetType().IsAggregateType() ||
-                       v.GetValueType() == lldb::eValueTypeRegisterSet;
-    if (is_readonly) {
-      if (!var.presentationHint)
-        var.presentationHint = {VariablePresentationHint()};
-      var.presentationHint->attributes.push_back("readOnly");
-    }
-
-    if (is_internal) {
-      if (!var.presentationHint)
-        var.presentationHint = {VariablePresentationHint()};
-      var.presentationHint->visibility = "internal";
-    }
 
     return var;
   }
@@ -426,7 +432,7 @@ VariableReferenceStorage::Insert(const lldb::SBFrame &frame) {
     const var_ref_t var_ref =
         m_temporary_kind_pool.Add<ScopeStore>(*this, kind, frame);
     const bool is_expensive = kind != eScopeKindLocals;
-    return CreateScope(kind, var_ref, is_expensive);
+    return MakeScope(kind, var_ref, is_expensive);
   };
 
   return {create_scope(eScopeKindLocals), create_scope(eScopeKindGlobals),

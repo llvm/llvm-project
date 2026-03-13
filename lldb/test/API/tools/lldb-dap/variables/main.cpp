@@ -13,6 +13,7 @@ int test_indexedVariables();
 int test_return_variable();
 int test_anonymous_types();
 int test_anonymous_fields();
+void test_unnamed_bitfields();
 
 int main(int argc, char const *argv[]) {
   static float s_local = 2.25;
@@ -35,6 +36,7 @@ int main(int argc, char const *argv[]) {
   }
   test_anonymous_types();
   test_anonymous_fields();
+  test_unnamed_bitfields();
   return test_indexedVariables(); // breakpoint 3
 }
 
@@ -74,4 +76,15 @@ int test_anonymous_fields() {
   home.ipv4[2] = 0;
   home.ipv4[1] = 1;
   return 1; // breakpoint 7
+}
+
+void test_unnamed_bitfields() {
+  struct example {
+    unsigned int lo : 4; // Uses first 4 bits of the first allocation unit
+    unsigned int : 0;    // Forces the next bit-field to start a new allocation
+                         // unit
+    unsigned int hi : 4; // Starts in a new allocation unit
+  };
+  example e = {0xA, 0xB};
+  printf("lo: %u, hi: %u\n", e.lo, e.hi); // breakpoint 8
 }
