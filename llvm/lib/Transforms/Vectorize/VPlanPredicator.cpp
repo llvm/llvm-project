@@ -34,6 +34,9 @@ class VPPredicator {
   /// Post-dominator tree for the VPlan.
   VPPostDominatorTree VPPDT;
 
+  /// Post-dominance frontier for the VPlan.
+  VPPostDominanceFrontier VPPDF;
+
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
   using EdgeMaskCacheTy =
@@ -70,7 +73,7 @@ class VPPredicator {
   }
 
 public:
-  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
+  VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan), VPPDF(VPPDT) {}
 
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(const VPBasicBlock *VPBB) const {
@@ -148,22 +151,25 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
-  // This is the block mask. We OR all unique incoming edges.
-  for (auto *Predecessor : SetVector<VPBlockBase *>(
-           VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
-    VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
-    if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
-                     // too.
-      setBlockInMask(VPBB, EdgeMask);
-      return;
-    }
+  auto AffectingBlocks = VPPDF.find(VPBB)->second;
+  for (VPBlockBase *AffectingBB : AffectingBlocks) {
+    // Switch can have multiple edges to the same successor, don't need to "or"
+    // it more than once.
+    SmallPtrSet<VPBlockBase *, 4> ProcessedSuccessors;
 
-    if (!BlockMask) { // BlockMask has its initial nullptr value.
-      BlockMask = EdgeMask;
-      continue;
-    }
+    for (auto *Succ : AffectingBB->successors()) {
+      if (!VPPDT.dominates(VPBB, Succ))
+        // That edge doesn't affect us:
+        continue;
 
-    BlockMask = Builder.createOr(BlockMask, EdgeMask, {});
+      if (!ProcessedSuccessors.insert(Succ).second)
+        continue;
+
+      VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(AffectingBB),
+                                         cast<VPBasicBlock>(Succ));
+      BlockMask =
+          BlockMask ? Builder.createOr(BlockMask, EdgeMask, {}) : EdgeMask;
+    }
   }
 
   setBlockInMask(VPBB, BlockMask);

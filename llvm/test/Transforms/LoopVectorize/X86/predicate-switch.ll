@@ -1192,8 +1192,8 @@ define void @br_under_switch_default_common_dest_with_case(ptr %start, ptr %end,
 ; FORCED-NEXT:    [[TMP33:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP32]])
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 42), ptr align 1 [[TMP8]], <4 x i1> [[TMP33]])
-; FORCED-NEXT:    [[TMP36:%.*]] = or <4 x i1> [[TMP32]], [[TMP15]]
-; FORCED-NEXT:    [[TMP37:%.*]] = or <4 x i1> [[TMP33]], [[TMP16]]
+; FORCED-NEXT:    [[TMP36:%.*]] = or <4 x i1> [[TMP15]], [[TMP32]]
+; FORCED-NEXT:    [[TMP37:%.*]] = or <4 x i1> [[TMP16]], [[TMP33]]
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[NEXT_GEP]], <4 x i1> [[TMP36]])
 ; FORCED-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> splat (i64 2), ptr align 1 [[TMP8]], <4 x i1> [[TMP37]])
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

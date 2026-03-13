@@ -192,18 +192,17 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP4]]>, ir<%c6>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP10]]>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = or vp<[[VP10]]>, ir<%c0>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = not ir<%c3>
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = logical-and vp<[[VP6]]>, vp<[[VP12]]>
-; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP13]]>
 ; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add6>/vp<[[VP10]]> ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP13]]>
-; CHECK-NEXT:      EMIT ir<%add5> = add ir<%iv>, ir<5>, vp<[[VP14]]>
+; CHECK-NEXT:      EMIT ir<%add5> = add ir<%iv>, ir<5>, vp<[[VP11]]>
 ; CHECK-NEXT:    Successor(s): bb7
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb7:
-; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = not ir<%c6>
-; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP15]]>
-; CHECK-NEXT:      BLEND ir<%phi7> = ir<%add6>/vp<[[VP16]]> ir<%add5>/vp<[[VP14]]>
+; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = not ir<%c6>
+; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP14]]>
+; CHECK-NEXT:      BLEND ir<%phi7> = ir<%add6>/vp<[[VP15]]> ir<%add5>/vp<[[VP11]]>
 ; CHECK-NEXT:      EMIT store ir<%phi7>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -229,7 +228,7 @@ bb0:
 ;             bb5  /
 ;               \ /
 ;               bb7
-; TODO: bb5's mask shouldn't depend on c1/c3.
+; Verify bb5's mask is "c0 || (!c0 && c6)" and doesn't depend on c1/c3.
   %iv = phi i64 [0, %entry], [%iv.next, %bb7]
   %gep = getelementptr i64, ptr %a, i64 %iv
   %c0 = icmp sle i64 %iv, 0
@@ -513,10 +512,11 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4)
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb7:
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = logical-and vp<[[VP9]]>, ir<%c4>
-; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = or vp<[[VP15]]>, vp<[[VP14]]>
+; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = or vp<[[VP15]]>, vp<[[VP11]]>
+; CHECK-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = or vp<[[VP16]]>, vp<[[VP13]]>
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP15]]> ir<0>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP16]]>
+; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>, vp<[[VP17]]>
 ; CHECK-NEXT:    Successor(s): bb8
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb8:
