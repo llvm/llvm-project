@@ -1034,6 +1034,7 @@ TEST_F(LocateModuleCallbackTest, ModuleCacheGetDoesNotInvokeCallback) {
 
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(cached_module_sp);
+  ASSERT_EQ(cached_module_sp->GetFileSpec(), uuid_view);
   // The locate module callback should not be called.
   EXPECT_EQ(callback_call_count, 0);
 
