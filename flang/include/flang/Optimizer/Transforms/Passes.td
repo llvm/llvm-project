@@ -260,7 +260,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "dwarf version">,
     Option<"splitDwarfFile", "split-dwarf-file",
            "std::string", /*default=*/"std::string{}",
-           "Name of the split dwarf file">
+           "Name of the split dwarf file">,
+    Option<"dwarfDebugFlags", "dwarf-debug-flags",
+           "std::string", /*default=*/"std::string{}",
+           "Command-line flags to append to DWARF producer">
 
   ];
 }
@@ -440,7 +443,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
               "Set the ninf flag on instructions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
-              "Set the no-nans-fp-math attribute on functions in the module.">,
+              "Set the nnan flag on instructions in the module.">,
        Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
               /*default=*/"false",
               "Set the afn flag on instructions in the module.">,

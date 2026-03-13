@@ -957,7 +957,7 @@ bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
   });
 }
 
-bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+bool PPCTTIImpl::canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE,
                             LoopInfo *LI, DominatorTree *DT,
                             AssumptionCache *AC,
                             TargetLibraryInfo *LibInfo) const {

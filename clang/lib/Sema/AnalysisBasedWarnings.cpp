@@ -573,7 +573,26 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
+  unsigned count =
+      reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
+
+  bool AddEHEdges = AC.getAddEHEdges();
+  if (!AddEHEdges && count != cfg->getNumBlockIDs())
+    // When there are things remaining dead, and we didn't add EH edges
+    // from CallExprs to the catch clauses, we have to go back and
+    // mark them as live.
+    for (const auto *B : *cfg) {
+      if (!live[B->getBlockID()]) {
+        if (B->preds().empty()) {
+          const Stmt *Term = B->getTerminatorStmt();
+          if (isa_and_nonnull<CXXTryStmt>(Term))
+            // When not adding EH edges from calls, catch clauses
+            // can otherwise seem dead.  Avoid noting them as dead.
+            count += reachable_code::ScanReachableFromBlock(B, live);
+          continue;
+        }
+      }
+    }
 
   // Now we know what is live, we check the live precessors of the exit block
   // and look for fall through paths, being careful to ignore normal returns,
@@ -2861,13 +2880,11 @@ public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                          const Expr *MovedExpr, SourceLocation FreeLoc,
-                          Confidence C) override {
+                          const Expr *MovedExpr,
+                          SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_loan_expires_moved_strict
-           : C == Confidence::Definite
-               ? diag::warn_lifetime_safety_loan_expires_permissive
-               : diag::warn_lifetime_safety_loan_expires_strict)
+           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
+                     : diag::warn_lifetime_safety_use_after_scope)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -2878,11 +2895,11 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr, SourceLocation ExpiryLoc,
-                            Confidence C) override {
+                            const Expr *MovedExpr,
+                            SourceLocation ExpiryLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved_strict
-                     : diag::warn_lifetime_safety_return_stack_addr_permissive)
+           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
+                     : diag::warn_lifetime_safety_return_stack_addr)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -2890,6 +2907,7 @@ public:
     S.Diag(ReturnExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
         << ReturnExpr->getSourceRange();
   }
+
   void reportDanglingField(const Expr *IssueExpr,
                            const FieldDecl *DanglingField,
                            const Expr *MovedExpr,
@@ -2904,6 +2922,27 @@ public:
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
+  }
+
+  void reportDanglingGlobal(const Expr *IssueExpr,
+                            const VarDecl *DanglingGlobal,
+                            const Expr *MovedExpr,
+                            SourceLocation ExpiryLoc) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
+                     : diag::warn_lifetime_safety_dangling_global)
+        << IssueExpr->getSourceRange();
+    if (MovedExpr)
+      S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
+          << MovedExpr->getSourceRange();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
   }
 
   void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
@@ -3005,6 +3044,21 @@ public:
     S.Diag(EscapeField->getLocation(),
            diag::note_lifetime_safety_escapes_to_field_here)
         << EscapeField->getEndLoc();
+  }
+
+  void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                               const VarDecl *EscapeGlobal) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+    if (EscapeGlobal->isStaticLocal() || EscapeGlobal->isStaticDataMember())
+      S.Diag(EscapeGlobal->getLocation(),
+             diag::note_lifetime_safety_escapes_to_static_storage_here)
+          << EscapeGlobal->getEndLoc();
+    else
+      S.Diag(EscapeGlobal->getLocation(),
+             diag::note_lifetime_safety_escapes_to_global_here)
+          << EscapeGlobal->getEndLoc();
   }
 
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
@@ -3148,17 +3202,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool IsLifetimeSafetyDiagnosticEnabled =
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_moved_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(
-          diag::warn_lifetime_safety_return_stack_addr_moved_strict,
-          D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
                        D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,

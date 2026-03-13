@@ -2934,6 +2934,9 @@ bool QualType::isBitwiseCloneableType(const ASTContext &Context) const {
   if (!RD)
     return true;
 
+  if (RD->isInvalidDecl())
+    return false;
+
   // Never allow memcpy when we're adding poisoned padding bits to the struct.
   // Accessing these posioned bits will trigger false alarms on
   // SanitizeAddressFieldPadding etc.
@@ -3083,6 +3086,10 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   // literal types.
   if (BaseTy->isScalarType() || BaseTy->isVectorType() ||
       BaseTy->isAnyComplexType())
+    return true;
+  // Matrices with constant numbers of rows and columns are also literal types
+  // in HLSL.
+  if (Ctx.getLangOpts().HLSL && BaseTy->isConstantMatrixType())
     return true;
   //    -- a reference type; or
   if (BaseTy->isReferenceType())

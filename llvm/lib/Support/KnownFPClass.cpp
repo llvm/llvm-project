@@ -352,6 +352,35 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   return Known;
 }
 
+// TODO: This generalizes to known ranges
+KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
+                                const APFloat &CRHS, DenormalMode Mode) {
+  // Match denormal scaling pattern, similar to the case in ldexp. If the
+  // constant's exponent is sufficiently large, the result cannot be subnormal.
+
+  const fltSemantics &Flt = CRHS.getSemantics();
+  unsigned Precision = APFloat::semanticsPrecision(Flt);
+  const int MantissaBits = Precision - 1;
+
+  int MinKnownExponent = ilogb(CRHS);
+  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+
+  KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
+  if (CannotBeSubnormal)
+    Known.knownNot(fcSubnormal);
+
+  // Multiply of values <= 1 cannot introduce overflow.
+  if (KnownLHS.isKnownNever(fcInf)) {
+    if (MinKnownExponent < 0)
+      Known.knownNot(fcInf);
+    else if (MinKnownExponent == 0 && CRHS.compareAbsoluteValue(APFloat::getOne(
+                                          Flt)) == APFloat::cmpEqual)
+      Known.knownNot(fcInf);
+  }
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {

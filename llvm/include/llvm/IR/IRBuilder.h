@@ -1191,24 +1191,24 @@ public:
   }
 
   /// Create an unconditional 'br label X' instruction.
-  BranchInst *CreateBr(BasicBlock *Dest) {
-    return Insert(BranchInst::Create(Dest));
+  UncondBrInst *CreateBr(BasicBlock *Dest) {
+    return Insert(UncondBrInst::Create(Dest));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
                            MDNode *Unpredictable = nullptr) {
-    return Insert(addBranchMetadata(BranchInst::Create(True, False, Cond),
+    return Insert(addBranchMetadata(CondBrInst::Create(Cond, True, False),
                                     BranchWeights, Unpredictable));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction. Copy branch meta data if available.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            Instruction *MDSrc) {
-    BranchInst *Br = BranchInst::Create(True, False, Cond);
+    CondBrInst *Br = CondBrInst::Create(Cond, True, False);
     if (MDSrc) {
       unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
                         LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
@@ -2655,7 +2655,8 @@ public:
 
   /// Return the difference between two pointer values. The returned value
   /// type is the address type of the pointers.
-  LLVM_ABI Value *CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name = "");
+  LLVM_ABI Value *CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name = "",
+                                bool IsNUW = false);
 
   /// Return the difference between two pointer values, dividing out the size
   /// of the pointed-to objects. The returned value type is the address type

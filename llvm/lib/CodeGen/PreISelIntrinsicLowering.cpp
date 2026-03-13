@@ -410,12 +410,14 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
+      Function *ParentFunc = Memset->getFunction();
+      const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
       Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
       if (!PatternValue) {
         // If it isn't possible to emit a memset_pattern16 libcall, expand to
         // a loop instead.
-        expandMemSetPatternAsLoop(Memset);
+        const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+        expandMemSetPatternAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
         break;

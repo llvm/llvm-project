@@ -196,10 +196,14 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{4-0} = Format.Value;
 
   // Indicates when Vd and Vs1/Vs2 cannot be the same register.
-  RISCVVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{6-5} = RVVConstraint.Value;
+  // We require that the Vd operand be named $vd, the Vs1 operand be named
+  // $vs1, and the Vs2 operand be named $vs2.
+  RISCVVConstraint VS1VS2Constraint = NoConstraint;
+  let TSFlags{6-5} = VS1VS2Constraint.Value;
 
   // Indicates that the destination and the VM operand cannot both be V0.
+  // We require the the VM operand to be named $vm and the destination
+  // operand to be named $vd.
   bit VMConstraint = 0;
   let TSFlags{7} = VMConstraint;
 
@@ -252,10 +256,11 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{21-20} = TargetOverlapConstraintType;
 
   // Most vector instructions are elementwise, but some may depend on the value
-  // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
-  // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
-  // changing their VL and/or mask.
-  EltDeps ElementsDependOn = EltDepsNone;
+  // of vl (vslide1down.vx), and others may depend on the mask (viota.m) or both
+  // (vredsum.vs). By default we assume elements depend on both vl and the mask,
+  // but if marked as EltDepsNone or EltDepsMask then RISCVVLOptimizer will
+  // reduce its vl.
+  EltDeps ElementsDependOn = EltDepsVLMask;
   let TSFlags{22} = ElementsDependOn.VL;
   let TSFlags{23} = ElementsDependOn.Mask;
 

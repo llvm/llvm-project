@@ -5306,9 +5306,17 @@ bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::DataLayout &dataLayout) {
   if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
     return false;
-  // Forward uses to the users of the fir.declare.
-  for (mlir::OpOperand &use : getResult().getUses())
+  // MLIR's mem2reg computes defining blocks only from direct users of
+  // the slot pointer. Stores through fir.declare are not direct users,
+  // so they are not registered as defining blocks. This causes missing
+  // phi nodes at join points (e.g., loop headers). Restrict promotion
+  // to the single-block case where no phi nodes are needed.
+  mlir::Block *declBlock = getOperation()->getBlock();
+  for (mlir::OpOperand &use : getResult().getUses()) {
+    if (use.getOwner()->getBlock() != declBlock)
+      return false;
     newBlockingUses.push_back(&use);
+  }
   return true;
 }
 

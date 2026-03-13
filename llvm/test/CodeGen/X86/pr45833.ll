@@ -29,7 +29,7 @@ define void @mstore_split9(<9 x float> %value, ptr %addr, <9 x i1> %mask) {
 ; CHECK-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; CHECK-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; CHECK-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm4 = xmm3[8,u,u,u],zero,xmm3[u,u,u],zero,xmm3[u,u,u],zero,xmm3[u,u,u]
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm4 = xmm3[8,9,10,11],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpslld $31, %xmm4, %xmm4
 ; CHECK-NEXT:    vmaskmovps %ymm1, %ymm4, 32(%rdi)
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero

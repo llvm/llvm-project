@@ -497,7 +497,7 @@ _CLC_OVERLOAD _CLC_DEF double __clc_erfc(double x) {
 
   ret = x >= 28.0 ? 0.0 : ret;
   ret = x <= -6.0 ? 2.0 : ret;
-  ret = ax > 0x7ff0000000000000UL ? x : ret;
+  ret = ax > 0x7ff0000000000000L ? x : ret;
 
   return ret;
 }

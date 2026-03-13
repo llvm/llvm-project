@@ -94,7 +94,7 @@ void Session::shutdownNext(Error Err) {
   // Get the next ResourceManager to shut down.
   auto NextRM = std::move(SI->ResourceMgrs.back());
   SI->ResourceMgrs.pop_back();
-  NextRM->shutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+  NextRM->onShutdown([this](Error Err) { shutdownNext(std::move(Err)); });
 }
 
 void Session::shutdownComplete() {

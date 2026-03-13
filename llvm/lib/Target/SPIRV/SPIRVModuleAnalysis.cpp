@@ -42,7 +42,7 @@ static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",
                       cl::desc("SPIR-V capabilities to avoid if there are "
                                "other options enabling a feature"),
-                      cl::ZeroOrMore, cl::Hidden,
+                      cl::Hidden,
                       cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
                                             "SPIR-V Shader capability")));
 // Use sets instead of cl::list to check "if contains" condition
@@ -939,7 +939,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
-                    Capability::DerivativeControl, Capability::MinLod});
+                    Capability::DerivativeControl, Capability::MinLod,
+                    Capability::ImageGatherExtended});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1495,6 +1496,15 @@ void addInstrRequirements(const MachineInstr &MI,
     unsigned NumComponents = MI.getOperand(2).getImm();
     if (NumComponents == 8 || NumComponents == 16)
       Reqs.addCapability(SPIRV::Capability::Vector16);
+
+    assert(MI.getOperand(1).isReg());
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    SPIRVTypeInst ElemTypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
+    if (ElemTypeDef->getOpcode() == SPIRV::OpTypePointer &&
+        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
+      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
+    }
     break;
   }
   case SPIRV::OpTypePointer: {
@@ -2162,6 +2172,15 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 5);
     break;
+  case SPIRV::OpImageFetch:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 4);
+    break;
+  case SPIRV::OpImageDrefGather:
+  case SPIRV::OpImageGather:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    addImageOperandReqs(MI, Reqs, ST, 5);
+    break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
@@ -2662,6 +2681,10 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
     MachineFunction *MF = MMI->getMachineFunction(F);
     if (!MF)
       continue;
+    if (MF->getFunction()
+            .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
+            .isValid())
+      continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
     for (auto &MBB : *MF) {
       if (!MBB.hasName() || MBB.empty())
@@ -2801,8 +2824,6 @@ static void collectFPFastMathDefaults(const Module &M,
     }
   }
 }
-
-struct SPIRV::ModuleAnalysisInfo SPIRVModuleAnalysis::MAI;
 
 void SPIRVModuleAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

@@ -3011,11 +3011,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         return true;
 
       // We know we have a branch instruction.
-      auto *BrInst = cast<BranchInst>(&I);
-
-      // Unconditional branches are never considered UB.
-      if (BrInst->isUnconditional())
-        return true;
+      auto *BrInst = cast<CondBrInst>(&I);
 
       // Either we stopped and the appropriate action was taken,
       // or we got back a simplified value to continue.
@@ -3129,7 +3125,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
                                Instruction::AtomicRMW},
                               UsedAssumedInformation,
                               /* CheckBBLivenessOnly */ true);
-    A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::Br},
+    A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::CondBr},
                               UsedAssumedInformation,
                               /* CheckBBLivenessOnly */ true);
     A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this,
@@ -3172,13 +3168,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     case Instruction::Store:
     case Instruction::AtomicCmpXchg:
     case Instruction::AtomicRMW:
+    case Instruction::CondBr:
       return !AssumedNoUBInsts.count(I);
-    case Instruction::Br: {
-      auto *BrInst = cast<BranchInst>(I);
-      if (BrInst->isUnconditional())
-        return false;
-      return !AssumedNoUBInsts.count(I);
-    } break;
     default:
       return false;
     }
@@ -4839,7 +4830,8 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
       UsedAssumedInformation = identifyAliveSuccessors(A, cast<InvokeInst>(*I),
                                                        *this, AliveSuccessors);
       break;
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
       UsedAssumedInformation = identifyAliveSuccessors(A, cast<BranchInst>(*I),
                                                        *this, AliveSuccessors);
       break;

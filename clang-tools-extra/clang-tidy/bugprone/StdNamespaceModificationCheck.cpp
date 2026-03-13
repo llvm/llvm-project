@@ -19,9 +19,9 @@ AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgumentIncludingPack,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     TemplateSpecializationType, FunctionDecl),
-    clang::ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
+    ast_matchers::internal::Matcher<TemplateArgument>, InnerMatcher) {
   const ArrayRef<TemplateArgument> Args =
-      clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
+      ast_matchers::internal::getTemplateSpecializationArgs(Node);
   for (const auto &Arg : Args) {
     if (Arg.getKind() != TemplateArgument::Pack)
       continue;
@@ -43,10 +43,13 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  auto UserDefinedType = qualType(
-      hasUnqualifiedDesugaredType(tagType(unless(hasDeclaration(tagDecl(
-          hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
-                                    unless(hasParent(namespaceDecl()))))))))));
+  auto UserDefinedDecl =
+      namedDecl(anyOf(classTemplateDecl(), tagDecl()),
+                hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
+                                          unless(hasParent(namespaceDecl())))));
+  auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
+      tagType(unless(hasDeclaration(UserDefinedDecl))),
+      templateSpecializationType(unless(hasDeclaration(UserDefinedDecl))))));
   auto HasNoProgramDefinedTemplateArgument = unless(
       hasAnyTemplateArgumentIncludingPack(refersToType(UserDefinedType)));
   auto InsideStdClassOrClassTemplateSpecialization = hasDeclContext(
@@ -91,8 +94,7 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(decl(anyOf(BadNonTemplateSpecializationDecl,
                                 BadClassTemplateSpec, BadInnerClassTemplateSpec,
-                                BadFunctionTemplateSpec, BadMemberFunctionSpec),
-                          unless(isExpansionInSystemHeader()))
+                                BadFunctionTemplateSpec, BadMemberFunctionSpec))
                          .bind("decl"),
                      this);
 }

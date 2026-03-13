@@ -15,6 +15,7 @@
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -56,7 +57,7 @@ struct FormatStyle {
   // If the BasedOn: was InheritParentConfig and this style needs the file from
   // the parent directories. It is not part of the actual style for formatting.
   // Thus the // instead of ///.
-  bool InheritsParentConfig;
+  std::string InheritConfig;
 
   /// The extra indent or outdent of access modifiers, e.g. ``public:``.
   /// \version 3.3
@@ -2450,9 +2451,84 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
+  /// A rule that specifies how to break a specific set of binary operators.
+  /// \version 23
+  struct BinaryOperationBreakRule {
+    /// The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+    /// Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
+    std::vector<tok::TokenKind> Operators;
+    /// The break style for these operators (defaults to ``OnePerLine``).
+    BreakBinaryOperationsStyle Style;
+    /// Minimum number of operands in a chain before the rule triggers.
+    /// For example, ``a && b && c`` is a chain of length 3.
+    /// ``0`` means always break (when the line is too long).
+    unsigned MinChainLength;
+    bool operator==(const BinaryOperationBreakRule &R) const {
+      return Operators == R.Operators && Style == R.Style &&
+             MinChainLength == R.MinChainLength;
+    }
+    bool operator!=(const BinaryOperationBreakRule &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Options for ``BreakBinaryOperations``.
+  ///
+  /// If specified as a simple string (e.g. ``OnePerLine``), it behaves like
+  /// the original enum and applies to all binary operators.
+  ///
+  /// If specified as a struct, allows per-operator configuration:
+  /// \code{.yaml}
+  ///   BreakBinaryOperations:
+  ///     Default: Never
+  ///     PerOperator:
+  ///       - Operators: ['&&', '||']
+  ///         Style: OnePerLine
+  ///         MinChainLength: 3
+  /// \endcode
+  /// \version 23
+  struct BreakBinaryOperationsOptions {
+    /// The default break style for operators not covered by ``PerOperator``.
+    BreakBinaryOperationsStyle Default;
+    /// Per-operator override rules.
+    std::vector<BinaryOperationBreakRule> PerOperator;
+    const BinaryOperationBreakRule *
+    findRuleForOperator(tok::TokenKind Kind) const {
+      for (const auto &Rule : PerOperator) {
+        if (llvm::find(Rule.Operators, Kind) != Rule.Operators.end())
+          return &Rule;
+        // clang-format splits ">>" into two ">" tokens for template parsing.
+        // Match ">" against ">>" rules so that per-operator rules for ">>"
+        // (stream extraction / right shift) work correctly.
+        if (Kind == tok::greater &&
+            llvm::find(Rule.Operators, tok::greatergreater) !=
+                Rule.Operators.end()) {
+          return &Rule;
+        }
+      }
+      return nullptr;
+    }
+    BreakBinaryOperationsStyle getStyleForOperator(tok::TokenKind Kind) const {
+      if (const auto *Rule = findRuleForOperator(Kind))
+        return Rule->Style;
+      return Default;
+    }
+    unsigned getMinChainLengthForOperator(tok::TokenKind Kind) const {
+      if (const auto *Rule = findRuleForOperator(Kind))
+        return Rule->MinChainLength;
+      return 0;
+    }
+    bool operator==(const BreakBinaryOperationsOptions &R) const {
+      return Default == R.Default && PerOperator == R.PerOperator;
+    }
+    bool operator!=(const BreakBinaryOperationsOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// The break binary operations style to use.
   /// \version 20
-  BreakBinaryOperationsStyle BreakBinaryOperations;
+  BreakBinaryOperationsOptions BreakBinaryOperations;
 
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
@@ -3084,22 +3160,63 @@ struct FormatStyle {
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
 
-  /// Indent goto labels.
-  ///
-  /// When ``false``, goto labels are flushed left.
-  /// \code
-  ///    true:                                  false:
-  ///    int f() {                      vs.     int f() {
-  ///      if (foo()) {                           if (foo()) {
-  ///      label1:                              label1:
-  ///        bar();                                 bar();
-  ///      }                                      }
-  ///    label2:                                label2:
-  ///      return 1;                              return 1;
-  ///    }                                      }
-  /// \endcode
+  /// Options for indenting goto labels.
+  enum IndentGotoLabelStyle : int8_t {
+    /// Do not indent goto labels.
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///    label1:
+    ///        bar();
+    ///      }
+    ///    label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_NoIndent,
+    /// Indent goto labels to the enclosing block (previous indenting level).
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///      label1:
+    ///        bar();
+    ///      }
+    ///    label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_OuterIndent,
+    /// Indent goto labels to the surrounding statements (current indenting
+    /// level).
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///        label1:
+    ///        bar();
+    ///      }
+    ///      label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_InnerIndent,
+    /// Indent goto labels to half the indentation of the surrounding code.
+    /// If the indentation width is an odd number, it will round up.
+    /// \code
+    ///    int f() {
+    ///      if (foo()) {
+    ///       label1:
+    ///        bar();
+    ///      }
+    ///     label2:
+    ///      return 1;
+    ///    }
+    /// \endcode
+    IGLS_HalfIndent,
+  };
+
+  /// The goto label indenting style to use.
   /// \version 10
-  bool IndentGotoLabels;
+  IndentGotoLabelStyle IndentGotoLabels;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {
@@ -3395,7 +3512,7 @@ struct FormatStyle {
     }
   };
 
-  /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  /// Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   /// and JavaScript).
   /// \version 16
   IntegerLiteralSeparatorStyle IntegerLiteralSeparator;

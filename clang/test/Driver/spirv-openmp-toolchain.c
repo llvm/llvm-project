@@ -65,7 +65,8 @@
 // RUN:        -nogpulib %s 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHECK-LINKER-ARG
 // CHECK-LINKER-ARG: clang-linker-wrapper
-// CHECK-LINKER: --device-linker=spirv64-intel=--allow-partial-linkage"
+// CHECK-LINKER-ARG: --device-linker=spirv64-intel=--allow-partial-linkage"
+// CHECK-LINKER-ARG-SAME: --device-linker=spirv64-intel=--create-library"
 // CHECK-LINKER-ARG-NOT: -mllvm
 // CHECK-LINKER-ARG-NOT: --spirv-ext=+SPV_INTEL_function_pointers
 // CHECK-LINKER-ARG: --linker-path
