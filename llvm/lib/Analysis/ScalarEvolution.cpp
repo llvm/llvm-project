@@ -5032,8 +5032,7 @@ public:
     bool IsPosBECond = false;
     Value *BECond = nullptr;
     if (BasicBlock *Latch = L->getLoopLatch()) {
-      BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
-      if (BI && BI->isConditional()) {
+      if (CondBrInst *BI = dyn_cast<CondBrInst>(Latch->getTerminator())) {
         assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
                "Both outgoing branches should not target same header!");
         BECond = BI->getCondition();
@@ -6018,7 +6017,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
 // Try to match a control flow sequence that branches out at BI and merges back
 // at Merge into a "C ? LHS : RHS" select pattern.  Return true on a successful
 // match.
-static bool BrPHIToSelect(DominatorTree &DT, BranchInst *BI, PHINode *Merge,
+static bool BrPHIToSelect(DominatorTree &DT, CondBrInst *BI, PHINode *Merge,
                           Value *&C, Value *&LHS, Value *&RHS) {
   C = BI->getCondition();
 
@@ -6067,11 +6066,10 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
     BasicBlock *IDom = DT[PN->getParent()]->getIDom()->getBlock();
     assert(IDom && "At least the entry block should dominate PN");
 
-    auto *BI = dyn_cast<BranchInst>(IDom->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(IDom->getTerminator());
     Value *Cond = nullptr, *LHS = nullptr, *RHS = nullptr;
 
-    if (BI && BI->isConditional() &&
-        BrPHIToSelect(DT, BI, PN, Cond, LHS, RHS) &&
+    if (BI && BrPHIToSelect(DT, BI, PN, Cond, LHS, RHS) &&
         properlyDominates(getSCEV(LHS), PN->getParent()) &&
         properlyDominates(getSCEV(RHS), PN->getParent()))
       return createNodeForSelectOrPHI(PN, Cond, LHS, RHS);
@@ -8958,7 +8956,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
     // We canonicalize untaken exits to br (constant), ignore them so that
     // proving an exit untaken doesn't negatively impact our ability to reason
     // about the loop as whole.
-    if (auto *BI = dyn_cast<BranchInst>(ExitBB->getTerminator()))
+    if (auto *BI = dyn_cast<CondBrInst>(ExitBB->getTerminator()))
       if (auto *CI = dyn_cast<ConstantInt>(BI->getCondition())) {
         bool ExitIfTrue = !L->contains(BI->getSuccessor(0));
         if (ExitIfTrue == CI->isZero())
@@ -9049,8 +9047,7 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
     return getCouldNotCompute();
 
   Instruction *Term = ExitingBlock->getTerminator();
-  if (BranchInst *BI = dyn_cast<BranchInst>(Term)) {
-    assert(BI->isConditional() && "If unconditional, it can't be in loop!");
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(Term)) {
     bool ExitIfTrue = !L->contains(BI->getSuccessor(0));
     assert(ExitIfTrue == L->contains(BI->getSuccessor(1)) &&
            "It should have one successor in loop and one exit block!");
@@ -11729,11 +11726,10 @@ bool ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
   if (!Latch)
     return false;
 
-  BranchInst *LoopContinuePredicate =
-    dyn_cast<BranchInst>(Latch->getTerminator());
-  if (LoopContinuePredicate && LoopContinuePredicate->isConditional() &&
-      isImpliedCond(Pred, LHS, RHS,
-                    LoopContinuePredicate->getCondition(),
+  CondBrInst *LoopContinuePredicate =
+      dyn_cast<CondBrInst>(Latch->getTerminator());
+  if (LoopContinuePredicate &&
+      isImpliedCond(Pred, LHS, RHS, LoopContinuePredicate->getCondition(),
                     LoopContinuePredicate->getSuccessor(0) != L->getHeader()))
     return true;
 
@@ -11787,8 +11783,8 @@ bool ScalarEvolution::isLoopBackedgeGuardedByCond(const Loop *L,
     if (!PBB)
       continue;
 
-    BranchInst *ContinuePredicate = dyn_cast<BranchInst>(PBB->getTerminator());
-    if (!ContinuePredicate || !ContinuePredicate->isConditional())
+    CondBrInst *ContinuePredicate = dyn_cast<CondBrInst>(PBB->getTerminator());
+    if (!ContinuePredicate)
       continue;
 
     Value *Condition = ContinuePredicate->getCondition();
@@ -11879,9 +11875,9 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
     PredBB = BB->getSinglePredecessor();
   for (std::pair<const BasicBlock *, const BasicBlock *> Pair(PredBB, BB);
        Pair.first; Pair = getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
-    const BranchInst *BlockEntryPredicate =
-        dyn_cast<BranchInst>(Pair.first->getTerminator());
-    if (!BlockEntryPredicate || BlockEntryPredicate->isUnconditional())
+    const CondBrInst *BlockEntryPredicate =
+        dyn_cast<CondBrInst>(Pair.first->getTerminator());
+    if (!BlockEntryPredicate)
       continue;
 
     if (ProveViaCond(BlockEntryPredicate->getCondition(),
@@ -15900,9 +15896,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   for (; Pair.first;
        Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
     VisitedBlocks.insert(Pair.second);
-    const BranchInst *LoopEntryPredicate =
-        dyn_cast<BranchInst>(Pair.first->getTerminator());
-    if (!LoopEntryPredicate || LoopEntryPredicate->isUnconditional())
+    const CondBrInst *LoopEntryPredicate =
+        dyn_cast<CondBrInst>(Pair.first->getTerminator());
+    if (!LoopEntryPredicate)
       continue;
 
     Terms.emplace_back(LoopEntryPredicate->getCondition(),

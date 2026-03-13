@@ -131,8 +131,8 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
-  BranchInst::Create(LoopBB, EntryBB);
-  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
+  UncondBrInst::Create(LoopBB, EntryBB);
+  CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB,
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
@@ -287,7 +287,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "bb1", F);
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
 
   auto *Ty = Type::getInt32Ty(Context);
   SmallVector<Instruction*, 8> Muls(8), Acc(8), NextAcc(8);
@@ -330,7 +330,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   }
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "bb2", F);
-  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
+  CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB,
                      LoopBB);
 
   Acc[0] = BinaryOperator::CreateAdd(Acc[0], Acc[1], "", ExitBB);
@@ -669,7 +669,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *CondBB = BasicBlock::Create(Context, "for.cond", F);
   BasicBlock *EndBB = BasicBlock::Create(Context, "for.end", F);
-  BranchInst::Create(CondBB, EntryBB);
+  UncondBrInst::Create(CondBB, EntryBB);
   BasicBlock *PrevBB = EntryBB;
 
   Type *I64Ty = Type::getInt64Ty(Context);
@@ -689,11 +689,11 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
       NextBB = BasicBlock::Create(Context, "for.cond", F, EndBB);
     else
       NextBB = EndBB;
-    BranchInst::Create(IncBB, NextBB, Cmp, CondBB);
+    CondBrInst::Create(Cmp, IncBB, NextBB, CondBB);
     auto *Dec = BinaryOperator::CreateNSWAdd(
         PN, ConstantInt::get(Context, APInt(64, -1)), "dec", IncBB);
     PN->addIncoming(Dec, IncBB);
-    BranchInst::Create(CondBB, IncBB);
+    UncondBrInst::Create(CondBB, IncBB);
 
     Accum = GetElementPtrInst::Create(I8Ty, Accum, PN, "gep", EndBB);
 
@@ -920,13 +920,13 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
 
   // entry:
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   // loop:
   auto *MinInt64 =
       ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
-  auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Br = CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)),
+                                LoopBB, ExitBB, LoopBB);
   auto *Phi =
       PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
@@ -979,12 +979,12 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
 
   // entry:
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   // loop:
   auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
-  auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Br = CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)),
+                                LoopBB, ExitBB, LoopBB);
   auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
   auto *AShr =

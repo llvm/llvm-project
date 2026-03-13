@@ -287,6 +287,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
+  spurious ``missing '(' after '__has_feature'`` errors caused by builtin
+  macros appearing in the return type of a function.
+
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
@@ -316,8 +321,12 @@ Changes in existing checks
   positives on trivially copyable types with a non-public copy constructor.
 
 - Improved :doc:`readability-container-size-empty
-  <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
-  when a member expression has a non-identifier name.
+  <clang-tidy/checks/readability/container-size-empty>` check:
+
+  - Fix a crash when a member expression has a non-identifier name.
+
+  - Reduce verbosity by removing the note indicating source location of the
+    ``empty`` function.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
@@ -328,6 +337,9 @@ Changes in existing checks
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 
+  - Diagnose and remove redundant ``else`` branches after calls to
+    ``[[noreturn]]`` functions.
+    
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
