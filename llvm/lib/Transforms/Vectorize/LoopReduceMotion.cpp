@@ -213,8 +213,9 @@ bool LoopReduceMotionPass::matchAndTransform(LoopStandardAnalysisResults &AR,
     if (!PN->getType()->isIntegerTy())
       continue;
 
+    auto SE = &AR.SE;
     RecurrenceDescriptor RecDesc;
-    if (!RecurrenceDescriptor::isReductionPHI(PN, &L, RecDesc))
+    if (!RecurrenceDescriptor::isReductionPHI(PN, &L, RecDesc, nullptr, nullptr, nullptr, SE))
       continue;
 
     if (RecDesc.getRecurrenceKind() != RecurKind::Add)
