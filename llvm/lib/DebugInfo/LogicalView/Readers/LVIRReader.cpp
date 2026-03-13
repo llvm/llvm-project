@@ -2209,13 +2209,11 @@ Error LVIRReader::createScopes() {
 
     Root->addElement(CompileUnit);
 
-    uint16_t LanguageName = CU->getSourceLanguage().getUnversionedName();
-    LVSourceLanguage SL =
-        TheModule->getCodeViewFlag()
-            ? LVSourceLanguage(
-                  static_cast<llvm::codeview::SourceLanguage>(LanguageName))
-            : LVSourceLanguage(
-                  static_cast<llvm::dwarf::SourceLanguage>(LanguageName));
+    // As the IR format uses the DWARF symbolic constants, the setting
+    // of the source language must use the DWARF language definitions.
+    uint16_t LanguageName = CU->getSourceLanguage().getName();
+    LVSourceLanguage SL = LVSourceLanguage(
+        static_cast<llvm::dwarf::SourceLanguage>(LanguageName));
     setDefaultLowerBound(&SL);
 
     if (options().getAttributeLanguage())
