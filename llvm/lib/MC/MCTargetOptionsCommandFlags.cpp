@@ -60,6 +60,7 @@ MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
 MCOPT(RelocSectionSymType, RelocSectionSym)
+MCOPT(bool, LargeEHEncoding)
 MCSTROPT(ABIName)
 MCSTROPT(AsSecureLogFile)
 
@@ -182,6 +183,13 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
                      "Never use section symbols")));
   MCBINDOPT(RelocSectionSym);
 
+  static cl::opt<bool> LargeEHEncoding(
+      "large-eh-encoding",
+      cl::desc("Use 8-byte pointer size for all x86_64 ELF EH encodings "
+               "(FDE, personality, LSDA, TType) to avoid relocation "
+               "overflows in large binaries"));
+  MCBINDOPT(LargeEHEncoding);
+
   static cl::opt<std::string> ABIName(
       "target-abi",
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -214,6 +222,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.RelocSectionSym = getRelocSectionSym();
+  Options.LargeEHEncoding = getLargeEHEncoding();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.EmitSFrameUnwind = getEmitSFrameUnwind();

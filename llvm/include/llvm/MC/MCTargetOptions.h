@@ -119,6 +119,11 @@ public:
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
 
+  // Use 8-byte (sdata8) pointer encodings for all ELF EH sections
+  // (.eh_frame FDE, personality, LSDA, TType) to avoid relocation overflows
+  // in large binaries.
+  bool LargeEHEncoding = false;
+
   LLVM_ABI MCTargetOptions();
 
   /// getABIName - If this returns a non-empty string this represents the
