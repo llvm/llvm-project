@@ -18,9 +18,10 @@
 
 ; Test extracting all images without specifying --image filters.
 ; RUN: llvm-offload-binary %t | FileCheck --check-prefix=EXTRACT %s
+
 ; EXTRACT: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
 
-; Test nested OffloadBinary construction with mulitiple inner images
+; Test nested OffloadBinary construction with multiple inner images.
 ; RUN: llvm-offload-binary -o %t5 --image=file=%s,arch=abc,triple=x-y-z --image=file=%s,arch=def,triple=x-y-z
 ; RUN: llvm-offload-binary -o %t6 --image=file=%t5,arch=nested,triple=x-y-z
 ; RUN: llvm-objdump --offloading %t6 | FileCheck %s --check-prefix=NESTED
@@ -32,8 +33,19 @@
 ; NESTED:   OFFLOADING IMAGE [0.1]:
 
 ; Test extracting nested images.
-; RUN: llvm-offload-binary -o %t5 --image=file=%s,file=%s,arch=abc,triple=x-y-z
-; RUN: llvm-offload-binary -o %t6 --image=file=%t5,arch=nested,triple=x-y-z
 ; RUN: llvm-offload-binary %t6 | FileCheck --check-prefix=EXTRACT-NESTED %s
+
 ; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
-; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.1.
+; EXTRACT-NESTED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
+
+; Test mixed nested and non-nested images.
+; RUN: llvm-offload-binary -o %t7 --image=file=%t5,arch=nested,triple=x-y-z --image=file=%s,arch=ghi,triple=x-y-z
+; RUN: llvm-offload-binary %t7 | FileCheck --check-prefix=EXTRACT-MIXED %s
+
+; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-abc.0.
+; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-def.1.
+; EXTRACT-MIXED: Extracted: llvm-offload-binary.{{.*}}-x-y-z-ghi.2.
+
+; Test extracting inner OffloadBinary with --image filter.
+; RUN: llvm-offload-binary %t7 --image=file=%t8,arch=nested,triple=x-y-z
+; RUN: diff %t5 %t8
