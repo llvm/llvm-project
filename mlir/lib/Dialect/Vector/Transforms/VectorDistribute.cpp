@@ -1077,16 +1077,11 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
     VectorType castOriginalType = oldCastOp.getSourceVectorType();
     VectorType castResultType = castDistributedType;
 
-    // We expect the distributed type to have a smaller rank than the original
-    // type. Prepend with size-one dimensions to make them the same.
-    unsigned castDistributedRank = castDistributedType.getRank();
-    unsigned castOriginalRank = castOriginalType.getRank();
-    if (castDistributedRank < castOriginalRank) {
-      SmallVector<int64_t> shape(castOriginalRank - castDistributedRank, 1);
-      llvm::append_range(shape, castDistributedType.getShape());
-      castDistributedType =
-          VectorType::get(shape, castDistributedType.getElementType());
-    }
+    FailureOr<VectorType> maybeSrcType =
+        inferDistributedSrcType(castDistributedType, castOriginalType);
+    if (failed(maybeSrcType))
+      return failure();
+    castDistributedType = *maybeSrcType;
 
     SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1098,6 +1093,46 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
         newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newCast);
     return success();
+  }
+
+private:
+  static FailureOr<VectorType>
+  inferDistributedSrcType(VectorType distributedType, VectorType srcType) {
+    unsigned distributedRank = distributedType.getRank();
+    unsigned srcRank = srcType.getRank();
+    if (distributedRank == srcRank)
+      // Nothing to do.
+      return distributedType;
+    if (distributedRank < srcRank) {
+      // If the distributed type has a smaller rank than the original type,
+      // prepend with unit dimensions to make the types the same length.
+      SmallVector<int64_t> shape(srcRank - distributedRank, 1);
+      llvm::append_range(shape, distributedType.getShape());
+      return VectorType::get(shape, distributedType.getElementType());
+    }
+    // Handle the expanding shape_cast's.
+    //
+    // If the casted-from type has one rank, we can assert that the element
+    // count in that rank will match the full thread-level element count of
+    // the yielded type.
+    // Note that getNumElements() will correctly "flatten" the shape of the
+    // specific shape_cast's distributed type (its distribution may be
+    // different from the overall warp size, e.g. if the cast is applied to
+    // a result of a gather).
+    if (srcRank == 1)
+      return VectorType::get(distributedType.getNumElements(),
+                             srcType.getElementType());
+    // Try to strip leading unit dimensions to match the ranks. We bail out
+    // for more complex tile sizes, because those would require us to
+    // determine the specific distribution parameters to threads, which is
+    // unfeasible within this pattern.
+    unsigned excessDims = distributedRank - srcRank;
+    ArrayRef<int64_t> shape = distributedType.getShape();
+    if (!llvm::all_of(shape.take_front(excessDims),
+                      [](int64_t d) { return d == 1; }))
+      return failure();
+    return VectorType::get(shape.drop_front(excessDims),
+                           distributedType.getElementType());
   }
 };
 

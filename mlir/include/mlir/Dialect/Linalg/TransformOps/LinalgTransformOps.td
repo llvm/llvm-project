@@ -143,6 +143,28 @@ def ApplyFoldPackUnpackIntoEmptyPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyDataLayoutPropagationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.data_layout_propagation",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collection of patterns to bubble up or down data layout ops across other
+    operations.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$poison_padding);
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyExtractSliceSinkingPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.extract_slice_sinking",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Patterns to sink extract slice across other operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//

@@ -83,7 +83,7 @@ void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
   for (size_t I = 0; I < BufferTypes.size(); ++I) {
     unsigned IndirectionCount = 0;
     const Type *BufferType = BufferTypes[I];
-    llvm::SmallVector<IndirectionType, 1> Indirections;
+    SmallVector<IndirectionType, 1> Indirections;
 
     // Capture the depth and types of indirections for the passed buffer.
     while (true) {
