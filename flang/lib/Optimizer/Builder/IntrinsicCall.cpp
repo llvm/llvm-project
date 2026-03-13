@@ -8783,11 +8783,23 @@ static mlir::Value genExtremumResult(mlir::Location loc,
     if (mlir::isa<mlir::IndexType>(type))
       TODO(loc, "extremum for index type");
 
+    mlir::Value cmpLeft = left;
+    mlir::Value cmpRight = right;
     if (type.isUnsignedInteger()) {
+      // arith.maxui/minui operands must have singless type.
+      mlir::Type signlessType = mlir::IntegerType::get(
+          builder.getContext(), type.getIntOrFloatBitWidth(),
+          mlir::IntegerType::SignednessSemantics::Signless);
+      left = builder.createConvert(loc, signlessType, left);
+      right = builder.createConvert(loc, signlessType, right);
+
+      mlir::Value result;
       if constexpr (isMax)
-        return mlir::arith::MaxUIOp::create(builder, loc, left, right);
+        result = mlir::arith::MaxUIOp::create(builder, loc, left, right);
       else
-        return mlir::arith::MinUIOp::create(builder, loc, left, right);
+        result = mlir::arith::MinUIOp::create(builder, loc, left, right);
+
+      return builder.createConvert(loc, type, result);
     } else {
       if constexpr (isMax)
         return mlir::arith::MaxSIOp::create(builder, loc, left, right);
