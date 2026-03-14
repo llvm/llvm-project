@@ -14227,14 +14227,18 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                    Zeroable, Subtarget, DAG))
       return V;
 
-  if (Subtarget.hasSSE41() && !isSingleSHUFPSMask(Mask)) {
-    // Use INSERTPS if we can complete the shuffle efficiently.
-    if (SDValue V = lowerShuffleAsInsertPS(DL, V1, V2, Mask, Zeroable, DAG))
-      return V;
+  if (Subtarget.hasSSE41()) {
+    bool MatchesShufPS = isSingleSHUFPSMask(Mask);
 
-    if (SDValue BlendPerm =
-            lowerShuffleAsBlendAndPermute(DL, MVT::v4f32, V1, V2, Mask, DAG))
-      return BlendPerm;
+    // Use INSERTPS if we can complete the shuffle efficiently.
+    if (!MatchesShufPS || Zeroable == 0x3 || Zeroable == 0xC)
+      if (SDValue V = lowerShuffleAsInsertPS(DL, V1, V2, Mask, Zeroable, DAG))
+        return V;
+
+    if (!MatchesShufPS)
+      if (SDValue BlendPerm =
+              lowerShuffleAsBlendAndPermute(DL, MVT::v4f32, V1, V2, Mask, DAG))
+        return BlendPerm;
   }
 
   // Use low/high mov instructions. These are only valid in SSE1 because
