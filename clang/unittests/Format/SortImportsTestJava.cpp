@@ -358,22 +358,15 @@ TEST_F(SortImportsTestJava, DoNotSortImportsInBlockComment) {
 }
 
 TEST_F(SortImportsTestJava, StopAtClassDeclaration) {
-  EXPECT_EQ("import org.a;\n"
-            "\n"
-            "class Foo {\n"
-            "  String code = \"\"\"\n"
-            "      import org.c;\n"
-            "      import org.b;\n"
-            "  \"\"\";\n"
-            "}",
-            sort("import org.a;\n"
-                 "\n"
-                 "class Foo {\n"
-                 "  String code = \"\"\"\n"
-                 "      import org.c;\n"
-                 "      import org.b;\n"
-                 "  \"\"\";\n"
-                 "}"));
+  constexpr StringRef Code("import org.a;\n"
+                           "\n"
+                           "class Foo {\n"
+                           "  String code = \"\"\"\n"
+                           "      import org.c;\n"
+                           "      import org.b;\n"
+                           "  \"\"\";\n"
+                           "}");
+  EXPECT_EQ(Code, sort(Code));
 }
 
 TEST_F(SortImportsTestJava, SortImportsAfterPackageStatement) {
