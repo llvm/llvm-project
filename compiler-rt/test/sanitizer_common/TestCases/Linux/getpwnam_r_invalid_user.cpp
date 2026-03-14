@@ -16,6 +16,7 @@ int main(void) {
   int res = getpwnam_r("no-such-user", &pwd, buf, sizeof(buf), &pwdres);
   fprintf(stderr, "Result: %d\n", res);
   fflush(stderr);
+  // It can fail inconsistently on some bots with these errors.
   assert(res == 0 || res == ENOENT || res == ETIMEDOUT);
   assert(pwdres == 0);
   return 0;
