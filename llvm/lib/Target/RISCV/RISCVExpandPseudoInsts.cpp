@@ -342,8 +342,7 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   MachineOperand &RHS = MI.getOperand(MI.getNumExplicitOperands() - 1);
 
   // FIXME: Would be wonderful to support LHS=X0, but not very easy.
-  if (LHS.getReg() == RISCV::X0 ||
-      MI.getOperand(1).getReg() == RISCV::X0 ||
+  if (LHS.getReg() == RISCV::X0 || MI.getOperand(1).getReg() == RISCV::X0 ||
       MI.getOperand(2).getReg() == RISCV::X0)
     return false;
 
@@ -399,8 +398,8 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   }
 
   if (RHS.isImm() && isInt<5>(RHS.getImm())) {
-    // $dst = PseudoCCMOVGPR $falsev (=$dst), $truev, $opcode, $lhs, $rhs_imm
-    // $dst = PseudoCCMOVGPRNoX0 $falsev (=$dst), $truev, $opcode, $lhs, $rhs_imm
+    // $dst = PseudoCCMOVGPR $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
+    // $dst = PseudoCCMOVGPRNoX0 $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
     // =>
     // $dst = QC_MVccI $falsev (=$dst), $lhs, $rhs_imm, $truev
     BuildMI(MBB, MBBI, DL, TII->get(CMovImmOpcode))
