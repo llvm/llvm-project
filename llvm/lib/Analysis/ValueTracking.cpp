@@ -483,17 +483,6 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
   KnownOut.Zero.setHighBits(MinimumNumberOfLeadingZeros);
 }
 
-static bool isKnownNonNegativeFromMin(const Value *Op0, const Value *Op1) {
-
-  Value *V;
-
-  if (match(Op1, m_SMin(m_Specific(Op0), m_Value(V))) ||
-      match(Op1, m_SMin(m_Value(V), m_Specific(Op0))))
-    return true;
-
-  return false;
-}
-
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    bool NSW, bool NUW,
                                    const APInt &DemandedElts,
@@ -512,7 +501,7 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   if (!Add && NSW && !KnownOut.isNonNegative() &&
       (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
            .value_or(false) ||
-       isKnownNonNegativeFromMin(Op0, Op1)))
+       match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
     KnownOut.makeNonNegative();
 
   if (Add)

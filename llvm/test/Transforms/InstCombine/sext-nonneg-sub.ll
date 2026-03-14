@@ -33,6 +33,21 @@ define i64 @smin_commutative(i32 %a, i32 %b) {
   ret i64 %ext
 }
 
+; NEGATIVE TEST: mismatched operands should not optimize
+define i64 @smin_mismatch(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i64 @smin_mismatch(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[B]], i32 [[C]])
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[MIN]]
+; CHECK-NEXT:    [[EXT:%.*]] = sext i32 [[SUB]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  %min = call i32 @llvm.smin.i32(i32 %b, i32 %c)
+  %sub = sub nsw i32 %a, %min
+  %ext = sext i32 %sub to i64
+  ret i64 %ext
+}
+
 
 ; NEGATIVE TEST: unguarded subtraction should NOT optimize
 define i64 @neg_unguarded_sub(i32 %a, i32 %b) {
@@ -46,6 +61,3 @@ define i64 @neg_unguarded_sub(i32 %a, i32 %b) {
   %ext = sext i32 %sub to i64
   ret i64 %ext
 }
-
-
-declare i32 @llvm.smin.i32(i32, i32)
