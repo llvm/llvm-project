@@ -17,7 +17,7 @@ macro(libclc_configure_source_options path option)
   )
 endmacro()
 
-# Merges OpenCL C source file lists with priority deduplication.
+# Merges CL source file lists with priority deduplication.
 #
 # All arguments after the output variable name are treated as source file
 # paths. When multiple files share the same basename, the last occurrence
@@ -146,9 +146,9 @@ function(link_libclc_builtin_library target_name)
   )
 endfunction()
 
-# Builds an OpenCL builtins library from sources, links it with any
-# internalized dependencies via link_libclc_builtin_library, and adds
-# a verification test for unresolved symbols.
+# Builds a builtins library from sources, links it with any internalized
+# dependencies via link_libclc_builtin_library, and adds a verification test
+# for unresolved symbols.
 function(add_libclc_library target_name)
   cmake_parse_arguments(ARG
     ""
@@ -167,19 +167,19 @@ function(add_libclc_library target_name)
     message(FATAL_ERROR "SOURCES is required for add_libclc_library")
   endif()
 
-  set(opencl_lib ${target_name}_opencl_builtins)
-  add_libclc_builtin_library(${opencl_lib}
+  set(clc_lib ${target_name}_clc_builtins)
+  add_libclc_builtin_library(${clc_lib}
     SOURCES ${ARG_SOURCES}
     COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
     INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
     COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
-    FOLDER "libclc/Device IR/OpenCL"
+    FOLDER "libclc/Device IR/Intermediate"
   )
 
   link_libclc_builtin_library(${target_name}
     ARCH ${ARG_ARCH}
     TRIPLE ${ARG_TRIPLE}
-    LIBRARIES ${opencl_lib}
+    LIBRARIES ${clc_lib}
     INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
     OPT_FLAGS ${ARG_OPT_FLAGS}
     OUTPUT_FILENAME "${ARG_OUTPUT_FILENAME}"
