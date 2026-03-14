@@ -141,7 +141,7 @@ public:
   }
 
   template <auto _Fn, class _Tp>
-    requires __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp*>
+    requires __is_invocable_using<const decltype(_Fn)&, _LIBCPP_FUNCTION_REF_CV _Tp*>
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
       : __storage_(__obj_ptr),
         __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {

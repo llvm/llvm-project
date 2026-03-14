@@ -242,7 +242,7 @@ constexpr bool test() {
   {
     // const noexcept
     int i = 5;
-    std::function_ref<double( double) const noexcept> f(std::constant_arg<&f1>, i);
+    std::function_ref<double(double) const noexcept> f(std::constant_arg<&f1>, i);
     assert(f(2.0) == 7.0);
   }
   {
@@ -282,31 +282,34 @@ constexpr bool test() {
   }
   {
     // with conversions
-    std::function_ref<Int(int, int, int)> f(std::constant_arg<NeedsConversion{}>);
-    assert(f(1, 2, 3).i == 6);
+    int i = 1;
 
-    std::function_ref<Int(int, int, int) const> f2(std::constant_arg<NeedsConversion{}>);
-    assert(f2(1, 2, 3).i == 6);
+    std::function_ref<Int(int, int)> f(std::constant_arg<NeedsConversion{}>, i);
+    assert(f(2, 3).i == 6);
 
-    std::function_ref<Int(int, int, int) noexcept> f3(std::constant_arg<NeedsConversion{}>);
-    assert(f3(1, 2, 3).i == 6);
+    std::function_ref<Int(int, int) const> f2(std::constant_arg<NeedsConversion{}>, i);
+    assert(f2(2, 3).i == 6);
 
-    std::function_ref<Int(int, int, int) const noexcept> f4(std::constant_arg<NeedsConversion{}>);
-    assert(f4(1, 2, 3).i == 6);
+    std::function_ref<Int(int, int) noexcept> f3(std::constant_arg<NeedsConversion{}>, i);
+    assert(f3(2, 3).i == 6);
+
+    std::function_ref<Int(int, int) const noexcept> f4(std::constant_arg<NeedsConversion{}>, i);
+    assert(f4(2, 3).i == 6);
   }
   {
     // with conversions function pointer
-    std::function_ref<Int(int, int, int)> f(std::constant_arg<&needs_conversion>);
-    assert(f(1, 2, 3).i == 6);
+    int i = 1;
+    std::function_ref<Int(int, int)> f(std::constant_arg<&needs_conversion>, i);
+    assert(f(2, 3).i == 6);
 
-    std::function_ref<Int(int, int, int) const> f2(std::constant_arg<&needs_conversion>);
-    assert(f2(1, 2, 3).i == 6);
+    std::function_ref<Int(int, int) const> f2(std::constant_arg<&needs_conversion>, i);
+    assert(f2(2, 3).i == 6);
 
-    std::function_ref<Int(int, int, int) noexcept> f3(std::constant_arg<&needs_conversion>);
-    assert(f3(1, 2, 3).i == 6);
+    std::function_ref<Int(int, int) noexcept> f3(std::constant_arg<&needs_conversion>, i);
+    assert(f3(2, 3).i == 6);
 
-    std::function_ref<Int(int, int, int) const noexcept> f4(std::constant_arg<&needs_conversion>);
-    assert(f4(1, 2, 3).i == 6);
+    std::function_ref<Int(int, int) const noexcept> f4(std::constant_arg<&needs_conversion>, i);
+    assert(f4(2, 3).i == 6);
   }
 
   return true;
