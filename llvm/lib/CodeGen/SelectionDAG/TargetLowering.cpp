@@ -8245,26 +8245,26 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
     // Precompute 2^MaxChunk mod Divisor
     APInt Mod(Divisor.getBitWidth(), 1);
-    for (unsigned k = 0; k < MaxChunk; ++k)
+    for (unsigned K = 0; K != MaxChunk; ++K)
       Mod = Mod.shl(1).urem(Divisor);
 
     // Since Divisor is odd, modular inverse of 2 is (Divisor + 1) / 2
     APInt Inv2 = (Divisor + 1).lshr(1);
 
     // Search for W where 2^W % Divisor == 1
-    for (unsigned i = MaxChunk; i > MaxChunk / 2; --i) {
+    for (unsigned I = MaxChunk, E = MaxChunk / 2; I > E; --I) {
       if (Mod.isOne()) {
         // Safety Check: Ensure (NumChunks * MaxChunkValue) doesn't overflow
         // LegalVT
-        unsigned NumChunks = divideCeil(BitWidth, i);
-        // if the ChunkWidth (i) plus the Potential Carry Bits is less than the
+        unsigned NumChunks = divideCeil(BitWidth, I);
+        // if the ChunkWidth (I) plus the Potential Carry Bits is less than the
         // Register Width (64), we have enough "slack" at the top of the
         // register to let the carries pile up safely.
-        // Max sum is NumChunks * (2^i - 1) so by approximation we need
-        // NumChunks × 2^i < 2^L. Taking log on both size we will have
-        // log2(NumChunks) + i < L.
-        if (i + Log2_32_Ceil(NumChunks) < LegalWidth) {
-          BestChunkWidth = i;
+        // Max sum is NumChunks * (2^I - 1) so by approximation we need
+        // NumChunks × 2^I < 2^L. Taking log on both size we will have
+        // log2(NumChunks) + I < L.
+        if (I + Log2_32_Ceil(NumChunks) < LegalWidth) {
+          BestChunkWidth = I;
           break;
         }
       }
@@ -8280,8 +8280,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     APInt MaskVal = APInt::getLowBitsSet(LegalWidth, BestChunkWidth);
     SDValue Mask = DAG.getConstant(MaskVal, dl, LegalVT);
 
-    for (unsigned i = 0; i < BitWidth; i += BestChunkWidth) {
-      SDValue Shift = DAG.getShiftAmountConstant(i, VT, dl);
+    for (unsigned I = 0; I < BitWidth; I += BestChunkWidth) {
+      SDValue Shift = DAG.getShiftAmountConstant(I, VT, dl);
       SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
       // Truncate to LegalVT
       SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, LegalVT, Chunk);
