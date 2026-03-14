@@ -958,3 +958,23 @@ int64_t test_vshld_n_u64(int64_t a) {
   // LLVM: ret i64 [[SHL_N]]
   return (int64_t)vshld_n_u64(a, 1);
 }
+
+// LLVM-LABEL: @test_vshld_s64
+// CIR-LABEL: @test_vshld_s64
+int64_t test_vshld_s64(int64_t a,int64_t b) {
+
+ // LLVM-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+ // LLVM:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sshl.i64(i64 [[A]], i64 [[B]])
+ // LLVM:    ret i64 [[VSHLD_S64_I]]
+  return (int64_t)vshld_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vshld_u64
+// CIR-LABEL: @test_vshld_u64
+int64_t test_vshld_u64(int64_t a,int64_t b) {
+
+ // LLVM-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+ // LLVM:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.ushl.i64(i64 [[A]], i64 [[B]])
+ // LLVM:    ret i64 [[VSHLD_S64_I]]
+  return (int64_t)vshld_u64(a, b);
+}
