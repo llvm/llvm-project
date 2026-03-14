@@ -207,7 +207,8 @@ inline std::string AddressSpaceToString(AddressSpace A) {
     return "shared";
   case AddressSpace::SharedCluster:
     return "shared::cluster";
-  case AddressSpace::Param:
+  case AddressSpace::EntryParam:
+  case AddressSpace::DeviceParam:
     return "param";
   case AddressSpace::Local:
     return "local";
