@@ -240,7 +240,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
     // Label source of switch edges with the associated value.
     if (const SwitchInst *SI = dyn_cast<SwitchInst>(Node->getTerminator())) {
-      unsigned SuccNo = I.getSuccessorIndex();
+      unsigned SuccNo = std::distance(succ_begin(SI), I);
 
       if (SuccNo == 0)
         return "def";
@@ -272,8 +272,8 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (!CFGInfo->showEdgeWeights())
       return "";
 
-    unsigned OpNo = I.getSuccessorIndex();
     const Instruction *TI = Node->getTerminator();
+    unsigned OpNo = std::distance(succ_begin(TI), I);
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
     auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
     double WeightPercent = ((double)BranchProb.getNumerator()) /
@@ -310,7 +310,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (!WeightsNode)
       return TTAttr;
 
-    OpNo = I.getSuccessorIndex() + 1;
+    OpNo += 1;
     if (OpNo >= WeightsNode->getNumOperands())
       return TTAttr;
     ConstantInt *Weight =

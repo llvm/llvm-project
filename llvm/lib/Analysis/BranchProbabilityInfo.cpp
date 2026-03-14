@@ -395,10 +395,11 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   SmallVector<unsigned, 2> ReachableIdxs;
 
   extractBranchWeights(WeightsNode, Weights);
+  auto Succs = succ_begin(TI);
   for (unsigned I = 0, E = Weights.size(); I != E; ++I) {
     WeightSum += Weights[I];
     const LoopBlock SrcLoopBB = getLoopBlock(BB);
-    const LoopBlock DstLoopBB = getLoopBlock(TI->getSuccessor(I));
+    const LoopBlock DstLoopBB = getLoopBlock(*Succs++);
     auto EstimatedWeight = getEstimatedEdgeWeight({SrcLoopBB, DstLoopBB});
     if (EstimatedWeight &&
         *EstimatedWeight <= static_cast<uint32_t>(BlockExecWeight::UNREACHABLE))
@@ -1104,7 +1105,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const_succ_iterator Dst) const {
-  return getEdgeProbability(Src, Dst.getSuccessorIndex());
+  return getEdgeProbability(Src, std::distance(succ_begin(Src), Dst));
 }
 
 /// Get the raw edge probability calculated for the block pair. This returns the
@@ -1116,9 +1117,9 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
     return BranchProbability(llvm::count(successors(Src), Dst), succ_size(Src));
 
   auto Prob = BranchProbability::getZero();
-  for (const_succ_iterator I = succ_begin(Src), E = succ_end(Src); I != E; ++I)
-    if (*I == Dst)
-      Prob += Probs.find(std::make_pair(Src, I.getSuccessorIndex()))->second;
+  for (auto It : enumerate(successors(Src)))
+    if (It.value() == Dst)
+      Prob += Probs.find(std::make_pair(Src, It.index()))->second;
 
   return Prob;
 }
