@@ -342,16 +342,31 @@ spirv.module Logical GLSL450 {
    // CHECK: spirv.ExecutionModeId {{@.*}} "LocalSizeHintId", @x, @y, @z
    spirv.ExecutionModeId @do_nothing "LocalSizeHintId", @x, @y, @z
 }
+
 // -----
+
 spirv.module Logical GLSL450 {
    spirv.func @do_nothing() -> () "None" {
      spirv.Return
    }
    spirv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{'spirv.ExecutionModeId' op expected at least one value operand}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId"
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected ExecutionMode that takes extra operands that are <id> operands, got: ContractionOff}}
    spirv.ExecutionModeId @do_nothing "ContractionOff"
 }
+
 // -----
+
 spirv.module Logical GLSL450 {
    spirv.SpecConstant @x = 3 : i32
    spirv.SpecConstant @y = 4 : i32
@@ -363,7 +378,9 @@ spirv.module Logical GLSL450 {
    // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid execution_mode attribute specification: "GLCompute"}}
    spirv.ExecutionModeId @do_nothing "GLCompute", @x, @y, @z
 }
+
 // -----
+
 spirv.module Logical GLSL450 {
    spirv.SpecConstant @x = 3 : i32
    spirv.SpecConstant @y = 4 : i32

@@ -959,16 +959,26 @@ ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
 void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getFn());
-  printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\"";
-  for (const auto &value : getValues()) {
-    printer << ", ";
-    printer.printSymbolName(cast<FlatSymbolRefAttr>(value).getValue());
-  }
+  printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\", ";
+
+  llvm::interleaveComma(
+      getValues().getAsValueRange<FlatSymbolRefAttr>(), printer,
+      [&](StringRef value) { printer.printSymbolName(value); });
 }
 
 LogicalResult spirv::ExecutionModeIdOp::verify() {
-  // TODO: Add check to ensure that ExecutionMode is an execution mode that
-  //       takes Extra Operands that are <id> operands
+  // Valid as of SPIRV 1.6
+  switch (getExecutionMode()) {
+  case ExecutionMode::SubgroupsPerWorkgroupId:
+  case ExecutionMode::LocalSizeId:
+  case ExecutionMode::LocalSizeHintId:
+    break;
+  default:
+    return emitOpError("expected ExecutionMode that takes extra operands that "
+                       "are <id> operands, got: ")
+           << stringifyExecutionMode(getExecutionMode());
+  }
+
   if (getValues().empty())
     return emitOpError("expected at least one value operand");
 
@@ -978,10 +988,9 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
       return emitOpError("expected value operands to be symbol reference");
     Operation *valueOp = SymbolTable::lookupNearestSymbolFrom(
         (*this)->getParentOp(), valueSymbol);
-    if (!valueOp) {
+    if (!valueOp)
       return emitOpError("cannot find symbol referenced by value operand: ")
              << valueSymbol.getValue();
-    }
   }
 
   return success();
