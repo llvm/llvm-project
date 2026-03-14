@@ -475,8 +475,7 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
                        "tbyte", "oword", "xmmword", "ymmword", "zmmword", "ptr",
                        "offset", "flat", "near", "far", "short"})
     MAI->ReservedIdentifiers.insert(KW);
-  // Operator keywords parsed by GAS in Intel mode (some are supported by
-  // X86AsmParser).
+  // Operator keywords parsed by GAS/X86AsmParser in Intel mode.
   for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
                        "or", "shl", "shr", "xor"})
     MAI->ReservedIdentifiers.insert(KW);
