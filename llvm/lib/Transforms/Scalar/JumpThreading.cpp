@@ -146,7 +146,7 @@ JumpThreadingPass::JumpThreadingPass(int T) {
 //  that P(t == true) is also unlikely.
 //
 static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
-  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!CondBr)
     return;
 
@@ -169,8 +169,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
     auto *SuccBB = PhiBB;
     SmallPtrSet<BasicBlock *, 16> Visited;
     while (true) {
-      BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
-      if (PredBr && PredBr->isConditional())
+      if (isa<CondBrInst>(PredBB->getTerminator()))
         return {PredBB, SuccBB};
       Visited.insert(PredBB);
       auto *SinglePredBB = PredBB->getSinglePredecessor();
@@ -205,7 +204,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
       return;
 
     BasicBlock *PredBB = PredOutEdge.first;
-    BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator());
+    CondBrInst *PredBr = dyn_cast<CondBrInst>(PredBB->getTerminator());
     if (!PredBr)
       return;
 
@@ -351,9 +350,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
 
       // processBlock doesn't thread BBs with unconditional TIs. However, if BB
       // is "almost empty", we attempt to merge BB with its sole successor.
-      auto *BI = dyn_cast<BranchInst>(BB.getTerminator());
-      if (BI && BI->isUnconditional()) {
-        BasicBlock *Succ = BI->getSuccessor(0);
+      if (auto *BI = dyn_cast<UncondBrInst>(BB.getTerminator())) {
+        BasicBlock *Succ = BI->getSuccessor();
         if (
             // The terminator must be the only non-phi instruction in BB.
             BB.getFirstNonPHIOrDbg(true)->isTerminator() &&
@@ -971,9 +969,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   // branch, if not we can't thread it.
   Value *Condition;
   Instruction *Terminator = BB->getTerminator();
-  if (BranchInst *BI = dyn_cast<BranchInst>(Terminator)) {
-    // Can't thread an unconditional jump.
-    if (BI->isUnconditional()) return false;
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(Terminator)) {
     Condition = BI->getCondition();
   } else if (SwitchInst *SI = dyn_cast<SwitchInst>(Terminator)) {
     Condition = SI->getCondition();
@@ -1023,7 +1019,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
     LLVM_DEBUG(dbgs() << "  In block '" << BB->getName()
                       << "' folding undef terminator: " << *BBTerm << '\n');
-    Instruction *NewBI = BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
+    Instruction *NewBI = UncondBrInst::Create(BBTerm->getSuccessor(BestSucc),
+                                              BBTerm->getIterator());
     NewBI->setDebugLoc(BBTerm->getDebugLoc());
     ++NumFolds;
     BBTerm->eraseFromParent();
@@ -1112,7 +1109,7 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
   // Before threading, try to propagate profile data backwards:
   if (PHINode *PN = dyn_cast<PHINode>(CondInst))
-    if (PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
+    if (PN->getParent() == BB && isa<CondBrInst>(BB->getTerminator()))
       updatePredecessorProfileMetadata(PN, BB);
 
   // Handle a variety of cases where we are branching on something derived from
@@ -1124,12 +1121,12 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   // If this is an otherwise-unfoldable branch on a phi node or freeze(phi) in
   // the current block, see if we can simplify.
   PHINode *PN = dyn_cast<PHINode>(CondWithoutFreeze);
-  if (PN && PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
+  if (PN && PN->getParent() == BB && isa<CondBrInst>(BB->getTerminator()))
     return processBranchOnPHI(PN);
 
   // If this is an otherwise-unfoldable branch on a XOR, see if we can simplify.
   if (CondInst->getOpcode() == Instruction::Xor &&
-      CondInst->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
+      CondInst->getParent() == BB && isa<CondBrInst>(BB->getTerminator()))
     return processBranchOnXOR(cast<BinaryOperator>(CondInst));
 
   // Search for a stronger dominating condition that can be used to simplify a
@@ -1141,8 +1138,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 }
 
 bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
-  auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   Value *Cond = BI->getCondition();
@@ -1164,8 +1161,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
   auto &DL = BB->getDataLayout();
 
   while (CurrentPred && Iter++ < ImplicationSearchThreshold) {
-    auto *PBI = dyn_cast<BranchInst>(CurrentPred->getTerminator());
-    if (!PBI || !PBI->isConditional())
+    auto *PBI = dyn_cast<CondBrInst>(CurrentPred->getTerminator());
+    if (!PBI)
       return false;
     if (PBI->getSuccessor(0) != CurrentBB && PBI->getSuccessor(1) != CurrentBB)
       return false;
@@ -1186,7 +1183,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       BasicBlock *KeepSucc = BI->getSuccessor(*Implication ? 0 : 1);
       BasicBlock *RemoveSucc = BI->getSuccessor(*Implication ? 1 : 0);
       RemoveSucc->removePredecessor(BB);
-      BranchInst *UncondBI = BranchInst::Create(KeepSucc, BI->getIterator());
+      UncondBrInst *UncondBI =
+          UncondBrInst::Create(KeepSucc, BI->getIterator());
       UncondBI->setDebugLoc(BI->getDebugLoc());
       ++NumFolds;
       BI->eraseFromParent();
@@ -1605,7 +1603,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
     BasicBlock *DestBB;
     if (isa<UndefValue>(Val))
       DestBB = nullptr;
-    else if (BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator())) {
+    else if (CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator())) {
       assert(isa<ConstantInt>(Val) && "Expecting a constant integer");
       DestBB = BI->getSuccessor(cast<ConstantInt>(Val)->isZero());
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(BB->getTerminator())) {
@@ -1662,7 +1660,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
 
       // Finally update the terminator.
       Instruction *Term = BB->getTerminator();
-      Instruction *NewBI = BranchInst::Create(OnlyDest, Term->getIterator());
+      Instruction *NewBI = UncondBrInst::Create(OnlyDest, Term->getIterator());
       NewBI->setDebugLoc(Term->getDebugLoc());
       ++NumFolds;
       Term->eraseFromParent();
@@ -1755,13 +1753,12 @@ bool JumpThreadingPass::processBranchOnPHI(PHINode *PN) {
   // to br(icmp(freeze ...)).
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     BasicBlock *PredBB = PN->getIncomingBlock(i);
-    if (BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator()))
-      if (PredBr->isUnconditional()) {
-        PredBBs[0] = PredBB;
-        // Try to duplicate BB into PredBB.
-        if (duplicateCondBranchOnPHIIntoPred(BB, PredBBs))
-          return true;
-      }
+    if (isa<UncondBrInst>(PredBB->getTerminator())) {
+      PredBBs[0] = PredBB;
+      // Try to duplicate BB into PredBB.
+      if (duplicateCondBranchOnPHIIntoPred(BB, PredBBs))
+        return true;
+    }
   }
 
   return false;
@@ -2142,7 +2139,7 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   // PredBB.  Then we can thread edges PredBB1->BB and PredBB2->BB through BB.
 
   // Require that BB end with a Branch for simplicity.
-  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!CondBr)
     return false;
 
@@ -2154,8 +2151,8 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   // Require that PredBB end with a conditional Branch. If PredBB ends with an
   // unconditional branch, we should be merging PredBB and BB instead. For
   // simplicity, we don't deal with a switch.
-  BranchInst *PredBBBranch = dyn_cast<BranchInst>(PredBB->getTerminator());
-  if (!PredBBBranch || PredBBBranch->isUnconditional())
+  CondBrInst *PredBBBranch = dyn_cast<CondBrInst>(PredBB->getTerminator());
+  if (!PredBBBranch)
     return false;
 
   // If PredBB has exactly one incoming edge, we don't gain anything by copying
@@ -2276,8 +2273,8 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   auto *BFI = getOrCreateBFI(HasProfile);
   auto *BPI = getOrCreateBPI(BFI != nullptr);
 
-  BranchInst *CondBr = cast<BranchInst>(BB->getTerminator());
-  BranchInst *PredBBBranch = cast<BranchInst>(PredBB->getTerminator());
+  CondBrInst *CondBr = cast<CondBrInst>(BB->getTerminator());
+  CondBrInst *PredBBBranch = cast<CondBrInst>(PredBB->getTerminator());
 
   BasicBlock *NewBB =
       BasicBlock::Create(PredBB->getContext(), PredBB->getName() + ".thread",
@@ -2429,7 +2426,7 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
 
   // We didn't copy the terminator from BB over to NewBB, because there is now
   // an unconditional jump to SuccBB.  Insert the unconditional jump.
-  BranchInst *NewBI = BranchInst::Create(SuccBB, NewBB);
+  UncondBrInst *NewBI = UncondBrInst::Create(SuccBB, NewBB);
   NewBI->setDebugLoc(BB->getTerminator()->getDebugLoc());
 
   // Check to see if SuccBB has PHI nodes. If so, we need to add entries to the
@@ -2667,15 +2664,15 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
   // Unless PredBB ends with an unconditional branch, split the edge so that we
   // can just clone the bits from BB into the end of the new PredBB.
-  BranchInst *OldPredBranch = dyn_cast<BranchInst>(PredBB->getTerminator());
+  UncondBrInst *OldPredBranch = dyn_cast<UncondBrInst>(PredBB->getTerminator());
 
-  if (!OldPredBranch || !OldPredBranch->isUnconditional()) {
+  if (!OldPredBranch) {
     BasicBlock *OldPredBB = PredBB;
     PredBB = SplitEdge(OldPredBB, BB);
     Updates.push_back({DominatorTree::Insert, OldPredBB, PredBB});
     Updates.push_back({DominatorTree::Insert, PredBB, BB});
     Updates.push_back({DominatorTree::Delete, OldPredBB, BB});
-    OldPredBranch = cast<BranchInst>(PredBB->getTerminator());
+    OldPredBranch = cast<UncondBrInst>(PredBB->getTerminator());
   }
 
   // We are going to have to map operands from the original BB block into the
@@ -2738,7 +2735,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
   // Check to see if the targets of the branch had PHI nodes. If so, we need to
   // add entries to the PHI nodes for branch from PredBB now.
-  BranchInst *BBBranch = cast<BranchInst>(BB->getTerminator());
+  CondBrInst *BBBranch = cast<CondBrInst>(BB->getTerminator());
   addPHINodeEntriesForMappedBlock(BBBranch->getSuccessor(0), BB, PredBB,
                                   ValueMapping);
   addPHINodeEntriesForMappedBlock(BBBranch->getSuccessor(1), BB, PredBB,
@@ -2781,14 +2778,14 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   //  |-----
   //  v
   // BB
-  BranchInst *PredTerm = cast<BranchInst>(Pred->getTerminator());
+  UncondBrInst *PredTerm = cast<UncondBrInst>(Pred->getTerminator());
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "select.unfold",
                                          BB->getParent(), BB);
   // Move the unconditional branch to NewBB.
   PredTerm->removeFromParent();
   PredTerm->insertInto(NewBB, NewBB->end());
   // Create a conditional branch and update PHI nodes.
-  auto *BI = BranchInst::Create(NewBB, BB, SI->getCondition(), Pred);
+  auto *BI = CondBrInst::Create(SI->getCondition(), NewBB, BB, Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
   BI->copyMetadata(*SI, {LLVMContext::MD_prof});
   SIUse->setIncomingValue(Idx, SI->getFalseValue());
@@ -2848,8 +2845,8 @@ bool JumpThreadingPass::tryToUnfoldSelect(SwitchInst *SI, BasicBlock *BB) {
     if (!PredSI || PredSI->getParent() != Pred || !PredSI->hasOneUse())
       continue;
 
-    BranchInst *PredTerm = dyn_cast<BranchInst>(Pred->getTerminator());
-    if (!PredTerm || !PredTerm->isUnconditional())
+    UncondBrInst *PredTerm = dyn_cast<UncondBrInst>(Pred->getTerminator());
+    if (!PredTerm)
       continue;
 
     unfoldSelectInstr(Pred, BB, PredSI, CondPHI, I);
@@ -2871,12 +2868,11 @@ bool JumpThreadingPass::tryToUnfoldSelect(SwitchInst *SI, BasicBlock *BB) {
 /// And expand the select into a branch structure if one of its arms allows %c
 /// to be folded. This later enables threading from bb1 over bb2.
 bool JumpThreadingPass::tryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
-  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   PHINode *CondLHS = dyn_cast<PHINode>(CondCmp->getOperand(0));
   Constant *CondRHS = cast<Constant>(CondCmp->getOperand(1));
 
-  if (!CondBr || !CondBr->isConditional() || !CondLHS ||
-      CondLHS->getParent() != BB)
+  if (!CondBr || !CondLHS || CondLHS->getParent() != BB)
     return false;
 
   for (unsigned I = 0, E = CondLHS->getNumIncomingValues(); I != E; ++I) {
@@ -2888,8 +2884,8 @@ bool JumpThreadingPass::tryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
     if (!SI || SI->getParent() != Pred || !SI->hasOneUse())
       continue;
 
-    BranchInst *PredTerm = dyn_cast<BranchInst>(Pred->getTerminator());
-    if (!PredTerm || !PredTerm->isUnconditional())
+    UncondBrInst *PredTerm = dyn_cast<UncondBrInst>(Pred->getTerminator());
+    if (!PredTerm)
       continue;
 
     // Now check if one of the select values would allow us to constant fold the
