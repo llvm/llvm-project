@@ -410,12 +410,14 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     }
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
-      const TargetLibraryInfo &TLI = LookupTLI(*Memset->getFunction());
+      Function *ParentFunc = Memset->getFunction();
+      const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
       Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
       if (!PatternValue) {
         // If it isn't possible to emit a memset_pattern16 libcall, expand to
         // a loop instead.
-        expandMemSetPatternAsLoop(Memset);
+        const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+        expandMemSetPatternAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
         break;
@@ -622,11 +624,11 @@ static bool expandCondLoop(Function &Intr) {
   for (User *U : llvm::make_early_inc_range(Intr.users())) {
     auto *Call = cast<CallInst>(U);
 
-    auto *Br = cast<BranchInst>(
+    auto *Br = cast<UncondBrInst>(
         SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false,
                                   getExplicitlyUnknownBranchWeightsIfProfiled(
                                       *Call->getFunction(), DEBUG_TYPE)));
-    Br->setSuccessor(0, Br->getParent());
+    Br->setSuccessor(Br->getParent());
     Call->eraseFromParent();
   }
   return true;
@@ -639,8 +641,8 @@ static bool expandLoopTrap(Function &Intr) {
         std::all_of(Call->getParent()->begin(), BasicBlock::iterator(Call),
                     [](Instruction &I) { return !I.mayHaveSideEffects(); })) {
       for (auto *BB : predecessors(Call->getParent())) {
-        auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-        if (!BI || BI->isUnconditional())
+        auto *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+        if (!BI)
           continue;
         IRBuilder<> B(BI);
         Value *Cond;

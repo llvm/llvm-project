@@ -44,6 +44,7 @@
 #include "ExceptionRecord.h"
 #include "ForwardDecl.h"
 #include "LocalDebugDelegate.h"
+#include "MSVCRTCFrameRecognizer.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
@@ -107,7 +108,10 @@ void ProcessWindows::Initialize() {
   }
 }
 
-void ProcessWindows::Terminate() {}
+void ProcessWindows::Terminate() {
+  if (!ShouldUseLLDBServer())
+    PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef ProcessWindows::GetPluginDescriptionStatic() {
   return "Process plugin for Windows";
@@ -299,6 +303,8 @@ void ProcessWindows::DidLaunch() {
 
 void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
   llvm::sys::ScopedLock lock(m_mutex);
+
+  RegisterMSVCRTCFrameRecognizer(*this);
 
   // The initial stop won't broadcast the state change event, so account for
   // that here.
@@ -856,6 +862,15 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
 
 std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
   return RegisterContextWindows::GetNumHardwareBreakpointSlots();
+}
+
+std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return std::nullopt;
+  auto exc = m_session_data->m_debugger->GetActiveException().lock();
+  if (!exc)
+    return std::nullopt;
+  return exc->GetExceptionCode();
 }
 
 Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {

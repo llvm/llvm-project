@@ -666,6 +666,7 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
       .getMutableSubtargetImpl()
       ->resolveEnvFromModule(M);
 
+  bool Changed = false;
   if (M.functions().empty()) {
     // If there are no functions, insert a service
     // function so that the global/constant tracking intrinsics
@@ -675,9 +676,9 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
     BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", SF);
     IRBuilder<> IRB(BB);
     IRB.CreateRetVoid();
+    Changed = true;
   }
 
-  bool Changed = false;
   for (Function &F : M) {
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

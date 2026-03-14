@@ -47,7 +47,7 @@ static RWBuffer<float> StaticArray[2];
 // CHECK-NEXT:   %arrayctor.cur = phi ptr [ @StaticArray, %entry ], [ %arrayctor.next, %arrayctor.loop ]
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::RWBuffer()(ptr {{.*}} %arrayctor.cur)
 // CHECK-NEXT: %arrayctor.next = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %arrayctor.cur, i32 1
-// CHECK-NEXT: %arrayctor.done = icmp eq ptr %arrayctor.next, getelementptr inbounds (%"class.hlsl::RWBuffer", ptr @StaticArray, i32 2)
+// CHECK-NEXT: %arrayctor.done = icmp eq ptr %arrayctor.next, getelementptr inbounds nuw (i8, ptr @StaticArray, i32 8)
 // CHECK-NEXT: br i1 %arrayctor.done, label %arrayctor.cont, label %arrayctor.loop
 // CHECK: arrayctor.cont:                                   ; preds = %arrayctor.loop
 // CHECK-NEXT: ret void
@@ -90,13 +90,13 @@ void main() {
 // CHECK: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 @StaticArray, i32 noundef 10, i32 noundef 6, i32 noundef 2, i32 noundef 0, ptr noundef [[ARRAY_STR]])
 // CHECK-NEXT: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
-// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 getelementptr ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1),
+// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 getelementptr inbounds nuw (i8, ptr @StaticArray, i32 4),
 // CHECK-SAME: i32 noundef 10, i32 noundef 6, i32 noundef 2, i32 noundef 1, ptr noundef [[ARRAY_STR]]
 
   StaticArray[1] = One;
 // Operator = call to assign non-static One handle to StaticArray element.
 // CHECK-NEXT: call {{.*}} ptr @hlsl::RWBuffer<float>::operator=(hlsl::RWBuffer<float> const&)
-// CHECK-SAME: (ptr {{.*}} getelementptr inbounds ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1), ptr {{.*}} @One)
+// CHECK-SAME: (ptr {{.*}} getelementptr inbounds nuw (i8, ptr @StaticArray, i32 4), ptr {{.*}} @One)
 
   StaticLocal[0] = 123;
 // CHECK-NEXT: %[[PTR0:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @main()::StaticLocal, i32 noundef 0)
@@ -108,7 +108,7 @@ void main() {
 
   StaticArray[1][2] = 789;
 // CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)
-// CHECK-SAME: (ptr {{.*}} getelementptr inbounds ([2 x %"class.hlsl::RWBuffer"], ptr @StaticArray, i32 0, i32 1), i32 noundef 2)
+// CHECK-SAME: (ptr {{.*}} getelementptr inbounds nuw (i8, ptr @StaticArray, i32 4), i32 noundef 2)
 // CHECK-NEXT: store float 7.890000e+02, ptr %[[PTR2]], align 4
 
   static RWStructuredBuffer<int> StaticLocalWithCounter;
@@ -130,7 +130,7 @@ void main() {
 // CHECK-SAME: i32 noundef 7, i32 noundef 4, i32 noundef 2, i32 noundef 0, ptr noundef [[ARRAYWITHCOUNTER_STR]], i32 noundef 1)
 
 // CHECK-NEXT: call void @hlsl::RWStructuredBuffer<int>::__createFromBindingWithImplicitCounter(unsigned int, unsigned int, int, unsigned int, char const*, unsigned int)
-// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align 4 getelementptr ([2 x %"class.hlsl::RWStructuredBuffer"], ptr @main()::StaticLocalArrayWithCounter, i32 0, i32 1),
+// CHECK-SAME: (ptr {{.*}} sret(%"class.hlsl::RWStructuredBuffer") align 4 getelementptr inbounds nuw (i8, ptr @main()::StaticLocalArrayWithCounter, i32 8),
 // CHECK-SAME: i32 noundef 7, i32 noundef 4, i32 noundef 2, i32 noundef 1, ptr noundef [[ARRAYWITHCOUNTER_STR]], i32 noundef 1)
 }
 

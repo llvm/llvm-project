@@ -27,7 +27,7 @@
 // RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/B.cppm -o %t/B.v1.pcm \
 // RUN:     -fprebuilt-module-path=%t -fmodule-file=AWrapper=%t/AWrapper.v1.pcm -fmodule-file=A=%t/A.v1.pcm
 //
-// RUN: not diff %t/B.pcm %t/B.v1.pcm &> /dev/null
+// RUN: diff %t/B.pcm %t/B.v1.pcm &> /dev/null
 
 //--- T.cppm
 export module T;
