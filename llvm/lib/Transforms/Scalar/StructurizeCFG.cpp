@@ -555,9 +555,10 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
   } else {
     // Test for successors as back edge
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
-    for (BasicBlock *Succ : successors(BB))
-      if (Visited.count(Succ))
-        Loops[Succ] = BB;
+    if (isa<UncondBrInst, CondBrInst>(BB->getTerminator()))
+      for (BasicBlock *Succ : successors(BB))
+        if (Visited.count(Succ))
+          Loops[Succ] = BB;
   }
 }
 
