@@ -1942,6 +1942,17 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
     CEK = checkVarTypeForConstantEmission(var->getType());
   } else if (isa<EnumConstantDecl>(Value)) {
     CEK = CEK_AsValueOnly;
+  } else if (const auto *BD = dyn_cast<BindingDecl>(Value)) {
+    // For structured binding elements from tuple-like decompositions, the
+    // binding is backed by a hidden holding variable (the "reference
+    // temporary"). Use the holding variable's type to decide whether we
+    // can constant-emit. Without this, static constexpr pack bindings used
+    // as array indices always materialise as loads from their reference-
+    // temporary globals, blocking constant folding and vectorisation.
+    if (VarDecl *HV = BD->getHoldingVar())
+      CEK = checkVarTypeForConstantEmission(HV->getType());
+    else
+      CEK = CEK_None;
   } else {
     CEK = CEK_None;
   }
@@ -2003,6 +2014,16 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   if (isa<VarDecl>(Value)) {
     if (!getContext().DeclMustBeEmitted(cast<VarDecl>(Value)))
       EmitDeclRefExprDbgValue(RefExpr, result.Val);
+  } else if (const auto *BD = dyn_cast<BindingDecl>(Value)) {
+    // For tuple-like structured binding elements, the holding variable is
+    // always emitted (static storage), so only emit a debug reference if
+    // it is not otherwise required to be emitted.
+    if (VarDecl *HV = BD->getHoldingVar()) {
+      if (!getContext().DeclMustBeEmitted(HV))
+        EmitDeclRefExprDbgValue(RefExpr, result.Val);
+    } else {
+      EmitDeclRefExprDbgValue(RefExpr, result.Val);
+    }
   } else {
     assert(isa<EnumConstantDecl>(Value));
     EmitDeclRefExprDbgValue(RefExpr, result.Val);
