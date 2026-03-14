@@ -2704,10 +2704,7 @@ bool GVNPass::processInstruction(Instruction *I) {
 
   // For conditional branches, we can perform simple conditional propagation on
   // the condition value itself.
-  if (BranchInst *BI = dyn_cast<BranchInst>(I)) {
-    if (!BI->isConditional())
-      return false;
-
+  if (CondBrInst *BI = dyn_cast<CondBrInst>(I)) {
     if (isa<Constant>(BI->getCondition()))
       return processFoldableCondBr(BI);
 
@@ -3309,8 +3306,8 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
 //     dead blocks with "UndefVal" in an hope these PHIs will optimized away.
 //
 // Return true iff *NEW* dead code are found.
-bool GVNPass::processFoldableCondBr(BranchInst *BI) {
-  if (!BI || BI->isUnconditional())
+bool GVNPass::processFoldableCondBr(CondBrInst *BI) {
+  if (!BI)
     return false;
 
   // If a branch has two identical successors, we cannot declare either dead.

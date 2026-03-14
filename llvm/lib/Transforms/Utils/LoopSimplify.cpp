@@ -629,8 +629,9 @@ ReprocessLoop:
   if (HasUniqueExitBlock()) {
     for (BasicBlock *ExitingBlock : ExitingBlocks) {
       if (!ExitingBlock->getSinglePredecessor()) continue;
-      BranchInst *BI = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
-      if (!BI || !BI->isConditional()) continue;
+      CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
+      if (!BI)
+        continue;
       CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition());
       if (!CI || CI->getParent() != ExitingBlock) continue;
 

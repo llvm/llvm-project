@@ -970,7 +970,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
 
 /// If we can (cheaply) find a widenable branch which controls entry into the
 /// loop, return it.
-static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
+static CondBrInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   // Walk back through any unconditional executed blocks and see if we can find
   // a widenable condition which seems to control execution of this loop.  Note
   // that we predict that maythrow calls are likely untaken and thus that it's
@@ -990,7 +990,7 @@ static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   } while (true);
 
   if (BasicBlock *Pred = BB->getSinglePredecessor()) {
-    if (auto *BI = dyn_cast<BranchInst>(Pred->getTerminator()))
+    if (auto *BI = dyn_cast<CondBrInst>(Pred->getTerminator()))
       if (BI->getSuccessor(0) == BB && isWidenableBranch(BI))
         return BI;
   }
@@ -1121,7 +1121,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       continue;
 
     // Can't rewrite non-branch yet.
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
 
