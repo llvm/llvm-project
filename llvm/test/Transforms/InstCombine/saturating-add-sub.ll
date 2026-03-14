@@ -2862,11 +2862,7 @@ entry:
 ; Fold zext-add-umin-trunc to uadd.sat
 define i8 @fold_umin_to_uadd_sat(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_umin_to_uadd_sat(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ZSUM]], i16 255)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %za = zext i8 %a to i16
@@ -2880,11 +2876,7 @@ define i8 @fold_umin_to_uadd_sat(i8 %a, i8 %b) {
 ; Fold zext-add-umin-trunc to uadd.sat with illegal type
 define i3 @fold_umin_to_uadd_sat_with_illegal_type(i3 %a, i3 %b) {
 ; CHECK-LABEL: @fold_umin_to_uadd_sat_with_illegal_type(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i3 [[A:%.*]] to i11
-; CHECK-NEXT:    [[ZB:%.*]] = zext i3 [[B:%.*]] to i11
-; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw i11 [[ZB]], [[ZA]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i11 @llvm.umin.i11(i11 [[ZSUM]], i11 7)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i11 [[CMP]] to i3
+; CHECK-NEXT:    [[R:%.*]] = call i3 @llvm.uadd.sat.i3(i3 [[B:%.*]], i3 [[A:%.*]])
 ; CHECK-NEXT:    ret i3 [[R]]
 ;
   %za = zext i3 %a to i11
@@ -2898,11 +2890,7 @@ define i3 @fold_umin_to_uadd_sat_with_illegal_type(i3 %a, i3 %b) {
 ; Fold zext-add-umin-trunc to uadd.sat with commuted operations
 define i8 @fold_umin_to_uadd_sat_with_commuted_operations(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_umin_to_uadd_sat_with_commuted_operations(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw i16 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ZSUM]], i16 255)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %za = zext i8 %a to i16
@@ -2938,11 +2926,7 @@ declare void @usei16(i16)
 ; Fold zext-add-smin-trunc to uadd.sat
 define i8 @fold_smin_to_uadd_sat(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_smin_to_uadd_sat(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.smin.i16(i16 [[ZSUM]], i16 255)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %za = zext i8 %a to i16
@@ -2956,11 +2940,7 @@ define i8 @fold_smin_to_uadd_sat(i8 %a, i8 %b) {
 ; Vector version of fold zext-add-umin-trunc to uadd.sat
 define <2 x i8> @fold_umin_to_uadd_sat_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @fold_umin_to_uadd_sat_vec(
-; CHECK-NEXT:    [[ZA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[ZB:%.*]] = zext <2 x i8> [[B:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[ZSUM:%.*]] = add nuw nsw <2 x i16> [[ZB]], [[ZA]]
-; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i16> @llvm.umin.v2i16(<2 x i16> [[ZSUM]], <2 x i16> splat (i16 255))
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw <2 x i16> [[CMP]] to <2 x i8>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[B:%.*]], <2 x i8> [[A:%.*]])
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %za = zext <2 x i8> %a to <2 x i16>
@@ -3010,11 +2990,7 @@ define i8 @no_fold_umin_to_uadd_sat_if_not_boundary(i8 %a, i8 %b) {
 ; Fold zext-sub-smax-trunc to usub.sat
 define i8 @fold_smax_to_usub_sat(i8 %a, i8 %b) {
 ; CHECK-LABEL: @fold_smax_to_usub_sat(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[ZSUB:%.*]] = sub nsw i16 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.smax.i16(i16 [[ZSUB]], i16 0)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[B:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %za = zext i8 %a to i16
@@ -3028,11 +3004,7 @@ define i8 @fold_smax_to_usub_sat(i8 %a, i8 %b) {
 ; Vector version of fold zext-sub-smax-trunc to usub.sat
 define <2 x i8> @fold_smax_to_usub_sat_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @fold_smax_to_usub_sat_vec(
-; CHECK-NEXT:    [[ZA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[ZB:%.*]] = zext <2 x i8> [[B:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[ZSUB:%.*]] = sub nsw <2 x i16> [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[CMP:%.*]] = call <2 x i16> @llvm.smax.v2i16(<2 x i16> [[ZSUB]], <2 x i16> zeroinitializer)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw <2 x i16> [[CMP]] to <2 x i8>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]])
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %za = zext <2 x i8> %a to <2 x i16>
