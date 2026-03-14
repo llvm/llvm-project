@@ -6214,6 +6214,20 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
                                 /*MayBeNull=*/false, CFITCK_DerivedCast,
                                 E->getBeginLoc());
 
+    // Emit type.test+assume for devirtualization, same as the pointer path
+    // in CGExprScalar.cpp CK_BaseToDerived.
+    if (DerivedClassDecl->isPolymorphic() &&
+        DerivedClassDecl->isEffectivelyFinal()) {
+      llvm::Value *BasePtr = LV.getAddress().emitRawPointer(*this);
+      CanQualType Ty = CGM.getContext().getCanonicalTagType(DerivedClassDecl);
+      llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(Ty);
+      llvm::Value *TypeId =
+          llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
+      llvm::Value *TypeTest = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::type_test), {BasePtr, TypeId});
+      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);
+    }
+
     return MakeAddrLValue(Derived, E->getType(), LV.getBaseInfo(),
                           CGM.getTBAAInfoForSubobject(LV, E->getType()));
   }

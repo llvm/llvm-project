@@ -50,3 +50,25 @@ void h(Base *b) {
 // CHECK-LABEL: define {{.*}} @_Z1hP4Base(
 // CHECK-NOT:     llvm.type.test
 // CHECK:         ret void
+
+// --- Reference casts ---
+// static_cast to a final polymorphic derived reference: type.test must be
+// emitted (same semantics as the pointer cast, via CK_BaseToDerived in lvalue
+// context). This is the pattern used by std::visit and CRTP with references.
+void ref_cast(Base &b) {
+  static_cast<Derived &>(b).foo();
+}
+
+// CHECK-LABEL: define {{.*}} @_Z8ref_castR4Base(
+// CHECK:         [[REF_PTR:%[0-9]+]] = load ptr, ptr %b.addr
+// CHECK-NEXT:    [[REF_TT:%[0-9]+]] = call i1 @llvm.type.test(ptr [[REF_PTR]], metadata !"_ZTS7Derived")
+// CHECK-NEXT:    call void @llvm.assume(i1 [[REF_TT]])
+
+// static_cast reference to a non-final class: no type.test.
+void ref_cast_nonfinal(Base &b) {
+  static_cast<NonFinalDerived &>(b).foo();
+}
+
+// CHECK-LABEL: define {{.*}} @_Z17ref_cast_nonfinalR4Base(
+// CHECK-NOT:     llvm.type.test
+// CHECK:         ret void
