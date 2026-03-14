@@ -2011,6 +2011,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     ctx.in.mipsGot->build();
 
   removeUnusedSyntheticSections(ctx);
+
+  // If the Hexagon guard section survived removal (i.e. it is needed),
+  // add its local symbol to the symbol table now, before any finalization
+  // that bakes section sizes into the layout.
+  finalizeSynthetic(ctx, ctx.in.hexagonGuard.get());
+
   ctx.script->diagnoseOrphanHandling();
   ctx.script->diagnoseMissingSGSectionAddress();
 
