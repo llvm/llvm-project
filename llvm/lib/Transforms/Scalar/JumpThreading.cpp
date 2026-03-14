@@ -1019,7 +1019,8 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
 
     LLVM_DEBUG(dbgs() << "  In block '" << BB->getName()
                       << "' folding undef terminator: " << *BBTerm << '\n');
-    Instruction *NewBI = UncondBrInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm->getIterator());
+    Instruction *NewBI = UncondBrInst::Create(BBTerm->getSuccessor(BestSucc),
+                                              BBTerm->getIterator());
     NewBI->setDebugLoc(BBTerm->getDebugLoc());
     ++NumFolds;
     BBTerm->eraseFromParent();
@@ -1182,7 +1183,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
       BasicBlock *KeepSucc = BI->getSuccessor(*Implication ? 0 : 1);
       BasicBlock *RemoveSucc = BI->getSuccessor(*Implication ? 1 : 0);
       RemoveSucc->removePredecessor(BB);
-      UncondBrInst *UncondBI = UncondBrInst::Create(KeepSucc, BI->getIterator());
+      UncondBrInst *UncondBI =
+          UncondBrInst::Create(KeepSucc, BI->getIterator());
       UncondBI->setDebugLoc(BI->getDebugLoc());
       ++NumFolds;
       BI->eraseFromParent();
@@ -2870,8 +2872,7 @@ bool JumpThreadingPass::tryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
   PHINode *CondLHS = dyn_cast<PHINode>(CondCmp->getOperand(0));
   Constant *CondRHS = cast<Constant>(CondCmp->getOperand(1));
 
-  if (!CondBr || !CondLHS ||
-      CondLHS->getParent() != BB)
+  if (!CondBr || !CondLHS || CondLHS->getParent() != BB)
     return false;
 
   for (unsigned I = 0, E = CondLHS->getNumIncomingValues(); I != E; ++I) {

@@ -1750,7 +1750,8 @@ public:
 
     // It should have a preheader and a branch instruction.
     BasicBlock *Preheader = CurLoop->getLoopPreheader();
-    if (!Preheader || !isa<UncondBrInst, CondBrInst>(Preheader->getTerminator()))
+    if (!Preheader ||
+        !isa<UncondBrInst, CondBrInst>(Preheader->getTerminator()))
       return false;
 
     // The loop exit must be conditioned on an icmp with 0 the null terminator.
