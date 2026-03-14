@@ -3307,9 +3307,6 @@ void GVNPass::addDeadBlock(BasicBlock *BB) {
 //
 // Return true iff *NEW* dead code are found.
 bool GVNPass::processFoldableCondBr(CondBrInst *BI) {
-  if (!BI)
-    return false;
-
   // If a branch has two identical successors, we cannot declare either dead.
   if (BI->getSuccessor(0) == BI->getSuccessor(1))
     return false;
