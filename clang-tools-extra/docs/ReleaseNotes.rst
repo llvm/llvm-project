@@ -338,6 +338,9 @@ Changes in existing checks
   - Fixed missed diagnostics when ``if`` statements appear in unbraced
     ``switch`` case labels.
 
+  - Fixed a false positive involving ``if`` statements which contain
+    a ``return``, ``break``, etc., jumped over by a ``goto``.
+
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 

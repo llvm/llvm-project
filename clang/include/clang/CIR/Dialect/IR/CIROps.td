@@ -1708,16 +1708,15 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
 def CIR_UnaryOpKind : CIR_I32EnumAttr<"UnaryOpKind", "unary operation kind", [
   I32EnumAttrCase<"Inc",   0, "inc">,
   I32EnumAttrCase<"Dec",   1, "dec">,
-  I32EnumAttrCase<"Plus",  2, "plus">,
-  I32EnumAttrCase<"Minus", 3, "minus">,
-  I32EnumAttrCase<"Not",   4, "not">
+  I32EnumAttrCase<"Minus", 2, "minus">,
+  I32EnumAttrCase<"Not",   3, "not">
 ]>;
 
 def CIR_UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   let summary = "Unary operations";
   let description = [{
     `cir.unary` performs the unary operation according to
-    the specified opcode kind: [inc, dec, plus, minus, not].
+    the specified opcode kind: [inc, dec, minus, not].
 
     It requires one input operand and has one result, both types
     should be the same.
@@ -2333,8 +2332,9 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyArithType> {
 // AndOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Commutative, Idempotent traits
-def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType> {
+def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType, [
+  Commutative, Idempotent
+]> {
   let summary = "Bitwise AND";
   let description = [{
     The `cir.and` operation performs a bitwise AND on integer operands.
@@ -2353,8 +2353,9 @@ def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType> {
 // OrOp
 //===----------------------------------------------------------------------===//
 
-// FIXME: Commutative, Idempotent traits
-def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType> {
+def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType, [
+  Commutative, Idempotent
+]> {
   let summary = "Bitwise OR";
   let description = [{
     The `cir.or` operation performs a bitwise OR on integer operands.
@@ -2373,7 +2374,7 @@ def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType> {
 // XorOp
 //===----------------------------------------------------------------------===//
 
-def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType> {
+def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType, [Commutative]> {
   let summary = "Bitwise XOR";
   let description = [{
     The `cir.xor` operation performs a bitwise XOR on integer operands.
@@ -2392,17 +2393,44 @@ def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType> {
 // MaxOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType> {
+def CIR_MaxOp : CIR_BinaryOp<"max", CIR_AnyIntOrVecOfIntType, [
+  Commutative, Idempotent
+]> {
   let summary = "Integer maximum";
   let description = [{
     The `cir.max` operation computes the maximum of two integer operands.
-    Both operands and the result must have the same integer type.
+    Both operands and the result must have the same integer type or vector of
+    integer type.
 
     Example:
 
     ```mlir
     %0 = cir.max %a, %b : !s32i
     %1 = cir.max %a, %b : !u32i
+    %2 = cir.max %a, %b : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MinOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MinOp : CIR_BinaryOp<"min", CIR_AnyIntOrVecOfIntType, [
+  Commutative, Idempotent
+]> {
+  let summary = "Integer minimum";
+  let description = [{
+    The `cir.min` operation computes the minimum of two integer operands.
+    Both operands and the result must have the same integer type or vector of
+    integer type.
+
+    Example:
+
+    ```mlir
+    %0 = cir.min %a, %b : !s32i
+    %1 = cir.min %a, %b : !u32i
+    %2 = cir.min %a, %b : !cir.vector<4 x !s32i>
     ```
   }];
 }
