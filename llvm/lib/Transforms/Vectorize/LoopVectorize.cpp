@@ -9069,11 +9069,15 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
+    using namespace llvm::VPlanPatternMatch;
+    assert(
+        match(MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue(),
+              m_ZeroInt()) &&
+        "canonical IV must start at 0");
+    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
-        {VectorTC,
-         MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue()},
-        {}, "vec.epilog.resume.val");
+        {VectorTC, MainPlan.getZero(Ty)}, {}, "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     if (MainScalarPH->begin() == MainScalarPH->end())
