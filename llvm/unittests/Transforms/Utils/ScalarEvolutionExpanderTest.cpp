@@ -82,7 +82,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
 
   // loop:                            ; preds = %loop, %entry
@@ -95,8 +95,8 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   //   br i1 undef, label %loop, label %exit
 
   const DataLayout &DL = F->getDataLayout();
-  BranchInst *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  CondBrInst *Br = CondBrInst::Create(
+      PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB, LoopBB);
   AllocaInst *Alloca = new AllocaInst(I32Ty, DL.getAllocaAddrSpace(), "alloca",
                                       Br->getIterator());
   ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
