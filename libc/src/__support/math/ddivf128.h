@@ -17,7 +17,6 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE constexpr double ddivf128(float128 x, float128 y) {
