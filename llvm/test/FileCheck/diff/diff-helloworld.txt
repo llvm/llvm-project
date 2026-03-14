@@ -1,0 +1,8 @@
+; RUN: printf "hello world\n" > %t.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.input %s 2>&1 | FileCheck -check-prefix=UNI-DIFF %s
+
+; CHECK: hello {{U}}niverse
+
+; UNI-DIFF: @@ -4 +1 @@
+; UNI-DIFF-NEXT: -hello {{[{][{]U[}][}]}}niverse
+; UNI-DIFF-NEXT: +hello world

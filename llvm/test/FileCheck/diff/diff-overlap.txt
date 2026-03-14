@@ -1,0 +1,15 @@
+; RUN: printf "LINE1\nBAD_LINE\nLINE3\nLINE4\nBAD_LINE\nLINE6\n" > %t.overlap.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.overlap.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK: LINE1
+; CHECK: LINE2
+; CHECK: LINE3
+; CHECK: LINE4
+; CHECK: LINE5
+; CHECK: LINE6
+
+; DIFF: @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  LINE1
+; DIFF-NEXT: -LINE2
+; DIFF-NEXT: +BAD_LINE
+; DIFF-NEXT:  LINE3

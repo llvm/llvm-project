@@ -1,0 +1,10 @@
+; RUN: printf "SET [[42]]\nDATA: [[42]]\n" > %t.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK: SET [[INNER:.*]]
+; CHECK: DATA: WRONG_VALUE
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  SET {{\[\[}}42{{\]\]}}
+; DIFF-NEXT: -DATA: WRONG_VALUE
+; DIFF-NEXT: +DATA: {{\[\[}}42{{\]\]}}

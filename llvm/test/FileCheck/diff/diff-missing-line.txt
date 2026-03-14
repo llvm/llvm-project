@@ -1,0 +1,11 @@
+; RUN: printf "ALPHA\nGAMMA\n" > %t.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK: ALPHA
+; CHECK: BETA
+; CHECK: GAMMA
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  ALPHA
+; DIFF-NEXT: -BETA
+; DIFF-NEXT: +GAMMA

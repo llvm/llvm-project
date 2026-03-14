@@ -1,0 +1,26 @@
+; --- Test 1: High Noise Ratio ---
+; RUN: printf "START\nNoise1\nNoise2\nNoise3\nNoise4\nTARGET\nEND\n" > %t.noise.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.noise.input %s --check-prefix=TEST1 2>&1 | FileCheck %s -check-prefix=DIFF1
+
+; TEST1: START
+; TEST1-NEXT: TARGET
+; TEST1: END
+
+; DIFF1:      @@ -[[#]] +[[#]] @@
+; DIFF1-NEXT:  START
+; DIFF1-NEXT: -TARGET
+; DIFF1-NEXT: +Noise1
+; DIFF1-NEXT:  Noise2
+
+; --- Test 2: CHECK-NEXT stray line ---
+; RUN: printf "HEADER\nSTRAY\nNEXT\n" > %t.next.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.next.input %s --check-prefix=TEST2 2>&1 | FileCheck %s -check-prefix=DIFF2
+
+; TEST2-LABEL: HEADER
+; TEST2-NEXT:  NEXT
+
+; DIFF2:      @@ -[[#]] +[[#]] @@
+; DIFF2-NEXT:  HEADER
+; DIFF2-NEXT: -NEXT
+; DIFF2-NEXT: +STRAY
+; DIFF2-NEXT:  NEXT

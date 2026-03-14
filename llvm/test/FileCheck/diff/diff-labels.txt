@@ -1,0 +1,11 @@
+; RUN: printf "FUNC_A\n  mov r0, #1\nFUNC_B\n  mov r1, #2\n" > %t.labels.input
+; RUN: not FileCheck --diff=unidiff --input-file %t.labels.input %s --check-prefix=LABELS 2>&1 | FileCheck %s -check-prefix=DIFF_LABELS
+
+; LABELS-LABEL: FUNC_A
+; LABELS-NEXT:  mov r0, #5
+; LABELS-LABEL: FUNC_B
+
+; DIFF_LABELS:      @@ -[[#]] +[[#]] @@
+; DIFF_LABELS-NEXT:  FUNC_A
+; DIFF_LABELS-NEXT: -mov r0, #5
+; DIFF_LABELS-NEXT: +mov r0, #1

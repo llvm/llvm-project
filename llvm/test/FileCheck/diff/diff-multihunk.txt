@@ -1,0 +1,13 @@
+; RUN: printf "BLOCK1_FAIL\nKEEP_THIS\nBLOCK2_FAIL\n" > %t.multi.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.multi.input %s 2>&1 | FileCheck %s -check-prefix=UNI-DIFF
+;
+; --- TEST DATA ---
+; CHECK: BLOCK1_PASS
+; CHECK: KEEP_THIS
+; CHECK: BLOCK2_PASS
+
+; --- VERIFY ---
+; UNI-DIFF: @@ -[[#]] +1 @@
+; UNI-DIFF-NEXT: -BLOCK1_PASS
+; UNI-DIFF-NEXT: +BLOCK1_FAIL
+; UNI-DIFF-NEXT:  KEEP_THIS

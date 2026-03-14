@@ -1,0 +1,7 @@
+; RUN: printf "THIS_IS_A_VERY_LONG_PREFIX_THAT_SHOULD_BE_TRUNCATED_BY_THE_SLIDING_WINDOW_LOGIC_ACTUAL_VALUE\n" > %t.input
+; RUN: not FileCheck --diff=split --input-file %t.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK: THIS_IS_A_VERY_LONG_PREFIX_THAT_SHOULD_BE_TRUNCATED_BY_THE_SLIDING_WINDOW_LOGIC_EXPECTED_VALUE
+
+; DIFF:      @@ L:[[#]] R:[[#]] @@
+; DIFF-NEXT: {{.*}}...{{.*}}WINDOW_LOGIC_EXPECTED_VALUE{{.*}}!{{.*}}...{{.*}}WINDOW_LOGIC_ACTUAL_VALUE

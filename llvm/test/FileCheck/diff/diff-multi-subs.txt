@@ -1,0 +1,9 @@
+; RUN: printf "SET REG=rax VAL=0\nUSE rax, 1\n" > %t.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=split --input-file %t.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK: SET REG=[[REG:[a-z]+]] VAL=[[VAL:[0-9]+]]
+; CHECK: USE [[REG]], [[VAL]]
+
+; DIFF:      @@ L:[[#]] R:[[#]] @@
+; DIFF-NEXT: {{.*}}SET REG=rax VAL=0{{.*}}| SET REG=rax VAL=0{{.*}}
+; DIFF-NEXT: {{.*}}USE rax, 0{{.*}}!{{.*}}USE rax, 1{{.*}}

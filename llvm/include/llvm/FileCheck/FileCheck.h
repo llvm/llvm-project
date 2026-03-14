@@ -27,6 +27,15 @@ class MemoryBuffer;
 class SourceMgr;
 template <typename T> class SmallVectorImpl;
 
+// Diff the output on failures.
+enum DiffFormatType {
+  Standard,
+  Split,
+  Unified,
+  SplitNoSubstitution,
+  UnifiedNoSubstitution
+};
+
 /// Contains info about various FileCheck options.
 struct FileCheckRequest {
   std::vector<StringRef> CheckPrefixes;
@@ -43,6 +52,7 @@ struct FileCheckRequest {
   bool AllowDeprecatedDagOverlap = false;
   bool Verbose = false;
   bool VerboseVerbose = false;
+  DiffFormatType DiffMode = DiffFormatType::Standard;
 };
 
 namespace Check {

@@ -1,0 +1,12 @@
+; RUN: printf "FUNCTION_A\n  BAD_OP\nFUNCTION_B\n  GOOD_OP\n" > %t.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK-LABEL: FUNCTION_A
+; CHECK:         CORRECT_OP
+; CHECK-LABEL: FUNCTION_B
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  FUNCTION_A
+; DIFF-NEXT: -CORRECT_OP
+; DIFF-NEXT: +BAD_OP
+; DIFF-NEXT:  FUNCTION_B

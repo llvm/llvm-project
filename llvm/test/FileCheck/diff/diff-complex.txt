@@ -1,0 +1,13 @@
+; RUN: printf "HEADER\nNoise1\nNoise2\nNoise3\nNoise4\nTARGET_BLOCK\nStray1\nStray2\nMATCH_ME\nNEXT_LINE\nNoise5\nNoise6\n" > %t.input
+; RUN: not FileCheck --diff=unidiff --input-file %t.input %s --check-prefix=COMPLEX 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; COMPLEX-LABEL: HEADER
+; COMPLEX:      TARGET_BLOCK
+; COMPLEX:      MATCH_ME
+; COMPLEX-NEXT: WRONG_NEXT
+; COMPLEX:      END_OF_FUNCTION
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  MATCH_ME
+; DIFF-NEXT: -WRONG_NEXT
+; DIFF-NEXT: +NEXT_LINE

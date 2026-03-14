@@ -1,0 +1,11 @@
+; RUN: printf "ID: 0x100\nTYPE: apple\nUSE: 0x100 (orange)\n" > %t.input
+; RUN: %ProtectFileCheckOutput not FileCheck --diff=unidiff --input-file %t.input %s 2>&1 | FileCheck %s -check-prefix=DIFF
+
+; CHECK: ID: [[ID:0x[0-9a-f]+]]
+; CHECK: TYPE: [[TYPE:[a-z]+]]
+; CHECK: USE: [[ID]] ([[TYPE]])
+
+; DIFF:      @@ -[[#]] +[[#]] @@
+; DIFF-NEXT:  TYPE: apple
+; DIFF-NEXT: -USE: 0x100 (apple)
+; DIFF-NEXT: +USE: 0x100 (orange)

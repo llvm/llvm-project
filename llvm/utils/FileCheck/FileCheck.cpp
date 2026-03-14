@@ -113,6 +113,16 @@ static cl::opt<bool> VerboseVerbose(
              "issues, or add it to the input dump if enabled.  Implies\n"
              "-v.\n"));
 
+static cl::opt<DiffFormatType> DiffMode(
+    "diff", cl::desc("Show mismatches using a diff-style format.\n"),
+    cl::values(clEnumValN(Standard, "standard", "Outputs a Standard diff"),
+               clEnumValN(Split, "split", "Outputs a Split diff"),
+               clEnumValN(Unified, "unidiff", "Outputs a Unified diff"),
+               clEnumValN(SplitNoSubstitution, "split-no-substitutions",
+                          "Outputs a Split diff with no substitutions"),
+               clEnumValN(UnifiedNoSubstitution, "unidiff-no-substitutions",
+                          "Outputs a Unified diff with no substitutions")));
+
 // The order of DumpInputValue members affects their precedence, as documented
 // for -dump-input below.
 enum DumpInputValue {
@@ -787,6 +797,7 @@ int main(int argc, char **argv) {
   if (GlobalDefineError)
     return 2;
 
+  Req.DiffMode = DiffMode;
   Req.AllowEmptyInput = AllowEmptyInput;
   Req.AllowUnusedPrefixes = AllowUnusedPrefixes;
   Req.EnableVarScope = EnableVarScope;
@@ -858,8 +869,9 @@ int main(int argc, char **argv) {
                                DumpInput == DumpInputNever ? nullptr : &Diags)
                      ? EXIT_SUCCESS
                      : 1;
-  if (DumpInput == DumpInputAlways ||
-      (ExitCode == 1 && DumpInput == DumpInputFail)) {
+  if ((DumpInput == DumpInputAlways ||
+       (ExitCode == 1 && DumpInput == DumpInputFail)) &&
+      Req.DiffMode == DiffFormatType::Standard) {
     errs() << "\n"
            << "Input file: " << InputFilename << "\n"
            << "Check file: " << CheckFilename << "\n"
