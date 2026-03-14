@@ -19,7 +19,6 @@
 #include "src/__support/macros/properties/compiler.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE float16 fabsf16(float16 x) {

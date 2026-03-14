@@ -14,7 +14,6 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE bfloat16 fabsbf16(bfloat16 x) { return fputil::abs(x); }
