@@ -1344,6 +1344,8 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getIntegralType();
   case TemplateArgument::StructuralValue:
     return argument.getStructuralValueType();
+  case TemplateArgument::Declaration:
+    return argument.getParamTypeForDecl();
   default:
     return {};
   }
