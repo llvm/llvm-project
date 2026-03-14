@@ -262,65 +262,6 @@ public:
     return Pack;
   }
 
-  static constexpr const char AuxArgBeginToken = '(';
-  static constexpr const char AuxArgEndToken = ')';
-  /// \Returns the auxiliary pass argument by parsing \p Args. The auxiliary
-  /// pass argument is enclosed in parentheses and should be before any other
-  /// argument.
-  static StringRef getAuxPassArg(StringRef Args) {
-    // Will exit with report if aux tokens are not properly nested.
-    auto CheckLegalAuxTokenNesting = [](StringRef Str) {
-      auto ExitWithError = [Str]() {
-        std::string ErrStr;
-        llvm::raw_string_ostream ErrSS(ErrStr);
-        ErrSS << "Spurious '" << AuxArgBeginToken << "' or '" << AuxArgEndToken
-              << "' in '" << Str << "' !\n";
-        reportFatalUsageError(ErrStr.c_str());
-      };
-      unsigned CntBegin = 0;
-      for (char C : Str) {
-        switch (C) {
-        case AuxArgBeginToken:
-          ++CntBegin;
-          break;
-        case AuxArgEndToken: {
-          if (CntBegin == 0)
-            ExitWithError();
-          --CntBegin;
-          break;
-        }
-        default:
-          break;
-        }
-      }
-      if (CntBegin != 0)
-        ExitWithError();
-    };
-
-    if (Args.empty())
-      return Args;
-    CheckLegalAuxTokenNesting(Args);
-    if (Args[0] != AuxArgBeginToken)
-      // Args may contain other passes with their own aux arguments so we allow
-      // aux tokens to appear later in the Args string, like "foo(bar)baz".
-      return StringRef();
-    // We found the Begin token, so look for the End token.
-    size_t EndIdx = Args.find(AuxArgEndToken);
-    assert(EndIdx != StringRef::npos &&
-           "Should have been caught by CheckLegalAuxTOkenNesting!");
-    assert(EndIdx >= 1 && "Expected at index 1 or later!");
-    return Args.substr(1, EndIdx - 1);
-  }
-
-  /// \Returns \p Args with the auxiliary argument removed.
-  /// For example: "(foo)bar1,bar2" returns "bar1,bar2".
-  static StringRef stripAuxPassArg(StringRef Args) {
-    StringRef Aux = getAuxPassArg(Args);
-    if (Aux.empty())
-      return Args;
-    return Args.slice(Aux.size() + 2, StringRef::npos);
-  }
-
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);

@@ -33,11 +33,9 @@ cl::opt<std::string> CollectSeeds(
 
 namespace sandboxir {
 
-SeedCollection::SeedCollection(StringRef Pipeline)
+SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
     : FunctionPass("seed-collection"),
-      RPM("rpm", VecUtils::stripAuxPassArg(Pipeline),
-          SandboxVectorizerPassBuilder::createRegionPass) {
-  StringRef AuxArg = VecUtils::getAuxPassArg(Pipeline);
+      RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {
   if (!AuxArg.empty()) {
     if (AuxArg != DiffTypesArgStr) {
       std::string ErrStr;
