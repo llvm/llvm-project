@@ -82,6 +82,9 @@ function(link_libclc_builtin_library target_name)
   if(NOT ARG_OUTPUT_FILENAME)
     message(FATAL_ERROR "OUTPUT_FILENAME is required for link_libclc_builtin_library")
   endif()
+  if(NOT ARG_LIBRARIES)
+    message(FATAL_ERROR "LIBRARIES is required for link_libclc_builtin_library")
+  endif()
 
   set(library_dir ${LIBCLC_OUTPUT_LIBRARY_DIR}/${ARG_TRIPLE})
   file(MAKE_DIRECTORY ${library_dir})
@@ -143,9 +146,9 @@ function(link_libclc_builtin_library target_name)
   )
 endfunction()
 
-# Builds an OpenCL builtins library from sources, links it with any
-# internalized dependencies via link_libclc_builtin_library, and adds
-# a verification test for unresolved symbols.
+# Builds a builtins library from sources, links it with any internalized
+# dependencies via link_libclc_builtin_library, and adds a verification test
+# for unresolved symbols.
 function(add_libclc_library target_name)
   cmake_parse_arguments(ARG
     ""
@@ -160,20 +163,23 @@ function(add_libclc_library target_name)
   if(NOT ARG_PARENT_TARGET)
     message(FATAL_ERROR "PARENT_TARGET is required for add_libclc_library")
   endif()
+  if(NOT ARG_SOURCES)
+    message(FATAL_ERROR "SOURCES is required for add_libclc_library")
+  endif()
 
-  set(opencl_lib ${target_name}_opencl_builtins)
-  add_libclc_builtin_library(${opencl_lib}
+  set(builtins_target ${target_name}_clc_builtins)
+  add_libclc_builtin_library(${builtins_target}
     SOURCES ${ARG_SOURCES}
     COMPILE_OPTIONS ${ARG_COMPILE_OPTIONS}
     INCLUDE_DIRS ${ARG_INCLUDE_DIRS}
     COMPILE_DEFINITIONS ${ARG_COMPILE_DEFINITIONS}
-    FOLDER "libclc/Device IR/OpenCL"
+    FOLDER "libclc/Device IR/Intermediate"
   )
 
   link_libclc_builtin_library(${target_name}
     ARCH ${ARG_ARCH}
     TRIPLE ${ARG_TRIPLE}
-    LIBRARIES ${opencl_lib}
+    LIBRARIES ${builtins_target}
     INTERNALIZE_LIBRARIES ${ARG_INTERNALIZE_LIBRARIES}
     OPT_FLAGS ${ARG_OPT_FLAGS}
     OUTPUT_FILENAME "${ARG_OUTPUT_FILENAME}"

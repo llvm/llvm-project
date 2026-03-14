@@ -3105,18 +3105,6 @@ public:
   Value *getCondition() const;
   void setCondition(Value *V);
 
-  unsigned getNumSuccessors() const { return 1+isConditional(); }
-
-  BasicBlock *getSuccessor(unsigned i) const {
-    assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
-    return cast_or_null<BasicBlock>((&Op<-1>() - i)->get());
-  }
-
-  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
-    assert(idx < getNumSuccessors() && "Successor # out of range for Branch!");
-    *(&Op<-1>() - idx) = NewSucc;
-  }
-
   /// Swap the successors of this branch instruction.
   ///
   /// Swaps the successors of the branch instruction. This also swaps any
