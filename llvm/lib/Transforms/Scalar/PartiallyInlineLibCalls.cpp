@@ -72,7 +72,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 
   auto *CurrBBTerm = cast<CondBrInst>(CurrBB.getTerminator());
   // We want an 'else' block though, not a 'then' block.
-  cast<CondBrInst>(CurrBBTerm)->swapSuccessors();
+  CurrBBTerm->swapSuccessors();
 
   // Create phi that will merge results of either sqrt and replace all uses.
   BasicBlock *JoinBB = LibCallTerm->getSuccessor(0);
