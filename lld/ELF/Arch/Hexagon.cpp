@@ -389,7 +389,7 @@ bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_HEX_B15_PCREL:
   case R_HEX_B13_PCREL:
   case R_HEX_B9_PCREL: {
-    uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA(ctx) : s.getVA(ctx, a);
+    uint64_t dst = expr == R_PLT_PC ? s.getPltVA(ctx) : s.getVA(ctx, a);
     return !ctx.target->inBranchRange(type, branchAddr, dst);
   }
   default:
