@@ -17,7 +17,7 @@ macro(libclc_configure_source_options path option)
   )
 endmacro()
 
-# Merges CL source file lists with priority deduplication.
+# Merges OpenCL C source file lists with priority deduplication.
 #
 # All arguments after the output variable name are treated as source file
 # paths. When multiple files share the same basename, the last occurrence
