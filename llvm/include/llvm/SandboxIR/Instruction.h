@@ -1061,9 +1061,9 @@ private:
 
 public:
   using sb_succ_op_iterator =
-      mapped_iterator<llvm::BranchInst::succ_op_iterator, LLVMBBToSBBB>;
+      mapped_iterator<llvm::BranchInst::succ_iterator, LLVMBBToSBBB>;
   iterator_range<sb_succ_op_iterator> successors() {
-    iterator_range<llvm::BranchInst::succ_op_iterator> LLVMRange =
+    iterator_range<llvm::BranchInst::succ_iterator> LLVMRange =
         cast<llvm::BranchInst>(Val)->successors();
     LLVMBBToSBBB BBMap(Ctx);
     sb_succ_op_iterator MappedBegin = map_iterator(LLVMRange.begin(), BBMap);
@@ -1072,10 +1072,9 @@ public:
   }
 
   using const_sb_succ_op_iterator =
-      mapped_iterator<llvm::BranchInst::const_succ_op_iterator,
-                      ConstLLVMBBToSBBB>;
+      mapped_iterator<llvm::BranchInst::const_succ_iterator, ConstLLVMBBToSBBB>;
   iterator_range<const_sb_succ_op_iterator> successors() const {
-    iterator_range<llvm::BranchInst::const_succ_op_iterator> ConstLLVMRange =
+    iterator_range<llvm::BranchInst::const_succ_iterator> ConstLLVMRange =
         static_cast<const llvm::BranchInst *>(cast<llvm::BranchInst>(Val))
             ->successors();
     ConstLLVMBBToSBBB ConstBBMap(Ctx);
