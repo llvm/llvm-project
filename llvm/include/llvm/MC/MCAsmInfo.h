@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -434,6 +435,11 @@ protected:
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
 public:
+  /// Identifiers that the assembler could misparse as registers, keywords, or
+  /// expression operators instead of symbol references. isValidUnquotedName()
+  /// checks this set to force quoting. Populated by targets.
+  StringSet<> ReservedIdentifiers;
+
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
 

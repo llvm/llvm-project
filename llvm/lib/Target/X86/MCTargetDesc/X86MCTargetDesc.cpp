@@ -464,6 +464,23 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
       nullptr, MRI.getDwarfRegNum(InstPtr, true), stackGrowth);
   MAI->addInitialFrameState(Inst2);
 
+  // Populate reserved identifiers so that symbol names matching register names
+  // or Intel syntax keywords get quoted in assembly output.
+  for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i)
+    if (const char *Name = MRI.getName(i))
+      if (Name[0])
+        MAI->ReservedIdentifiers.insert(StringRef(Name).lower());
+  // Size/type keywords.
+  for (StringRef KW : {"byte", "word", "dword", "fword", "qword", "mmword",
+                       "tbyte", "oword", "xmmword", "ymmword", "zmmword", "ptr",
+                       "offset", "flat", "near", "far", "short"})
+    MAI->ReservedIdentifiers.insert(KW);
+  // Operator keywords parsed by GAS in Intel mode (some are supported by
+  // X86AsmParser).
+  for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
+                       "or", "shl", "shr", "xor"})
+    MAI->ReservedIdentifiers.insert(KW);
+
   return MAI;
 }
 

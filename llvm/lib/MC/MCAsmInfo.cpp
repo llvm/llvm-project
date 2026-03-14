@@ -94,7 +94,7 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
       return false;
   }
 
-  return true;
+  return !ReservedIdentifiers.contains(Name.lower());
 }
 
 bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
