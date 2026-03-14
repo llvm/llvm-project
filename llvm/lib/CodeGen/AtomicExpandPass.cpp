@@ -292,7 +292,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     bool Fenced = false;
-    if (TLI->shouldInsertFencesForAtomic(LI) && isAcquireOrStronger(LI->getOrdering())) {
+    if (TLI->shouldInsertFencesForAtomic(LI) &&
+        isAcquireOrStronger(LI->getOrdering())) {
       AtomicOrdering FenceOrdering = LI->getOrdering();
       LI->setOrdering(AtomicOrdering::Monotonic);
       Fenced = bracketInstWithFences(LI, FenceOrdering);
@@ -321,7 +322,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     bool Fenced = false;
-    if (TLI->shouldInsertFencesForAtomic(SI) && isReleaseOrStronger(SI->getOrdering())) {
+    if (TLI->shouldInsertFencesForAtomic(SI) &&
+        isReleaseOrStronger(SI->getOrdering())) {
       AtomicOrdering FenceOrdering = SI->getOrdering();
       SI->setOrdering(AtomicOrdering::Monotonic);
       Fenced = bracketInstWithFences(SI, FenceOrdering);
@@ -347,8 +349,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     }
 
     bool Fenced = false;
-    if (TLI->shouldInsertFencesForAtomic(RMWI) && (isReleaseOrStronger(RMWI->getOrdering()) ||
-          isAcquireOrStronger(RMWI->getOrdering()))) {
+    if (TLI->shouldInsertFencesForAtomic(RMWI) &&
+        (isReleaseOrStronger(RMWI->getOrdering()) ||
+         isAcquireOrStronger(RMWI->getOrdering()))) {
       AtomicOrdering FenceOrdering = RMWI->getOrdering();
       RMWI->setOrdering(TLI->atomicOperationOrderAfterFenceSplit(RMWI));
       Fenced = bracketInstWithFences(RMWI, FenceOrdering);
