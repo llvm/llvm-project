@@ -3910,14 +3910,11 @@ void Parser::ParseDeclarationSpecifiers(
       // conflict.
       if (DS.getTypeSpecType() == DeclSpec::TST_auto && TypeRep) {
         // Check if the next token indicates this is a declarator
-        tok::TokenKind NextKind = NextToken().getKind();
-        if (NextKind == tok::equal || NextKind == tok::l_paren ||
-            NextKind == tok::l_square || NextKind == tok::amp ||
-            NextKind == tok::ampamp || NextKind == tok::star ||
-            NextKind == tok::coloncolon || NextKind == tok::comma ||
-            NextKind == tok::semi || NextKind == tok::colon ||
-            NextKind == tok::greater || NextKind == tok::r_paren ||
-            NextKind == tok::arrow) {
+        Token Next = NextToken();
+        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
+                         tok::ampamp, tok::star, tok::coloncolon, tok::comma,
+                         tok::semi, tok::colon, tok::greater, tok::r_paren,
+                         tok::arrow)) {
           // This identifier is likely the variable/parameter name, stop parsing
           // decl specifiers. Note: ':' is for range-based for loops:
           // for (auto Arg: x).
@@ -3929,7 +3926,7 @@ void Parser::ParseDeclarationSpecifiers(
         // Check for concept constraint syntax: C<T> auto param)
         // If the identifier is followed by 'auto' and then an identifier that's
         // followed by ')', this might be concept syntax, not a type conflict.
-        if (NextKind == tok::identifier) {
+        if (Next.is(tok::identifier)) {
           // Look ahead to see if this is followed by ')' (function parameter)
           Token AfterNext = GetLookAheadToken(2);
           if (AfterNext.is(tok::r_paren)) {
