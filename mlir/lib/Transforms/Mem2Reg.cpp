@@ -207,7 +207,12 @@ private:
   const DataLayout &dataLayout;
 };
 
-using BlockIndexCache = DenseMap<Region *, DenseMap<Block *, size_t>>;
+/// Maps a region to a map of blocks to their index in the region.
+/// The region is identified by its entry block pointer instead of its region
+/// pointer to not need to invalidate the cache when region content is moved to
+/// a new region. This only supports moves of all the blocks of a region to
+/// an empty region.
+using BlockIndexCache = DenseMap<Block *, DenseMap<Block *, size_t>>;
 
 /// The MemorySlotPromoter handles the state of promoting a memory slot. It
 /// wraps a slot and its associated allocator. This will perform the mutation of
@@ -297,6 +302,10 @@ private:
   const Mem2RegStatistics &statistics;
 
   /// Shared cache of block indices of specific regions.
+  /// Cache entries must be invalidated before any addition, removal or
+  /// reordering of blocks in the corresponding region.
+  /// Cache entries are *NOT* invalidated if all the blocks of the corresponding
+  /// region are moved to an empty region.
   BlockIndexCache &blockIndexCache;
 };
 
@@ -652,15 +661,18 @@ void MemorySlotPromoter::promoteInRegion(Region *region, Value reachingDef) {
   }
 }
 
-/// Gets or creates a block index mapping for `region`.
+/// Gets or creates a block index mapping for the region of which the entry
+/// block is `regionEntryBlock`.
 static const DenseMap<Block *, size_t> &
-getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
-  auto [it, inserted] = blockIndexCache.try_emplace(region);
+getOrCreateBlockIndices(BlockIndexCache &blockIndexCache,
+                        Block *regionEntryBlock) {
+  auto [it, inserted] = blockIndexCache.try_emplace(regionEntryBlock);
   if (!inserted)
     return it->second;
 
   DenseMap<Block *, size_t> &blockIndices = it->second;
-  SetVector<Block *> topologicalOrder = getBlocksSortedByDominance(*region);
+  SetVector<Block *> topologicalOrder =
+      getBlocksSortedByDominance(*regionEntryBlock->getParent());
   for (auto [index, block] : llvm::enumerate(topologicalOrder))
     blockIndices[block] = index;
   return blockIndices;
@@ -669,12 +681,17 @@ getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
 /// Sorts `ops` according to dominance. Relies on the topological order of basic
 /// blocks to get a deterministic ordering. Uses `blockIndexCache` to avoid the
 /// potentially expensive recomputation of a block index map.
+/// This function assumes no blocks are ever deleted or entry block changed
+/// during the lifetime of the block index cache.
 static void dominanceSort(SmallVector<Operation *> &ops, Region &region,
                           BlockIndexCache &blockIndexCache) {
+  if (region.empty())
+    return;
+
   // Produce a topological block order and construct a map to lookup the indices
   // of blocks.
   const DenseMap<Block *, size_t> &topoBlockIndices =
-      getOrCreateBlockIndices(blockIndexCache, &region);
+      getOrCreateBlockIndices(blockIndexCache, &region.front());
 
   // Combining the topological order of the basic blocks together with block
   // internal operation order guarantees a deterministic, dominance respecting

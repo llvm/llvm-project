@@ -317,15 +317,19 @@ def PromotableRegionOpInterface
         regions, but before the actual removal of the blocking uses.
 
         Returns the new reaching definition at the exit of the operation. For
-        this purpose, it is allowed to mutate the operation using the provided
-        `builder`, along with its region contents. However, all blocks within
-        the existing regions must remain valid and no new blocks may be added.
-        As a result, the operation is allowed to be cloned and replaced only
-        if its region content is moved from the original operation and not
-        copied. Operations with an effect on the value of the slot must not
-        change said effect (for example, new control flow that could change
-        reaching definitions for a block is not allowed), and must remain
-        unmodified.
+        this purpose, mutation is allowed under the following constraints:
+        1. If a region is deleted, all of its content must have been moved out
+           (not copied) to a new empty region that remains valid after the
+           deletion.
+        2. Mutation must not change control flow within existing or moved
+           regions. This includes adding, removing or reordering blocks.
+        3. Mutation must not modify or add operations that interact with the
+           value of the slot.
+
+        As an example, in order to add new results to the region operation, it
+        is allowed to clone the operation without regions, move (without
+        copying) the old region content into the new regions, and delete the
+        original operation.
 
         The `entryReachingDef` is the reaching definition at the entry of the
         region operation.
