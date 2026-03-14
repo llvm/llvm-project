@@ -692,8 +692,7 @@ void coro::BaseCloner::replaceEntryBlock() {
   // exactly one predecessor, which we created when splitting out
   // AllocaSpillBlock to begin with.
   assert(Entry->hasOneUse());
-  auto BranchToEntry = cast<BranchInst>(Entry->user_back());
-  assert(BranchToEntry->isUnconditional());
+  auto BranchToEntry = cast<UncondBrInst>(Entry->user_back());
   Builder.SetInsertPoint(BranchToEntry);
   Builder.CreateUnreachable();
   BranchToEntry->eraseFromParent();
@@ -724,8 +723,7 @@ void coro::BaseCloner::replaceEntryBlock() {
              Shape.ABI == coro::ABI::RetconOnceDynamic) &&
             isa<CoroSuspendRetconInst>(ActiveSuspend)));
     auto *MappedCS = cast<AnyCoroSuspendInst>(VMap[ActiveSuspend]);
-    auto Branch = cast<BranchInst>(MappedCS->getNextNode());
-    assert(Branch->isUnconditional());
+    auto Branch = cast<UncondBrInst>(MappedCS->getNextNode());
     Builder.CreateBr(Branch->getSuccessor(0));
     break;
   }
@@ -828,10 +826,10 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   // instructions are not in the same BB.
   // FIXME: remove this hardcoded number of tries.
   for (unsigned Repeat = 0; Repeat < 2; Repeat++) {
-    auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
-    if (!Branch || !Branch->isUnconditional())
+    auto *Branch = dyn_cast_or_null<UncondBrInst>(Successor);
+    if (!Branch)
       break;
-    Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+    Successor = Branch->getSuccessor()->getFirstNonPHIOrDbg();
   }
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
@@ -1378,7 +1376,7 @@ static bool simplifySuspendPoint(CoroSuspendInst *Suspend,
 
   // No longer need a call to coro.resume or coro.destroy.
   if (auto *Invoke = dyn_cast<InvokeInst>(CB)) {
-    BranchInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
+    UncondBrInst::Create(Invoke->getNormalDest(), Invoke->getIterator());
   }
 
   // Grab the CalledValue from CB before erasing the CallInstr.
@@ -1634,7 +1632,7 @@ private:
           S->getNextNode(), ResumeBB->getName() + Twine(".landing"));
       Switch->addCase(IndexVal, ResumeBB);
 
-      cast<BranchInst>(SuspendBB->getTerminator())->setSuccessor(0, LandingBB);
+      cast<UncondBrInst>(SuspendBB->getTerminator())->setSuccessor(LandingBB);
       auto *PN = PHINode::Create(Builder.getInt8Ty(), 2, "");
       PN->insertBefore(LandingBB->begin());
       S->replaceAllUsesWith(PN);
@@ -1853,7 +1851,7 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // point.
     auto *SuspendBB = Suspend->getParent();
     auto *NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto *Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto *Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Place it before the first suspend.
     auto *ReturnBB =
@@ -1953,7 +1951,7 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
     // the suspend point.
     auto SuspendBB = Suspend->getParent();
     auto NewSuspendBB = SuspendBB->splitBasicBlock(Suspend);
-    auto Branch = cast<BranchInst>(SuspendBB->getTerminator());
+    auto Branch = cast<UncondBrInst>(SuspendBB->getTerminator());
 
     // Create the unified return block.
     if (!ReturnBB) {

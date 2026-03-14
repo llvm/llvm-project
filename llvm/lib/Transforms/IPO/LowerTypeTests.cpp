@@ -784,11 +784,11 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // where nothing happens between the type test and the br.
   // If so, create slightly simpler IR.
   if (CI->hasOneUse())
-    if (auto *Br = dyn_cast<BranchInst>(*CI->user_begin()))
+    if (auto *Br = dyn_cast<CondBrInst>(*CI->user_begin()))
       if (CI->getNextNode() == Br) {
         BasicBlock *Then = InitialBB->splitBasicBlock(CI->getIterator());
         BasicBlock *Else = Br->getSuccessor(1);
-        BranchInst *NewBr = BranchInst::Create(Then, Else, OffsetInRange);
+        CondBrInst *NewBr = CondBrInst::Create(OffsetInRange, Then, Else);
         NewBr->setMetadata(LLVMContext::MD_prof,
                            Br->getMetadata(LLVMContext::MD_prof));
         ReplaceInstWithInst(InitialBB->getTerminator(), NewBr);
