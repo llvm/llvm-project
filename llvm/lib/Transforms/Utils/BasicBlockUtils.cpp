@@ -1733,7 +1733,7 @@ void llvm::SplitBlockAndInsertForEachLane(
   }
 }
 
-BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
+CondBrInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
                                  BasicBlock *&IfFalse) {
   PHINode *SomePHI = dyn_cast<PHINode>(BB->begin());
   BasicBlock *Pred1 = nullptr;
@@ -1756,28 +1756,29 @@ BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
       return nullptr;
   }
 
-  // We can only handle branches.  Other control flow will be lowered to
-  // branches if possible anyway.
-  BranchInst *Pred1Br = dyn_cast<BranchInst>(Pred1->getTerminator());
-  BranchInst *Pred2Br = dyn_cast<BranchInst>(Pred2->getTerminator());
-  if (!Pred1Br || !Pred2Br)
-    return nullptr;
+  Instruction *Pred1Term = Pred1->getTerminator();
+  Instruction *Pred2Term = Pred2->getTerminator();
 
   // Eliminate code duplication by ensuring that Pred1Br is conditional if
   // either are.
-  if (Pred2Br->isConditional()) {
+  if (isa<CondBrInst>(Pred2Term)) {
     // If both branches are conditional, we don't have an "if statement".  In
     // reality, we could transform this case, but since the condition will be
     // required anyway, we stand no chance of eliminating it, so the xform is
     // probably not profitable.
-    if (Pred1Br->isConditional())
+    if (isa<CondBrInst>(Pred1Term))
       return nullptr;
 
     std::swap(Pred1, Pred2);
-    std::swap(Pred1Br, Pred2Br);
+    std::swap(Pred1Term, Pred2Term);
   }
 
-  if (Pred1Br->isConditional()) {
+  // We can only handle branches.  Other control flow will be lowered to
+  // branches if possible anyway.
+  if (!isa<UncondBrInst>(Pred2Term))
+    return nullptr;
+
+  if (auto *Pred1Br = dyn_cast<CondBrInst>(Pred1Term)) {
     // The only thing we have to watch out for here is to make sure that Pred2
     // doesn't have incoming edges from other blocks.  If it does, the condition
     // doesn't dominate BB.
@@ -1803,6 +1804,9 @@ BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
     return Pred1Br;
   }
 
+  if (!isa<UncondBrInst>(Pred1Term))
+    return nullptr;
+
   // Ok, if we got here, both predecessors end with an unconditional branch to
   // BB.  Don't panic!  If both blocks only have a single (identical)
   // predecessor, and THAT is a conditional branch, then we're all ok!
@@ -1811,10 +1815,9 @@ BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
     return nullptr;
 
   // Otherwise, if this is a conditional branch, then we can use it!
-  BranchInst *BI = dyn_cast<BranchInst>(CommonPred->getTerminator());
+  CondBrInst *BI = dyn_cast<CondBrInst>(CommonPred->getTerminator());
   if (!BI) return nullptr;
 
-  assert(BI->isConditional() && "Two successors but not conditional?");
   if (BI->getSuccessor(0) == Pred1) {
     IfTrue = Pred1;
     IfFalse = Pred2;
@@ -1825,7 +1828,7 @@ BranchInst *llvm::GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
   return BI;
 }
 
-void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
+void llvm::InvertBranch(CondBrInst *PBI, IRBuilderBase &Builder) {
   Value *NewCond = PBI->getCondition();
   // If this is a "cmp" instruction, only used for branching (and nowhere
   // else), then we can simply invert the predicate.
@@ -1842,8 +1845,7 @@ void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
 bool llvm::hasOnlySimpleTerminator(const Function &F) {
   for (auto &BB : F) {
     auto *Term = BB.getTerminator();
-    if (!(isa<ReturnInst>(Term) || isa<UnreachableInst>(Term) ||
-          isa<BranchInst>(Term)))
+    if (!isa<ReturnInst, UnreachableInst, UncondBrInst, CondBrInst>(Term))
       return false;
   }
   return true;

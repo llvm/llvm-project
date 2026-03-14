@@ -412,7 +412,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
     return false;
 
   BasicBlock *IfTrue2, *IfFalse2;
-  BranchInst *DomBI2 = GetIfCondition(BB, IfTrue2, IfFalse2);
+  CondBrInst *DomBI2 = GetIfCondition(BB, IfTrue2, IfFalse2);
   if (!DomBI2)
     return false;
   Instruction *CInst2 = dyn_cast<Instruction>(DomBI2->getCondition());
@@ -424,7 +424,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
     return false;
 
   BasicBlock *IfTrue1, *IfFalse1;
-  BranchInst *DomBI1 = GetIfCondition(SecondEntryBlock, IfTrue1, IfFalse1);
+  CondBrInst *DomBI1 = GetIfCondition(SecondEntryBlock, IfTrue1, IfFalse1);
   if (!DomBI1)
     return false;
   Instruction *CInst1 = dyn_cast<Instruction>(DomBI1->getCondition());
@@ -485,7 +485,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   // Merge \param SecondEntryBlock into \param FirstEntryBlock.
   FirstEntryBlock->back().eraseFromParent();
   FirstEntryBlock->splice(FirstEntryBlock->end(), SecondEntryBlock);
-  BranchInst *PBI = cast<BranchInst>(FirstEntryBlock->getTerminator());
+  CondBrInst *PBI = cast<CondBrInst>(FirstEntryBlock->getTerminator());
   assert(PBI->getCondition() == CInst2);
   BasicBlock *SaveInsertBB = Builder.GetInsertBlock();
   BasicBlock::iterator SaveInsertPt = Builder.GetInsertPoint();

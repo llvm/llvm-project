@@ -3743,7 +3743,7 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   BasicBlock *BB = PN->getParent();
 
   BasicBlock *IfTrue, *IfFalse;
-  BranchInst *DomBI = GetIfCondition(BB, IfTrue, IfFalse);
+  CondBrInst *DomBI = GetIfCondition(BB, IfTrue, IfFalse);
   if (!DomBI)
     return false;
   Value *IfCond = DomBI->getCondition();
@@ -4006,7 +4006,7 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
   return std::nullopt;
 }
 
-static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
+static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
                                              DomTreeUpdater *DTU,
                                              MemorySSAUpdater *MSSAU,
                                              const TargetTransformInfo *TTI) {
@@ -4055,7 +4055,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
       MDWeights.push_back(PredTrueWeight * SuccTrueWeight);
       // FalseWeight is FalseWeight for PBI * TotalWeight for BI +
       //               TrueWeight for PBI * FalseWeight for BI.
-      // We assume that total weights of a BranchInst can fit into 32 bits.
+      // We assume that total weights of a CondBrInst can fit into 32 bits.
       // Therefore, we will not have overflow using 64-bit arithmetic.
       MDWeights.push_back(PredFalseWeight * (SuccFalseWeight + SuccTrueWeight) +
                           PredTrueWeight * SuccFalseWeight);
@@ -4130,15 +4130,10 @@ static bool isVectorOp(Instruction &I) {
 /// If this basic block is simple enough, and if a predecessor branches to us
 /// and one of our successors, fold the block into the predecessor and use
 /// logical operations to pick the right destination.
-bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
+bool llvm::foldBranchToCommonDest(CondBrInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
                                   unsigned BonusInstThreshold) {
-  // If this block ends with an unconditional branch,
-  // let speculativelyExecuteBB() deal with it.
-  if (!BI->isConditional())
-    return false;
-
   BasicBlock *BB = BI->getParent();
   TargetTransformInfo::TargetCostKind CostKind =
     BB->getParent()->hasMinSize() ? TargetTransformInfo::TCK_CodeSize
@@ -4247,7 +4242,7 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   // Ok, we have the budget. Perform the transformation.
   for (BasicBlock *PredBlock : Preds) {
-    auto *PBI = cast<BranchInst>(PredBlock->getTerminator());
+    auto *PBI = cast<CondBrInst>(PredBlock->getTerminator());
     return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, TTI);
   }
   return false;
@@ -8501,14 +8496,6 @@ bool SimplifyCFGOpt::simplifyUncondBranch(UncondBrInst *BI,
       return true;
   }
 
-  // If this basic block is ONLY a compare and a branch, and if a predecessor
-  // branches to us and our successor, fold the comparison into the
-  // predecessor and use logical operations to update the incoming value
-  // for PHI nodes in common successor.
-  if (Options.SpeculateBlocks &&
-      foldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI,
-                             Options.BonusInstThreshold))
-    return requestResimplify();
   return false;
 }
 
