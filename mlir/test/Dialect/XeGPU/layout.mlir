@@ -27,6 +27,16 @@ gpu.func @create_nd_tdesc_subgroup_3(%src: memref<128x128xf32>) {
   gpu.return
 }
 
+
+// -----
+// CHECK: func.func @create_nd_tdesc_wrap_around_layout(%[[arg0:.*]]: memref<24x32xf32>) {
+func.func @create_nd_tdesc_wrap_around_layout(%src: memref<24x32xf32>) {
+  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %[[arg0]][0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<4x8xf32, #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
+    %0 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
+      !xegpu.tensor_desc<4x8xf32,  #xegpu.layout<lane_layout = [2, 8], lane_data = [4, 1]>>
+  return
+}
+
 // CHECK: gpu.func @create_nd_tdesc_wg_1(%[[arg0:.*]]: memref<24x32xf32>) {
 gpu.func @create_nd_tdesc_wg_1(%src: memref<24x32xf32>) {
   // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [3, 2], sg_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>>

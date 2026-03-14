@@ -52,21 +52,25 @@ getSgShapeAndCount(ArrayRef<int64_t> shape,
                    xegpu::DistributeLayoutAttr layout) {
   int count = 1;
   SmallVector<int64_t> sgShape(shape);
-  if (layout && layout.isForWorkgroup()) {
-    SmallVector<int64_t> sgLayout = layout.getEffectiveSgLayoutAsInt();
-    if (!layout.getEffectiveSgDataAsInt().empty())
-      sgShape = layout.getEffectiveSgDataAsInt();
-    else if (auto maybeDerivedSgData = computeShapeRatio(shape, sgLayout))
-      sgShape = *maybeDerivedSgData;
-    SmallVector<int64_t> distUnit = computeElementwiseMul(sgLayout, sgShape);
-    // Clamp distUnit to the original shape to handle cases where data is
-    // shared among subgroups, which may cause distUnit to exceed the original
-    // shape.
-    for (size_t i = 0; i < distUnit.size(); ++i)
-      distUnit[i] = std::min(shape[i], distUnit[i]);
-    count = computeProduct(shape) / computeProduct(distUnit);
-  }
-  return std::make_pair(sgShape, count);
+  auto distributedShape = layout.computeDistributedShape(
+      SmallVector<int64_t>(shape.begin(), shape.end()));
+  if (failed(distributedShape))
+    return std::make_pair(sgShape, count);
+  auto sgData = layout.getEffectiveSgDataAsInt();
+  count = computeProduct(distributedShape.value()) / computeProduct(sgData);
+  // auto sgLayout = layout.getEffectiveSgLayoutAsInt();
+  // auto sgData = layout.getEffectiveSgDataAsInt();
+  // SmallVector<int64_t> distUnit =
+  //     computeElementwiseMul(sgLayout, sgData);
+  // // Clamp distUnit to the original shape to handle wrap-around cases where
+  // data
+  // // is shared among subgroups, which may cause distUnit to exceed the
+  // original
+  // // shape.
+  // for (size_t i = 0; i < distUnit.size(); ++i)
+  //   distUnit[i] = std::min(shape[i], distUnit[i]);
+  // count = computeProduct(shape) / computeProduct(distUnit);
+  return std::make_pair(sgData, count);
 }
 
 /// Utility helper for deriving a list of offsets for each sub-TensorDescs
@@ -1712,16 +1716,20 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   converter.addConversion(
       [&](xegpu::TensorDescType type,
           SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        // Only convert WG-level tensor descs. SG-level or layout-less types
+        // are already legal and should pass through unchanged.
+        if (!layout || !layout.isForWorkgroup())
+          return std::nullopt;
+
         Type elemTy = type.getElementType();
         ArrayRef<int64_t> shape = type.getShape();
 
         int count;
         SmallVector<int64_t> subShape;
-        xegpu::LayoutAttr layout = type.getLayoutAttr();
         std::tie(subShape, count) = getSgShapeAndCount(shape, layout);
 
-        if (layout)
-          layout = layout.dropSgLayoutAndData();
+        layout = layout.dropSgLayoutAndData();
 
         auto newTy = xegpu::TensorDescType::get(
             type.getContext(), subShape, elemTy, type.getEncoding(), layout);

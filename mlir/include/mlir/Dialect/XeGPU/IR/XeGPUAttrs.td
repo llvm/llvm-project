@@ -270,6 +270,63 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+    InterfaceMethod<[{Computes the per-compute-unit shape by dividing each dimension of
+                      `shape` by the corresponding layout factor (sg_layout or
+                      lane_layout). For wrap-around dimensions where the division is uneven,
+                      the tensor tile is broadcasted to all subgroups/lanes.}],
+                    /*retTy=*/"FailureOr<SmallVector<int64_t>>",
+                    /*methodName=*/"computeDistributedShape",
+                    /*args=*/(ins "SmallVector<int64_t>":$shape),
+                    /*methodBody=*/[{
+                      SmallVector<int64_t> layout;
+                      SmallVector<int64_t> subShape;
+                      if ($_self.isForWorkgroup()) {
+                        layout = $_self.getEffectiveSgLayoutAsInt();
+                        subShape = $_self.getEffectiveSgDataAsInt();
+                      } else if ($_self.isForSubgroup()) {
+                        layout = $_self.getEffectiveLaneLayoutAsInt();
+                        subShape = $_self.getEffectiveLaneDataAsInt();
+                      } else {
+                        return failure();
+                      }
+                      assert(
+                          !subShape.empty() &&
+                          "sgdata or lanedata cannot be empty for distributed shape computation");
+
+                      SmallVector<int64_t> distributedShape(shape.size());
+                      llvm::errs() << "computeDistributedShape:\n";
+                      llvm::errs() << "  shape: [";
+                        llvm::interleaveComma(shape, llvm::errs());
+                        llvm::errs() << "]\n";
+                      llvm::errs() << "  layout: [";
+                        llvm::interleaveComma(layout, llvm::errs());
+                        llvm::errs() << "]\n";
+                      llvm::errs() << "  subShape: [";
+                        llvm::interleaveComma(subShape, llvm::errs());
+                        llvm::errs() << "]\n";
+                      for (auto [i, dim] : llvm::enumerate(shape)) {
+                        int64_t distri_unit = layout[i]*subShape[i];
+                        if ((dim % distri_unit) == 0) {
+                          // Evenly divisible case, divide the dimension by the layout factor.
+                          distributedShape[i] = dim / layout[i];
+                          assert((distributedShape[i] % subShape[i] == 0) &&
+                                "Even distribution: sgdata or lanedata must divide the distributed dimension");
+                          llvm::errs() << "  dim[" << i << "]=" << dim
+                            << " evenly divisible, distributed=" << distributedShape[i] << "\n";
+                        } else {
+                          // wrap around case, the dimension size must be equal to subShape value
+                          assert(dim == subShape[i] &&
+                                "Wrap-around distribution: sgdata or lanedata must be same as tensor tile shape");
+                          distributedShape[i] = dim;
+                          llvm::errs() << "  dim[" << i << "]=" << dim
+                            << " wrap-around, kept=" << distributedShape[i] << "\n";
+                        }
+                      }
+                      llvm::errs() << "  result: [";
+                        llvm::interleaveComma(distributedShape, llvm::errs());
+                        llvm::errs() << "]\n";
+                      return distributedShape;
+                    }]>,
     InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",

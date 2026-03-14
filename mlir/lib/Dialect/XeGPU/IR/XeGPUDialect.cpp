@@ -160,7 +160,7 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
   // check LaneLayout and LaneData
   auto maybeLaneShape =
       tryDistribute(instShape, attr.getEffectiveLaneLayoutAsInt(),
-                    attr.getEffectiveLaneDataAsInt(), false);
+                    attr.getEffectiveLaneDataAsInt(), true);
   return maybeLaneShape.has_value();
 }
 
@@ -204,6 +204,83 @@ LogicalResult ScatterTensorDescAttr::verify(
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// XeGPU_DistributeLayoutAttr
+//===----------------------------------------------------------------------===//
+
+/// Computes the per-compute-unit shape by dividing each dimension of
+/// `shape` by the corresponding layout factor (sg_layout or
+/// lane_layout). For wrap-around dimensions where the division is uneven,
+/// the tensor tile is broadcasted to all subgroups/lanes.
+// FailureOr<SmallVector<int64_t>>
+// DistributeLayoutAttr::computeDistributedShape(SmallVector<int64_t> shape)
+// const {
+
+//   SmallVector<int64_t> layout;
+//   SmallVector<int64_t> subShape;
+//   if (isForWorkgroup()) {
+//     layout = getEffectiveSgLayoutAsInt();
+//     subShape = getEffectiveSgDataAsInt();
+//   } else if (isForSubgroup()) {
+//     layout = getEffectiveLaneLayoutAsInt();
+//     subShape = getEffectiveLaneDataAsInt();
+//   } else {
+//     return failure();
+//   }
+//   assert(
+//       !subShape.empty() &&
+//       "sgdata or lanedata cannot be empty for distributed shape
+//       computation");
+
+//   SmallVector<int64_t> distributedShape(shape);
+//   for (auto [i, dim] : llvm::enumerate(shape)) {
+//     if (dim % layout[i] != 0) {
+//       // wrap around case, the dimension size must be equal to subShape value
+//       assert(dim == subShape[i] &&
+//              "Wrap-around distribution: sgdata or lanedata must be same as "
+//              "tensor tile shape");
+//       distributedShape[i] = dim;
+//     } else {
+//       // Evenly divisible case, divide the dimension by the layout factor.
+//       distributedShape[i] = dim / layout[i];
+//       assert(distributedShape[i] % subShape[i] == 0 &&
+//              "Even distribution: sgdata or lanedata must divide the "
+//              "distributed dimension");
+//     }
+//   }
+//   return distributedShape;
+// }
+
+// bool DistributeLayoutAttr::isCompatibleWith(
+//     const xegpu::DistributeLayoutAttr &other, xegpu::LayoutKind level) {
+//   if (!other)
+//     return false;
+//   switch (level) {
+//   case xegpu::LayoutKind::Subgroup:
+//     if (getEffectiveSgLayoutAsInt() ==
+//                other.getEffectiveSgLayoutAsInt() &&
+//            getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt() &&
+//           getEffectiveOrderAsInt() == other.getEffectiveOrderAsInt()) {
+//       return true;
+//     }
+//   case xegpu::LayoutKind::InstData:
+//     if (getEffectiveInstDataAsInt() ==
+//            other.getEffectiveInstDataAsInt()) {
+//       return true;
+//     }
+//   case xegpu::LayoutKind::Lane:
+//     if (getEffectiveLaneLayoutAsInt() ==
+//                other.getEffectiveLaneLayoutAsInt() &&
+//            getEffectiveLaneDataAsInt() ==
+//                other.getEffectiveLaneDataAsInt() &&
+//                getEffectiveOrderAsInt() == other.getEffectiveOrderAsInt()) {
+//       return true;
+//     }
+//   }
+
+//   return false;
+// }
 
 //===----------------------------------------------------------------------===//
 // XeGPU_LayoutAttr
@@ -373,12 +450,8 @@ LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   } else {
     return failure();
   }
-  if (subShape.empty()) {
-    if (auto derivedShape = computeShapeRatio(shape, layout))
-      subShape = derivedShape.value();
-    else
-      return failure();
-  }
+  assert(!subShape.empty() && "sgdata or lanedata cannot be empty for "
+                              "distributed coordinates computation");
 
   // delinearize Ids
   auto maybeIds = delinearizeId(builder, loc, linearId);
