@@ -1505,12 +1505,10 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 }
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
-  // When CUDA Fortran is enabled together with OpenACC, new
-  // symbols are created for the one appearing in the use_device
-  // clause. These new symbols have the CUDA Fortran device
-  // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name && name->symbol) {
+  // For CUDA Fortran interoperability, new symbols are created for the ones
+  // appearing in the use_device clause. These new symbols have the CUDA Fortran
+  // device attribute.
+  if (name && name->symbol) {
     if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
       name->symbol = copy;
       if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
