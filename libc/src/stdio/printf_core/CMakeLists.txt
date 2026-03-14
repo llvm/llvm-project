@@ -49,10 +49,13 @@ if(LIBC_CONF_PRINTF_DISABLE_WIDE)
 else()
   set(wchar_deps
     libc.hdr.types.wchar_t
+    libc.hdr.types.char32_t
+    libc.hdr.types.char8_t
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.wchar.wcrtomb
     libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.string_converter
   )
   set(parser_wchar_deps
     libc.hdr.types.wint_t
@@ -129,6 +132,7 @@ add_header_library(
     .writer
     libc.include.inttypes
     libc.hdr.limits_macros
+    libc.src.string.string_utils
     libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.limits

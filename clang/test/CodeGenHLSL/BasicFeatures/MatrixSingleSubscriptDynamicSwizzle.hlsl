@@ -6,11 +6,11 @@
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[INDEX]], ptr [[INDEX_ADDR]], align 4
-// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[M_ADDR]], align 4, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INDEX_ADDR]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = add i32 12, [[TMP2]]

@@ -33,9 +33,9 @@ class AAResults;
 class AllocaInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallBase;
 class CallInst;
+class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
 class Function;
@@ -202,7 +202,7 @@ LLVM_ABI bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-LLVM_ABI bool foldBranchToCommonDest(BranchInst *BI,
+LLVM_ABI bool foldBranchToCommonDest(CondBrInst *BI,
                                      llvm::DomTreeUpdater *DTU = nullptr,
                                      MemorySSAUpdater *MSSAU = nullptr,
                                      const TargetTransformInfo *TTI = nullptr,

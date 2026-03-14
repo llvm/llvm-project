@@ -2631,8 +2631,8 @@ LSRInstance::OptimizeLoopTermCond() {
     // induction variable, to allow coalescing the live ranges for the IV into
     // one register value.
 
-    BranchInst *TermBr = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
-    if (!TermBr || TermBr->isUnconditional())
+    CondBrInst *TermBr = dyn_cast<CondBrInst>(ExitingBlock->getTerminator());
+    if (!TermBr)
       continue;
 
     Instruction *Cond = dyn_cast<Instruction>(TermBr->getCondition());

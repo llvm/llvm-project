@@ -21,12 +21,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_FLOATN __clc_sin(__CLC_FLOATN x) {
   s = __CLC_AS_FLOATN(__CLC_AS_INTN(s) ^ ((regn > 1) << 31) ^
                       (__CLC_AS_INTN(x) ^ __CLC_AS_INTN(absx)));
 
-  s = __clc_select(s, __CLC_GENTYPE_NAN, __clc_isnan(x) || __clc_isinf(x));
-
-  // Subnormals
-  s = x == 0.0f ? x : s;
-
-  return s;
+  return __clc_select(s, __CLC_GENTYPE_NAN, __clc_isnan(x) || __clc_isinf(x));
 }
 
 #elif __CLC_FPSIZE == 16

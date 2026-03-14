@@ -2472,7 +2472,7 @@ ChangeStatus Attributor::cleanupIR() {
           Callee->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
-    if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
+    if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
       Instruction *UserI = cast<Instruction>(U->getUser());
       if (isa<UndefValue>(NewV)) {
         ToBeChangedToUnreachableInsts.insert(UserI);

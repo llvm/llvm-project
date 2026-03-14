@@ -1503,7 +1503,7 @@ def : Pat<(XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)),
 // zero-extends it). For RISC-V, the mask is unnecessary as shifts in the base
 // ISA only read the least significant 5 bits (RV32I) or 6 bits (RV64I).
 def shiftMaskXLen : ComplexPattern<XLenVT, 1, "selectShiftMaskXLen", [], [], 0>;
-def shiftMask32   : ComplexPattern<i64, 1, "selectShiftMask<32>", [], [], 0>;
+def shiftMask32   : ComplexPattern<XLenVT, 1, "selectShiftMask<32>", [], [], 0>;
 // FIXME: This is labelled as handling 's32', however the ComplexPattern it
 // refers to handles both i32 and i64 based on the HwMode. Currently this LLT
 // parameter appears to be ignored so this pattern works for both, however we
@@ -1516,12 +1516,14 @@ def GIShiftMask32 :
     GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
+class PatGprShiftMask<SDPatternOperator OpNode, RVInst Inst,
+                      ComplexPattern ShiftMask, ValueType vt = XLenVT>
+    : Pat<(vt (OpNode GPR:$rs1, ShiftMask:$rs2)),
+          (Inst GPR:$rs1, ShiftMask:$rs2)>;
 class PatGprShiftMaskXLen<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, shiftMaskXLen:$rs2),
-          (Inst GPR:$rs1, shiftMaskXLen:$rs2)>;
+    : PatGprShiftMask<OpNode, Inst, shiftMaskXLen>;
 class PatGprShiftMask32<SDPatternOperator OpNode, RVInst Inst>
-    : Pat<(OpNode GPR:$rs1, shiftMask32:$rs2),
-          (Inst GPR:$rs1, shiftMask32:$rs2)>;
+    : PatGprShiftMask<OpNode, Inst, shiftMask32, i64>;
 
 def : PatGprShiftMaskXLen<shl, SLL>;
 def : PatGprShiftMaskXLen<srl, SRL>;

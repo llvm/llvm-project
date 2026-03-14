@@ -39,6 +39,10 @@ MakeEnregisteredLocationExpression(llvm::codeview::RegisterId reg,
 DWARFExpression MakeRegRelLocationExpression(llvm::codeview::RegisterId reg,
                                              int32_t offset,
                                              lldb::ModuleSP module);
+DWARFExpression
+MakeRegRelIndirLocationExpression(llvm::codeview::RegisterId reg,
+                                  int32_t offset, int32_t offset_in_udt,
+                                  lldb::ModuleSP module);
 DWARFExpression MakeVFrameRelLocationExpression(llvm::StringRef fpo_program,
                                                 int32_t offset,
                                                 lldb::ModuleSP module);

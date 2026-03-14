@@ -9,6 +9,6 @@
 #include <clc/relational/clc_islessgreater.h>
 
 #define __CLC_FUNCTION islessgreater
-#define __CLC_BODY "binary_def.inc"
+#define __CLC_BODY "relational_binary_def.inc"
 
 #include <clc/math/gentype.inc>

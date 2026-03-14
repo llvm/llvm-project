@@ -180,15 +180,15 @@ llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_fir
   llvm.return
 }
 // CHECK: define void @target_map_single_private() {
-// CHECK: call void @__omp_offloading_[[MAP_SINGLE_PRIVATE_OFFLOADED_FUNCTION:.*]](ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[MAP_SINGLE_PRIVATE_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr null)
 // CHECK: define void @target_map_2_privates() {
-// CHECK: call void @__omp_offloading_[[MAP_2_PRIVATES_OFFLOADED_FUNCTION:.*]](ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[MAP_2_PRIVATES_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr null)
 // CHECK: define void @target_op_private_multi_block
-// CHECK: call void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION:.*]]()
+// CHECK: call void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION:.*]](ptr null)
 // CHECK: define void @target_boxchar_
-// CHECK: call void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}}, ptr null)
 // CHECK: define void @target_firstprivate_()
-// CHECK: call void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}}, ptr null)
 
 // CHECK: define internal void @__omp_offloading_[[MAP_SINGLE_PRIVATE_OFFLOADED_FUNCTION]]
 // CHECK: %[[PRIV_ALLOC:.*]] = alloca i32, align 4
@@ -208,13 +208,13 @@ llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_fir
 // CHECK: %[[ADD_FLOAT:.*]] = fadd contract float %[[CAST_TO_FLOAT]], 1.100000e+01
 // CHECK: store float %[[ADD_FLOAT]], ptr %[[PRIV_FLOAT_ALLOC]], align 4
 
-// CHECK: define internal void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION]]
+// CHECK: define internal void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION]](ptr %{{.*}})
 // CHECK: %[[PRIV_ALLOC:.*]] = alloca float, align 4
 // CHECK: %[[PHI_ALLOCA:.*]]  = phi ptr [ %[[PRIV_ALLOC]], {{.*}} ]
 // CHECK: %[[RESULT:.*]] = load float, ptr %[[PHI_ALLOCA]], align 4
 
 
-// CHECK: define internal void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION]](ptr %{{[^,]+}}, ptr %[[MAPPED_ARG:.*]]) {
+// CHECK: define internal void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION]](ptr %{{[^,]+}}, ptr %[[MAPPED_ARG:[^,]+]], ptr %{{.*}}) {
 // CHECK: %[[BOXCHAR:.*]] = load { ptr, i64 }, ptr %[[MAPPED_ARG]]
 // CHECK: %[[BOXCHAR_PTR:.*]] = extractvalue { ptr, i64 } %[[BOXCHAR]], 0
 // CHECK: %[[BOXCHAR_i64:.*]] = extractvalue { ptr, i64 } %[[BOXCHAR]], 1
@@ -223,7 +223,7 @@ llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_fir
 // CHECK: %[[PRIV_BOXCHAR1:.*]] = insertvalue { ptr, i64 } %[[PRIV_BOXCHAR0]], i64 %[[BOXCHAR_i64]], 1
 
 
-// CHECK: define internal void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION]](ptr %[[SV:.*]], ptr %[[SF:.*]])
+// CHECK: define internal void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION]](ptr %[[SV:.*]], ptr %[[SF:[^,]+]], ptr %{{.*}})
 // CHECK: entry:
 // CHECK-NEXT: %[[SV_PRIV_ALLOCA:.*]] = alloca i32, align 4
 // CHECK-NEXT: %[[SF_PRIV_ALLOCA:.*]] = alloca float, align 4

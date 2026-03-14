@@ -603,7 +603,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   } else {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
-                    Args, Ptrs, *KernelLaunchEnvOrErr);
+                    Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
   }
 
   // Record the kernel description after we modified the argument count and num
@@ -626,30 +626,38 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     AsyncInfoWrapper);
 }
 
-KernelLaunchParamsTy GenericKernelTy::prepareArgs(
-    GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
-    uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
-    llvm::SmallVectorImpl<void *> &Ptrs,
-    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
-  uint32_t KLEOffset = !!KernelLaunchEnvironment;
-  NumArgs += KLEOffset;
-
+KernelLaunchParamsTy
+GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+                             ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+                             llvm::SmallVectorImpl<void *> &Args,
+                             llvm::SmallVectorImpl<void *> &Ptrs,
+                             KernelLaunchEnvironmentTy *KernelLaunchEnvironment,
+                             uint32_t Version) const {
   if (NumArgs == 0)
     return KernelLaunchParamsTy{};
 
+  // The argument arrays already include the dyn_ptr slot at the end (appended
+  // by the host for version >= 4, or by upgradeKernelArgs for version 3).
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
-  if (KernelLaunchEnvironment) {
-    Args[0] = KernelLaunchEnvironment;
-    Ptrs[0] = &Args[0];
-  }
+  for (uint32_t I = 0; I < NumArgs; ++I)
+    Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(ArgPtrs[I]) +
+                                       ArgOffsets[I]);
 
-  for (uint32_t I = KLEOffset; I < NumArgs; ++I) {
-    Args[I] =
-        (void *)((intptr_t)ArgPtrs[I - KLEOffset] + ArgOffsets[I - KLEOffset]);
+  // Optionally assign the KernelLaunchEnvironment to the last slot (dyn_ptr).
+  if (KernelLaunchEnvironment)
+    Args[NumArgs - 1] = KernelLaunchEnvironment;
+
+  // Version 3 device kernels have dyn_ptr baked in at position 0. Rotate the
+  // last element to the front to match the device ABI.
+  if (Version <= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR &&
+      KernelLaunchEnvironment)
+    std::rotate(Args.begin(), Args.end() - 1, Args.end());
+
+  for (uint32_t I = 0; I < NumArgs; ++I)
     Ptrs[I] = &Args[I];
-  }
+
   return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
 }
 

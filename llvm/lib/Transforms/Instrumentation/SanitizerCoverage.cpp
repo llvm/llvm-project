@@ -646,7 +646,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
                              const SanitizerCoverageOptions &Options) {
   if (!Options.NoPrune)
     if (CMP->hasOneUse())
-      if (auto BR = dyn_cast<BranchInst>(CMP->user_back()))
+      if (auto BR = dyn_cast<CondBrInst>(CMP->user_back()))
         for (BasicBlock *B : BR->successors())
           if (IsBackEdge(BR->getParent(), B, DT))
             return false;

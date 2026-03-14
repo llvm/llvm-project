@@ -6715,6 +6715,22 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     builder.restoreIP(codeGenIP);
     genMapInfos(builder, moduleTranslation, dl, combinedInfos, mapData,
                 targetDirective);
+
+    // Append a null entry for the implicit dyn_ptr argument so the argument
+    // count sent to the runtime already includes it.
+    auto *nullPtr = llvm::Constant::getNullValue(builder.getPtrTy());
+    combinedInfos.BasePointers.push_back(nullPtr);
+    combinedInfos.Pointers.push_back(nullPtr);
+    combinedInfos.DevicePointers.push_back(
+        llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+    combinedInfos.Sizes.push_back(builder.getInt64(0));
+    combinedInfos.Types.push_back(
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+    if (!combinedInfos.Names.empty())
+      combinedInfos.Names.push_back(nullPtr);
+    combinedInfos.Mappers.push_back(nullptr);
+
     return combinedInfos;
   };
 

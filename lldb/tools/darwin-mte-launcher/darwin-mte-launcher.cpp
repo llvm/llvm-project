@@ -14,6 +14,24 @@
 
 using namespace llvm;
 
+static std::vector<const char *> get_extended_env(const char *envp[]) {
+  // Copy over the current environment.
+  std::vector<const char *> new_envp;
+  for (const char **e = envp; *e; ++e)
+    new_envp.push_back(*e);
+
+  // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
+  // (MTE) and crashes.
+  // https://bugs.python.org/issue43593
+  new_envp.push_back("PYTHONMALLOC=malloc");
+
+  // Collect allocation traces for tagged memory.
+  new_envp.push_back("SanitizersAllocationTraces=tagged");
+
+  new_envp.push_back(nullptr);
+  return new_envp;
+}
+
 int main(int argc, const char *argv[], const char *envp[]) {
   const char *program = argv[1];
   const char **new_args = &argv[1];
@@ -45,14 +63,7 @@ int main(int argc, const char *argv[], const char *envp[]) {
     return EXIT_FAILURE;
   }
 
-  // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
-  // (MTE) and crashes.
-  // https://bugs.python.org/issue43593
-  std::vector<const char *> new_envp;
-  for (const char **e = envp; *e; ++e)
-    new_envp.push_back(*e);
-  new_envp.push_back("PYTHONMALLOC=malloc");
-  new_envp.push_back(nullptr);
+  std::vector<const char *> new_envp = get_extended_env(envp);
 
   pid_t pid;
   ret = posix_spawn(&pid, program, /*file_actions=*/nullptr, &attr,

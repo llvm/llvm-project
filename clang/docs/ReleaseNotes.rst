@@ -384,6 +384,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
+- Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 
 OpenACC Specific Changes
 ------------------------

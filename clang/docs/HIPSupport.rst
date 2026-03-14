@@ -484,6 +484,90 @@ non-constexpr function, which is by default a host function.
 Users can override the inferred host and device attributes of default
 destructors by adding explicit host and device attributes to them.
 
+Deferred Diagnostics
+====================
+
+In HIP (and CUDA), a ``__host__ __device__`` function can be called from both
+host and device code. Certain operations may not be valid on one side (e.g.,
+calling a host-only function from device code, or referencing a device-only
+function from host code). However, a ``__host__ __device__`` function
+containing such operations is only ill-formed if the function is actually
+reachable from a caller where the operation cannot be emitted.
+
+Clang handles this through *deferred diagnostics*: errors and warnings in
+``__host__ __device__`` functions are recorded during parsing but not emitted
+immediately. They are only emitted when a function whose linkage guarantees
+IR emission (e.g., a kernel, or an externally visible ``__host__`` or
+``__device__`` function) directly or indirectly calls the
+``__host__ __device__`` function containing the invalid operation.
+
+HD-Promoted Functions
+---------------------
+
+An *HD-promoted function* is a function that is implicitly or explicitly
+``__host__ __device__`` and is only emitted because a caller requires it —
+it does not have standalone linkage that guarantees emission. HD-promoted
+functions are the primary source of deferred diagnostics.
+
+Common examples of HD-promoted functions:
+
+- Lambdas without explicit ``__host__`` or ``__device__`` attributes
+- ``inline __host__ __device__`` helper functions
+- ``__host__ __device__`` template instantiations
+
+When an HD-promoted function contains operations that are not valid on the
+caller's side, clang emits the deferred diagnostics along with notes showing
+how the function was reached.
+
+Example
+^^^^^^^
+
+.. code-block:: c++
+
+   __host__ void host_only();
+
+   // This lambda is implicitly __host__ __device__. It is HD-promoted
+   // when called from a __device__ function.
+   __device__ auto lambda = [] {
+     host_only();  // error: only emitted if lambda is used from device code
+   };
+
+   __device__ void df1() {
+     lambda();  // triggers deferred diagnostic for lambda
+   }
+
+   __device__ void df2() {
+     lambda();  // same lambda, same error — not duplicated
+   }
+
+Clang emits the error once and lists all device callers:
+
+.. code-block:: text
+
+   error: reference to __host__ function 'host_only' in __host__ __device__ function
+     note: 'host_only' declared here
+     note: called by 'df1'
+     note: called by 'df2'
+
+Call Chain Notes
+^^^^^^^^^^^^^^^^
+
+When an HD-promoted function is reached through a chain of intermediate
+functions, clang shows the full call chain. The first note in each chain uses
+"called by" and subsequent notes use "which is called by":
+
+.. code-block:: text
+
+   error: reference to __host__ function 'host_only' in __host__ __device__ function
+     note: called by 'helper1'
+     note: which is called by 'device_func1'
+     note: called by 'helper2'
+     note: which is called by 'device_func2'
+
+Each "called by" starts a new chain, and "which is called by" continues it.
+This makes it clear which device function ultimately forced the code into
+device context.
+
 C++ Standard Parallelism Offload Support: Compiler And Runtime
 ==============================================================
 

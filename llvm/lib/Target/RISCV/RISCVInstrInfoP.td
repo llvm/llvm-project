@@ -1643,14 +1643,16 @@ def riscv_wsla : RVSDNode<"WSLA", SDT_RISCVWideningShiftLeft>;
 // Narrowing shift: res = nsrl(lo, hi, shamt) is equivalent to
 // res = truncate (srl (build_pair lo, hi), shamt), XLenVT
 def SDT_RISCVNarrowingShift : SDTypeProfile<1, 3, [SDTCisVT<0, i32>,
-                                                   SDTCisVT<1, i32>,
-                                                   SDTCisVT<2, i32>,
-                                                   SDTCisVT<3, i32>]>;
+                                                   SDTCisSameAs<0, 1>,
+                                                   SDTCisSameAs<0, 2>,
+                                                   SDTCisSameAs<0, 3>]>;
 def riscv_nsrl : RVSDNode<"NSRL", SDT_RISCVNarrowingShift>;
 def riscv_nsra : RVSDNode<"NSRA", SDT_RISCVNarrowingShift>;
 
 // ComplexPattern for 64-bit shift mask (NSRL/NSRA only read 6 bits).
-def shiftMask64 : ComplexPattern<i32, 1, "selectShiftMask<64>", [], [], 0>;
+def shiftMask64 : ComplexPattern<XLenVT, 1, "selectShiftMask<64>", [], [], 0>;
+def shiftMask8 : ComplexPattern<XLenVT, 1, "selectShiftMask<8>", [], [], 0>;
+def shiftMask16 : ComplexPattern<XLenVT, 1, "selectShiftMask<16>", [], [], 0>;
 
 // Build a GPRPair from two GPR registers for narrowing shift instructions.
 def BuildGPRPair : OutPatFrag<(ops node:$lo, node:$hi),
@@ -1800,24 +1802,18 @@ let Predicates = [HasStdExtP] in {
   def : PatGprImm<riscv_psslai, PSSLAI_H, timm, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
-  def : Pat<(XLenVecI8VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
-            (PSLL_BS GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI8VT (riscv_psrl GPR:$rs1, GPR:$rs2)),
-            (PSRL_BS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask8, XLenVecI8VT>;
+  def : PatGprShiftMask<riscv_psrl, PSRL_BS, shiftMask8, XLenVecI8VT>;
 
   // 8-bit arithmetic shift left/right
-  def : Pat<(XLenVecI8VT (riscv_psra GPR:$rs1, GPR:$rs2)),
-            (PSRA_BS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_psra, PSRA_BS, shiftMask8, XLenVecI8VT>;
 
   // 16-bit logical shift left/right
-  def : Pat<(XLenVecI16VT (riscv_pshl GPR:$rs1, GPR:$rs2)),
-            (PSLL_HS GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(XLenVecI16VT (riscv_psrl GPR:$rs1, GPR:$rs2)),
-            (PSRL_HS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_pshl, PSLL_HS, shiftMask16, XLenVecI16VT>;
+  def : PatGprShiftMask<riscv_psrl, PSRL_HS, shiftMask16, XLenVecI16VT>;
 
   // 16-bit arithmetic shift left/right
-  def : Pat<(XLenVecI16VT (riscv_psra GPR:$rs1, GPR:$rs2)),
-            (PSRA_HS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_psra, PSRA_HS, shiftMask16, XLenVecI16VT>;
 
   // // splat pattern
   def : Pat<(XLenVecI8VT (splat_vector (XLenVT GPR:$rs2))), (PADD_BS (XLenVT X0), GPR:$rs2)>;
@@ -1862,14 +1858,14 @@ let Predicates = [HasStdExtP, IsRV32] in {
 
   // Narrowing shift patterns (NSRL/NSRA)
   // Immediate shift amount patterns
-  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt)),
+  def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, uimm6:$shamt),
             (NSRLI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
-  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt)),
+  def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, uimm6:$shamt),
             (NSRAI (BuildGPRPair GPR:$lo, GPR:$hi), uimm6:$shamt)>;
   // Register shift amount patterns
-  def : Pat<(i32 (riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+  def : Pat<(riscv_nsrl GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRL (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
-  def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
+  def : Pat<(riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
@@ -1974,14 +1970,11 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGprImm<riscv_psslai, PSSLAI_W, timm, v2i32>;
 
   // 32-bit logical shift left/right
-  def : Pat<(v2i32 (riscv_pshl GPR:$rs1, GPR:$rs2)),
-            (PSLL_WS GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(v2i32 (riscv_psrl GPR:$rs1, GPR:$rs2)),
-            (PSRL_WS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;
+  def : PatGprShiftMask<riscv_psrl, PSRL_WS, shiftMask32, v2i32>;
 
   // 32-bit arithmetic shift left/right
-  def : Pat<(v2i32 (riscv_psra GPR:$rs1, GPR:$rs2)),
-            (PSRA_WS GPR:$rs1, GPR:$rs2)>;
+  def : PatGprShiftMask<riscv_psra, PSRA_WS, shiftMask32, v2i32>;
 
   // splat pattern
   def : Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;

@@ -73,7 +73,7 @@ static uint32_t getMisExpectTolerance(const LLVMContext &Ctx) {
 static const Instruction *getInstCondition(const Instruction *I) {
   assert(I != nullptr && "MisExpect target Instruction cannot be nullptr");
   const Instruction *Ret = nullptr;
-  if (auto *B = dyn_cast<BranchInst>(I)) {
+  if (auto *B = dyn_cast<CondBrInst>(I)) {
     Ret = dyn_cast<Instruction>(B->getCondition());
   }
   // TODO: Find a way to resolve condition location for switches

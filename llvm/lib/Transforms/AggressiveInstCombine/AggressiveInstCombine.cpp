@@ -1320,7 +1320,7 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
         BasicBlock::Create(Ctx, "sub_" + Twine(I), BBCI->getParent(), BBTail));
   BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBTail);
 
-  cast<BranchInst>(BBCI->getTerminator())->setSuccessor(0, BBSubs[0]);
+  cast<UncondBrInst>(BBCI->getTerminator())->setSuccessor(BBSubs[0]);
 
   B.SetInsertPoint(BBNE);
   PHINode *Phi = B.CreatePHI(CI->getType(), N);
@@ -1337,7 +1337,7 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
     if (i < N - 1) {
-      BranchInst *CondBrInst = B.CreateCondBr(
+      CondBrInst *CondBrInst = B.CreateCondBr(
           B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)), BBNE,
           BBSubs[i + 1]);
 

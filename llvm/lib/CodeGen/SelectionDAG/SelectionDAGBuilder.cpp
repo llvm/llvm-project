@@ -2529,15 +2529,9 @@ static bool collectInstructionDeps(
 }
 
 bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
-    const FunctionLoweringInfo &FuncInfo, const BranchInst &I,
+    const FunctionLoweringInfo &FuncInfo, const CondBrInst &I,
     Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs,
     TargetLoweringBase::CondMergingParams Params) const {
-  if (I.getNumSuccessors() != 2)
-    return false;
-
-  if (!I.isConditional())
-    return false;
-
   if (Params.BaseCost < 0)
     return false;
 

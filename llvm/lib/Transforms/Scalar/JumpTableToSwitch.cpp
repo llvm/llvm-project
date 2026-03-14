@@ -181,7 +181,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
     // just some of the jump targets are taken (for the given profile).
     BranchWeights.push_back(FctID == 0U ? 0U
                                         : GuidToCounter.lookup_or(FctID, 0U));
-    BranchInst::Create(Tail, B);
+    UncondBrInst::Create(Tail, B);
     if (PHI)
       PHI->addIncoming(Call, B);
   }

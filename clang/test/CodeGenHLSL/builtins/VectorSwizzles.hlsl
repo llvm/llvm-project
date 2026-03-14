@@ -5,9 +5,9 @@
 // CHECK-LABEL: Single
 
 // Setup local vars.
-// CHECK: [[VecAddr:%.*]] = alloca <3 x i64>, align 32
+// CHECK: [[VecAddr:%.*]] = alloca <3 x i64>, align 8
 // CHECK-NEXT: [[AAddr:%.*]] = alloca i64, align 8
-// CHECK-NEXT: store <3 x i64> %vec, ptr [[VecAddr]], align 32
+// CHECK-NEXT: store <3 x i64> %vec, ptr [[VecAddr]], align 8
 // CHECK-NEXT: store i64 %a, ptr [[AAddr]], align 8
 
 // Update single element of the vector.
@@ -16,7 +16,7 @@
 // CHECK-NEXT: store i64 [[A]], ptr [[Vy]], align 8
 
 // Return.
-// CHECK-NEXT: [[RetVal:%.*]] = load <3 x i64>, ptr [[VecAddr]], align 32
+// CHECK-NEXT: [[RetVal:%.*]] = load <3 x i64>, ptr [[VecAddr]], align 8
 // CHECK-NEXT: ret <3 x i64> [[RetVal]]
 uint64_t3 Single(uint64_t3 vec, uint64_t a){
     vec.y = a;
@@ -26,10 +26,10 @@ uint64_t3 Single(uint64_t3 vec, uint64_t a){
 // CHECK-LABEL: Double
 
 // Setup local vars.
-// CHECK: [[VecAddr:%.*]] = alloca <3 x float>, align 16
+// CHECK: [[VecAddr:%.*]] = alloca <3 x float>, align 4
 // CHECK-NEXT: [[AAddr:%.*]] = alloca float, align 4
 // CHECK-NEXT: [[BAddr:%.*]] = alloca float, align 4
-// CHECK-NEXT: store <3 x float> %vec, ptr [[VecAddr]], align 16
+// CHECK-NEXT: store <3 x float> %vec, ptr [[VecAddr]], align 4
 // CHECK-NEXT: store float %a, ptr [[AAddr]], align 4
 // CHECK-NEXT: store float %b, ptr [[BAddr]], align 4
 
@@ -48,7 +48,7 @@ uint64_t3 Single(uint64_t3 vec, uint64_t a){
 // CHECK-NEXT: store float [[TmpY]], ptr [[VecY]], align 4
 
 // Return.
-// CHECK-NEXT: [[RetVal:%.*]] = load <3 x float>, ptr [[VecAddr]], align 16
+// CHECK-NEXT: [[RetVal:%.*]] = load <3 x float>, ptr [[VecAddr]], align 4
 // CHECK-NEXT: ret <3 x float> [[RetVal]]
 float3 Double(float3 vec, float a, float b) {
     vec.zy = {a, b};
@@ -58,10 +58,10 @@ float3 Double(float3 vec, float a, float b) {
 // CHECK-LABEL: Shuffle
 
 // Setup local vars.
-// CHECK: [[VecAddr:%.*]] = alloca <4 x half>, align 8
+// CHECK: [[VecAddr:%.*]] = alloca <4 x half>, align 2
 // CHECK-NEXT: [[AAddr:%.*]] = alloca half, align 2
 // CHECK-NEXT: [[BAddr:%.*]] = alloca half, align 2
-// CHECK-NEXT: store <4 x half> %vec, ptr [[VecAddr]], align 8
+// CHECK-NEXT: store <4 x half> %vec, ptr [[VecAddr]], align 2
 // CHECK-NEXT: store half %a, ptr [[AAddr]], align 2
 // CHECK-NEXT: store half %b, ptr [[BAddr]], align 2
 
@@ -88,7 +88,7 @@ float3 Double(float3 vec, float a, float b) {
 // CHECK-NEXT: store half [[TmpW]], ptr [[VecY]], align 2
 
 // Return.
-// CHECK-NEXT: [[RetVal:%.*]] = load <4 x half>, ptr [[VecAddr]], align 8
+// CHECK-NEXT: [[RetVal:%.*]] = load <4 x half>, ptr [[VecAddr]], align 2
 // CHECK-NEXT: ret <4 x half> [[RetVal]]
 half4 Shuffle(half4 vec, half a, half b) {
     vec.zwxy = {a, b, 13.74, a};

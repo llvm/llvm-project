@@ -359,9 +359,9 @@ void vla_subscript_expr() {
 // CIR: cir.store {{.*}} %[[A_VAL]], %[[COMPOUND_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %[[COMPOUND_ADDR]] : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[COMPOUND_PTR:.*]] = cir.ptr_stride %[[TMP_COMPOUND]], %[[CONST_0]] : (!cir.ptr<!cir.ptr<!s32i>>, !s32i) -> !cir.ptr<!cir.ptr<!s32i>>
-// CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %10 : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[TMP_COMPOUND:.*]] = cir.load {{.*}} %[[COMPOUND_PTR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !u64i
-// CIR: %[[VLA_IDX:.*]] = cir.mul nsw %[[CONST_1]], %7 : !u64i
+// CIR: %[[VLA_IDX:.*]] = cir.mul nsw %[[CONST_1]], %[[TMP_N]] : !u64i
 // CIR: %[[VLA_A_PTR:.*]] = cir.ptr_stride %[[TMP_COMPOUND]], %[[VLA_IDX]] : (!cir.ptr<!s32i>, !u64i) -> !cir.ptr<!s32i>
 // CIR: %[[ELEM_5_PTR:.*]] = cir.ptr_stride %[[VLA_A_PTR]], %[[CONST_5]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_0_VAL]], %[[ELEM_5_PTR]] : !s32i, !cir.ptr<!s32i>

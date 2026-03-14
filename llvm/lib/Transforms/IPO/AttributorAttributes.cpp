@@ -664,11 +664,10 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   if (S.isAtFixpoint())
     return;
 
-  SmallVector<const BranchInst *, 4> BrInsts;
+  SmallVector<const CondBrInst *, 4> BrInsts;
   auto Pred = [&](const Instruction *I) {
-    if (const BranchInst *Br = dyn_cast<BranchInst>(I))
-      if (Br->isConditional())
-        BrInsts.push_back(Br);
+    if (const CondBrInst *Br = dyn_cast<CondBrInst>(I))
+      BrInsts.push_back(Br);
     return true;
   };
 
@@ -705,7 +704,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   // }
 
   Explorer->checkForAllContext(&CtxI, Pred);
-  for (const BranchInst *Br : BrInsts) {
+  for (const CondBrInst *Br : BrInsts) {
     StateType ParentState;
 
     // The known state of the parent state is a conjunction of children's
@@ -4698,26 +4697,30 @@ identifyAliveSuccessors(Attributor &A, const InvokeInst &II,
 }
 
 static bool
-identifyAliveSuccessors(Attributor &A, const BranchInst &BI,
+identifyAliveSuccessors(Attributor &, const UncondBrInst &BI,
+                        AbstractAttribute &,
+                        SmallVectorImpl<const Instruction *> &AliveSuccessors) {
+  AliveSuccessors.push_back(&BI.getSuccessor()->front());
+  return false;
+}
+
+static bool
+identifyAliveSuccessors(Attributor &A, const CondBrInst &BI,
                         AbstractAttribute &AA,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   bool UsedAssumedInformation = false;
-  if (BI.getNumSuccessors() == 1) {
-    AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
+  std::optional<Constant *> C =
+      A.getAssumedConstant(*BI.getCondition(), AA, UsedAssumedInformation);
+  if (!C || isa_and_nonnull<UndefValue>(*C)) {
+    // No value yet, assume both edges are dead.
+  } else if (isa_and_nonnull<ConstantInt>(*C)) {
+    const BasicBlock *SuccBB =
+        BI.getSuccessor(1 - cast<ConstantInt>(*C)->getValue().getZExtValue());
+    AliveSuccessors.push_back(&SuccBB->front());
   } else {
-    std::optional<Constant *> C =
-        A.getAssumedConstant(*BI.getCondition(), AA, UsedAssumedInformation);
-    if (!C || isa_and_nonnull<UndefValue>(*C)) {
-      // No value yet, assume both edges are dead.
-    } else if (isa_and_nonnull<ConstantInt>(*C)) {
-      const BasicBlock *SuccBB =
-          BI.getSuccessor(1 - cast<ConstantInt>(*C)->getValue().getZExtValue());
-      AliveSuccessors.push_back(&SuccBB->front());
-    } else {
-      AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
-      AliveSuccessors.push_back(&BI.getSuccessor(1)->front());
-      UsedAssumedInformation = false;
-    }
+    AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
+    AliveSuccessors.push_back(&BI.getSuccessor(1)->front());
+    UsedAssumedInformation = false;
   }
   return UsedAssumedInformation;
 }
@@ -4831,8 +4834,11 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
                                                        *this, AliveSuccessors);
       break;
     case Instruction::UncondBr:
+      UsedAssumedInformation = identifyAliveSuccessors(
+          A, cast<UncondBrInst>(*I), *this, AliveSuccessors);
+      break;
     case Instruction::CondBr:
-      UsedAssumedInformation = identifyAliveSuccessors(A, cast<BranchInst>(*I),
+      UsedAssumedInformation = identifyAliveSuccessors(A, cast<CondBrInst>(*I),
                                                        *this, AliveSuccessors);
       break;
     case Instruction::Switch:
@@ -6912,7 +6918,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       if (auto *II = dyn_cast<InvokeInst>(AI.CB)) {
         auto *NBB = II->getNormalDest();
-        BranchInst::Create(NBB, AI.CB->getParent());
+        UncondBrInst::Create(NBB, AI.CB->getParent());
         A.deleteAfterManifest(*AI.CB);
       } else {
         A.deleteAfterManifest(*AI.CB);
@@ -12520,13 +12526,13 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       BasicBlock *CBBB = CB->getParent();
       A.registerManifestAddedBasicBlock(*ThenTI->getParent());
       A.registerManifestAddedBasicBlock(*IP->getParent());
-      auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
+      auto *SplitTI = cast<CondBrInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
       if (&*IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
         A.registerManifestAddedBasicBlock(*ElseBB);
-        IP = BranchInst::Create(CBBB, ElseBB)->getIterator();
+        IP = UncondBrInst::Create(CBBB, ElseBB)->getIterator();
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {
         ElseBB = IP->getParent();

@@ -526,16 +526,13 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     } else if (CurInst->isTerminator()) {
       LLVM_DEBUG(dbgs() << "Found a terminator instruction.\n");
 
-      if (BranchInst *BI = dyn_cast<BranchInst>(CurInst)) {
-        if (BI->isUnconditional()) {
-          NextBB = BI->getSuccessor(0);
-        } else {
-          ConstantInt *Cond =
-            dyn_cast<ConstantInt>(getVal(BI->getCondition()));
-          if (!Cond) return false;  // Cannot determine.
-
-          NextBB = BI->getSuccessor(!Cond->getZExtValue());
-        }
+      if (UncondBrInst *BI = dyn_cast<UncondBrInst>(CurInst)) {
+        NextBB = BI->getSuccessor(0);
+      } else if (CondBrInst *BI = dyn_cast<CondBrInst>(CurInst)) {
+        ConstantInt *Cond = dyn_cast<ConstantInt>(getVal(BI->getCondition()));
+        if (!Cond)
+          return false; // Cannot determine.
+        NextBB = BI->getSuccessor(!Cond->getZExtValue());
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(CurInst)) {
         ConstantInt *Val =
           dyn_cast<ConstantInt>(getVal(SI->getCondition()));

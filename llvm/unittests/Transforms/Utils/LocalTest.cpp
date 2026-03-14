@@ -39,10 +39,10 @@ TEST(Local, RecursivelyDeleteDeadPHINodes) {
 
   builder.SetInsertPoint(bb0);
   PHINode    *phi = builder.CreatePHI(Type::getInt32Ty(C), 2);
-  BranchInst *br0 = builder.CreateCondBr(builder.getTrue(), bb0, bb1);
+  CondBrInst *br0 = builder.CreateCondBr(builder.getTrue(), bb0, bb1);
 
   builder.SetInsertPoint(bb1);
-  BranchInst *br1 = builder.CreateBr(bb0);
+  UncondBrInst *br1 = builder.CreateBr(bb0);
 
   phi->addIncoming(phi, bb0);
   phi->addIncoming(phi, bb1);
@@ -80,7 +80,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
                        GlobalValue::ExternalLinkage, "F"));
   BasicBlock *Entry(BasicBlock::Create(C, "", F.get()));
   BasicBlock *BB(BasicBlock::Create(C, "", F.get()));
-  BranchInst::Create(BB, Entry);
+  UncondBrInst::Create(BB, Entry);
 
   B.SetInsertPoint(BB);
 
@@ -100,7 +100,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
 
   P1->addIncoming(P3, BB);
   P2->addIncoming(P4, BB);
-  BranchInst::Create(BB, BB);
+  UncondBrInst::Create(BB, BB);
 
   // Verify that we can eliminate PHIs that become duplicates after chaning PHIs
   // downstream.
@@ -219,8 +219,7 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
       BasicBlock *SinglePred = BB->getSinglePredecessor();
       if (!SinglePred || SinglePred == BB || BB->hasAddressTaken())
         continue;
-      BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
-      if (Term && !Term->isConditional())
+      if (isa<UncondBrInst>(SinglePred->getTerminator()))
         MergeBasicBlockIntoOnlyPred(BB, &DTU);
     }
     if (DTU.hasDomTree()) {

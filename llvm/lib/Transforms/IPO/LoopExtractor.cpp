@@ -187,10 +187,8 @@ bool LoopExtractor::runOnFunction(Function &F) {
     bool ShouldExtractLoop = false;
 
     // Extract the loop if the entry block doesn't branch to the loop header.
-    Instruction *EntryTI = F.getEntryBlock().getTerminator();
-    if (!isa<BranchInst>(EntryTI) ||
-        !cast<BranchInst>(EntryTI)->isUnconditional() ||
-        EntryTI->getSuccessor(0) != TLL->getHeader()) {
+    auto *EntryTI = dyn_cast<UncondBrInst>(F.getEntryBlock().getTerminator());
+    if (EntryTI && EntryTI->getSuccessor() != TLL->getHeader()) {
       ShouldExtractLoop = true;
     } else {
       // Check to see if any exits from the loop are more than just return

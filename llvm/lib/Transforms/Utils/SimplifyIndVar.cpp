@@ -2231,8 +2231,8 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto *TI = BB->getTerminator();
     UpdateRangeFromGuards(TI);
 
-    auto *BI = dyn_cast<BranchInst>(TI);
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(TI);
+    if (!BI)
       continue;
 
     auto *TrueSuccessor = BI->getSuccessor(0);

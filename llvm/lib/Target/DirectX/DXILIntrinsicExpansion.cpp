@@ -231,6 +231,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::matrix_multiply:
+  case Intrinsic::matrix_transpose:
     return true;
   case Intrinsic::dx_resource_load_rawbuffer:
     return resourceAccessNeeds64BitExpansion(
@@ -1135,6 +1136,23 @@ static Value *expandMatrixMultiply(CallInst *Orig) {
   return Result;
 }
 
+// Expand llvm.matrix.transpose as a shufflevector that permutes elements
+// from column-major source to column-major transposed layout.
+// Element (r,c) at index c*Rows + r moves to index r*Cols + c.
+static Value *expandMatrixTranspose(CallInst *Orig) {
+  Value *Mat = Orig->getArgOperand(0);
+  unsigned Rows = cast<ConstantInt>(Orig->getArgOperand(1))->getZExtValue();
+  unsigned Cols = cast<ConstantInt>(Orig->getArgOperand(2))->getZExtValue();
+
+  unsigned NumElts = Rows * Cols;
+  SmallVector<int, 16> Mask(NumElts);
+  for (unsigned I = 0; I < NumElts; ++I)
+    Mask[I] = (I % Cols) * Rows + (I / Cols);
+
+  IRBuilder<> Builder(Orig);
+  return Builder.CreateShuffleVector(Mat, Mask);
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -1238,6 +1256,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::matrix_multiply:
     Result = expandMatrixMultiply(Orig);
+    break;
+  case Intrinsic::matrix_transpose:
+    Result = expandMatrixTranspose(Orig);
     break;
   }
   if (Result) {

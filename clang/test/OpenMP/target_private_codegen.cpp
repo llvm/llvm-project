@@ -88,11 +88,11 @@ int foo(int n) {
   }
   // make sure that private variables are generated in all cases and that we use those instances for operations inside the
   // target region
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}} noundef [[VLA3:%.+]])
-  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}} noundef [[VLA3:%.+]], ptr {{[^,]+}})
   // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR4:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK:  [[A:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[B:%.+]] = alloca [10 x float],
   // TCHECK:  [[SSTACK:%.+]] = alloca ptr,
@@ -212,11 +212,11 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr noundef [[TH:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]])
-  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
+  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr noundef [[TH:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], ptr {{[^,]+}})
   // TCHECK: [[TH_ADDR:%.+]] = alloca ptr,
   // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK: [[VLA_ADDR2:%.+]] = alloca i{{[0-9]+}},
+  // TCHECK:  [[DYN_PTR:%.+]] = alloca ptr
   // TCHECK: [[B:%.+]] = alloca i{{[0-9]+}},
   // TCHECK: [[SSTACK:%.+]] = alloca ptr,
   // TCHECK: store ptr [[TH]], ptr [[TH_ADDR]],

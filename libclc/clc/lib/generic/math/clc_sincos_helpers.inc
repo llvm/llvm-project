@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#pragma OPENCL FP_CONTRACT OFF
+
 _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_sinf_piby4(__CLC_FLOATN x,
                                                      __CLC_FLOATN y) {
   // Taylor series for sin(x) is x - x^3/3! + x^5/5! - x^7/7! ...

@@ -403,7 +403,7 @@ bool setLoopProbability(Loop *L, BranchProbability P);
 /// - The probability \c P that control flows from \p B to its first target
 ///   label such that `1 - P` is the probability of control flowing to its
 ///   second target label, or vice-versa if \p ForFirstTarget is false.
-BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
+BranchProbability getBranchProbability(CondBrInst *B, bool ForFirstTarget);
 
 /// Calculates the edge probability from Src to Dst.
 /// Dst has to be a successor to Src.
@@ -416,11 +416,8 @@ BranchProbability getBranchProbability(BasicBlock *Src, BasicBlock *Dst);
 
 /// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
 /// the probabilities of control flowing to its first and second target labels,
-/// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if
-/// the implementation cannot set the probability (e.g., \p B must have exactly
-/// two target labels, so it must be a conditional branch).  Otherwise, return
-/// true.
-bool setBranchProbability(BranchInst *B, BranchProbability P,
+/// respectively, or vice-versa if \p ForFirstTarget is false.
+void setBranchProbability(CondBrInst *B, BranchProbability P,
                           bool ForFirstTarget);
 
 /// Check inner loop (L) backedge count is known to be invariant on all

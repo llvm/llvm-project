@@ -164,11 +164,14 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 
 // First shuffle + if ladder for row 0
 // CHECK: %[[ROW0_INIT:.*]] = vector.shuffle %[[PASS_CAST]], %[[PASS_CAST]] [0, 1, 2]
+// CHECK: %[[DIM0:.*]] = memref.dim %[[BASE]], %[[C0]]
+// CHECK: %[[DIM1:.*]] = memref.dim %[[BASE]], %[[C1]]
 // CHECK: %[[MASK_0_0:.*]] = vector.extract %[[MASK]][0, 0]
 // CHECK: %[[IDX_0_0:.*]] = vector.extract %[[IDX]][0, 0]
 // CHECK: %[[OFF_0_0:.*]] = arith.addi %[[IDX_0_0]], %[[C1]]
+// CHECK: %[[DL_0_0:.*]]:2 = affine.delinearize_index %[[OFF_0_0]] into (%[[DIM0]], %[[DIM1]])
 // CHECK: %[[IF_0_0:.*]] = scf.if %[[MASK_0_0]] -> (vector<3xf32>) {
-// CHECK:   %[[LOAD_0_0:.*]] = vector.load %[[BASE]][%[[C0]], %[[OFF_0_0]]] : memref<?x?xf32>, vector<1xf32>
+// CHECK:   %[[LOAD_0_0:.*]] = vector.load %[[BASE]][%[[DL_0_0]]#0, %[[DL_0_0]]#1] : memref<?x?xf32>, vector<1xf32>
 // CHECK:   %[[ELEM_0_0:.*]] = vector.extract %[[LOAD_0_0]][0] : f32
 // CHECK:   %[[INS_0_0:.*]] = vector.insert %[[ELEM_0_0]], %[[ROW0_INIT]] [0] : f32 into vector<3xf32>
 // CHECK:   scf.yield %[[INS_0_0]] : vector<3xf32>
@@ -179,6 +182,7 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 // CHECK: %[[MASK_0_1:.*]] = vector.extract %[[MASK]][0, 1]
 // CHECK: %[[IDX_0_1:.*]] = vector.extract %[[IDX]][0, 1]
 // CHECK: %[[OFF_0_1:.*]] = arith.addi %[[IDX_0_1]], %[[C1]]
+// CHECK: %[[DL_0_1:.*]]:2 = affine.delinearize_index %[[OFF_0_1]] into (%[[DIM0]], %[[DIM1]])
 // CHECK: %[[IF_0_1:.*]] = scf.if %[[MASK_0_1]] -> (vector<3xf32>)
 
 // … (similar checks for the rest of row 0, then row 1)
@@ -190,6 +194,7 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 // CHECK: %[[MASK_1_0:.*]] = vector.extract %[[MASK]][1, 0]
 // CHECK: %[[IDX_1_0:.*]] = vector.extract %[[IDX]][1, 0]
 // CHECK: %[[OFF_1_0:.*]] = arith.addi %[[IDX_1_0]], %[[C1]]
+// CHECK: %[[DL_1_0:.*]]:2 = affine.delinearize_index %[[OFF_1_0]] into
 // CHECK: %[[IF_1_0:.*]] = scf.if %[[MASK_1_0]] -> (vector<3xf32>)
 
 // … (similar checks for remaining row 1 inserts)

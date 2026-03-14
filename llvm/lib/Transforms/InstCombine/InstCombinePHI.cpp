@@ -1312,10 +1312,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     SuccForValue[C] = Succ;
     ++SuccCount[Succ];
   };
-  if (auto *BI = dyn_cast<BranchInst>(IDom->getTerminator())) {
-    if (BI->isUnconditional())
-      return nullptr;
-
+  if (auto *BI = dyn_cast<CondBrInst>(IDom->getTerminator())) {
     Cond = BI->getCondition();
     AddSucc(ConstantInt::getTrue(Context), BI->getSuccessor(0));
     AddSucc(ConstantInt::getFalse(Context), BI->getSuccessor(1));

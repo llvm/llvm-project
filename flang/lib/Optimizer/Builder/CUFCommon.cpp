@@ -50,6 +50,8 @@ bool cuf::isCUDADeviceContext(mlir::Region &region,
     return true;
   if (region.getParentOfType<mlir::acc::ComputeRegionOpInterface>())
     return true;
+  if (region.getParentOfType<mlir::acc::HostDataOp>())
+    return true;
   if (auto funcOp = region.getParentOfType<mlir::func::FuncOp>()) {
     if (auto cudaProcAttr =
             funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(

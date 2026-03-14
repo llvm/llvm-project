@@ -250,11 +250,19 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   lldb::addr_t vtable_address =
       process->ReadPointerFromMemory(member_f_pointer_value, status);
 
+  ABISP abi_sp = process->GetABI();
+  if (abi_sp)
+    vtable_address = abi_sp->FixCodeAddress(vtable_address);
+
   if (status.Fail())
     return optional_info;
 
   lldb::addr_t vtable_address_first_entry =
       process->ReadPointerFromMemory(vtable_address + address_size, status);
+
+  if (abi_sp)
+    vtable_address_first_entry =
+        abi_sp->FixCodeAddress(vtable_address_first_entry);
 
   if (status.Fail())
     return optional_info;
@@ -264,6 +272,10 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   // need it.
   lldb::addr_t possible_function_address =
       process->ReadPointerFromMemory(address_after_vtable, status);
+
+  if (abi_sp)
+    possible_function_address =
+        abi_sp->FixCodeAddress(possible_function_address);
 
   if (status.Fail())
     return optional_info;

@@ -1352,11 +1352,24 @@ void Instruction::setSuccessor(unsigned idx, BasicBlock *B) {
   llvm_unreachable("not a terminator");
 }
 
+iterator_range<Instruction::const_succ_iterator>
+Instruction::successors() const {
+  switch (getOpcode()) {
+#define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
+  case Instruction::OPC:                                                       \
+    return static_cast<const CLASS *>(this)->successors();
+#include "llvm/IR/Instruction.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a terminator");
+}
+
 void Instruction::replaceSuccessorWith(BasicBlock *OldBB, BasicBlock *NewBB) {
-  for (unsigned Idx = 0, NumSuccessors = Instruction::getNumSuccessors();
-       Idx != NumSuccessors; ++Idx)
-    if (getSuccessor(Idx) == OldBB)
-      setSuccessor(Idx, NewBB);
+  auto Succs = successors();
+  for (auto I = Succs.begin(), E = Succs.end(); I != E; ++I)
+    if (*I == OldBB)
+      I.getUse()->set(NewBB);
 }
 
 Instruction *Instruction::cloneImpl() const {

@@ -30,9 +30,13 @@ void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
 }
 
 void ExpireFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
-                      const OriginManager &) const {
+                      const OriginManager &OM) const {
   OS << "Expire (";
   LM.getLoan(getLoanID())->dump(OS);
+  if (auto OID = getOriginID()) {
+    OS << ", Origin: ";
+    OM.dump(*OID, OS);
+  }
   OS << ")\n";
 }
 

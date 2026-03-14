@@ -1,6 +1,6 @@
 ; RUN: llc < %s -asm-verbose=false \
-; RUN:   -fast-isel -fast-isel-abort=1 -verify-machineinstrs \
-; RUN:   -wasm-disable-explicit-locals -wasm-keep-registers \
+; RUN:   -fast-isel -fast-isel-abort=3 -verify-machineinstrs \
+; RUN:   -wasm-disable-explicit-locals -wasm-keep-registers -O0 \
 ; RUN:   | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
@@ -75,4 +75,19 @@ bb:
   %tmp = getelementptr i64, ptr %p, i32 1
   %tmp2 = load i64, ptr %tmp, align 8
   ret i64 %tmp2
+}
+
+; CHECK-LABEL: br:
+; CHECK: br_if
+; CHECK: br
+; CHECK: f32.const $push{{[0-9]+}}=, 0x1.4p1{{$}}
+define float @br(i32 %a) {
+  %cond = icmp eq i32 %a, 0
+  br i1 %cond, label %block1, label %block2
+block1:
+  br label %block3
+block2:
+  br label %block3
+block3:
+  ret float 2.5
 }

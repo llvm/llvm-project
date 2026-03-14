@@ -75,7 +75,7 @@ static bool subWithOverflow(APInt &Result, const APInt &In1, const APInt &In2,
 /// branch on sign bit comparison.
 static bool hasBranchUse(ICmpInst &I) {
   for (auto *U : I.users())
-    if (isa<BranchInst>(U))
+    if (isa<CondBrInst>(U))
       return true;
   return false;
 }
@@ -1419,7 +1419,7 @@ Instruction *InstCombinerImpl::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     return nullptr;
   };
 
-  for (BranchInst *BI : DC.conditionsFor(X)) {
+  for (CondBrInst *BI : DC.conditionsFor(X)) {
     CmpPredicate DomPred;
     const APInt *DomC;
     if (!match(BI->getCondition(),
@@ -6836,8 +6836,8 @@ static bool isChainSelectCmpBranch(const SelectInst *SI) {
   const BasicBlock *BB = SI->getParent();
   if (!BB)
     return false;
-  auto *BI = dyn_cast_or_null<BranchInst>(BB->getTerminator());
-  if (!BI || BI->getNumSuccessors() != 2)
+  auto *BI = dyn_cast_or_null<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
   auto *IC = dyn_cast<ICmpInst>(BI->getCondition());
   if (!IC || (IC->getOperand(0) != SI && IC->getOperand(1) != SI))

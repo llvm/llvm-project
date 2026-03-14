@@ -153,6 +153,21 @@ static bool MakeRegisterBasedLocationExpressionInternal(
   return true;
 }
 
+/// *(reg + indir_offset) + offset
+static bool MakeRegisterBasedIndirectLocationExpressionInternal(
+    Stream &stream, llvm::codeview::RegisterId reg, RegisterKind &register_kind,
+    int32_t indir_offset, int32_t offset, lldb::ModuleSP module) {
+  if (!MakeRegisterBasedLocationExpressionInternal(stream, reg, register_kind,
+                                                   indir_offset, module))
+    return false;
+
+  stream.PutHex8(llvm::dwarf::DW_OP_deref);
+  stream.PutHex8(llvm::dwarf::DW_OP_plus_uconst);
+  stream.PutSLEB128(offset);
+
+  return true;
+}
+
 static DWARFExpression MakeRegisterBasedLocationExpressionInternal(
     llvm::codeview::RegisterId reg, std::optional<int32_t> relative_offset,
     lldb::ModuleSP module) {
@@ -171,6 +186,16 @@ DWARFExpression lldb_private::npdb::MakeEnregisteredLocationExpression(
 DWARFExpression lldb_private::npdb::MakeRegRelLocationExpression(
     llvm::codeview::RegisterId reg, int32_t offset, lldb::ModuleSP module) {
   return MakeRegisterBasedLocationExpressionInternal(reg, offset, module);
+}
+
+DWARFExpression lldb_private::npdb::MakeRegRelIndirLocationExpression(
+    llvm::codeview::RegisterId reg, int32_t offset, int32_t offset_in_udt,
+    lldb::ModuleSP module) {
+  return MakeLocationExpressionInternal(
+      module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
+        return MakeRegisterBasedIndirectLocationExpressionInternal(
+            stream, reg, register_kind, offset, offset_in_udt, module);
+      });
 }
 
 static bool EmitVFrameEvaluationDWARFExpression(

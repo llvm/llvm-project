@@ -1646,7 +1646,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   BasicBlock *OrigEntry = Entry->getNextNode();
   BasicBlock *SetjmpDispatchBB =
       BasicBlock::Create(C, "setjmp.dispatch", &F, OrigEntry);
-  cast<BranchInst>(Entry->getTerminator())->setSuccessor(0, SetjmpDispatchBB);
+  cast<UncondBrInst>(Entry->getTerminator())->setSuccessor(SetjmpDispatchBB);
 
   // Create catch.dispatch.longjmp BB and a catchswitch instruction
   BasicBlock *CatchDispatchLongjmpBB =

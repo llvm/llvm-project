@@ -415,7 +415,7 @@ public:
         RecordOffset(RecordOffset) {}
 
   TypeIndex Index;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -943,7 +943,7 @@ public:
 
   uint32_t Offset = 0;
   TypeIndex Type;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -963,7 +963,7 @@ public:
   uint32_t Offset = 0;
   TypeIndex Type;
   uint32_t OffsetInUdt = 0;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;

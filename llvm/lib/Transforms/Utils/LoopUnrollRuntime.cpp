@@ -376,7 +376,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(1, Count - 1);
   }
-  BranchInst *RemainderLoopGuard =
+  CondBrInst *RemainderLoopGuard =
       B.CreateCondBr(BrLoopExit, EpilogPreHeader, Exit, BranchWeights);
   if (!OriginalLoopProb.isUnknown()) {
     setBranchProbability(RemainderLoopGuard,
@@ -454,7 +454,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
       // Subtle: NewIter can be 0 if we wrapped when computing the trip count,
       // thus we must compare the post-increment (wrapping) value.
       BasicBlock *FirstLoopBB = cast<BasicBlock>(VMap[Header]);
-      BranchInst *LatchBR = cast<BranchInst>(NewBB->getTerminator());
+      CondBrInst *LatchBR = cast<CondBrInst>(NewBB->getTerminator());
       IRBuilder<> Builder(LatchBR);
       PHINode *NewIdx =
           PHINode::Create(NewIter->getType(), 2, suffix + ".iter");
@@ -484,7 +484,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
         MDBuilder MDB(Builder.getContext());
         BranchWeights = MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
       }
-      BranchInst *RemainderLoopLatch =
+      CondBrInst *RemainderLoopLatch =
           Builder.CreateCondBr(IdxCmp, FirstLoopBB, InsertBot, BranchWeights);
       if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
         // Compute the total frequency of the original loop body from the
@@ -693,9 +693,9 @@ bool llvm::UnrollRuntimeLoopRemainder(
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *Header = L->getHeader();
 
-  BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
+  CondBrInst *LatchBR = dyn_cast<CondBrInst>(Latch->getTerminator());
 
-  if (!LatchBR || LatchBR->isUnconditional()) {
+  if (!LatchBR) {
     // The loop-rotate pass can be helpful to avoid this in many cases.
     LLVM_DEBUG(
         dbgs()
@@ -770,7 +770,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   }
 
   BasicBlock *PreHeader = L->getLoopPreheader();
-  BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
+  Instruction *PreHeaderBR = PreHeader->getTerminator();
   SCEVExpander Expander(*SE, "loop-unroll");
   if (!AllowExpensiveTripCount &&
       Expander.isHighCostExpansion(TripCountSC, L, SCEVExpansionBudget, TTI,
@@ -861,7 +861,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // in epilog case and around prolog remainder loop in prolog case.
   // Compute the number of extra iterations required, which is:
   //  extra iterations = run-time trip count % loop unroll factor
-  PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
+  PreHeaderBR = PreHeader->getTerminator();
   IRBuilder<> B(PreHeaderBR);
   Value *TripCount = Expander.expandCodeFor(TripCountSC, TripCountSC->getType(),
                                             PreHeaderBR);
@@ -902,7 +902,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     MDBuilder MDB(B.getContext());
     BranchWeights = MDB.createBranchWeights(EpilogHeaderWeights);
   }
-  BranchInst *UnrollingLoopGuard =
+  CondBrInst *UnrollingLoopGuard =
       B.CreateCondBr(BranchVal, RemainderLoop, UnrollingLoop, BranchWeights);
   if (!OriginalLoopProb.isUnknown() && UseEpilogRemainder) {
     // The original loop's first iteration always happens.  Compute the
@@ -1050,7 +1050,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // thus we must compare the post-increment (wrapping) value.
     IRBuilder<> B2(NewPreHeader->getTerminator());
     Value *TestVal = B2.CreateSub(TripCount, ModVal, "unroll_iter");
-    BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
+    CondBrInst *LatchBR = cast<CondBrInst>(Latch->getTerminator());
     PHINode *NewIdx = PHINode::Create(TestVal->getType(), 2, "niter");
     NewIdx->insertBefore(Header->getFirstNonPHIIt());
     B2.SetInsertPoint(LatchBR);

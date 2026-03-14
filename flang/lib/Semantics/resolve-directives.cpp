@@ -1802,7 +1802,8 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
   if (name.symbol && WithinConstruct()) {
     const Symbol &symbol{name.symbol->GetUltimate()};
     if (!symbol.owner().IsDerivedType() && !symbol.has<ProcEntityDetails>() &&
-        !symbol.has<SubprogramDetails>() && !IsObjectWithVisibleDSA(symbol)) {
+        !symbol.has<SubprogramDetails>() && !IsObjectWithVisibleDSA(symbol) &&
+        !symbol.has<AssocEntityDetails>()) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (&symbol != found) {
           // adjust the symbol within the region

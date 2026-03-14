@@ -2336,14 +2336,15 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     }
   } break;
   case Instruction::UncondBr:
+    Code = bitc::FUNC_CODE_INST_BR;
+    Vals.push_back(VE.getValueID(cast<UncondBrInst>(I).getSuccessor()));
+    break;
   case Instruction::CondBr: {
     Code = bitc::FUNC_CODE_INST_BR;
-    const BranchInst &II = cast<BranchInst>(I);
+    const CondBrInst &II = cast<CondBrInst>(I);
     Vals.push_back(VE.getValueID(II.getSuccessor(0)));
-    if (II.isConditional()) {
-      Vals.push_back(VE.getValueID(II.getSuccessor(1)));
-      pushValue(II.getCondition(), InstID, Vals);
-    }
+    Vals.push_back(VE.getValueID(II.getSuccessor(1)));
+    pushValue(II.getCondition(), InstID, Vals);
   } break;
   case Instruction::Switch: {
     Code = bitc::FUNC_CODE_INST_SWITCH;

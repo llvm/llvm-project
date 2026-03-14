@@ -231,6 +231,7 @@ static bool isLocalVariableType(SymbolKind K) {
   switch (K) {
   case S_REGISTER:
   case S_REGREL32:
+  case S_REGREL32_INDIR:
   case S_LOCAL:
     return true;
   default:
@@ -1137,6 +1138,14 @@ void PdbAstBuilderClang::CreateFunctionParameters(
     case S_REGREL32: {
       RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
       cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
+      param_type = reg.Type;
+      param_name = reg.Name;
+      break;
+    }
+    case S_REGREL32_INDIR: {
+      RegRelativeIndirSym reg(SymbolRecordKind::RegRelativeIndirSym);
+      cantFail(
+          SymbolDeserializer::deserializeAs<RegRelativeIndirSym>(sym, reg));
       param_type = reg.Type;
       param_name = reg.Name;
       break;
