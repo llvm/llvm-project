@@ -54,24 +54,24 @@ private:
 
   // use a union instead of a plain `void*` to avoid dropping const qualifiers and casting function pointers to data
   // pointers
+  // todo: libstdc++ does not support volatile objects. shall we support it? the standard does not say it should not be supported
   union __storage_t {
-    void* __obj_ptr;
-    void const* __obj_const_ptr;
-    void (*__fn_ptr)();
+    void* __obj_ptr_;
+    void const* __obj_const_ptr_;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t() noexcept : __obj_ptr(nullptr) {}
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t() noexcept : __obj_ptr_(nullptr) {}
 
     template <class _Tp>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __storage_t(_Tp* __ptr) noexcept {
       if constexpr (is_object_v<_Tp>) {
         if constexpr (is_const_v<_Tp>) {
-          __obj_const_ptr = __ptr;
+          __obj_const_ptr_ = __ptr;
         } else {
-          __obj_ptr = __ptr;
+          __obj_ptr_ = __ptr;
         }
       } else {
         static_assert(is_function_v<_Tp>);
-        __fn_ptr = reinterpret_cast<void (*)()>(__ptr);
+        __obj_ptr_ = reinterpret_cast<void*>(__ptr);
       }
     }
   };
@@ -80,13 +80,13 @@ private:
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __get(__storage_t __storage) {
     if constexpr (is_object_v<_Tp>) {
       if constexpr (is_const_v<_Tp>) {
-        return static_cast<_Tp*>(__storage.__obj_const_ptr);
+        return static_cast<_Tp*>(__storage.__obj_const_ptr_);
       } else {
-        return static_cast<_Tp*>(__storage.__obj_ptr);
+        return static_cast<_Tp*>(__storage.__obj_ptr_);
       }
     } else {
       static_assert(is_function_v<_Tp>);
-      return reinterpret_cast<_Tp*>(__storage.__fn_ptr);
+      return reinterpret_cast<_Tp*>(__storage.__obj_ptr_);
     }
   }
 
@@ -142,8 +142,8 @@ public:
 
   template <auto _Fn, class _Tp>
     requires __is_invocable_using<const decltype(_Fn)&, _LIBCPP_FUNCTION_REF_CV _Tp*>
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
-      : __storage_(__obj_ptr),
+  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr_) noexcept
+      : __storage_(__obj_ptr_),
         __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {
           auto __obj = __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
           return std::invoke_r<_Rp>(_Fn, __obj, std::forward<_ArgTypes>(__args)...);
@@ -153,7 +153,7 @@ public:
     }
 
     if constexpr (is_member_pointer_v<decltype(_Fn)>) {
-      _LIBCPP_ASSERT_UNCATEGORIZED(__obj_ptr != nullptr, "the object pointer should not be a nullptr");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__obj_ptr_ != nullptr, "the object pointer should not be a nullptr");
     }
   }
 
