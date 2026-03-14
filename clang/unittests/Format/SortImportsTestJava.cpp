@@ -384,7 +384,7 @@ TEST_F(SortImportsTestJava, SortImportsAfterPackageStatement) {
             sort("package org.a;\n"
                  "\n"
                  "import org.b;\n"
-                 "import org.a;\n"));
+                 "import org.a;"));
 }
 
 } // end namespace
