@@ -124,7 +124,8 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
     // clear the underflow raised by casting
     fputil::clear_except_if_required(FE_UNDERFLOW);
     int rounding = fputil::quick_get_round();
-    // values checked through exhaustive testing which rounded up/down and caused spurious or missing underflow
+    // values checked through exhaustive testing which rounded up/down and
+    // caused spurious or missing underflow
     bool except_value = (rounding == FE_UPWARD && xbits.uintval() == 0x0a48) ||
                         (rounding == FE_DOWNWARD && xbits.uintval() == 0x8a48);
 
