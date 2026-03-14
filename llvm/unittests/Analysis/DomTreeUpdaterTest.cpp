@@ -776,6 +776,7 @@ TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
   // CFG Change: remove bb0 -> bb1.
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
   BB0->getTerminator()->eraseFromParent();
+  new UnreachableInst(Context, BB0);
 
   // Update the DTU and simulate invalid updates.
   DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB0, BB1},
