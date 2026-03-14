@@ -634,7 +634,7 @@ public:
 
   virtual TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::getFixed(32);
+    return TypeSize::get(32, K == TargetTransformInfo::RGK_ScalableVector);
   }
 
   virtual unsigned getMinVectorRegisterBitWidth() const { return 128; }

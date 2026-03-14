@@ -70,7 +70,9 @@ class SCEV;
 
 struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
-  SCEVUse(const SCEV *S) : PointerIntPair() { setFromOpaqueValue((void *)S); }
+  SCEVUse(const SCEV *S) : PointerIntPair() {
+    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
+  }
   SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
 
   operator const SCEV *() const { return getPointer(); }

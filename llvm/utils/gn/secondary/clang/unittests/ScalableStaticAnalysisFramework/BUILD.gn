@@ -6,9 +6,11 @@ unittest("ClangScalableAnalysisTests") {
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
+    "//clang/lib/Frontend",
     "//clang/lib/ScalableStaticAnalysisFramework/Core",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
+    "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
   ]
