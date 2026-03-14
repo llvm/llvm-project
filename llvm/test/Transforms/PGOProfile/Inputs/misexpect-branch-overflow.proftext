@@ -1,0 +1,37 @@
+# IR level Instrumentation Flag
+:ir
+bar
+# Func Hash:
+146835647075900052
+# Num Counters:
+2
+# Counter Values:
+2147483648
+2147483648
+
+baz
+# Func Hash:
+12884901887
+# Num Counters:
+1
+# Counter Values:
+399668
+
+foo
+# Func Hash:
+29212902728
+# Num Counters:
+2
+# Counter Values:
+40803991
+1600332
+
+main
+# Func Hash:
+41605652536
+# Num Counters:
+2
+# Counter Values:
+2147483648
+2147483648
+

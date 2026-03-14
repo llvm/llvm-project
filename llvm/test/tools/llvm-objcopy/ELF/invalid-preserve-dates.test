@@ -1,0 +1,29 @@
+## This tests for an expected error when --preserve-dates is
+## specified at the same time as using stdin or stdout as input or
+## output files.
+
+# RUN: yaml2obj %s -o %t.foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+...
+
+# RUN: not llvm-objcopy --preserve-dates - %t 2>&1 | FileCheck %s
+# RUN: not llvm-objcopy --preserve-dates %t.foo - 2>&1 | FileCheck %s
+
+## Test that llvm-strip reports a proper error when --preserve-dates is specified
+## with one or more inputs, where one of them is stdin.
+# RUN: not llvm-strip --preserve-dates - < %t.foo 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates %t.foo - < %t.foo 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates - %t.foo < %t.foo 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates %t.foo - %t.foo < %t.foo 2>&1 | FileCheck %s
+
+## Testing -o.
+# RUN: not llvm-strip --preserve-dates - -o %t.foo < %t.foo 2>&1 | FileCheck %s
+# RUN: not llvm-strip --preserve-dates %t.foo -o - < %t.foo 2>&1 | FileCheck %s
+
+# CHECK: error: --preserve-dates requires a file

@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -run-pass post-RA-sched -o - %s | FileCheck %s
+
+# The post-RA scheduler reorders S2_lsr_r_p and S2_lsr_r_p_or. Both of them
+# use r9, and the last of the two kills it. The kill flag fixup did not
+# correctly update the flag, resulting in both instructions killing r9.
+
+# CHECK-LABEL: name: foo
+# Check for no-kill of r9 in the first instruction, after reordering:
+# CHECK: $d7 = S2_lsr_r_p_or killed $d7, killed $d1, $r9
+# CHECK: $d13 = S2_lsr_r_p killed $d0, killed $r9
+
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+
+---
+name: foo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $d0, $d1, $r9, $r13
+
+    $d7 = S2_asl_r_p $d0, $r13
+    $d5 = S2_asl_r_p $d1, killed $r13
+    $d6 = S2_lsr_r_p killed $d0, $r9
+    $d7 = S2_lsr_r_p_or killed $d7, killed $d1, killed $r9
+    $d1 = A2_combinew killed $r11, killed $r10
+    $d0 = A2_combinew killed $r15, killed $r14
+    J2_jump %bb.1, implicit-def $pc
+
+  bb.1:
+    A2_nop
+...
+

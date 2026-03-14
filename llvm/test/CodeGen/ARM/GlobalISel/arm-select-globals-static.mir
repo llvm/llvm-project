@@ -1,0 +1,71 @@
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=static -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF-NOMOVT
+# RUN: llc -O0 -mtriple arm-linux -relocation-model=static -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,ELF-MOVT
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=static -mattr=+no-movt -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-NOMOVT
+# RUN: llc -O0 -mtriple arm-darwin -relocation-model=static -mattr=-no-movt,+v8m -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=CHECK,DARWIN-MOVT
+--- |
+  @internal_global = internal global i32 42
+  define void @test_internal_global() { ret void }
+
+  @external_global = external global i32
+  define void @test_external_global() { ret void }
+...
+---
+name:            test_internal_global
+# CHECK-LABEL: name: test_internal_global
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+# ELF-NOMOVT: constants:
+# ELF-NOMOVT: id: 0
+# ELF-NOMOVT: value: 'ptr @internal_global'
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @internal_global
+    ; ELF-MOVT: [[G:%[0-9]+]]:gpr = MOVi32imm @internal_global
+    ; ELF-NOMOVT: [[G:%[0-9]+]]:gpr = LDRi12 %const.0, 0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
+    ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = MOVi32imm @internal_global
+    ; DARWIN-NOMOVT: [[G:%[0-9]+]]:gpr = LDRLIT_ga_abs @internal_global
+
+    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @internal_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14 /* CC::al */, $noreg
+
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[V]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...
+---
+name:            test_external_global
+# CHECK-LABEL: name: test_external_global
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+# ELF-NOMOVT: constants:
+# ELF-NOMOVT: id: 0
+# ELF-NOMOVT: value: 'ptr @external_global'
+body:             |
+  bb.0:
+    %0(p0) = G_GLOBAL_VALUE @external_global
+    ; ELF-MOVT: [[G:%[0-9]+]]:gpr = MOVi32imm @external_global
+    ; ELF-NOMOVT: [[G:%[0-9]+]]:gpr = LDRi12 %const.0, 0, 14 /* CC::al */, $noreg :: (load (p0) from constant-pool)
+    ; DARWIN-MOVT: [[G:%[0-9]+]]:gpr = MOVi32imm @external_global
+    ; DARWIN-NOMOVT: [[G:%[0-9]+]]:gpr = LDRLIT_ga_abs @external_global
+
+    %1(s32) = G_LOAD %0(p0) :: (load (s32) from @external_global)
+    ; CHECK: [[V:%[0-9]+]]:gpr = LDRi12 [[G]], 0, 14 /* CC::al */, $noreg
+
+    $r0 = COPY %1(s32)
+    ; CHECK: $r0 = COPY [[V]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+...

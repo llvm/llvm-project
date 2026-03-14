@@ -1,0 +1,167 @@
+# A rule for self contained header file targets.
+# This rule merely copies the header file from the current source directory to
+# the current binary directory.
+# Usage:
+#     add_header(
+#       <target name>
+#       HDR <header file>
+#     )
+function(add_header target_name)
+  cmake_parse_arguments(
+    "ADD_HEADER"
+    ""             # No optional arguments
+    "HDR;DEST_HDR" # Single value arguments
+    "DEPENDS"
+    ${ARGN}
+  )
+  if(NOT ADD_HEADER_HDR)
+    message(FATAL_ERROR "'add_header' rules requires the HDR argument specifying a headef file.")
+  endif()
+
+  if(ADD_HEADER_DEST_HDR)
+    set(dest_leaf_filename ${ADD_HEADER_DEST_HDR})
+  else()
+    set(dest_leaf_filename ${ADD_HEADER_HDR})
+  endif()
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${dest_leaf_filename})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(dest_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
+
+  add_custom_command(
+    OUTPUT ${dest_file}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dest_file}
+    DEPENDS ${src_file}
+  )
+
+  get_fq_target_name(${target_name} fq_target_name)
+  set(copied_hdr_target ${fq_target_name}.__copied_hdr__)
+  add_custom_target(
+    ${copied_hdr_target}
+    DEPENDS ${dest_file}
+  )
+
+  if(ADD_HEADER_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
+    # Dependencies of a add_header target can only be another add_header target
+    # or an add_gen_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
+    add_dependencies(
+      ${copied_hdr_target} ${fq_deps_list}
+    )
+  endif()
+
+  add_header_library(
+    ${target_name}
+    HDRS
+      ${dest_file}
+    DEPENDS
+      ${copied_hdr_target}
+  )
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_NAME ${dest_leaf_filename}
+      HEADER_FILE_PATH ${dest_file}
+      DEPS "${fq_deps_list}"
+  )
+endfunction(add_header)
+
+function(add_gen_header target_name)
+  cmake_parse_arguments(
+    "ADD_GEN_HDR"
+    "PROXY;PUBLIC" # No optional arguments
+    "YAML_FILE;GEN_HDR" # Single value arguments
+    "DEPENDS"     # Multi value arguments
+    ${ARGN}
+  )
+  get_fq_target_name(${target_name} fq_target_name)
+  if(NOT LLVM_LIBC_FULL_BUILD AND NOT ADD_GEN_HDR_PROXY)
+    add_library(${fq_target_name} INTERFACE)
+    return()
+  endif()
+  if(NOT ADD_GEN_HDR_GEN_HDR)
+    message(FATAL_ERROR "`add_gen_hdr` rule requires GEN_HDR to be specified.")
+  endif()
+  if(NOT ADD_GEN_HDR_YAML_FILE)
+    message(FATAL_ERROR "`add_gen_hdr` rule requires YAML_FILE to be specified.")
+  endif()
+
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  if (ADD_GEN_HDR_PROXY)
+    set(out_file ${LIBC_BUILD_DIR}/hdr/${relative_path})
+    set(proxy_arg "--proxy")
+  else()
+    set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  endif()
+  set(dep_file "${out_file}.d")
+  set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
+  
+  if(LLVM_LIBC_ALL_HEADERS)
+    set(entry_points "")
+  else()
+    set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
+  endif()
+
+  # TODO: Use $<LIST:PREPEND,list,item,...> after we bump CMake to 3.27.
+  list(TRANSFORM entry_points PREPEND "--entry-point=")
+  set(rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${relative_path}.rsp")
+  file(GENERATE OUTPUT ${rsp_file} CONTENT "$<JOIN:${entry_points},\n>")
+
+  add_custom_command(
+    OUTPUT ${out_file}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/main.py"
+            --output ${out_file}
+            --depfile ${dep_file}
+            --write-if-changed
+            ${proxy_arg}
+            ${yaml_file}
+            "@${rsp_file}"
+    DEPENDS ${yaml_file} ${rsp_file}
+    DEPFILE ${dep_file}
+    COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
+  )
+
+  if(ADD_GEN_HDR_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
+    # Dependencies of a add_header target can only be another add_gen_header target
+    # or an add_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
+  endif()
+  set(generated_hdr_target ${fq_target_name}.__generated_hdr__)
+  add_custom_target(
+    ${generated_hdr_target}
+    DEPENDS ${out_file} ${fq_deps_list} ${decl_out_file}
+  )
+
+  add_header_library(
+    ${target_name}
+    HDRS
+      ${out_file}
+  )
+
+  add_dependencies(${fq_target_name} ${generated_hdr_target})
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_NAME ${ADD_GEN_HDR_GEN_HDR}
+      HEADER_FILE_PATH ${out_file}
+      DECLS_FILE_PATH "${decl_out_file}"
+      DEPS "${fq_deps_list}"
+  )
+
+
+endfunction(add_gen_header)

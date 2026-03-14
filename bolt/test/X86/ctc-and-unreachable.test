@@ -1,0 +1,13 @@
+## Check that we don't fail processing a function with conditional tail call and
+## a fall-through to a next function (result of builtin_unreachable()).
+
+RUN: %clang %cflags %p/Inputs/ctc_and_unreachable.s -o %t.exe -Wl,-q
+RUN: llvm-bolt %t.exe -o %t --print-after-lowering --print-only=foo 2>&1 | FileCheck %s
+
+CHECK: Binary Function "foo"
+CHECK:  cmpq $0x1, %rdi
+CHECK:  je bar # TAILCALL
+CHECK:  retq
+CHECK:  cmpq	$0x1, %rdi
+CHECK:  jmp	.Ltmp[[#]]
+CHECK: End of Function "foo"

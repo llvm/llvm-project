@@ -1,0 +1,42 @@
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -f -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -dump-debug-map | FileCheck %s --check-prefix DEBUGMAP
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -f -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/common/common.x86_64 -dump-debug-map | FileCheck %s --check-prefix DEBUGMAP
+
+The test was compiled from two source files:
+$ cd /private/tmp/common
+$ cat common1.c
+int i[1000];
+int main() {
+  return i[1];
+}
+$ cat common2.c
+extern int i[1000];
+int bar() {
+  return i[0];
+}
+$ clang -fcommon -g -c common1.c -o common1.o
+$ clang -fcommon -g -c common2.c -o common2.o
+$ clang -fcommon -g common1.o common2.o -o common.x86_64
+
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_TAG_variable
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_name{{.*}}"i"
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_location{{.*}}DW_OP_addr 0x100001000)
+
+CHECK: DW_TAG_compile_unit
+CHECK:   DW_TAG_variable
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_name{{.*}}"i"
+CHECK-NOT: {{NULL|DW_TAG}}
+CHECK:     DW_AT_location{{.*}}DW_OP_addr 0x100001000)
+
+DEBUGMAP: filename:{{.*}}common1.o
+DEBUGMAP: symbols:
+DEBUGMAP: sym: _i, binAddr: 0x100001000, size: 0x0
+DEBUGMAP: filename:{{.*}}common2.o
+DEBUGMAP: symbols:
+DEBUGMAP: sym: _i, binAddr: 0x100001000, size: 0x0

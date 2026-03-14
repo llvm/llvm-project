@@ -1,0 +1,344 @@
+## Test the "--export-symbols" option.
+## The option merges all the output of input files, sorts and prints out unique symbols from the input files.
+
+# RUN: yaml2obj --docnum=1 -DFLAG=0x0002 %s -o %t1.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x0002 %s -o %t2.o
+# RUN: yaml2obj --docnum=2 -DFLAG=0x0002 -DSECT=26 %s -o %t2_invalid.o
+
+## Test the following cases:
+## Do not export global symbols beginning with "__sinit" , "__sterm" , "." , "(". or regular expression "^__[0-9]+__".
+## Do not export hidden and internal symbols.
+## Remove name prefixes of global symbols beginning with "__tf1" and "__tf9".
+# RUN: llvm-nm --export-symbols %t1.o | FileCheck %s --check-prefixes=COMMON,WEAK,RSRC --implicit-check-not={{.}}
+
+## Show that weak symbols are not exported when using the "--no-weak" option.
+# RUN: llvm-nm --export-symbols --no-weak %t1.o | FileCheck --check-prefixes=COMMON,RSRC  %s --implicit-check-not={{.}}
+
+## Show that only unique symbols (with a different name or visibility) are exported.
+## RUN: llvm-nm --export-symbols %t1.o %t2.o | FileCheck --check-prefixes=COMMON,WEAK,OBJ2,RSRC %s --implicit-check-not={{.}}
+
+## Show that __rsrc symbols are not exported when using the "--no-rsrc" option.
+# RUN: llvm-nm --export-symbols --no-rsrc %t1.o  | FileCheck --check-prefixes=COMMON,WEAK %s --implicit-check-not={{.}}
+
+# COMMON:      023__
+# COMMON-NEXT: __023
+# COMMON-NEXT: __02er02__
+# COMMON-NEXT: ____
+# RSRC-NEXT:   __rsrc
+# COMMON-NEXT: __rsrc export
+# COMMON-NEXT: __tf2value
+# COMMON-NEXT: export_protected_var export
+# COMMON-NEXT: export_protected_var protected
+# OBJ2-NEXT:   export_var_in_sec_obj export
+# COMMON-NEXT: protected_var protected
+# OBJ2-NEXT:   protected_var_in_sec_obj protected
+# COMMON-NEXT: tf1value
+# COMMON-NEXT: tf9value
+# OBJ2-NEXT:   var1_in_sec_obj
+# WEAK-NEXT:   weak_func
+
+## Test the behavior of the symbol reference section.
+# RUN: llvm-nm --export-symbols --no-rsrc %t2_invalid.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2_invalid.o --check-prefixes=INVALID %s
+
+# INVALID:      llvm-nm{{(\.exe)?}}: warning: [[FILE]]: for symbol with index 8: the section index (26) is invalid
+# INVALID-NEXT: export_protected_var export
+# INVALID-NEXT: export_protected_var protected
+# INVALID-NEXT: protected_var_in_sec_obj protected
+# INVALID-NEXT: var1_in_sec_obj
+
+## Show that symbols in shared object files are not exported.
+## Generate XCOFF shared object file.
+# RUN: yaml2obj -DFLAG=0x2000 --docnum=2 %s -o %t_shared.o
+# RUN: llvm-nm --export-symbols %t_shared.o | count 0
+
+## Test that llvm-nm ignores AIX linker import files when using --export-symbols. These start with "#!".
+# RUN: echo -e "#!\n bar\n foo " > %t_imp.txt
+# RUN: llvm-nm --export-symbols %t_imp.txt 2>&1 | count 0
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+  Flags:             [[FLAG]]
+AuxiliaryHeader:
+  Magic:                 0x10B
+  Version:               0x2
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+  - Name:            .bss
+    Flags:           [ STYP_DATA ]
+  - Name:            .debug
+    Flags:           [ STYP_DEBUG ]
+Symbols:
+  - Name:            export_protected_var
+    Section:         .data
+## Exported visibility.
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            export_protected_var
+    Section:         .data
+## Protected visibility.
+    Type:            0x3000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            __rsrc
+    Section:         .data
+## No visibility.
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+  - Name:            __sinit
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x9
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0xC
+  - Name:            __sterm
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0xC
+  - Name:            .func
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x02
+       StorageMappingClass:    XMC_PR
+  - Name:            (func)
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0xC
+  - Name:            __023__
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+  - Name:            __tf1_tf1value
+    Section:         .text
+    Type:            0x00
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RO
+  - Name:            __tf9_12345678tf9value
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            __tf2value
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x21
+       StorageMappingClass:    XMC_TC
+  - Name:            __tf2value
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            weak_func
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_WEAKEXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            protected_var
+    Section:         .bss
+    Type:            0x3000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x02
+       StorageMappingClass:    XMC_RW
+  - Name:            hidden_var
+    Section:         .data
+## Hidden visibility.
+    Type:            0x2000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            internal_var
+    Section:         .data
+## Internal visibility.
+    Type:            0x1000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+## A symbol that is neither text, nor data, nor bss.
+  - Name:            debug
+    Section:         .debug
+## Empty symbol name.
+  - Name:            ""
+    Section:         .data
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_TC
+  - Name:            undef_var
+    SectionIndex:    0
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x20
+       StorageMappingClass:    XMC_UA
+## Do not export not global symbol.
+  - Name:            hidext_var
+    Section:         .data
+## Protected visibility.
+    Type:            0x3000
+    StorageClass:    C_HIDEXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+## Symbol should not be filtered out by option --no-rsrc.
+  - Name:            __tf1___rsrc
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+## Following symbols should not be filtered out by regular expression "^__[0-9]+__".
+  - Name:            __023
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+  - Name:            023__
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+  - Name:            ____
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+  - Name:            __02er02__
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+  Flags:             [[FLAG]]
+AuxiliaryHeader:
+  Magic:                 0x10B
+  Version:               0x2
+  TextSectionSize:       0x280
+  DataSectionSize:       0x90
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+  - Name:            .data
+    Flags:           [ STYP_DATA ]
+Symbols:
+  - Name:            export_protected_var
+    Section:         .data
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            export_protected_var
+    Section:         .data
+    Type:            0x3000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            var1_in_sec_obj
+    Section:         .data
+    Type:            0x0
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+       SectionOrLength:        0x4
+  - Name:            protected_var_in_sec_obj
+    Section:         .data
+    Type:            0x3000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW
+  - Name:            export_var_in_sec_obj
+    SectionIndex:    [[SECT=2]]
+    Type:            0x4000
+    StorageClass:    C_EXT
+    AuxEntries:
+     - Type:                   AUX_CSECT
+       SymbolAlignmentAndType: 0x09
+       StorageMappingClass:    XMC_RW

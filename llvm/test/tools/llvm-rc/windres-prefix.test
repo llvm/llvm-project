@@ -1,0 +1,27 @@
+; This test uses symlinks.
+; UNSUPPORTED: system-windows
+
+; RUN: rm -rf %t && mkdir %t
+
+; Check that a triple prefix on the executable gets picked up as target triple.
+
+; RUN: ln -fs llvm-windres %t/aarch64-w64-mingw32-windres
+; RUN: ln -fs llvm-windres %t/arm64ec-w64-mingw32-windres
+; RUN: %t/aarch64-w64-mingw32-windres -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-PREPROC
+; RUN: %t/arm64ec-w64-mingw32-windres -### %p/Inputs/empty.rc %t.res | FileCheck %s --check-prefix=CHECK-PREPROC-EC
+; CHECK-PREPROC: "clang" "--driver-mode=gcc" "-target" "aarch64-w64-mingw32"
+; CHECK-PREPROC-EC: "clang" "--driver-mode=gcc" "-target" "arm64ec-w64-mingw32"
+
+; Check that the triple prefix also affects the output object file type.
+
+; RUN: %t/aarch64-w64-mingw32-windres --no-preprocess %p/Inputs/tag-stringtable-basic.rc %t.o
+; RUN: %t/arm64ec-w64-mingw32-windres --no-preprocess %p/Inputs/tag-stringtable-basic.rc %t-ec.o
+; RUN: llvm-readobj --coff-resources %t.o | FileCheck %s --check-prefix=CHECK-OBJ
+; RUN: llvm-readobj --coff-resources %t-ec.o | FileCheck %s --check-prefix=CHECK-OBJ-EC
+
+; CHECK-OBJ: Format: COFF-ARM64
+; CHECK-OBJ: Resources [
+; CHECK-OBJ:   Total Number of Resources:
+; CHECK-OBJ-EC: Format: COFF-ARM64EC
+; CHECK-OBJ-EC: Resources [
+; CHECK-OBJ-EC:   Total Number of Resources:

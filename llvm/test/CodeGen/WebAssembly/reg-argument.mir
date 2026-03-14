@@ -1,0 +1,81 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown %s -o - -run-pass wasm-argument-move  | FileCheck %s
+
+# wasm-argument-move pass moves all ARGUMENT instructions to the top of the
+# entry BB.
+---
+name: argument_i32
+# CHECK-LABEL: argument_i32
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:i32 = ARGUMENT_i32 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:i32 = ARGUMENT_i32 0, implicit $arguments
+    RETURN implicit-def $arguments
+...
+---
+name: argument_i64
+# CHECK-LABEL: argument_i64
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:i64 = ARGUMENT_i64 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:i64 = ARGUMENT_i64 0, implicit $arguments
+    RETURN implicit-def $arguments
+...
+---
+name: argument_f32
+# CHECK-LABEL: argument_f32
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:f32 = ARGUMENT_f32 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:f32 = ARGUMENT_f32 0, implicit $arguments
+    RETURN implicit-def $arguments
+...
+---
+name: argument_f64
+# CHECK-LABEL: argument_f64
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:f64 = ARGUMENT_f64 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:f64 = ARGUMENT_f64 0, implicit $arguments
+    RETURN implicit-def $arguments
+...
+---
+name: argument_funcref
+# CHECK-LABEL: argument_funcref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:funcref = ARGUMENT_funcref 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:funcref = ARGUMENT_funcref 0, implicit $arguments
+    RETURN implicit-def $arguments
+...
+---
+name: argument_externref
+# CHECK-LABEL: argument_externref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:externref = ARGUMENT_externref 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:externref = ARGUMENT_externref 0, implicit $arguments
+    RETURN implicit-def $arguments
+...
+---
+name: argument_exnref
+# CHECK-LABEL: argument_exnref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %1:exnref = ARGUMENT_exnref 0
+  bb.0:
+    %0:i32 = CONST_I32 0, implicit-def $arguments
+    %1:exnref = ARGUMENT_exnref 0, implicit $arguments
+    RETURN implicit-def $arguments
+...

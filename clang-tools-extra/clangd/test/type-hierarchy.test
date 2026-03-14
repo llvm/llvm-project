@@ -1,0 +1,145 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"struct Parent {};\nstruct Child1 : Parent {};\nstruct Child2 : Child1 {};\nstruct Child3 : Child2 {};\nstruct Child4 : Child3 {};"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/prepareTypeHierarchy","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":11},"direction":2,"resolve":1}}
+#      CHECK:  "id": 1
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "data": {
+# CHECK-NEXT:         "parents": [
+# CHECK-NEXT:          {
+# CHECK-NEXT:           "parents": [
+# CHECK-NEXT:             {
+# CHECK-NEXT:              "parents": [],
+# CHECK-NEXT:              "symbolID": "FE546E7B648D69A7"
+# CHECK-NEXT:             }
+# CHECK-NEXT:           ],
+# CHECK-NEXT:           "symbolID": "ECDC0C46D75120F4"
+# CHECK-NEXT:          }
+# CHECK-NEXT:        ],
+# CHECK-NEXT:        "symbolID": "8A991335E4E67D08"
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "kind": 23,
+# CHECK-NEXT:       "name": "Child2",
+# CHECK-NEXT:       "range": {
+# CHECK-NEXT:         "end": {
+# CHECK-NEXT:           "character": 25,
+# CHECK-NEXT:           "line": 2
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "start": {
+# CHECK-NEXT:           "character": 0,
+# CHECK-NEXT:           "line": 2
+# CHECK-NEXT:         }
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "selectionRange": {
+# CHECK-NEXT:         "end": {
+# CHECK-NEXT:           "character": 13,
+# CHECK-NEXT:           "line": 2
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "start": {
+# CHECK-NEXT:           "character": 7,
+# CHECK-NEXT:           "line": 2
+# CHECK-NEXT:         }
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+---
+{"jsonrpc":"2.0","id":2,"method":"typeHierarchy/supertypes","params":{"item":{"uri":"test:///main.cpp","data":{"parents":[{"parents":[{"parents":[],"symbolID":"FE546E7B648D69A7"}],"symbolID":"ECDC0C46D75120F4"}],"symbolID":"8A991335E4E67D08"},"name":"Child2","kind":23,"range":{"end":{"character":13,"line":3},"start":{"character":7,"line":3}},"selectionRange":{"end":{"character":13,"line":3},"start":{"character":7,"line":3}}}}}
+#      CHECK:  "id": 2
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "data": {
+# CHECK-NEXT:         "parents": [
+# CHECK-NEXT:           {
+# CHECK-NEXT:            "parents": [],
+# CHECK-NEXT:            "symbolID": "FE546E7B648D69A7"
+# CHECK-NEXT:           }
+# CHECK-NEXT:         ],
+# CHECK-NEXT:         "symbolID": "ECDC0C46D75120F4"
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "detail": "Child1",
+# CHECK-NEXT:       "kind": 23,
+# CHECK-NEXT:       "name": "Child1",
+# CHECK-NEXT:       "range": {
+# CHECK-NEXT:         "end": {
+# CHECK-NEXT:           "character": 13,
+# CHECK-NEXT:           "line": 1
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "start": {
+# CHECK-NEXT:           "character": 7,
+# CHECK-NEXT:           "line": 1
+# CHECK-NEXT:         }
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "selectionRange": {
+# CHECK-NEXT:         "end": {
+# CHECK-NEXT:           "character": 13,
+# CHECK-NEXT:           "line": 1
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "start": {
+# CHECK-NEXT:           "character": 7,
+# CHECK-NEXT:           "line": 1
+# CHECK-NEXT:         }
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
+# CHECK-NEXT:     }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":2,"method":"typeHierarchy/subtypes","params":{"item":{"uri":"test:///main.cpp","data":{"parents":[{"parents":[{"parents":[],"symbolID":"FE546E7B648D69A7"}],"symbolID":"ECDC0C46D75120F4"}],"symbolID":"8A991335E4E67D08"},"name":"Child2","kind":23,"range":{"end":{"character":13,"line":3},"start":{"character":7,"line":3}},"selectionRange":{"end":{"character":13,"line":3},"start":{"character":7,"line":3}}}}}
+#      CHECK:  "id": 2
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:     {
+# CHECK-NEXT:       "data": {
+# CHECK-NEXT:         "parents": [
+# CHECK-NEXT:          {
+# CHECK-NEXT:           "parents": [
+# CHECK-NEXT:            {
+# CHECK-NEXT:             "parents": [
+# CHECK-NEXT:               {
+# CHECK-NEXT:                "parents": [],
+# CHECK-NEXT:                "symbolID": "FE546E7B648D69A7"
+# CHECK-NEXT:               }
+# CHECK-NEXT:             ],
+# CHECK-NEXT:             "symbolID": "ECDC0C46D75120F4"
+# CHECK-NEXT:            }
+# CHECK-NEXT:           ],
+# CHECK-NEXT:           "symbolID": "8A991335E4E67D08"
+# CHECK-NEXT:         }
+# CHECK-NEXT:        ],
+# CHECK-NEXT:        "symbolID": "A6576FE083F2949A"
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "detail": "Child3",
+# CHECK-NEXT:       "kind": 23,
+# CHECK-NEXT:       "name": "Child3",
+# CHECK-NEXT:       "range": {
+# CHECK-NEXT:         "end": {
+# CHECK-NEXT:           "character": 13,
+# CHECK-NEXT:           "line": 3
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "start": {
+# CHECK-NEXT:           "character": 7,
+# CHECK-NEXT:           "line": 3
+# CHECK-NEXT:         }
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "selectionRange": {
+# CHECK-NEXT:         "end": {
+# CHECK-NEXT:           "character": 13,
+# CHECK-NEXT:           "line": 3
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "start": {
+# CHECK-NEXT:           "character": 7,
+# CHECK-NEXT:           "line": 3
+# CHECK-NEXT:         }
+# CHECK-NEXT:       },
+# CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
+# CHECK-NEXT:     }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

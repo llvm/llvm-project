@@ -1,0 +1,62 @@
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/templated_operators/template_operators -o %t.apple.dSYM
+
+RUN: llvm-dwarfdump -apple-names %t.apple.dSYM | FileCheck %s -check-prefix=NAMES
+
+The test was compiled from a single source:
+$ cat template_operators.cpp
+template <typename T>
+bool operator<(const T&, const T&){
+ return true;
+}
+
+template <typename T>
+bool operator>(const T&, const T&){
+ return true;
+}
+
+template <typename T>
+bool operator<<(const T&, const T&){
+ return true;
+}
+
+template <typename T>
+bool operator>>(const T&, const T&){
+ return true;
+}
+
+template <typename T>
+bool operator==(const T&, const T&){
+ return true;
+}
+
+struct B{};
+
+struct D{};
+
+template <typename T>
+bool operator<=>(const T&,const T&){ return true;}
+
+int main() {
+  B b1;
+  B b2;
+  D d1;
+  D d2;
+
+   return b1 < b2 && b1 > b2 && b1 << b2 && b1 >> b2 && b1 == b2 && d1 <=> d2;
+}
+$ clang++ -std=c++2a -g template_operators.cpp -c -o template_operators.o
+$ clang template_operators.o -o template_operators
+
+
+NAMES-DAG: "operator<"
+NAMES-DAG: "operator<<B>"
+NAMES-DAG: "operator>"
+NAMES-DAG: "operator><B>"
+NAMES-DAG: "operator<<"
+NAMES-DAG: "operator<<<B>"
+NAMES-DAG: "operator>>"
+NAMES-DAG: "operator>><B>"
+NAMES-DAG: "operator<=>"
+NAMES-DAG: "operator<=><D>"
+NAMES-DAG: "operator=="
+NAMES-DAG: "operator==<B>"

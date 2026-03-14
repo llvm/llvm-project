@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=hexagon -run-pass none -o - %s | FileCheck %s
+---
+name: fred
+
+body: |
+  bb.0:
+
+    ; CHECK: target-flags(hexagon-pcrel)
+    $r0 = A2_tfrsi target-flags (hexagon-pcrel) 0
+    ; CHECK: target-flags(hexagon-got)
+    $r0 = A2_tfrsi target-flags (hexagon-got) 0
+    ; CHECK: target-flags(hexagon-lo16)
+    $r0 = A2_tfrsi target-flags (hexagon-lo16) 0
+    ; CHECK: target-flags(hexagon-hi16)
+    $r0 = A2_tfrsi target-flags (hexagon-hi16) 0
+    ; CHECK: target-flags(hexagon-gprel)
+    $r0 = A2_tfrsi target-flags (hexagon-gprel) 0
+    ; CHECK: target-flags(hexagon-gdgot)
+    $r0 = A2_tfrsi target-flags (hexagon-gdgot) 0
+    ; CHECK: target-flags(hexagon-gdplt)
+    $r0 = A2_tfrsi target-flags (hexagon-gdplt) 0
+    ; CHECK: target-flags(hexagon-ie)
+    $r0 = A2_tfrsi target-flags (hexagon-ie) 0
+    ; CHECK: target-flags(hexagon-iegot)
+    $r0 = A2_tfrsi target-flags (hexagon-iegot) 0
+    ; CHECK: target-flags(hexagon-tprel)
+    $r0 = A2_tfrsi target-flags (hexagon-tprel) 0
+
+    ; CHECK: target-flags(hexagon-ext)
+    $r0 = A2_tfrsi target-flags (hexagon-ext) 0
+    ; CHECK: target-flags(hexagon-pcrel, hexagon-ext)
+    $r0 = A2_tfrsi target-flags (hexagon-pcrel,hexagon-ext) 0
+    ; CHECK: target-flags(hexagon-ie, hexagon-ext)
+    $r0 = A2_tfrsi target-flags (hexagon-ie,hexagon-ext) 0
+...
+

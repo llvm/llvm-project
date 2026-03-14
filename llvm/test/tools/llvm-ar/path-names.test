@@ -1,0 +1,9 @@
+RUN: llvm-ar t %S/Inputs/path-names.a | FileCheck %s --check-prefix=CONTENTS --implicit-check-not {{.}}
+CONTENTS: a/foo.txt
+CONTENTS-NEXT: b/foo.txt
+
+RUN: llvm-ar p %S/Inputs/path-names.a b/foo.txt | FileCheck %s --check-prefix=NO-FULL-PATH --implicit-check-not {{.}}
+NO-FULL-PATH: hello-a
+
+RUN: llvm-ar Pp %S/Inputs/path-names.a b/foo.txt | FileCheck %s --check-prefix=FULL-PATH --implicit-check-not {{.}}
+FULL-PATH: hello-b

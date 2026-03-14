@@ -1,0 +1,24 @@
+# RUN: llc -verify-machineinstrs %s -run-pass prologepilog -mtriple=x86_64-pc-win32-coreclr -o - | FileCheck %s
+...
+---
+name:            main4k
+# CHECK-LABEL: name: main4k
+
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    8
+stack:
+  - { id: 0, size: 4096, alignment: 1, stack-id: default }
+body:             |
+  bb.0.entry:
+    $eax = IMPLICIT_DEF
+    RET 0, killed $eax
+
+  ; CHECK: bb.1.entry:
+  ; CHECK:   liveins: $rdx
+  ; CHECK: bb.2.entry:
+  ; CHECK:   liveins: $rcx, $rdx
+  ; CHECK: bb.3.entry:
+  ; CHECK:   liveins: $rax
+...

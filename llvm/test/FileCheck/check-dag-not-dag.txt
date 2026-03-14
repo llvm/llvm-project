@@ -1,0 +1,76 @@
+;---------------------------------------------------------------------
+; RUN: FileCheck -input-file %s %s -check-prefix=NotSearchEnd
+
+The search range for the NOTs used to end at the start of the match range for
+the first DAG in the following DAG group.  Now it ends at the start of the
+match range for the entire following DAG group.
+
+__NotSearchEnd
+x0
+x1
+
+y1
+foobar
+y0
+
+z2
+foobar
+z1
+foobar
+z0
+__NotSearchEnd
+
+; NotSearchEnd:     {{^}}__NotSearchEnd
+; NotSearchEnd-DAG: {{^}}x0
+; NotSearchEnd-DAG: {{^}}x1
+; NotSearchEnd-NOT: {{^}}foobar
+; NotSearchEnd-DAG: {{^}}y0
+; NotSearchEnd-DAG: {{^}}y1
+; NotSearchEnd-NOT: {{^}}foobar
+; NotSearchEnd-DAG: {{^}}z0
+; NotSearchEnd-DAG: {{^}}z1
+; NotSearchEnd-DAG: {{^}}z2
+; NotSearchEnd:     {{^}}__NotSearchEnd
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -input-file %s %s -check-prefix=Dag2SearchStart
+
+The start of the search range for the second or later DAG group used to be
+different for its first DAG than its other DAGs.  For the first DAG, it was
+the start of the permitted range for the preceding DAG group, and there was a
+reordering complaint if the match range was in the first DAG group's match
+range.  For the other DAGs, it was the end of the match range for the
+preceding DAG group, so reordering detection wasn't possible.  Now, the
+first DAG behaves like the others, and so reordering detection is no longer
+implemented.  As a result, matches that used to produce the reordering
+complaint are now skipped, permitting later matches to succeed.
+
+__Dag2SearchStart
+y0
+y1
+x0
+y0
+y1
+x1
+
+z1
+z0
+y1
+z1
+z0
+y0
+
+z0
+z1
+__Dag2SearchStart
+
+; Dag2SearchStart:     {{^}}__Dag2SearchStart
+; Dag2SearchStart-DAG: {{^}}x0
+; Dag2SearchStart-DAG: {{^}}x1
+; Dag2SearchStart-NOT: {{^}}foobar
+; Dag2SearchStart-DAG: {{^}}y0
+; Dag2SearchStart-DAG: {{^}}y1
+; Dag2SearchStart-NOT: {{^}}foobar
+; Dag2SearchStart-DAG: {{^}}z0
+; Dag2SearchStart-DAG: {{^}}z1
+; Dag2SearchStart:     {{^}}__Dag2SearchStart

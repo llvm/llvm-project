@@ -1,0 +1,50 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.o.1
+# RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-HSA %s
+# RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-HSA %s
+# RUN: yaml2obj --docnum=2 %s -o %t.o.2
+# RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-PAL %s
+# RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-PAL %s
+# RUN: yaml2obj --docnum=3 %s -o %t.o.3
+# RUN: llvm-readobj -S --file-headers %t.o.3 | FileCheck --check-prefixes=ELF-MESA3D %s
+# RUN: obj2yaml %t.o.3 | FileCheck --check-prefixes=YAML-MESA3D %s
+
+# ELF-HSA:    OS/ABI: AMDGPU_HSA    (0x40)
+# ELF-PAL:    OS/ABI: AMDGPU_PAL    (0x41)
+# ELF-MESA3D: OS/ABI: AMDGPU_MESA3D (0x42)
+
+# YAML-HSA:    OSABI: ELFOSABI_AMDGPU_HSA
+# YAML-PAL:    OSABI: ELFOSABI_AMDGPU_PAL
+# YAML-MESA3D: OSABI: ELFOSABI_AMDGPU_MESA3D
+
+# Doc1
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_AMDGPU_HSA
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ ]
+...
+
+# Doc2
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_AMDGPU_PAL
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ ]
+...
+
+# Doc3
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_AMDGPU_MESA3D
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ ]
+...

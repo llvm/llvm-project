@@ -1,0 +1,32 @@
+RUN: %build -n --verbose --arch=32 --mode=compile --compiler=any -o %t/foo.out foobar.c \
+RUN:    | FileCheck %s
+RUN: %build -n --verbose --arch=32 --mode=compile --compiler=any --outdir %t foo.c bar.c \
+RUN:    | FileCheck --check-prefix=MULTI-INPUT %s
+
+
+CHECK:      Script Arguments:
+CHECK-NEXT:   Arch: 32
+CHECK:        Compiler: any
+CHECK:        Outdir: {{.*}}script-args.test.tmp
+CHECK:        Output: {{.*}}script-args.test.tmp{{.}}foo.out
+CHECK:        Nodefaultlib: False
+CHECK:        Opt: none
+CHECK:        Mode: compile
+CHECK:        Clean: True
+CHECK:        Verbose: True
+CHECK:        Dryrun: True
+CHECK:        Inputs: foobar.c
+
+MULTI-INPUT:      Script Arguments:
+MULTI-INPUT-NEXT:   Arch: 32
+MULTI-INPUT-NEXT:   Compiler: any
+MULTI-INPUT-NEXT:   Outdir: {{.*}}script-args.test.tmp
+MULTI-INPUT-NEXT:   Output: 
+MULTI-INPUT-NEXT:   Nodefaultlib: False
+MULTI-INPUT-NEXT:   Opt: none
+MULTI-INPUT-NEXT:   Mode: compile
+MULTI-INPUT-NEXT:   Clean: True
+MULTI-INPUT-NEXT:   Verbose: True
+MULTI-INPUT-NEXT:   Dryrun: True
+MULTI-INPUT-NEXT:   Inputs: foo.c
+MULTI-INPUT-NEXT:           bar.c

@@ -1,0 +1,9 @@
+module a {
+  header "a.h"
+  // Hide content by not re-exporting module b.
+}
+
+module b {
+  header "b.h"
+  export *
+}

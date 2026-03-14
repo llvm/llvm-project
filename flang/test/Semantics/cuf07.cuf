@@ -1,0 +1,42 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+  real, allocatable :: xa
+  real, allocatable, managed :: ma
+ contains
+  attributes(device) subroutine devsubr
+    real, device, allocatable :: da
+    real, allocatable, managed :: dma
+    allocate(da) ! ok
+    deallocate(da) ! ok
+    allocate(dma) ! ok
+    deallocate(dma) ! ok
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'xa' is a host variable and is not definable in a device subprogram
+    allocate(xa)
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'xa' is a host variable and is not definable in a device subprogram
+    deallocate(xa)
+    !ERROR: Name in ALLOCATE statement is not definable
+    !BECAUSE: 'ma' is a host-associated allocatable and is not definable in a device subprogram
+    allocate(ma)
+    !ERROR: Name in DEALLOCATE statement is not definable
+    !BECAUSE: 'ma' is a host-associated allocatable and is not definable in a device subprogram
+    deallocate(ma)
+  end subroutine
+
+  subroutine hostsub()
+    integer, allocatable, device :: ia(:)
+    logical :: plog
+
+    !WARNING: Object in ALLOCATE should have PINNED attribute when PINNED option is specified
+    allocate(ia(100), pinned = plog)
+  end subroutine
+
+  subroutine host2()
+    integer, allocatable, pinned :: ia(:)
+    integer :: istream
+
+    !ERROR: Object in ALLOCATE must have DEVICE attribute when STREAM option is specified
+    allocate(ia(100), stream = istream)
+  end subroutine
+end module

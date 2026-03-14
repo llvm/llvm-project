@@ -1,0 +1,64 @@
+name: "Check code formatting"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'users/**'
+
+jobs:
+  code_formatter:
+    runs-on: ubuntu-24.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-format'
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@e0021407031f5be11a464abee9a0776171c79891 # v47.0.1
+        with:
+          separator: ","
+          skip_initial_fetch: true
+          base_sha: 'HEAD~1'
+          sha: 'HEAD'
+
+      - name: "Listed files"
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "Formatting files:"
+          echo "$CHANGED_FILES"
+
+      - name: Run code formatter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        # Create an empty comments file so the pr-write job doesn't fail.
+        run: |
+          echo "[]" > comments &&
+          python ./llvm/utils/git/code-format-helper.py \
+            --write-comment-to-file \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev HEAD~1 \
+            --end-rev HEAD \
+            --changed-files "$CHANGED_FILES"
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments

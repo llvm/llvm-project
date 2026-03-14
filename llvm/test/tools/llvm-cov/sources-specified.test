@@ -1,0 +1,62 @@
+RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   | FileCheck -check-prefix=REPORT %s
+
+RUN: llvm-cov show -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   | FileCheck -check-prefix=SHOW %s
+
+# Don't include all source files when provided source files are filtered out.
+RUN: llvm-cov show -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   --ignore-filename-regex='.*' \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   | FileCheck -allow-empty -check-prefix=IGNORE %s
+
+IGNORE-NOT: {{.*}}main.cc{{.*}}
+IGNORE-NOT: {{.*}}inc.h{{.*}}
+IGNORE-NOT: {{.*}}dec.h{{.*}}
+
+# Order of files may differ, check the total values calculated.
+REPORT-NOT: {{.*}}abs.h{{.*}}
+REPORT: {{^}}TOTAL 3{{.*}}72.73%
+
+# Order of files may differ, check that there are 3 files and not abs.h.
+SHOW-NOT: {{.*}}abs.h{{.*}}
+SHOW: {{.*}}sources_specified{{.*}}
+SHOW: {{.*}}sources_specified{{.*}}
+SHOW: {{.*}}sources_specified{{.*}}
+
+
+# Test "export" command. Use a temp .json file as output is a single line.
+RUN: llvm-cov export -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   > %t.export.json
+
+RUN: FileCheck -check-prefix=NO-EXPORT %s < %t.export.json
+RUN: FileCheck -check-prefix=EXPORT %s < %t.export.json
+
+NO-EXPORT-NOT: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)abs.h"}}
+EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)main.cc"}}
+EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)extra(/|\\\\)dec.h"}}
+EXPORT-DAG: {{"filename":"(/|\\\\)tmp(/|\\\\)sources_specified(/|\\\\)extra(/|\\\\)inc.h"}}
+
+Instructions for regenerating the test:
+
+# cd %S/Inputs/sources_specified
+cp -r . /tmp/sources_specified
+
+clang -mllvm -enable-name-compression=false -fprofile-instr-generate \
+    -fcoverage-mapping /tmp/sources_specified/main.cc -o main
+
+LLVM_PROFILE_FILE="main.raw" ./main
+llvm-profdata merge main.raw -o main.profdata
+llvm-cov convert-for-testing ./main -o ./main.covmapping
+rm main main.raw

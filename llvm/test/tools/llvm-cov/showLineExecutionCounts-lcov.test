@@ -1,0 +1,38 @@
+// FULL: SF:{{.*}}showLineExecutionCounts.cpp
+// FULL: FN:6,main
+// FULL: FNDA:161,main
+// FULL: FNF:1
+// FULL: FNH:1
+int main() {                              // FULL: DA:[[@LINE]],161
+  int x = 0;                              // FULL: DA:[[@LINE]],161
+                                          // FULL: DA:[[@LINE]],161
+  if (x) {                                // FULL: DA:[[@LINE]],161
+    x = 0;                                // FULL: DA:[[@LINE]],0
+  } else {                                // FULL: DA:[[@LINE]],161
+    x = 1;                                // FULL: DA:[[@LINE]],161
+  }                                       // FULL: DA:[[@LINE]],161
+                                          // FULL: DA:[[@LINE]],161
+  for (int i = 0; i < 100; ++i) {         // FULL: DA:[[@LINE]],16261
+    x = 1;                                // FULL: DA:[[@LINE]],16100
+  }                                       // FULL: DA:[[@LINE]],16100
+                                          // FULL: DA:[[@LINE]],161
+  x = x < 10 ? x + 1 : x - 1;             // FULL: DA:[[@LINE]],161
+  x = x > 10 ?                            // FULL: DA:[[@LINE]],161
+        x - 1:                            // FULL: DA:[[@LINE]],0
+        x + 1;                            // FULL: DA:[[@LINE]],161
+                                          // FULL: DA:[[@LINE]],161
+  return 0;                               // FULL: DA:[[@LINE]],161
+}                                         // FULL: DA:[[@LINE]],161
+// FULL: LF:20
+// FULL: LH:18
+// FULL: end_of_record
+// RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
+// RUN: llvm-cov export -format=lcov %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata %s | FileCheck -check-prefixes=FULL %s
+
+// RUN: llvm-cov export -format=lcov -summary-only %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata %s | FileCheck -check-prefixes=SUMMARYONLY %s
+// SUMMARYONLY: SF:{{.*}}showLineExecutionCounts.cpp
+// SUMMARYONLY: FNF:1
+// SUMMARYONLY: FNH:1
+// SUMMARYONLY: LF:20
+// SUMMARYONLY: LH:18
+// SUMMARYONLY: end_of_record

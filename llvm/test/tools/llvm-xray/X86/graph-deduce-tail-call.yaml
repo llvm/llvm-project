@@ -1,0 +1,75 @@
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d \
+#RUN:    | FileCheck %s -check-prefix=EMPTY
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e count \
+#RUN:    | FileCheck %s -check-prefix=COUNT
+#
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e min \
+#RUN:    | FileCheck %s -check-prefix=TIME
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e med \
+#RUN:    | FileCheck %s -check-prefix=TIME
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e 90p \
+#RUN:    | FileCheck %s -check-prefix=TIME
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e 99p \
+#RUN:    | FileCheck %s -check-prefix=TIME
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e max \
+#RUN:    | FileCheck %s -check-prefix=TIME
+#RUN: llvm-xray graph %s -o - -m %S/Inputs/simple-instrmap.yaml -d -e sum \
+#RUN:    | FileCheck %s -check-prefix=TIME
+#
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 0
+records:
+# Here we reconstruct the following call trace:
+#
+#   f1()
+#     f2()
+#       f3()
+#
+# But we find that we're missing an exit record for f2() because it's
+# tail-called f3(). We make sure that if we see a trace like this that we can
+# deduce tail calls, and account the time (potentially wrongly) to f2() when
+# f1() exits. That is because we don't go back to f3()'s entry record to
+# properly do the math on the timing of f2().
+#
+# Note that by default, tail/sibling call deduction is disabled, and is enabled
+# with a flag "-d" or "-deduce-sibling-calls".
+#
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10000 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 111, kind: function-enter, tsc: 10002 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 111, kind: function-exit,  tsc: 10003 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,  tsc: 10004 }
+...
+
+#EMPTY:       digraph xray {
+#EMPTY-DAG:   F0 -> F1 [label=""];
+#EMPTY-DAG:   F1 -> F2 [label=""];
+#EMPTY-DAG:   F2 -> F3 [label=""];
+#EMPTY-DAG:   F1 [label="@(1)"];
+#EMPTY-DAG:   F2 [label="@(2)"];
+#EMPTY-DAG:   F3 [label="@(3)"];
+#EMPTY-NEXT:       }
+
+#COUNT:       digraph xray {
+#COUNT-DAG:   F0 -> F1 [label="1"];
+#COUNT-DAG:   F1 -> F2 [label="1"];
+#COUNT-DAG:   F2 -> F3 [label="1"];
+#COUNT-DAG:   F1 [label="@(1)"];
+#COUNT-DAG:   F2 [label="@(2)"];
+#COUNT-DAG:   F3 [label="@(3)"];
+#COUNT-NEXT:       }
+
+
+#TIME:       digraph xray {
+#TIME-DAG:   F0 -> F1 [label="4.{{.*}}"];
+#TIME-DAG:   F1 -> F2 [label="3.{{.*}}"];
+#TIME-DAG:   F2 -> F3 [label="1.{{.*}}"];
+#TIME-DAG:   F1 [label="@(1)"];
+#TIME-DAG:   F2 [label="@(2)"];
+#TIME-DAG:   F3 [label="@(3)"];
+#TIME-NEXT:       }

@@ -1,0 +1,165 @@
+;; Test the -memprof-min-percent-max-cold-size flag for annotating only the
+;; largest contexts with size info.
+
+; REQUIRES: x86_64-linux
+
+; RUN: split-file %s %t
+
+;; Specify version 4 so that a summary is generated.
+; RUN: llvm-profdata merge --memprof-version=4 %t/memprof_max_cold_threshold.yaml -o %t/memprof_max_cold_threshold.memprofdata
+
+; RUN: llvm-profdata show --memory %t/memprof_max_cold_threshold.memprofdata | FileCheck %s --check-prefixes=SUMMARY
+; SUMMARY: # MemProfSummary:
+; SUMMARY: #   Total contexts: 5
+; SUMMARY: #   Total cold contexts: 4
+; SUMMARY: #   Total hot contexts: 0
+; SUMMARY: #   Maximum cold context total size: 400
+; SUMMARY: #   Maximum warm context total size: 500
+; SUMMARY: #   Maximum hot context total size: 0
+
+;; Test with various thresholds, starting with the baseline of no context size
+;; info.
+; RUN: opt < %t/memprof_max_cold_threshold.ll -passes='memprof-use<profile-filename=%t/memprof_max_cold_threshold.memprofdata>' -S | FileCheck %s --check-prefixes=ALL,NONE
+; RUN: opt < %t/memprof_max_cold_threshold.ll -memprof-min-percent-max-cold-size=99 -passes='memprof-use<profile-filename=%t/memprof_max_cold_threshold.memprofdata>' -S | FileCheck %s --check-prefixes=ALL,THRESH99
+; RUN: opt < %t/memprof_max_cold_threshold.ll -memprof-min-percent-max-cold-size=75 -passes='memprof-use<profile-filename=%t/memprof_max_cold_threshold.memprofdata>' -S | FileCheck %s --check-prefixes=ALL,THRESH75
+; RUN: opt < %t/memprof_max_cold_threshold.ll -memprof-min-percent-max-cold-size=50 -passes='memprof-use<profile-filename=%t/memprof_max_cold_threshold.memprofdata>' -S | FileCheck %s --check-prefixes=ALL,THRESH50
+
+;; Make sure serializing / deserializing through bitcode works
+; RUN: opt < %t/memprof_max_cold_threshold.ll -memprof-min-percent-max-cold-size=75 -passes='memprof-use<profile-filename=%t/memprof_max_cold_threshold.memprofdata>' -o %t/out.bc
+; RUN: llvm-dis %t/out.bc -o - | FileCheck %s --check-prefixes=ALL,THRESH75
+
+;--- memprof_max_cold_threshold.yaml
+---
+HeapProfileRecords:
+  - GUID:            _Z3foov
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+          - { Function: main, LineOffset: 2, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+	  # Smallest cold, 25% of largest cold size
+          TotalSize:                  100
+          AllocCount:                 1
+          TotalLifetimeAccessDensity: 1
+          TotalLifetime:              1000000
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+          - { Function: main, LineOffset: 3, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+	  # Largest cold
+          TotalSize:                  400
+          AllocCount:                 1
+          TotalLifetimeAccessDensity: 1
+          TotalLifetime:              1000000
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+          - { Function: main, LineOffset: 4, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+	  # Second largest cold, 75% of largest cold size
+          TotalSize:                  300
+          AllocCount:                 1
+          TotalLifetimeAccessDensity: 1
+          TotalLifetime:              1000000
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+          - { Function: main, LineOffset: 5, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+	  # Second smallest cold, 50% of largest cold size
+          TotalSize:                  200
+          AllocCount:                 1
+          TotalLifetimeAccessDensity: 1
+          TotalLifetime:              1000000
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 0, Column: 22, IsInlineFrame: false }
+          - { Function: main, LineOffset: 6, Column: 5, IsInlineFrame: false }
+        MemInfoBlock:
+	  # Largest context, which is non-cold (due to short lifetime)
+          TotalSize:                  500
+          AllocCount:                 1
+          TotalLifetimeAccessDensity: 1
+          TotalLifetime:              1
+    CallSites:       []
+...
+;--- memprof_max_cold_threshold.ll
+define dso_local ptr @_Z3foov() !dbg !4 {
+entry:
+  %call = call ptr @_Znam(i64 4) #0, !dbg !5
+; ALL: call ptr @_Znam(i64 4) {{.*}} !memprof ![[M1:[0-9]+]]
+  ret ptr %call
+}
+
+;; No MIBs get context size info without option.
+; NONE: ![[M1]] = !{![[M2:[0-9]+]], ![[M3:[0-9]+]], ![[M4:[0-9]+]], ![[M5:[0-9]+]], ![[M6:[0-9]+]]}
+; NONE: ![[M2]] = !{![[C2:[0-9]+]], !"cold"}
+; NONE: ![[C2]] = !{i64 590523745590780990, i64 720385627691022109}
+; NONE: ![[M3]] = !{![[C3:[0-9]+]], !"cold"}
+; NONE: ![[C3]] = !{i64 590523745590780990, i64 8256520048276991898}
+; NONE: ![[M4]] = !{![[C4:[0-9]+]], !"cold"}
+; NONE: ![[C4]] = !{i64 590523745590780990, i64 -6953100768213558995}
+; NONE: ![[M5]] = !{![[C5:[0-9]+]], !"cold"}
+; NONE: ![[C5]] = !{i64 590523745590780990, i64 -6435117705372285425}
+; NONE: ![[M6]] = !{![[C6:[0-9]+]], !"notcold"}
+; NONE: ![[C6]] = !{i64 590523745590780990, i64 -2847840206325626610}
+
+; THRESH99: ![[M1]] = !{![[M2:[0-9]+]], ![[M3:[0-9]+]], ![[M4:[0-9]+]], ![[M5:[0-9]+]], ![[M6:[0-9]+]]}
+; THRESH99: ![[M2]] = !{![[C2:[0-9]+]], !"cold"}
+; THRESH99: ![[C2]] = !{i64 590523745590780990, i64 720385627691022109}
+;; MIB with size 400 is now included with threshold 99%
+; THRESH99: ![[M3]] = !{![[C3:[0-9]+]], !"cold", ![[S3:[0-9]+]]}
+; THRESH99: ![[C3]] = !{i64 590523745590780990, i64 8256520048276991898}
+; THRESH99: ![[S3]] = !{i64 6509573709067523871, i64 400}
+; THRESH99: ![[M4]] = !{![[C4:[0-9]+]], !"cold"}
+; THRESH99: ![[C4]] = !{i64 590523745590780990, i64 -6953100768213558995}
+; THRESH99: ![[M5]] = !{![[C5:[0-9]+]], !"cold"}
+; THRESH99: ![[C5]] = !{i64 590523745590780990, i64 -6435117705372285425}
+; THRESH99: ![[M6]] = !{![[C6:[0-9]+]], !"notcold"}
+; THRESH99: ![[C6]] = !{i64 590523745590780990, i64 -2847840206325626610}
+
+; THRESH75: ![[M1]] = !{![[M2:[0-9]+]], ![[M3:[0-9]+]], ![[M4:[0-9]+]], ![[M5:[0-9]+]], ![[M6:[0-9]+]]}
+; THRESH75: ![[M2]] = !{![[C2:[0-9]+]], !"cold"}
+; THRESH75: ![[C2]] = !{i64 590523745590780990, i64 720385627691022109}
+; THRESH75: ![[M3]] = !{![[C3:[0-9]+]], !"cold", ![[S3:[0-9]+]]}
+; THRESH75: ![[C3]] = !{i64 590523745590780990, i64 8256520048276991898}
+; THRESH75: ![[S3]] = !{i64 6509573709067523871, i64 400}
+; THRESH75: ![[M4]] = !{![[C4:[0-9]+]], !"cold"}
+; THRESH75: ![[C4]] = !{i64 590523745590780990, i64 -6953100768213558995}
+;; MIB with size 300 is now included with threshold 75%
+; THRESH75: ![[M5]] = !{![[C5:[0-9]+]], !"cold", ![[S5:[0-9]+]]}
+; THRESH75: ![[C5]] = !{i64 590523745590780990, i64 -6435117705372285425}
+; THRESH75: ![[S5]] = !{i64 86248815258696712, i64 300}
+; THRESH75: ![[M6]] = !{![[C6:[0-9]+]], !"notcold"}
+; THRESH75: ![[C6]] = !{i64 590523745590780990, i64 -2847840206325626610}
+
+; THRESH50: ![[M1]] = !{![[M2:[0-9]+]], ![[M3:[0-9]+]], ![[M4:[0-9]+]], ![[M5:[0-9]+]], ![[M6:[0-9]+]]}
+;; The smallest never gets context size info.
+; THRESH50: ![[M2]] = !{![[C2:[0-9]+]], !"cold"}
+; THRESH50: ![[C2]] = !{i64 590523745590780990, i64 720385627691022109}
+; THRESH50: ![[M3]] = !{![[C3:[0-9]+]], !"cold", ![[S3:[0-9]+]]}
+; THRESH50: ![[C3]] = !{i64 590523745590780990, i64 8256520048276991898}
+; THRESH50: ![[S3]] = !{i64 6509573709067523871, i64 400}
+;; MIB with size 200 is now included with threshold 50%
+; THRESH50: ![[M4]] = !{![[C4:[0-9]+]], !"cold", ![[S4:[0-9]+]]}
+; THRESH50: ![[C4]] = !{i64 590523745590780990, i64 -6953100768213558995}
+; THRESH50: ![[S4]] = !{i64 -2629930016428010893, i64 200}
+; THRESH50: ![[M5]] = !{![[C5:[0-9]+]], !"cold", ![[S5:[0-9]+]]}
+; THRESH50: ![[C5]] = !{i64 590523745590780990, i64 -6435117705372285425}
+; THRESH50: ![[S5]] = !{i64 86248815258696712, i64 300}
+;; Non cold context never gets context size info
+; THRESH50: ![[M6]] = !{![[C6:[0-9]+]], !"notcold"}
+; THRESH50: ![[C6]] = !{i64 590523745590780990, i64 -2847840206325626610}
+
+declare ptr @_Znam(i64)
+
+attributes #0 = { builtin allocsize(0) }
+
+!llvm.module.flags = !{!2, !3}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
+!1 = !DIFile(filename: "t", directory: "/")
+!2 = !{i32 7, !"Dwarf Version", i32 5}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 1, unit: !0)
+!5 = !DILocation(line: 1, column: 22, scope: !4)
+!6 = !DILocation(line: 2, column: 22, scope: !4)
+!7 = !DILocation(line: 3, column: 22, scope: !4)
+!8 = !DILocation(line: 4, column: 22, scope: !4)

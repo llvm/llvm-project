@@ -1,0 +1,12 @@
+## Test invalid use of the --dwarf option.
+
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objdump --dwarf=bad_value %t 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: error: 'bad_value' is not a valid value for '--dwarf='
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL

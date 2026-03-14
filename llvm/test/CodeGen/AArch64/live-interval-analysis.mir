@@ -1,0 +1,23 @@
+# RUN: llc -o /dev/null %s -mtriple=aarch64-darwin-ios -run-pass=liveintervals -debug-only=regalloc -precompute-phys-liveness 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-darwin-ios --passes='print<live-intervals>' -debug-only=regalloc -precompute-phys-liveness 2>&1 | FileCheck %s
+# REQUIRES: asserts
+--- |
+  define void @reserved_reg_liveness() { ret void }
+...
+---
+# CHECK-LABEL: ********** INTERVALS **********
+# W29 is reserved, so we should only see dead defs
+# CHECK-DAG: W29 [32r,32d:{{[0-9]+}})[64r,64d:{{[0-9]+}})
+# For normal registers like x28 we should see the full intervals
+# CHECK-DAG: W28 [0B,16r:{{[0-9]+}})[32r,48r:{{[0-9]+}})[48r,48d:{{[0-9]+}})
+# CHECK: # End machine code for function reserved_reg_liveness.
+name: reserved_reg_liveness
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x28
+    %6 : xseqpairsclass = COPY $x28_fp
+    $x28_fp = COPY %6
+    $x28 = COPY $x28
+    $fp = COPY $fp
+...

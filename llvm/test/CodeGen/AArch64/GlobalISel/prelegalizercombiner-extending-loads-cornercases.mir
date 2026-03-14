@@ -1,0 +1,309 @@
+# RUN: llc -O0 -run-pass=aarch64-prelegalizer-combiner -global-isel %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=aarch64-prelegalizer-combiner -global-isel %s -o - \
+# RUN:   -debug-only=aarch64-prelegalizer-combiner,gi-combiner 2>&1 >/dev/null \
+# RUN:   | FileCheck %s --check-prefix=CHECK-WORKLIST
+
+# REQUIRES: asserts
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+
+  define void @multiple_copies(ptr %addr) {
+  entry:
+    br i1 0, label %if, label %else
+  if:
+    br label %exit
+  else:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @sink_to_phi_trivially_dominating(ptr %addr) {
+  entry:
+    br i1 0, label %if, label %exit
+  if:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @sink_to_phi_nondominating(ptr %addr) {
+  entry:
+    br i1 0, label %if, label %else
+  if:
+    br label %exit
+  else:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @sink_to_phi_emptyblock(ptr %addr) {
+  entry:
+    br i1 0, label %if, label %else
+  if:
+    br label %exit
+  else:
+    br label %else2
+  else2:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @use_doesnt_def_anything(ptr %addr) {
+  entry:
+    ret void
+  }
+
+  define void @op0_isnt_a_reg(ptr %addr) {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            multiple_copies
+# CHECK-LABEL: name: multiple_copies
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    %3:_(s32) = G_SEXT %2
+    %4:_(s32) = G_CONSTANT i32 1
+    %5:_(s1) = G_ICMP intpred(ne), %1:_(s32), %4:_
+    G_BRCOND %5:_(s1), %bb.1
+    G_BR %bb.2.else
+  bb.1.if:
+  ; CHECK: bb.1.if:
+    successors: %bb.3(0x80000000)
+    %10:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[T1:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %6:_(s8) = G_ADD %2, %10
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_ADD [[T1]], {{.*}}
+    G_BR %bb.3.exit
+  bb.2.else:
+  ; CHECK: bb.2.else:
+    successors: %bb.3(0x80000000)
+    %11:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[T3:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %7:_(s8) = G_SUB %2, %11
+    ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_ADD [[T3]], {{.*}}
+    G_BR %bb.3.exit
+  bb.3.exit:
+  ; CHECK: bb.3.exit:
+    %8:_(s8) = G_PHI %6:_(s8), %bb.1, %7:_(s8), %bb.2
+    ; CHECK: [[T5:%[0-9]+]]:_(s8) = G_PHI [[T2]](s8), %bb.1, [[T4]](s8)
+    %9:_(s32) = G_ZEXT %8
+    ; CHECK: [[T6:%[0-9]+]]:_(s32) = G_ZEXT [[T5]](s8)
+    ; CHECK: $w0 = COPY [[T0]](s32)
+    ; CHECK: $w1 = COPY [[T6]](s32)
+    $w0 = COPY %3
+    $w1 = COPY %9
+
+# Check that we report the correct modifications to the observer. This acts as
+# a test of the debug output and a test.
+#
+# CHECK-WORKLIST-LABEL: Generic MI Combiner for: multiple_copies
+# CHECK-WORKLIST:       Try combining [[IN0:%[0-9]+]]:_(s8) = G_LOAD [[IN1:%[0-9]+]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
+# CHECK-WORKLIST:       Preferred use is: [[IN2:%[0-9]+]]:_(s32) = G_SEXT [[IN0]]:_(s8)
+# CHECK-WORKLIST-DAG:   Changing: [[IN0]]:_(s8) = G_LOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
+# CHECK-WORKLIST-DAG:   Changing: [[IN3:%[0-9]+]]:_(s8) = G_ADD [[IN0]]:_, [[IN4:%[0-9]+]]:_
+# CHECK-WORKLIST-DAG:   Changed: [[IN3]]:_(s8) = G_ADD [[NEW1:%[0-9]+]]:_, [[IN4]]:_
+# CHECK-WORKLIST-DAG:   Changing: [[IN5:%[0-9]+]]:_(s8) = G_SUB [[IN0]]:_, [[IN6:%[0-9]+]]:_
+# CHECK-WORKLIST-DAG:   Changed: [[IN5]]:_(s8) = G_SUB [[NEW2:%[0-9]+]]:_, [[IN6]]:_
+# CHECK-WORKLIST-DAG:   Erasing: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
+# CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
+# CHECK-WORKLIST-DAG:   Created: [[NEW1]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
+# CHECK-WORKLIST-DAG:   Created: [[NEW2]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
+# CHECK-WORKLIST:       Try combining
+...
+
+---
+name:            sink_to_phi_trivially_dominating
+# CHECK-LABEL: name: sink_to_phi_trivially_dominating
+# This test currently tests that we don't sink if we would sink to a phi. This
+# is needed to avoid inserting into the middle of the leading G_PHI instructions
+# of a BB
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %3:_(s32) = G_SEXT %2
+    %4:_(s32) = G_CONSTANT i32 1
+    %5:_(s1) = G_ICMP intpred(ne), %1:_(s32), %4:_
+    G_BRCOND %5:_(s1), %bb.1
+    G_BR %bb.2.exit
+  bb.1.if:
+  ; CHECK: bb.1.if:
+    successors: %bb.2(0x80000000)
+    %10:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[T1:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %6:_(s8) = G_ADD %2, %10
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_ADD [[T1]], {{.*}}
+    G_BR %bb.2.exit
+  bb.2.exit:
+  ; CHECK: bb.2.exit:
+    %8:_(s8) = G_PHI %6:_(s8), %bb.1, %2:_(s8), %bb.0
+    ; CHECK: [[T5:%[0-9]+]]:_(s8) = G_PHI [[T2]](s8), %bb.1, [[T4]](s8)
+    %9:_(s32) = G_ZEXT %8
+    ; CHECK: [[T6:%[0-9]+]]:_(s32) = G_ZEXT [[T5]](s8)
+    ; CHECK: $w0 = COPY [[T0]](s32)
+    ; CHECK: $w1 = COPY [[T6]](s32)
+    $w0 = COPY %3
+    $w1 = COPY %9
+...
+
+---
+name:            sink_to_phi_nondominating
+# CHECK-LABEL: name: sink_to_phi_nondominating
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    %3:_(s32) = G_CONSTANT i32 1
+    %4:_(s1) = G_ICMP intpred(ne), %1:_(s32), %3:_
+    G_BRCOND %4:_(s1), %bb.1
+    G_BR %bb.2.else
+  bb.1.if:
+  ; CHECK: bb.1.if:
+    successors: %bb.3(0x80000000)
+    %5:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[T1:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %6:_(s8) = G_ADD %2, %5
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_ADD [[T1]], {{.*}}
+    G_BR %bb.3.exit
+  bb.2.else:
+  ; CHECK: bb.2.else:
+    successors: %bb.3(0x80000000)
+    %7:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[T3:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %8:_(s8) = G_SUB %2, %7
+    ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_ADD [[T3]], {{.*}}
+    G_BR %bb.3.exit
+  bb.3.exit:
+  ; CHECK: bb.3.exit:
+    %9:_(s8) = G_PHI %6:_(s8), %bb.1, %8:_(s8), %bb.2
+    ; CHECK: [[T5:%[0-9]+]]:_(s8) = G_PHI [[T2]](s8), %bb.1, [[T4]](s8)
+    %10:_(s32) = G_SEXT %2
+    %11:_(s32) = G_ZEXT %9
+    ; CHECK: [[T6:%[0-9]+]]:_(s32) = G_ZEXT [[T5]](s8)
+    ; CHECK: $w0 = COPY [[T0]](s32)
+    ; CHECK: $w1 = COPY [[T6]](s32)
+    $w0 = COPY %10
+    $w1 = COPY %11
+# CHECK-WORKLIST-LABEL: Generic MI Combiner for: sink_to_phi_nondominating
+# CHECK-WORKLIST:       Try combining [[IN0:%[0-9]+]]:_(s8) = G_LOAD [[IN1:%[0-9]+]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
+# CHECK-WORKLIST:       Preferred use is: [[IN2:%[0-9]+]]:_(s32) = G_SEXT [[IN0]]:_(s8)
+# CHECK-WORKLIST-DAG:   Changing: [[IN0]]:_(s8) = G_LOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
+# CHECK-WORKLIST-DAG:   Creating: G_TRUNC
+# CHECK-WORKLIST-DAG:   Changing: [[IN3:%[0-9]+]]:_(s8) = G_ADD [[IN0]]:_, [[IN4:%[0-9]+]]:_
+# CHECK-WORKLIST-DAG:   Changed: [[IN3]]:_(s8) = G_ADD [[OUT1:%[0-9]+]]:_, [[IN4]]:_
+# CHECK-WORKLIST-DAG:   Creating: G_TRUNC
+# CHECK-WORKLIST-DAG:   Changing: [[IN5:%[0-9]+]]:_(s8) = G_SUB [[IN0]]:_, [[IN6:%[0-9]+]]:_
+# CHECK-WORKLIST-DAG:   Changed: [[IN5]]:_(s8) = G_SUB [[OUT2:%[0-9]+]]:_, [[IN6]]:_
+# CHECK-WORKLIST-DAG:   Erasing: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
+# CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
+# CHECK-WORKLIST-DAG:   Created: [[OUT1]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
+# CHECK-WORKLIST-DAG:   Created: [[OUT2]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
+# CHECK-WORKLIST:       Try combining
+...
+
+---
+name:            sink_to_phi_emptyblock
+# CHECK-LABEL: name: sink_to_phi_emptyblock
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    successors: %bb.1(0x40000000), %bb.2(0x40000000); %bb.1(50.00%), %bb.2(50.00%)
+    ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
+    %0:_(p0) = COPY $x0
+    %1:_(s32) = COPY $w1
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    %3:_(s32) = G_SEXT %2
+    %4:_(s32) = G_CONSTANT i32 1
+    %5:_(s1) = G_ICMP intpred(ne), %1:_(s32), %4:_
+    G_BRCOND %5:_(s1), %bb.1
+    G_BR %bb.2.else
+  bb.1.if:
+  ; CHECK: bb.1.if:
+    successors: %bb.4(0x80000000)
+    %10:_(s8) = G_CONSTANT i8 1
+    ; CHECK: [[T1:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    %6:_(s8) = G_ADD %2, %10
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_ADD [[T1]], {{.*}}
+    G_BR %bb.4.exit
+  bb.2.else:
+  ; CHECK: bb.2.else:
+    successors: %bb.3(0x80000000)
+    G_BR %bb.3.else2
+  bb.3.else2:
+  ; CHECK: bb.3.else2:
+    successors: %bb.4(0x80000000)
+    ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
+    ; Fallthrough
+  bb.4.exit:
+  ; CHECK: bb.4.exit:
+    %8:_(s8) = G_PHI %6:_(s8), %bb.1, %2:_(s8), %bb.3
+    ; CHECK: [[T5:%[0-9]+]]:_(s8) = G_PHI [[T2]](s8), %bb.1, [[T4]](s8)
+    %9:_(s32) = G_ZEXT %8
+    ; CHECK: [[T6:%[0-9]+]]:_(s32) = G_ZEXT [[T5]](s8)
+    ; CHECK: $w0 = COPY [[T0]](s32)
+    ; CHECK: $w1 = COPY [[T6]](s32)
+    $w0 = COPY %3
+    $w1 = COPY %9
+...
+
+---
+name:            use_doesnt_def_anything
+# CHECK-LABEL: name: use_doesnt_def_anything
+# Check that we don't crash when inspecting a use that doesn't define anything.
+# The real issue which was that the combine rule was looking through
+# non-truncates as if they were truncates and attempting to obtain the result
+# register. It would usually go on to make the right overall decision anyway but
+# would sometimes crash on things like (SOME_INTRINSIC imm). This test covers
+# the case that it would recover from.
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    ; CHECK: %1:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr)
+    G_STORE %1(s8), %0(p0) :: (store (s8) into %ir.addr)
+    ; CHECK: G_STORE %1(s8), %0(p0) :: (store (s8) into %ir.addr)
+...
+
+---
+name:            op0_isnt_a_reg
+# CHECK-LABEL: name: op0_isnt_a_reg
+# This test covers the variant of use_doesnt_def_anything that would crash.
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    ; CHECK: %1:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.hint), %1(s8)
+    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.hint), %1(s8)
+...

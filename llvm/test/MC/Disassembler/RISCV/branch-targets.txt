@@ -1,0 +1,27 @@
+# RUN: llvm-mc -assemble -triple riscv32 -mattr=+c -filetype=obj %s -o - 2>&1 | \
+# RUN:   llvm-objdump -d --mattr=+c -M no-aliases - | FileCheck %s
+# RUN: llvm-mc -assemble -triple riscv64 -mattr=+c -filetype=obj %s -o - 2>&1 | \
+# RUN:   llvm-objdump -d --mattr=+c -M no-aliases - | FileCheck %s
+
+label1:
+.option norvc
+  j label1
+  j label2
+  bnez a0, label1
+  bnez a0, label2
+.option rvc
+  j label1
+  j label2
+  bnez a0, label1
+  bnez a0, label2
+# CHECK-LABEL: <label1>:
+# CHECK-NEXT: jal zero, 0x0 <label1>
+# CHECK-NEXT: jal zero, 0x18 <label2>
+# CHECK-NEXT: bne a0, zero, 0x0 <label1>
+# CHECK-NEXT: bne a0, zero, 0x18 <label2>
+# CHECK-NEXT: c.j 0x0 <label1>
+# CHECK-NEXT: c.j 0x18 <label2>
+# CHECK-NEXT: c.bnez a0, 0x0 <label1>
+# CHECK-NEXT: c.bnez a0, 0x18 <label2>
+
+label2:

@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=si-i1-copies -o - %s | FileCheck -check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -passes=si-i1-copies -o - %s | FileCheck -check-prefixes=GCN %s
+
+# GCN-LABEL: name: lcssa_phi
+---
+name:              lcssa_phi
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:sreg_64 = S_MOV_B64 0
+    %8:vreg_1 = IMPLICIT_DEF
+    %10:sreg_64 = IMPLICIT_DEF
+    %11:sreg_64 = SI_IF %10, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    %1:sreg_64 = PHI %0, %bb.0, %3, %bb.1
+    %2:sreg_64 = IMPLICIT_DEF
+    %3:sreg_64 = SI_IF_BREAK %2, %1, implicit-def dead $scc
+    %4:sreg_64 = IMPLICIT_DEF
+    %5:vreg_1 = COPY %4
+    SI_LOOP %3, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    %6:vreg_1 = PHI %5, %bb.1
+    SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.3:
+    %7:vreg_1 = PHI %6, %bb.2, %8, %bb.0
+    SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_ENDPGM 0
+
+...

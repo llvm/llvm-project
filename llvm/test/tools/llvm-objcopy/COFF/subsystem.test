@@ -1,0 +1,82 @@
+## Test the --subsystem option.
+
+# RUN: yaml2obj %s -o %t.in.exe
+
+# RUN: llvm-objcopy --subsystem=posix:7.4 --subsystem windows %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=WIN74
+
+# WIN74: MajorOperatingSystemVersion: 6
+# WIN74: MinorOperatingSystemVersion: 0
+# WIN74: MajorSubsystemVersion: 7
+# WIN74: MinorSubsystemVersion: 4
+# WIN74: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI
+
+# RUN: llvm-objcopy --subsystem=posix:7.4 --subsystem windows:9 %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=WIN90
+
+# WIN90: MajorOperatingSystemVersion: 6
+# WIN90: MinorOperatingSystemVersion: 0
+# WIN90: MajorSubsystemVersion: 9
+# WIN90: MinorSubsystemVersion: 0
+# WIN90: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI
+
+# RUN: not llvm-objcopy --subsystem=foobar %t.in.exe %t.err.exe 2>&1 | FileCheck %s --check-prefix=INVALID-SUBSYS
+
+# INVALID-SUBSYS: 'foobar' is not a valid subsystem{{$}}
+
+# RUN: not llvm-objcopy --subsystem=windows:foo %t.in.exe %t.err.exe 2>&1 | FileCheck %s --check-prefix=INVALID-MAJOR-NUMBER
+# RUN: not llvm-objcopy --subsystem=windows:8.bar %t.in.exe %t.err.exe 2>&1 | FileCheck %s --check-prefix=INVALID-MINOR-NUMBER
+
+# INVALID-MAJOR-NUMBER: 'foo' is not a valid subsystem major version
+# INVALID-MINOR-NUMBER: 'bar' is not a valid subsystem minor version
+
+# RUN: llvm-objcopy --subsystem=efi_application %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-APPLICATION
+# RUN: llvm-objcopy --subsystem=efi-app %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-APPLICATION
+
+# EFI-APPLICATION: Subsystem: IMAGE_SUBSYSTEM_EFI_APPLICATION
+
+# RUN: llvm-objcopy --subsystem=efi_boot_service_driver %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-BOOT-SERVICE-DRIVER
+# RUN: llvm-objcopy --subsystem=efi-bsd %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-BOOT-SERVICE-DRIVER
+
+# EFI-BOOT-SERVICE-DRIVER: Subsystem: IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
+
+# RUN: llvm-objcopy --subsystem=efi_runtime_driver %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-RUNTIME-DRIVER
+# RUN: llvm-objcopy --subsystem=efi-rtd %t.in.exe %t.out.exe
+# RUN: llvm-readobj --file-headers %t.out.exe | FileCheck %s --check-prefix=EFI-RUNTIME-DRIVER
+
+# EFI-RUNTIME-DRIVER: Subsystem: IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [  ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [  ]
+    VirtualAddress:  4096
+    VirtualSize:     1
+    SectionData:     C3
+symbols:
+...

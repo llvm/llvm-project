@@ -1,0 +1,76 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+subroutine s(n,m,a,l,c)
+  integer, intent(in) :: n
+  integer, device, intent(in) :: m(n)
+  real, device, intent(in) :: a(n)
+  logical, device, intent(in) :: l(n)
+  integer j, mr
+  real ar
+  logical lr
+  complex :: cr
+  complex, device, intent(in) :: c(n)
+!$cuf kernel do <<<*,*>>> reduce (+:mr,ar)
+  do j=1,n; mr = mr + m(j); ar = ar + a(j); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (+:lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (*:mr,ar)
+  do j=1,n; mr = mr * m(j); ar = ar * a(j); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (*:lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (max:mr,ar)
+  do j=1,n; mr = max(mr,m(j)); ar = max(ar,a(j)); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (max:lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (min:mr,ar)
+  do j=1,n; mr = min(mr,m(j)); ar = min(ar,a(j)); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (min:lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (iand:mr)
+  do j=1,n; mr = iand(mr,m(j)); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (iand:ar,lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (ieor:mr)
+  do j=1,n; mr = ieor(mr,m(j)); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (ieor:ar,lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (ior:mr)
+  do j=1,n; mr = ior(mr,m(j)); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type LOGICAL(4)
+!$cuf kernel do <<<*,*>>> reduce (ior:ar,lr)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (.and.:lr)
+  do j=1,n; lr = lr .and. l(j); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type INTEGER(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!$cuf kernel do <<<*,*>>> reduce (.and.:mr,ar)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (.eqv.:lr)
+  do j=1,n; lr = lr .eqv. l(j); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type INTEGER(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!$cuf kernel do <<<*,*>>> reduce (.eqv.:mr,ar)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (.neqv.:lr)
+  do j=1,n; lr = lr .neqv. l(j); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type INTEGER(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!$cuf kernel do <<<*,*>>> reduce (.neqv.:mr,ar)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (.or.:lr)
+  do j=1,n; lr = lr .or. l(j); end do
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type INTEGER(4)
+!ERROR: !$CUF KERNEL DO REDUCE operation is not acceptable for a variable with type REAL(4)
+!$cuf kernel do <<<*,*>>> reduce (.or.:mr,ar)
+  do j=1,n; end do
+!$cuf kernel do <<<*,*>>> reduce (+:cr) ! ok complex type
+  do j=1,n; cr = cr + c(j); end do
+end

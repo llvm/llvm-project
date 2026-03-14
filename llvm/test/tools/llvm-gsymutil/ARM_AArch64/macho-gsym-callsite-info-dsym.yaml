@@ -1,0 +1,950 @@
+## Test that reconstructs a dSYM file from YAML and generates a callsite-enabled gsym from it - and then verifies the gsym.
+## See llvm/test/tools/llvm-gsymutil/ARM_AArch64/macho-gsym-callsite-info.test for the script to generate this yaml file
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/call_sites.dSYM.yaml -o %t/call_sites.dSYM
+
+# RUN: llvm-gsymutil --num-threads=1 --convert=%t/call_sites.dSYM --callsites-yaml-file=%t/callsites.yaml -o %t/call_sites_dSYM.gsym
+
+# Dump the GSYM file and check the output for callsite information
+# RUN: llvm-gsymutil %t/call_sites_dSYM.gsym | FileCheck --check-prefix=CHECK-GSYM %s
+
+
+# CHECK-GSYM:      FunctionInfo @ 0x[[#%x,FUNC_INFO:]]: [0x[[#%x,FUNC_START:]] - 0x[[#%x,FUNC_END:]]) "func_mainBin_dec_call_everything"
+# CHECK-GSYM-NEXT: LineTable:
+#                    // func_mainBin_dec_call_everything() {
+# CHECK-GSYM-NEXT:   0x[[#%x,ENTRY:]] {{.*}}/call_sites.cpp:16
+#                    // func_mainBin_dec_01();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_DEC_01_CALL:]] {{.*}}/call_sites.cpp:17
+#                    // func_mainBin_dec_02();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_DEC_02_CALL:]] {{.*}}/call_sites.cpp:18
+#                    // func_mainBin_dec_03();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_DEC_03_CALL:]] {{.*}}/call_sites.cpp:19
+#                    // func_mainBin_inc_01();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_INC_01_CALL:]] {{.*}}/call_sites.cpp:21
+#                    // func_mainBin_inc_02();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_INC_02_CALL:]] {{.*}}/call_sites.cpp:22
+#                    // func_mainBin_inc_03();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_INC_03_CALL:]] {{.*}}/call_sites.cpp:23
+#                    // g_func_ptr();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_FUNC_CALL:]] {{.*}}/call_sites.cpp:25
+#                    // g_extern_func_ptr();
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_EXTERN_FUNC_CALL:]] {{.*}}/call_sites.cpp:26
+#                    // g_volatile_var = 0;
+# CHECK-GSYM-NEXT:   0x[[#%x,ADDR_VAR_ASSIGN:]] {{.*}}/call_sites.cpp:28
+#                    // }
+# CHECK-GSYM-NEXT:   0x[[#%x,]] {{.*}}/call_sites.cpp:29
+# CHECK-GSYM-NEXT: CallSites (by relative return offset):
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_DEC_02_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_dec_01]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_DEC_03_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_dec_02]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_INC_01_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_dec_03]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_INC_02_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_inc_01]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_INC_03_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_inc_02]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_FUNC_CALL,FUNC_START)]] Flags[InternalCall] MatchRegex[func_mainBin_inc_03]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_EXTERN_FUNC_CALL,FUNC_START)]] Flags[None] MatchRegex[.*func.*]
+# CHECK-GSYM-NEXT:   0x[[#%.4x,sub(ADDR_VAR_ASSIGN,FUNC_START)]] Flags[ExternalCall] MatchRegex[.*extern_func.*]
+
+
+#--- callsites.yaml
+functions:
+  - name: func_mainBin_dec_call_everything
+    callsites:
+      - return_offset: 0x0C
+        match_regex: ["func_mainBin_dec_01"]
+        flags:
+          - "InternalCall"
+      - return_offset: 0x10
+        match_regex: ["func_mainBin_dec_02"]
+        flags:
+          - "InternalCall"
+      - return_offset: 0x14
+        match_regex: ["func_mainBin_dec_03"]
+        flags:
+          - "InternalCall"
+      - return_offset: 24
+        match_regex: ["func_mainBin_inc_01"]
+        flags:
+          - "InternalCall"
+      - return_offset: 28
+        match_regex: ["func_mainBin_inc_02"]
+        flags:
+          - "InternalCall"
+      - return_offset: 32
+        match_regex: ["func_mainBin_inc_03"]
+        flags:
+          - "InternalCall"
+      - return_offset: 44
+        match_regex: [".*func.*"]
+      - return_offset: 56
+        match_regex: [".*extern_func.*"]
+        flags:
+          - "ExternalCall"
+
+
+#--- call_sites.dSYM.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0xA
+  ncmds:           8
+  sizeofcmds:      1392
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C44E9-5555-3144-A1D3-328233D00078
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             720896
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           12
+    stroff:          4288
+    strsize:         235
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        0
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000338
+        size:            216
+        offset:          0x0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         CFFAEDFE0C000001000000000A000000080000007005000000000000000000001B000000180000004C4C44E955553144A1D3328233D0007832000000180000000100000000000B0000000B00000000000200000018000000001000000C000000C0100000EB00000019000000480000005F5F504147455A45524F00000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000019000000980000005F5F544558540000000000000000000000000000010000000040000000000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         0
+    filesize:        0
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __common
+        segname:         __DATA
+        addr:            0x100004000
+        size:            24
+        offset:          0x0
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x1
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4295000064
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        427
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         872
+    segname:         __DWARF
+    vmaddr:          4295004160
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        1894
+    maxprot:         7
+    initprot:        3
+    nsects:          10
+    flags:           0
+    Sections:
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x100009000
+        size:            150
+        offset:          0x2000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_aranges
+        segname:         __DWARF
+        addr:            0x100009096
+        size:            48
+        offset:          0x2096
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x1000090C6
+        size:            424
+        offset:          0x20C6
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_frame
+        segname:         __DWARF
+        addr:            0x10000926E
+        size:            232
+        offset:          0x226E
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         14000000FFFFFFFF0400080001781E0C1F0000000000000014000000000000003803000001000000140000000000000014000000000000004C03000001000000140000000000000014000000000000006003000001000000140000000000000014000000000000007403000001000000140000000000000014000000000000008803000001000000140000000000000014000000000000009C0300000100000014000000000000001C00000000000000B0030000010000004800000000000000480C1D109E019D021C00000000000000F8030000010000001800000000000000480C1D109E019D02
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x100009356
+        size:            171
+        offset:          0x2356
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x100009401
+        size:            378
+        offset:          0x2401
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x10000957B
+        size:            36
+        offset:          0x257B
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x10000959F
+        size:            340
+        offset:          0x259F
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000B0000000B0000000C000000000000000100000001000600FFFFFFFF00000000FFFFFFFFFFFFFFFFFFFFFFFF01000000FFFFFFFF0300000004000000060000000900000073A83B36215E623FACBB81686A7F9A7C1939EE6AC7E03A771A39EE6AC8E03A773856D6801B39EE6AC9E03A77A4000000B4000000C4000000D4000000E4000000F40000000401000014010000240100003401000044010000AC000000010000002E00000000000000CA000000010000007300000000000000BF000000010000004F0000000000000075010000010000008001000000000000DC0000000100000088000000000000001801000001000000C700000000000000F0000000010000009D000000000000002C01000001000000DC00000000000000540100000100000006010000000000000401000001000000B2000000000000004001000001000000F100000000000000
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x1000096F3
+        size:            79
+        offset:          0x26F3
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000100000001000000180000000000000004000000010006000300050005000B0006000600000000003080880B38000000BB0000000100000048000000240000A4283A0C00000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x100009742
+        size:            36
+        offset:          0x2742
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968312
+    - n_strx:          8
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968120
+    - n_strx:          29
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968140
+    - n_strx:          50
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968160
+    - n_strx:          71
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968180
+    - n_strx:          92
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968200
+    - n_strx:          113
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968220
+    - n_strx:          134
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968240
+    - n_strx:          168
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983680
+    - n_strx:          184
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983688
+    - n_strx:          196
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         4294983696
+    - n_strx:          215
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+  StringTable:
+    - ''
+    - ''
+    - _main
+    - _func_mainBin_dec_01
+    - _func_mainBin_dec_02
+    - _func_mainBin_dec_03
+    - _func_mainBin_inc_01
+    - _func_mainBin_inc_02
+    - _func_mainBin_inc_03
+    - _func_mainBin_dec_call_everything
+    - _g_volatile_var
+    - _g_func_ptr
+    - _g_extern_func_ptr
+    - __mh_execute_header
+DWARF:
+  debug_str:
+    - ''
+    - 'clang version 20.0.0git (https://github.com/alx32/llvm-project.git f41f6ea1f33c4f5e7c94f3d155e44292d1809c50)'
+    - call_sites.cpp
+    - '/'
+    - '/tmp/___________________________________/tst'
+    - g_volatile_var
+    - int
+    - g_func_ptr
+    - g_extern_func_ptr
+    - func_mainBin_dec_01
+    - func_mainBin_dec_02
+    - func_mainBin_dec_03
+    - func_mainBin_inc_01
+    - func_mainBin_inc_02
+    - func_mainBin_inc_03
+    - func_mainBin_dec_call_everything
+    - main
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+        - Code:            0x3
+          Tag:             DW_TAG_volatile_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+        - Code:            0x4
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x5
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+        - Code:            0x6
+          Tag:             DW_TAG_subroutine_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+        - Code:            0x7
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_APPLE_omit_frame_ptr
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_all_calls
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+        - Code:            0x8
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_all_calls
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+        - Code:            0x9
+          Tag:             DW_TAG_call_site
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_call_origin
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_call_return_pc
+              Form:            DW_FORM_addr
+        - Code:            0xA
+          Tag:             DW_TAG_call_site
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_call_target
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_return_pc
+              Form:            DW_FORM_addr
+        - Code:            0xB
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_all_calls
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+  debug_aranges:
+    - Length:          0x2C
+      Version:         2
+      CuOffset:        0x0
+      AddressSize:     0x8
+      Descriptors:
+        - Address:         0x100000338
+          Length:          0xD8
+  debug_info:
+    - Length:          0x1A4
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x21
+            - Value:           0x6E
+            - Value:           0x7D
+            - Value:           0x0
+            - Value:           0x7F
+            - Value:           0x1
+            - Value:           0x100000338
+            - Value:           0xD8
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xAC
+            - Value:           0x43
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0x9
+              BlockData:       [ 0x3, 0x0, 0x40, 0x0, 0x0, 0x1, 0x0, 0x0,
+                                 0x0 ]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x48
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0xBB
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xBF
+            - Value:           0x64
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x5
+            - Value:           0x9
+              BlockData:       [ 0x3, 0x8, 0x40, 0x0, 0x0, 0x1, 0x0, 0x0,
+                                 0x0 ]
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x69
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x6E
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0x48
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xCA
+            - Value:           0x64
+            - Value:           0x1
+            - Value:           0x1
+            - Value:           0x6
+            - Value:           0x9
+              BlockData:       [ 0x3, 0x10, 0x40, 0x0, 0x0, 0x1, 0x0, 0x0,
+                                 0x0 ]
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x100000338
+            - Value:           0x14
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0xDC
+            - Value:           0x1
+            - Value:           0x8
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x10000034C
+            - Value:           0x14
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0xF0
+            - Value:           0x1
+            - Value:           0x9
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x100000360
+            - Value:           0x14
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x104
+            - Value:           0x1
+            - Value:           0xA
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x100000374
+            - Value:           0x14
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x118
+            - Value:           0x1
+            - Value:           0xC
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x100000388
+            - Value:           0x14
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x12C
+            - Value:           0x1
+            - Value:           0xD
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x7
+          Values:
+            - Value:           0x10000039C
+            - Value:           0x14
+            - Value:           0x1
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x140
+            - Value:           0x1
+            - Value:           0xE
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x8
+          Values:
+            - Value:           0x1000003B0
+            - Value:           0x48
+            - Value:           0x1
+              BlockData:       [ 0x6D ]
+            - Value:           0x1
+            - Value:           0x154
+            - Value:           0x1
+            - Value:           0x10
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0x88
+            - Value:           0x1000003BC
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0x9D
+            - Value:           0x1000003C0
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0xB2
+            - Value:           0x1000003C4
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0xC7
+            - Value:           0x1000003C8
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0xDC
+            - Value:           0x1000003CC
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0xF1
+            - Value:           0x1000003D0
+        - AbbrCode:        0xA
+          Values:
+            - Value:           0x1
+              BlockData:       [ 0x58 ]
+            - Value:           0x1000003DC
+        - AbbrCode:        0xA
+          Values:
+            - Value:           0x1
+              BlockData:       [ 0x58 ]
+            - Value:           0x1000003E8
+        - AbbrCode:        0x0
+        - AbbrCode:        0xB
+          Values:
+            - Value:           0x1000003F8
+            - Value:           0x18
+            - Value:           0x1
+              BlockData:       [ 0x6D ]
+            - Value:           0x1
+            - Value:           0x175
+            - Value:           0x1
+            - Value:           0x1F
+            - Value:           0x48
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x9
+          Values:
+            - Value:           0x106
+            - Value:           0x100000404
+        - AbbrCode:        0x0
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          146
+      Version:         4
+      PrologueLength:  38
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:            call_sites.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4294968120
+        - Opcode:          DW_LNS_set_column
+          Data:            54
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x19
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            58
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0xF2
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            54
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            58
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0xF2
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            54
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            58
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0xF2
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            54
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            58
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0xF2
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            54
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            58
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0xF2
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            54
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            58
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0xF2
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            0
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x83
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          0x4C
+          Data:            0
+        - Opcode:          0xBB
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            20
+        - Opcode:          0xBC
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            1
+        - Opcode:          DW_LNS_set_epilogue_begin
+          Data:            0
+        - Opcode:          0x83
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            0
+        - Opcode:          0x84
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            3
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          0x83
+          Data:            0
+        - Opcode:          0x4B
+          Data:            0
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          DW_LNS_set_epilogue_begin
+          Data:            0
+        - Opcode:          0x4A
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            8
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+...

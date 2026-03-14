@@ -1,0 +1,70 @@
+## Test that printing debug directories that aren't part of the runtime
+## mapped sections doesn't fail. Currently llvm-readobj only prints the
+## entry itself and not the payload. Note that there isn't currently any
+## meaningful data in this test input where it claims the debug entry
+## payload is.
+
+# RUN: yaml2obj %s -o %t.exe
+
+# RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck %s
+
+# CHECK:      DebugDirectory [
+# CHECK-NEXT:   DebugEntry {
+# CHECK-NEXT:     Characteristics: 0x0
+# CHECK-NEXT:     TimeDateStamp: 2019-01-17 21:06:10 (0x5C40EE42)
+# CHECK-NEXT:     MajorVersion: 0x0
+# CHECK-NEXT:     MinorVersion: 0x0
+# CHECK-NEXT:     Type: CodeView (0x2)
+# CHECK-NEXT:     SizeOfData: 0x19
+# CHECK-NEXT:     AddressOfRawData: 0x0
+# CHECK-NEXT:     PointerToRawData: 0x3E4
+# CHECK-NEXT:   }
+# CHECK-NEXT:   DebugEntry {
+# CHECK-NEXT:     Characteristics: 0x0
+# CHECK-NEXT:     TimeDateStamp: 2019-01-17 21:06:10 (0x5C40EE42)
+# CHECK-NEXT:     MajorVersion: 0x0
+# CHECK-NEXT:     MinorVersion: 0x0
+# CHECK-NEXT:     Type: ExtendedDLLCharacteristics (0x14)
+# CHECK-NEXT:     SizeOfData: 0x4
+# CHECK-NEXT:     AddressOfRawData: 0x0
+# CHECK-NEXT:     PointerToRawData: 0x3E0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       1073741824
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [  ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  Debug:
+    RelativeVirtualAddress: 8192
+    Size:            56
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [  ]
+    VirtualAddress:  4096
+    VirtualSize:     16
+    SectionData:     C3909090909090909090909090909090
+  - Name:            .buildid
+    Characteristics: [  ]
+    VirtualAddress:  8192
+    VirtualSize:     56
+    SectionData:     0000000042EE405C00000000020000001900000000000000E40300000000000042EE405C00000000140000000400000000000000E0030000
+symbols:
+...

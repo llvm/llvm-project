@@ -1,0 +1,23 @@
+RUN: llvm-gsymutil -h 2>&1 | FileCheck --check-prefix=HELP %s
+RUN: llvm-gsymutil --help 2>&1 | FileCheck --check-prefix=HELP %s
+HELP: OVERVIEW: A tool for dumping, searching and creating GSYM files.
+HELP: USAGE: llvm-gsymutil{{[^ ]*}} [options] <input GSYM files>
+HELP: OPTIONS:
+HELP: --address=<value>
+HELP: --addresses-from-stdin
+HELP: --arch=<value>
+HELP: --convert=<value>
+HELP: --help
+HELP: --num-threads=<value>
+HELP: --out-file=<value>
+HELP: --quiet
+HELP: --verbose
+HELP: --verify
+HELP: --version
+
+RUN: llvm-gsymutil --version 2>&1 | FileCheck --check-prefix=VERSION %s
+VERSION: {{ version }}
+
+RUN: not llvm-gsymutil --addresses-from-stdin --address 0x12345678 | FileCheck --check-prefix=INCOMPATIBLE %s
+RUN: not llvm-gsymutil --addresses-from-stdin llvm-gsymutil | FileCheck --check-prefix=INCOMPATIBLE %s
+INCOMPATIBLE: error: no input files or addresses can be specified when using the --addresses-from-stdin option.

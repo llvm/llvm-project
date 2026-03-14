@@ -1,0 +1,5 @@
+if(LLDB_TOOL_LLDB_SERVER_BUILD)
+  if (NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
+    add_subdirectory(lldb-server)
+  endif()
+endif()

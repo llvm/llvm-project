@@ -1,0 +1,14 @@
+RUN: rm -rf %t && mkdir -p %t
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/a.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/b.obj %S/Inputs/b.s
+
+RUN: rm -f %t/l.lib
+RUN: llvm-lib /out:%t/foo.lib %t/a.obj %t/b.obj
+
+# This should ignore the two .obj files, then print the first .lib file,
+# then ignore the 2nd one.
+RUN: llvm-lib /list %t/a.obj %t/b.obj %t/foo.lib %t/foo.lib | FileCheck %s
+
+CHECK: a.obj
+CHECK: b.obj
+CHECK-NOT: a.obj

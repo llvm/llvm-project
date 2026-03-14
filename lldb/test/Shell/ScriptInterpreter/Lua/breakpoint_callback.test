@@ -1,0 +1,12 @@
+# RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t
+# RUN: %lldb -s %s --script-language lua %t 2>&1 | FileCheck %s
+b main
+breakpoint command add -s lua
+local a = 123
+print(a)
+quit
+run
+# CHECK: 123
+breakpoint command add -s lua
+789_nil
+# CHECK: {{unexpected symbol near '789'|malformed number near '789_'}}

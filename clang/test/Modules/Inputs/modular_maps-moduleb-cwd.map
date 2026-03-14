@@ -1,0 +1,4 @@
+module B {
+  header "Inputs/modular_maps/common.h"
+  private header "Inputs/modular_maps/b.h"
+}

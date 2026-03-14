@@ -1,0 +1,5 @@
+module ModA { header "A.h" }
+module ModB { 
+  header "B.h" 
+  export *
+}

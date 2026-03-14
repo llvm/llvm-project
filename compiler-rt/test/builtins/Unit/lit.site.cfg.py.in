@@ -1,0 +1,18 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.name_suffix = "@BUILTINS_TEST_CONFIG_SUFFIX@"
+config.builtins_lit_source_dir = "@BUILTINS_LIT_SOURCE_DIR@/Unit"
+config.target_cflags = "@BUILTINS_TEST_TARGET_CFLAGS@"
+config.target_arch = "@BUILTINS_TEST_TARGET_ARCH@"
+config.sanitizer_cxx_lib = "@SANITIZER_TEST_CXX_LIBNAME@"
+config.builtins_build_crt = @COMPILER_RT_BUILD_CRT_PYBOOL@
+config.is_msvc = @MSVC_PYBOOL@
+config.builtins_is_msvc = @BUILTINS_IS_MSVC_PYBOOL@
+config.builtins_lit_source_features = "@BUILTINS_LIT_SOURCE_FEATURES@"
+config.test_suite_supports_overriding_runtime_lib_path = True
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@BUILTINS_LIT_SOURCE_DIR@/Unit/lit.cfg.py")

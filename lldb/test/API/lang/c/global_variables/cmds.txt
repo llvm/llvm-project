@@ -1,0 +1,3 @@
+break main.c:5
+continue
+var -global g_a -global g_global_int

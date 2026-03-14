@@ -1,0 +1,15 @@
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  ARM
+    Platform ID:     Linux
+    CSD Version:     '15E216'
+    CPU:             
+      CPUID:           0x00000000
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/target/path/libuuidmatch.so'
+        CodeView Record: 525344537295E17C66689E05CBB5DEE5003865D55267C116
+...

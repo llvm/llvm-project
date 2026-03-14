@@ -1,0 +1,16 @@
+;; Show that llvm-nm prints dashes for the symbol value of symbols in values.
+;; Also show that the --no-llvm-bc option prevents loading bitcode files.
+; RUN: llvm-as %s -o %t.bc
+
+; RUN: llvm-nm %t.bc | FileCheck %s --check-prefix=RECOGNISED
+; RUN: not llvm-nm %t.bc --no-llvm-bc 2>&1 | FileCheck %s --check-prefix=UNRECOGNISED -DFILE=%t.bc
+
+; RECOGNISED: ---------------- T foo
+; UNRECOGNISED: error: [[FILE]]: The file was not recognized as a valid object file
+
+target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @foo() {
+  ret void
+}

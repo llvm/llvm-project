@@ -1,0 +1,188 @@
+## Test that we bail out if a section consisting of symidx is invalid.
+
+## In this case, the symbol .gfids$y is not present at all.
+# RUN: yaml2obj %s --docnum=1 -o %t1.in.o
+# RUN: not llvm-objcopy --strip-debug %t1.in.o %t1.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-NOSYM -DFILE=%t1.out.o
+
+# ERROR-NOSYM: error: '[[FILE]]': section '.gfids$y' does not have the corresponding symbol or the symbol has unexpected format
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+  - Name:            '.gfids$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '04000000'
+    SizeOfRawData:   8
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 4
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+## In this case, the symbol .giats$y has a non-zero offset.
+# RUN: yaml2obj %s --docnum=2 -o %t2.in.o
+# RUN: not llvm-objcopy --strip-debug %t2.in.o %t2.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-OFFSET -DFILE=%t2.out.o
+
+# ERROR-OFFSET: error: '[[FILE]]': section '.giats$y' does not have the corresponding symbol or the symbol has unexpected format
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+  - Name:            '.giats$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0600000010000000'
+    SizeOfRawData:   8
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            '.giats$y'
+    Value:           42
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1167279533
+      Number:          5
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+## In this case, the symbol .gljmp$y has a non-static storage class.
+# RUN: yaml2obj %s --docnum=3 -o %t3.in.o
+# RUN: not llvm-objcopy --strip-debug %t3.in.o %t3.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-EXTERNAL -DFILE=%t3.out.o
+
+# ERROR-EXTERNAL: error: '[[FILE]]': section '.gljmp$y' does not have the corresponding symbol or the symbol has unexpected format
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+  - Name:            '.gljmp$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0600000010000000'
+    SizeOfRawData:   8
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            '.gljmp$y'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+## In this case, .gfids$y contains a symbol index that is not present in the
+## symbol table. Generally the behavior should be the same for every section consisting
+## of .symidx directives, e.g .giats$y, .gljmp$y and .gehcont$y.
+# RUN: yaml2obj %s --docnum=4 -o %t4.in.o
+# RUN: not llvm-objcopy --strip-debug %t4.in.o %t4.out.o 2>&1 | FileCheck %s --check-prefix=ERROR-SYMIDX  -DFILE=%t4.out.o
+
+# ERROR-SYMIDX: error: '[[FILE]]': section '.gfids$y' contains a .symidx (16) that is incorrect or was stripped
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+  - Name:            '.gfids$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0400000010000000'
+    SizeOfRawData:   8
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            '.gfids$y'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1167279533
+      Number:          5
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

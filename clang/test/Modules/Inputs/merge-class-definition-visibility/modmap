@@ -1,0 +1,8 @@
+module Def1 {
+  module B { header "b.h" }
+  module C { header "c.h" }
+}
+module Def2 {
+  module D { header "d.h" }
+  module E { header "e.h" }
+}

@@ -1,0 +1,8 @@
+# NOTE: Use a '\' in 'llvm\-extract' to prevent substitution.
+
+# RUN: cp -f %S/Inputs/custom-tool.ll %t.ll && %update_test_checks %t.ll --tool=llvm\-extract --tool-binary=llvm-extract
+# RUN: diff -u %t.ll %S/Inputs/custom-tool.ll.expected
+
+## Check that running the script again does not change the result.
+# RUN: %update_test_checks %t.ll --tool=llvm\-extract --tool-binary=llvm-extract
+# RUN: diff -u %t.ll %S/Inputs/custom-tool.ll.expected

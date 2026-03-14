@@ -1,0 +1,178 @@
+# RUN: llc -mtriple=armv7-- -run-pass=prologepilog -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define void @CheckAddrMode_i12() { ret void }
+  define void @CheckAddrMode3() { ret void }
+  define void @CheckAddrMode5() { ret void }
+  define void @CheckAddrMode5FP16() { ret void }
+  define void @foo() { ret void }
+
+...
+---
+
+name:           CheckAddrMode_i12
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r0
+    ; CHECK-LABEL: name:           CheckAddrMode_i12
+    ; CHECK: $r1 = MOVr killed $r0, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
+    ; CHECK-NEXT: BL @OUTLINED_FUNCTION_[[I12:[0-9]+]]
+    ; CHECK-NEXT: $r6 = LDRi12 $sp, 4088, 14 /* CC::al */, $noreg
+    $r1 = MOVr killed $r0, 14, $noreg, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $r1 = LDRi12 $sp, 0, 14, $noreg
+    $r2 = LDRi12 $sp, 8, 14, $noreg
+    $r5 = LDRi12 $sp, 4086, 14, $noreg
+    $r6 = LDRi12 $sp, 4088, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $r1 = LDRi12 $sp, 0, 14, $noreg
+    $r2 = LDRi12 $sp, 8, 14, $noreg
+    $r5 = LDRi12 $sp, 4086, 14, $noreg
+    $r6 = LDRi12 $sp, 4088, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $r1 = LDRi12 $sp, 0, 14, $noreg
+    $r2 = LDRi12 $sp, 8, 14, $noreg
+    $r5 = LDRi12 $sp, 4086, 14, $noreg
+    $r6 = LDRi12 $sp, 4088, 14, $noreg
+    BX_RET 14, $noreg
+...
+---
+
+name:           CheckAddrMode3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r1
+    ; CHECK-LABEL: name:           CheckAddrMode3
+    ; CHECK: $r0 = MOVr killed $r1, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
+    ; CHECK-NEXT: BL @OUTLINED_FUNCTION_[[I3:[0-9]+]]
+    ; CHECK-NEXT: $r6 = LDRSH $sp, $noreg, 248, 14 /* CC::al */, $noreg
+    $r0 = MOVr killed $r1, 14, $noreg, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $r1 = LDRSH $sp, $noreg, 0, 14, $noreg
+    $r2 = LDRSH $sp, $noreg, 8, 14, $noreg
+    $r5 = LDRSH $sp, $noreg, 247, 14, $noreg
+    $r6 = LDRSH $sp, $noreg, 248, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $r1 = LDRSH $sp, $noreg, 0, 14, $noreg
+    $r2 = LDRSH $sp, $noreg, 8, 14, $noreg
+    $r5 = LDRSH $sp, $noreg, 247, 14, $noreg
+    $r6 = LDRSH $sp, $noreg, 248, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $r1 = LDRSH $sp, $noreg, 0, 14, $noreg
+    $r2 = LDRSH $sp, $noreg, 8, 14, $noreg
+    $r5 = LDRSH $sp, $noreg, 247, 14, $noreg
+    $r6 = LDRSH $sp, $noreg, 248, 14, $noreg
+    BX_RET 14, $noreg
+...
+---
+
+name:           CheckAddrMode5
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2
+    ; CHECK-LABEL: name:           CheckAddrMode5
+    ; CHECK: $r0 = MOVr killed $r2, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
+    ; CHECK-NEXT: BL @OUTLINED_FUNCTION_[[I5:[0-9]+]]
+    ; CHECK-NEXT: $d5 = VLDRD $sp, 254, 14 /* CC::al */, $noreg
+    $r0 = MOVr killed $r2, 14, $noreg, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $d0 = VLDRD $sp, 0, 14, $noreg
+    $d1 = VLDRD $sp, 8, 14, $noreg
+    $d4 = VLDRD $sp, 253, 14, $noreg
+    $d5 = VLDRD $sp, 254, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $d0 = VLDRD $sp, 0, 14, $noreg
+    $d1 = VLDRD $sp, 8, 14, $noreg
+    $d4 = VLDRD $sp, 253, 14, $noreg
+    $d5 = VLDRD $sp, 254, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $d0 = VLDRD $sp, 0, 14, $noreg
+    $d1 = VLDRD $sp, 8, 14, $noreg
+    $d4 = VLDRD $sp, 253, 14, $noreg
+    $d5 = VLDRD $sp, 254, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $d0 = VLDRD $sp, 0, 14, $noreg
+    $d1 = VLDRD $sp, 8, 14, $noreg
+    $d4 = VLDRD $sp, 253, 14, $noreg
+    $d5 = VLDRD $sp, 254, 14, $noreg
+    BX_RET 14, $noreg
+...
+---
+
+name:           CheckAddrMode5FP16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r3
+    ; CHECK-LABEL: name:           CheckAddrMode5FP16
+    ; CHECK: $r0 = MOVr killed $r3, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK-NEXT: BL @foo, implicit-def dead $lr, implicit $sp
+    ; CHECK-NEXT: BL @OUTLINED_FUNCTION_[[I5FP16:[0-9]+]]
+    ; CHECK-NEXT: $s6 = VLDRH $sp, 252, 14, $noreg
+    $r0 = MOVr killed $r3, 14, $noreg, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $s1 = VLDRH $sp, 0, 14, $noreg
+    $s2 = VLDRH $sp, 8, 14, $noreg
+    $s5 = VLDRH $sp, 240, 14, $noreg
+    $s6 = VLDRH $sp, 252, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $s1 = VLDRH $sp, 0, 14, $noreg
+    $s2 = VLDRH $sp, 8, 14, $noreg
+    $s5 = VLDRH $sp, 240, 14, $noreg
+    $s6 = VLDRH $sp, 252, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $s1 = VLDRH $sp, 0, 14, $noreg
+    $s2 = VLDRH $sp, 8, 14, $noreg
+    $s5 = VLDRH $sp, 240, 14, $noreg
+    $s6 = VLDRH $sp, 252, 14, $noreg
+    BL @foo, implicit-def dead $lr, implicit $sp
+    $s1 = VLDRH $sp, 0, 14, $noreg
+    $s2 = VLDRH $sp, 8, 14, $noreg
+    $s5 = VLDRH $sp, 240, 14, $noreg
+    $s6 = VLDRH $sp, 252, 14, $noreg
+    BX_RET 14, $noreg
+...
+---
+
+name:           foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+
+    BX_RET 14, $noreg
+
+    ;CHECK: name:           OUTLINED_FUNCTION_[[I5]]
+    ;CHECK: liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
+    ;CHECK: $d0 = VLDRD $sp, 0, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $d1 = VLDRD $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $d4 = VLDRD $sp, 253, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+
+    ;CHECK: name:           OUTLINED_FUNCTION_[[I5FP16]]
+    ;CHECK: liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
+    ;CHECK: $s1 = VLDRH $sp, 0, 14, $noreg
+    ;CHECK-NEXT: $s2 = VLDRH $sp, 8, 14, $noreg
+    ;CHECK-NEXT: $s5 = VLDRH $sp, 240, 14, $noreg
+    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+
+    ;CHECK: name:           OUTLINED_FUNCTION_[[I12]]
+    ;CHECK: liveins: $r10, $r9, $r8, $r7, $d8, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9
+    ;CHECK: $r1 = LDRi12 $sp, 0, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $r2 = LDRi12 $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $r5 = LDRi12 $sp, 4086, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg
+
+    ;CHECK: name:           OUTLINED_FUNCTION_[[I3]]
+    ;CHECK: liveins: $r10, $r9, $r8, $r7, $d8, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9
+    ;CHECK: $r1 = LDRSH $sp, $noreg, 0, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $r2 = LDRSH $sp, $noreg, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: $r5 = LDRSH $sp, $noreg, 247, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg

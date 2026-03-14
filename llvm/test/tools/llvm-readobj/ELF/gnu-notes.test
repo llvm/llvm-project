@@ -1,0 +1,270 @@
+## Test tools are able to dump different types of notes.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.so
+# RUN: llvm-readelf --notes %t1.so | FileCheck %s --check-prefix=GNU --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --notes %t1.so | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-objcopy --strip-sections %t1.so %t1.stripped.so
+# RUN: llvm-readelf --notes %t1.stripped.so | FileCheck %s --check-prefix=GNU-STRIPPED --strict-whitespace --match-full-lines
+# RUN: llvm-readobj --notes %t1.stripped.so | FileCheck %s --check-prefix=LLVM-STRIPPED
+
+#      GNU:Displaying notes found in: .note.ABI-tag
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000010	NT_GNU_ABI_TAG (ABI version tag)
+# GNU-NEXT:    OS: Linux, ABI: 2.6.32
+# GNU-EMPTY:
+# GNU-NEXT:Displaying notes found in: .note.gnu.build-id
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
+# GNU-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+# GNU-EMPTY:
+# GNU-NEXT:Displaying notes found in: .note.gnu.gold-version
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000009	NT_GNU_GOLD_VERSION (gold version)
+# GNU-NEXT:    Version: gold 1.11
+# GNU-EMPTY:
+# GNU-NEXT:Displaying notes found in: .note.gnu.unknown
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000004	Unknown note type: (0x0000abcd)
+# GNU-NEXT:   description data: 61 62 63 64
+# GNU-EMPTY:
+
+# LLVM:      NoteSections [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.ABI-tag
+# LLVM-NEXT:     Offset: 0x78
+# LLVM-NEXT:     Size: 0x20
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x10
+# LLVM-NEXT:       Type: NT_GNU_ABI_TAG (ABI version tag)
+# LLVM-NEXT:       OS: Linux
+# LLVM-NEXT:       ABI: 2.6.32
+# LLVM-NEXT:     }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:   }
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.gnu.build-id
+# LLVM-NEXT:     Offset: 0x98
+# LLVM-NEXT:     Size: 0x20
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x10
+# LLVM-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# LLVM-NEXT:       Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+# LLVM-NEXT:     }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:   }
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.gnu.gold-version
+# LLVM-NEXT:     Offset: 0xB8
+# LLVM-NEXT:     Size: 0x1C
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x9
+# LLVM-NEXT:       Type: NT_GNU_GOLD_VERSION (gold version)
+# LLVM-NEXT:       Version: gold 1.11
+# LLVM-NEXT:     }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:   }
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.gnu.unknown
+# LLVM-NEXT:     Offset: 0xD4
+# LLVM-NEXT:     Size: 0x14
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x4
+# LLVM-NEXT:       Type: Unknown (0x0000abcd)
+# LLVM-NEXT:       Description data (
+# LLVM-NEXT:         0000: 61626364                             |abcd|
+# LLVM-NEXT:       )
+# LLVM-NEXT:     }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+## Note: the section name is <?> here because the section header table is not present.
+# LLVM-STRIPPED:      NoteSections [
+# LLVM-STRIPPED-NEXT:   NoteSection {
+# LLVM-STRIPPED-NEXT:     Name: <?>
+# LLVM-STRIPPED-NEXT:     Offset: 0x78
+# LLVM-STRIPPED-NEXT:     Size: 0x20
+# LLVM-STRIPPED-NEXT:     Notes [
+# LLVM-STRIPPED-NEXT:     {
+# LLVM-STRIPPED-NEXT:       Owner: GNU
+# LLVM-STRIPPED-NEXT:       Data size: 0x10
+# LLVM-STRIPPED-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# LLVM-STRIPPED-NEXT:       Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+# LLVM-STRIPPED-NEXT:     }
+# LLVM-STRIPPED-NEXT:    ]
+# LLVM-STRIPPED-NEXT:   }
+# LLVM-STRIPPED-NEXT: ]
+
+## Note: offset and length printed instead of "found in: .note.gnu.build-id"
+## because the section header table is not present.
+#      GNU-STRIPPED:Displaying notes found at file offset 0x00000078 with length 0x00000020:
+# GNU-STRIPPED-NEXT:  Owner                Data size 	Description
+# GNU-STRIPPED-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
+# GNU-STRIPPED-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  EPhEntSize: [[PHENTSIZE=<none>]]
+  EShNum:     [[SHNUM=<none>]]
+Sections:
+  - Name:         .note.ABI-tag
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Content:      040000001000000001000000474E550000000000020000000600000020000000
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x0000000000400120
+    AddressAlign: 0x0000000000000004
+    Content:      040000001000000003000000474E55004FCB712AA6387724A9F465A32CD8C14B
+  - Name:         .note.gnu.gold-version
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Content:      040000000900000004000000474E5500676F6C6420312E3131000000
+  - Name:         .note.gnu.unknown
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Content:      0400000004000000cdab0000474E550061626364
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FileSize: 0x20
+    FirstSec: .note.gnu.build-id
+    LastSec:  .note.gnu.build-id
+
+## Test tools report an error if a note section has an invalid offset
+## that goes past the end of file.
+
+# RUN: yaml2obj --docnum=2 -DSHOFFSET=0xffff0000 %s -o %t2.so
+# RUN: llvm-readelf --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1-GNU
+# RUN: llvm-readobj --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1-LLVM
+
+# ERR1-GNU:      Displaying notes found in: .note
+# ERR1-GNU-NEXT:   Owner                Data size        Description
+# ERR1-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0xffff0000) or size (0x0)
+# ERR1-GNU-EMPTY:
+
+# ERR1-LLVM:      NoteSections [
+# ERR1-LLVM-NEXT:   NoteSection {
+# ERR1-LLVM-NEXT:     Name:   .note
+# ERR1-LLVM-NEXT:     Offset: 0xFFFF0000
+# ERR1-LLVM-NEXT:     Size:   0x0
+# ERR1-LLVM-NEXT:     Notes [
+# ERR1-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0xffff0000) or size (0x0)
+# ERR1-LLVM-NEXT:    ]
+# ERR1-LLVM-NEXT:   }
+# ERR1-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:     .note
+    Type:     SHT_NOTE
+    Notes:    []
+    ShOffset: [[SHOFFSET=<none>]]
+    ShSize:   [[SHSIZE=<none>]]
+
+## Test tools report an error if a note section has invalid size
+## that goes past the end of file.
+
+# RUN: yaml2obj --docnum=2 -DSHSIZE=0xffff0000 %s -o %t3.so
+# RUN: llvm-readelf --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2-GNU
+# RUN: llvm-readobj --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2-LLVM
+
+# ERR2-GNU:      Displaying notes found in: .note
+# ERR2-GNU-NEXT:   Owner                Data size        Description
+# ERR2-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0x40) or size (0xffff0000)
+# ERR2-GNU-EMPTY:
+
+# ERR2-LLVM:      NoteSections [
+# ERR2-LLVM-NEXT:   NoteSection {
+# ERR2-LLVM-NEXT:     Name: .note
+# ERR2-LLVM-NEXT:     Offset: 0x40
+# ERR2-LLVM-NEXT:     Size: 0xFFFF0000
+# ERR2-LLVM-NEXT:     Notes [
+# ERR2-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0x40) or size (0xffff0000)
+# ERR2-LLVM-NEXT:    ]
+# ERR2-LLVM-NEXT:   }
+# ERR2-LLVM-NEXT: ]
+
+## Test tools report an error if a note program header has an invalid offset that
+## goes past the end of file.
+
+# RUN: yaml2obj --docnum=3 -DPHOFFSET=0xffff0000 %s -o %t4.so
+# RUN: llvm-readelf --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3-GNU
+# RUN: llvm-readobj --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3-LLVM
+
+# ERR3-GNU:      Displaying notes found at file offset 0xffff0000 with length 0x00000000:
+# ERR3-GNU-NEXT:   Owner                Data size        Description
+# ERR3-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0xffff0000) or size (0x0)
+# ERR3-GNU-NOT: {{.}}
+
+# ERR3-LLVM:      NoteSections [
+# ERR3-LLVM-NEXT:   NoteSection {
+# ERR3-LLVM-NEXT:     Name: <?>
+# ERR3-LLVM-NEXT:     Offset: 0xFFFF0000
+# ERR3-LLVM-NEXT:     Size: 0x0
+# ERR3-LLVM-NEXT:     Notes [
+# ERR3-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0xffff0000) or size (0x0)
+# ERR3-LLVM-NEXT:    ]
+# ERR3-LLVM-NEXT:   }
+# ERR3-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+ProgramHeaders:
+  - Type:     PT_NOTE
+    Offset:   [[PHOFFSET=<none>]]
+    FileSize: [[PHFILESIZE=<none>]]
+
+## Test tools report an error if a note program header has an invalid size that
+## goes past the end of file.
+
+# RUN: yaml2obj --docnum=3 -DPHFILESIZE=0xffff0000 %s -o %t5.so
+# RUN: llvm-readelf --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefix=ERR4-GNU
+# RUN: llvm-readobj --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefix=ERR4-LLVM
+
+# ERR4-GNU:      Displaying notes found at file offset 0x00000000 with length 0xffff0000:
+# ERR4-GNU-NEXT:   Owner                Data size        Description
+# ERR4-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
+# ERR4-GNU-EMPTY:
+
+# ERR4-LLVM:      NoteSections [
+# ERR4-LLVM-NEXT:   NoteSection {
+# ERR4-LLVM-NEXT:     Name: <?>
+# ERR4-LLVM-NEXT:     Offset: 0x0
+# ERR4-LLVM-NEXT:     Size: 0xFFFF0000
+# ERR4-LLVM-NEXT:     Notes [
+# ERR4-LLVM-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
+# ERR4-LLVM-NEXT:    ]
+# ERR4-LLVM-NEXT:   }
+# ERR4-LLVM-NEXT: ]
+
+## Check we report a warning when we are unable to locate the PT_NOTE
+## segment because of broken program headers.
+# RUN: yaml2obj --docnum=1 -DPHENTSIZE=1 -DSHNUM=0 %s -o %t6.so
+# RUN: llvm-readelf --notes %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=PHENTSIZE-WARN-GNU
+# RUN: llvm-readobj --notes %t6.so 2>&1 | FileCheck %s -DFILE=%t6.so --check-prefix=PHENTSIZE-WARN-LLVM
+
+# PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
+# PHENTSIZE-WARN-GNU: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
+
+# PHENTSIZE-WARN-LLVM:      NoteSections [
+# PHENTSIZE-WARN-LLVM-NEXT: warning: '[[FILE]]': unable to read program headers to locate the PT_NOTE segment: invalid e_phentsize: 1
+# PHENTSIZE-WARN-LLVM-NEXT: ]

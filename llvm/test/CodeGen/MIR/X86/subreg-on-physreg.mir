@@ -1,0 +1,12 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported for subreg index on a physreg.
+--- |
+  define void @t() { ret void }
+...
+---
+name: t
+body: |
+  bb.0:
+    ; CHECK: [[@LINE+1]]:19: subregister index expects a virtual register
+    $eax.sub_8bit = COPY $bl
+...

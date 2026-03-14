@@ -1,0 +1,12 @@
+framework module FooFramework {
+    umbrella header "FooUmbrella.h"
+
+    export *
+    module * {
+        export *
+    }
+
+    explicit module Private {
+        textual header "Baz_Private.h"
+    }
+}

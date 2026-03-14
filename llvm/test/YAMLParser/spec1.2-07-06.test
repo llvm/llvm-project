@@ -1,0 +1,7 @@
+# RUN: yaml-bench -canonical %s | FileCheck %s --strict-whitespace
+# CHECK: " 1st non-empty\n2nd non-empty 3rd non-empty "
+
+" 1st non-empty
+
+ 2nd non-empty 
+	3rd non-empty "

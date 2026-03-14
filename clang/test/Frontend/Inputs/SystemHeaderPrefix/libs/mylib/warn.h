@@ -1,0 +1,2 @@
+#if MYLIB
+#endif

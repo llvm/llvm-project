@@ -1,0 +1,44 @@
+## Check that with the common switch common symbols are added to bss (Berkeley
+## output) or shown as *COM* (sysv output). Otherwise their size is ignored.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-size -A --common %t.o | FileCheck --check-prefix=SYSV %s
+# RUN: llvm-size -B --common %t.o | FileCheck --check-prefix=BSD %s
+# RUN: llvm-size -A %t.o | FileCheck --check-prefix=SYSVNOCOMM %s
+# RUN: llvm-size -B %t.o | FileCheck --check-prefix=BSDNOCOMM %s
+
+# SYSV:      {{.*}}.o  :
+# SYSV-NEXT: section     size   addr
+# SYSV-NEXT: .text          0      0
+# SYSV-NEXT: *COM*          8      0
+# SYSV-NEXT: Total          8
+
+# SYSVNOCOMM:      {{.*}}.o  :
+# SYSVNOCOMM-NEXT: section     size   addr
+# SYSVNOCOMM-NEXT: .text          0      0
+# SYSVNOCOMM-NEXT: Total          0
+
+# BSD:      text    data     bss     dec     hex filename
+# BSD-NEXT:    0       0       8       8       8 {{.*}}.o
+
+# BSDNOCOMM:      text    data     bss     dec     hex filename
+# BSDNOCOMM-NEXT:    0       0       0       0       0 {{.*}}.o
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:  y
+    Type:  STT_OBJECT
+    Size:  4
+    Index: SHN_COMMON
+  - Name:  z
+    Type:  STT_OBJECT
+    Size:  4
+    Index: SHN_COMMON

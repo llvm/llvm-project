@@ -1,0 +1,27 @@
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:   %clang -S %S/Inputs/null_dereference_and_division_by_zero.c \
+RUN:   | FileCheck %s -check-prefix CHECK-TWO-BUGS
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:   -disable-checker core.DivideZero \
+RUN:   %clang -S %S/Inputs/null_dereference_and_division_by_zero.c \
+RUN:   | FileCheck %s -check-prefix CHECK-ONE-BUG
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:   -disable-checker core.NullDereference \
+RUN:   %clang -S %S/Inputs/null_dereference_and_division_by_zero.c \
+RUN:   | FileCheck %s -check-prefix CHECK-ONE-BUG
+
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir \
+RUN:   -disable-checker core.NullDereference \
+RUN:   -disable-checker core.DivideZero \
+RUN:   %clang -S %S/Inputs/null_dereference_and_division_by_zero.c \
+RUN:   | FileCheck %s -check-prefix CHECK-NO-BUGS
+
+CHECK-NO-BUGS: scan-build: No bugs found.
+CHECK-ONE-BUG: scan-build: 1 bug found.
+CHECK-TWO-BUGS: scan-build: 2 bugs found.

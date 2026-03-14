@@ -1,0 +1,162 @@
+//===- llvm/Analysis/DominanceFrontier.h - Dominator Frontiers --*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the DominanceFrontier class, which calculate and holds the
+// dominance frontier for a function.
+//
+// CAUTION: For SSA-construction-like problems there are more efficient ways to
+// do that, take a look at GenericIteratedDominanceFrontier.h/SSAUpdater.h. Also
+// note that that this analysis computes dominance frontiers for *every* block
+// which inherently increases complexity. Unless you do need *all* of them and
+// *without* any modifications to the DomTree/CFG in between queries there
+// should be better alternatives.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ANALYSIS_DOMINANCEFRONTIER_H
+#define LLVM_ANALYSIS_DOMINANCEFRONTIER_H
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/GenericDomTree.h"
+#include <cassert>
+
+namespace llvm {
+
+class BasicBlock;
+class Function;
+class raw_ostream;
+
+//===----------------------------------------------------------------------===//
+/// DominanceFrontierBase - Common base class for computing forward and inverse
+/// dominance frontiers for a function.
+///
+template <class BlockT, bool IsPostDom>
+class DominanceFrontierBase {
+public:
+  // Dom set for a bb. Use SetVector to make iterating dom frontiers of a bb
+  // deterministic.
+  using DomSetType = SetVector<BlockT *>;
+  using DomSetMapType = DenseMap<BlockT *, DomSetType>; // Dom set map
+  using DomTreeT = DominatorTreeBase<BlockT, IsPostDom>;
+  using DomTreeNodeT = DomTreeNodeBase<BlockT>;
+
+protected:
+  using GraphTy = std::conditional_t<IsPostDom, Inverse<BlockT *>, BlockT *>;
+  using BlockTraits = GraphTraits<GraphTy>;
+
+  DomSetMapType Frontiers;
+  static constexpr bool IsPostDominators = IsPostDom;
+
+public:
+  DominanceFrontierBase() = default;
+
+  /// isPostDominator - Returns true if analysis based of postdoms
+  bool isPostDominator() const {
+    return IsPostDominators;
+  }
+
+  void releaseMemory() {
+    Frontiers.clear();
+  }
+
+  // Accessor interface:
+  using iterator = typename DomSetMapType::iterator;
+  using const_iterator = typename DomSetMapType::const_iterator;
+
+  iterator begin() { return Frontiers.begin(); }
+  const_iterator begin() const { return Frontiers.begin(); }
+  iterator end() { return Frontiers.end(); }
+  const_iterator end() const { return Frontiers.end(); }
+  iterator find(BlockT *B) { return Frontiers.find(B); }
+  const_iterator find(BlockT *B) const { return Frontiers.find(B); }
+
+  /// print - Convert to human readable form
+  ///
+  void print(raw_ostream &OS) const;
+
+  /// dump - Dump the dominance frontier to dbgs().
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() const;
+#endif
+
+  void analyze(const DomTreeT &DT);
+};
+
+class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
+public:
+  using DomTreeT = DomTreeBase<BasicBlock>;
+  using DomTreeNodeT = DomTreeNodeBase<BasicBlock>;
+  using DomSetType = DominanceFrontier::DomSetType;
+  using iterator = DominanceFrontier::iterator;
+  using const_iterator = DominanceFrontier::const_iterator;
+
+  /// Handle invalidation explicitly.
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+};
+
+class DominanceFrontierWrapperPass : public FunctionPass {
+  DominanceFrontier DF;
+
+public:
+  static char ID; // Pass ID, replacement for typeid
+
+  DominanceFrontierWrapperPass();
+
+  DominanceFrontier &getDominanceFrontier() { return DF; }
+  const DominanceFrontier &getDominanceFrontier() const { return DF;  }
+
+  void releaseMemory() override;
+
+  bool runOnFunction(Function &) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  void print(raw_ostream &OS, const Module * = nullptr) const override;
+
+  void dump() const;
+};
+
+extern template class DominanceFrontierBase<BasicBlock, false>;
+extern template class DominanceFrontierBase<BasicBlock, true>;
+
+/// Analysis pass which computes a \c DominanceFrontier.
+class DominanceFrontierAnalysis
+    : public AnalysisInfoMixin<DominanceFrontierAnalysis> {
+  friend AnalysisInfoMixin<DominanceFrontierAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  /// Provide the result type for this analysis pass.
+  using Result = DominanceFrontier;
+
+  /// Run the analysis pass over a function and produce a dominator tree.
+  DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// Printer pass for the \c DominanceFrontier.
+class DominanceFrontierPrinterPass
+    : public PassInfoMixin<DominanceFrontierPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DominanceFrontierPrinterPass(raw_ostream &OS);
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
+};
+
+} // end namespace llvm
+
+#endif // LLVM_ANALYSIS_DOMINANCEFRONTIER_H

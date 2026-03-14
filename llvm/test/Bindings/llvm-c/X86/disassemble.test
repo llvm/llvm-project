@@ -1,0 +1,23 @@
+; RUN: llvm-c-test --disassemble < %s | FileCheck %s
+
+x86_64-linux-unknown  NULL  48 83 c4 38 5b 5d 41 5c 41 5d 41 5e 41 5f c3
+;CHECK: triple: x86_64-linux-unknown, features: NULL
+;CHECK: addq	$56, %rsp
+;CHECK: popq	%rbx
+;CHECK: popq	%rbp
+;CHECK: popq	%r12
+;CHECK: popq	%r13
+;CHECK: popq	%r14
+;CHECK: popq	%r15
+;CHECK: ret
+
+i686-apple-darwin     NULL  0f b7 4c 24 0a e8 29 ce ff ff
+;CHECK: triple: i686-apple-darwin, features: NULL
+;CHECK: movzwl	10(%esp), %ecx
+;CHECK: calll	-12759
+
+i686-linux-unknown    NULL  dd 44 24 04 d9 e1 c3
+;CHECK: triple: i686-linux-unknown, features: NULL
+;CHECK: fldl	4(%esp)
+;CHECK: fabs
+;CHECK: ret

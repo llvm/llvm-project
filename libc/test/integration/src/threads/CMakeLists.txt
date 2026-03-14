@@ -1,0 +1,119 @@
+add_libc_integration_test_suite(libc-threads-integration-tests)
+
+add_integration_test(
+  mtx_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    mtx_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.errno.errno
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
+  thrd_equal_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_equal_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_current
+    libc.src.threads.thrd_equal
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
+  thrd_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.errno.errno
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
+  thrd_exit_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    thrd_exit_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_exit
+    libc.src.threads.thrd_join
+)
+
+add_integration_test(
+  tss_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    tss_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_exit
+    libc.src.threads.thrd_join
+    libc.src.threads.tss_create
+    libc.src.threads.tss_delete
+    libc.src.threads.tss_get
+    libc.src.threads.tss_set
+)
+
+add_integration_test(
+  call_once_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    call_once_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.call_once
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+    libc.src.__support.CPP.atomic
+)
+
+add_integration_test(
+  cnd_test
+  SUITE
+    libc-threads-integration-tests
+  SRCS
+    cnd_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.cnd_init
+    libc.src.threads.cnd_broadcast
+    libc.src.threads.cnd_signal
+    libc.src.threads.cnd_destroy
+    libc.src.threads.cnd_wait
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+    libc.src.threads.linux.threads_utils
+)

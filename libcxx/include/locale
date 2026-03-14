@@ -1,0 +1,226 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_LOCALE
+#define _LIBCPP_LOCALE
+
+/*
+    locale synopsis
+
+namespace std
+{
+
+class locale
+{
+public:
+    // types:
+    class facet;
+    class id;
+
+    typedef int category;
+    static const category // values assigned here are for exposition only
+        none     = 0x000,
+        collate  = 0x010,
+        ctype    = 0x020,
+        monetary = 0x040,
+        numeric  = 0x080,
+        time     = 0x100,
+        messages = 0x200,
+        all = collate | ctype | monetary | numeric | time | messages;
+
+    // construct/copy/destroy:
+    locale() noexcept;
+    locale(const locale& other) noexcept;
+    explicit locale(const char* std_name);
+    explicit locale(const string& std_name);
+    locale(const locale& other, const char* std_name, category);
+    locale(const locale& other, const string& std_name, category);
+    template <class Facet> locale(const locale& other, Facet* f);
+    locale(const locale& other, const locale& one, category);
+
+    ~locale(); // not virtual
+
+    const locale& operator=(const locale& other) noexcept;
+
+    template <class Facet> locale combine(const locale& other) const;
+
+    // locale operations:
+    basic_string<char> name() const;
+    bool operator==(const locale& other) const;
+    bool operator!=(const locale& other) const;                              // removed C++20
+    template <class charT, class Traits, class Allocator>
+      bool operator()(const basic_string<charT,Traits,Allocator>& s1,
+                      const basic_string<charT,Traits,Allocator>& s2) const;
+
+    // global locale objects:
+    static locale global(const locale&);
+    static const locale& classic();
+};
+
+template <class Facet> const Facet& use_facet(const locale&);
+template <class Facet> bool has_facet(const locale&) noexcept;
+
+// 22.3.3, convenience interfaces:
+template <class charT> bool isspace (charT c, const locale& loc);
+template <class charT> bool isprint (charT c, const locale& loc);
+template <class charT> bool iscntrl (charT c, const locale& loc);
+template <class charT> bool isupper (charT c, const locale& loc);
+template <class charT> bool islower (charT c, const locale& loc);
+template <class charT> bool isalpha (charT c, const locale& loc);
+template <class charT> bool isdigit (charT c, const locale& loc);
+template <class charT> bool ispunct (charT c, const locale& loc);
+template <class charT> bool isxdigit(charT c, const locale& loc);
+template <class charT> bool isalnum (charT c, const locale& loc);
+template <class charT> bool isgraph (charT c, const locale& loc);
+template <class charT> charT toupper(charT c, const locale& loc);
+template <class charT> charT tolower(charT c, const locale& loc);
+
+template<class Codecvt, class Elem = wchar_t,
+         class Wide_alloc = allocator<Elem>,
+         class Byte_alloc = allocator<char>>
+class wstring_convert                                      // Removed in C++26
+{
+public:
+    typedef basic_string<char, char_traits<char>, Byte_alloc> byte_string;
+    typedef basic_string<Elem, char_traits<Elem>, Wide_alloc> wide_string;
+    typedef typename Codecvt::state_type                      state_type;
+    typedef typename wide_string::traits_type::int_type       int_type;
+
+    wstring_convert(Codecvt* pcvt = new Codecvt);          // before C++14
+    explicit wstring_convert(Codecvt* pcvt = new Codecvt); // before C++20
+    wstring_convert() : wstring_convert(new Codecvt) {}    // C++20
+    explicit wstring_convert(Codecvt* pcvt);               // C++20
+
+    wstring_convert(Codecvt* pcvt, state_type state);
+    explicit wstring_convert(const byte_string& byte_err,           // explicit in C++14
+                    const wide_string& wide_err = wide_string());
+    wstring_convert(const wstring_convert&) = delete;               // C++14
+    wstring_convert & operator=(const wstring_convert &) = delete;  // C++14
+    ~wstring_convert();
+
+    wide_string from_bytes(char byte);
+    wide_string from_bytes(const char* ptr);
+    wide_string from_bytes(const byte_string& str);
+    wide_string from_bytes(const char* first, const char* last);
+
+    byte_string to_bytes(Elem wchar);
+    byte_string to_bytes(const Elem* wptr);
+    byte_string to_bytes(const wide_string& wstr);
+    byte_string to_bytes(const Elem* first, const Elem* last);
+
+    size_t converted() const; // noexcept in C++14
+    state_type state() const;
+};
+
+template <class Codecvt, class Elem = wchar_t, class Tr = char_traits<Elem>>
+class wbuffer_convert                                               // Removed in C++26
+    : public basic_streambuf<Elem, Tr>
+{
+public:
+    typedef typename Tr::state_type state_type;
+
+    wbuffer_convert(streambuf* bytebuf = 0, Codecvt* pcvt = new Codecvt,
+                    state_type state = state_type());          // before C++14
+    explicit wbuffer_convert(streambuf* bytebuf = nullptr, Codecvt* pcvt = new Codecvt,
+                            state_type state = state_type()); // before C++20
+    wbuffer_convert() : wbuffer_convert(nullptr) {} // C++20
+    explicit wbuffer_convert(streambuf* bytebuf, Codecvt* pcvt = new Codecvt,
+                            state_type state = state_type()); // C++20
+
+    wbuffer_convert(const wbuffer_convert&) = delete;               // C++14
+    wbuffer_convert & operator=(const wbuffer_convert &) = delete;  // C++14
+    ~wbuffer_convert();                                             // C++14
+
+    streambuf* rdbuf() const;
+    streambuf* rdbuf(streambuf* bytebuf);
+
+    state_type state() const;
+};
+
+// 22.4.1 and 22.4.1.3, ctype:
+class ctype_base;
+template <class charT> class ctype;
+template <> class ctype<char>; // specialization
+template <class charT> class ctype_byname;
+template <> class ctype_byname<char>; // specialization
+
+class codecvt_base;
+template <class internT, class externT, class stateT> class codecvt;
+template <class internT, class externT, class stateT> class codecvt_byname;
+
+// 22.4.2 and 22.4.3, numeric:
+template <class charT, class InputIterator> class num_get;
+template <class charT, class OutputIterator> class num_put;
+template <class charT> class numpunct;
+template <class charT> class numpunct_byname;
+
+// 22.4.4, col lation:
+template <class charT> class collate;
+template <class charT> class collate_byname;
+
+// 22.4.5, date and time:
+class time_base;
+template <class charT, class InputIterator> class time_get;
+template <class charT, class InputIterator> class time_get_byname;
+template <class charT, class OutputIterator> class time_put;
+template <class charT, class OutputIterator> class time_put_byname;
+
+// 22.4.6, money:
+class money_base;
+template <class charT, class InputIterator> class money_get;
+template <class charT, class OutputIterator> class money_put;
+template <class charT, bool Intl> class moneypunct;
+template <class charT, bool Intl> class moneypunct_byname;
+
+// 22.4.7, message retrieval:
+class messages_base;
+template <class charT> class messages;
+template <class charT> class messages_byname;
+
+}  // std
+
+*/
+
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/locale>
+#else
+#  include <__config>
+
+#  if _LIBCPP_HAS_LOCALIZATION
+
+#    include <__locale>
+#    include <__locale_dir/messages.h>
+#    include <__locale_dir/money.h>
+#    include <__locale_dir/num.h>
+#    include <__locale_dir/time.h>
+#    include <__locale_dir/wbuffer_convert.h>
+#    include <__locale_dir/wstring_convert.h>
+#    include <ios>
+#    include <version>
+
+#    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#      pragma GCC system_header
+#    endif
+
+#  endif // _LIBCPP_HAS_LOCALIZATION
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#    include <atomic>
+#    include <concepts>
+#    include <cstdarg>
+#    include <iterator>
+#    include <mutex>
+#    include <optional>
+#    include <stdexcept>
+#    include <type_traits>
+#    include <typeinfo>
+#  endif
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+
+#endif // _LIBCPP_LOCALE

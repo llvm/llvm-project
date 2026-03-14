@@ -1,0 +1,16 @@
+# RUN: not %split-file %s %t 2>&1 | FileCheck %s
+# RUN: not ls %t/dup
+
+# CHECK: {{.*}}.test:[[#@LINE+1]]: error: empty part name
+//--- 
+
+# CHECK: {{.*}}.test:[[#@LINE+1]]: error: part name cannot have leading or trailing space
+//---  leading_space
+
+# CHECK: {{.*}}.test:[[#@LINE+1]]: error: part name cannot have leading or trailing space
+//--- trailing_space 
+
+;--- dup
+
+# CHECK: {{.*}}.test:[[#@LINE+1]]: error: ';--- dup' occurs more than once
+;--- dup

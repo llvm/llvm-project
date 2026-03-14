@@ -1,0 +1,104 @@
+# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj %s -o %t.debug
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %s -o %t.dir/UPPER_CASE
+# RUN: yaml2obj %s -o %t.dir/UPPER_CASE.debug
+
+## Default ABI is msvc:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -f %t -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=msvc -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is gnu:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
+# RUN:   -f %t -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is msvc, module override is gnu:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=gnu" \
+# RUN:   -f %t -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is gnu, module override is msvc:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=msvc" \
+# RUN:   -f %t -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=msvc -DFILENAME=%basename_t.tmp %s
+
+## Default ABI is msvc, module override is gnu (with .debug suffix):
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=gnu" \
+# RUN:   -f %t.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=%basename_t.tmp.debug %s
+
+## Default ABI is gnu, module override is msvc (with .debug suffix):
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi gnu" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi %basename_t.tmp=msvc" \
+# RUN:   -f %t.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=msvc -DFILENAME=%basename_t.tmp.debug %s
+
+## Check that case-sensitive match is chosen before lower-case:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case=msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi UPPER_CASE=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE %s
+
+## Check that lower-case match with .debug suffix is chosen before case-sensitive match without .debug suffix:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi UPPER_CASE=msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case.debug=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE.debug %s
+
+## Check that case-sensitive match without .debug suffix is chosen before lower-case match without .debug suffix:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case.debug=msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi UPPER_CASE.debug=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE.debug %s
+
+## Check that lower-case match without .debug suffix works:
+# RUN: %lldb -O "settings set plugin.object-file.pe-coff.abi msvc" \
+# RUN:   -O "settings append plugin.object-file.pe-coff.module-abi upper_case.debug=gnu" \
+# RUN:   -f %t.dir/UPPER_CASE.debug -o "image list --triple --basename" -o exit | \
+# RUN:   FileCheck -DABI=gnu -DFILENAME=UPPER_CASE.debug %s
+
+# CHECK-LABEL: image list --triple --basename
+# CHECK-NEXT: x86_64-pc-windows-[[ABI]] [[FILENAME]]
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 5152
+  ImageBase:       5368709120
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT, IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     64
+    SectionData:     DEADBEEFBAADF00D
+symbols:         []
+...

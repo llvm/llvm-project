@@ -1,0 +1,28 @@
+# REQUIRES: x86
+## Document the behavior when an output section is specified by multiple
+## INSERT commands. It is discouraged in the real world.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/insert-after.s -o %t.o
+# RUN: ld.lld -T %s %t.o -o %t
+# RUN: llvm-readelf -S -l %t | FileCheck %s
+
+# CHECK:      Name      Type     Address          Off
+# CHECK-NEXT:           NULL     0000000000000000 000000
+# CHECK-NEXT: .text     PROGBITS 0000000000201158 000158
+# CHECK-NEXT: .foo.text PROGBITS 0000000000201160 000160
+# CHECK-NEXT: .foo.data PROGBITS 0000000000202168 000168
+# CHECK:      Type
+# CHECK-NEXT: PHDR {{.*}} R
+# CHECK-NEXT: LOAD {{.*}} R
+# CHECK-NEXT: LOAD {{.*}} R E
+# CHECK-NEXT: LOAD {{.*}} RW
+# CHECK-NEXT: GNU_STACK {{.*}} RW
+
+## First, move .foo.data after .foo.text
+SECTIONS { .foo.data : { *(.foo.data) } } INSERT AFTER .foo.text;
+
+## Next, move .foo.text after .foo.data
+SECTIONS { .foo.text : { *(.foo.text) } } INSERT AFTER .foo.data;
+
+## Then, move .foo.data after .foo.text again.
+SECTIONS { .foo.data : { *(.foo.data) } } INSERT AFTER .foo.text;

@@ -1,0 +1,10 @@
+test_sample_loader_inline:63067:0
+ 1: sample_loader_inlinee:40000
+sample_loader_inlinee:3000:0
+ 1: direct_leaf_func:35000
+  11: 3000
+test_cgscc_inline:63067:0
+ 1: cgscc_inlinee:1
+cgscc_inlinee:3000:0
+ 1: direct_leaf_func:35000
+  11: 3000

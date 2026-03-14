@@ -1,0 +1,123 @@
+add_entrypoint_object(
+  socket
+  SRCS
+    socket.cpp
+  HDRS
+    ../socket.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  bind
+  SRCS
+    bind.cpp
+  HDRS
+    ../bind.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.include.sys_socket
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  socketpair
+  SRCS
+    socketpair.cpp
+  HDRS
+    ../socketpair.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.include.sys_socket
+    libc.src.__support.macros.sanitizer
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  send
+  SRCS
+    send.cpp
+  HDRS
+    ../send.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sendto
+  SRCS
+    sendto.cpp
+  HDRS
+    ../sendto.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sendmsg
+  SRCS
+    sendmsg.cpp
+  HDRS
+    ../sendmsg.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.hdr.types.struct_msghdr
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+add_entrypoint_object(
+  recv
+  SRCS
+    recv.cpp
+  HDRS
+    ../recv.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.macros.sanitizer
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  recvfrom
+  SRCS
+    recvfrom.cpp
+  HDRS
+    ../recvfrom.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.hdr.types.struct_sockaddr
+    libc.hdr.types.socklen_t
+    libc.src.__support.macros.sanitizer
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  recvmsg
+  SRCS
+    recvmsg.cpp
+  HDRS
+    ../recvmsg.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.hdr.types.struct_msghdr
+    libc.src.__support.macros.sanitizer
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

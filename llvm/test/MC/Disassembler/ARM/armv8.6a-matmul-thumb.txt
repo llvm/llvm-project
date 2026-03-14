@@ -1,0 +1,38 @@
+# RUN:     llvm-mc -triple=thumbv8a -mattr=+i8mm  -disassemble < %s      | FileCheck %s
+# RUN: not llvm-mc -triple=thumbv8a -mattr=+v8.4a -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOMATMUL
+
+[0x22,0xfc,0x44,0x0c]
+# CHECK: vsmmla.s8 q0, q1, q2
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0x22,0xfc,0x54,0x0c]
+# CHECK: vummla.u8 q0, q1, q2
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0xa2,0xfc,0x44,0x0c]
+# CHECK: vusmmla.s8 q0, q1, q2
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0xa1,0xfc,0x02,0x0d]
+# CHECK: vusdot.s8 d0, d1, d2
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0xa2,0xfc,0x44,0x0d]
+# CHECK: vusdot.s8 q0, q1, q2
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0x81,0xfe,0x02,0x0d]
+# CHECK: vusdot.s8 d0, d1, d2[0]
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0x81,0xfe,0x32,0x0d]
+# CHECK: vsudot.u8 d0, d1, d2[1]
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0x82,0xfe,0x42,0x0d]
+# CHECK: vusdot.s8 q0, q1, d2[0]
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding
+
+[0x82,0xfe,0x72,0x0d]
+# CHECK: vsudot.u8 q0, q1, d2[1]
+# NOMATMUL: :[[@LINE-2]]:{{[0-9]+}}: warning: invalid instruction encoding

@@ -1,0 +1,5 @@
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2[[ENCODING]]
+  Type:  ET_REL

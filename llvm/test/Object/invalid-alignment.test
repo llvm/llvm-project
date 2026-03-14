@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -r %t.o 2>&1 | FileCheck %s
+
+# CHECK:      Format: elf64-x86-64
+# CHECK-NEXT: Arch: x86_64
+# CHECK-NEXT: AddressSize: 64bit
+# CHECK-NEXT: LoadName:
+# CHECK-NEXT: Relocations [
+# CHECK-NEXT:   Section (2) .rela.foo {
+# CHECK-NEXT:     0x0 R_X86_64_NONE - 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .foo
+    Type:            SHT_PROGBITS
+    Content:         42
+  - Name:            .rela.foo
+    Type:            SHT_RELA
+    Info:            .foo
+    Relocations:
+      - Type:        R_X86_64_NONE

@@ -1,0 +1,29 @@
+---
+GlobalValueMap:
+  42:
+    - Live: true
+      TypeTestAssumeVCalls:
+        - GUID: 14276520915468743435  # typeid1
+          Offset: 0
+        - GUID: 271751036925422857  # typeid1_rv
+          Offset: 0
+      TypeCheckedLoadVCalls:
+        - GUID: 15427464259790519041  # typeid2
+          Offset: 0
+        - GUID: 1146149264729288256  # typeid2_rv
+          Offset: 0
+      TypeTestAssumeConstVCalls:
+        - VFunc:
+            GUID: 3515965990081467659  # typeid3
+            Offset: 0
+          Args: [12, 24]
+        - VFunc:
+            GUID: 2777626534618191571  # typeid3_rv
+            Offset: 0
+          Args: [12, 24]
+      TypeCheckedLoadConstVCalls:
+        - VFunc:
+            GUID: 17525413373118030901  # typeid4
+            Offset: 0
+          Args: [24, 12]
+...

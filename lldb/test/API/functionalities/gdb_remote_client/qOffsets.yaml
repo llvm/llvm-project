@@ -1,0 +1,19 @@
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         "c3c3c3c3"
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1004
+    AddressAlign:    0x4
+    Content:         040000001000000001000000474e550000000000030000000700000000000000

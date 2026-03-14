@@ -1,0 +1,38 @@
+## If the section header index of a SHT_REL[A] section is smaller than the
+## section header index of the relocated section, we should handle it properly.
+## Normally it is not what compilers would emit, but some custom tools might
+## want to use this feature, which is not restricted by ELF gABI.
+## GNU ld supports this as well.
+
+# RUN: yaml2obj %s -DTYPE=SHT_RELA -o %t1.o
+# RUN: ld.lld -shared %t1.o -o %t1
+# RUN: llvm-readelf --relocs %t1 | FileCheck %s
+
+# RUN: yaml2obj %s -DTYPE=SHT_REL -o %t2.o
+# RUN: ld.lld -shared %t2.o -o %t2
+# RUN: llvm-readelf --relocs %t2 | FileCheck %s
+
+## Check we handle the relocation properly.
+# CHECK:      Relocation section '.rela.dyn' at offset 0x238 contains 1 entries:
+# CHECK-NEXT:     Offset             Info             Type    Symbol's Value  Symbol's Name + Addend
+# CHECK-NEXT: 00000000000022f0  0000000100000001 R_X86_64_64 0000000000000000 foo + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .relx.data
+    Type:  [[TYPE]]
+    Info:  .data
+    Relocations:
+      - Symbol: foo
+        Type:   R_X86_64_64
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+Symbols:
+  - Name:    foo
+    Binding: STB_GLOBAL

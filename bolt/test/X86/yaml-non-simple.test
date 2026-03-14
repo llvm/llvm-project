@@ -1,0 +1,71 @@
+## Check that YAML profile for non-simple function is not reported as stale.
+
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml --profile-ignore-hash -v=1 \
+# RUN:   --report-stale 2>&1 | FileCheck %s
+
+# CHECK: BOLT-INFO: could not disassemble function main. Will ignore.
+# CHECK: BOLT-INFO: could not disassemble function main.cold. Will ignore.
+# CHECK: BOLT-INFO: 0 out of 2 functions in the binary (0.0%) have non-empty execution profile
+# CHECK: BOLT-INFO: 1 function with profile could not be optimized
+
+#--- main.s
+.globl main
+.type	main, @function
+main:
+  .cfi_startproc
+.LBB00:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  subq    $16, %rsp
+  testq   %rax, %rax
+  js      .LBB03
+.LBB01:
+  jne     .LBB04
+.LBB02:
+  nop
+.LBB03:
+  xorl    %eax, %eax
+  addq    $16, %rsp
+  popq    %rbp
+  retq
+.LBB04:
+  xorl    %eax, %eax
+  addq    $16, %rsp
+  popq    %rbp
+  retq
+  .cfi_endproc
+  .size	main, .-main
+
+.globl main.cold
+.type	main.cold, @function
+main.cold:
+  .cfi_startproc
+  nop
+  .cfi_endproc
+  .size	main.cold, .-main.cold
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'yaml-non-simple.s.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:            main
+    fid:             0
+    hash:            0x0000000000000000
+    exec:            1
+    nblocks:         5
+    blocks:
+      - bid:             1
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+...

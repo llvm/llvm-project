@@ -1,0 +1,13 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when a register operand is sized
+# but isn't generic, like a physical register.
+
+---
+name:            test_size_physreg
+registers:
+body: |
+  bb.0.entry:
+    liveins: $edi
+    ; CHECK: [[@LINE+1]]:10: unexpected type on physical register
+    $edi(s32) = G_ADD i32 $edi, $edi
+...

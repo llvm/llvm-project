@@ -1,0 +1,44 @@
+# Test that windows path separators are handled correctly.
+REQUIRES: system-windows
+
+# Note: many of these tests depend on relative paths, so we have to cd to a
+# test directory first.
+RUN: mkdir -p %t && cd %t
+RUN: rm -rf a b && mkdir a b
+RUN: echo hello-a      > a/foo.txt
+RUN: echo hello-b      > b/foo.txt
+RUN: echo hello-parent > foo.txt
+
+# P is implied when using thin archives.
+# Create an archive.
+RUN: rm -f archive.a
+RUN: llvm-ar rcST archive.a a\..\a\foo.txt
+RUN: llvm-ar rcST archive.a foo.txt
+RUN: llvm-ar rcST archive.a b\foo.txt b/foo.txt
+RUN: llvm-ar dT archive.a foo.txt
+RUN: llvm-ar t archive.a | FileCheck %s --check-prefix=ARCHIVE --implicit-check-not {{.}}
+
+ARCHIVE:      a/foo.txt
+ARCHIVE-NEXT: b/foo.txt
+ARCHIVE-NEXT: b/foo.txt
+
+RUN: llvm-ar t archive.a | FileCheck %s --check-prefix=LIST-BOTH --implicit-check-not {{.}}
+RUN: llvm-ar t archive.a a\foo.txt | FileCheck %s --check-prefix=LIST-A --implicit-check-not {{.}}
+RUN: llvm-ar t archive.a b\foo.txt | FileCheck %s --check-prefix=LIST-B --implicit-check-not {{.}}
+
+LIST-BOTH:       a/foo.txt
+LIST-BOTH-NEXT:  b/foo.txt
+LIST-BOTH-NEXT:  b/foo.txt
+LIST-A:          a/foo.txt
+LIST-B:          b/foo.txt
+
+# Nesting a thin archive with a name conflict.
+RUN: rm -f a\nested.a b\nested.a nested.a
+RUN: llvm-ar rcST a\nested.a a\foo.txt
+RUN: llvm-ar rcST b\nested.a b\foo.txt
+RUN: llvm-ar rcST nested.a a\nested.a foo.txt b\nested.a
+RUN: llvm-ar t nested.a | FileCheck %s --check-prefix=NESTED --implicit-check-not {{.}}
+
+NESTED:      a/foo.txt
+NESTED-NEXT: foo.txt
+NESTED-NEXT: b/foo.txt

@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=hexagon -run-pass hexagon-cext-opt %s -o - | FileCheck %s
+# REQUIRES: asserts
+#
+# This testcase used to trigger an incorrect assertion. Make sure it no
+# longer does.
+# CHECK: A2_tfrsi @G + 65536
+
+--- |
+  define void @fred() {
+    ret void
+  }
+  @G = external global [128 x i16], align 8
+...
+
+---
+name: fred
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    successors: %bb.1
+    %6:intregs = A2_tfrsi @G
+    %7:intregs = A2_addi killed %6, 2
+    %8:intregs = A2_tfrsi 127
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %7
+    $r1 = COPY %8
+    %9:intregs = IMPLICIT_DEF
+    J2_callr killed %9, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit $r0, implicit $r1, implicit-def $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+    %5:intregs = A2_tfrsi 8
+    %10:intregs = A2_tfrsi @G + 8
+    %4:intregs = A2_addi killed %10, 2
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    %0:intregs = PHI %4, %bb.0, %3, %bb.1
+    %1:intregs = PHI %5, %bb.0, %2, %bb.1
+    %11:predregs = C2_cmpgtui %1, 127
+    %2:intregs = A2_addi %1, 8
+    %3:intregs = A2_addi %0, 16
+    J2_jumpf %11, %bb.1, implicit-def $pc
+
+  bb.2:
+    %13:intregs = A2_tfrsi @G
+    %14:intregs = A2_addi killed %13, 2
+    %15:intregs = A2_tfrsi 127
+    ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
+    $r0 = COPY %14
+    $r1 = COPY %15
+    %16:intregs = IMPLICIT_DEF
+    PS_callr_nr killed %16, implicit $r0, implicit $r1, implicit-def $r29
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29
+...

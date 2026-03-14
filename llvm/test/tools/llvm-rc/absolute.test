@@ -1,0 +1,7 @@
+; RUN: touch %t.manifest
+; RUN: echo "1 24 \"%t.manifest\"" > %t.rc
+; RUN: llvm-rc -no-preprocess -- %t.rc
+;; On Windows, try stripping out the drive name from the absolute path,
+;; and make sure the path still is found.
+; RUN: cat %t.rc | sed 's/"[a-zA-Z]:/"/' > %t2.rc
+; RUN: llvm-rc -no-preprocess -- %t2.rc

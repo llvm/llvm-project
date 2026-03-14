@@ -1,0 +1,26 @@
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
+# Test that CFI verifier finds inconsistent offset between bb.end and one of
+# its precedessors.
+--- |
+  define void @inconsistentOffset() {
+    bb.end:
+      ret void
+  }
+...
+---
+# CHECK: *** Inconsistent CFA register and/or offset between pred and succ ***
+# CHECK: Succ: bb.end
+# CHECK: LLVM ERROR: Found 1 in/out CFI information errors.
+name: inconsistentOffset
+body: |
+  bb.0:
+    CFI_INSTRUCTION def_cfa_offset 24
+    JCC_1 %bb.2, 5, implicit undef $eflags
+
+  bb.1:
+    CFI_INSTRUCTION def_cfa_offset 32
+
+  bb.2.bb.end:
+    RET 0
+...

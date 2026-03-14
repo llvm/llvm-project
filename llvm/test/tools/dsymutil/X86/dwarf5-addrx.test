@@ -1,0 +1,162 @@
+## Test that DWARF5 DW_FORM_addrx is correctly recognized
+## and converted into the DW_FORM_addr or just preserved
+## in case --update.
+
+## $ cat dwarf5-addrx.c
+## __attribute__ ((optnone)) int foo1 ( ) {
+##   volatile int a = 0x1; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo2 ( ) {
+##   volatile int a = 0x2; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo3 ( ) {
+##   volatile int a = 0x3; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo4 ( ) {
+##   volatile int a = 0x4; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo5 ( ) {
+##   volatile int a = 0x5; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo6 ( ) {
+##   volatile int a = 0x6; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo7 ( ) {
+##   volatile int a = 0x7; return a;
+## }
+##
+## __attribute__ ((optnone)) int foo8 ( ) {
+##   volatile int a = 0x8; return a;
+## }
+##
+## int main ( void ) {
+##   return foo1()+foo2()+foo3()+foo4()+foo5()+foo6()+foo7()+foo8();
+## }
+##
+## $ clang -gdwarf-5 dwarf5-addrx.c -c -o dwarf5-addrx.o
+## $ clang dwarf5-addrx.o -o dwarf5-addrx.out
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix DWARF
+
+RUN: dsymutil --update -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix UPDATE-DWARF
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix DWARF
+
+RUN: dsymutil --linker parallel --update -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5-addrx.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+
+RUN: llvm-dwarfdump --verbose %t.dSYM | FileCheck %s --check-prefix UPDATE-DWARF
+
+
+CHECK-NOT: error:
+
+DWARF: DW_TAG_compile_unit
+DWARF:   DW_AT_name [DW_FORM_strx]  {{.*}}     "dwarf5-addrx.c"
+DWARF:   DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000100000eb0)
+DWARF:   DW_AT_high_pc [DW_FORM_data4]   (0x00000103)
+DWARF:   DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000100000eb0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo1"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000100000ec0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo2"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000100000ed0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo3"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000100000ee0)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo4"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000004) address = 0x0000000100000ef0)
+DWARF:     DW_AT_high_pc  [DW_FORM_data4]  (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo5"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000005) address = 0x0000000100000f00)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo6"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000006) address = 0x0000000100000f10)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo7"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000007) address = 0x0000000100000f20)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo8"
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000008) address = 0x0000000100000f30)
+DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000083)
+DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "main"
+
+UPDATE-DWARF: DW_TAG_compile_unit
+UPDATE-DWARF:   DW_AT_name [DW_FORM_strx]  {{.*}}     "dwarf5-addrx.c"
+UPDATE-DWARF:   DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000000) address = 0x0000000000000000)
+UPDATE-DWARF:   DW_AT_high_pc [DW_FORM_data4]   (0x00000103)
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x0000000000000000)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo1"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc [DW_FORM_addrx] (indexed (00000001) address = 0x0000000000000010)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo2"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000002) address = 0x0000000000000020)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo3"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc  [DW_FORM_addrx] (indexed (00000003) address = 0x0000000000000030)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo4"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000004) address = 0x0000000000000040)
+UPDATE-DWARF:     DW_AT_high_pc  [DW_FORM_data4]  (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo5"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc  [DW_FORM_addrx] (indexed (00000005) address = 0x0000000000000050)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo6"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc  [DW_FORM_addrx] (indexed (00000006) address = 0x0000000000000060)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo7"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc  [DW_FORM_addrx] (indexed (00000007) address = 0x0000000000000070)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo8"
+UPDATE-DWARF:   DW_TAG_subprogram
+UPDATE-DWARF:     DW_AT_low_pc  [DW_FORM_addrx] (indexed (00000008) address = 0x0000000000000080)
+UPDATE-DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000083)
+UPDATE-DWARF:     DW_AT_name  [DW_FORM_strx] {{.*}}   "main"
+UPDATE-DWARF:  .debug_addr contents:
+UPDATE-DWARF:  0x00000000: Address table header: length = 0x0000004c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPDATE-DWARF: Addrs: [
+UPDATE-DWARF: 0x0000000000000000
+UPDATE-DWARF: 0x0000000000000010
+UPDATE-DWARF: 0x0000000000000020
+UPDATE-DWARF: 0x0000000000000030
+UPDATE-DWARF: 0x0000000000000040
+UPDATE-DWARF: 0x0000000000000050
+UPDATE-DWARF: 0x0000000000000060
+UPDATE-DWARF: 0x0000000000000070
+UPDATE-DWARF: 0x0000000000000080
+UPDATE-DWARF: ]

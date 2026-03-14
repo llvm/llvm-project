@@ -1,0 +1,89 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            PSV0
+    Size:            144
+    PSVInfo:
+      Version:         1
+      ShaderStage:     4
+      InputControlPointCount: 1024
+      OutputPositionPresent: 1
+      TessellatorDomain: 2056
+      MinimumWaveLaneCount: 0
+      MaximumWaveLaneCount: 4294967295
+      UsesViewID:      0
+      SigPatchConstOrPrimVectors:  0
+      SigInputVectors: 0
+      SigOutputVectors: [ 0, 16, 32, 64 ]
+      ResourceStride:       16
+      Resources:
+        - Type:            Sampler
+          Space:           2
+          LowerBound:      3
+          UpperBound:      4
+        - Type:            Invalid
+          Space:           32768
+          LowerBound:      8388608
+          UpperBound:      2147483648
+      SigInputElements: []
+      SigOutputElements: []
+      SigPatchOrPrimElements: []
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
+      PatchOutputMap: []
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      4
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+...
+
+# CHECK: Name:            PSV0
+# CHECK: PSVInfo:
+# CHECK-NEXT: Version:         1
+# CHECK-NEXT: ShaderStage:     4
+# CHECK-NEXT: InputControlPointCount: 1024
+# CHECK-NEXT: OutputPositionPresent: 1
+# CHECK-NEXT: TessellatorDomain: 2056
+# CHECK-NEXT: MinimumWaveLaneCount: 0
+# CHECK-NEXT: MaximumWaveLaneCount: 4294967295
+# CHECK-NEXT: UsesViewID:      0
+# CHECK-NEXT: SigPatchConstOrPrimVectors:  0
+# CHECK-NEXT: SigInputVectors: 0
+# CHECK-NEXT: SigOutputVectors: [ 0, 16, 32, 64 ]
+# CHECK-NEXT: ResourceStride: 16
+# CHECK-NEXT: Resources:
+# CHECK-NEXT: - Type:            Sampler
+# CHECK-NEXT: Space:           2
+# CHECK-NEXT: LowerBound:      3
+# CHECK-NEXT: UpperBound:      4
+# CHECK-NEXT: - Type:            Invalid
+# CHECK-NEXT: Space:           32768
+# CHECK-NEXT: LowerBound:      8388608
+# CHECK-NEXT: UpperBound:      2147483648
+# CHECK-NEXT: SigInputElements: []
+# CHECK-NEXT: SigOutputElements: []
+# CHECK-NEXT: SigPatchOrPrimElements: []
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT: PatchOutputMap: [  ]
+# CHECK-NEXT: Name

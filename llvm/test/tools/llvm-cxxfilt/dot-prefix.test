@@ -1,0 +1,4 @@
+## Show that the llvm-cxxfilt does not consider the dot prefix to be part of the symbol name to be demangled.
+RUN: llvm-cxxfilt -n ._ZL5func0v | FileCheck %s
+
+CHECK: .func0()

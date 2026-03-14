@@ -1,0 +1,14 @@
+RUN: llvm-opt-report -r %p %p/Inputs/unrl.yaml | FileCheck -strict-whitespace %s
+
+; CHECK: < {{.*[/\]}}unrl.c
+; CHECK-NEXT:  1     | void bar();
+; CHECK-NEXT:  2     | 
+; CHECK-NEXT:  3     | void foo() {
+; CHECK-NEXT:  4 U5  |   for (int i = 0; i < 5; ++i)
+; CHECK-NEXT:  5     |     bar();
+; CHECK-NEXT:  6     | 
+; CHECK-NEXT:  7 U11 |   for (int i = 0; i < 11; ++i)
+; CHECK-NEXT:  8     |     bar();
+; CHECK-NEXT:  9     | }
+; CHECK-NEXT: 10     | 
+

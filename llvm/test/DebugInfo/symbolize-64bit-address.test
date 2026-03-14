@@ -1,0 +1,6 @@
+RUN: llvm-symbolizer 0xffffffff00000000 -a --obj=%p/Inputs/symbolize-64bit-addr.elf.x86_64 \
+RUN:   | FileCheck %s
+
+CHECK:      0xffffffff00000000
+CHECK-NEXT: _start
+CHECK-NEXT: symbolize-64bit-addr.c:1:0

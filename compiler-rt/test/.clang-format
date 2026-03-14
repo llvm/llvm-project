@@ -1,0 +1,3 @@
+BasedOnStyle: LLVM
+ReflowComments: false
+IndentPPDirectives: AfterHash

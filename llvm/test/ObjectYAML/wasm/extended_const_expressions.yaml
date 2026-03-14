@@ -1,0 +1,42 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            GLOBAL
+    Globals:         
+      - Index:       0
+        Type:        I32
+        Mutable:     false
+        InitExpr:
+          # "extended" encoding of init expression:
+          # (global.get[0x23] 0x1 end[0x0b])
+          Extended:       true
+          Body:           23010b
+      - Index:       1
+        Type:        I64
+        Mutable:     false
+        InitExpr:
+          # (global.get[0x23] 0x1 i32.const[0x41] 0x2 i32.add[0x6a] end[0x0b])
+          Extended:       true
+          Body:           230141026a0b
+...
+# CHECK: --- !WASM
+# CHECK: FileHeader:
+# CHECK:   Version:           0x1
+# CHECK: Sections:
+# CHECK:  - Type:            GLOBAL
+# CHECK:    Globals:         
+# CHECK:      - Index:       0
+# CHECK:        Type:        I32
+# CHECK:        Mutable:     false
+# CHECK:        InitExpr:
+# CHECK:          Opcode:          GLOBAL_GET
+# CHECK:          Index:           1
+# CHECK:      - Index:           1
+# CHECK:        Type:            I64
+# CHECK:        Mutable:         false
+# CHECK:        InitExpr:
+# CHECK:          Extended:        true
+# CHECK:          Body:            230141026A0B
+# CHECK: ...

@@ -1,0 +1,212 @@
+//===-- ConstantFolding.h - Fold instructions into constants ----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file declares routines for folding instructions into constants when all
+// operands are constants, for example "sub i32 1, 0" -> "1".
+//
+// Also, to supplement the basic VMCore ConstantExpr simplifications,
+// this file declares some additional folding routines that can make use of
+// DataLayout information. These functions cannot go in VMCore due to library
+// dependency issues.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ANALYSIS_CONSTANTFOLDING_H
+#define LLVM_ANALYSIS_CONSTANTFOLDING_H
+
+#include "llvm/Support/Compiler.h"
+#include <stdint.h>
+
+namespace llvm {
+
+namespace Intrinsic {
+using ID = unsigned;
+}
+
+class APInt;
+template <typename T> class ArrayRef;
+class CallBase;
+class Constant;
+class DSOLocalEquivalent;
+class DataLayout;
+class Function;
+class GlobalValue;
+class GlobalVariable;
+class Instruction;
+class TargetLibraryInfo;
+class Type;
+
+/// If this constant is a constant offset from a global, return the global and
+/// the constant. Because of constantexprs, this function is recursive.
+/// If the global is part of a dso_local_equivalent constant, return it through
+/// `Equiv` if it is provided.
+LLVM_ABI bool
+IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
+                           const DataLayout &DL,
+                           DSOLocalEquivalent **DSOEquiv = nullptr);
+
+/// ConstantFoldInstruction - Try to constant fold the specified instruction.
+/// If successful, the constant result is returned, if not, null is returned.
+/// Note that this fails if not all of the operands are constant.  Otherwise,
+/// this function can only fail when attempting to fold instructions like loads
+/// and stores, which have no constant expression form.
+LLVM_ABI Constant *
+ConstantFoldInstruction(const Instruction *I, const DataLayout &DL,
+                        const TargetLibraryInfo *TLI = nullptr);
+
+/// ConstantFoldConstant - Fold the constant using the specified DataLayout.
+/// This function always returns a non-null constant: Either the folding result,
+/// or the original constant if further folding is not possible.
+LLVM_ABI Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
+                                        const TargetLibraryInfo *TLI = nullptr);
+
+/// ConstantFoldInstOperands - Attempt to constant fold an instruction with the
+/// specified operands.  If successful, the constant result is returned, if not,
+/// null is returned.  Note that this function can fail when attempting to
+/// fold instructions like loads and stores, which have no constant expression
+/// form.
+///
+/// In some cases, constant folding may return one value chosen from a set of
+/// multiple legal return values. For example, the exact bit pattern of NaN
+/// results is not guaranteed. Using such a result is usually only valid if
+/// all uses of the original operation are replaced by the constant-folded
+/// result. The \p AllowNonDeterministic parameter controls whether this is
+/// allowed.
+LLVM_ABI Constant *ConstantFoldInstOperands(
+    const Instruction *I, ArrayRef<Constant *> Ops, const DataLayout &DL,
+    const TargetLibraryInfo *TLI = nullptr, bool AllowNonDeterministic = true);
+
+/// Attempt to constant fold a compare instruction (icmp/fcmp) with the
+/// specified operands. Returns null or a constant expression of the specified
+/// operands on failure.
+/// Denormal inputs may be flushed based on the denormal handling mode.
+LLVM_ABI Constant *ConstantFoldCompareInstOperands(
+    unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
+    const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
+
+/// Attempt to constant fold a unary operation with the specified operand.
+/// Returns null on failure.
+LLVM_ABI Constant *ConstantFoldUnaryOpOperand(unsigned Opcode, Constant *Op,
+                                              const DataLayout &DL);
+
+/// Attempt to constant fold a binary operation with the specified operands.
+/// Returns null or a constant expression of the specified operands on failure.
+LLVM_ABI Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
+                                                Constant *RHS,
+                                                const DataLayout &DL);
+
+/// Attempt to constant fold a floating point binary operation with the
+/// specified operands, applying the denormal handling mod to the operands.
+/// Returns null or a constant expression of the specified operands on failure.
+LLVM_ABI Constant *
+ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
+                           const DataLayout &DL, const Instruction *I,
+                           bool AllowNonDeterministic = true);
+
+/// Attempt to flush float point constant according to denormal mode set in the
+/// instruction's parent function attributes. If so, return a zero with the
+/// correct sign, otherwise return the original constant. Inputs and outputs to
+/// floating point instructions can have their mode set separately, so the
+/// direction is also needed.
+///
+/// If the calling function's denormal_fpenv input mode is dynamic for the
+/// floating-point type, returns nullptr for denormal inputs.
+LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+                                   bool IsOutput);
+
+/// Attempt to constant fold a cast with the specified operand.  If it
+/// fails, it returns a constant expression of the specified operand.
+LLVM_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C,
+                                           Type *DestTy, const DataLayout &DL);
+
+/// Constant fold a zext, sext or trunc, depending on IsSigned and whether the
+/// DestTy is wider or narrower than C. Returns nullptr on failure.
+LLVM_ABI Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy,
+                                           bool IsSigned, const DataLayout &DL);
+
+/// Extract value of C at the given Offset reinterpreted as Ty. If bits past
+/// the end of C are accessed, they are assumed to be poison.
+LLVM_ABI Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                             const APInt &Offset,
+                                             const DataLayout &DL);
+
+/// Extract value of C reinterpreted as Ty. Same as previous API with zero
+/// offset.
+LLVM_ABI Constant *ConstantFoldLoadFromConst(Constant *C, Type *Ty,
+                                             const DataLayout &DL);
+
+/// Return the value that a load from C with offset Offset would produce if it
+/// is constant and determinable. If this is not determinable, return null.
+LLVM_ABI Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                                APInt Offset,
+                                                const DataLayout &DL);
+
+/// Return the value that a load from C would produce if it is constant and
+/// determinable. If this is not determinable, return null.
+LLVM_ABI Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
+                                                const DataLayout &DL);
+
+/// If C is a uniform value where all bits are the same (either all zero, all
+/// ones, all undef or all poison), return the corresponding uniform value in
+/// the new type. If the value is not uniform or the result cannot be
+/// represented, return null.
+LLVM_ABI Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
+                                                    const DataLayout &DL);
+
+/// canConstantFoldCallTo - Return true if its even possible to fold a call to
+/// the specified function.
+LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
+
+/// ConstantFoldCall - Attempt to constant fold a call to the specified function
+/// with the specified arguments, returning null if unsuccessful.
+LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
+                                    ArrayRef<Constant *> Operands,
+                                    const TargetLibraryInfo *TLI = nullptr,
+                                    bool AllowNonDeterministic = true);
+
+LLVM_ABI Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
+                                               Constant *RHS, Type *Ty,
+                                               Instruction *FMFSource);
+
+/// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
+/// returning null if unsuccessful. Can cast pointer to pointer or pointer to
+/// integer and vice versa if their sizes are equal.
+LLVM_ABI Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
+                                                  const DataLayout &DL);
+
+/// Check whether the given call has no side-effects.
+/// Specifically checks for math routimes which sometimes set errno.
+LLVM_ABI bool isMathLibCallNoop(const CallBase *Call,
+                                const TargetLibraryInfo *TLI);
+
+LLVM_ABI Constant *ReadByteArrayFromGlobal(const GlobalVariable *GV,
+                                           uint64_t Offset);
+
+struct PreservedCastFlags {
+  bool NNeg = false;
+  bool NUW = false;
+  bool NSW = false;
+};
+
+/// Try to cast C to InvC losslessly, satisfying CastOp(InvC) equals C, or
+/// CastOp(InvC) is a refined value of undefined C. Will try best to
+/// preserve the flags.
+LLVM_ABI Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
+                                      unsigned CastOp, const DataLayout &DL,
+                                      PreservedCastFlags *Flags = nullptr);
+
+LLVM_ABI Constant *
+getLosslessUnsignedTrunc(Constant *C, Type *DestTy, const DataLayout &DL,
+                         PreservedCastFlags *Flags = nullptr);
+
+LLVM_ABI Constant *getLosslessSignedTrunc(Constant *C, Type *DestTy,
+                                          const DataLayout &DL,
+                                          PreservedCastFlags *Flags = nullptr);
+} // namespace llvm
+
+#endif

@@ -1,0 +1,8 @@
+UNSUPPORTED: android
+
+Verify that various functions are *not* present in the minimal binary. Presence
+of those symbols in the minimal runtime would mean that the split code made it
+back into the core Sanitizer runtime library.
+
+RUN: nm %shared_minlibscudo | not grep Symbolizer
+RUN: nm %shared_minlibscudo | not grep Coverage

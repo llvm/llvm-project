@@ -1,0 +1,74 @@
+# IR level Instrumentation Flag
+:ir
+_Z10createTypei
+# Func Hash:
+146835647075900052
+# Num Counters:
+2
+# Counter Values:
+750
+250
+
+_ZN8Derived15func1Eii
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+250
+
+_ZN8Derived15func2Eii
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+250
+
+main
+# Func Hash:
+1124236338992350536
+# Num Counters:
+2
+# Counter Values:
+1000
+1
+# Num Value Kinds:
+2
+# ValueKind = IPVK_IndirectCallTarget:
+0
+# NumValueSites:
+2
+2
+vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func1Eii:750
+_ZN8Derived15func1Eii:250
+2
+vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func2Eii:750
+_ZN8Derived15func2Eii:250
+# ValueKind = IPVK_VTableTarget:
+2
+# NumValueSites:
+2
+2
+vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E:750
+_ZTV8Derived1:250
+2
+vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E:750
+_ZTV8Derived1:250
+
+vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func1Eii
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+750
+
+vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func2Eii
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+750
+

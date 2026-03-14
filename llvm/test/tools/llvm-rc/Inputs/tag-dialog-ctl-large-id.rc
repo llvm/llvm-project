@@ -1,0 +1,3 @@
+5 DIALOG 1, 2, 3, 4 {
+  RTEXT "Too large ID", 100000, 1, 2, 3, 4
+}

@@ -1,0 +1,7 @@
+RUN: llvm-readobj --coff-exports %S/Inputs/const-import.lib | FileCheck %s
+
+CHECK: Type: const
+CHECK: Name type: noprefix
+CHECK: Symbol: __imp____CFConstantStringClassReference
+CHECK: Symbol: ___CFConstantStringClassReference
+

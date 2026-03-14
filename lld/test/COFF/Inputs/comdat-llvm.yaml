@@ -1,0 +1,30 @@
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.rdata$mysymbol'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     2A
+symbols:
+  - Name:            '.rdata$mysymbol'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3686517206
+      Number:          1
+      Selection:       IMAGE_COMDAT_SELECT_SAME_SIZE
+  - Name:            mysymbol
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

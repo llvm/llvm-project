@@ -1,0 +1,19 @@
+# RUN: llvm-objcopy --version | FileCheck --check-prefix=OBJCOPY %s
+# RUN: llvm-objcopy -V | FileCheck --check-prefix=OBJCOPY %s
+
+# RUN: llvm-strip --version | FileCheck --check-prefix=STRIP %s
+# RUN: llvm-strip -V | FileCheck --check-prefix=STRIP %s
+
+# RUN: llvm-install-name-tool --version | FileCheck %s
+# RUN: llvm-install-name-tool -V | FileCheck %s
+
+# RUN: llvm-bitcode-strip --version | FileCheck %s
+# RUN: llvm-bitcode-strip -V | FileCheck %s
+
+# OBJCOPY-DAG: {{ version }}
+# OBJCOPY-DAG: GNU objcopy
+
+# STRIP-DAG: {{ version }}
+# STRIP-DAG: GNU strip
+
+# CHECK: {{ version }}

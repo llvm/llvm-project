@@ -1,0 +1,17 @@
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+b main
+# CHECK-LABEL: b main
+# CHECK: Breakpoint 1: where = {{.*}}`main
+
+run
+# CHECK-LABEL: run
+# CHECK: Process {{.*}} stopped
+# CHECK: stop reason = breakpoint 1
+# CHECK:   frame #0: {{.*}}`main at main.c
+
+thread select 1
+# CHECK-LABEL: thread select 1
+# CHECK: stop reason = breakpoint 1
+# CHECK:   frame #0: {{.*}}`main at main.c

@@ -1,0 +1,30 @@
+# RUN: yaml2obj %p/Inputs/debug_rnglist_basic.yaml -o %ttest
+# RUN: lldb-test breakpoints %ttest %s | FileCheck %s
+
+# The following code and invocation were used to produce yaml file,
+# which was manually reduced after that.
+# clang -O0 -gdwarf-5 test.cpp -o test -fuse-ld=lld -ffunction-sections
+#
+# //test.cpp:
+# int zed() { 
+#  return 1;
+# }
+#
+# int main() {
+#  return zed();
+# }
+#
+# clang and LLD versions were 8.0.0 (trunk 343487)
+#
+# Output file contains .debug_rnglists section with basic entries:
+# DW_RLE_start_length and DW_RLE_end_of_list.
+# If LLDB would not be able to parse the section and entries correctly,
+# then reported location would be incorrect.
+
+b main
+# CHECK-LABEL: b main
+# CHECK: Address: {{.*}}`main + 15 at test.cpp:6:9
+
+b zed
+# CHECK-LABEL: b zed
+# CHECK: Address: {{.*}}`zed() + 4 at test.cpp:2:2

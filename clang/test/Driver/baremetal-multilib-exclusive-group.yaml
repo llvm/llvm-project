@@ -1,0 +1,71 @@
+# UNSUPPORTED: system-windows
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
+
+# RUN: FileCheck %s < %t.err --check-prefix=POS
+# RUN: FileCheck %s < %t.err --check-prefix=NEG
+
+# Expected results:
+#
+# Due to the Mappings section, all six of these library directories should
+# match the command-line flag --target=thumbv7em-none-unknown-eabi.
+#
+# The two "non_exclusive" directories, which don't have an ExclusiveGroup at
+# all, should both be selected. So should the two "own_group", each of which
+# specifies a different value of ExclusiveGroup. But the three "exclusive",
+# which have the _same_ ExclusiveGroup value, should not: the third one wins.
+# So we expect five of these seven directories to show up in the clang-cc1
+# command line, but not testdir1_exclusive or testdir2_exclusive.
+
+# POS-DAG: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/testdir1_non_exclusive/include/c++/v1"
+# POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir2_non_exclusive/include/c++/v1"
+# POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir3_exclusive/include/c++/v1"
+# POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir1_own_group/include/c++/v1"
+# POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir2_own_group/include/c++/v1"
+
+# NEG-NOT: "-internal-isystem" "{{[^"]*}}/bin/../lib/clang-runtimes/testdir1_exclusive/include/c++/v1"
+# NEG-NOT: "-internal-isystem" "{{[^"]*}}/bin/../lib/clang-runtimes/testdir2_exclusive/include/c++/v1"
+
+---
+MultilibVersion: 1.0
+
+Groups:
+- Name: actually_exclude_something
+  Type: Exclusive
+
+- Name: foo
+  Type: Exclusive
+
+- Name: bar
+  Type: Exclusive
+
+Variants:
+- Dir: testdir1_non_exclusive
+  Flags: [--target=thumbv7m-none-unknown-eabi]
+
+- Dir: testdir2_non_exclusive
+  Flags: [--target=thumbv7em-none-unknown-eabi]
+
+- Dir: testdir1_exclusive
+  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Group: actually_exclude_something
+
+- Dir: testdir2_exclusive
+  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Group: actually_exclude_something
+
+- Dir: testdir3_exclusive
+  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Group: actually_exclude_something
+
+- Dir: testdir1_own_group
+  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Group: foo
+
+- Dir: testdir2_own_group
+  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Group: bar
+
+Mappings:
+- Match: --target=thumbv7em-none-unknown-eabi
+  Flags: [--target=thumbv7m-none-unknown-eabi]

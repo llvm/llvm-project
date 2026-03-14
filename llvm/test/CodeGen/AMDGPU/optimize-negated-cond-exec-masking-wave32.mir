@@ -1,0 +1,362 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass=si-optimize-exec-masking-pre-ra -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN: name: negated_cond_vop2
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, %0, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop2
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
+    $vcc_lo = S_AND_B32 $exec_lo, killed $vcc_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, %0, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop2_redef_vcc1
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: V_CMP_NE_U32_e32 1, %1, implicit-def $vcc_lo, implicit $exec
+# GCN-NEXT: $vcc_lo = COPY $sgpr0
+# GCN-NEXT: $vcc_lo = S_AND_B32 $exec_lo, $vcc_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop2_redef_vcc1
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
+    $vcc_lo = COPY $sgpr0
+    $vcc_lo = S_AND_B32 $exec_lo, killed $vcc_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_redef_cmp
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: dead %3:sgpr_32 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+# GCN-NEXT: %2:sgpr_32 = COPY $sgpr0
+# GCN-NEXT: $vcc_lo = S_AND_B32 %2, $exec_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_redef_cmp
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+    %2 = COPY $sgpr0
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_undef_vcc
+# GCN:      $vcc_lo = S_AND_B32 $exec_lo, undef $vcc_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_undef_vcc
+body:             |
+  bb.0:
+    $vcc_lo = S_AND_B32 $exec_lo, undef $vcc_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_imp_vcc
+# GCN:      $vcc_lo = IMPLICIT_DEF
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, $vcc_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_imp_vcc
+body:             |
+  bb.0:
+    $vcc_lo = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $vcc_lo, implicit $exec
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop2_imp_vcc
+# GCN:      $vcc_lo = IMPLICIT_DEF
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, $vcc_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop2_imp_vcc
+body:             |
+  bb.0:
+    $vcc_lo = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $vcc_lo, implicit $exec
+    V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
+    $vcc_lo = S_AND_B32 killed $vcc_lo, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_redef_sel
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: dead %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: %1:vgpr_32 = COPY $vgpr0
+# GCN-NEXT: %2:sgpr_32 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+# GCN-NEXT: $vcc_lo = S_AND_B32 %2, $exec_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_redef_sel
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %1:vgpr_32 = COPY $vgpr0
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop2_used_sel
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, %0, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop2_used_sel
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
+    $vcc_lo = S_AND_B32 $exec_lo, killed $vcc_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    $vgpr0 = COPY %1
+    S_ENDPGM 0, implicit $vgpr0
+...
+
+# GCN: name: negated_cond_vop2_used_vcc
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: V_CMP_NE_U32_e32 1, %1, implicit-def $vcc_lo, implicit $exec
+# GCN-NEXT: $sgpr0_sgpr1 = COPY $vcc
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, %0, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop2_used_vcc
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    V_CMP_NE_U32_e32 1, %1, implicit-def $vcc, implicit $exec
+    $sgpr0_sgpr1 = COPY $vcc
+    $vcc_lo = S_AND_B32 $exec_lo, killed $vcc_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_sel_wrong_subreg1
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1.sub1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub1, 1, implicit $exec
+# GCN-NEXT: $vcc_lo = S_AND_B32 %2, $exec_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_sel_wrong_subreg1
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    undef %1.sub1 = IMPLICIT_DEF
+    %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub1, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_sel_wrong_subreg2
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: %1.sub1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub1, 1, implicit $exec
+# GCN-NEXT: $vcc_lo = S_AND_B32 %2, $exec_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_sel_wrong_subreg2
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    undef %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %1.sub1 = IMPLICIT_DEF
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub1, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_sel_right_subreg1
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1.sub1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, %0, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_sel_right_subreg1
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    undef %1.sub1 = IMPLICIT_DEF
+    %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub0, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_sel_right_subreg2
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1.sub1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: $vcc_lo = S_ANDN2_B32 $exec_lo, %0, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_sel_right_subreg2
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    undef %1.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %1.sub1 = IMPLICIT_DEF
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub0, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
+
+# GCN: name: negated_cond_vop3_sel_subreg_overlap
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1.sub2:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: %1.sub2_sub3:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub2, 1, implicit $exec
+# GCN-NEXT: $vcc_lo = S_AND_B32 %2, $exec_lo, implicit-def dead $scc
+# GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
+---
+name:            negated_cond_vop3_sel_subreg_overlap
+body:             |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    undef %1.sub2:vreg_128 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+    %1.sub2_sub3 = IMPLICIT_DEF
+    %2:sgpr_32 = V_CMP_NE_U32_e64 %1.sub2, 1, implicit $exec
+    $vcc_lo = S_AND_B32 killed %2, $exec_lo, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.2, implicit killed $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...

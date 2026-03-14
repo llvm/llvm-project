@@ -1,0 +1,16 @@
+Some basic tests for supplementing instrumentation profile with sample profile for static funcs.
+
+RUN: llvm-profdata merge -supplement-instr-with-sample=%p/Inputs/NoFUnique.afdotext -suppl-min-size-threshold=2 %p/Inputs/NoFUnique.proftext -o %t1
+RUN: llvm-profdata show -function=foo -counts %t1 | FileCheck %s
+
+RUN: llvm-profdata merge -supplement-instr-with-sample=%p/Inputs/FUnique.afdotext -suppl-min-size-threshold=2 %p/Inputs/FUnique.proftext -o %t2
+RUN: llvm-profdata show -function=foo -counts %t2 | FileCheck %s
+
+RUN: llvm-profdata merge -supplement-instr-with-sample=%p/Inputs/NoFUnique.afdotext -suppl-min-size-threshold=2 %p/Inputs/FUnique.proftext -o %t3
+RUN: llvm-profdata show -function=foo -counts %t3 | FileCheck %s
+
+RUN: llvm-profdata merge -supplement-instr-with-sample=%p/Inputs/FUnique.afdotext -suppl-min-size-threshold=2 %p/Inputs/NoFUnique.proftext -o %t4
+RUN: llvm-profdata show -function=foo -counts %t4 | FileCheck %s
+
+CHECK: Counters: 3    <PseudoHot>
+CHECK-NEXT: Instrumentation level:

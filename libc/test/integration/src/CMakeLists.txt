@@ -1,0 +1,7 @@
+add_subdirectory(__support)
+add_subdirectory(pthread)
+add_subdirectory(spawn)
+add_subdirectory(stdio)
+add_subdirectory(stdlib)
+add_subdirectory(threads)
+add_subdirectory(unistd)

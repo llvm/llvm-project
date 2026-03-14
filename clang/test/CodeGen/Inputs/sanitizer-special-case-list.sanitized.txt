@@ -1,0 +1,4 @@
+[unsigned-integer-overflow]
+fun:*cfi*
+[cfi]
+fun:*overflow*

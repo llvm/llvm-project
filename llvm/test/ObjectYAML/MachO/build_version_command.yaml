@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           1
+  sizeofcmds:      32
+  flags:           0x00218085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        2
+    minos:           0x00080000
+    sdk:             0x00090000
+    ntools:          1
+    Tools:
+      - tool:        1
+        version:     0x00000000
+...
+
+
+CHECK: LoadCommands:
+CHECK:   - cmd:             LC_BUILD_VERSION
+CHECK-NEXT:    cmdsize:         32
+CHECK-NEXT:    platform:        2
+CHECK-NEXT:    minos:           524288
+CHECK-NEXT:    sdk:             589824
+CHECK-NEXT:    ntools:          1
+CHECK-NEXT:    Tools:
+CHECK-NEXT:      - tool:            1
+CHECK-NEXT:        version:         0

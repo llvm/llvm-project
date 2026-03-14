@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+
+  @g_int = global i32 0, align 4
+
+  define ptr @test_global_ptrv() {
+  entry:
+    ret ptr @g_int
+  }
+...
+---
+name:            test_global_ptrv
+# CHECK-LABEL: name:  test_global_ptrv
+alignment:       16
+legalized:       false
+regBankSelected: false
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+# CHECK:          %0:_(p0) = G_GLOBAL_VALUE @g_int
+# CHECK-NEXT:     $rax = COPY %0(p0)
+# CHECK-NEXT:     RET 0, implicit $rax
+body:             |
+  bb.1.entry:
+    %0(p0) = G_GLOBAL_VALUE @g_int
+    $rax = COPY %0(p0)
+    RET 0, implicit $rax
+
+...

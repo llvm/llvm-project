@@ -1,0 +1,97 @@
+## Test how we dump SHT_CREL sections.
+# RUN: yaml2obj %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=YAML
+
+# YAML:      - Name:            .crel.text
+# YAML-NEXT:   Type:            SHT_CREL
+# YAML-NEXT:   Link:            .symtab
+# YAML-NEXT:   Info:            .text
+# YAML-NEXT:   Relocations:
+# YAML-NEXT:     - Offset:          0x1
+# YAML-NEXT:       Symbol:          g1
+# YAML-NEXT:       Type:            R_X86_64_32
+# YAML-NEXT:       Addend:          1
+# YAML-NEXT:     - Offset:          0x2
+# YAML-NEXT:       Symbol:          l1
+# YAML-NEXT:       Type:            R_X86_64_64
+# YAML-NEXT:       Addend:          2
+# YAML-NEXT:     - Symbol:          g1
+# YAML-NEXT:       Type:            R_X86_64_32S
+# YAML-NEXT:       Addend:          -1
+# YAML-NEXT:     - Offset:          0x4
+# YAML-NEXT:       Symbol:          .text
+# YAML-NEXT:       Type:            R_X86_64_32S
+# YAML-NEXT:       Addend:          -9223372036854775808
+# YAML-NEXT: - Name:            .crel.dyn
+# YAML-NEXT:   Type:            SHT_CREL
+# YAML-NEXT:   Relocations:     []
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+
+Sections:
+- Name: .foo
+  Type: SHT_PROGBITS
+  Flags: [SHF_ALLOC]
+- Name: .text
+  Type: SHT_PROGBITS
+  Content: "0000000000000000"
+  Flags: [SHF_ALLOC]
+- Name: .crel.text
+  Type: SHT_CREL
+  Info: .text
+  Link: .symtab
+  Relocations:
+    - Offset: 0x1
+      Symbol: g1
+      Type:   R_X86_64_32
+      Addend: 1
+    - Offset: 0x2
+      Symbol: l1
+      Type:   R_X86_64_64
+      Addend: 2
+    - Offset: 0x0
+      Symbol: g1
+      Type:   R_X86_64_32S
+      Addend: 0xffffffffffffffff
+    - Offset: 0x4
+      Symbol: .text
+      Type:   R_X86_64_32S
+      Addend: 0x8000000000000000
+- Name:    .crel.dyn
+  Type:    SHT_CREL
+  Content: 00
+## Trigger the .dynsym emission.
+DynamicSymbols: []
+Symbols:
+  - Name: unused
+    Section: .text
+  - Name: .text
+    Type: STT_SECTION
+    Section: .text
+  - Name:    l1
+  - Name:    g1
+    Section: .text
+    Value:   0x0
+    Size:    4
+    Binding: STB_GLOBAL
+
+## Test the behavior when the sh_entsize field is broken.
+
+# RUN: yaml2obj -DTYPE=SHT_RELA --docnum=2 %s -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ERR1
+
+# ERR1: unable to decode LEB128 at offset 0x00000000: malformed uleb128, extends past end
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_CREL

@@ -1,0 +1,4 @@
+module X {
+  header "Category.h"
+  export *
+}

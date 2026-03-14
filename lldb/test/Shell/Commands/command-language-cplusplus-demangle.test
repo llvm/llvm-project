@@ -1,0 +1,22 @@
+# RUN: %lldb -b -o "language cplusplus demangle __ZN3Foo7DoThingEv" \
+# RUN:   | FileCheck --check-prefix=DOUBLE-UNDERSCORE %s
+# RUN: %lldb -b -o "language cplusplus demangle _ZN3Foo7DoThingEv" \
+# RUN:   | FileCheck --check-prefix=SINGLE-UNDERSCORE %s
+# RUN: not %lldb -b -o "language cplusplus demangle foo" 2>&1 \
+# RUN:   | FileCheck --check-prefix=NOT-MANGLED %s
+# RUN: not %lldb -b -o "language cplusplus demangle _ZN3Foo7DoThingEv foo" 2>&1 \
+# RUN:   | FileCheck --check-prefix=MULTI-ARG %s
+# RUN: %lldb -b -o "help language cplusplus demangle" \
+# RUN:   | FileCheck --check-prefix=HELP-MESSAGE %s
+
+# DOUBLE-UNDERSCORE: __ZN3Foo7DoThingEv ---> Foo::DoThing()
+
+# SINGLE-UNDERSCORE: _ZN3Foo7DoThingEv ---> Foo::DoThing()
+
+# NOT-MANGLED: error: foo is not a valid C++ mangled name
+
+# MULTI-ARG: _ZN3Foo7DoThingEv ---> Foo::DoThing()
+# MULTI-ARG: error: foo is not a valid C++ mangled name
+
+# HELP-MESSAGE: Demangle a C++ mangled name.
+# HELP-MESSAGE: Syntax: language cplusplus demangle [<mangled-name> ...] 

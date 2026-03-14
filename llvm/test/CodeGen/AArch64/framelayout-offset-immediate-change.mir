@@ -1,0 +1,17 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+---
+name: framelayout_offset_immediate_change
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 0, size: 1}
+body: |
+  bb.0:
+    $x0 = LDURXi %fixed-stack.0, -264
+    RET_ReallyLR
+...
+# CHECK:      name:            framelayout_offset_immediate_change
+# CHECK:      body:             |
+# CHECK-NEXT:   bb.0:
+# CHECK-NEXT:     $x8 = SUBXri $sp, 8, 0
+# CHECK-NEXT:     $x0 = LDURXi killed $x8, -256
+# CHECK-NEXT:     RET_ReallyLR

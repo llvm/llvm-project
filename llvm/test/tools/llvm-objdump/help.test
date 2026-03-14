@@ -1,0 +1,16 @@
+RUN: llvm-objdump --help | FileCheck %s
+RUN: llvm-objdump --help-hidden | FileCheck --check-prefix=HIDDEN %s
+
+CHECK: OVERVIEW: llvm object file dumper
+CHECK: USAGE: llvm-objdump{{(.exe)?}} [options] <input object files>{{$}}
+CHECK: OPTIONS:
+CHECK-NOT: {{ -w }}
+CHECK: llvm-objdump MachO Specific Options:
+CHECK: @FILE
+
+HIDDEN: OVERVIEW: llvm object file dumper
+HIDDEN: USAGE: llvm-objdump{{(.exe)?}} [options] <input object files>{{$}}
+HIDDEN: OPTIONS:
+HIDDEN: {{ -w }}
+HIDDEN: llvm-objdump MachO Specific Options:
+HIDDEN: @FILE

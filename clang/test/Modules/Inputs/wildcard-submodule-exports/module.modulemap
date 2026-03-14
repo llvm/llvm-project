@@ -1,0 +1,20 @@
+module A {
+  module One { header "A_one.h" }
+  module Two { header "A_two.h" }
+}
+
+module B {
+  module One { header "B_one.h" }
+  module Two { header "B_two.h" }
+}
+
+module C {
+  module One { 
+    header "C_one.h" 
+    export A.*
+  }
+  module Two { 
+    header "C_two.h"
+    export * 
+  }
+}

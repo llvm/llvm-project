@@ -1,0 +1,10 @@
+framework module A {
+  header "a.h"
+  export *
+}
+
+framework module B {
+}
+
+framework module C {
+}

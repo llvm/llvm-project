@@ -1,0 +1,5 @@
+Windows echo does not have good Unicode support.
+UNSUPPORTED: system-windows
+
+RUN: echo "ようこそ" | FileCheck %s
+CHECK: {{^}}ようこそ{{$}}

@@ -1,0 +1,32 @@
+# RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu 2>&1 | FileCheck %s
+
+# An unmapped 2-byte instruction
+#
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: 0x01
+# CHECK-NEXT: ^
+0x01
+0x10
+
+# An unmapped 4-byte instruction
+#
+# CHECK-NEXT: warning: invalid instruction encoding
+# CHECK-NEXT: 0x53
+# CHECK-NEXT: ^
+0x53
+0x00 0x00 0x00
+
+# An unmapped 6-byte instruction
+#
+# CHECK-NEXT: warning: invalid instruction encoding
+# CHECK-NEXT: 0xff
+# CHECK-NEXT: ^
+0xff
+0x00 0x00 0x00 0x00 0x00
+
+# A trailing zero (also unmapped)
+#
+# CHECK-NEXT: warning: invalid instruction encoding
+# CHECK-NEXT: 0x00
+# CHECK-NEXT: ^
+0x00

@@ -1,0 +1,105 @@
+RUN: llvm-profdata show --sample --json %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=JSON
+RUN: llvm-profdata show --sample --show-format=json %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=JSON
+JSON:      [
+JSON-NEXT:   {
+JSON-NEXT:     "name": "main",
+JSON-NEXT:     "total": 184019,
+JSON-NEXT:     "head": 0,
+JSON-NEXT:     "body": [
+JSON-NEXT:       {
+JSON-NEXT:         "line": 4,
+JSON-NEXT:         "samples": 534
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 4,
+JSON-NEXT:         "discriminator": 2,
+JSON-NEXT:         "samples": 534
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 5,
+JSON-NEXT:         "samples": 1075
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 5,
+JSON-NEXT:         "discriminator": 1,
+JSON-NEXT:         "samples": 1075
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 6,
+JSON-NEXT:         "samples": 2080
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 7,
+JSON-NEXT:         "samples": 534
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 9,
+JSON-NEXT:         "samples": 2064,
+JSON-NEXT:         "calls": [
+JSON-NEXT:           {
+JSON-NEXT:             "function": "_Z3bari",
+JSON-NEXT:             "samples": 1471
+JSON-NEXT:           },
+JSON-NEXT:           {
+JSON-NEXT:             "function": "_Z3fooi",
+JSON-NEXT:             "samples": 631
+JSON-NEXT:           }
+JSON-NEXT:         ]
+JSON-NEXT:       }
+JSON-NEXT:     ],
+JSON-NEXT:     "callsites": [
+JSON-NEXT:       {
+JSON-NEXT:         "line": 10,
+JSON-NEXT:         "samples": [
+JSON-NEXT:           {
+JSON-NEXT:             "name": "inline1",
+JSON-NEXT:             "total": 1000,
+JSON-NEXT:             "body": [
+JSON-NEXT:               {
+JSON-NEXT:                 "line": 1,
+JSON-NEXT:                 "samples": 1000
+JSON-NEXT:               }
+JSON-NEXT:             ]
+JSON-NEXT:           }
+JSON-NEXT:         ]
+JSON-NEXT:       },
+JSON-NEXT:       {
+JSON-NEXT:         "line": 10,
+JSON-NEXT:         "samples": [
+JSON-NEXT:           {
+JSON-NEXT:             "name": "inline2",
+JSON-NEXT:             "total": 2000,
+JSON-NEXT:             "body": [
+JSON-NEXT:               {
+JSON-NEXT:                 "line": 1,
+JSON-NEXT:                 "samples": 2000
+JSON-NEXT:               }
+JSON-NEXT:             ]
+JSON-NEXT:           }
+JSON-NEXT:         ]
+JSON-NEXT:       }
+JSON-NEXT:     ]
+JSON-NEXT:   },
+JSON-NEXT:   {
+JSON-NEXT:     "name": "_Z3bari",
+JSON-NEXT:     "total": 20301,
+JSON-NEXT:     "head": 1437,
+JSON-NEXT:     "body": [
+JSON-NEXT:       {
+JSON-NEXT:         "line": 1,
+JSON-NEXT:         "samples": 1437
+JSON-NEXT:       }
+JSON-NEXT:     ]
+JSON-NEXT:   },
+JSON-NEXT:   {
+JSON-NEXT:     "name": "_Z3fooi",
+JSON-NEXT:     "total": 7711,
+JSON-NEXT:     "head": 610,
+JSON-NEXT:     "body": [
+JSON-NEXT:       {
+JSON-NEXT:         "line": 1,
+JSON-NEXT:         "samples": 610
+JSON-NEXT:       }
+JSON-NEXT:     ]
+JSON-NEXT:   }
+JSON-NEXT: ]

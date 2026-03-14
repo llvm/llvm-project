@@ -1,0 +1,5 @@
+framework module NameInModMap {
+  umbrella header "NameInDir.h"
+  export *
+  module * { export * }
+}

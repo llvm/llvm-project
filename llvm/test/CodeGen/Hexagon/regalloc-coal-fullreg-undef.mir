@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=hexagon -run-pass=register-coalescer -o - %s | FileCheck %s
+
+# Make sure that the coalescer does not create a full definition with
+# an undef flag on the destination. This used to happen when rematerializing
+# a double register and coalescing a smaller reg into a subreg of it.
+
+# CHECK-NOT: undef %[0-9]+:doubleregs = A2_tfrpi 1
+
+---
+name: fred
+tracksRegLiveness: true
+body: |
+
+  bb.0:
+    successors: %bb.1(0x80000000); %bb.1(200.00%)
+
+    %18:doubleregs = A2_tfrpi 1
+    %23:intregs = IMPLICIT_DEF
+    %24:doubleregs = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.1(0x80000000); %bb.1(200.00%)
+
+    %1:doubleregs = COPY %24:doubleregs
+    %0:intregs = COPY %23:intregs
+    %13:intregs = COPY %18.isub_lo:doubleregs
+    %13:intregs = S2_asl_i_r_or %13:intregs, %0:intregs, 1
+    %15:intregs = S2_extractu %0:intregs, 1, 31
+    undef %17.isub_lo:doubleregs = COPY %13:intregs
+    %17.isub_hi:doubleregs = COPY %15:intregs
+    %2:doubleregs = A2_addp %17:doubleregs, %1:doubleregs
+    %3:intregs = A2_addi %0:intregs, -1
+    %23:intregs = COPY %3:intregs
+    %24:doubleregs = COPY %2:doubleregs
+    J2_jump %bb.1, implicit-def dead $pc
+
+...

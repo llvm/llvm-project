@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -start-before=greedy,0 -stop-after=virtregrewriter,2 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=GCN %s
+
+--- |
+  define amdgpu_ps void @e32() #0 {
+    ret void
+  }
+
+  define amdgpu_ps void @e64() #0 {
+    ret void
+  }
+
+...
+
+
+---
+name: e32
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15,  $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31,  $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47,  $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63,  $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79,  $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95,  $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111,  $vgpr112,  $vgpr113,  $vgpr114,  $vgpr115,  $vgpr116,  $vgpr117,  $vgpr118,  $vgpr119,  $vgpr120,  $vgpr121,  $vgpr122,  $vgpr123,  $vgpr124,  $vgpr125,  $vgpr126,  $vgpr127
+
+    ; GCN-LABEL: name: e32
+    ; GCN: renamable $vgpr128 = V_ADD_F16_e32 $vgpr0, $vgpr1, implicit $exec, implicit $mode
+    %0:vgpr_32 = V_ADD_F16_e32 $vgpr0, $vgpr1,  implicit $exec,  implicit $mode
+    S_NOP 0, implicit  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit  $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit  $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    S_NOP 0, implicit  $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79
+    S_NOP 0, implicit  $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95
+    S_NOP 0, implicit  $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111
+    S_NOP 0, implicit  $vgpr112, implicit  $vgpr113, implicit  $vgpr114, implicit  $vgpr115, implicit  $vgpr116, implicit  $vgpr117, implicit  $vgpr118, implicit  $vgpr119, implicit  $vgpr120, implicit  $vgpr121, implicit  $vgpr122, implicit  $vgpr123, implicit  $vgpr124, implicit  $vgpr125, implicit  $vgpr126, implicit  $vgpr127
+    S_ENDPGM 0, implicit %0
+...
+
+---
+name: e64
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15,  $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31,  $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47,  $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63,  $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79,  $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95,  $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111,  $vgpr112,  $vgpr113,  $vgpr114,  $vgpr115,  $vgpr116,  $vgpr117,  $vgpr118,  $vgpr119,  $vgpr120,  $vgpr121,  $vgpr122,  $vgpr123,  $vgpr124,  $vgpr125,  $vgpr126,  $vgpr127
+
+    ; GCN-LABEL: name: e64
+    ; GCN: renamable $vgpr128 = V_ADD_F16_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $exec, implicit $mode
+    %0:vgpr_32 = V_ADD_F16_e64 0, $vgpr0, 0, $vgpr1, 0, 0, implicit $exec,  implicit $mode
+    S_NOP 0, implicit  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit  $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit  $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    S_NOP 0, implicit  $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79
+    S_NOP 0, implicit  $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95
+    S_NOP 0, implicit  $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111
+    S_NOP 0, implicit  $vgpr112, implicit  $vgpr113, implicit  $vgpr114, implicit  $vgpr115, implicit  $vgpr116, implicit  $vgpr117, implicit  $vgpr118, implicit  $vgpr119, implicit  $vgpr120, implicit  $vgpr121, implicit  $vgpr122, implicit  $vgpr123, implicit  $vgpr124, implicit  $vgpr125, implicit  $vgpr126, implicit  $vgpr127
+    S_ENDPGM 0, implicit %0
+...

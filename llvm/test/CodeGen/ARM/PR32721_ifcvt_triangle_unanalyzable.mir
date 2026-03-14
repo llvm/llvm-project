@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=armv7-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+---
+name:            foo
+body:             |
+  bb.0:
+    B %bb.2
+
+  bb.1:
+    BX_RET 14, 0
+
+  bb.2:
+    Bcc %bb.1, 1, $cpsr
+
+  bb.3:
+    B %bb.1
+...
+
+# We should get a single block containing the BX_RET, with no successors at all
+
+# CHECK:      body:
+# CHECK-NEXT:   bb.0:
+# CHECK-NEXT:     BX_RET
+

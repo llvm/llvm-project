@@ -1,0 +1,32 @@
+1 VERSIONINFO
+FILEVERSION 1, 2, 3, 4
+PRODUCTVERSION 5, 6, 7
+FILEFLAGSMASK 50
+FILEFLAGS 555
+FILEOS 110
+FILETYPE 555555
+FILESUBTYPE 14
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        {
+            VALUE "CompanyName",      "a"
+            VALUE "FileDescription",  "b" "c", "d", L"eee" "f" L"g", "a", L"hohoho"
+            VALUE "FileVersion",      "c"
+            VALUE "InternalName",     "d"
+            VALUE "LegalCopyright",   "e" "0"
+            VALUE "LegalTrademarks1", 1 2, 3
+            VALUE "LegalTrademarks2", "g"
+            VALUE "OriginalFilename", L"h"
+            VALUE "ProductName",      "a" "b", "c"
+            VALUE "ProductVersion",   0x12345678L
+        }
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+
+    END
+END

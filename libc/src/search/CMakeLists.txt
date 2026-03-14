@@ -1,0 +1,127 @@
+add_subdirectory(hsearch)
+
+add_entrypoint_object(
+  hcreate
+  SRCS
+    hcreate.cpp
+  HDRS
+    hcreate.h
+  DEPENDS
+    libc.src.search.hsearch.global
+    libc.src.__support.HashTable.table
+    libc.src.__support.HashTable.randomness
+    libc.src.errno.errno
+    libc.include.search
+)
+
+add_entrypoint_object(
+  hcreate_r
+  SRCS
+    hcreate_r.cpp
+  HDRS
+    hcreate_r.h
+  DEPENDS
+    libc.src.__support.HashTable.table
+    libc.src.__support.HashTable.randomness
+    libc.src.errno.errno
+    libc.include.search
+)
+
+add_entrypoint_object(
+  hsearch
+  SRCS
+    hsearch.cpp
+  HDRS
+    hsearch.h
+  DEPENDS
+    libc.hdr.types.ACTION
+    libc.hdr.types.ENTRY
+    libc.src.search.hsearch.global
+    libc.src.__support.HashTable.table
+    libc.src.__support.HashTable.randomness
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  hsearch_r
+  SRCS
+    hsearch_r.cpp
+  HDRS
+    hsearch_r.h
+  DEPENDS
+    libc.hdr.types.ACTION
+    libc.hdr.types.ENTRY
+    libc.src.__support.HashTable.table
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  hdestroy
+  SRCS
+    hdestroy.cpp
+  HDRS
+    hdestroy.h
+  DEPENDS
+    libc.src.search.hsearch.global
+    libc.src.__support.HashTable.table
+    libc.include.search
+)
+
+add_entrypoint_object(
+  hdestroy_r
+  SRCS
+    hdestroy_r.cpp
+  HDRS
+    hdestroy_r.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.HashTable.table
+    libc.include.search
+)
+
+add_entrypoint_object(
+  insque
+  SRCS
+    insque.cpp
+  HDRS
+    insque.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.intrusive_list
+)
+
+add_entrypoint_object(
+  remque
+  SRCS
+    remque.cpp
+  HDRS
+    remque.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.intrusive_list
+)
+
+add_entrypoint_object(
+  lfind
+  SRCS
+    lfind.cpp
+  HDRS
+    lfind.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
+)
+
+add_entrypoint_object(
+  lsearch
+  SRCS
+    lsearch.cpp
+  HDRS
+    lsearch.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
+    libc.src.string.memory_utils.inline_memcpy
+)

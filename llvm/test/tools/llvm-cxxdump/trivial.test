@@ -1,0 +1,66 @@
+RUN: llvm-cxxdump %p/Inputs/trivial.obj.coff-i386 \
+RUN:   | FileCheck %s --check-prefix=COFF-I386
+
+RUN: llvm-cxxdump %p/Inputs/trivial.obj.elf-i386 \
+RUN:   | FileCheck %s --check-prefix=ELF-I386
+
+RUN: llvm-cxxdump %p/Inputs/mixed-archive.coff-i386 \
+RUN:   | FileCheck %s --check-prefix=MIXEDARCOFF-I386
+
+COFF-I386:      ??_7S@@6B@[0]: ??_R4S@@6B@
+COFF-I386-NEXT: ??_7S@@6B@[4]: ??_GS@@UAEPAXI@Z
+COFF-I386-NEXT: ??_8S@@7B@[0]: -4
+COFF-I386-NEXT: ??_8S@@7B@[4]: 4
+COFF-I386-NEXT: ??_R4S@@6B@[IsImageRelative]: 0
+COFF-I386-NEXT: ??_R4S@@6B@[OffsetToTop]: 0
+COFF-I386-NEXT: ??_R4S@@6B@[VFPtrOffset]: 0
+COFF-I386-NEXT: ??_R4S@@6B@[TypeDescriptor]: ??_R0?AUS@@@8
+COFF-I386-NEXT: ??_R4S@@6B@[ClassHierarchyDescriptor]: ??_R3S@@8
+COFF-I386-NEXT: ??_R3A@@8[AlwaysZero]: 0
+COFF-I386-NEXT: ??_R3A@@8[Flags]: 0
+COFF-I386-NEXT: ??_R3A@@8[NumClasses]: 1
+COFF-I386-NEXT: ??_R3A@@8[BaseClassArray]: ??_R2A@@8
+COFF-I386-NEXT: ??_R3S@@8[AlwaysZero]: 0
+COFF-I386-NEXT: ??_R3S@@8[Flags]: 0
+COFF-I386-NEXT: ??_R3S@@8[NumClasses]: 2
+COFF-I386-NEXT: ??_R3S@@8[BaseClassArray]: ??_R2S@@8
+COFF-I386-NEXT: ??_R2A@@8[0]: ??_R1A@?0A@EA@A@@8
+COFF-I386-NEXT: ??_R2S@@8[0]: ??_R1A@?0A@EA@S@@8
+COFF-I386-NEXT: ??_R2S@@8[4]: ??_R1A@33FA@A@@8
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[TypeDescriptor]: ??_R0?AUA@@@8
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[NumBases]: 0
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[OffsetInVBase]: 0
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[VBPtrOffset]: 4
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[OffsetInVBTable]: 4
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[Flags]: 80
+COFF-I386-NEXT: ??_R1A@33FA@A@@8[ClassHierarchyDescriptor]: ??_R3A@@8
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[TypeDescriptor]: ??_R0?AUA@@@8
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[NumBases]: 0
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[OffsetInVBase]: 0
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[VBPtrOffset]: -1
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[OffsetInVBTable]: 0
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[Flags]: 64
+COFF-I386-NEXT: ??_R1A@?0A@EA@A@@8[ClassHierarchyDescriptor]: ??_R3A@@8
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[TypeDescriptor]: ??_R0?AUS@@@8
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[NumBases]: 1
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[OffsetInVBase]: 0
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[VBPtrOffset]: -1
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[OffsetInVBTable]: 0
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[Flags]: 64
+COFF-I386-NEXT: ??_R1A@?0A@EA@S@@8[ClassHierarchyDescriptor]: ??_R3S@@8
+COFF-I386-NEXT: ??_R0?AUA@@@8[VFPtr]: ??_7type_info@@6B@
+COFF-I386-NEXT: ??_R0?AUA@@@8[AlwaysZero]: 0
+COFF-I386-NEXT: ??_R0?AUA@@@8[MangledName]: .?AUA@@
+COFF-I386-NEXT: ??_R0?AUS@@@8[VFPtr]: ??_7type_info@@6B@
+COFF-I386-NEXT: ??_R0?AUS@@@8[AlwaysZero]: 0
+COFF-I386-NEXT: ??_R0?AUS@@@8[MangledName]: .?AUS@@
+
+ELF-I386:      _ZTS1A: 1A
+ELF-I386-NEXT: _ZTV1A[0]: 0
+ELF-I386-NEXT: _ZTV1A[4]: _ZTI1A
+ELF-I386-NEXT: _ZTV1A[8]: _ZN1A1fEv
+
+MIXEDARCOFF-I386:      ??_7S@@6B@[0]: ??_R4S@@6B@
+
+RUN: not llvm-cxxdump %t.blah 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT %s
+ENOENT: {{.*}}.blah: error: [[MSG]]

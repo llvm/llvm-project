@@ -1,0 +1,12 @@
+# RUN: llvm-bcanalyzer --dump --dump-blockinfo %S/Inputs/has-block-info.bc | FileCheck %s
+
+# CHECK: <BLOCKINFO_BLOCK NumWords=13 BlockCodeSize=2>
+# CHECK:   <SETBID op0=8/>
+# CHECK:   <BLOCKNAME op0=65 op1=66 op2=67 op3=0/>
+# CHECK:   <SETRECORDNAME op0=0 op1=65 op2=65 op3=65 op4=0/>
+# CHECK:   <SETRECORDNAME op0=1 op1=66 op2=66 op3=66 op4=0/>
+# CHECK:   <SETBID op0=9/>
+# CHECK:   <BLOCKNAME op0=88 op1=89 op2=90 op3=0/>
+# CHECK:   <SETRECORDNAME op0=0 op1=88 op2=88 op3=88 op4=0/>
+# CHECK:   <SETRECORDNAME op0=1 op1=89 op2=89 op3=89 op4=0/>
+# CHECK: </BLOCKINFO_BLOCK>

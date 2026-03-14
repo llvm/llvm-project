@@ -1,0 +1,38 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=register-hints -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --check-prefix=RESULT %s < %t
+
+# CHECK-INTERESTINGNESS: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+# CHECK-INTERESTINGNESS: - { id: 2, class: vgpr_32, preferred-register: '%1' }
+# CHECK-INTERESTINGNESS-COUNT-5: V_MOV_B32
+
+# RESULT: registers:
+# RESULT-NEXT: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+# RESULT-NEXT: - { id: 1, class: vgpr_32 }
+# RESULT-NEXT: - { id: 2, class: vgpr_32, preferred-register: '%1' }
+# RESULT-NEXT: - { id: 3, class: vgpr_32 }
+# RESULT-NEXT: - { id: 4, class: vgpr_32 }
+
+---
+name: func
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
+  - { id: 1, class: vgpr_32, preferred-register: '' }
+  - { id: 2, class: vgpr_32, preferred-register: '%1' }
+  - { id: 3, class: vgpr_32, preferred-register: '%4' }
+  - { id: 4, class: vgpr_32, preferred-register: '%3' }
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    S_WAITCNT 0
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+    %3:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
+    %4:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
+    S_NOP 0
+    S_ENDPGM 0, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4
+...
+

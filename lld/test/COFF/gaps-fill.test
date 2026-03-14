@@ -1,0 +1,78 @@
+# REQUIRES: aarch64, x86
+# RUN: split-file %s %t.dir
+
+# RUN: llvm-mc -filetype=obj -triple=aarch64-windows %t.dir/arm64-dllmain.s -o %t.dir/arm64-dllmain.obj
+# RUN: llvm-mc -filetype=obj -triple=aarch64-windows %t.dir/arm64-p4sym.s -o %t.dir/arm64-p4sym.obj
+# RUN: lld-link -dll -machine:arm64 %t.dir/arm64-dllmain.obj %t.dir/arm64-p4sym.obj -out:%t.dll
+
+# RUN: llvm-objdump -dz %t.dll | FileCheck -check-prefix=CHECK-ARM64 %s
+# CHECK-ARM64: 180001000: 52800020     mov     w0, #0x1
+# CHECK-ARM64: 180001004: d65f03c0     ret
+# CHECK-ARM64: 180001008: 00000000
+# CHECK-ARM64: 18000100c: 00000000
+# CHECK-ARM64: 180001010: 52800040     mov     w0, #0x2
+# CHECK-ARM64: 180001014: d65f03c0     ret
+
+#--- arm64-dllmain.s
+        .def _DllMainCRTStartup;
+        .scl 2;
+        .type 32;
+        .endef
+        .globl _DllMainCRTStartup
+        .p2align 2
+_DllMainCRTStartup:
+        mov w0, #1
+        ret
+
+#--- arm64-p4sym.s
+        .def p4sym;
+        .scl 2;
+        .type 32;
+        .endef
+        .globl p4sym
+        .p2align 4
+p4sym:
+        mov w0, #2
+        ret
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-windows %t.dir/x86_64-dllmain.s -o %t.dir/x86_64-dllmain.obj
+# RUN: llvm-mc -filetype=obj -triple=x86_64-windows %t.dir/x86_64-p4sym.s -o %t.dir/x86_64-p4sym.obj
+# RUN: lld-link -dll -machine:amd64 %t.dir/x86_64-dllmain.obj %t.dir/x86_64-p4sym.obj -out:%t.dll
+
+# RUN: llvm-objdump -dz %t.dll | FileCheck -check-prefix=CHECK-X64 %s
+# CHECK-X64: 180001000: b8 01 00 00 00 movl $0x1, %eax
+# CHECK-X64: 180001005: c3 retq
+# CHECK-X64: 180001006: cc int3
+# CHECK-X64: 180001007: cc int3
+# CHECK-X64: 180001008: cc int3
+# CHECK-X64: 180001009: cc int3
+# CHECK-X64: 18000100a: cc int3
+# CHECK-X64: 18000100b: cc int3
+# CHECK-X64: 18000100c: cc int3
+# CHECK-X64: 18000100d: cc int3
+# CHECK-X64: 18000100e: cc int3
+# CHECK-X64: 18000100f: cc int3
+# CHECK-X64: 180001010: b8 02 00 00 00 movl $0x2, %eax
+# CHECK-X64: 180001015: c3 retq
+
+#--- x86_64-dllmain.s
+        .def _DllMainCRTStartup;
+        .scl 2;
+        .type 32;
+        .endef
+        .globl _DllMainCRTStartup
+        .p2align 4, 0x90
+_DllMainCRTStartup:
+        movl $1, %eax
+        retq
+
+#--- x86_64-p4sym.s
+        .def p4sym;
+        .scl 2;
+        .type 32;
+        .endef
+        .globl p4sym
+        .p2align 4, 0x90
+p4sym:
+        movl $2, %eax
+        retq

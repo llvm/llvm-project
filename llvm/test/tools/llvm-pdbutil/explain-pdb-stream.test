@@ -1,0 +1,48 @@
+; REQUIRES: diasdk
+
+; RUN: llvm-pdbutil explain \
+; RUN: -offset=0x11000 \
+; RUN: -offset=0x11004 \
+; RUN: -offset=0x11008 \
+; RUN: -offset=0x1100C \
+; RUN: -offset=0x1101C \
+; RUN: %p/Inputs/InjectedSource.pdb | FileCheck %s
+
+
+CHECK:      Block:Offset = 11:0000.
+CHECK-NEXT: Address is in block 17 (allocated).
+CHECK-NEXT:   Address is at offset 0/202 of Stream 1 (PDB Stream).
+CHECK-NEXT:   Within the PDB stream:
+CHECK-NEXT:     address is at offset 0/28 of the PDB Stream Header.
+CHECK-NEXT:     which contains the PDB Stream Version Signature.
+CHECK-NEXT:     The current value is 20000404.
+
+CHECK:      Block:Offset = 11:0004.
+CHECK-NEXT: Address is in block 17 (allocated).
+CHECK-NEXT:   Address is at offset 4/202 of Stream 1 (PDB Stream).
+CHECK-NEXT:   Within the PDB stream:
+CHECK-NEXT:     address is at offset 4/28 of the PDB Stream Header.
+CHECK-NEXT:     which contains the signature of the PDB Stream.
+CHECK-NEXT:     The current value is 1521153653.
+
+CHECK:      Block:Offset = 11:0008.
+CHECK-NEXT: Address is in block 17 (allocated).
+CHECK-NEXT:   Address is at offset 8/202 of Stream 1 (PDB Stream).
+CHECK-NEXT:   Within the PDB stream:
+CHECK-NEXT:     address is at offset 8/28 of the PDB Stream Header.
+CHECK-NEXT:     which contains the age of the PDB.
+CHECK-NEXT:     The current value is 1.
+
+CHECK:      Block:Offset = 11:000C.
+CHECK-NEXT: Address is in block 17 (allocated).
+CHECK-NEXT:   Address is at offset 12/202 of Stream 1 (PDB Stream).
+CHECK-NEXT:   Within the PDB stream:
+CHECK-NEXT:     address is at offset 12/28 of the PDB Stream Header.
+CHECK-NEXT:     which contains the guid of the PDB.
+CHECK-NEXT:     The current value is {6EE46B82-ED02-4370-9C27-20CCC07E92A7}.
+
+CHECK:      Block:Offset = 11:001C.
+CHECK-NEXT: Address is in block 17 (allocated).
+CHECK-NEXT:   Address is at offset 28/202 of Stream 1 (PDB Stream).
+CHECK-NEXT:   Within the PDB stream:
+CHECK-NEXT:     address is at offset 0/166 of the Named Stream Map.

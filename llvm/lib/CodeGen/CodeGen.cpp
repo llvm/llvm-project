@@ -1,0 +1,172 @@
+//===-- CodeGen.cpp -------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the common initialization routines for the
+// CodeGen library.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/InitializePasses.h"
+#include "llvm/PassRegistry.h"
+
+using namespace llvm;
+
+/// initializeCodeGen - Initialize all passes linked into the CodeGen library.
+void llvm::initializeCodeGen(PassRegistry &Registry) {
+  initializeAssignmentTrackingAnalysisPass(Registry);
+  initializeAtomicExpandLegacyPass(Registry);
+  initializeBasicBlockMatchingAndInferencePass(Registry);
+  initializeBasicBlockPathCloningPass(Registry);
+  initializeBasicBlockSectionsPass(Registry);
+  initializeBasicBlockSectionsProfileReaderWrapperPassPass(Registry);
+  initializeBranchFolderLegacyPass(Registry);
+  initializeBranchRelaxationLegacyPass(Registry);
+  initializeBreakFalseDepsPass(Registry);
+  initializeCFGuardLongjmpPass(Registry);
+  initializeCFIFixupPass(Registry);
+  initializeCFIInstrInserterPass(Registry);
+  initializeCheckDebugMachineModulePass(Registry);
+  initializeCodeGenPrepareLegacyPassPass(Registry);
+  initializeComplexDeinterleavingLegacyPassPass(Registry);
+  initializeDeadMachineInstructionElimPass(Registry);
+  initializeDebugifyMachineModulePass(Registry);
+  initializeDetectDeadLanesLegacyPass(Registry);
+  initializeDummyCGSCCPassPass(Registry);
+  initializeDwarfEHPrepareLegacyPassPass(Registry);
+  initializeEHContGuardTargetsPass(Registry);
+  initializeEarlyIfConverterLegacyPass(Registry);
+  initializeEarlyIfPredicatorPass(Registry);
+  initializeEarlyMachineLICMPass(Registry);
+  initializeEarlyTailDuplicateLegacyPass(Registry);
+  initializeExpandIRInstsLegacyPassPass(Registry);
+  initializeExpandMemCmpLegacyPassPass(Registry);
+  initializeExpandPostRALegacyPass(Registry);
+  initializeExpandReductionsPass(Registry);
+  initializeFEntryInserterLegacyPass(Registry);
+  initializeFinalizeISelPass(Registry);
+  initializeFixupStatepointCallerSavedLegacyPass(Registry);
+  initializeFuncletLayoutPass(Registry);
+  initializeGCEmptyBasicBlocksLegacyPass(Registry);
+  initializeGCMachineCodeAnalysisPass(Registry);
+  initializeGCModuleInfoPass(Registry);
+  initializeGlobalMergePass(Registry);
+  initializeGlobalMergeFuncPassWrapperPass(Registry);
+  initializeHardwareLoopsLegacyPass(Registry);
+  initializeIfConverterPass(Registry);
+  initializeImplicitNullChecksPass(Registry);
+  initializeIndirectBrExpandLegacyPassPass(Registry);
+  initializeInsertCodePrefetchPass(Registry);
+  initializeInitUndefLegacyPass(Registry);
+  initializeInlineAsmPreparePass(Registry);
+  initializeInterleavedLoadCombinePass(Registry);
+  initializeInterleavedAccessPass(Registry);
+  initializeJMCInstrumenterPass(Registry);
+  initializeLazyMachineBlockFrequencyInfoPassPass(Registry);
+  initializeLibcallLoweringInfoWrapperPass(Registry);
+  initializeLiveDebugValuesLegacyPass(Registry);
+  initializeLiveDebugVariablesWrapperLegacyPass(Registry);
+  initializeLiveIntervalsWrapperPassPass(Registry);
+  initializeLiveRangeShrinkPass(Registry);
+  initializeLiveStacksWrapperLegacyPass(Registry);
+  initializeLiveVariablesWrapperPassPass(Registry);
+  initializeLocalStackSlotPassPass(Registry);
+  initializeLowerEmuTLSPass(Registry);
+  initializeLowerGlobalDtorsLegacyPassPass(Registry);
+  initializeLowerIntrinsicsPass(Registry);
+  initializeMIRAddFSDiscriminatorsPass(Registry);
+  initializeMIRCanonicalizerPass(Registry);
+  initializeMIRNamerPass(Registry);
+  initializeMIRProfileLoaderPassPass(Registry);
+  initializeMachineBlockFrequencyInfoWrapperPassPass(Registry);
+  initializeMachineBlockHashInfoPass(Registry);
+  initializeMachineBlockPlacementLegacyPass(Registry);
+  initializeMachineBlockPlacementStatsLegacyPass(Registry);
+  initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
+  initializeMachineCFGPrinterPass(Registry);
+  initializeMachineCSELegacyPass(Registry);
+  initializeMachineCombinerPass(Registry);
+  initializeMachineDominanceFrontierWrapperPassPass(Registry);
+  initializeMachineCopyPropagationLegacyPass(Registry);
+  initializeMachineCycleInfoPrinterLegacyPass(Registry);
+  initializeMachineCycleInfoWrapperPassPass(Registry);
+  initializeMachineDominatorTreeWrapperPassPass(Registry);
+  initializeMachineFunctionPrinterPassPass(Registry);
+  initializeMachineFunctionSplitterPass(Registry);
+  initializeMachineLateInstrsCleanupLegacyPass(Registry);
+  initializeMachineLICMPass(Registry);
+  initializeMachineLoopInfoWrapperPassPass(Registry);
+  initializeMachineModuleInfoWrapperPassPass(Registry);
+  initializeMachineOptimizationRemarkEmitterPassPass(Registry);
+  initializeMachineOutlinerPass(Registry);
+  initializeMachinePipelinerPass(Registry);
+  initializeMachineSanitizerBinaryMetadataLegacyPass(Registry);
+  initializeModuloScheduleTestPass(Registry);
+  initializeMachinePostDominatorTreeWrapperPassPass(Registry);
+  initializeMachineRegionInfoPassPass(Registry);
+  initializeMachineSchedulerLegacyPass(Registry);
+  initializeMachineSinkingLegacyPass(Registry);
+  initializeMachineUniformityAnalysisPassPass(Registry);
+  initializeMIR2VecVocabLegacyAnalysisPass(Registry);
+  initializeMIR2VecVocabPrinterLegacyPassPass(Registry);
+  initializeMIR2VecPrinterLegacyPassPass(Registry);
+  initializeMachineUniformityInfoPrinterPassPass(Registry);
+  initializeMachineVerifierLegacyPassPass(Registry);
+  initializeObjCARCContractLegacyPassPass(Registry);
+  initializeOptimizePHIsLegacyPass(Registry);
+  initializePEILegacyPass(Registry);
+  initializePHIEliminationPass(Registry);
+  initializePatchableFunctionLegacyPass(Registry);
+  initializePeepholeOptimizerLegacyPass(Registry);
+  initializePhysicalRegisterUsageInfoWrapperLegacyPass(Registry);
+  initializePostMachineSchedulerLegacyPass(Registry);
+  initializePostRAMachineSinkingLegacyPass(Registry);
+  initializePostRAHazardRecognizerLegacyPass(Registry);
+  initializePostRASchedulerLegacyPass(Registry);
+  initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
+  initializeProcessImplicitDefsLegacyPass(Registry);
+  initializePseudoProbeInserterPass(Registry);
+  initializeRABasicPass(Registry);
+  initializeRAGreedyLegacyPass(Registry);
+  initializeReachingDefInfoWrapperPassPass(Registry);
+  initializeRegAllocFastPass(Registry);
+  initializeRegAllocScoringPass(Registry);
+  initializeRegUsageInfoCollectorLegacyPass(Registry);
+  initializeRegUsageInfoPropagationLegacyPass(Registry);
+  initializeRegisterCoalescerLegacyPass(Registry);
+  initializeRemoveLoadsIntoFakeUsesLegacyPass(Registry);
+  initializeRemoveRedundantDebugValuesLegacyPass(Registry);
+  initializeRenameIndependentSubregsLegacyPass(Registry);
+  initializeReplaceWithVeclibLegacyPass(Registry);
+  initializeSafeStackLegacyPassPass(Registry);
+  initializeSelectOptimizePass(Registry);
+  initializeShadowStackGCLoweringPass(Registry);
+  initializeShrinkWrapLegacyPass(Registry);
+  initializeSjLjEHPreparePass(Registry);
+  initializeSlotIndexesWrapperPassPass(Registry);
+  initializeStackColoringLegacyPass(Registry);
+  initializeStackFrameLayoutAnalysisLegacyPass(Registry);
+  initializeStackMapLivenessPass(Registry);
+  initializeStackProtectorPass(Registry);
+  initializeStackSlotColoringLegacyPass(Registry);
+  initializeStaticDataSplitterPass(Registry);
+  initializeStaticDataAnnotatorPass(Registry);
+  initializeStripDebugMachineModulePass(Registry);
+  initializeTailDuplicateLegacyPass(Registry);
+  initializeTargetPassConfigPass(Registry);
+  initializeTwoAddressInstructionLegacyPassPass(Registry);
+  initializeTypePromotionLegacyPass(Registry);
+  initializeUnpackMachineBundlesPass(Registry);
+  initializeUnreachableBlockElimLegacyPassPass(Registry);
+  initializeUnreachableMachineBlockElimLegacyPass(Registry);
+  initializeVirtRegMapWrapperLegacyPass(Registry);
+  initializeVirtRegRewriterLegacyPass(Registry);
+  initializeWasmEHPreparePass(Registry);
+  initializeWinEHPreparePass(Registry);
+  initializeWindowsSecureHotPatchingPass(Registry);
+  initializeXRayInstrumentationLegacyPass(Registry);
+}

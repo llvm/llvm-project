@@ -1,0 +1,4 @@
+
+
+-cc1
+-triple i686-pc-windows-msvc

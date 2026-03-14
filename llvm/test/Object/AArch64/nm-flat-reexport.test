@@ -1,0 +1,7 @@
+RUN: rm -rf %t && mkdir -p %t
+RUN: yaml2obj %p/../Inputs/MachO/flat-reexport.yaml -o %t/flat-reexport
+RUN: llvm-nm --dyldinfo-only %t/flat-reexport | FileCheck %s
+
+CHECK-NOT: error
+CHECK: _fputc
+CHECK: _sym1

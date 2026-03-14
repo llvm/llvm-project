@@ -1,0 +1,72 @@
+# RUN: clangd -lit-test < %s | FileCheck %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///main.cpp",
+  "languageId":"cpp",
+  "version":1,
+  "text":"int foo(int bar);\nint x = foo(42);\nint y = foo(42);"
+}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"clangd/inlayHints","params":{
+  "textDocument":{"uri":"test:///main.cpp"},
+  "range":{
+    "start": {"line":1,"character":0},
+    "end": {"line":2,"character":0}
+  }
+}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "kind": "parameter",
+# CHECK-NEXT:      "label": "bar: ",
+# CHECK-NEXT:      "position": {
+# CHECK-NEXT:        "character": 12,
+# CHECK-NEXT:        "line": 1
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "range": {
+# CHECK-NEXT:        "end": {
+# CHECK-NEXT:          "character": 14,
+# CHECK-NEXT:          "line": 1
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "start": {
+# CHECK-NEXT:          "character": 12,
+# CHECK-NEXT:          "line": 1
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+# CHECK-NEXT:}
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/inlayHint","params":{
+  "textDocument":{"uri":"test:///main.cpp"},
+  "range":{
+    "start": {"line":1,"character":0},
+    "end": {"line":2,"character":0}
+  }
+}}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "kind": 2,
+# CHECK-NEXT:      "label": [
+# CHECK-NEXT:        {
+# CHECK-NEXT:          "value": "bar:"
+# CHECK-NEXT:        }
+# CHECK-NEXT:      ],
+# CHECK-NEXT:      "paddingLeft": false,
+# CHECK-NEXT:      "paddingRight": true,
+# CHECK-NEXT:      "position": {
+# CHECK-NEXT:        "character": 12,
+# CHECK-NEXT:        "line": 1
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+# CHECK-NEXT:}
+---
+{"jsonrpc":"2.0","id":100,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+

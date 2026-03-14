@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=hexagon -run-pass liveintervals -run-pass machineverifier -run-pass register-coalescer %s -o - | FileCheck %s
+#
+# If there is no consumer of the live intervals, the live intervals pass
+# will be freed immediately after it runs, before the verifier. Add a
+# user (register coalescer in this case), so that the verification will
+# cover live intervals as well.
+#
+# Make sure that this compiles successfully.
+# CHECK: undef %1.isub_lo:doubleregs = A2_addi %1.isub_lo, 1
+
+---
+name: fred
+tracksRegLiveness: true
+
+registers:
+  - { id: 0, class: intregs }
+  - { id: 1, class: doubleregs }
+  - { id: 2, class: predregs }
+  - { id: 3, class: doubleregs }
+body: |
+  bb.0:
+    liveins: $d0
+    successors: %bb.1
+        %0 = IMPLICIT_DEF
+        %1 = COPY $d0
+
+  bb.1:
+    successors: %bb.1
+        %2 = C2_cmpgt %0, %1.isub_lo
+        %3 = COPY %1
+        %1 = COPY %3
+        undef %1.isub_lo = A2_addi %1.isub_lo, 1
+        J2_jump %bb.1, implicit-def $pc
+...

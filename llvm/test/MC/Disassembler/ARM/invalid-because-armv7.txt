@@ -1,0 +1,26 @@
+# RUN: not llvm-mc -disassemble -triple armv7 -show-encoding < %s 2>&1 | FileCheck %s
+
+# This file is checking encodings that are valid on some triples, but not on the
+# ARMv7 triple, probably because the relevant instruction is v8, though there
+# could be other reasons.
+
+# Would be vcvtt.f64.f16 d3, s1
+[0xe0 0x3b 0xb2 0xee]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xe0 0x3b 0xb2 0xee]
+
+# Would be vcvtb.f16.f64 s4, d1
+[0x41 0x2b 0xb3 0xee]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x41 0x2b 0xb3 0xee]
+
+# Would be vcvtblt.f16.f64 s4, d1
+[0x41 0x2b 0xb3 0xbe]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x41 0x2b 0xb3 0xbe]
+
+# Would be vmrs r0, mvfr2
+[0x10 0xa 0xf5 0xee]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x10 0xa 0xf5 0xee]
+

@@ -1,0 +1,42 @@
+## Check how we print sections.
+
+# RUN: llvm-readobj --sections %p/Inputs/trivial.obj.coff-i386 | FileCheck %s
+
+# CHECK:      Sections [
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Number: 1
+# CHECK-NEXT:     Name: .text (2E 74 65 78 74 00 00 00)
+# CHECK-NEXT:     VirtualSize: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     RawDataSize: 22
+# CHECK-NEXT:     PointerToRawData: 0x64
+# CHECK-NEXT:     PointerToRelocations: 0x7A
+# CHECK-NEXT:     PointerToLineNumbers: 0x0
+# CHECK-NEXT:     RelocationCount: 3
+# CHECK-NEXT:     LineNumberCount: 0
+# CHECK-NEXT:     Characteristics [ (0x60500020)
+# CHECK-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+# CHECK-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+# CHECK-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+# CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Number: 2
+# CHECK-NEXT:     Name: .data (2E 64 61 74 61 00 00 00)
+# CHECK-NEXT:     VirtualSize: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     RawDataSize: 13
+# CHECK-NEXT:     PointerToRawData: 0x98
+# CHECK-NEXT:     PointerToRelocations: 0x0
+# CHECK-NEXT:     PointerToLineNumbers: 0x0
+# CHECK-NEXT:     RelocationCount: 0
+# CHECK-NEXT:     LineNumberCount: 0
+# CHECK-NEXT:     Characteristics [ (0xC0300040)
+# CHECK-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+# CHECK-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+# CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# CHECK-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

@@ -1,0 +1,57 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+# RUN: clangd -lit-test -pch-storage=memory < %s | FileCheck -strict-whitespace %s
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "processId": 123,
+    "rootPath": "clangd",
+    "capabilities": {
+      "textDocument": {
+        "completion": {
+          "completionItem": {
+            "snippetSupport": true
+          }
+        }
+      }
+    },
+    "trace": "off"
+  }
+}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"int func_with_args(int a, int b);\nint main() {\nfunc_with\n}"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:///main.cpp"},"position":{"line":2,"character":7}}}
+#      CHECK:  "id": 1
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": {{.*}}
+# CHECK-NEXT:    "items": [
+# CHECK:           "filterText": "func_with_args",
+# CHECK-NEXT:      "insertText": "func_with_args(${1:int a}, ${2:int b})",
+# CHECK-NEXT:      "insertTextFormat": 2,
+# CHECK-NEXT:      "kind": 3,
+# CHECK-NEXT:      "label": " func_with_args(int a, int b)",
+# CHECK-NEXT:      "score": {{[0-9]+.[0-9]+}},
+# CHECK-NEXT:      "sortText": "{{.*}}func_with_args"
+# CHECK-NEXT:      "textEdit": {
+# CHECK-NEXT:        "newText": "func_with_args(${1:int a}, ${2:int b})",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 7,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 0,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        }
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

@@ -1,0 +1,36 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-nm -B -S %t | FileCheck --match-full-lines %s
+# RUN: llvm-nm -W -B -S %t | count 0
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .data
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    weak_func
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_WEAK
+    Size:    17
+  - Name:    weak_var
+    Type:    STT_OBJECT
+    Section: .data
+    Binding: STB_WEAK
+    Size:    4
+  - Name:    weak_extern_func
+    Type:    STT_FUNC
+    Binding: STB_WEAK
+  - Name:    weak_extern_var
+    Type:    STT_OBJECT
+    Binding: STB_WEAK
+
+# CHECK:                  w weak_extern_func
+# CHECK:                  v weak_extern_var
+# CHECK: 0000000000000000 0000000000000011 W weak_func
+# CHECK: 0000000000000000 0000000000000004 V weak_var

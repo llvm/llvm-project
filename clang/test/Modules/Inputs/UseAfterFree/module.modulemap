@@ -1,0 +1,3 @@
+module UseAfterFreePublic {
+  header "UseAfterFreePublic.h"
+}

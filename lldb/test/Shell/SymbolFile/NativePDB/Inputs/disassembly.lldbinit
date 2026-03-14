@@ -1,0 +1,2 @@
+disassemble --flavor=intel -m -n main
+quit

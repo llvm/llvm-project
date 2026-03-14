@@ -1,0 +1,745 @@
+//===- ARMISelLowering.h - ARM DAG Lowering Interface -----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the interfaces that ARM uses to lower LLVM code into a
+// selection DAG.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_ARM_ARMISELLOWERING_H
+#define LLVM_LIB_TARGET_ARM_ARMISELLOWERING_H
+
+#include "MCTargetDesc/ARMBaseInfo.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
+#include "llvm/Support/CodeGen.h"
+#include <optional>
+#include <utility>
+
+namespace llvm {
+
+class ARMBaseTargetMachine;
+class ARMSubtarget;
+class DataLayout;
+class FastISel;
+class FunctionLoweringInfo;
+class GlobalValue;
+class InstrItineraryData;
+class Instruction;
+class IRBuilderBase;
+class MachineBasicBlock;
+class MachineInstr;
+class SelectionDAG;
+class TargetLibraryInfo;
+class TargetMachine;
+class TargetRegisterInfo;
+class VectorType;
+
+  namespace ARM {
+  /// Possible values of current rounding mode, which is specified in bits
+  /// 23:22 of FPSCR.
+  enum Rounding {
+    RN = 0,    // Round to Nearest
+    RP = 1,    // Round towards Plus infinity
+    RM = 2,    // Round towards Minus infinity
+    RZ = 3,    // Round towards Zero
+    rmMask = 3 // Bit mask selecting rounding mode
+  };
+
+  // Bit position of rounding mode bits in FPSCR.
+  const unsigned RoundingBitsPos = 22;
+
+  // Bits of floating-point status. These are NZCV flags, QC bit and cumulative
+  // FP exception bits.
+  const unsigned FPStatusBits = 0xf800009f;
+
+  // Some bits in the FPSCR are not yet defined.  They must be preserved when
+  // modifying the contents.
+  const unsigned FPReservedBits = 0x00006060;
+  } // namespace ARM
+
+  /// Define some predicates that are used for node matching.
+  namespace ARM {
+
+    bool isBitFieldInvertedMask(unsigned v);
+
+  } // end namespace ARM
+
+  //===--------------------------------------------------------------------===//
+  //  ARMTargetLowering - ARM Implementation of the TargetLowering interface
+
+  class ARMTargetLowering : public TargetLowering {
+    // Copying needed for an outgoing byval argument.
+    enum ByValCopyKind {
+      // Argument is already in the correct location, no copy needed.
+      NoCopy,
+      // Argument value is currently in the local stack frame, needs copying to
+      // outgoing arguemnt area.
+      CopyOnce,
+      // Argument value is currently in the outgoing argument area, but not at
+      // the correct offset, so needs copying via a temporary in local stack
+      // space.
+      CopyViaTemp,
+    };
+
+  public:
+    explicit ARMTargetLowering(const TargetMachine &TM,
+                               const ARMSubtarget &STI);
+
+    const ARMBaseTargetMachine &getTM() const;
+
+    unsigned getJumpTableEncoding() const override;
+    bool useSoftFloat() const override;
+
+    SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
+    /// ReplaceNodeResults - Replace the results of node with an illegal result
+    /// type with new values built out of custom code.
+    void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue>&Results,
+                            SelectionDAG &DAG) const override;
+
+    bool isSelectSupported(SelectSupportKind Kind) const override {
+      // ARM does not support scalar condition selects on vectors.
+      return (Kind != ScalarCondVectorVal);
+    }
+
+    bool isReadOnly(const GlobalValue *GV) const;
+
+    /// getSetCCResultType - Return the value type to use for ISD::SETCC.
+    EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
+                           EVT VT) const override;
+
+    MachineBasicBlock *
+    EmitInstrWithCustomInserter(MachineInstr &MI,
+                                MachineBasicBlock *MBB) const override;
+
+    void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                       SDNode *Node) const override;
+
+    bool supportKCFIBundles() const override;
+
+    MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
+                                MachineBasicBlock::instr_iterator &MBBI,
+                                const TargetInstrInfo *TII) const override;
+
+    SDValue PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const;
+    SDValue PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const;
+    SDValue PerformCMOVToBFICombine(SDNode *N, SelectionDAG &DAG) const;
+    SDValue PerformIntrinsicCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformMVEExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformMVETruncCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+    bool SimplifyDemandedBitsForTargetNode(SDValue Op,
+                                           const APInt &OriginalDemandedBits,
+                                           const APInt &OriginalDemandedElts,
+                                           KnownBits &Known,
+                                           TargetLoweringOpt &TLO,
+                                           unsigned Depth) const override;
+
+    bool isDesirableToTransformToIntegerOp(unsigned Opc, EVT VT) const override;
+
+    /// allowsMisalignedMemoryAccesses - Returns true if the target allows
+    /// unaligned memory accesses of the specified type. Returns whether it
+    /// is "fast" by reference in the second argument.
+    bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
+                                        Align Alignment,
+                                        MachineMemOperand::Flags Flags,
+                                        unsigned *Fast) const override;
+
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
+                            const AttributeList &FuncAttributes) const override;
+
+    bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
+    bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
+    bool isZExtFree(SDValue Val, EVT VT2) const override;
+    Type* shouldConvertSplatType(ShuffleVectorInst* SVI) const override;
+
+    bool isFNegFree(EVT VT) const override;
+
+    bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
+
+    bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
+
+
+    /// isLegalAddressingMode - Return true if the addressing mode represented
+    /// by AM is legal for this target, for a load/store of the specified type.
+    bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
+                               Type *Ty, unsigned AS,
+                               Instruction *I = nullptr) const override;
+
+    bool isLegalT2ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
+
+    /// Returns true if the addressing mode representing by AM is legal
+    /// for the Thumb1 target, for a load/store of the specified type.
+    bool isLegalT1ScaledAddressingMode(const AddrMode &AM, EVT VT) const;
+
+    /// isLegalICmpImmediate - Return true if the specified immediate is legal
+    /// icmp immediate, that is the target has icmp instructions which can
+    /// compare a register against the immediate without having to materialize
+    /// the immediate into a register.
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+
+    /// isLegalAddImmediate - Return true if the specified immediate is legal
+    /// add immediate, that is the target has add instructions which can
+    /// add a register and the immediate without having to materialize
+    /// the immediate into a register.
+    bool isLegalAddImmediate(int64_t Imm) const override;
+
+    /// getPreIndexedAddressParts - returns true by value, base pointer and
+    /// offset pointer and addressing mode by reference if the node's address
+    /// can be legally represented as pre-indexed load / store address.
+    bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
+                                   ISD::MemIndexedMode &AM,
+                                   SelectionDAG &DAG) const override;
+
+    /// getPostIndexedAddressParts - returns true by value, base pointer and
+    /// offset pointer and addressing mode by reference if this node can be
+    /// combined with a load / store to form a post-indexed load / store.
+    bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
+                                    SDValue &Offset, ISD::MemIndexedMode &AM,
+                                    SelectionDAG &DAG) const override;
+
+    void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                       const APInt &DemandedElts,
+                                       const SelectionDAG &DAG,
+                                       unsigned Depth) const override;
+
+    bool targetShrinkDemandedConstant(SDValue Op, const APInt &DemandedBits,
+                                      const APInt &DemandedElts,
+                                      TargetLoweringOpt &TLO) const override;
+
+    ConstraintType getConstraintType(StringRef Constraint) const override;
+
+    /// Examine constraint string and operand type and determine a weight value.
+    /// The operand object must already have been set up with the operand type.
+    ConstraintWeight getSingleConstraintMatchWeight(
+      AsmOperandInfo &info, const char *constraint) const override;
+
+    std::pair<unsigned, const TargetRegisterClass *>
+    getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                 StringRef Constraint, MVT VT) const override;
+
+    const char *LowerXConstraint(EVT ConstraintVT) const override;
+
+    /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
+    /// vector.  If it is invalid, don't add anything to Ops. If hasMemory is
+    /// true it means one of the asm constraint of the inline asm instruction
+    /// being processed is 'm'.
+    void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
+                                      std::vector<SDValue> &Ops,
+                                      SelectionDAG &DAG) const override;
+
+    InlineAsm::ConstraintCode
+    getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
+      if (ConstraintCode == "Q")
+        return InlineAsm::ConstraintCode::Q;
+      if (ConstraintCode.size() == 2) {
+        if (ConstraintCode[0] == 'U') {
+          switch(ConstraintCode[1]) {
+          default:
+            break;
+          case 'm':
+            return InlineAsm::ConstraintCode::Um;
+          case 'n':
+            return InlineAsm::ConstraintCode::Un;
+          case 'q':
+            return InlineAsm::ConstraintCode::Uq;
+          case 's':
+            return InlineAsm::ConstraintCode::Us;
+          case 't':
+            return InlineAsm::ConstraintCode::Ut;
+          case 'v':
+            return InlineAsm::ConstraintCode::Uv;
+          case 'y':
+            return InlineAsm::ConstraintCode::Uy;
+          }
+        }
+      }
+      return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
+    }
+
+    const ARMSubtarget* getSubtarget() const {
+      return Subtarget;
+    }
+
+    /// getRegClassFor - Return the register class that should be used for the
+    /// specified value type.
+    const TargetRegisterClass *
+    getRegClassFor(MVT VT, bool isDivergent = false) const override;
+
+    bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
+                                Align &PrefAlign) const override;
+
+    /// createFastISel - This method returns a target specific FastISel object,
+    /// or null if the target does not support "fast" ISel.
+    FastISel *
+    createFastISel(FunctionLoweringInfo &funcInfo,
+                   const TargetLibraryInfo *libInfo,
+                   const LibcallLoweringInfo *libcallLowering) const override;
+
+    Sched::Preference getSchedulingPreference(SDNode *N) const override;
+
+    bool preferZeroCompareBranch() const override { return true; }
+
+    bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
+
+    bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
+
+    bool hasAndNotCompare(SDValue V) const override {
+      // We can use bics for any scalar.
+      return V.getValueType().isScalarInteger();
+    }
+
+    bool
+    isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
+    bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
+    /// isFPImmLegal - Returns true if the target can instruction select the
+    /// specified FP immediate natively. If false, the legalizer will
+    /// materialize the FP immediate as a load from a constant pool.
+    bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                      bool ForCodeSize = false) const override;
+
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
+                            unsigned Intrinsic) const override;
+
+    /// Returns true if it is beneficial to convert a load of a constant
+    /// to just the constant itself.
+    bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                           Type *Ty) const override;
+
+    /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
+    /// with this index.
+    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                                 unsigned Index) const override;
+
+    bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                              bool MathUsed) const override {
+      // Using overflow ops for overflow checks only should beneficial on ARM.
+      return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
+    }
+
+    bool shouldReassociateReduction(unsigned Opc, EVT VT) const override {
+      return Opc != ISD::VECREDUCE_ADD;
+    }
+
+    /// Returns true if an argument of type Ty needs to be passed in a
+    /// contiguous block of registers in calling convention CallConv.
+    bool functionArgumentNeedsConsecutiveRegisters(
+        Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+        const DataLayout &DL) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception address on entry to an EH pad.
+    Register
+    getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception typeid on entry to a landing pad.
+    Register
+    getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
+    Instruction *makeDMB(IRBuilderBase &Builder, ARM_MB::MemBOpt Domain) const;
+    Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
+                          AtomicOrdering Ord) const override;
+    Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                                AtomicOrdering Ord) const override;
+
+    void
+    emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
+
+    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                  AtomicOrdering Ord) const override;
+    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                   AtomicOrdering Ord) const override;
+
+    unsigned getMaxSupportedInterleaveFactor() const override;
+
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
+                              ArrayRef<ShuffleVectorInst *> Shuffles,
+                              ArrayRef<unsigned> Indices, unsigned Factor,
+                              const APInt &GapMask) const override;
+    bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
+
+    bool shouldInsertFencesForAtomic(const Instruction *I) const override;
+    TargetLoweringBase::AtomicExpansionKind
+    shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+    TargetLoweringBase::AtomicExpansionKind
+    shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+    TargetLoweringBase::AtomicExpansionKind
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
+    TargetLoweringBase::AtomicExpansionKind
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
+
+    bool useLoadStackGuardNode(const Module &M) const override;
+
+    void
+    insertSSPDeclarations(Module &M,
+                          const LibcallLoweringInfo &Libcalls) const override;
+
+    bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
+                                   unsigned &Cost) const override;
+
+    bool canCreateUndefOrPoisonForTargetNode(
+        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+
+    bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
+                          const MachineFunction &MF) const override {
+      // Do not merge to larger than i32.
+      return (MemVT.getSizeInBits() <= 32);
+    }
+
+    bool isCheapToSpeculateCttz(Type *Ty) const override;
+    bool isCheapToSpeculateCtlz(Type *Ty) const override;
+
+    bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+      return VT.isScalarInteger();
+    }
+
+    bool supportSwiftError() const override {
+      return true;
+    }
+
+    bool supportSplitCSR(MachineFunction *MF) const override {
+      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+             MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
+    }
+
+    bool hasStandaloneRem(EVT VT) const override {
+      return HasStandaloneRem;
+    }
+
+    ShiftLegalizationStrategy
+    preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
+                                       unsigned ExpansionFactor) const override;
+
+    CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
+    CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
+
+    /// Returns true if \p VecTy is a legal interleaved access type. This
+    /// function checks the vector element type and the overall width of the
+    /// vector.
+    bool isLegalInterleavedAccessType(unsigned Factor, FixedVectorType *VecTy,
+                                      Align Alignment,
+                                      const DataLayout &DL) const;
+
+    bool isMulAddWithConstProfitable(SDValue AddNode,
+                                     SDValue ConstNode) const override;
+
+    bool alignLoopsWithOptSize() const override;
+
+    /// Returns the number of interleaved accesses that will be generated when
+    /// lowering accesses of the given type.
+    unsigned getNumInterleavedAccesses(VectorType *VecTy,
+                                       const DataLayout &DL) const;
+
+    void finalizeLowering(MachineFunction &MF) const override;
+
+    /// Return the correct alignment for the current calling convention.
+    Align getABIAlignmentForCallingConv(Type *ArgTy,
+                                        const DataLayout &DL) const override;
+
+    bool isDesirableToCommuteWithShift(const SDNode *N,
+                                       CombineLevel Level) const override;
+
+    bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
+
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
+
+    /// Return true if it is profitable to fold a pair of shifts into a mask.
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+      EVT VT = Y.getValueType();
+
+      if (VT.isVector())
+        return false;
+
+      return VT.getScalarSizeInBits() <= 32;
+    }
+
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
+
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
+    bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
+
+    bool isComplexDeinterleavingSupported() const override;
+    bool isComplexDeinterleavingOperationSupported(
+        ComplexDeinterleavingOperation Operation, Type *Ty) const override;
+
+    Value *createComplexDeinterleavingIR(
+        IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
+        ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
+        Value *Accumulator = nullptr) const override;
+
+    bool useFPRegsForHalfType() const override { return true; }
+
+  protected:
+    std::pair<const TargetRegisterClass *, uint8_t>
+    findRepresentativeClass(const TargetRegisterInfo *TRI,
+                            MVT VT) const override;
+
+  private:
+    /// Subtarget - Keep a pointer to the ARMSubtarget around so that we can
+    /// make the right decision when generating code for different targets.
+    const ARMSubtarget *Subtarget;
+
+    const TargetRegisterInfo *RegInfo;
+
+    const InstrItineraryData *Itins;
+
+    // TODO: remove this, and have shouldInsertFencesForAtomic do the proper
+    // check.
+    bool InsertFencesForAtomic;
+
+    bool HasStandaloneRem = true;
+
+    void addTypeForNEON(MVT VT, MVT PromotedLdStVT);
+    void addDRTypeForNEON(MVT VT);
+    void addQRTypeForNEON(MVT VT);
+    std::pair<SDValue, SDValue> getARMXALUOOp(SDValue Op, SelectionDAG &DAG, SDValue &ARMcc) const;
+
+    using RegsToPassVector = SmallVector<std::pair<unsigned, SDValue>, 8>;
+
+    void PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG, SDValue Chain,
+                          SDValue &Arg, RegsToPassVector &RegsToPass,
+                          CCValAssign &VA, CCValAssign &NextVA,
+                          SDValue &StackPtr,
+                          SmallVectorImpl<SDValue> &MemOpChains,
+                          bool IsTailCall,
+                          int SPDiff) const;
+    SDValue GetF64FormalArgument(CCValAssign &VA, CCValAssign &NextVA,
+                                 SDValue &Root, SelectionDAG &DAG,
+                                 const SDLoc &dl) const;
+
+    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
+                                            bool isVarArg) const;
+    CCAssignFn *CCAssignFnForNode(CallingConv::ID CC, bool Return,
+                                  bool isVarArg) const;
+    std::pair<SDValue, MachinePointerInfo>
+    computeAddrForCallArg(const SDLoc &dl, SelectionDAG &DAG,
+                          const CCValAssign &VA, SDValue StackPtr,
+                          bool IsTailCall, int SPDiff) const;
+    ByValCopyKind ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                            SDValue Dst,
+                                            ISD::ArgFlagsTy Flags) const;
+    SDValue LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEH_SJLJ_SETUP_DISPATCH(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG,
+                                    const ARMSubtarget *Subtarget) const;
+    SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
+                                    const ARMSubtarget *Subtarget) const;
+    SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalAddressELF(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalAddressWindows(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
+                                            SelectionDAG &DAG) const;
+    SDValue LowerToTLSExecModels(GlobalAddressSDNode *GA,
+                                 SelectionDAG &DAG,
+                                 TLSModel::Model model) const;
+    SDValue LowerGlobalTLSAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerConstantFP(SDValue Op, SelectionDAG &DAG,
+                            const ARMSubtarget *ST) const;
+    SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
+                              const ARMSubtarget *ST) const;
+    SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerDivRem(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed) const;
+    void ExpandDIV_Windows(SDValue Op, SelectionDAG &DAG, bool Signed,
+                           SmallVectorImpl<SDValue> &Results) const;
+    SDValue ExpandBITCAST(SDNode *N, SelectionDAG &DAG,
+                          const ARMSubtarget *Subtarget) const;
+    SDValue LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG, bool Signed,
+                                   SDValue &Chain) const;
+    SDValue LowerREM(SDNode *N, SelectionDAG &DAG) const;
+    SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
+    void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                   SelectionDAG &DAG) const;
+    SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
+                       const ARMSubtarget *Subtarget) const;
+    std::pair<SDValue, SDValue>
+    LowerAEABIUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerAEABIUnalignedStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+    Register getRegisterByName(const char* RegName, LLT VT,
+                               const MachineFunction &MF) const override;
+
+    SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                          SmallVectorImpl<SDNode *> &Created) const override;
+
+    bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                    EVT VT) const override;
+
+    SDValue MoveToHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT, MVT ValVT,
+                      SDValue Val) const;
+    SDValue MoveFromHPR(const SDLoc &dl, SelectionDAG &DAG, MVT LocVT,
+                        MVT ValVT, SDValue Val) const;
+
+    SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
+                            CallingConv::ID CallConv, bool isVarArg,
+                            const SmallVectorImpl<ISD::InputArg> &Ins,
+                            const SDLoc &dl, SelectionDAG &DAG,
+                            SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
+                            SDValue ThisVal, bool isCmseNSCall) const;
+
+    void initializeSplitCSR(MachineBasicBlock *Entry) const override;
+    void insertCopiesSplitCSR(
+      MachineBasicBlock *Entry,
+      const SmallVectorImpl<MachineBasicBlock *> &Exits) const override;
+
+    bool splitValueIntoRegisterParts(
+        SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
+        unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC)
+        const override;
+
+    SDValue joinRegisterPartsIntoValue(
+        SelectionDAG & DAG, const SDLoc &DL, const SDValue *Parts,
+        unsigned NumParts, MVT PartVT, EVT ValueVT,
+        std::optional<CallingConv::ID> CC) const override;
+
+    SDValue
+    LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+                         const SmallVectorImpl<ISD::InputArg> &Ins,
+                         const SDLoc &dl, SelectionDAG &DAG,
+                         SmallVectorImpl<SDValue> &InVals) const override;
+
+    int StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG, const SDLoc &dl,
+                       SDValue &Chain, const Value *OrigArg,
+                       unsigned InRegsParamRecordIdx, int ArgOffset,
+                       unsigned ArgSize) const;
+
+    void VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
+                              const SDLoc &dl, SDValue &Chain,
+                              unsigned ArgOffset, unsigned TotalArgRegsSaveSize,
+                              bool ForceMutable = false) const;
+
+    SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                      SmallVectorImpl<SDValue> &InVals) const override;
+
+    /// HandleByVal - Target-specific cleanup for ByVal support.
+    void HandleByVal(CCState *, unsigned &, Align) const override;
+
+    /// IsEligibleForTailCallOptimization - Check whether the call is eligible
+    /// for tail call optimization. Targets which want to do tail call
+    /// optimization should implement this function.
+    bool IsEligibleForTailCallOptimization(
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const;
+
+    bool CanLowerReturn(CallingConv::ID CallConv,
+                        MachineFunction &MF, bool isVarArg,
+                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        LLVMContext &Context, const Type *RetTy) const override;
+
+    SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+                        const SmallVectorImpl<ISD::OutputArg> &Outs,
+                        const SmallVectorImpl<SDValue> &OutVals,
+                        const SDLoc &dl, SelectionDAG &DAG) const override;
+
+    bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
+
+    bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
+
+    bool shouldConsiderGEPOffsetSplit() const override { return true; }
+
+    bool isUnsupportedFloatingType(EVT VT) const;
+
+    ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
+    SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
+                    SDValue ARMcc, SDValue Flags, SelectionDAG &DAG) const;
+    SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
+                      SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
+    SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
+                      const SDLoc &dl, bool Signaling = false) const;
+
+    SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;
+
+    void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
+                                MachineBasicBlock *DispatchBB, int FI) const;
+
+    void EmitSjLjDispatchBlock(MachineInstr &MI, MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *EmitStructByval(MachineInstr &MI,
+                                       MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *EmitLowered__chkstk(MachineInstr &MI,
+                                           MachineBasicBlock *MBB) const;
+    MachineBasicBlock *EmitLowered__dbzchk(MachineInstr &MI,
+                                           MachineBasicBlock *MBB) const;
+    void addMVEVectorTypes(bool HasMVEFP);
+    void addAllExtLoads(const MVT From, const MVT To, LegalizeAction Action);
+    void setAllExpand(MVT VT);
+  };
+
+  enum VMOVModImmType {
+    VMOVModImm,
+    VMVNModImm,
+    MVEVMVNModImm,
+    OtherModImm
+  };
+
+  namespace ARM {
+
+  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
+                           const TargetLibraryInfo *libInfo,
+                           const LibcallLoweringInfo *libcallLowering);
+
+  } // end namespace ARM
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_ARM_ARMISELLOWERING_H

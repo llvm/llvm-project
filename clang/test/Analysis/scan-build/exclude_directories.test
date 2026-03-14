@@ -1,0 +1,34 @@
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir %clang -S \
+RUN:     %S/Inputs/multidirectory_project/directory1/file1.c \
+RUN:     %S/Inputs/multidirectory_project/directory2/file2.c \
+RUN:     | FileCheck %s -check-prefix CHECK-NO-EXCLUDE
+
+// The purpose of this test is to ensure that the --exclude command line option
+// actually excludes reports from inside the specified directories.
+
+
+// First, let's make sure that without --exclude issues in both
+// directory1 and directory2 are found.
+CHECK-NO-EXCLUDE: scan-build: 2 bugs found.
+
+
+// Only one issue should be found when directory1 is excluded.
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir --exclude directory1 %clang -S \
+RUN:     %S/Inputs/multidirectory_project/directory1/file1.c \
+RUN:     %S/Inputs/multidirectory_project/directory2/file2.c \
+RUN:     | FileCheck %s -check-prefix CHECK-EXCLUDE1
+
+CHECK-EXCLUDE1: scan-build: 1 bug found.
+
+
+// When both directories are excluded, no issues should be reported.
+RUN: rm -rf %t.output_dir && mkdir %t.output_dir
+RUN: %scan-build -o %t.output_dir --exclude directory1 --exclude directory2 %clang -S \
+RUN:     %S/Inputs/multidirectory_project/directory1/file1.c \
+RUN:     %S/Inputs/multidirectory_project/directory2/file2.c \
+RUN:     | FileCheck %s -check-prefix CHECK-EXCLUDE-BOTH
+
+CHECK-EXCLUDE-BOTH: scan-build: 0 bugs found.
+

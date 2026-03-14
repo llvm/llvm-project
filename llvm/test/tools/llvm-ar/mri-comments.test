@@ -1,0 +1,19 @@
+# Test different MRI comment formats and white space.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
+
+RUN: echo "create %t/mri.ar;comment" > %t/script.mri
+RUN: echo "addmod %t/elf.o * comment" >> %t/script.mri
+RUN: echo "; comment" >> %t/script.mri
+RUN: echo " ;comment" >> %t/script.mri
+RUN: echo "* comment" >> %t/script.mri
+RUN: echo " *comment" >> %t/script.mri
+RUN: echo "" >> %t/script.mri
+RUN: echo " " >> %t/script.mri
+RUN: echo " save" >> %t/script.mri
+
+RUN: llvm-ar -M < %t/script.mri
+RUN: llvm-ar t %t/mri.ar | FileCheck %s
+
+CHECK: elf.o

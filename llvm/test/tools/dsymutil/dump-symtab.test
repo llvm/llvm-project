@@ -1,0 +1,47 @@
+RUN: dsymutil -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=ALL,I386 %s
+RUN: dsymutil -arch i386 -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=I386,ONE %s
+
+RUN: dsymutil --linker parallel -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=ALL,I386 %s
+RUN: dsymutil --linker parallel -arch i386 -s %p/Inputs/fat-test.dylib | FileCheck -check-prefixes=I386,ONE %s
+
+
+ALL:  ----------------------------------------------------------------------
+ALL-NEXT:  Symbol table for: '{{.*}}fat-test.dylib' (x86_64)
+ALL-NEXT:  ----------------------------------------------------------------------
+ALL-NEXT:  Index    n_strx   n_type             n_sect n_desc n_value
+ALL-NEXT:  ======== -------- ------------------ ------ ------ ----------------
+ALL-NEXT:  [     0] 00000002 64 (N_SO         ) 00     0000   0000000000000000 '/Inputs/'
+ALL-NEXT:  [     1] 0000000b 64 (N_SO         ) 00     0000   0000000000000000 'fat-test.c'
+ALL-NEXT:  [     2] 00000016 66 (N_OSO        ) 03     0001   0000000055b1d0b9 '/Inputs/fat-test.o'
+ALL-NEXT:  [     3] 00000029 20 (N_GSYM       ) 00     0000   0000000000000000 '_x86_64_var'
+ALL-NEXT:  [     4] 00000001 64 (N_SO         ) 01     0000   0000000000000000
+ALL-NEXT:  [     5] 00000035 0f (     SECT EXT) 02     0000   0000000000001000 '_x86_64_var'
+ALL-NEXT:  [     6] 00000041 01 (     UNDF EXT) 00     0100   0000000000000000 'dyld_stub_binder'
+
+I386: ----------------------------------------------------------------------
+I386-NEXT: Symbol table for: '{{.*}}fat-test.dylib' (i386)
+I386-NEXT: ----------------------------------------------------------------------
+I386-NEXT: Index    n_strx   n_type             n_sect n_desc n_value
+I386-NEXT: ======== -------- ------------------ ------ ------ ----------------
+I386-NEXT: [     0] 00000002 64 (N_SO         ) 00     0000   0000000000000000 '/Inputs/'
+I386-NEXT: [     1] 0000000b 64 (N_SO         ) 00     0000   0000000000000000 'fat-test.c'
+I386-NEXT: [     2] 00000016 66 (N_OSO        ) 03     0001   0000000055b1d0b9 '/Inputs/fat-test.o'
+I386-NEXT: [     3] 00000029 20 (N_GSYM       ) 00     0000   0000000000000000 '_i386_var'
+I386-NEXT: [     4] 00000001 64 (N_SO         ) 01     0000   0000000000000000
+I386-NEXT: [     5] 00000033 0f (     SECT EXT) 02     0000   0000000000001000 '_i386_var'
+I386-NEXT: [     6] 0000003d 01 (     UNDF EXT) 00     0100   0000000000000000 'dyld_stub_binder'
+
+ONE-NOT: Symbol table
+
+ALL:  ----------------------------------------------------------------------
+ALL-NEXT:  Symbol table for: '{{.*}}fat-test.dylib' (x86_64h)
+ALL-NEXT:  ----------------------------------------------------------------------
+ALL-NEXT:  Index    n_strx   n_type             n_sect n_desc n_value
+ALL-NEXT:  ======== -------- ------------------ ------ ------ ----------------
+ALL-NEXT:  [     0] 00000002 64 (N_SO         ) 00     0000   0000000000000000 '/Inputs/'
+ALL-NEXT:  [     1] 0000000b 64 (N_SO         ) 00     0000   0000000000000000 'fat-test.c'
+ALL-NEXT:  [     2] 00000016 66 (N_OSO        ) 08     0001   0000000055b1d0b9 '/Inputs/fat-test.o'
+ALL-NEXT:  [     3] 00000029 20 (N_GSYM       ) 00     0000   0000000000000000 '_x86_64h_var'
+ALL-NEXT:  [     4] 00000001 64 (N_SO         ) 01     0000   0000000000000000
+ALL-NEXT:  [     5] 00000036 0f (     SECT EXT) 02     0000   0000000000001000 '_x86_64h_var'
+ALL-NEXT:  [     6] 00000043 01 (     UNDF EXT) 00     0100   0000000000000000 'dyld_stub_binder'

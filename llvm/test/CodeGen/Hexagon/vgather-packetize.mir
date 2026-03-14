@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv65 -start-before hexagon-packetizer -o - %s | FileCheck %s
+
+# Check that the vgather pseudo was expanded and packetized with the
+# surrounding instructions.
+
+# CHECK:      r1 = add(r1,#1)
+# CHECK-NEXT: vtmp.h = vgather
+# CHECK-NEXT: vmem(r0+#0) = vtmp.new
+# CHECK-NEXT: } :endloop0
+
+name: fred
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $m0, $w0
+    $r1 = A2_tfrsi 2
+    $r2 = A2_tfrsi 1
+    $m0 = A2_tfrrcr $r1
+    J2_loop0i %bb.1, 128, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+
+  bb.1:
+    liveins: $r0, $r1, $r2, $m0, $w0
+    $r1 = A2_addi $r1, 1
+    V6_vgathermhw_pseudo killed $r0, 0, killed $r2, killed $m0, killed $w0, implicit-def $vtmp
+    ENDLOOP0 %bb.1, implicit $lc0, implicit $sa0, implicit-def $lc0, implicit-def $p3, implicit-def $pc, implicit-def $usr
+
+  bb.2:
+    liveins: $r1
+    $r0 = A2_tfr $r1
+    PS_jmpret killed $r31, implicit $r0, implicit-def dead $pc
+...

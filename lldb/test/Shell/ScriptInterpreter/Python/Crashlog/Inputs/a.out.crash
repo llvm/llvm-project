@@ -1,0 +1,50 @@
+Process:               a.out [21606]
+Path:                  /private/tmp/a.out
+Identifier:            a.out
+Version:               0
+Code Type:             X86-64 (Native)
+Parent Process:        fish [88883]
+User ID:               501
+
+Date/Time:             2020-11-11 14:47:34.600 -0800
+OS Version:            macOS 11.0.1
+Report Version:        12
+Bridge OS Version:     redacted
+Anonymous UUID:        DCEF35CB-68D5-F524-FF13-060901F52EA8
+
+
+Time Awake Since Boot: 400000 seconds
+
+System Integrity Protection: enabled
+
+Crashed Thread:        0  Dispatch queue: com.apple.main-thread
+
+Exception Type:        EXC_BAD_ACCESS (SIGSEGV)
+Exception Codes:       KERN_INVALID_ADDRESS at 0x0000000000000000
+Exception Note:        EXC_CORPSE_NOTIFY
+
+Termination Signal:    Segmentation fault: 11
+Termination Reason:    Namespace SIGNAL, Code 0xb
+Terminating Process:   exc handler [21606]
+
+Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
+0   a.out                         	@foo@ foo + 16 (test.c:3)
+1   a.out                         	@bar@
+2   a.out                         	@main@ main + 20 (test.c:8)
+3   libdyld.dylib                 	0x1000000 start + 1
+
+Thread 0 crashed with X86 Thread State (64-bit):
+  rax: 0x0000000000000000  rbx: 0x0000000000000000  rcx: 0x00007ffee42d81d0  rdx: 0x00007ffee42d8080
+  rdi: 0x0000000000000001  rsi: 0x00007ffee42d8070  rbp: 0x00007ffee42d8020  rsp: 0x00007ffee42d8020
+   r8: 0x0000000000000000   r9: 0x0000000000000000  r10: 0x0000000000000000  r11: 0x0000000000000000
+  r12: 0x0000000000000000  r13: 0x0000000000000000  r14: 0x0000000000000000  r15: 0x0000000000000000
+  rip: 0x000000010b92af70  rfl: 0x0000000000010202  cr2: 0x0000000000000000
+
+Logical CPU:     2
+Error Code:      0x00000006 (no mapping for user data write)
+Trap Number:     14
+
+
+Binary Images:
+       0x100000000 -        0x200000000 +a.out (0) <@UUID@> @EXEC@
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???

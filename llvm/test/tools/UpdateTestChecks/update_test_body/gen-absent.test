@@ -1,0 +1,7 @@
+# RUN: cp %s %t && not %update_test_body %t 2>&1 | FileCheck %s
+
+# CHECK: 'gen' does not exist
+
+.ifdef GEN
+#--- a.txt
+.endif

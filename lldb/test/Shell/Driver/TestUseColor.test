@@ -1,0 +1,7 @@
+UNSUPPORTED: system-windows
+
+RUN: not %lldb -b -o 'settings set use-color true' -o 'settings show use-color' -o 'bogus' > %t 2>&1
+RUN: cat -v %t | FileCheck %s --check-prefix COLOR
+COLOR: use-color (boolean) = true
+# The [[ confuses FileCheck so regex match it.
+COLOR: {{.+}}0;1;31merror: {{.+}}0m'bogus' is not a valid command

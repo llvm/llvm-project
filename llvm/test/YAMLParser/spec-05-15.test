@@ -1,0 +1,7 @@
+# RUN: not yaml-bench -canonical %s 2>&1 | FileCheck %s
+
+Bad escapes:
+  "\c
+  \xq-"
+
+# CHECK: error

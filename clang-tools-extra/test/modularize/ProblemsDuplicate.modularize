@@ -1,0 +1,9 @@
+# RUN: not modularize %s -x c++ 2>&1 | FileCheck %s
+# RUN: not modularize %S/Inputs/ProblemsDuplicate.modulemap -x c++ 2>&1 | FileCheck %s
+
+Inputs/DuplicateHeader1.h
+Inputs/DuplicateHeader2.h
+
+# CHECK: error: value 'TypeInt' defined at multiple locations:
+# CHECK-NEXT:    {{.*}}{{[/\\]}}Inputs{{[/\\]}}DuplicateHeader1.h:2:13
+# CHECK-NEXT:    {{.*}}{{[/\\]}}Inputs{{[/\\]}}DuplicateHeader2.h:2:13

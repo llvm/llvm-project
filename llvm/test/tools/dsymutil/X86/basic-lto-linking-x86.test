@@ -1,0 +1,383 @@
+RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-lto.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil -oso-prepend-path=%p/.. -dump-debug-map %p/../Inputs/basic-lto.macho.x86_64 | dsymutil -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s
+
+RUN: dsymutil --linker parallel -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-lto.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. -dump-debug-map \
+RUN:   %p/../Inputs/basic-lto.macho.x86_64 | dsymutil -f -o - -y - | \
+RUN:   llvm-dwarfdump -a - | FileCheck %s
+
+CHECK: file format Mach-O 64-bit x86-64
+
+CHECK: debug_info contents
+
+CHECK:  Compile Unit:
+
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_language (DW_LANG_C99)
+CHECK:    DW_AT_name ("basic1.c")
+CHECK:    DW_AT_stmt_list (0x00000000)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:    DW_AT_low_pc (0x0000000100000f40)
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("main")
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
+CHECK:      DW_AT_decl_line (23)
+CHECK:      DW_AT_prototyped (0x01)
+CHECK:      DW_AT_type (0x00000063
+CHECK:      DW_AT_external (0x01)
+CHECK:      DW_AT_accessibility (DW_ACCESS_public)
+CHECK:      DW_AT_low_pc (0x0000000100000f40)
+CHECK:      DW_AT_high_pc (0x0000000100000f4b)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("argc")
+CHECK:        DW_AT_type (0x00000063
+CHECK:        DW_AT_location (DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("argv")
+CHECK:        DW_AT_type (0x0000006a
+CHECK:        DW_AT_location (DW_OP_reg4 RSI)
+CHECK:      NULL
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("int")
+CHECK:      DW_AT_encoding (DW_ATE_signed)
+CHECK:      DW_AT_byte_size (0x04)
+CHECK:    DW_TAG_pointer_type
+CHECK:      DW_AT_type (0x0000006f
+CHECK:    DW_TAG_pointer_type
+CHECK:      DW_AT_type (0x00000074
+CHECK:    DW_TAG_const_type
+CHECK:      DW_AT_type (0x00000079
+CHECK:    DW_TAG_base_type
+CHECK:      DW_AT_name ("char")
+CHECK:      DW_AT_encoding (DW_ATE_signed_char)
+CHECK:      DW_AT_byte_size (0x01)
+CHECK:    NULL
+
+CHECK:  Compile Unit:
+
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_name ("basic2.c")
+CHECK:    DW_AT_stmt_list (0x0000003e)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:   DW_AT_low_pc (0x0000000100000f50)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("private_int")
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
+CHECK:      DW_AT_location (DW_OP_addr 0x100001008)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("baz")
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:      DW_AT_location (DW_OP_addr 0x100001000)
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("foo")
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:      DW_AT_low_pc (0x0000000100000f50)
+CHECK:      DW_AT_high_pc (0x0000000100000f89)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("arg")
+CHECK:        DW_AT_type (0x0000000000000063
+CHECK:        DW_AT_location (0x00000000
+CHECK:          [0x0000000100000f50, 0x0000000100000f5e): DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:[[INC1:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
+CHECK:        DW_AT_abstract_origin (0x00000128 "inc")
+CHECK:        DW_AT_low_pc (0x0000000100000f63)
+CHECK:        DW_AT_high_pc (0x0000000100000f72)
+CHECK:        DW_AT_call_line (20)
+CHECK:      NULL
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("inc")
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:      DW_AT_inline (DW_INL_inlined)
+CHECK:    NULL
+
+CHECK:  Compile Unit:
+
+CHECK:  DW_TAG_compile_unit
+CHECK:    DW_AT_producer ("Apple LLVM version 6.0 (clang-600.0.39) (based on LLVM 3.5svn)")
+CHECK:    DW_AT_name ("basic3.c")
+CHECK:    DW_AT_stmt_list (0x0000007e)
+CHECK:    DW_AT_comp_dir ("/Inputs")
+CHECK:    DW_AT_low_pc (0x0000000100000f90)
+CHECK:    DW_TAG_variable
+CHECK:      DW_AT_name ("val")
+CHECK:      DW_AT_type (0x00000176
+CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
+CHECK:      DW_AT_location (DW_OP_addr 0x100001004)
+CHECK:    DW_TAG_volatile_type
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("bar")
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:      DW_AT_low_pc (0x0000000100000f90)
+CHECK:      DW_AT_high_pc (0x0000000100000fb4)
+CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
+CHECK:      DW_TAG_formal_parameter
+CHECK:        DW_AT_name ("arg")
+CHECK:        DW_AT_type (0x0000000000000063
+CHECK:        DW_AT_location (0x00000025
+CHECK:          [0x0000000100000f90, 0x0000000100000f9f): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK:          [0x0000000100000fa9, 0x0000000100000fad): DW_OP_reg5 RDI, DW_OP_piece 0x4)
+CHECK:      DW_TAG_lexical_block
+CHECK:        DW_AT_low_pc (0x0000000100000f94)
+CHECK:        DW_AT_high_pc (0x0000000100000fa7)
+CHECK:[[INC2:0x[0-9a-f]*]]{{.*}}DW_TAG_inlined_subroutine
+CHECK:          DW_AT_abstract_origin (0x000001d4 "inc")
+CHECK:          DW_AT_ranges (0x00000000
+CHECK:             [0x0000000100000f94, 0x0000000100000f9a)
+CHECK:             [0x0000000100000f9f, 0x0000000100000fa7))
+CHECK:        NULL
+CHECK:      NULL
+CHECK:    DW_TAG_subprogram
+CHECK:      DW_AT_name ("inc")
+CHECK:      DW_AT_type (0x0000000000000063
+CHECK:    NULL
+
+CHECK: .debug_loc contents:
+CHECK-NEXT: 0x00000000:
+CHECK-NEXT:              (0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NOT: :
+CHECK:      0x00000025:
+CHECK-NEXT:              (0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              (0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4
+
+CHECK: .debug_aranges contents:
+CHECK-NEXT: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: [0x0000000100000f40, 0x0000000100000f4b)
+CHECK-NEXT: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x00000081, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: [0x0000000100000f50, 0x0000000100000f89)
+CHECK-NEXT: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x0000013a, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: [0x0000000100000f90, 0x0000000100000fb4)
+
+
+CHECK: .debug_line contents
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic1.c"
+CHECK-NEXT: dir_index: 0
+CHECK: 0x0000000100000f40     23      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f44     24      0      1   0             0       0  is_stmt prologue_end
+CHECK: 0x0000000100000f4b     24      0      1   0             0       0  is_stmt end_sequence
+
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic2.c"
+CHECK-NEXT: dir_index: 0
+CHECK: 0x0000000100000f50     19      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f54     20      0      1   0             0       0  is_stmt prologue_end
+CHECK: 0x0000000100000f63     15      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f72     20      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f89     20      0      1   0             0       0  is_stmt end_sequence
+
+CHECK: file_names[  1]:
+CHECK-NEXT: name: "basic3.c"
+CHECK-NEXT: dir_index: 0
+CHECK: 0x0000000100000f90     16      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f94     12      0      1   0             0       0  is_stmt prologue_end
+CHECK: 0x0000000100000f9a     17      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000f9f     12      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fa7     20      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fa9     19      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fb2     20      0      1   0             0       0  is_stmt
+CHECK: 0x0000000100000fb4     20      0      1   0             0       0  is_stmt end_sequence
+
+CHECK-NOT: .debug_pubnames contents:
+CHECK-NOT: .debug_pubtypes contents:
+
+CHECK: .apple_names contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 7
+CHECK-NEXT:   Hashes count: 7
+CHECK-NEXT:   HeaderData length: 12
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   Hash 0xb8860c2 [
+CHECK-NEXT:     Name@0x74 {
+CHECK-NEXT:       String: 0x0000007e "baz"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x000000c0
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT:   Hash 0xb88801f [
+CHECK-NEXT:     Name@0x84 {
+CHECK-NEXT:       String: 0x0000008a "inc"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000110
+CHECK-NEXT:       ]
+CHECK-NEXT:       Data 1 [
+CHECK-NEXT:         Atom[0]: 0x000001c7
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 1 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 2 [
+CHECK-NEXT:   Hash 0xfed12c6a [
+CHECK-NEXT:     Name@0x98 {
+CHECK-NEXT:       String: 0x00000072 "private_int"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x000000a7
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 3 [
+CHECK-NEXT:   Hash 0xb88b5c8 [
+CHECK-NEXT:     Name@0xa8 {
+CHECK-NEXT:       String: 0x00000097 "val"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000160
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT:   Hash 0x7c9a7f6a [
+CHECK-NEXT:     Name@0xb8 {
+CHECK-NEXT:       String: 0x00000051 "main"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000026
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 4 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 5 [
+CHECK-NEXT:   Hash 0xb887389 [
+CHECK-NEXT:     Name@0xc8 {
+CHECK-NEXT:       String: 0x00000082 "foo"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x000000d9
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 6 [
+CHECK-NEXT:   Hash 0xb8860ba [
+CHECK-NEXT:     Name@0xd8 {
+CHECK-NEXT:       String: 0x0000009b "bar"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x0000017f
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+
+CHECK: apple_types contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 2
+CHECK-NEXT:   Hashes count: 2
+CHECK-NEXT:   HeaderData length: 24
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 4
+CHECK-NEXT: Size of each hash data entry: 11
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT:   Atom 1 {
+CHECK-NEXT:     Type: DW_ATOM_die_tag
+CHECK-NEXT:     Form: DW_FORM_data2
+CHECK-NEXT:   }
+CHECK-NEXT:   Atom 2 {
+CHECK-NEXT:     Type: DW_ATOM_type_flags
+CHECK-NEXT:     Form: DW_FORM_data1
+CHECK-NEXT:   }
+CHECK-NEXT:   Atom 3 {
+CHECK-NEXT:     Type: DW_ATOM_qual_name_hash
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   Hash 0xb888030 [
+CHECK-NEXT:     Name@0x44 {
+CHECK-NEXT:       String: 0x00000060 "int"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000063
+CHECK-NEXT:         Atom[1]: 0x0024
+CHECK-NEXT:         Atom[2]: 0x00
+CHECK-NEXT:         Atom[3]: 0x0c3a28a4
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 1 [
+CHECK-NEXT:   Hash 0x7c952063 [
+CHECK-NEXT:     Name@0x5b {
+CHECK-NEXT:       String: 0x00000064 "char"
+CHECK-NEXT:       Data 0 [
+CHECK-NEXT:         Atom[0]: 0x00000079
+CHECK-NEXT:         Atom[1]: 0x0024
+CHECK-NEXT:         Atom[2]: 0x00
+CHECK-NEXT:         Atom[3]: 0x937bd757
+CHECK-NEXT:       ]
+CHECK-NEXT:     }
+CHECK-NEXT:   ]
+CHECK-NEXT: ]
+
+CHECK: .apple_namespaces contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 1
+CHECK-NEXT:   Hashes count: 0
+CHECK-NEXT:   HeaderData length: 12
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]
+
+CHECK: .apple_objc contents:
+CHECK-NEXT: Header {
+CHECK-NEXT:   Magic: 0x48415348
+CHECK-NEXT:   Version: 0x1
+CHECK-NEXT:   Hash function: 0x0
+CHECK-NEXT:   Bucket count: 1
+CHECK-NEXT:   Hashes count: 0
+CHECK-NEXT:   HeaderData length: 12
+CHECK-NEXT: }
+CHECK-NEXT: DIE offset base: 0
+CHECK-NEXT: Number of atoms: 1
+CHECK-NEXT: Size of each hash data entry: 4
+CHECK-NEXT: Atoms [
+CHECK-NEXT:   Atom 0 {
+CHECK-NEXT:     Type: DW_ATOM_die_offset
+CHECK-NEXT:     Form: DW_FORM_data4
+CHECK-NEXT:   }
+CHECK-NEXT: ]
+CHECK-NEXT: Bucket 0 [
+CHECK-NEXT:   EMPTY
+CHECK-NEXT: ]

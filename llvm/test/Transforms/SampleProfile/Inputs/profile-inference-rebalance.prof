@@ -1,0 +1,27 @@
+countMultipliers:37078302:0
+ 2: 65536
+ 3: 10
+ 4: 65536
+ 7: 65536
+ 9: 65536
+ 10: 65536
+ !CFGChecksum: 223598586707
+
+countMultipliers2:37078302:0
+ 1: 2100
+ 2: 2000
+ 6: 2100
+ !CFGChecksum: 2235985
+
+countMultipliers3:37078302:0
+ 1: 100
+ 2: 100
+ 3: 100
+ !CFGChecksum: 22985
+
+countMultipliers4:37078302:0
+ 1: 100
+ 2: 50
+ 3: 50
+ 5: 100
+ !CFGChecksum: 2298578

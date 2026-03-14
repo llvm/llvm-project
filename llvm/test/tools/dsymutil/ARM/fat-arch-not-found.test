@@ -1,0 +1,14 @@
+# RUN: dsymutil -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
+#
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs -y %s -o - 2>&1 | FileCheck %s
+
+---
+triple:          'armv7-apple-darwin'
+objects:
+  - filename: libfat-test.a(fat-test.o)
+    symbols:
+      - { sym: _armv7_var, objAddr: 0x0, binAddr: 0x1000, size: 0x4 }
+...
+
+# CHECK: libfat-test.a(fat-test.o): No object file for requested architecture
+

@@ -1,0 +1,17 @@
+// A valid MachO object with a bind table containing an opcode
+// `BIND_OPCODE_DO_BIND_ULEB_TIMES_SKIPPING_ULEB` with negative skip value
+// (0xFFFFFFFFFFFFFFF0).
+
+RUN: yaml2obj %p/Inputs/MachO/bind-negative-skip.yaml | \
+RUN: llvm-objdump --bind --macho - | \
+RUN: FileCheck %s
+
+CHECK:      Bind table:
+CHECK-NEXT: segment      section            address     type       addend dylib            symbol
+CHECK-NEXT: __DATA_CONST __got              0x100004000 pointer         0 libSystem        _free
+CHECK-NEXT: __DATA       __data             0x100008040 pointer         0 libSystem        _free
+CHECK-NEXT: __DATA_CONST __got              0x100004008 pointer         0 libSystem        _malloc
+CHECK-NEXT: __DATA       __data             0x100008030 pointer         0 libSystem        _malloc
+CHECK-NEXT: __DATA       __data             0x100008028 pointer         0 libSystem        _malloc
+CHECK-NEXT: __DATA       __data             0x100008020 pointer         0 libSystem        _malloc
+CHECK-NEXT: __DATA_CONST __got              0x100004010 pointer         0 libSystem        dyld_stub_binder

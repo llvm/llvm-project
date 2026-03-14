@@ -1,0 +1,27 @@
+//===-- IPO.cpp -----------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the common infrastructure (including C bindings) for
+// libLLVMIPO.a, which implements several transformations over the LLVM
+// intermediate representation.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/InitializePasses.h"
+
+using namespace llvm;
+
+void llvm::initializeIPO(PassRegistry &Registry) {
+  initializeAlwaysInlinerLegacyPassPass(Registry);
+  initializeBarrierNoopPass(Registry);
+  initializeDAEPass(Registry);
+  initializeDAHPass(Registry);
+  initializeGlobalDCELegacyPassPass(Registry);
+  initializeLoopExtractorLegacyPassPass(Registry);
+  initializeSingleLoopExtractorPass(Registry);
+}

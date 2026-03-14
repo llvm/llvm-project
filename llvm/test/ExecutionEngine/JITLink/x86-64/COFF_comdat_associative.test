@@ -1,0 +1,86 @@
+# REQUIRES: asserts
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec %t 2>&1 \
+# RUN:              | FileCheck %s
+#
+# Check COMDAT associative symbol is emitted as local symbol.
+#
+# CHECK:       Creating graph symbols...
+# CHECK:         0: Creating defined graph symbol for COFF symbol ".text" in .text (index: 1)
+# CHECK-NEXT:      0x0 (block + 0x00000000): size: 0x00000000, linkage: strong, scope: local, dead  -   .text
+# CHECK-NEXT:    4: Exporting COMDAT graph symbol for COFF symbol "func" in section 2
+# CHECK-NEXT:      0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func
+# CHECK-NEXT:    4: Creating defined graph symbol for COFF symbol "func" in .text (index: 2)
+# CHECK-NEXT:      0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func
+# CHECK-NEXT:    5: Creating defined graph symbol for COFF symbol ".xdata" in .xdata (index: 3)
+# CHECK-NEXT:      0x0 (block + 0x00000000): size: 0x00000000, linkage: strong, scope: local, dead  -   .xdata
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     C3
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     C3
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0100000000000000'
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        40735498
+      Number:          1
+  - Name:            .text
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        40735498
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            func
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3433693342
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

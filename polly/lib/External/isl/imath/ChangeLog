@@ -1,0 +1,563 @@
+1.0.1
+	First released version.
+
+1.0.2
+	Fixed a bug in mp_int_div() which would yield incorrect quotients
+	when the divisor was very close in value to a prefix of the
+	dividend.  This is now fixed, and there are regression tests in
+	the tests directory.
+
+	Added recursive multiplication and squaring (Karatsuba-Ofman) for
+	large input values.  Integrated these with the existing code for
+	exponentiation, too.  See the code for s_kmul() and s_ksqr() in
+	imath.c.  Tests added and verified against GNU bc.
+
+	Added documentation on mp_get_multiply_threshold() and the reason
+	why it exists.
+
+1.0.3
+	Fixed a couple of bugs in pi.c that were causing incorrect values
+	to be computed for > 30 digits or so.  Added a pi-computation test
+	to the default test suite (make test), checked against a static
+	file computed by bc (set scale=1024, compute 4 * atan(1)).  Added
+	command line option to specify output radix for pi.
+
+	Cleaned up a sign-related bug in mp_int_gcd(), which would cause
+	the sign of gcd(0, x) to be incorrect when x < 0.  Test cases
+	added for future regression.
+
+	Fixed a bug in s_reduce() which would give incorrect results for
+	powers of 2 in certain circumstances.  Added tests to drive this
+	case for future regression.
+
+	Added mp_int_exptmod_evalue() and mp_int_exptmod_bvalue() to make
+	it easier to work with small bases and small exponents.
+
+	Set default recursive multiplication threshold to 50 digits, since
+	this seems to work best for the platforms I've tested so far.
+
+	Added iprime.h and iprime.c to the distribution.
+
+1.0.4
+	Added `findsizes.pl' to the distribution.
+
+	Revised the type declarations in imath.h to use 32/64 bit
+	operations where the "long long" type is supported.
+
+	Fixed a sign-related bug in mp_int_invmod().
+
+	Fixed several small bugs related to shifting which affect the use
+	of 32-bit digits.  Many architectures cannot shift by 32 bits at a
+	time (e.g., MIPS), so I split each of these cases into two shifts
+	of half the size, which should scale properly for both the smaller
+	and larger cases.
+
+	Fixed several arithmetic issues with 32-bit digits that arose due
+	to missing type-casts on the right-hand sides of assignments.
+
+	Fixed s_print() and s_print_buf() to handle the sizes of digits
+	transparently.
+
+1.0.5
+	Updated the Makefile to include the _GNU_SOURCE macro.  For many
+	GCC systems, this is necessary to get the correct definition of
+	the ULLONG_MAX macro in <limits.h>.  Also, you may now build with
+	the make option DEBUG=Y to enable debugging, e.g.:
+
+	make DEBUG=Y imtest
+
+	By default, the Makefile builds with the optimizer enabled.
+
+	Cleaned up the definitions triggered by USE_LONG_LONG in imath.h,
+	and added an #error instruction in case the build is unable to
+	find a definition of ULLONG_MAX or ULONG_LONG_MAX in <limits.h>.
+	Also added the mp_int_to_unsigned(), mp_int_read_unsigned(), and
+	mp_int_unsigned_len() prototypes.
+
+	Fixed a bug in s_qmul() [imath.c:2493] that would grow the value
+	being multiplied even if there was room in the existing digits to
+	hold the result.  This was driving an (apparent) bug in the more
+	general mp_int_read_binary() routine.  Added the routines
+	mentioned in the previous paragraph, and factored some common
+	code out into a static s_tobin().
+
+	Added reset_registers() to imdrover.{h,c}.  Added new test
+	driver functions test_to_uns() and test_read_uns().  Renamed
+	test_read_bin to test_read_binary().
+
+	Silenced a sign-related warning in pi.c (related to printf).
+
+	Added many new test vectors to tests/conv.t, including the
+	original bug proof-of-concept from Tom Wu, and a series of new
+	tests for the unsigned conversion routines.
+
+	Updated `doc.txt' to reflect the changes described above.
+
+1.0.6
+	Updated copyright notices, added LICENSE file explaining the
+	license I am using.  This is basically the BSD license, so
+	you should have no trouble incorporating this code into other
+	open source projects.
+
+	No new functionality in this release.
+
+1.0.7
+	The mp_int_invmod(a, m, c) function would compute a negative value
+	for c when given a < 0.  I added some code to insure that the value
+	returned is always the least non-negative member of the congruence
+	class, if the inverse exists.  A test for this was added to invmod.t.
+
+1.0.8
+	Fixed a small buffer-overrun in s_qmul().  Because it only
+	allocates an extra digit if it absolutely has to, the test for
+	whether it needs to carry a shift out into the "spare" digit had
+	to be written carefully; I missed a subtlety, which is now
+	fixed. Along the way, I fixed a minor performance-related bug in
+	the same routine.
+
+	Added mp_int_error_string(), which converts mp_result values
+	into descriptive strings.  These are statically allocated, so
+	you don't have to free them.
+
+	This version also adds an "examples" subdirectory.  Currently,
+	there is only one program there, but I will add more examples as
+	time permits me.  You have to read the source to understand them
+	anyway, so I won't explain them here.
+
+1.1.0
+	Added imrat.h and imrat.c, containing routines for rational number
+	arithmetic at arbitrary precision.  Added support to the test driver,
+	in imath.c and included various tests in the tests/ subdirectory.
+
+	Fixed a sign-of-zero bug in mp_int_mul().  Tests added to mul.t to
+	regress this fix.
+
+1.1.2
+	Fixed a bug with leading zeroes after the decimal point in the
+	mp_rat_read_decimal() function (imrat.c).  Along the way, I also
+	found a sign-related bug, in which -0.5 would be treated as if it
+	were positive, because the sign of zero is implicitly positive,
+	and the denominator is treated as unsigned always.
+
+	Thanks to Eric Silva for pointing out the leading zeroes bug.
+	The solution isn't the most efficient possible.
+
+1.1.3
+	Rewrote mp_int_to_decimal() to support new rounding modes.  The
+	modes are documented in doc.txt.  Some of the code sucked anyway,
+	so I rewrote pretty much the entire function.
+
+	Added new rounding mode constants.
+
+1.1.4
+	Added mixed rational/integer operations:
+	  mp_rat_add_int, mp_rat_sub_int, mp_rat_mul_int, mp_rat_div_int
+	Added rational exponentiation (with integer exponents):
+	  mp_rat_expt
+
+	Tests for same were added to the tests/ subdirectory.
+
+1.1.5
+	Added mp_rat_read_cdecimal() and mp_rat_read_ustring()
+	Updated the input.c example.
+
+1.1.6
+	Fixed a bug in mp_int_read_cstring() which would read the string
+	"-0" with incorrect sign (MP_NEG instead of MP_ZPOS).  This would
+	violate an invariant that zero is always signed with positives.
+
+	Added some tests to tests/neg.t to catch this case.
+
+1.1.7
+	Fixed a bug in s_udiv(), internal to imath.c, which caused
+	division to fail in some corner cases masked by the use of long
+	long as a word type.  As a result, s_udiv() has now been wholly
+	rewritten.  I also fixed a few lingering buffer-length errors in
+	s_kmul(), and added a "const" qualifier to the input buffers for
+	the mp_int_read_string() and mp_int_read_cstring() functions,
+	and their analogs in imrat.c.
+
+1.1.8
+	Added mp_int_alloc() and mp_int_free().
+
+1.1.9
+	Added mp_rat_alloc() and mp_rat_free().  Fixed a couple of minor
+	bugs in the doc.txt file.  Added mp_int_sqrt() to imath.{h,c} and
+	doc.txt.
+
+1.2
+	Dropped bugfix component of revision number.  Fixed rsakey.c
+	example program to be complete and work faster.
+
+1.3
+	Replaced findsizes.pl with findsizes.py.  Fixed two bugs in the
+	rsakey tool that were leading to incorrect output.
+
+1.4
+	Fixed a bug in mp_int_alloc(), it was not returning NULL when out
+	of memory, but rather failing in assert() instead.  Also, updated
+	the documentation to have better language about the return values
+	in various error conditions.
+
+1.5
+	Changed the API for rational rounding.  Removed the two functions
+	mp_rat_set_rounding() and mp_rat_get_rounding(), along with the
+	round_output global variable.  Redefined the MP_ROUND_* constants
+	as an enumeration type (mp_round_mode).  Added a new parameter to
+	the mp_rat_to_decimal() function to accept a rounding mode.  Unit
+	tests and doc.txt updated suitably.
+
+	This release also incorporates a small patch submitted by Jonathan
+	Shapiro to support compilation in C++.
+
+1.6
+	Defined default_precision and multiply_threshold to be constant
+	and static.  If IMATH_TEST is defined at compile time, these are
+	made global, and can be modified by the caller (the imtimer tool
+	makes use of this ability, for example).
+
+	Implemented a single-digit optimization suggested by J. Shapiro.
+	Documentation updated.
+
+1.7
+	Fixed a subtle casting problem in the use of the ctype macros that
+	would permit negative signed character values to produce illogical
+	behaviour in some configurations (e.g., NetBSD).  Removed a dead
+	"return" statement.
+
+	Added the -pedantic switch for gcc, to get more aggressive
+	warnings; to permit the nonstandard "long long" type to still be
+	used, I also added -Wno-long-long when building with long long
+	enabled (the standard configuration).
+
+	Fixed a bug found by the Samba team running Valgrind on the
+	Heimdal project, and reported by Love Hörnquist Âstrand:  One of
+	the intermediate values used during modular exponentiation could
+	be overflowed during recursive multiplication.  Fixed by taking a
+	more conservative approach to buffer sizing.
+
+	Added a "contrib" subdirectory, whose first entry is a Makefile
+	to build IMath with the MSVC++ "nmake" program, contributed by
+	Matus Horvath.
+
+1.8
+	Fixed a bug in s_udiv() affecting the computation of quotient
+	digits.  Thanks to Love Âstrand for isolating this bug.  Also in
+	this release, defining USELLONG=Y or USELLONG=N on the command
+	line for make will switch support for the "long long" data type on
+	or off without having to edit the Makefile.  The default is still
+	to permit use of "long long", even though the type is not standard
+	ANSI C90.
+
+1.9
+	Increased the number of small primes used for primality testing to
+	100 from 32.  Removed an unwanted #define from imath.c, left over
+	from testing; added "static" to the declaration of the s_embar()
+	internal function since it is not used outside imath.c.  Reduced
+	the quantity of feedback generated by rsakey.c during the prime
+	finding stage of key generation.
+
+1.10
+	All primes less than 1000 are now used in iprime.c for preliminary
+	testing of prime candidates.  Removed declaration of s_pad() from
+	rsakey.c example.  Added imcalc.c example.
+
+	Beginning with this release, defining the DEBUG preprocessor macro
+	when compiling imath.c causes all the normally-static helper
+	functions to be exported.  This makes it easier to troubleshoot
+	bugs in the back end functions without manually editing the source
+	till you have found where the bug actually is.
+
+	Fixed a memory leak in the test driver (imtest.c) where the input
+	buffers allocated for test specs were not released before being
+	released.  No impact on the core routines, but nevertheless not a
+	good thing.
+
+	Fixed several uninitialized memory reads and one subtle read past
+	the end of a buffer in s_kmul(), found during a run of Purify.
+	Thanks to Love Hörnquist Âstrand for finding this one, and
+	providing a good test case so I could isolate the problem.  Also
+	fixed a buglet in s_kmul(), in which free() was being called
+	instead of s_free(), which would break if you provided a custom
+	version of s_alloc() and s_free() for your application.
+
+1.11
+	Those functions which take int parameters to supply one or more of
+	the arithmetic values of the function have been converted to use a
+	typedef "mp_small".  This is defined in imath.h, along with some
+	supporting macros.
+
+	Added mp_int_to_uint() and mp_int_lcm() in imath.{h,c}, based on a
+	patch contributed by Hal Finkel.  Added LCM tests as as well as
+	some more GCD tests in tests/lcm.t and tests/gcd.t
+
+	Also at Hal Finkel's request, added mp_int_root() to compute the
+	integer nth root, i.e., \lfloor a^{1/b}\rfloor; replaced the old
+	mp_int_sqrt() function with a call to mp_int_root() via a macro.
+	The new implementation is probably slightly less efficient for
+	square roots, but more general.  Added tests/root.t and moved the
+	sqrt tests there, also.
+
+1.12
+	Added a new global constant MP_MINERR which is the value of the
+	smallest error code defined by IMath itself.  This can be used by
+	clients who wish to define and use additional error codes, so that
+	those codes will not conflict with the existing set.
+
+	Extended the imcalc example to include memory.
+
+	Fixed a bug in mp_int_add() in which -1 + 1 = -0 (the sign of zero
+	was recorded incorrectly).  Added tests to the regression suite
+	for this fix.
+
+1.13
+	Cosmetic change -- updated all the files with my new web address.
+
+	Fixed a buglet caught by Love Hörnquist Âstrand using the LLVM
+	static checker tools, in which a mp_int_copy() failure would be
+	silently ignored and cause an extra copy to be generated.
+
+	Fixed a bug in the testing suite while building on MinGW.  The pi
+	generation tests compare to static files and these tests fail if
+	CR/LF is output instead of just LF.  The test script now strips
+	all CR and LF from the output and compares to files lacking them.
+	Reported by Chris Cole <cjcole@gmail.com>.
+
+1.14
+	Instead of using the preprocessor to delete "static", the static
+	definitions in imath.c now use an explicit STATIC macro, that is
+	made null when DEBUG is defined.  This avoids a subtle problem
+	with static variables defined inside functions (although no bugs
+	actually arose from it).
+
+	Fixed a bug in s_udiv() while building on MinGW.  When building
+	with short type digits, the routine was incorrectly discarding
+	overflow when computing the next quotient digit.
+	Reported by Paul DeMarco <pdemarco@ppg.com>.
+
+1.15
+	Fixed a bug in the definition of MP_DIGIT_MAX that caused errors
+	when IMath is built under 64-bit Linux.  Reported by
+	Klaus Stengel <klaus.stengel@informatik.stud.uni-erlangen.de>.
+
+	Unpacked the macro definitions in imath.c a bit, to make them more
+	readable.
+
+	Added mp_int_expt_full() by request of Andrea Barberio
+	<insomniac@slackware.it>.
+
+1.16
+	Fixed a bug in mp_int_to_uint() which was causing incorrect MP_RANGE
+	errors during small integer conversion.
+	Reported by Andrea Barberio <insomniac@slackware.it>
+
+	Added mp_int_compare_uvalue().
+	Added some new testing hooks in imtest.c, new unit tests.
+
+	Made some code style changes that do not affect functionality.
+
+1.17
+	Fixed a bug in mp_int_swap() where mpz_t structures using their single
+	field as storage would not get swapped correctly.
+	Reported by Andres Navarro <canavarro82@gmail.com>
+
+	Added regression test for this and some hooks for future
+	regressions in the tests/test.sh script.
+
+1.18
+	Made mp_int_rat() use mp_int_init() to initialize numerator and
+	denominator instead of mp_int_init_size().
+	Some minor code cleanup inside the testing code (imdrover.c).
+
+	Fixed an off-by-one bug in s_udiv() which could cause the quotient
+	guessing loop to spin.  Reported by Andres Navarro.  Added
+	triggering example to div.t as a regression test.
+
+1.19
+	Fix signedness error in compile.  Reported by Paweł Sikora.
+
+1.20
+	Fix broken comments, apparently from a previous bad merge.
+	Remove emacs folding-mode comments throughout.
+	Some minor Makefile cleanup to make clang happier.
+
+1.21
+	Fix a syntax error. TODO: Run tests before merging, or better
+	still set up CI someplace.
+	Remove dead division code.
+	Restore a missing comparison.
+	Drop dead flags from the Makefile.
+
+1.22
+	Remove MP_USMALL_MIN, which was unused by anything in imath.
+	Rework doc.txt into Markdown.
+	Restore imath-test.scm and imath.py, dropped during import.
+
+1.23
+	Portability fixes from PostgreSQL (#8), from nmisch.
+
+1.24
+	A cosmetic update, consisting mainly of readability updates,
+	documentation fixes, and warning fixes. There are not intended to
+	be any functional changes in this update, but a fair bit of code
+	and the Makefile have been modified, so I'm adding a tag.
+
+	My intent is to keep the source formatted with clang-format going
+	forward, though I will need to set up some presubmit checks to
+	enforce that. For now it is still a manual step via "make format".
+
+	7e45d6a Remove a doc reference to MP_USMALL_MIN.
+	544687d Fix the spelling of mp_error_string in doc.md.
+	592d4a0 Fix some mis-converted section breaks in doc.md.
+	df9fe8e Format source files with clang-format.
+	fcb4e21 Build with 64-bit words by default.
+	1579b70 Minor simplifications to the Makefile.
+	0fbe8e6 Style cleanup: More invasive manual changes.
+	1d28177 Add -Wextra and -Wno-unused-parameter to default build flags.
+	15ba02a Fix warnings for signed/unsigned comparisons.
+	3556984 Style cleanup: Insert missing brackets.
+
+1.25
+	This version fixes several issues found by clang static analysis.
+	It also includes some additional follow-on cleanup tasks from the
+	previous release.
+
+	b5a73c4 Cleanup: Use .tc for test files instead of .t.
+	dc307ae Cleanup: Remove dead author URLs, SVN markers.
+	389a1be bug: Fix a memory leak in test_meta.
+	8fb98f7 bug: Fix a use of an uninitalized pointer.
+	fe0757a bug: Fix reads of uninitalized fields in free_test.
+	08fe765 bug: Fix a reachable null pointer indirection.
+	7b10453 bug: Remove a redundant initialization.
+	cebce44 bug: Fix various dead assignments.
+	ef36352 Remove the findsizes.py script.
+	eebfb85 Fix some more comparison-sign mismatches.
+	9abcf66 Cleanup: Update a stale reference to doc.txt in the README.
+	8ec696f Cleanup: Consolidate the USE_32BIT_WORDS macro sections.
+
+1.26
+	Another round of fixes. Notably the gmp-compat-test again works on
+	macOS, fixing https://github.com/creachadair/imath/issues/26.
+	Also, this release cleans up some more warnings and fixes some
+	missing #include paths.
+
+	2ea0fff gmp_compat: Fix warnings for mixed-sign comparisons.
+	2a41bae Fix DLL loading.
+	56c40f4 Make gmp-compat-test work again on macOS.
+	f163906 Comment out a vacuously true assertion.
+	667d90e gmp_compat: Ensure a definition of ssize_t is available.
+	6c6fdd8 Fix a vacuously meaningless comparison.
+	4dac16f Silence a warning about an uninitalized variable.
+	c6119c4 Include strings.h for strcasecmp.
+
+1.27
+	Another round of cleanup and bug fixes. This release includes a
+	Dockerfile to support basic Linux testing, which I found useful as
+	I do most of my work on macOS.
+
+	This release also addresses most of issue #29 (Switching from C90
+	to C99). Part of that change removes most function-like macros
+	from the API headers, replacing them with static functions. Code
+	that used the macros as lvalues will no longer work, but can and
+	should be easily updated to access the members of mpz_t directly.
+
+	Fixed: #34.
+
+	899e202 Add a docker config for basic Linux testing.
+	40e8887 Move imath-test.scm to the tests directory.
+	6f01c9f Add .dockerignore to the release tarball.
+	1dab081 Fix the spelling of __abs__ in imath.py.
+	8f0a00c Enable source formatting for Python.
+	99e27c8 Format all Python source with yapf.
+	bf289f0 gmp-compat-test: Remove dependency on Python 3.
+	9269d57 Clean up the Linux test image.
+	61ca691 Include stdbool.h and use the bool type where appropriate.
+	d4760ee Replace macros with static inline functions.
+	8241977 linux test: Layer the image for better caching.
+	46bb578 imath: Replace accessor macros with inline functions.
+	50c6cc8 imrat: Replace accessor macros with static functions.
+	0c5cec9 gmp_compat: Fix lvalue uses of MP_USED.
+	89c72f2 Remove CHECK and NRCHECK macros.
+	dbe9f50 imath: Replace macros with static functions.
+	0006998 imath: Replace ROUND_PREC macro with a function.
+	b628a0c Move local variable declarations closer to first use.
+	54d51da Remove obsolete division spec.
+	796776f iprime: Move and scope variables closer to first use.
+	8fd5236 iprime: Use a sentinel instead of a length.
+	ce89180 Include getopt.h explicitly where it is required.
+	e6fc170 Make libimath.so build correctly under GCC.
+	b54d8c9 Use Bourne in preference to Bash.
+	8f88c01 Makefile: Export CC and CFLAGS for submakes.
+	58f4392 Use the inherited settings in the gmp-compat-tests.
+	8a181cd Make the Linux docker test run "make check".
+	28617f2 gmp_compat: Fix overflow in the uint conversion adapter.
+
+1.28
+	Another round of cleanup, and some more invasive API changes.
+	I removed more macros, and added an API surface for setting the
+	default precision and recursive-multiply threshold.
+	The compile-time switchable statics are now strictly static.
+	The handling of temporary values was greatly reworked to make it
+	less brittle.
+
+	ba44b37 Add unit tests for mp_int_is_prime.
+	6f10877 imath: Remove lvalue uses of access macros, and the macros.
+	f4939db Fix formatting.
+	85137fa docs: Remove macro implementation comments.
+	37f046e Rework the handling of temporaries.
+	cc8ac74 imtimer: Fix a lingering lvalue use of MP_USED.
+	9736a8b imath: Drop switchable statics and stdio dependency.
+	5445ad8 Add functions to set default precision and multiply threshold.
+	58f2d6e Use alpine:latest rather than a fixed version.
+
+1.29
+	The Documentation Edition. The main improvement here is that the
+	API documentation is now unified in the header files, and doc.md
+	is now generated from a template that includes the text from the
+	headers. The automation for this is still unsatisfactory, but it
+	is better than it was.
+
+	d239b2e Remove imath.py.
+	e43b0f5 imath: Clean up extraneous whitespace.
+	fbbbbad Remove the mpz struct tag.
+	718fef2 imath: Add documentation comments to the header.
+	02600e5 imath: Make radix bound checks into requirements.
+	c21f49d imrat: Add documentation comments to the header.
+	ea5398f Remove the mpq struct tag.
+	c1549c7 Move tools and tests into subdirectories.
+	7187c49 Remove extraneous whitespace from declarations.
+	afa715c Comment cleanup on Aisle 2.
+	cbf9a03 Add tools/mkdoc.py.
+	58672fc Remove the "dist" target from Makefile.
+	894bb90 Move rtest.c into the tests directory.
+	d4cfc69 Add a doc.md.in template file.
+	bd929aa Add a make rule for doc.md from doc.md.in.
+	6dea44e Update doc.md using the new generator.
+	56ef9a0 doc: Include mp_int_set_uvalue.
+	13618b3 doc: Explain the comparator terminology.
+	9990b2e Make the clean and distclean make-rules equivalent.
+	13df978 doc: Update the explanation of temp handling macros.
+	b80bd8a doc: Emit one generated comment for the whole file.
+	3cde6b8 doc: Remove the markdown disclaimer.
+	045a2a6 doc: Point my address to github instead of e-mail.
+	08f2efd doc: Add headings for general API functions.
+	77159d9 mkdoc.py: Link back to source lines.
+	aec8587 doc: Include links back to the source.
+	f8c9f6c imath: Document a constraint on mp_int_redux_const.
+
+1.30
+	Improve test automation; no functional changes to the library.
+
+	fc7846a imtest: Ensure the exit code is non-zero when tests fail.
+	87edcbe test.sh: Exit non-zero if any unit tests fail.
+	276d1f9 imtest: Make test output easier to read.
+	c8c90c4 Make the Linux test protocol less brittle.
+	f68ba5b Add a .gitattributes file.
+	33c2843 Add a docker-test target to the Makefile.
+
+1.31
+	Improvements to build and test automation; add CI configuration.
+
+	d419633 Add a Travis CI configuration for imath.
+	3305c4a Ensure the Makefile respects a $CC set in the environment.
+	d2da4b6 Update instructions for reporting bugs.

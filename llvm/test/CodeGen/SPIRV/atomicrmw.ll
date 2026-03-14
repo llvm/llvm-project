@@ -1,0 +1,60 @@
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
+; CHECK-DAG: %[[#MemSem_Acquire:]] = OpConstant %[[#Int]] 2
+; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4{{$}}
+; CHECK-DAG: %[[#MemSem_AcquireRelease:]] = OpConstant %[[#Int]] 8
+; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 16
+; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
+; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#PointerType:]] = OpTypePointer CrossWorkgroup %[[#Int]]
+; CHECK-DAG: %[[#FPPointerType:]] = OpTypePointer CrossWorkgroup %[[#Float]]
+; CHECK-DAG: %[[#Pointer:]] = OpVariable %[[#PointerType]] CrossWorkgroup
+; CHECK-DAG: %[[#FPPointer:]] = OpVariable %[[#FPPointerType]] CrossWorkgroup
+; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42
+
+@ui = common dso_local addrspace(1) global i32 0, align 4
+@f = common dso_local local_unnamed_addr addrspace(1) global float 0.000000e+00, align 4
+
+define dso_local spir_func void @test_atomicrmw() local_unnamed_addr {
+entry:
+  %0 = atomicrmw xchg ptr addrspace(1) @ui, i32 42 acq_rel
+; CHECK: %[[#]] = OpAtomicExchange %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_AcquireRelease]] %[[#Value]]
+
+  %1 = atomicrmw xchg ptr addrspace(1) @f, float 42.000000e+00 seq_cst
+; CHECK: %[[#]] = OpAtomicExchange %[[#Float]] %[[#FPPointer]] %[[#Scope_CrossDevice]] %[[#MemSem_SequentiallyConsistent]] %[[#FPValue]]
+
+  %2 = atomicrmw add ptr addrspace(1) @ui, i32 42 monotonic
+; CHECK: %[[#]] = OpAtomicIAdd %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %{{.+}} %[[#Value]]
+
+  %3 = atomicrmw sub ptr addrspace(1) @ui, i32 42 acquire
+; CHECK: %[[#]] = OpAtomicISub %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Acquire]] %[[#Value]]
+
+  %4 = atomicrmw or ptr addrspace(1) @ui, i32 42 release
+; CHECK: %[[#]] = OpAtomicOr %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Release]] %[[#Value]]
+
+  %5 = atomicrmw xor ptr addrspace(1) @ui, i32 42 acq_rel
+; CHECK: %[[#]] = OpAtomicXor %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_AcquireRelease]] %[[#Value]]
+
+  %6 = atomicrmw and ptr addrspace(1) @ui, i32 42 seq_cst
+; CHECK: %[[#]] = OpAtomicAnd %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_SequentiallyConsistent]] %[[#Value]]
+
+  %7 = atomicrmw max ptr addrspace(1) @ui, i32 42 monotonic
+; CHECK: %[[#]] = OpAtomicSMax %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %{{.*}} %[[#Value]]
+
+  %8 = atomicrmw min ptr addrspace(1) @ui, i32 42 acquire
+; CHECK: %[[#]] = OpAtomicSMin %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Acquire]] %[[#Value]]
+
+  %9 = atomicrmw umax ptr addrspace(1) @ui, i32 42 release
+; CHECK: %[[#]] = OpAtomicUMax %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Release]] %[[#Value]]
+
+  %10 = atomicrmw umin ptr addrspace(1) @ui, i32 42 acq_rel
+; CHECK: %[[#]] = OpAtomicUMin %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_AcquireRelease]] %[[#Value]]
+
+  ret void
+}

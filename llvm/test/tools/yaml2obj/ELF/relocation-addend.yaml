@@ -1,0 +1,141 @@
+## Here we document how yaml2obj handles relocation addend descriptions.
+
+## Case 1: Check a 64-bit object.
+
+## Case 1.1: Document we accept any hex/decimal addends in [INT64_MIN, UINT64_MAX].
+
+## INT64_MIN   == -9223372036854775808
+## UINT64_MAX  == 0xffffffffffffffff
+
+## Addend == UINT64_MAX.
+# RUN: yaml2obj %s -o %t64.decimal.max -DADDEND=18446744073709551615
+# RUN: llvm-readobj -r %t64.decimal.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFFFFFFFFFF
+# RUN: yaml2obj %s -o %t64.hex.max -DADDEND=0xFFFFFFFFFFFFFFFF
+# RUN: llvm-readobj -r %t64.hex.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFFFFFFFFFF
+
+## Addend == first positive integer.
+# RUN: yaml2obj %s -o %t64.decimal.first.pos -DADDEND=1
+# RUN: llvm-readobj -r %t64.decimal.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
+# RUN: yaml2obj %s -o %t64.hex.first.pos -DADDEND=0x1
+# RUN: llvm-readobj -r %t64.hex.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
+
+## Addend == 0.
+# RUN: yaml2obj %s -o %t64.decimal.null -DADDEND=0
+# RUN: llvm-readobj -r %t64.decimal.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
+# RUN: yaml2obj %s -o %t64.hex.null -DADDEND=0x0
+# RUN: llvm-readobj -r %t64.hex.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
+
+## Addend == first negative integer.
+# RUN: yaml2obj %s -o %t64.decimal.first.neg -DADDEND=-1
+# RUN: llvm-readobj -r %t64.decimal.first.neg | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFFFFFFFFFF
+## We do not accept negative hex addends.
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=-0x1 2>&1 | FileCheck %s --check-prefix=ERR
+
+## Addend == INT64_MIN.
+# RUN: yaml2obj %s -o %t64.decimal.min -DADDEND=-9223372036854775808
+# RUN: llvm-readobj -r %t64.decimal.min | FileCheck %s --check-prefix=TEST -DADDEND=0x8000000000000000
+# TEST: 0x0 R_{{.*}}_PC32 foo [[ADDEND]]
+
+# Case 1.2: Document we do not accept any hex/decimal addends outside of the range specified.
+
+## Addend == 2^64.
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=18446744073709551616 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=0x10000000000000000 2>&1 | FileCheck %s --check-prefix=ERR
+
+## Addend == INT64_MIN - 1.
+# RUN: not yaml2obj %s -o /dev/null -DADDEND=-9223372036854775809 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: invalid number
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Type:   R_X86_64_PC32
+        Symbol: foo
+        Addend: [[ADDEND]]
+Symbols:
+  - Name: foo
+
+## Case 2: Check a 32-bit object.
+
+## INT32_MIN   == -2147483648
+## UINT32_MAX  == 0xffffffff
+
+## Case 2.1: Document we accept any hex/decimal addends in [INT32_MIN, UINT32_MAX].
+
+## Addend == UINT32_MAX.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.max -DADDEND=4294967295
+# RUN: llvm-readobj -r %t32.decimal.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFF
+# RUN: yaml2obj --docnum=2 %s -o %t32.hex.max -DADDEND=0xFFFFFFFF
+# RUN: llvm-readobj -r %t32.hex.max | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFF
+
+## Addend == first positive integer.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.first.pos -DADDEND=1
+# RUN: llvm-readobj -r %t32.decimal.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
+# RUN: yaml2obj --docnum=2 %s -o %t32.hex.first.pos -DADDEND=0x1
+# RUN: llvm-readobj -r %t32.hex.first.pos | FileCheck %s --check-prefix=TEST -DADDEND=0x1
+
+## Addend == 0.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.null -DADDEND=0
+# RUN: llvm-readobj -r %t32.decimal.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
+# RUN: yaml2obj --docnum=2 %s -o %t32.hex.null -DADDEND=0x0
+# RUN: llvm-readobj -r %t32.hex.null | FileCheck %s --check-prefix=TEST -DADDEND=0x0
+
+## Addend == first negative integer.
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.first.neg -DADDEND=-1
+# RUN: llvm-readobj -r %t32.decimal.first.neg | FileCheck %s --check-prefix=TEST -DADDEND=0xFFFFFFFF
+## We do not accept negative hex addends.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=-0x1 2>&1 | FileCheck %s --check-prefix=ERR
+
+## Addend == INT32_MIN
+# RUN: yaml2obj --docnum=2 %s -o %t32.decimal.min -DADDEND=-2147483648
+# RUN: llvm-readobj -r %t32.decimal.min | FileCheck %s --check-prefix=TEST -DADDEND=0x80000000
+
+# Case 2.2: Document we do not accept any hex/decimal addends outside of the range specified.
+
+## Addend == 2^32.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=4294967296 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=0x100000000 2>&1 | FileCheck %s --check-prefix=ERR
+
+## Addend == INT32_MIN - 1.
+# RUN: not yaml2obj --docnum=2 %s -o /dev/null -DADDEND=-2147483649 2>&1 | FileCheck %s --check-prefix=ERR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Link: .symtab
+    Relocations:
+      - Type:   R_386_PC32
+        Symbol: foo
+        Addend: [[ADDEND]]
+Symbols:
+  - Name: foo
+
+## Case 3: Check we do not allow invalid values.
+# RUN: not yaml2obj %s -D ADDEND=0x1122GGEE 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=-0x1122GGEE 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=1234G5 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=-1234G5 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=foo 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=- 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj %s -D ADDEND=--1234 2>&1 | FileCheck %s --check-prefix=ERR

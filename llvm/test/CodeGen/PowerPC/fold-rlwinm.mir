@@ -1,0 +1,203 @@
+# RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -run-pass ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s
+
+---
+name: testFoldRLWINM
+#CHECK: name: testFoldRLWINM
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 27, 5, 31
+    ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 5, 31
+    %3:gprc = RLWINM %2:gprc, 19, 0, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 0, 12
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMSrcFullMask1
+#CHECK: name: testFoldRLWINMSrcFullMask1
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 27, 0, 31
+    ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 0, 31
+    %3:gprc = RLWINM %2:gprc, 19, 0, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 0, 12
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMSrcFullMask2
+#CHECK: name: testFoldRLWINMSrcFullMask2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 27, 10, 9 
+    ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 10, 9
+    %3:gprc = RLWINM %2:gprc, 19, 10, 1
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 10, 1
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMSrcWrapped
+#CHECK: name: testFoldRLWINMSrcWrapped
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 27, 30, 10
+    ; CHECK-NOT: %2:gprc = RLWINM %1, 27, 30, 10 
+    %3:gprc = RLWINM %2:gprc, 19, 0, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 11, 12
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMUserWrapped
+#CHECK: name: testFoldRLWINMUserWrapped
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 10, 5, 31
+    ; CHECK: %2:gprc = RLWINM killed %1, 10, 5, 31
+    %3:gprc = RLWINM %2:gprc, 10, 30, 5
+    ; CHECK: %3:gprc = RLWINM killed %2, 10, 30, 5
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMResultWrapped
+#CHECK: name: testFoldRLWINMResultWrapped
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM killed %1:gprc, 10, 20, 10
+    ; CHECK: %2:gprc = RLWINM killed %1, 10, 20, 10
+    %3:gprc = RLWINM killed %2:gprc, 10, 0, 31
+    ; CHECK: %3:gprc = RLWINM killed %2, 10, 0, 31
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMMultipleUses
+#CHECK: name: testFoldRLWINMMultipleUses
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM killed %1:gprc, 27, 5, 31
+    ; CHECK: %2:gprc = RLWINM %1, 27, 5, 31
+    %3:gprc = RLWINM %2:gprc, 19, 0, 12
+    ; CHECK: %3:gprc = RLWINM killed %1, 14, 0, 12
+    STW %3:gprc, %2:gprc, 100 
+    ; CHECK: STW killed %3, killed %2, 100
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMToZero
+#CHECK: name: testFoldRLWINMToZero
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 27, 5, 10
+    ; CHECK-NOT: RLWINM %1,
+    %3:gprc = RLWINM %2:gprc, 8, 5, 10
+    ; CHECK: %3:gprc = LI 0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINM_recToZero
+#CHECK: name: testFoldRLWINM_recToZero
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 27, 5, 10
+    ; CHECK-NOT: RLWINM %1,
+    %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec killed %1, 0, implicit-def dead $cr0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
+#CHECK: name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM_rec killed %1:gprc, 27, 5, 10, implicit-def $cr0
+    ; CHECK: %2:gprc = RLWINM_rec %1, 27, 5, 10, implicit-def dead $cr0
+    %3:gprc = RLWINM_rec killed %2:gprc, 8, 5, 10, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec killed %1, 0, implicit-def dead $cr0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMInvalidMask
+#CHECK: name: testFoldRLWINMInvalidMask
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 20, 5, 31
+    ; CHECK: %2:gprc = RLWINM killed %1, 20, 5, 31
+    %3:gprc = RLWINM %2:gprc, 19, 10, 20
+    ; CHECK: %3:gprc = RLWINM killed %2, 19, 10, 20
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMLIWrapMask
+#CHECK: name: testFoldRLWINMLIWrapMask
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:gprc = COPY $x3
+    %1:gprc = LI 100
+    ; CHECK: %2:gprc = LI 200
+    %2:gprc = RLWINM %1:gprc, 1, 3, 2
+    STW %2:gprc, %0:gprc, 100
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMAndANDI
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    ; CHECK-LABEL: name: testFoldRLWINMAndANDI
+    ; CHECK: liveins: $x3
+    ; CHECK: [[COPY:%[0-9]+]]:g8rc = COPY killed $x3
+    ; CHECK: [[COPY1:%[0-9]+]]:gprc = COPY killed [[COPY]].sub_32
+    ; CHECK: [[RLWINM:%[0-9]+]]:gprc = RLWINM killed [[COPY1]], 4, 28, 31
+    ; CHECK: [[ANDI_rec:%[0-9]+]]:gprc = ANDI_rec killed [[RLWINM]], 4, implicit-def dead $cr0
+    ; CHECK: BLR8 implicit $lr8, implicit $rm
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 4, 28, 31
+    %3:gprc = ANDI_rec %2:gprc, 4, implicit-def $cr0
+    BLR8 implicit $lr8, implicit $rm
+...

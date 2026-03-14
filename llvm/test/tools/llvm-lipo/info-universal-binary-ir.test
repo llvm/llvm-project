@@ -1,0 +1,16 @@
+# RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-armv7.o
+# RUN: llvm-as %p/Inputs/arm64-ios.ll -o %t-arm64.o
+# RUN: llvm-as %p/Inputs/x64-osx.ll -o %t-x64.o
+
+# RUN: llvm-lipo %t-arm64.o %t-x64.o -create -output %t-universal0.o
+# RUN: llvm-lipo -info %t-universal0.o | FileCheck %s
+#
+# CHECK: Architectures in the fat file: {{.*}} are: x86_64 arm64
+
+# Test that, despites the "thumbv7" triple present in armv7-ios.ll,
+# architecture is still reported as armv7
+# RUN: llvm-lipo %t-armv7.o -create -output %t-universal1.o
+# RUN: llvm-lipo -info %t-universal1.o | FileCheck --check-prefix=ARMV7 %s
+#
+# ARMV7: armv7
+# ARMV7-NOT: thumbv7

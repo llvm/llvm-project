@@ -1,0 +1,5 @@
+# RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux-gnu \
+# RUN:   -mcpu=mips32r6 -mattr=+ginv | FileCheck %s
+
+0x7c 0x40 0x00 0x3d  # CHECK: ginvi $2
+0x7c 0x40 0x02 0xbd  # CHECK: ginvt $2, 2

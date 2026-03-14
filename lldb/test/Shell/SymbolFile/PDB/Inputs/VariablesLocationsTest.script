@@ -1,0 +1,25 @@
+breakpoint set --file VariablesLocationsTest.cpp --line 6
+breakpoint set --file VariablesLocationsTest.cpp --line 15
+
+run
+
+target variable g_var
+
+frame variable arg_0
+frame variable arg_1
+
+frame variable loc_0
+frame variable loc_1
+
+frame select 1
+
+frame variable loc_0
+frame variable loc_1
+
+continue
+
+frame variable arg_0
+
+frame variable loc_0
+frame variable loc_1
+

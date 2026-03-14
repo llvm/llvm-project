@@ -1,0 +1,24 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @test(ptr %a) {
+  entry:
+    %b = load i32, ptr %a
+    ret i32 %b
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+  ; CHECK: [[@LINE+1]]:64: use of undefined IR value '%ir.c'
+    $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load (s32) from %ir.c)
+    RET64 $eax
+...
+

@@ -1,0 +1,24 @@
+---
+MainSourceFile:     ignore-conflict.cpp
+Diagnostics:
+  - DiagnosticName: test-ignore-conflict-insertion
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/ignore-conflict.cpp
+      FileOffset: 0
+      Replacements:
+        - FilePath:        $(path)/ignore-conflict.cpp
+          Offset:          0
+          Length:          0
+          ReplacementText: "#include <a.h>\n"
+  - DiagnosticName: test-ignore-conflict-insertion
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/ignore-conflict.cpp
+      FileOffset: 0
+      Replacements:
+        - FilePath:        $(path)/ignore-conflict.cpp
+          Offset:          0
+          Length:          0
+          ReplacementText: "#include <b.h>\n"
+...

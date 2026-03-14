@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# When a low-level type is only a single 's'/'p' character
+---
+name: test_low_level_type_is_single_s_p
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: expected integers after 's'/'p' type character
+    %0:_(s) = COPY $x0
+...

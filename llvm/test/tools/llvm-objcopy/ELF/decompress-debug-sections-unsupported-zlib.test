@@ -1,0 +1,18 @@
+# UNSUPPORTED: zlib
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objcopy --decompress-debug-sections %t /dev/null 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: error: '[[FILE]]': failed to decompress section '.debug_info': LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Type:         SHT_PROGBITS
+    Name:         .debug_info
+    Flags:        [ SHF_COMPRESSED ]
+    AddressAlign: 8
+    Content:      "010000000000000001000000000000000100000000000000789c63040000020002"

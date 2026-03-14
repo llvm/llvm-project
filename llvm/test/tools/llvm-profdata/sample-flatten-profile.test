@@ -1,0 +1,52 @@
+; RUN: llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %S/Inputs/sample-flatten-profile.proftext -o - | FileCheck %s --match-full-lines --strict-whitespace
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t2 && llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %t2 -o - | FileCheck %s --match-full-lines --strict-whitespace
+
+; RUN: llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %S/Inputs/sample-flatten-profile-cs.proftext -o - | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CHECK-CS
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile-cs.proftext -o %t2 && llvm-profdata merge --sample --convert-sample-profile-layout=flat --text %t2 -o - | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CHECK-CS
+
+; CHECK:baz:169:10
+; CHECK-NEXT: 1: 10
+; CHECK-NEXT: 3: 20
+; CHECK-NEXT: 4: 36 corge:15 quux:13 qux:8
+; CHECK-NEXT: 4.1: 12 thud:5 grault:4 quux:3
+; CHECK-NEXT: 5: 20 foo:20
+; CHECK-NEXT: 6: 2 bar:2
+; CHECK-NEXT: 10: 1
+; CHECK-NEXT: !CFGChecksum: 1
+; CHECK-NEXT: !Attributes: 1
+; CHECK-NEXT:foo:134:21
+; CHECK-NEXT: 1: 21
+; CHECK-NEXT: 3: 12 bar:11
+; CHECK-NEXT: 4: 1
+; CHECK-NEXT: !CFGChecksum: 3
+; CHECK-NEXT: !Attributes: 3
+; CHECK-NEXT:main:104:1
+; CHECK-NEXT: 4: 1
+; CHECK-NEXT: 4.2: 1
+; CHECK-NEXT: 7: 1
+; CHECK-NEXT: 9: 3 bar:2 foo:1
+; CHECK-NEXT: 10: 16 baz:15 foo:1
+; CHECK-NEXT: !CFGChecksum: 2
+; CHECK-NEXT: !Attributes: 2
+; CHECK-NEXT:bar:15:14
+; CHECK-NEXT: 1: 14
+; CHECK-NEXT: 7: 1
+; CHECK-NEXT: !CFGChecksum: 4
+; CHECK-NEXT: !Attributes: 4
+
+; CHECK-CS:baz:150:10
+; CHECK-CS-NEXT: 1: 10
+; CHECK-CS-NEXT: 3: 20
+; CHECK-CS-NEXT: 5: 20 foo:20
+; CHECK-CS-NEXT:foo:104:2
+; CHECK-CS-NEXT: 1: 1
+; CHECK-CS-NEXT: 3: 2 bar:1
+; CHECK-CS-NEXT: 4: 1
+; CHECK-CS-NEXT:main:91:1
+; CHECK-CS-NEXT: 4: 1
+; CHECK-CS-NEXT: 4.2: 1
+; CHECK-CS-NEXT: 7: 1
+; CHECK-CS-NEXT: 9: 3 bar:2 foo:1
+; CHECK-CS-NEXT: 10: 3 baz:2 foo:1
+; CHECK-CS-NEXT:bar:2:2
+; CHECK-CS-NEXT: 1: 2

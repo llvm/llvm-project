@@ -1,0 +1,13 @@
+## Verifies that llvm-bolt is able to remove dead basic blocks. Also check that
+## the BB reordering ignores dead BBs.
+
+RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %S/Inputs/entry.s -o %t.o
+RUN: link_fdata %S/Inputs/entry.s %t.o %t.fdata --nmtool llvm-nm
+RUN: llvm-strip --strip-unneeded %t.o
+RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+RUN: llvm-bolt %t.exe --data %t.fdata -o %t --funcs=_start \
+RUN:   --eliminate-unreachable --reorder-blocks=none \
+RUN:   --print-finalized --sequential-disassembly 2>&1 | FileCheck %s
+
+## Optimized
+CHECK:  BB Layout : .LBB00, .Ltmp0, .Ltmp2, .Ltmp3, .Ltmp4, .Ltmp5, .Ltmp6, .Ltmp7, .Ltmp8, .Ltmp9, .Ltmp10, .Ltmp11

@@ -1,0 +1,127 @@
+add_custom_target(libc_sys_stat_unittests)
+
+add_subdirectory(testdata)
+
+add_libc_unittest(
+  chmod_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    chmod_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.stat.chmod
+    libc.src.unistd.close
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  fchmodat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    fchmodat_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.stat.fchmodat
+    libc.src.unistd.close
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  fchmod_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    fchmod_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.sys.stat.fchmod
+    libc.src.unistd.close
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  mkdirat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    mkdirat_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.sys.stat.mkdirat
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  stat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    stat_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.sys.stat.stat
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  lstat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    lstat_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.sys.stat.lstat
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  fstat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    fstat_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.sys_stat
+    libc.src.errno.errno
+    libc.src.sys.stat.fstat
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

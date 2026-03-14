@@ -1,0 +1,34 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK-LABEL: Name: .r-x
+# CHECK: Permissions: r-x
+#
+# CHECK-LABEL: Name: .rw-
+# CHECK: Permissions: rw-
+
+# CHECK-LABEL: Name: .---
+# CHECK: Permissions: ---
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  Entry:           0x00000000000007A0
+Sections:
+  - Name:            .r-x
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         DEADBEEFBAADF00D
+  - Name:            .rw-
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         DEADBEEFBAADF00D
+  - Name:            .---
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+...

@@ -1,0 +1,23 @@
+foo bat bar
+baz
+
+RUN: FileCheck --input-file=%s --check-prefix=PASS1 %s
+PASS1: foo
+PASS1-SAME: bat
+PASS1-SAME: bar
+PASS1-NEXT: baz
+
+RUN: FileCheck --input-file=%s --check-prefix=PASS2 %s
+PASS2: foo
+PASS2-NOT: baz
+PASS2-SAME: bar
+PASS2-NEXT: baz
+
+RUN: not FileCheck --input-file=%s --check-prefix=FAIL1 %s
+FAIL1: foo
+FAIL1-SAME: baz
+
+RUN: not FileCheck --input-file=%s --check-prefix=FAIL2 %s
+FAIL2: foo
+FAIL2-NOT: bat
+FAIL2-SAME: bar

@@ -1,0 +1,14 @@
+# REQUIRES: zlib
+This test tries to parse a checked-in binary index.
+If this test fails it means there has been a backward incompatilbe change to
+serialization format.
+Please bump the version number in
+clang-tools-extra/clangd/index/Serialization.cpp and regenarate sample.idx with
+
+  clangd-indexer \
+    clang-tools-extra/clangd/test/index-serialization/Inputs/sample.cpp > \
+    clang-tools-extra/clangd/test/index-serialization/Inputs/sample.idx
+
+Also if you've introduced new slabs/chunks to serialized index, make sure
+indexing sample.cpp would yield non-trivial values for those.
+# RUN: dexp %/S/Inputs/sample.idx -c="find B" | grep Bar || not grep -v '^#' %s

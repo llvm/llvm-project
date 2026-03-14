@@ -1,0 +1,62 @@
+; RUN: FileCheck -check-prefix=A -input-file %s %s
+
+;; This tests the LITERAL directive modifier.
+
+The result is "5371, 5372, 5373, 5374"
+
+The result is "[[[5371]], [[5372]], [[5373]], [[5374]]]"
+[[[5375]], [[5376]],
+[[[5377]], [[5378]],
+{{there you go.*}}
+
+[[10]]
+[[20]]
+[[50]]
+
+;; These should all not match.
+; A{}: 5371, 5372,
+; A{LITERAL} 5371, 5372,
+; A{LITERAL 5371, 5372,
+; A{LITERAL,} 5371, 5372,
+; A{, LITERAL} 5371, 5372,
+
+; A: 5371, 5372,
+; A-SAME: 5373, 5374
+; A{LITERAL}: [[[5371]], [[5372]],
+; A-SAME{LITERAL}: [[5373]], [[5374]]]
+
+;; Modifier list allows whitespace.
+; A{  LITERAL  }: [[[5375]], [[5376]],
+;; Modifiers are combined into a set and repetition is allowed.
+; A{LITERAL , LITERAL}: [[[5377]], [[5378]],
+
+; A-NEXT{LITERAL}: {{there you go.*}}
+; A-NOT{LITERAL}: [[50]]
+; A-DAG{LITERAL}: [[20]]
+; A-DAG{LITERAL}: [[10]]
+; A{LITERAL}: [[50]]
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=INVALID 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-INVALID
+
+;; Ensure invalid modifier skipped.
+
+; INVALID{BADMODIFIER}: 6371, 6372,
+; CHECK-INVALID: no check strings found with prefix 'INVALID
+
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERRNOT 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=ERRNOT
+
+;; This ensures a failure is correctly reported when a NOT directive with a
+;; LITERAL modifier matches.
+
+[[a]]
+[[b]]
+[[c]]
+
+; CHECK-ERRNOT{LITERAL}: [[a]]
+; CHECK-ERRNOT-NOT{LITERAL}: [[b]]
+; CHECK-ERRNOT{LITERAL}: [[c]]
+; ERRNOT: no match expected

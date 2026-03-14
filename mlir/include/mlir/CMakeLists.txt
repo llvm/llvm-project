@@ -1,0 +1,8 @@
+add_subdirectory(Bytecode)
+add_subdirectory(Conversion)
+add_subdirectory(Dialect)
+add_subdirectory(IR)
+add_subdirectory(Interfaces)
+add_subdirectory(Reducer)
+add_subdirectory(Target)
+add_subdirectory(Transforms)

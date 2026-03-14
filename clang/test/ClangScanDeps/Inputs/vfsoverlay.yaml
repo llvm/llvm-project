@@ -1,0 +1,12 @@
+{
+  'version': 0,
+  'roots': [
+    { 'name': 'DIR', 'type': 'directory',
+      'contents': [
+        { 'name': 'not_real.h', 'type': 'file',
+          'external-contents': 'DIR/Inputs/header.h'
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+NDK_ROOT := $(shell dirname $(CC))/../../../../..
+
+ifeq "$(HOST_OS)" "Linux"
+	HOST_TAG := linux-x86_64
+else ifeq "$(HOST_OS)" "Darwin"
+	HOST_TAG := darwin-x86_64
+else
+	HOST_TAG := windows-x86_64
+endif
+
+TOOLCHAIN_ROOT := $(NDK_ROOT)/toolchains/llvm/prebuilt/$(HOST_TAG)
+TOOLCHAIN_SYSROOT := $(TOOLCHAIN_ROOT)/sysroot
+
+OBJCOPY ?= $(TOOLCHAIN_ROOT)/bin/llvm-objcopy
+ARCHIVER ?= $(TOOLCHAIN_ROOT)/bin/llvm-ar
+
+ifeq "$(wildcard $(TOOLCHAIN_SYSROOT)/.)" ""
+# Compiling test inferiors for Android requires an NDK with the unified
+# toolchain introduced in version r19.
+$(error "No unified toolchain sysroot found in $(NDK_ROOT). NDK must be r19 or later.")
+endif
+
+ifeq "$(ARCH)" "arm"
+	TRIPLE := armv7-none-linux-androideabi
+	ARCH_CFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm
+else ifeq "$(ARCH)" "aarch64"
+	TRIPLE := aarch64-none-linux-android
+else ifeq "$(ARCH)" "i386"
+	TRIPLE := i686-none-linux-android
+else
+	TRIPLE := $(ARCH)-none-linux-android
+endif
+
+# lowest 64-bit API level
+API_LEVEL := 21
+
+ifeq "$(ARCH)" "arm"
+	ARCH_DIR := arm-linux-androideabi
+else
+	ARCH_DIR := $(subst -none,,$(TRIPLE))
+endif
+
+ARCH_CFLAGS += \
+	--target=$(TRIPLE) \
+	--sysroot=$(TOOLCHAIN_SYSROOT) \
+	-D__ANDROID_API__=$(API_LEVEL)
+
+ARCH_CXXFLAGS += \
+	-isystem $(TOOLCHAIN_SYSROOT)/usr/include/c++/v1
+
+ARCH_LDFLAGS += \
+	--target=$(TRIPLE) \
+	--sysroot=$(TOOLCHAIN_SYSROOT) \
+	--prefix=$(TOOLCHAIN_SYSROOT)/usr/lib/$(ARCH_DIR)/$(API_LEVEL) \
+	-L$(TOOLCHAIN_SYSROOT)/usr/lib/$(ARCH_DIR)/$(API_LEVEL) \
+	$(TOOLCHAIN_SYSROOT)/usr/lib/$(ARCH_DIR)/libc++_static.a \
+	-lm \
+	-lc++abi \
+	-nostdlib++

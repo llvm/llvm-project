@@ -1,0 +1,80 @@
+# RUN: llc -O0 -verify-machineinstrs -mtriple aarch64-- -run-pass=legalizer %s -o - | FileCheck %s
+
+# Check that when we combine ZEXT/ANYEXT we assign the correct location.
+# CHECK: !8 = !DILocation(line: 23, column: 5, scope: !4)
+# CHECK:  G_AND %16, %15, debug-location !8
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64-apple-ios13.0.0"
+
+  @.str = external dso_local unnamed_addr constant [4 x i8], align 1
+
+  define void @main() personality ptr @__gxx_personality_v0 !dbg !4 {
+  entry:
+    %tobool = trunc i8 undef to i1
+    %conv = zext i1 %tobool to i32
+    call void (ptr, ...) @printf(ptr @.str, i32 %conv), !dbg !8
+    %0 = load i32, ptr undef, align 4, !dbg !9
+    call void (ptr, ...) @printf(ptr @.str, i32 %0)
+    ret void
+  }
+
+  declare void @printf(ptr, ...)
+  declare i32 @__gxx_personality_v0(...)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 10.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, nameTableKind: None, sysroot: "/pata/tino", sdk: "iPhoneOS13.0.sdk")
+  !1 = !DIFile(filename: "/pata/tino/main.cpp", directory: "/pata/tino")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !{i32 7, !"PIC Level", i32 2}
+  !4 = distinct !DISubprogram(name: "main", scope: !5, file: !5, line: 19, type: !6, scopeLine: 20, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
+  !5 = !DIFile(filename: "main.cpp", directory: "/pata/tino")
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{}
+  !8 = !DILocation(line: 23, column: 5, scope: !4)
+  !9 = !DILocation(line: 36, column: 21, scope: !4)
+
+...
+---
+name:            main
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+  - { id: 2, class: _, preferred-register: '' }
+  - { id: 3, class: _, preferred-register: '' }
+  - { id: 4, class: _, preferred-register: '' }
+  - { id: 5, class: _, preferred-register: '' }
+  - { id: 6, class: _, preferred-register: '' }
+  - { id: 7, class: _, preferred-register: '' }
+  - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+body:             |
+  bb.1.entry:
+    %0:_(s8) = G_IMPLICIT_DEF
+    %4:_(p0) = COPY $x0
+    %10:_(p0) = G_IMPLICIT_DEF debug-location !DILocation(line: 0, scope: !4)
+    %1:_(s1) = G_TRUNC %0(s8)
+    %2:_(s32) = G_ZEXT %1(s1)
+    ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp, debug-location !8
+    $x0 = COPY %4(p0), debug-location !8
+    %5:_(p0) = COPY $sp, debug-location !8
+    %6:_(s64) = G_CONSTANT i64 0
+    %7:_(p0) = G_PTR_ADD %5, %6(s64), debug-location !8
+    %8:_(s64) = G_ANYEXT %2(s32), debug-location !8
+    G_STORE %8(s64), %7(p0), debug-location !8 :: (store (s64) into stack, align 1)
+    BL @printf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, debug-location !8
+    ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp, debug-location !8
+    %13:_(s64) = G_LOAD %10(p0), debug-location !9 :: (load (s32) from `ptr undef`)
+    ADJCALLSTACKDOWN 8, 0, implicit-def $sp, implicit $sp
+    $x0 = COPY %4(p0)
+    %11:_(p0) = COPY $sp
+    %12:_(p0) = G_PTR_ADD %11, %6(s64)
+    G_STORE %13(s64), %12(p0) :: (store (s64) into stack, align 1)
+    BL @printf, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0
+    ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit $sp
+    RET_ReallyLR
+
+...

@@ -1,0 +1,72 @@
+add_custom_target(UnitTests)
+set_target_properties(UnitTests PROPERTIES FOLDER "LLVM/Tests")
+
+function(add_llvm_unittest test_dirname)
+  add_unittest(UnitTests ${test_dirname} ${ARGN})
+endfunction()
+function(add_llvm_unittest_with_input_files test_dirname)
+  add_unittest_with_input_files(UnitTests ${test_dirname} ${ARGN})
+endfunction()
+
+# The target unittests may test APIs that aren't exported in libLLVM.so, so
+# we need to always link against the static libraries.
+function(add_llvm_target_unittest test_dir_name)
+  add_llvm_unittest(${test_dir_name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
+endfunction()
+
+# gtest macros like EXPECT_TRUE are expanded to a single line
+# multi-statement code with if/else. eg:
+#   if (...)
+#     EXPECT_TURE(...)
+# will be expanded into something like:
+#   if(...)
+#     switch (0) case 0: default: if (...) ; else return;;
+# GCC may emit false positive dangling-else warnings for such code.
+# However, such warnings are actually against LLVM's style guide.
+# disable the warning for GCC so that one can enbable Werror.
+if (CMAKE_COMPILER_IS_GNUCXX)
+  list(APPEND LLVM_COMPILE_FLAGS "-Wno-dangling-else")
+endif ()
+
+add_subdirectory(ADT)
+add_subdirectory(Analysis)
+add_subdirectory(AsmParser)
+add_subdirectory(BinaryFormat)
+add_subdirectory(Bitcode)
+add_subdirectory(Bitstream)
+add_subdirectory(CAS)
+add_subdirectory(CGData)
+add_subdirectory(CodeGen)
+add_subdirectory(DebugInfo)
+add_subdirectory(Debuginfod)
+add_subdirectory(Demangle)
+add_subdirectory(DWARFLinkerParallel)
+add_subdirectory(ExecutionEngine)
+add_subdirectory(FileCheck)
+add_subdirectory(Frontend)
+add_subdirectory(FuzzMutate)
+add_subdirectory(InterfaceStub)
+add_subdirectory(IR)
+add_subdirectory(LineEditor)
+add_subdirectory(Linker)
+add_subdirectory(MC)
+add_subdirectory(MI)
+add_subdirectory(MIR)
+add_subdirectory(ObjCopy)
+add_subdirectory(Object)
+add_subdirectory(ObjectYAML)
+add_subdirectory(Option)
+add_subdirectory(Remarks)
+add_subdirectory(Passes)
+add_subdirectory(ProfileData)
+add_subdirectory(SandboxIR)
+add_subdirectory(Support)
+add_subdirectory(TableGen)
+add_subdirectory(Target)
+add_subdirectory(TargetParser)
+add_subdirectory(Telemetry)
+add_subdirectory(Testing)
+add_subdirectory(TextAPI)
+add_subdirectory(Transforms)
+add_subdirectory(XRay)
+add_subdirectory(tools)

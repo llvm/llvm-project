@@ -1,0 +1,10 @@
+{
+  'version': 0,
+  'fallthrough': true,
+  'roots': [
+    { 'name': 'OUT_DIR',
+      'type': 'directory-remap',
+      'external-contents': 'INPUT_DIR'
+    }
+  ]
+}

@@ -1,0 +1,513 @@
+# RUN: llc -verify-machineinstrs -mtriple=amdgcn -run-pass si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -verify-machineinstrs -mtriple=amdgcn -passes si-shrink-instructions -o - %s | FileCheck -check-prefix=GCN %s
+# Check that add with carry out isn't incorrectly reduced to e32 when
+# the carry out is a virtual register.
+
+# TODO: We should run this test until the end of codegen to make sure
+# that the post-RA run does manage to shrink it, but right now the
+# resume crashes
+
+...
+# GCN-LABEL: name: shrink_add_vop3{{$}}
+# GCN: %29:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %19, %17, 0, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+name:            shrink_add_vop3
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64_xexec }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vreg_64 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %26 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %27 = REG_SEQUENCE %3, 1, %26, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
+    %29, %9 = V_ADD_CO_U32_e64 %19, %17, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN-LABEL: name: shrink_sub_vop3{{$}}
+# GCN: %29:vgpr_32, %9:sreg_64_xexec = V_SUB_CO_U32_e64 %19, %17, 0, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+
+name:            shrink_sub_vop3
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64_xexec }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vreg_64 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %26 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %27 = REG_SEQUENCE %3, 1, %26, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
+    %29, %9 = V_SUB_CO_U32_e64 %19, %17, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN-LABEL: name: shrink_subrev_vop3{{$}}
+# GCN: %29:vgpr_32, %9:sreg_64_xexec = V_SUBREV_CO_U32_e64 %19, %17, 0, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+
+name:            shrink_subrev_vop3
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64_xexec }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vreg_64 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %26 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %27 = REG_SEQUENCE %3, 1, %26, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
+    %29, %9 = V_SUBREV_CO_U32_e64 %19, %17, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %29, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN-LABEL: name: check_addc_src2_vop3{{$}}
+# GCN: %29:vgpr_32, $vcc = V_ADDC_U32_e64 %19, %17, %9, 0, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+name: check_addc_src2_vop3
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64_xexec }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vreg_64 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %26 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %27 = REG_SEQUENCE %3, 1, %26, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
+    %9 = S_MOV_B64 0
+    %29, $vcc = V_ADDC_U32_e64 %19, %17, %9, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+---
+# GCN-LABEL: name: shrink_addc_vop3{{$}}
+# GCN: %29:vgpr_32 = V_ADDC_U32_e32 %19, %17, implicit-def $vcc, implicit $vcc, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+
+name:            shrink_addc_vop3
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vreg_64 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %26 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %27 = REG_SEQUENCE %3, 1, %26, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
+    $vcc = S_MOV_B64 0
+    %29, $vcc = V_ADDC_U32_e64 %19, %17, $vcc, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...
+
+---
+# GCN-LABEL: name: shrink_addc_undef_vcc{{$}}
+# GCN: %29:vgpr_32 = V_ADDC_U32_e32 %19, %17, implicit-def $vcc, implicit undef $vcc, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+name:            shrink_addc_undef_vcc
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_64 }
+  - { id: 1, class: sreg_32_xm0 }
+  - { id: 2, class: sgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_64_xexec }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32 }
+  - { id: 8, class: sreg_32_xm0 }
+  - { id: 9, class: sreg_64 }
+  - { id: 10, class: sreg_32_xm0 }
+  - { id: 11, class: sreg_32_xm0 }
+  - { id: 12, class: sgpr_64 }
+  - { id: 13, class: sgpr_128 }
+  - { id: 14, class: sreg_32_xm0 }
+  - { id: 15, class: sreg_64 }
+  - { id: 16, class: sgpr_128 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vreg_64 }
+  - { id: 19, class: vgpr_32 }
+  - { id: 20, class: vreg_64 }
+  - { id: 21, class: sreg_32_xm0 }
+  - { id: 22, class: sreg_32 }
+  - { id: 23, class: sreg_32 }
+  - { id: 24, class: vgpr_32 }
+  - { id: 25, class: vreg_64 }
+  - { id: 26, class: vgpr_32 }
+  - { id: 27, class: vreg_64 }
+  - { id: 28, class: vreg_64 }
+  - { id: 29, class: vgpr_32 }
+liveins:
+  - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
+  - { reg: '$vgpr0', virtual-reg: '%3' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    %3 = COPY $vgpr0
+    %0 = COPY $sgpr0_sgpr1
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %26 = V_ASHRREV_I32_e32 31, %3, implicit $exec
+    %27 = REG_SEQUENCE %3, 1, %26, 2
+    %10 = S_MOV_B32 61440
+    %11 = S_MOV_B32 0
+    %12 = REG_SEQUENCE killed %11, 1, killed %10, 2
+    %13 = REG_SEQUENCE killed %5, 17, %12, 18
+    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
+    %16 = REG_SEQUENCE killed %4, 17, %12, 18
+    %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
+    %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
+    %29, $vcc = V_ADDC_U32_e64 %19, %17, undef $vcc, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...

@@ -1,0 +1,606 @@
+## Check that we are able to dump auxiliary symbols.
+## 1. We can use default values for the fields of auxiliary symbols.
+## 2. We can explicitly specify all fields for auxiliary symbols.
+
+## Case1: check the default behaviour in XCOFF32.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj --syms %t1 | FileCheck %s --check-prefix=DEFAULT32
+
+# DEFAULT32:     Symbols [
+# DEFAULT32-NEXT:   Symbol {
+# DEFAULT32-NEXT:     Index: 0
+# DEFAULT32-NEXT:     Name: aux_fcn_csect
+# DEFAULT32-NEXT:     Value (RelocatableAddress): 0x0
+# DEFAULT32-NEXT:     Section: N_UNDEF
+# DEFAULT32-NEXT:     Type: 0x20
+# DEFAULT32-NEXT:     StorageClass: C_EXT (0x2)
+# DEFAULT32-NEXT:     NumberOfAuxEntries: 2
+# DEFAULT32-NEXT:     Function Auxiliary Entry {
+# DEFAULT32-NEXT:       Index: 1
+# DEFAULT32-NEXT:       OffsetToExceptionTable: 0x0
+# DEFAULT32-NEXT:       SizeOfFunction: 0x0
+# DEFAULT32-NEXT:       PointerToLineNum: 0x0
+# DEFAULT32-NEXT:       SymbolIndexOfNextBeyond: 0
+# DEFAULT32-NEXT:     }
+# DEFAULT32-NEXT:     CSECT Auxiliary Entry {
+# DEFAULT32-NEXT:       Index: 2
+# DEFAULT32-NEXT:       SectionLen: 0
+# DEFAULT32-NEXT:       ParameterHashIndex: 0x0
+# DEFAULT32-NEXT:       TypeChkSectNum: 0x0
+# DEFAULT32-NEXT:       SymbolAlignmentLog2: 0
+# DEFAULT32-NEXT:       SymbolType: XTY_ER (0x0)
+# DEFAULT32-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# DEFAULT32-NEXT:       StabInfoIndex: 0x0
+# DEFAULT32-NEXT:       StabSectNum: 0x0
+# DEFAULT32-NEXT:     }
+# DEFAULT32-NEXT:   }
+# DEFAULT32-NEXT:   Symbol {
+# DEFAULT32-NEXT:     Index: 3
+# DEFAULT32-NEXT:     Name: aux_stat
+# DEFAULT32-NEXT:     Value (RelocatableAddress): 0x0
+# DEFAULT32-NEXT:     Section: N_UNDEF
+# DEFAULT32-NEXT:     Type: 0x0
+# DEFAULT32-NEXT:     StorageClass: C_STAT (0x3)
+# DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT32-NEXT:     Sect Auxiliary Entry For Stat {
+# DEFAULT32-NEXT:       Index: 4
+# DEFAULT32-NEXT:       SectionLength: 0
+# DEFAULT32-NEXT:       NumberOfRelocEnt: 0
+# DEFAULT32-NEXT:       NumberOfLineNum: 0
+# DEFAULT32-NEXT:     }
+# DEFAULT32-NEXT:   }
+# DEFAULT32-NEXT:   Symbol {
+# DEFAULT32-NEXT:     Index: 5
+# DEFAULT32-NEXT:     Name: aux_sym
+# DEFAULT32-NEXT:     Value (RelocatableAddress): 0x0
+# DEFAULT32-NEXT:     Section: N_UNDEF
+# DEFAULT32-NEXT:     Type: 0x0
+# DEFAULT32-NEXT:     StorageClass: C_BLOCK (0x64)
+# DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT32-NEXT:     Block Auxiliary Entry {
+# DEFAULT32-NEXT:       Index: 6
+# DEFAULT32-NEXT:       LineNumber (High 2 Bytes): 0x0
+# DEFAULT32-NEXT:       LineNumber (Low 2 Bytes): 0x0
+# DEFAULT32-NEXT:     }
+# DEFAULT32-NEXT:   }
+# DEFAULT32-NEXT:   Symbol {
+# DEFAULT32-NEXT:     Index: 7
+# DEFAULT32-NEXT:     Name: aux_file
+# DEFAULT32-NEXT:     Value (SymbolTableIndex): 0x0
+# DEFAULT32-NEXT:     Section: N_UNDEF
+# DEFAULT32-NEXT:     Source Language ID: TB_C (0x0)
+# DEFAULT32-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# DEFAULT32-NEXT:     StorageClass: C_FILE (0x67)
+# DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT32-NEXT:     File Auxiliary Entry {
+# DEFAULT32-NEXT:       Index: 8
+# DEFAULT32-NEXT:       Name: 
+# DEFAULT32-NEXT:       Type: XFT_FN (0x0)
+# DEFAULT32-NEXT:     }
+# DEFAULT32-NEXT:   }
+# DEFAULT32-NEXT:   Symbol {
+# DEFAULT32-NEXT:     Index: 9
+# DEFAULT32-NEXT:     Name: aux_sect
+# DEFAULT32-NEXT:     Value (OffsetInDWARF): 0x0
+# DEFAULT32-NEXT:     Section: N_UNDEF
+# DEFAULT32-NEXT:     Type: 0x0
+# DEFAULT32-NEXT:     StorageClass: C_DWARF (0x70)
+# DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT32-NEXT:     Sect Auxiliary Entry For DWARF {
+# DEFAULT32-NEXT:       Index: 10
+# DEFAULT32-NEXT:       LengthOfSectionPortion: 0x0
+# DEFAULT32-NEXT:       NumberOfRelocEntries: 0
+# DEFAULT32-NEXT:     }
+# DEFAULT32-NEXT:   }
+# DEFAULT32-NEXT: ]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               aux_fcn_csect
+    StorageClass:       C_EXT
+    Type:               0x20
+    AuxEntries:
+      - Type:                 AUX_FCN
+        OffsetToExceptionTbl: [[OFFTOEXP=<none>]]
+        SizeOfFunction:       [[SIZEOFFUN=<none>]]
+        SymIdxOfNextBeyond:   [[SYMIDXOFNEXT=<none>]]
+        PtrToLineNum:         [[PTRTOLINE=<none>]]
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     [[HASHIDX=<none>]]
+        TypeChkSectNum:         [[TYPECHKNUM=<none>]]
+        SymbolAlignmentAndType: [[SYMALIGN=<none>]]
+        StorageMappingClass:    [[STORMAPCLASS=<none>]]
+        SectionOrLength:        [[SECTORLEN=<none>]]
+        StabInfoIndex:          [[STABIDX=<none>]]
+        StabSectNum:            [[STABNUM=<none>]]
+  - Name:               aux_stat
+    StorageClass:       C_STAT
+    AuxEntries:
+      - Type:             AUX_STAT
+        SectionLength:    [[SECTLEN=<none>]]
+        NumberOfRelocEnt: [[NUMOFREL=<none>]]
+        NumberOfLineNum:  [[NUMOFLINE=<none>]]
+  - Name:               aux_sym
+    StorageClass:       C_BLOCK
+    AuxEntries:
+      - Type:       AUX_SYM
+        LineNumHi:  [[LINEHI=<none>]]
+        LineNumLo:  [[LINELO=<none>]]
+  - Name:               aux_file
+    StorageClass:       C_FILE
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: [[FILENAME=<none>]]
+        FileStringType:   [[FILETYPE=<none>]]
+  - Name:               aux_sect
+    StorageClass:       C_DWARF
+    AuxEntries:
+      - Type:                   AUX_SECT
+        LengthOfSectionPortion: [[LENOFSEC=<none>]]
+        NumberOfRelocEnt:       [[NUMOFRELOC=<none>]]
+
+## Case2: check the non-default behaviour in XCOFF32.
+# RUN: yaml2obj %s --docnum=1 -o %t2 -DOFFTOEXP=2 -DSIZEOFFUN=3 \
+# RUN:   -DSYMIDXOFNEXT=4 -DPTRTOLINE=5 -DHASHIDX=2 -DTYPECHKNUM=3 \
+# RUN:   -DSYMALIGN=4 -DSTORMAPCLASS=XMC_RO -DSECTORLEN=6 -DSTABIDX=7 \
+# RUN:   -DSTABNUM=8 -DSECTLEN=2 -DNUMOFREL=3 -DNUMOFLINE=4 \
+# RUN:   -DLINEHI=2 -DLINELO=3 -DFILENAME='fname' -DFILETYPE=XFT_CD \
+# RUN:   -DLENOFSEC=2 -DNUMOFRELOC=3
+# RUN: llvm-readobj --syms %t2 | FileCheck %s --check-prefix=NON-DEFAULT32
+
+# NON-DEFAULT32:      Symbols [
+# NON-DEFAULT32-NEXT:   Symbol {
+# NON-DEFAULT32-NEXT:     Index: 0
+# NON-DEFAULT32-NEXT:     Name: aux_fcn_csect
+# NON-DEFAULT32-NEXT:     Value (RelocatableAddress): 0x0
+# NON-DEFAULT32-NEXT:     Section: N_UNDEF
+# NON-DEFAULT32-NEXT:     Type: 0x20
+# NON-DEFAULT32-NEXT:     StorageClass: C_EXT (0x2)
+# NON-DEFAULT32-NEXT:     NumberOfAuxEntries: 2
+# NON-DEFAULT32-NEXT:     Function Auxiliary Entry {
+# NON-DEFAULT32-NEXT:       Index: 1
+# NON-DEFAULT32-NEXT:       OffsetToExceptionTable: 0x2
+# NON-DEFAULT32-NEXT:       SizeOfFunction: 0x3
+# NON-DEFAULT32-NEXT:       PointerToLineNum: 0x5
+# NON-DEFAULT32-NEXT:       SymbolIndexOfNextBeyond: 4
+# NON-DEFAULT32-NEXT:     }
+# NON-DEFAULT32-NEXT:     CSECT Auxiliary Entry {
+# NON-DEFAULT32-NEXT:       Index: 2
+# NON-DEFAULT32-NEXT:       SectionLen: 6
+# NON-DEFAULT32-NEXT:       ParameterHashIndex: 0x2
+# NON-DEFAULT32-NEXT:       TypeChkSectNum: 0x3
+# NON-DEFAULT32-NEXT:       SymbolAlignmentLog2: 0
+# NON-DEFAULT32-NEXT:       SymbolType: 0x4
+# NON-DEFAULT32-NEXT:       StorageMappingClass: XMC_RO (0x1)
+# NON-DEFAULT32-NEXT:       StabInfoIndex: 0x7
+# NON-DEFAULT32-NEXT:       StabSectNum: 0x8
+# NON-DEFAULT32-NEXT:     }
+# NON-DEFAULT32-NEXT:   }
+# NON-DEFAULT32-NEXT:   Symbol {
+# NON-DEFAULT32-NEXT:     Index: 3
+# NON-DEFAULT32-NEXT:     Name: aux_stat
+# NON-DEFAULT32-NEXT:     Value (RelocatableAddress): 0x0
+# NON-DEFAULT32-NEXT:     Section: N_UNDEF
+# NON-DEFAULT32-NEXT:     Type: 0x0
+# NON-DEFAULT32-NEXT:     StorageClass: C_STAT (0x3)
+# NON-DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT32-NEXT:     Sect Auxiliary Entry For Stat {
+# NON-DEFAULT32-NEXT:       Index: 4
+# NON-DEFAULT32-NEXT:       SectionLength: 2
+# NON-DEFAULT32-NEXT:       NumberOfRelocEnt: 3
+# NON-DEFAULT32-NEXT:       NumberOfLineNum: 4
+# NON-DEFAULT32-NEXT:     }
+# NON-DEFAULT32-NEXT:   }
+# NON-DEFAULT32-NEXT:   Symbol {
+# NON-DEFAULT32-NEXT:     Index: 5
+# NON-DEFAULT32-NEXT:     Name: aux_sym
+# NON-DEFAULT32-NEXT:     Value (RelocatableAddress): 0x0
+# NON-DEFAULT32-NEXT:     Section: N_UNDEF
+# NON-DEFAULT32-NEXT:     Type: 0x0
+# NON-DEFAULT32-NEXT:     StorageClass: C_BLOCK (0x64)
+# NON-DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT32-NEXT:     Block Auxiliary Entry {
+# NON-DEFAULT32-NEXT:       Index: 6
+# NON-DEFAULT32-NEXT:       LineNumber (High 2 Bytes): 0x2
+# NON-DEFAULT32-NEXT:       LineNumber (Low 2 Bytes): 0x3
+# NON-DEFAULT32-NEXT:     }
+# NON-DEFAULT32-NEXT:   }
+# NON-DEFAULT32-NEXT:   Symbol {
+# NON-DEFAULT32-NEXT:     Index: 7
+# NON-DEFAULT32-NEXT:     Name: aux_file
+# NON-DEFAULT32-NEXT:     Value (SymbolTableIndex): 0x0
+# NON-DEFAULT32-NEXT:     Section: N_UNDEF
+# NON-DEFAULT32-NEXT:     Source Language ID: TB_C (0x0)
+# NON-DEFAULT32-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# NON-DEFAULT32-NEXT:     StorageClass: C_FILE (0x67)
+# NON-DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT32-NEXT:     File Auxiliary Entry {
+# NON-DEFAULT32-NEXT:       Index: 8
+# NON-DEFAULT32-NEXT:       Name: fname
+# NON-DEFAULT32-NEXT:       Type: XFT_CD (0x80)
+# NON-DEFAULT32-NEXT:     }
+# NON-DEFAULT32-NEXT:   }
+# NON-DEFAULT32-NEXT:   Symbol {
+# NON-DEFAULT32-NEXT:     Index: 9
+# NON-DEFAULT32-NEXT:     Name: aux_sect
+# NON-DEFAULT32-NEXT:     Value (OffsetInDWARF): 0x0
+# NON-DEFAULT32-NEXT:     Section: N_UNDEF
+# NON-DEFAULT32-NEXT:     Type: 0x0
+# NON-DEFAULT32-NEXT:     StorageClass: C_DWARF (0x70)
+# NON-DEFAULT32-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT32-NEXT:     Sect Auxiliary Entry For DWARF {
+# NON-DEFAULT32-NEXT:       Index: 10
+# NON-DEFAULT32-NEXT:       LengthOfSectionPortion: 0x2
+# NON-DEFAULT32-NEXT:       NumberOfRelocEntries: 3
+# NON-DEFAULT32-NEXT:     }
+# NON-DEFAULT32-NEXT:   }
+# NON-DEFAULT32-NEXT: ]
+
+## Case3: check the default behaviour in XCOFF64.
+# RUN: yaml2obj %s --docnum=2 -o %t3
+# RUN: llvm-readobj --syms %t3 | FileCheck %s --check-prefix=DEFAULT64
+
+# DEFAULT64:      Symbols [
+# DEFAULT64-NEXT:   Symbol {
+# DEFAULT64-NEXT:     Index: 0
+# DEFAULT64-NEXT:     Name: aux_except_fcn_csect
+# DEFAULT64-NEXT:     Value (RelocatableAddress): 0x0
+# DEFAULT64-NEXT:     Section: N_UNDEF
+# DEFAULT64-NEXT:     Type: 0x20
+# DEFAULT64-NEXT:     StorageClass: C_EXT (0x2)
+# DEFAULT64-NEXT:     NumberOfAuxEntries: 3
+# DEFAULT64-NEXT:     Exception Auxiliary Entry {
+# DEFAULT64-NEXT:       Index: 1
+# DEFAULT64-NEXT:       OffsetToExceptionTable: 0x0
+# DEFAULT64-NEXT:       SizeOfFunction: 0x0
+# DEFAULT64-NEXT:       SymbolIndexOfNextBeyond: 0
+# DEFAULT64-NEXT:       Auxiliary Type: AUX_EXCEPT (0xFF)
+# DEFAULT64-NEXT:     }
+# DEFAULT64-NEXT:     Function Auxiliary Entry {
+# DEFAULT64-NEXT:       Index: 2
+# DEFAULT64-NEXT:       SizeOfFunction: 0x0
+# DEFAULT64-NEXT:       PointerToLineNum: 0x0
+# DEFAULT64-NEXT:       SymbolIndexOfNextBeyond: 0
+# DEFAULT64-NEXT:       Auxiliary Type: AUX_FCN (0xFE)
+# DEFAULT64-NEXT:     }
+# DEFAULT64-NEXT:     CSECT Auxiliary Entry {
+# DEFAULT64-NEXT:       Index: 3
+# DEFAULT64-NEXT:       SectionLen: 0
+# DEFAULT64-NEXT:       ParameterHashIndex: 0x0
+# DEFAULT64-NEXT:       TypeChkSectNum: 0x0
+# DEFAULT64-NEXT:       SymbolAlignmentLog2: 0
+# DEFAULT64-NEXT:       SymbolType: XTY_ER (0x0)
+# DEFAULT64-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# DEFAULT64-NEXT:       Auxiliary Type: AUX_CSECT (0xFB)
+# DEFAULT64-NEXT:     }
+# DEFAULT64-NEXT:   }
+# DEFAULT64-NEXT:   Symbol {
+# DEFAULT64-NEXT:     Index: 4
+# DEFAULT64-NEXT:     Name: aux_sym
+# DEFAULT64-NEXT:     Value (RelocatableAddress): 0x0
+# DEFAULT64-NEXT:     Section: N_UNDEF
+# DEFAULT64-NEXT:     Type: 0x0
+# DEFAULT64-NEXT:     StorageClass: C_BLOCK (0x64)
+# DEFAULT64-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT64-NEXT:     Block Auxiliary Entry {
+# DEFAULT64-NEXT:       Index: 5
+# DEFAULT64-NEXT:       LineNumber: 0x0
+# DEFAULT64-NEXT:       Auxiliary Type: AUX_SYM (0xFD)
+# DEFAULT64-NEXT:     }
+# DEFAULT64-NEXT:   }
+# DEFAULT64-NEXT:   Symbol {
+# DEFAULT64-NEXT:     Index: 6
+# DEFAULT64-NEXT:     Name: aux_file
+# DEFAULT64-NEXT:     Value (SymbolTableIndex): 0x0
+# DEFAULT64-NEXT:     Section: N_UNDEF
+# DEFAULT64-NEXT:     Source Language ID: TB_C (0x0)
+# DEFAULT64-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# DEFAULT64-NEXT:     StorageClass: C_FILE (0x67)
+# DEFAULT64-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT64-NEXT:     File Auxiliary Entry {
+# DEFAULT64-NEXT:       Index: 7
+# DEFAULT64-NEXT:       Name: 
+# DEFAULT64-NEXT:       Type: XFT_FN (0x0)
+# DEFAULT64-NEXT:       Auxiliary Type: AUX_FILE (0xFC)
+# DEFAULT64-NEXT:     }
+# DEFAULT64-NEXT:   }
+# DEFAULT64-NEXT:   Symbol {
+# DEFAULT64-NEXT:     Index: 8
+# DEFAULT64-NEXT:     Name: aux_sect
+# DEFAULT64-NEXT:     Value (OffsetInDWARF): 0x0
+# DEFAULT64-NEXT:     Section: N_UNDEF
+# DEFAULT64-NEXT:     Type: 0x0
+# DEFAULT64-NEXT:     StorageClass: C_DWARF (0x70)
+# DEFAULT64-NEXT:     NumberOfAuxEntries: 1
+# DEFAULT64-NEXT:     Sect Auxiliary Entry For DWARF {
+# DEFAULT64-NEXT:       Index: 9
+# DEFAULT64-NEXT:       LengthOfSectionPortion: 0x0
+# DEFAULT64-NEXT:       NumberOfRelocEntries: 0
+# DEFAULT64-NEXT:       Auxiliary Type: AUX_SECT (0xFA)
+# DEFAULT64-NEXT:     }
+# DEFAULT64-NEXT:   }
+# DEFAULT64-NEXT: ]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Symbols:
+  - Name:               aux_except_fcn_csect
+    StorageClass:       C_EXT
+    Type:               0x20
+    AuxEntries:
+      - Type:                 AUX_EXCEPT
+        OffsetToExceptionTbl: [[OFFTOEXP=<none>]]
+        SizeOfFunction:       [[SIZEOFFUN=<none>]]
+        SymIdxOfNextBeyond:   [[SYMIDXOFNEXT=<none>]]
+      - Type:               AUX_FCN
+        SizeOfFunction:     [[SIZEOFFUN2=<none>]]
+        SymIdxOfNextBeyond: [[SYMIDXOFNEXT2=<none>]]
+        PtrToLineNum:       [[PTRTOLINE=<none>]]
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     [[HASHIDX=<none>]]
+        TypeChkSectNum:         [[TYPECHKNUM=<none>]]
+        SymbolAlignmentAndType: [[SYMALIGN=<none>]]
+        StorageMappingClass:    [[STORMAPCLASS=<none>]]
+        SectionOrLengthLo:      [[SECTLENLO=<none>]]
+        SectionOrLengthHi:      [[SECTLENHI=<none>]]
+  - Name:               aux_sym
+    StorageClass:       C_BLOCK
+    AuxEntries:
+      - Type:    AUX_SYM
+        LineNum: [[LINENUM=<none>]]
+  - Name:               aux_file
+    StorageClass:       C_FILE
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: [[FILENAME=<none>]]
+        FileStringType:   [[FILETYPE=<none>]]
+  - Name:               aux_sect
+    StorageClass:       C_DWARF
+    AuxEntries:
+      - Type:                   AUX_SECT
+        LengthOfSectionPortion: [[LENOFSEC=<none>]]
+        NumberOfRelocEnt:       [[NUMOFRELOC=<none>]]
+
+## Case4: check the non-default behaviour in XCOFF64.
+# RUN: yaml2obj %s --docnum=2 -o %t4 -DOFFTOEXP=2 -DSIZEOFFUN=3 \
+# RUN:   -DSYMIDXOFNEXT=4 -DSIZEOFFUN2=2 -DSYMIDXOFNEXT2=3 -DPTRTOLINE=4 \
+# RUN:   -DHASHIDX=2 -DTYPECHKNUM=3 -DSYMALIGN=4 -DSTORMAPCLASS=XMC_RO \
+# RUN:   -DSECTLENLO=5 -DSECTLENHI=1 -DLINENUM=2 -DFILENAME='fname' \
+# RUN:   -DFILETYPE=XFT_CD -DLENOFSEC=2 -DNUMOFRELOC=3
+# RUN: llvm-readobj --syms %t4 | FileCheck %s --check-prefix=NON-DEFAULT64
+
+# NON-DEFAULT64:      Symbols [
+# NON-DEFAULT64-NEXT:   Symbol {
+# NON-DEFAULT64-NEXT:     Index: 0
+# NON-DEFAULT64-NEXT:     Name: aux_except_fcn_csect
+# NON-DEFAULT64-NEXT:     Value (RelocatableAddress): 0x0
+# NON-DEFAULT64-NEXT:     Section: N_UNDEF
+# NON-DEFAULT64-NEXT:     Type: 0x20
+# NON-DEFAULT64-NEXT:     StorageClass: C_EXT (0x2)
+# NON-DEFAULT64-NEXT:     NumberOfAuxEntries: 3
+# NON-DEFAULT64-NEXT:     Exception Auxiliary Entry {
+# NON-DEFAULT64-NEXT:       Index: 1
+# NON-DEFAULT64-NEXT:       OffsetToExceptionTable: 0x2
+# NON-DEFAULT64-NEXT:       SizeOfFunction: 0x3
+# NON-DEFAULT64-NEXT:       SymbolIndexOfNextBeyond: 4
+# NON-DEFAULT64-NEXT:       Auxiliary Type: AUX_EXCEPT (0xFF)
+# NON-DEFAULT64-NEXT:     }
+# NON-DEFAULT64-NEXT:     Function Auxiliary Entry {
+# NON-DEFAULT64-NEXT:       Index: 2
+# NON-DEFAULT64-NEXT:       SizeOfFunction: 0x2
+# NON-DEFAULT64-NEXT:       PointerToLineNum: 0x4
+# NON-DEFAULT64-NEXT:       SymbolIndexOfNextBeyond: 3
+# NON-DEFAULT64-NEXT:       Auxiliary Type: AUX_FCN (0xFE)
+# NON-DEFAULT64-NEXT:     }
+# NON-DEFAULT64-NEXT:     CSECT Auxiliary Entry {
+# NON-DEFAULT64-NEXT:       Index: 3
+# NON-DEFAULT64-NEXT:       SectionLen: 4294967301
+# NON-DEFAULT64-NEXT:       ParameterHashIndex: 0x2
+# NON-DEFAULT64-NEXT:       TypeChkSectNum: 0x3
+# NON-DEFAULT64-NEXT:       SymbolAlignmentLog2: 0
+# NON-DEFAULT64-NEXT:       SymbolType: 0x4
+# NON-DEFAULT64-NEXT:       StorageMappingClass: XMC_RO (0x1)
+# NON-DEFAULT64-NEXT:       Auxiliary Type: AUX_CSECT (0xFB)
+# NON-DEFAULT64-NEXT:     }
+# NON-DEFAULT64-NEXT:   }
+# NON-DEFAULT64-NEXT:   Symbol {
+# NON-DEFAULT64-NEXT:     Index: 4
+# NON-DEFAULT64-NEXT:     Name: aux_sym
+# NON-DEFAULT64-NEXT:     Value (RelocatableAddress): 0x0
+# NON-DEFAULT64-NEXT:     Section: N_UNDEF
+# NON-DEFAULT64-NEXT:     Type: 0x0
+# NON-DEFAULT64-NEXT:     StorageClass: C_BLOCK (0x64)
+# NON-DEFAULT64-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT64-NEXT:     Block Auxiliary Entry {
+# NON-DEFAULT64-NEXT:       Index: 5
+# NON-DEFAULT64-NEXT:       LineNumber: 0x2
+# NON-DEFAULT64-NEXT:       Auxiliary Type: AUX_SYM (0xFD)
+# NON-DEFAULT64-NEXT:     }
+# NON-DEFAULT64-NEXT:   }
+# NON-DEFAULT64-NEXT:   Symbol {
+# NON-DEFAULT64-NEXT:     Index: 6
+# NON-DEFAULT64-NEXT:     Name: aux_file
+# NON-DEFAULT64-NEXT:     Value (SymbolTableIndex): 0x0
+# NON-DEFAULT64-NEXT:     Section: N_UNDEF
+# NON-DEFAULT64-NEXT:     Source Language ID: TB_C (0x0)
+# NON-DEFAULT64-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# NON-DEFAULT64-NEXT:     StorageClass: C_FILE (0x67)
+# NON-DEFAULT64-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT64-NEXT:     File Auxiliary Entry {
+# NON-DEFAULT64-NEXT:       Index: 7
+# NON-DEFAULT64-NEXT:       Name: fname
+# NON-DEFAULT64-NEXT:       Type: XFT_CD (0x80)
+# NON-DEFAULT64-NEXT:       Auxiliary Type: AUX_FILE (0xFC)
+# NON-DEFAULT64-NEXT:     }
+# NON-DEFAULT64-NEXT:   }
+# NON-DEFAULT64-NEXT:   Symbol {
+# NON-DEFAULT64-NEXT:     Index: 8
+# NON-DEFAULT64-NEXT:     Name: aux_sect
+# NON-DEFAULT64-NEXT:     Value (OffsetInDWARF): 0x0
+# NON-DEFAULT64-NEXT:     Section: N_UNDEF
+# NON-DEFAULT64-NEXT:     Type: 0x0
+# NON-DEFAULT64-NEXT:     StorageClass: C_DWARF (0x70)
+# NON-DEFAULT64-NEXT:     NumberOfAuxEntries: 1
+# NON-DEFAULT64-NEXT:     Sect Auxiliary Entry For DWARF {
+# NON-DEFAULT64-NEXT:       Index: 9
+# NON-DEFAULT64-NEXT:       LengthOfSectionPortion: 0x2
+# NON-DEFAULT64-NEXT:       NumberOfRelocEntries: 3
+# NON-DEFAULT64-NEXT:       Auxiliary Type: AUX_SECT (0xFA)
+# NON-DEFAULT64-NEXT:     }
+# NON-DEFAULT64-NEXT:   }
+# NON-DEFAULT64-NEXT: ]
+
+## Case5: a file name longer than 8 bytes in the AUX_FILE symbol
+##        is stored in the string table.
+# RUN: yaml2obj %s --docnum=3 -o %t5
+# RUN: llvm-readobj --syms --string-table %t5 | FileCheck %s \
+# RUN:   --check-prefix=FILENAME
+
+# FILENAME:      Symbols [
+# FILENAME-NEXT:   Symbol {
+# FILENAME-NEXT:     Index: 0
+# FILENAME-NEXT:     Name: aux_file
+# FILENAME-NEXT:     Value (SymbolTableIndex): 0x0
+# FILENAME-NEXT:     Section: N_UNDEF
+# FILENAME-NEXT:     Source Language ID: TB_C (0x0)
+# FILENAME-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# FILENAME-NEXT:     StorageClass: C_FILE (0x67)
+# FILENAME-NEXT:     NumberOfAuxEntries: 1
+# FILENAME-NEXT:     File Auxiliary Entry {
+# FILENAME-NEXT:       Index: 1
+# FILENAME-NEXT:       Name: fileNameInStringTable
+# FILENAME-NEXT:       Type: XFT_CD (0x80)
+# FILENAME-NEXT:     }
+# FILENAME-NEXT:   }
+# FILENAME-NEXT: ]
+# FILENAME-NEXT: StringTable {
+# FILENAME-NEXT:   Length: 26
+# FILENAME-NEXT:   [     4]   fileNameInStringTable  
+# FILENAME-NEXT: }
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               aux_file
+    StorageClass:       C_FILE
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:             AUX_FILE
+        FileNameOrString: fileNameInStringTable
+        FileStringType:   XFT_CD
+
+## Case6: show that yaml2obj reports an error when trying to write
+##        the AUX_STAT symbol for XCOFF64.
+# RUN: not yaml2obj %s --docnum=4 -o %t6 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=STAT64
+
+# STAT64: error: an auxiliary symbol of type AUX_STAT cannot be defined in XCOFF64
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Symbols:
+  - StorageClass:       C_STAT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_STAT
+
+## Case7: show that yaml2obj reports an error when trying to write
+##        the AUX_EXCEPT symbol for XCOFF32.
+# RUN: not yaml2obj %s --docnum=5 -o %t7 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=EXCEPT32
+
+# EXCEPT32: error: an auxiliary symbol of type AUX_EXCEPT cannot be defined in XCOFF32
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - StorageClass:       C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_EXCEPT
+
+## Case8: show that yaml2obj reports an error when the specified value
+##        of NumberOfAuxEntries is less than the actual number.
+# RUN: not yaml2obj %s --docnum=6 -o %t8 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=AUXCOUNT
+
+# AUXCOUNT: error: specified NumberOfAuxEntries 1 is less than the actual number of auxiliary entries 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - StorageClass:       C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_FCN
+      - Type: AUX_CSECT
+
+## Case9: pad with zeros when the specified value of NumberOfAuxEntries
+##        is greater than the actual number.
+# RUN: yaml2obj %s --docnum=7 -o %t9
+# RUN: llvm-readobj --syms %t9 | FileCheck %s --check-prefix=AUXNUM
+
+# AUXNUM:      Symbols [
+# AUXNUM-NEXT:   Symbol {
+# AUXNUM-NEXT:     Index: 0
+# AUXNUM-NEXT:     Name: 
+# AUXNUM-NEXT:     Value (SymbolTableIndex): 0x0
+# AUXNUM-NEXT:     Section: N_UNDEF
+# AUXNUM-NEXT:     Source Language ID: TB_C (0x0)
+# AUXNUM-NEXT:     CPU Version ID: TCPU_INVALID (0x0)
+# AUXNUM-NEXT:     StorageClass: C_FILE (0x67)
+# AUXNUM-NEXT:     NumberOfAuxEntries: 2
+# AUXNUM-NEXT:     File Auxiliary Entry {
+# AUXNUM-NEXT:       Index: 1
+# AUXNUM-NEXT:       Name: foo
+# AUXNUM-NEXT:       Type: XFT_FN (0x0)
+# AUXNUM-NEXT:     }
+# AUXNUM-NEXT:     File Auxiliary Entry {
+# AUXNUM-NEXT:       Index: 2
+# AUXNUM-NEXT:       Name: 
+# AUXNUM-NEXT:       Type: XFT_FN (0x0)
+# AUXNUM-NEXT:     }
+# AUXNUM-NEXT:   }
+# AUXNUM-NEXT: ]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - StorageClass:       C_FILE
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_FILE
+        FileNameOrString: foo
+
+## Case10: Specify a SymbolType outside the range of field definition.
+# RUN: not yaml2obj %s -DSYMTYPE=8 --docnum=8 -o %t10 2>&1 | \ 
+# RUN:   FileCheck %s --check-prefix BADSYMTYPE
+
+# BADSYMTYPE: error: symbol type must be less than 8
+
+## Case11: Specify a SymbolType outside the range of its enumeration.
+# RUN: yaml2obj %s -DSYMTYPE=7 --docnum=8 -o %t11
+# RUN: llvm-readobj --syms %t11 | FileCheck %s --check-prefix=STYPE
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               aux_fcn_csect
+    StorageClass:       C_EXT
+    Type:               0x20
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolAlignment: 4
+        SymbolType: [[SYMTYPE=<none>]]
+
+# STYPE:      SymbolAlignmentLog2: 4
+# STYPE-NEXT:   SymbolType: 0x7

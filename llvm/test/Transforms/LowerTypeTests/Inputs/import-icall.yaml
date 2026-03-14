@@ -1,0 +1,20 @@
+---
+TypeIdMap:
+  typeid1:
+    TTRes:
+      Kind:            AllOnes
+      SizeM1BitWidth:  7
+  typeid2:
+    TTRes:
+      Kind:            Single
+      SizeM1BitWidth:  0
+WithGlobalValueDeadStripping: false
+CfiFunctionDefs:
+  - local_a
+  - local_b
+  - does_not_exist
+CfiFunctionDecls:
+  - external
+  - external_weak
+  - local_decl
+...

@@ -1,0 +1,59 @@
+# RUN: llc -mtriple=arm-eabi -run-pass=arm-cp-islands %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.2a-arm-none-eabi"
+
+  define hidden i32 @main() {
+  entry:
+    %P5 = alloca half, align 2
+    store half 0xH3FE0, ptr %P5, align 2
+    %0 = load half, ptr %P5, align 2
+    call void @z_bar(half %0)
+    ret i32 0
+  }
+
+  declare dso_local void @z_bar(half)
+
+...
+---
+name:            main
+alignment:       2
+tracksRegLiveness: true
+frameInfo:
+  stackSize:       16
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  localFrameSize:  2
+stack:
+  - { id: 0, name: P5, offset: -10, size: 2, alignment: 2, local-offset: -2 }
+  - { id: 1, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '$lr',
+      callee-saved-restored: false }
+  - { id: 2, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '$r7' }
+constants:
+  - id:              0
+    value:           half 0xH3FE0
+    alignment:       2
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $r7, $lr
+
+    frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    $sp = frame-setup tSUBspi $sp, 2, 14 /* CC::al */, $noreg
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    renamable $s0 = VLDRH %const.0, 0, 14, $noreg :: (load (s16) from constant-pool)
+    VSTRH killed renamable $s0, $sp, 3, 14, $noreg :: (store (s16) into %ir.P5)
+    renamable $r0 = t2LDRHi12 $sp, 6, 14 /* CC::al */, $noreg :: (dereferenceable load (s16) from %ir.P5)
+    tBL 14 /* CC::al */, $noreg, @z_bar, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp
+    renamable $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+    $sp = frame-destroy tADDspi $sp, 2, 14 /* CC::al */, $noreg
+    frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
+
+  ; CHECK: name:            main
+  ; CHECK-NEXT: alignment:       4
+...

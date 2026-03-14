@@ -1,0 +1,93 @@
+RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
+RUN: dsymutil -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
+RUN: dsymutil -verbose -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 2>&1 | FileCheck %s --check-prefix=CHECK-ARCHIVE
+RUN: dsymutil -dump-debug-map %p/Inputs/basic.macho.x86_64 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NOT-FOUND
+RUN: not dsymutil -dump-debug-map %p/Inputs/inexistant 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NO-EXECUTABLE
+
+RUN: dsymutil --linker parallel -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 | FileCheck %s
+RUN: dsymutil --linker parallel -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-lto.macho.x86_64 | FileCheck %s --check-prefix=CHECK-LTO
+RUN: dsymutil --linker parallel -verbose -dump-debug-map -oso-prepend-path=%p %p/Inputs/basic-archive.macho.x86_64 2>&1 | FileCheck %s --check-prefix=CHECK-ARCHIVE
+RUN: dsymutil --linker parallel -dump-debug-map %p/Inputs/basic.macho.x86_64 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NOT-FOUND
+RUN: not dsymutil --linker parallel -dump-debug-map %p/Inputs/inexistant 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=NO-EXECUTABLE
+
+
+
+Check that We can parse the debug map of the basic executable.
+
+CHECK-NOT: error
+CHECK: ---
+CHECK: triple: 'x86_64-apple-darwin'
+CHECK: binary-path:{{.*}}/Inputs/basic.macho.x86_64
+CHECK: filename:{{.*}}/Inputs/basic1.macho.x86_64.o
+CHECK-DAG: sym: _main, objAddr: 0x0, binAddr: 0x100000EA0, size: 0x24
+CHECK: filename{{.*}}/Inputs/basic2.macho.x86_64.o
+CHECK-DAG: 	sym: _baz, objAddr: 0x310, binAddr: 0x100001000, size: 0x0
+CHECK-DAG: 	sym: _foo, objAddr: 0x20, binAddr: 0x100000ED0, size: 0x50
+CHECK-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F20, size: 0x17
+CHECK-DAG: 	sym: _private_int, objAddr: 0x560, binAddr: 0x100001008, size: 0x0
+CHECK: filename{{.*}}/Inputs/basic3.macho.x86_64.o
+CHECK-DAG: 	sym: _bar, objAddr: 0x20, binAddr: 0x100000F40, size: 0x50
+CHECK-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F90, size: 0x19
+CHECK-DAG: 	sym: _val, binAddr: 0x100001004, size: 0x0
+CHECK: ...
+
+
+Check that we can parse the debug-map of the basic-lto executable
+
+CHECK-LTO-NOT: error
+CHECK-LTO: ---
+CHECK-LTO: triple: 'x86_64-apple-darwin'
+CHECK-LTO: binary-path:{{.*}}/Inputs/basic-lto.macho.x86_64
+CHECK-LTO: /Inputs/basic-lto.macho.x86_64.o
+CHECK-LTO-DAG: 	sym: _bar, objAddr: 0x50, binAddr: 0x100000F90, size: 0x24
+CHECK-LTO-DAG: 	sym: _baz, objAddr: 0x658, binAddr: 0x100001000, size: 0x0
+CHECK-LTO-DAG: 	sym: _foo, objAddr: 0x10, binAddr: 0x100000F50, size: 0x40
+CHECK-LTO-DAG: 	sym: _main, objAddr: 0x0, binAddr: 0x100000F40, size: 0x10
+CHECK-LTO-DAG: 	sym: _private_int, objAddr: 0x8E8, binAddr: 0x100001008, size: 0x0
+CHECK-LTO-DAG: 	sym: _val, objAddr: 0x8EC, binAddr: 0x100001004, size: 0x0
+CHECK-LTO: ...
+
+Check thet we correctly handle debug maps with archive members (including only
+opening the archive once if mulitple of its members are used).
+
+CHECK-ARCHIVE:      trying to open {{.*}}basic-archive.macho.x86_64'
+CHECK-ARCHIVE-NEXT: 	loaded object.
+CHECK-ARCHIVE-NEXT: trying to open {{.*}}/Inputs/basic1.macho.x86_64.o'
+CHECK-ARCHIVE: 	loaded object.
+CHECK-ARCHIVE-NEXT: trying to open {{.*}}/libbasic.a(basic2.macho.x86_64.o)'
+CHECK-ARCHIVE-NEXT: 	loaded archive {{.*}}/libbasic.a'
+CHECK-ARCHIVE-NEXT: 	found member in archive.
+CHECK-ARCHIVE-NEXT: trying to open {{.*}}/libbasic.a(basic3.macho.x86_64.o)'
+CHECK-ARCHIVE-NEXT: 	found member in archive.
+CHECK-ARCHIVE: ---
+CHECK-ARCHIVE: triple: 'x86_64-apple-darwin'
+CHECK-ARCHIVE: binary-path:{{.*}}/Inputs/basic-archive.macho.x86_64
+CHECK-ARCHIVE: /Inputs/basic1.macho.x86_64.o
+CHECK-ARCHIVE-DAG: 	sym: _main, objAddr: 0x0, binAddr: 0x100000EA0, size: 0x24
+CHECK-ARCHIVE: /Inputs/./libbasic.a(basic2.macho.x86_64.o)
+CHECK-ARCHIVE-DAG: 	sym: _baz, objAddr: 0x310, binAddr: 0x100001000, size: 0x0
+CHECK-ARCHIVE-DAG: 	sym: _foo, objAddr: 0x20, binAddr: 0x100000ED0, size: 0x50
+CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F20, size: 0x17
+CHECK-ARCHIVE-DAG: 	sym: _private_int, objAddr: 0x560, binAddr: 0x100001004, size: 0x0
+CHECK-ARCHIVE: /Inputs/./libbasic.a(basic3.macho.x86_64.o)
+CHECK-ARCHIVE-DAG: 	sym: _bar, objAddr: 0x20, binAddr: 0x100000F40, size: 0x50
+CHECK-ARCHIVE-DAG: 	sym: _inc, objAddr: 0x70, binAddr: 0x100000F90, size: 0x19
+CHECK-ARCHIVE-DAG: 	sym: _val, binAddr: 0x100001008, size: 0x0
+CHECK-ARCHIVE: ...
+
+Check that we warn about missing object files (this presumes that the files aren't
+present in the machine's /Inputs/ folder, which should be a pretty safe bet).
+
+warning: (x86_64) /Inputs/basic1.macho.x86_64.o unable to open object file:
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic1.macho.x86_64.o unable to open object file: [[MSG]]
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic2.macho.x86_64.o unable to open object file: [[MSG]]
+NOT-FOUND: warning: (x86_64) {{.*}}/Inputs/basic3.macho.x86_64.o unable to open object file: [[MSG]]
+NOT-FOUND: ---
+NOT-FOUND-NEXT: triple: 'x86_64-apple-darwin'
+NOT-FOUND-NEXT: binary-path:{{.*}}/Inputs/basic.macho.x86_64
+NOT-FOUND-NEXT: ...
+
+Check that we correctly error out on invalid executable.
+
+NO-EXECUTABLE: cannot parse{{.*}}/inexistant': [[MSG]]
+NO-EXECUTABLE-NOT: ---

@@ -1,0 +1,22 @@
+# RUN: not --crash llc -mtriple=amdgcn -run-pass machineverifier %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn --passes='machine-function(verify)' %s -o - 2>&1 | FileCheck %s
+
+# CHECK: *** Bad machine code: SOP2/SOPC instruction requires too many immediate constants
+# CHECK: - instruction: %0:sreg_32_xm0 = S_ADD_I32
+
+# CHECK: *** Bad machine code: SOP2/SOPC instruction requires too many immediate constants
+# CHECK: - instruction: S_CMP_EQ_U32
+
+# CHECK-NOT: Bad machine code
+
+---
+name: sop2_sopc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:sreg_32_xm0 = S_ADD_I32 2011, -113, implicit-def $scc
+    S_CMP_EQ_U32 2011, -113, implicit-def $scc
+
+    %1:sreg_32_xm0 = S_SUB_I32 2011, 10, implicit-def $scc
+    S_CMP_LG_U32 -5, 2011, implicit-def $scc
+...

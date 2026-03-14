@@ -1,0 +1,140 @@
+# REQUIRES: x86
+# RUN: rm -rf %t; split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/obj.o %t/obj.s
+# RUN: yaml2obj %t/dylib.yaml -o %t/libdylib.dylib
+# RUN: %lld -platform_version macos 12.0.0 12.0.0 -lSystem %t/obj.o %t/libdylib.dylib -o /dev/null
+
+#--- obj.s
+  .globl _main
+_main:
+  call _foo
+
+#--- dylib.yaml
+## This yaml is from a dylib produced by ld64
+##   echo ".global _foo\n_foo" > dylib.s
+##   clang -target=x86_64-apple-macos12 -dynamiclib -isysroot Inputs/MacOSX.sdk dylib.s -o libdylib.dylib
+##   obj2yaml --raw-segment=data libdylib.dylib
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x6
+  ncmds:           13
+  sizeofcmds:      568
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x4000
+        size:            0
+        offset:          0x4000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        96
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         libdylib.dylib
+    ZeroPadBytes:    3
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         16384
+    datasize:        48
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         16432
+    datasize:        16
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16456
+    nsyms:           1
+    stroff:          16472
+    strsize:         8
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            52409B91-DF59-346A-A63F-D4E6FFDC3E04
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           786432
+    sdk:             851968
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         53674242
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 65793
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.dylib'
+    ZeroPadBytes:    8
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16448
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16456
+    datasize:        0
+__LINKEDIT:      00000000200000002C0000002C000000000000000100000000000000000000000200000000000000000000000000000000015F666F6F000804008080010000000000000000000000020000000F010000004000000000000020005F666F6F0000
+...

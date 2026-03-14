@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=spirv64-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
+
+// This is the sample from the C++ Itanium ABI, p2.6.2.
+namespace Test {
+  class A1 { int i; };
+  class A2 { int i; virtual void f(); };
+  class V1 : public A1, public A2 { int i; };
+  class B1 { int i; };
+  class B2 { int i; };
+  class V2 : public B1, public B2, public virtual V1 { int i; };
+  class V3 { virtual void g(); };
+  class C1 : public virtual V1 { int i; };
+  class C2 : public virtual V3, virtual V2 { int i; };
+  class X1 { int i; };
+  class C3 : public X1 { int i; };
+  class D : public C1, public C2, public C3 { int i;  };
+
+  D d;
+}
+
+// CHECK: call void @_ZN4Test2V2C2Ev(ptr noundef nonnull align 8 dereferenceable(20) %2, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 88))
+// CHECK: call void @_ZN4Test2C1C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this1, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 8))
+// CHECK: call void @_ZN4Test2C2C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %3, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 24))
+// CHECK: define linkonce_odr void @_ZN4Test2V2C2Ev(ptr noundef nonnull align 8 dereferenceable(20) %this, ptr addrspace(1) noundef %vtt)
+// CHECK: define linkonce_odr void @_ZN4Test2C1C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this, ptr addrspace(1) noundef %vtt)
+// CHECK: define linkonce_odr void @_ZN4Test2C2C2Ev(ptr noundef nonnull align 8 dereferenceable(12) %this, ptr addrspace(1) noundef %vtt)
+// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2V2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(20) %2, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 88))
+// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2C1C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this1, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 8))
+// WITH-NONZERO-DEFAULT-AS: call {{.*}} void @_ZN4Test2C2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %3, ptr addrspace(1) noundef getelementptr inbounds nuw (i8, ptr addrspace(1) @_ZTTN4Test1DE, i64 24))
+// WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} void @_ZN4Test2V2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(20) %this, ptr addrspace(1) noundef %vtt)
+// WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} void @_ZN4Test2C1C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this, ptr addrspace(1) noundef %vtt)
+// WITH-NONZERO-DEFAULT-AS: define linkonce_odr {{.*}} void @_ZN4Test2C2C2Ev(ptr addrspace(4) noundef align 8 dereferenceable_or_null(12) %this, ptr addrspace(1) noundef %vtt)

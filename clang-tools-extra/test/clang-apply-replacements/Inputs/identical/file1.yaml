@@ -1,0 +1,15 @@
+---
+MainSourceFile:     identical.cpp
+Diagnostics:
+  - DiagnosticName: test-identical-insertion
+    DiagnosticMessage:
+      Message: Fix
+      FilePath: $(path)/identical.cpp
+      FileOffset: 12
+      Replacements:
+        - FilePath:        $(path)/identical.cpp
+          Offset:          12
+          Length:          0
+          ReplacementText: '0'
+...
+

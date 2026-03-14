@@ -1,0 +1,486 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+IsLittleEndian:  false
+FileHeader:      
+  magic:           0xFEEDFACE
+  cputype:         0x00000012
+  cpusubtype:      0x00000000
+  filetype:        0x00000001
+  ncmds:           4
+  sizeofcmds:      1264
+  flags:           0x00002000
+LoadCommands:    
+  - cmd:             LC_SEGMENT
+    cmdsize:         1144
+    segname:         ''
+    vmaddr:          0
+    vmsize:          1122
+    fileoff:         1292
+    filesize:        1122
+    maxprot:         7
+    initprot:        7
+    nsects:          16
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            188
+        offset:          0x0000050C
+        align:           4
+        reloff:          0x00000970
+        nreloc:          9
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __textcoal_nt
+        segname:         __TEXT
+        addr:            0x00000000000000BC
+        size:            0
+        offset:          0x000005C8
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x8000000B
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __picsymbolstub1
+        segname:         __TEXT
+        addr:            0x00000000000000BC
+        size:            0
+        offset:          0x000005C8
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000008
+        reserved1:       0x00000000
+        reserved2:       0x00000020
+        reserved3:       0x00000000
+      - sectname:        __cstring
+        segname:         __TEXT
+        addr:            0x00000000000000BC
+        size:            48
+        offset:          0x000005C8
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000002
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x00000000000000EC
+        size:            182
+        offset:          0x000005F8
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_loc
+        segname:         __DWARF
+        addr:            0x00000000000001A2
+        size:            0
+        offset:          0x000006AE
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0x00000000000001A2
+        size:            104
+        offset:          0x000006AE
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x000000000000020A
+        size:            141
+        offset:          0x00000716
+        align:           0
+        reloff:          0x000009B8
+        nreloc:          2
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_ranges
+        segname:         __DWARF
+        addr:            0x0000000000000297
+        size:            0
+        offset:          0x000007A3
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_macinfo
+        segname:         __DWARF
+        addr:            0x0000000000000297
+        size:            1
+        offset:          0x000007A3
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x0000000000000298
+        size:            60
+        offset:          0x000007A4
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x00000000000002D4
+        size:            36
+        offset:          0x000007E0
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x00000000000002F8
+        size:            36
+        offset:          0x00000804
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x000000000000031C
+        size:            133
+        offset:          0x00000828
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_frame
+        segname:         __DWARF
+        addr:            0x00000000000003A4
+        size:            48
+        offset:          0x000008B0
+        align:           2
+        reloff:          0x000009C8
+        nreloc:          1
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x00000000000003D4
+        size:            142
+        offset:          0x000008E0
+        align:           0
+        reloff:          0x000009D0
+        nreloc:          1
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_VERSION_MIN_MACOSX
+    cmdsize:         16
+    version:         658432
+    sdk:             0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          2520
+    nsyms:           2
+    stroff:          2544
+    strsize:         36
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:    
+  NameList:        
+    - n_strx:          24
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x01
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+  StringTable:     
+    - ''
+    - _compilerrt_abort_impl
+    - ___absvdi2
+    - ''
+DWARF:           
+  debug_str:       
+    - 'clang version 4.0.0 (trunk 290181) (llvm/trunk 290209)'
+    - ../compiler-rt/lib/builtins/absvdi2.c
+    - /Users/cbieneman/dev/open-source/llvm-build-rel
+    - int
+    - di_int
+    - long long int
+    - __absvdi2
+    - a
+    - N
+    - t
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x00000003
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x00000004
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_prototyped
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x00000005
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000006
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000007
+          Tag:             DW_TAG_const_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+...
+
+#CHECK: DWARF:           
+#CHECK:   debug_str:       
+#CHECK:     - 'clang version 4.0.0 (trunk 290181) (llvm/trunk 290209)'
+#CHECK:     - '../compiler-rt/lib/builtins/absvdi2.c'
+#CHECK:     - '/Users/cbieneman/dev/open-source/llvm-build-rel'
+#CHECK:     - int
+#CHECK:     - di_int
+#CHECK:     - long long int
+#CHECK:     - __absvdi2
+#CHECK:     - a
+#CHECK:     - N
+#CHECK:     - t
+#CHECK:   debug_abbrev:    
+#CHECK:     - Code:            0x1
+#CHECK:       Tag:             DW_TAG_compile_unit
+#CHECK:       Children:        DW_CHILDREN_yes
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_producer
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_language
+#CHECK:           Form:            DW_FORM_data2
+#CHECK:         - Attribute:       DW_AT_name
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_stmt_list
+#CHECK:           Form:            DW_FORM_sec_offset
+#CHECK:         - Attribute:       DW_AT_comp_dir
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_low_pc
+#CHECK:           Form:            DW_FORM_addr
+#CHECK:         - Attribute:       DW_AT_high_pc
+#CHECK:           Form:            DW_FORM_data4
+#CHECK:     - Code:            0x2
+#CHECK:       Tag:             DW_TAG_base_type
+#CHECK:       Children:        DW_CHILDREN_no
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_name
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_encoding
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_byte_size
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:     - Code:            0x3
+#CHECK:       Tag:             DW_TAG_typedef
+#CHECK:       Children:        DW_CHILDREN_no
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_type
+#CHECK:           Form:            DW_FORM_ref4
+#CHECK:         - Attribute:       DW_AT_name
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_decl_file
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_decl_line
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:     - Code:            0x4
+#CHECK:       Tag:             DW_TAG_subprogram
+#CHECK:       Children:        DW_CHILDREN_yes
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_low_pc
+#CHECK:           Form:            DW_FORM_addr
+#CHECK:         - Attribute:       DW_AT_high_pc
+#CHECK:           Form:            DW_FORM_data4
+#CHECK:         - Attribute:       DW_AT_frame_base
+#CHECK:           Form:            DW_FORM_exprloc
+#CHECK:         - Attribute:       DW_AT_name
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_decl_file
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_decl_line
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_prototyped
+#CHECK:           Form:            DW_FORM_flag_present
+#CHECK:         - Attribute:       DW_AT_type
+#CHECK:           Form:            DW_FORM_ref4
+#CHECK:         - Attribute:       DW_AT_external
+#CHECK:           Form:            DW_FORM_flag_present
+#CHECK:     - Code:            0x5
+#CHECK:       Tag:             DW_TAG_formal_parameter
+#CHECK:       Children:        DW_CHILDREN_no
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_location
+#CHECK:           Form:            DW_FORM_exprloc
+#CHECK:         - Attribute:       DW_AT_name
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_decl_file
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_decl_line
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_type
+#CHECK:           Form:            DW_FORM_ref4
+#CHECK:     - Code:            0x6
+#CHECK:       Tag:             DW_TAG_variable
+#CHECK:       Children:        DW_CHILDREN_no
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_location
+#CHECK:           Form:            DW_FORM_exprloc
+#CHECK:         - Attribute:       DW_AT_name
+#CHECK:           Form:            DW_FORM_strp
+#CHECK:         - Attribute:       DW_AT_decl_file
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_decl_line
+#CHECK:           Form:            DW_FORM_data1
+#CHECK:         - Attribute:       DW_AT_type
+#CHECK:           Form:            DW_FORM_ref4
+#CHECK:     - Code:            0x7
+#CHECK:       Tag:             DW_TAG_const_type
+#CHECK:       Children:        DW_CHILDREN_no
+#CHECK:       Attributes:      
+#CHECK:         - Attribute:       DW_AT_type
+#CHECK:          Form:            DW_FORM_ref4       
+

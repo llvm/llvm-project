@@ -1,0 +1,16 @@
+# Comment prefixes are not recognized at ends of words.
+
+RUN: echo 'foo'                 >  %t.in
+RUN: echo 'bar'                 >> %t.in
+RUN: echo 'foo'                 >> %t.in
+RUN: echo 'bar'                 >> %t.in
+RUN: echo 'FOO-COM: CHECK: foo' >  %t.chk
+RUN: echo 'RUN_COM: CHECK: bar' >> %t.chk
+RUN: echo 'RUN3COM: CHECK: foo' >> %t.chk
+RUN: echo ' COMRUN: CHECK: bar' >> %t.chk
+RUN: %ProtectFileCheckOutput FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 | FileCheck %s
+
+CHECK: .chk:1:17: remark: CHECK: expected string found in input
+CHECK: .chk:2:17: remark: CHECK: expected string found in input
+CHECK: .chk:3:17: remark: CHECK: expected string found in input
+CHECK: .chk:4:17: remark: CHECK: expected string found in input

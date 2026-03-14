@@ -1,0 +1,79 @@
+//===-- lldb-server.cpp -----------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "SystemInitializerLLGS.h"
+#include "lldb/Host/Config.h"
+#include "lldb/Initialization/SystemLifetimeManager.h"
+#include "lldb/Version/Version.h"
+
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+
+#include <cstdio>
+#include <cstdlib>
+
+static llvm::ManagedStatic<lldb_private::SystemLifetimeManager>
+    g_debugger_lifetime;
+
+static int display_usage(const char *progname, int exit_code) {
+  fprintf(stderr,
+          "Usage:\n"
+          "  %s v[ersion]\n"
+          "  %s g[dbserver] [options]\n"
+          "  %s p[latform] [options]\n"
+          "Invoke subcommand for additional help\n",
+          progname, progname, progname);
+  return exit_code;
+}
+
+// Forward declarations of subcommand main methods.
+int main_gdbserver(int argc, char *argv[]);
+int main_platform(int argc, char *argv[]);
+
+namespace llgs {
+static void Initialize() {
+  if (auto e = g_debugger_lifetime->Initialize(
+          std::make_unique<SystemInitializerLLGS>()))
+    llvm::consumeError(std::move(e));
+}
+
+static void Terminate() { g_debugger_lifetime->Terminate(); }
+} // namespace llgs
+
+int main(int argc, char *argv[]) {
+  llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash backtrace.\n");
+
+  const char *progname = argv[0];
+  if (argc < 2)
+    return display_usage(progname, EXIT_SUCCESS);
+
+  switch (argv[1][0]) {
+  case 'g': {
+    llgs::Initialize();
+    auto terminate = llvm::scope_exit([]() { llgs::Terminate(); });
+    return main_gdbserver(argc, argv);
+  }
+  case 'p': {
+    llgs::Initialize();
+    auto terminate = llvm::scope_exit([]() { llgs::Terminate(); });
+    return main_platform(argc, argv);
+  }
+  case 'v':
+    fprintf(stderr, "%s\n", lldb_private::GetVersion());
+    return EXIT_SUCCESS;
+  }
+
+  return display_usage(progname, EXIT_FAILURE);
+}

@@ -1,0 +1,8 @@
+# A comment directive is not recognized within a check directive's pattern and
+# thus does not comment out the remainder of the pattern.
+
+RUN: echo 'foo'                 > %t.in
+RUN: echo 'CHECK: foo COM: bar' > %t.chk
+RUN: %ProtectFileCheckOutput not FileCheck %t.chk < %t.in 2>&1 | FileCheck %s
+
+CHECK: .chk:1:8: error: CHECK: expected string not found in input

@@ -1,0 +1,9 @@
+# RUN: llvm-mc -triple=armv8 -mattr=+sb -disassemble < %s      | FileCheck %s
+# RUN: llvm-mc -triple=armv8 -mattr=+v8.5a    -disassemble < %s      | FileCheck %s
+# RUN: llvm-mc -triple=armv8 -mattr=-sb -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOSB
+
+0x70 0xf0 0x7f 0xf5
+
+# CHECK:    sb
+# NOSB: invalid instruction encoding
+# NOSB-NEXT: 0x70 0xf0 0x7f 0xf5

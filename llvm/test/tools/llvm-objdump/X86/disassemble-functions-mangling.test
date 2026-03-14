@@ -1,0 +1,61 @@
+## Show that the --disassemble-symbols switch takes demangled names when
+## --demangle is specified, otherwise the switch takes mangled names.
+
+# RUN: yaml2obj %s -o %t.o
+
+## --disassemble-symbols without --demangle.
+# RUN: llvm-objdump --disassemble-symbols=_Z3foov %t.o | FileCheck %s --check-prefix=MANGLED
+# RUN: llvm-objdump --disassemble-symbols='foo()' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MANGLED-MISS
+# RUN: llvm-objdump --disassemble-symbols=foo %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MANGLED-MISS
+# RUN: llvm-objdump --disassemble-symbols='i,f' %t.o | FileCheck %s --check-prefix=NOMANGLE
+
+## --disassemble-symbols with --demangle.
+# RUN: llvm-objdump -C --disassemble-symbols='foo()' %t.o | FileCheck %s --check-prefix=DEMANGLED
+# RUN: llvm-objdump -C --disassemble-symbols='_Z3foov' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DEMANGLED-MISS
+# RUN: llvm-objdump -C --disassemble-symbols='i,f' %t.o | FileCheck %s --check-prefix=NOMANGLE
+# RUN: llvm-objdump -C --disassemble-symbols='std::allocator<wchar_t>::allocator()' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DEMANGLED-MULTI
+
+# MANGLED: <_Z3foov>:
+# MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing symbol foo
+
+# DEMANGLED: <foo()>:
+# DEMANGLED-MISS: warning: '{{.*}}': failed to disassemble missing symbol _Z3foov
+
+# NOMANGLE: <i>:
+# NOMANGLE: <f>:
+
+# DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
+# DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x1000
+    Content: 9090909090
+Symbols:
+  - Name:    _Z3foov
+    Value:   0x1000
+    Section: .text
+  - Name:    i
+    Value:   0x1001
+    Section: .text
+  - Name:    f
+    Value:   0x1002
+    Section: .text
+  - Name:    _ZNSaIwEC1Ev
+    Value:   0x1003
+    Section: .text
+  - Name:    _ZNSaIwEC2Ev
+    Value:   0x1004
+    Section: .text

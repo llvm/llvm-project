@@ -1,0 +1,195 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+sse2                        -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NOVL --check-prefix=SSE2
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                         -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NOVL --check-prefix=AVX1
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl           -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512VL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl,+avx512bw -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512BWVL
+
+--- |
+  define <16 x i8> @test_add_v16i8(<16 x i8> %arg1, <16 x i8> %arg2) {
+    %ret = add <16 x i8> %arg1, %arg2
+    ret <16 x i8> %ret
+  }
+
+  define <8 x i16> @test_add_v8i16(<8 x i16> %arg1, <8 x i16> %arg2) {
+    %ret = add <8 x i16> %arg1, %arg2
+    ret <8 x i16> %ret
+  }
+
+  define <4 x i32> @test_add_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
+    %ret = add <4 x i32> %arg1, %arg2
+    ret <4 x i32> %ret
+  }
+
+  define <2 x i64> @test_add_v2i64(<2 x i64> %arg1, <2 x i64> %arg2) {
+    %ret = add <2 x i64> %arg1, %arg2
+    ret <2 x i64> %ret
+  }
+
+...
+---
+name:            test_add_v16i8
+# ALL-LABEL: name:  test_add_v16i8
+alignment:       16
+legalized:       true
+regBankSelected: true
+# NOVL:            registers:
+# NOVL-NEXT:         - { id: 0, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 2, class: vr128, preferred-register: '', flags: [   ] }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr128, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 2, class: vr128, preferred-register: '', flags: [   ] }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr128x, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# SSE2:                %2:vr128 = PADDBrr %0, %1
+#
+# AVX1:                %2:vr128 = VPADDBrr %0, %1
+#
+# AVX512VL:            %2:vr128 = VPADDBrr %0, %1
+#
+# AVX512BWVL:          %2:vr128x = VPADDBZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $xmm0, $xmm1
+
+    %0(<16 x s8>) = COPY $xmm0
+    %1(<16 x s8>) = COPY $xmm1
+    %2(<16 x s8>) = G_ADD %0, %1
+    $xmm0 = COPY %2(<16 x s8>)
+    RET 0, implicit $xmm0
+
+...
+---
+name:            test_add_v8i16
+# ALL-LABEL: name:  test_add_v8i16
+alignment:       16
+legalized:       true
+regBankSelected: true
+# NOVL:            registers:
+# NOVL-NEXT:         - { id: 0, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 2, class: vr128, preferred-register: '', flags: [   ] }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr128, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 2, class: vr128, preferred-register: '', flags: [   ] }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr128x, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# SSE2:                %2:vr128 = PADDWrr %0, %1
+#
+# AVX1:                %2:vr128 = VPADDWrr %0, %1
+#
+# AVX512VL:            %2:vr128 = VPADDWrr %0, %1
+#
+# AVX512BWVL:          %2:vr128x = VPADDWZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $xmm0, $xmm1
+
+    %0(<8 x s16>) = COPY $xmm0
+    %1(<8 x s16>) = COPY $xmm1
+    %2(<8 x s16>) = G_ADD %0, %1
+    $xmm0 = COPY %2(<8 x s16>)
+    RET 0, implicit $xmm0
+
+...
+---
+name:            test_add_v4i32
+# ALL-LABEL: name:  test_add_v4i32
+alignment:       16
+legalized:       true
+regBankSelected: true
+# NOVL:            registers:
+# NOVL-NEXT:         - { id: 0, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 2, class: vr128, preferred-register: '', flags: [   ] }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 2, class: vr128x, preferred-register: '', flags: [   ] }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr128x, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# SSE2:                %2:vr128 = PADDDrr %0, %1
+#
+# AVX1:                %2:vr128 = VPADDDrr %0, %1
+#
+# AVX512VL:            %2:vr128x = VPADDDZ128rr %0, %1
+#
+# AVX512BWVL:          %2:vr128x = VPADDDZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $xmm0, $xmm1
+
+    %0(<4 x s32>) = COPY $xmm0
+    %1(<4 x s32>) = COPY $xmm1
+    %2(<4 x s32>) = G_ADD %0, %1
+    $xmm0 = COPY %2(<4 x s32>)
+    RET 0, implicit $xmm0
+
+...
+---
+name:            test_add_v2i64
+# ALL-LABEL: name:  test_add_v2i64
+alignment:       16
+legalized:       true
+regBankSelected: true
+# NOVL:            registers:
+# NOVL-NEXT:         - { id: 0, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 1, class: vr128, preferred-register: '', flags: [   ] }
+# NOVL-NEXT:         - { id: 2, class: vr128, preferred-register: '', flags: [   ] }
+#
+# AVX512VL:        registers:
+# AVX512VL-NEXT:     - { id: 0, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:     - { id: 2, class: vr128x, preferred-register: '', flags: [   ] }
+#
+# AVX512BWVL:      registers:
+# AVX512BWVL-NEXT:   - { id: 0, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 1, class: vr128x, preferred-register: '', flags: [   ] }
+# AVX512BWVL-NEXT:   - { id: 2, class: vr128x, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# SSE2:                %2:vr128 = PADDQrr %0, %1
+#
+# AVX1:                %2:vr128 = VPADDQrr %0, %1
+#
+# AVX512VL:            %2:vr128x = VPADDQZ128rr %0, %1
+#
+# AVX512BWVL:          %2:vr128x = VPADDQZ128rr %0, %1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $xmm0, $xmm1
+
+    %0(<2 x s64>) = COPY $xmm0
+    %1(<2 x s64>) = COPY $xmm1
+    %2(<2 x s64>) = G_ADD %0, %1
+    $xmm0 = COPY %2(<2 x s64>)
+    RET 0, implicit $xmm0
+
+...

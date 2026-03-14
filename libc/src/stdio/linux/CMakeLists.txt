@@ -1,0 +1,70 @@
+add_entrypoint_object(
+  remove
+  SRCS
+    remove.cpp
+  HDRS
+    ../remove.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  rename
+  SRCS
+    rename.cpp
+  HDRS
+    ../rename.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.hdr.fcntl_macros
+)
+
+add_entrypoint_object(
+  fdopen
+  SRCS
+    fdopen.cpp
+  HDRS
+    ../fdopen.h
+  DEPENDS
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stdin
+  SRCS
+    stdin.cpp
+  HDRS
+    ../stdin.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stdout
+  SRCS
+    stdout.cpp
+  HDRS
+    ../stdout.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  stderr
+  SRCS
+    stderr.cpp
+  HDRS
+    ../stderr.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)

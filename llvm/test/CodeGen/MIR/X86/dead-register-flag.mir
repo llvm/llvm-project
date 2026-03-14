@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the 'dead' register flags
+# correctly.
+
+--- |
+
+  define i32 @foo(i32 %a) #0 {
+  body:
+    %c = mul i32 %a, 11
+    ret i32 %c
+  }
+
+  attributes #0 = { "frame-pointer"="none" }
+
+...
+---
+name:            foo
+body: |
+  ; CHECK: bb.0.body:
+  bb.0.body:
+    ; CHECK: $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    $eax = IMUL32rri8 $edi, 11, implicit-def dead $eflags
+    RET64 $eax
+...

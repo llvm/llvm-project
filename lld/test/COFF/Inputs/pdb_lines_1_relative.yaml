@@ -1,0 +1,470 @@
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC28C744242400000000E800000000B82A0000004883C428C3
+    Relocations:
+      - VirtualAddress:  13
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+    SizeOfRawData:   0
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0104010004420000'
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC28E800000000904883C428C3
+    Relocations:
+      - VirtualAddress:  5
+        SymbolName:      bar
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     202F44454641554C544C49423A6C6962636D742E6C6962202F44454641554C544C49423A6F6C646E616D65732E6C6962
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   11
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    11000
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         'clang version 11.0.0 (https://github.com/llvm/llvm-project.git 77dad72eae974338ddc13d74783c012ccbb8c5ac)'
+      - !Symbols
+        Records:
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              CodeSize:        27
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4098
+              Flags:           [  ]
+              DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
+          - Kind:            S_PROC_ID_END
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        27
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        '.\pdb_lines_1.c'
+            Lines:
+              - Offset:          0
+                LineStart:       2
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          12
+                LineStart:       3
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          17
+                LineStart:       4
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+      - !FileChecksums
+        Checksums:
+          - FileName:        '.\pdb_lines_1.c'
+            Kind:            MD5
+            Checksum:        9A64DD4298487888B1D99F825D520C5E
+          - FileName:        '.\foo.h'
+            Kind:            MD5
+            Checksum:        A9D05E6DC184DE20A57797E24F8B0E97
+      - !StringTable
+        Strings:
+          - '.\pdb_lines_1.c'
+          - '.\foo.h'
+          - ''
+          - ''
+          - ''
+      - !Symbols
+        Records:
+          - Kind:            S_BUILDINFO
+            BuildInfoSym:
+              BuildId:         4105
+    Relocations:
+      - VirtualAddress:  184
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  188
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  240
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  244
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_SECTION
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_ARGLIST
+        ArgList:
+          ArgIndices:      [  ]
+      - Kind:            LF_PROCEDURE
+        Procedure:
+          ReturnType:      116
+          CallConv:        NearC
+          Options:         [ None ]
+          ParameterCount:  0
+          ArgumentList:    4096
+      - Kind:            LF_FUNC_ID
+        FuncId:
+          ParentScope:     0
+          FunctionType:    4097
+          Name:            main
+      - Kind:            LF_PROCEDURE
+        Procedure:
+          ReturnType:      3
+          CallConv:        NearC
+          Options:         [ None ]
+          ParameterCount:  0
+          ArgumentList:    4096
+      - Kind:            LF_FUNC_ID
+        FuncId:
+          ParentScope:     0
+          FunctionType:    4099
+          Name:            foo
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          .
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          pdb_lines_1.c
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          'buildninjaRel\bin\clang-cl.exe'
+      - Kind:            LF_STRING_ID
+        StringId:
+          Id:              0
+          String:          '"-cc1" "-triple" "x86_64-pc-windows-msvc19.26.28806" "-emit-obj" "-mrelax-all" "-mincremental-linker-compatible" "-disable-free" "-main-file-name" "pdb_lines_1.c" "-mrelocation-model" "pic" "-pic-level" "2" "-mthread-model" "posix" "-mframe-pointer=none" "-relaxed-aliasing" "-fmath-errno" "-fno-rounding-math" "-mconstructor-aliases" "-munwind-tables" "-target-cpu" "x86-64" "-mllvm" "-x86-asm-syntax=intel" "-D_MT" "-flto-visibility-public-std" "--dependent-lib=libcmt" "--dependent-lib=oldnames" "-stack-protector" "2" "-fms-volatile" "-fdiagnostics-format" "msvc" "-gcodeview" "-debug-info-kind=limited" "-resource-dir" "D:\\llvm-project\\buildninjaRel\\lib\\clang\\11.0.0" "-internal-isystem" "D:\\llvm-project\\buildninjaRel\\lib\\clang\\11.0.0\\include" "-internal-isystem" "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Tools\\MSVC\\14.26.28801\\ATLMFC\\include" "-internal-isystem" "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Professional\\VC\\Tools\\MSVC\\14.26.28801\\include" "-internal-isystem" "C:\\Program Files (x86)\\Windows Kits\\NETFXSDK\\4.8\\include\\um" "-internal-isystem" "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.18362.0\\ucrt" "-internal-isystem" "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.18362.0\\shared" "-internal-isystem" "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.18362.0\\um" "-internal-isystem" "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.18362.0\\winrt" "-internal-isystem" "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.18362.0\\cppwinrt" "-fdebug-compilation-dir" "." "-ferror-limit" "19" "-fmessage-length=146" "-fno-use-cxa-atexit" "-fms-extensions" "-fms-compatibility" "-fms-compatibility-version=19.26.28806" "-fdelayed-template-parsing" "-fcolor-diagnostics" "-faddrsig" "-x" "c"'
+      - Kind:            LF_BUILDINFO
+        BuildInfo:
+          ArgIndices:      [ 4101, 4103, 4102, 0, 4104 ]
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     000000001B00000000000000
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      main
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  8
+        SymbolTableIndex: 6
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+  - Name:            .llvm_addrsig
+    Characteristics: [ IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     0A1D
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0104010004420000'
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              CodeSize:        15
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4100
+              Flags:           [  ]
+              DisplayName:     foo
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
+          - Kind:            S_PROC_ID_END
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        15
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        '.\foo.h'
+            Lines:
+              - Offset:          0
+                LineStart:       2
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          4
+                LineStart:       3
+                IsStatement:     false
+                EndDelta:        0
+              - Offset:          9
+                LineStart:       4
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+    Relocations:
+      - VirtualAddress:  44
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  48
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  100
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  104
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_SECTION
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     000000000F00000000000000
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  8
+        SymbolTableIndex: 11
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          27
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        3051916600
+      Number:          1
+  - Name:            .data
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            .bss
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          3
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        264583633
+      Number:          4
+  - Name:            .text
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          15
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        236440503
+      Number:          5
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            foo
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   11
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        264583633
+      Number:          5
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            .drectve
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          48
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        149686238
+      Number:          6
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          396
+      NumberOfRelocations: 4
+      NumberOfLinenumbers: 0
+      CheckSum:        3390249978
+      Number:          7
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   12
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          148
+      NumberOfRelocations: 4
+      NumberOfLinenumbers: 0
+      CheckSum:        1236081121
+      Number:          5
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            '.debug$T'
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          2028
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2043733667
+      Number:          8
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        567356797
+      Number:          9
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   13
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        3642757804
+      Number:          5
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            .llvm_addrsig
+    Value:           0
+    SectionNumber:   10
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          2
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2582217811
+      Number:          10
+  - Name:            '@feat.00'
+    Value:           0
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            main
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            bar
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            .file
+    Value:           0
+    SectionNumber:   -2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_FILE
+    File:            pdb_lines_1.c
+...

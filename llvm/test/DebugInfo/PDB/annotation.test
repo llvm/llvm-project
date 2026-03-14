@@ -1,0 +1,88 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-pdbutil dump --symbols %t.obj | FileCheck %s
+# RUN: llvm-readobj --codeview %t.obj | FileCheck %s --check-prefix=READOBJ
+
+# CHECK:      S_ANNOTATION [size = 20]
+# CHECK-NEXT: addr = 0001:0042
+# CHECK-NEXT: strings = [
+# CHECK-NEXT:            foo
+# CHECK-NEXT:            bar]
+
+# READOBJ:      AnnotationSym {
+# READOBJ-NEXT:   Kind: S_ANNOTATION (0x1019)
+# READOBJ-NEXT:   Offset: 0x2A
+# READOBJ-NEXT:   Segment: 0x1
+# READOBJ-NEXT:   Strings [
+# READOBJ-NEXT:     foo
+# READOBJ-NEXT:     bar
+# READOBJ-NEXT:   ]
+# READOBJ-NEXT: }
+
+--- !COFF
+header:          
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:        
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     CD2C0F0B
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    Subsections:     
+      - !Symbols
+        Records:         
+          - Kind:            S_OBJNAME
+            ObjNameSym:      
+              Signature:       0
+              ObjectName:      'SimpleFunction.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:     
+              Flags:           [ SecurityChecks, HotPatch ]
+              Machine:         X64
+              FrontendMajor:   19
+              FrontendMinor:   14
+              FrontendBuild:   26433
+              FrontendQFE:     0
+              BackendMajor:    19
+              BackendMinor:    14
+              BackendBuild:    26433
+              BackendQFE:      0
+              Version:         'Microsoft (R) Optimizing Compiler'
+          - Kind:            S_ANNOTATION
+            AnnotationSym:   
+              Offset: 42
+              Segment: 1
+              Strings:         
+                - foo
+                - bar
+      - !StringTable
+        Strings:
+          - 'SimpleFunction.c'
+symbols:         
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2772061208
+      Number:          1
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          396
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+...

@@ -1,0 +1,7 @@
+; RUN: FileCheck -check-prefix=A -input-file %s %s
+
+this should be matched
+
+; B-DAG: foo
+
+; A-DAG: {{this}} should be matched

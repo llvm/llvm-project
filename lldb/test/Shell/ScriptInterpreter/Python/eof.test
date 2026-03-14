@@ -1,0 +1,6 @@
+RUN: echo 'foo' | %lldb -o script | FileCheck %s
+
+# Check that the python interpreter detects the OF and the prompt is printed
+# exactly once.
+CHECK: >>>
+CHECK-NOT: >>>

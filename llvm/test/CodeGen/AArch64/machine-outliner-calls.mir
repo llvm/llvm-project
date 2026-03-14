@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-pc-windows-msvc -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=WINDOWS
+--- |
+  define void @baz() #0 {
+    ret void
+  }
+  
+  define void @bar(i32 %a) #0 {
+    ret void
+  }
+  
+  attributes #0 = { noredzone }
+...
+---
+
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    $sp = frame-setup SUBXri $sp, 32, 0
+    $fp = frame-setup ADDXri $sp, 16, 0
+
+  bb.1:
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 4
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 3
+    
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 2
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    
+
+  bb.2:
+    $fp, $lr = LDPXi $sp, 2
+    RET undef $lr
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+
+# CHECK: name:            OUTLINED_FUNCTION_0
+# CHECK: bb.0:
+# CHECK: liveins: $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $d8, $d9, $d10, $d11, $d12, $d13, $d14, $d15, $lr
+# CHECK-DAG: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
+# CHECK-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
+# CHECK-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# CHECK-NEXT: $w17 = ORRWri $wzr, 1
+# CHECK-NEXT: $w17 = ORRWri $wzr, 1
+# CHECK-NEXT: early-clobber $sp, $lr = LDRXpost $sp, 16
+# CHECK-NEXT: RET $lr
+# WINDOWS-NOT: OUTLINED

@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=thumbv7--linux-android -verify-machineinstrs -run-pass=arm-ldst-opt %s -o - | FileCheck %s --check-prefix=CHECK-MERGE
+#CHECK-MERGE: foo
+name:            foo
+# CHECK-MERGE: VSTMDIA $r4, 14 /* CC::al */, $noreg,  $d15,  $d16,  $d17,  $d18,  $d19,  $d20,  $d21,  $d22,  $d23,  $d24,  $d25,  $d26,  $d27,  $d28,  $d29,  $d30
+# CHECK-MERGE-NEXT: VSTRD  $d31, $r4, 32, 14 /* CC::al */, $noreg :: (store (s64))
+# CHECK-MERGE:     VSTMDIA killed $r0, 14 /* CC::al */, $noreg,  $d4,  $d5,  $d6,  $d7,  $d8,  $d9,  $d10,  $d11,  $d12,  $d13,  $d14
+body:             |
+  bb.0:
+    VSTRD  $d15, $r4, 0, 14, $noreg :: (store (s64))
+    VSTRD  $d16, $r4, 2, 14, $noreg :: (store (s64))
+    VSTRD  $d17, $r4, 4, 14, $noreg :: (store (s64))
+    VSTRD  $d18, $r4, 6, 14, $noreg :: (store (s64))
+    VSTRD  $d19, $r4, 8, 14, $noreg :: (store (s64))
+    VSTRD  $d20, $r4, 10, 14, $noreg :: (store (s64))
+    VSTRD  $d21, $r4, 12, 14, $noreg :: (store (s64))
+    VSTRD  $d22, $r4, 14, 14, $noreg :: (store (s64))
+    VSTRD  $d23, $r4, 16, 14, $noreg :: (store (s64))
+    VSTRD  $d24, $r4, 18, 14, $noreg :: (store (s64))
+    VSTRD  $d25, $r4, 20, 14, $noreg :: (store (s64))
+    VSTRD  $d26, $r4, 22, 14, $noreg :: (store (s64))
+    VSTRD  $d27, $r4, 24, 14, $noreg :: (store (s64))
+    VSTRD  $d28, $r4, 26, 14, $noreg :: (store (s64))
+    VSTRD  $d29, $r4, 28, 14, $noreg :: (store (s64))
+    VSTRD  $d30, $r4, 30, 14, $noreg :: (store (s64))
+    VSTRD  $d31, $r4, 32, 14, $noreg :: (store (s64))
+    VSTRD  $d0, $r4, 34, 14, $noreg :: (store (s64))
+    VSTRD  $d1, $r4, 36, 14, $noreg :: (store (s64))
+    VSTRD  $d3, $r4, 38, 14, $noreg :: (store (s64))
+    VSTRD  $d2, $r4, 40, 14, $noreg :: (store (s64))
+    VSTRD  $d4, $r4, 42, 14, $noreg :: (store (s64))
+    VSTRD  $d5, $r4, 44, 14, $noreg :: (store (s64))
+    VSTRD  $d6, $r4, 46, 14, $noreg :: (store (s64))
+    VSTRD  $d7, $r4, 48, 14, $noreg :: (store (s64))
+    VSTRD  $d8, $r4, 50, 14, $noreg :: (store (s64))
+    VSTRD  $d9, $r4, 52, 14, $noreg :: (store (s64))
+    VSTRD  $d10, $r4, 54, 14, $noreg :: (store (s64))
+    VSTRD  $d11, $r4, 56, 14, $noreg :: (store (s64))
+    VSTRD  $d12, $r4, 58, 14, $noreg :: (store (s64))
+    VSTRD  $d13, $r4, 60, 14, $noreg :: (store (s64))
+    VSTRD  $d14, $r4, 62, 14, $noreg :: (store (s64))

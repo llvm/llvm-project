@@ -1,0 +1,30 @@
+//===- DialectConversion.pdll - DialectConversion PDLL Support -*- PDLL -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines various utilities for interacting with dialect conversion
+// within PDLL.
+//
+//===----------------------------------------------------------------------===//
+
+/// This rewrite returns the converted value of `value`, whose type is defined 
+/// by the type converted specified in the `PDLConversionConfig` of the current
+/// pattern.
+Rewrite convertValue(value: Value) -> Value;
+
+/// This rewrite returns the converted values of `values`, whose type is defined 
+/// by the type converted specified in the `PDLConversionConfig` of the current
+/// pattern.
+Rewrite convertValues(values: ValueRange) -> ValueRange;
+
+/// This rewrite returns the converted type of `type` as defined by the type
+/// converted specified in the `PDLConversionConfig` of the current pattern.
+Rewrite convertType(type: Type) -> Type;
+
+/// This rewrite returns the converted types of `types` as defined by the type
+/// converted specified in the `PDLConversionConfig` of the current pattern.
+Rewrite convertTypes(types: TypeRange) -> TypeRange;

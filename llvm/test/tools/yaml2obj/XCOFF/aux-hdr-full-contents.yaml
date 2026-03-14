@@ -1,0 +1,123 @@
+## Test that we can explicitly specify all fields of the auxiliary file header.
+## Notice that the values aren't derived from the sections if we explicitly set the fields.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj --auxiliary-header %t1 | FileCheck %s --check-prefix=CHECK32
+# RUN: yaml2obj %s -DMAGIC=0x1F7 -DFLAG64=0x2 -o %t2
+# RUN: llvm-readobj --auxiliary-header %t2 | FileCheck %s --check-prefix=CHECK64
+
+# CHECK32:      Format: aixcoff-rs6000
+# CHECK32-NEXT: Arch: powerpc
+# CHECK32-NEXT: AddressSize: 32bit
+# CHECK32-NEXT: AuxiliaryHeader {
+# CHECK32-NEXT:   Magic: 0x10B
+# CHECK32-NEXT:   Version: 0x1
+# CHECK32-NEXT:   Size of .text section: 0x8
+# CHECK32-NEXT:   Size of .data section: 0x9
+# CHECK32-NEXT:   Size of .bss section: 0x10
+# CHECK32-NEXT:   Entry point address: 0x1111
+# CHECK32-NEXT:   .text section start address: 0x2222
+# CHECK32-NEXT:   .data section start address: 0x3333
+# CHECK32-NEXT:   TOC anchor address: 0x4444
+# CHECK32-NEXT:   Section number of entryPoint: 1
+# CHECK32-NEXT:   Section number of .text: 2
+# CHECK32-NEXT:   Section number of .data: 3
+# CHECK32-NEXT:   Section number of TOC: 4
+# CHECK32-NEXT:   Section number of loader data: 5
+# CHECK32-NEXT:   Section number of .bss: 6
+# CHECK32-NEXT:   Maxium alignment of .text: 0x7
+# CHECK32-NEXT:   Maxium alignment of .data: 0x3
+# CHECK32-NEXT:   Module type: 0x0
+# CHECK32-NEXT:   CPU type of objects: 0x1
+# CHECK32-NEXT:   (Reserved): 0x0
+# CHECK32-NEXT:   Maximum stack size: 0x0
+# CHECK32-NEXT:   Maximum data size: 0x0
+# CHECK32-NEXT:   Reserved for debugger: 0x0
+# CHECK32-NEXT:   Text page size: 0x1
+# CHECK32-NEXT:   Data page size: 0x1
+# CHECK32-NEXT:   Stack page size: 0x1
+# CHECK32-NEXT:   Flag: 0x0
+# CHECK32-NEXT:   Alignment of thread-local storage: 0x1
+# CHECK32-NEXT:   Section number for .tdata: 7
+# CHECK32-NEXT:   Section number for .tbss: 8
+# CHECK32-NEXT: }
+
+# CHECK64:      Format: aix5coff64-rs6000
+# CHECK64-NEXT: Arch: powerpc64
+# CHECK64-NEXT: AddressSize: 64bit
+# CHECK64-NEXT: AuxiliaryHeader {
+# CHECK64-NEXT:   Magic: 0x10B
+# CHECK64-NEXT:   Version: 0x1
+# CHECK64-NEXT:   Reserved for debugger: 0x0
+# CHECK64-NEXT:   .text section start address: 0x2222
+# CHECK64-NEXT:   .data section start address: 0x3333
+# CHECK64-NEXT:   TOC anchor address: 0x4444
+# CHECK64-NEXT:   Section number of entryPoint: 1
+# CHECK64-NEXT:   Section number of .text: 2
+# CHECK64-NEXT:   Section number of .data: 3
+# CHECK64-NEXT:   Section number of TOC: 4
+# CHECK64-NEXT:   Section number of loader data: 5
+# CHECK64-NEXT:   Section number of .bss: 6
+# CHECK64-NEXT:   Maxium alignment of .text: 0x7
+# CHECK64-NEXT:   Maxium alignment of .data: 0x3
+# CHECK64-NEXT:   Module type: 0x0
+# CHECK64-NEXT:   CPU type of objects: 0x1
+# CHECK64-NEXT:   (Reserved): 0x0
+# CHECK64-NEXT:   Text page size: 0x1
+# CHECK64-NEXT:   Data page size: 0x1
+# CHECK64-NEXT:   Stack page size: 0x1
+# CHECK64-NEXT:   Flag: 0x0
+# CHECK64-NEXT:   Alignment of thread-local storage: 0x1
+# CHECK64-NEXT:   Size of .text section: 0x8
+# CHECK64-NEXT:   Size of .data section: 0x9
+# CHECK64-NEXT:   Size of .bss section: 0x10
+# CHECK64-NEXT:   Entry point address: 0x1111
+# CHECK64-NEXT:   Maximum stack size: 0x0
+# CHECK64-NEXT:   Maximum data size: 0x0
+# CHECK64-NEXT:   Section number for .tdata: 7
+# CHECK64-NEXT:   Section number for .tbss: 8
+# CHECK64-NEXT:   Additional flags 64-bit XCOFF: 0x2
+# CHECK64-NEXT: }
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x1DF]]
+AuxiliaryHeader:
+  Magic:                 0x10B
+  Version:               0x1
+  TextSectionSize:       0x8
+  DataSectionSize:       0x9
+  BssSectionSize:        0x10
+  EntryPointAddr:        0x1111
+  TextStartAddr:         0x2222
+  DataStartAddr:         0x3333
+  TOCAnchorAddr:         0x4444
+  SecNumOfEntryPoint:    1
+  SecNumOfText:          2
+  SecNumOfData:          3
+  SecNumOfTOC:           4
+  SecNumOfLoader:        5
+  SecNumOfBSS:           6
+  MaxAlignOfText:        0x7
+  MaxAlignOfData:        0x3
+  ModuleType:            0x1
+  TextPageSize:          0x1
+  DataPageSize:          0x1
+  StackPageSize:         0x1
+  SecNumOfTData:         7
+  SecNumOfTBSS:          8
+  FlagAndTDataAlignment: 0x1
+  Flag:                  [[FLAG64=<none>]]
+Sections:
+  - Flags:       [ STYP_TEXT ]
+    SectionData: "1232"
+  - Flags:       [ STYP_DATA ]
+    SectionData: "5678"
+  - Flags:       [ STYP_BSS ]
+    SectionData: "9101"
+  - Flags:       [ STYP_TDATA ]
+    SectionData: "1112"
+  - Flags:       [ STYP_TBSS ]
+    SectionData: "1314"
+  - Flags:       [ STYP_LOADER ]
+    SectionData: "1516"

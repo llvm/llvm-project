@@ -1,0 +1,22 @@
+import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
+
+static_library("FrontendTool") {
+  output_name = "clangFrontendTool"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/include/clang/Config",
+    "//clang/lib/Basic",
+    "//clang/lib/CodeGen",
+    "//clang/lib/Driver",
+    "//clang/lib/ExtractAPI",
+    "//clang/lib/Frontend",
+    "//clang/lib/Frontend/Rewrite",
+    "//clang/lib/Options",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  if (clang_enable_static_analyzer) {
+    deps += [ "//clang/lib/StaticAnalyzer/Frontend" ]
+  }
+  sources = [ "ExecuteCompilerInvocation.cpp" ]
+}

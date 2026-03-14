@@ -1,0 +1,3 @@
+RUN: not llvm-dwp %p/../Inputs/multiple_type_sections.dwp -o %t 2>&1 | FileCheck %s
+
+CHECK: error: multiple type unit sections in .dwp file

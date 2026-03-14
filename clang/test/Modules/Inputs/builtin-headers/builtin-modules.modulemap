@@ -1,0 +1,29 @@
+module c_complex [system] {
+  header "complex.h"
+  export *
+}
+
+module c_float [system] {
+  header "float.h"
+  export *
+}
+
+module c_inttypes [system] {
+  header "inttypes.h"
+  export *
+}
+
+module c_limits [system] {
+  header "limits.h"
+  export *
+}
+
+module c_math [system] {
+  header "math.h"
+  export *
+}
+
+module c_stdint [system] {
+  header "stdint.h"
+  export *
+}

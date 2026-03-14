@@ -1,0 +1,17 @@
+## Ignore invalid sh_entsize (sh_size%sh_entsize!=0) for non-SHF_MERGE sections.
+## GNU as before 2.35 had such a bug for .stab
+## https://sourceware.org/bugzilla/show_bug.cgi?id=25768
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld -e 0 --fatal-warnings %t.o -o /dev/null
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .stab
+    Type:    SHT_PROGBITS
+    EntSize: 20
+    Size:    24

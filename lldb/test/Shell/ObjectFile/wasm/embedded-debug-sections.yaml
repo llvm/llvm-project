@@ -1,0 +1,167 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK: Plugin name: wasm
+# CHECK: Architecture: wasm32-unknown-unknown-wasm
+# CHECK: UUID: 
+# CHECK: Executable: false
+# CHECK: Stripped: false
+# CHECK: Type: shared library
+# CHECK: Strata: user
+# CHECK: Base VM address: 0x0
+
+# CHECK: Name: code
+# CHECK: Type: code
+# CHECK: VM address: 0x0
+# CHECK: VM size: 56
+# CHECK: File size: 56
+
+# CHECK: Name: .debug_info
+# CHECK: Type: dwarf-info
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 2
+
+# CHECK: Name: .debug_abbrev
+# CHECK: Type: dwarf-abbrev
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 2
+
+# CHECK: Name: .debug_line
+# CHECK: Type: dwarf-line
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 2
+
+# CHECK: Name: .debug_str
+# CHECK: Type: dwarf-str
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 3
+
+# CHECK: Name: .debug_abbrev.dwo
+# CHECK: Type: dwarf-abbrev-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_info.dwo
+# CHECK: Type: dwarf-info-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_line.dwo
+# CHECK: Type: dwarf-line
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_line_str.dwo
+# CHECK: Type: dwarf-line-str
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_loc.dwo
+# CHECK: Type: dwarf-loc-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_loclists.dwo
+# CHECK: Type: dwarf-loclists-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_macro.dwo
+# CHECK: Type: dwarf-macro
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_rnglists.dwo
+# CHECK: Type: dwarf-rnglists-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_str.dwo
+# CHECK: Type: dwarf-str-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_str_offsets.dwo
+# CHECK: Type: dwarf-str-offsets-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+# CHECK: Name: .debug_types.dwo
+# CHECK: Type: dwarf-types-dwo
+# CHECK: VM address: 0x0
+# CHECK: VM size: 0
+# CHECK: File size: 4
+
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           6
+        Body:            238080808000210141102102200120026B21032003200036020C200328020C2104200328020C2105200420056C210620060F0B
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         4C00
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         0111
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         5100
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         636CFF
+  - Type:            CUSTOM
+    Name:            .debug_abbrev.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_info.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_line.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_line_str.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_loc.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_loclists.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_macro.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_rnglists.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_str.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_str_offsets.dwo
+    Payload:         DEADBEEF
+  - Type:            CUSTOM
+    Name:            .debug_types.dwo
+    Payload:         DEADBEEF
+...

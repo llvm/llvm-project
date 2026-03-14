@@ -1,0 +1,130 @@
+# RUN: llc -verify-machineinstrs -mtriple aarch64--- \
+# RUN: -run-pass=instruction-select -mattr=+fullfp16 -global-isel %s -o - \
+# RUN: | FileCheck %s
+...
+---
+name:            floor_float
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_float
+    ; CHECK: %{{[0-9]+}}:fpr32 = nofpexcept FRINTMSr %{{[0-9]+}}
+    liveins: $s0
+    %0:fpr(s32) = COPY $s0
+    %1:fpr(s32) = G_FFLOOR %0
+    $s0 = COPY %1(s32)
+
+...
+---
+name:            floor_double
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_double
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTMDr %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(s64) = COPY $d0
+    %1:fpr(s64) = G_FFLOOR %0
+    $d0 = COPY %1(s64)
+
+...
+---
+name:            floor_v2f32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_v2f32
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTMv2f32 %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(<2 x s32>) = COPY $d0
+    %1:fpr(<2 x s32>) = G_FFLOOR %0
+    $d0 = COPY %1(<2 x s32>)
+
+...
+---
+name:            floor_v4f32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_v4f32
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTMv4f32 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:fpr(<4 x s32>) = G_FFLOOR %0
+    $q0 = COPY %1(<4 x s32>)
+
+...
+---
+name:            floor_v2f64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_v2f64
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTMv2f64 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<2 x s64>) = COPY $q0
+    %1:fpr(<2 x s64>) = G_FFLOOR %0
+    $q0 = COPY %1(<2 x s64>)
+
+...
+---
+name:            floor_v4f16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_v4f16
+    ; CHECK: %{{[0-9]+}}:fpr64 = nofpexcept FRINTMv4f16 %{{[0-9]+}}
+    liveins: $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = G_FFLOOR %0
+    $d0 = COPY %1(<4 x s16>)
+
+...
+---
+name:            floor_v8f16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name:            floor_v8f16
+    ; CHECK: %{{[0-9]+}}:fpr128 = nofpexcept FRINTMv8f16 %{{[0-9]+}}
+    liveins: $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = G_FFLOOR %0
+    $q0 = COPY %1(<8 x s16>)
+
+...

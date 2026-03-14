@@ -1,0 +1,193 @@
+## This is a test for --dynamic/-D option.
+
+## Test llvm-nm dumping ELF file with valid .dynsym section.
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-nm --dynamic %t1.o | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix DYNSYM
+# RUN: llvm-nm -D %t1.o | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix DYNSYM
+
+#       DYNSYM:                 U globalsym
+#  DYNSYM-NEXT:                 U localsym1
+#  DYNSYM-NEXT:0000000000000000 n localsym2
+# DYNSYM-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: section
+    Type: SHT_PROGBITS
+DynamicSymbols:
+  - Name:    localsym1
+    Type:    STT_OBJECT
+  - Name:    localsym2
+    Section: section
+  - Name:    globalsym
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+
+## Test llvm-nm dumping ELF file without a .dynsym section.
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-nm --dynamic %t2.o 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t2.o --check-prefix NO-SYMS
+
+#       NO-SYMS:[[FILE]]: no symbols
+# NO-SYMS-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
+## Test llvm-nm dumping ELF file with an empty .dynsym section.
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-nm --dynamic %t3.o 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --strict-whitespace -DFILE=%t3.o --check-prefix NO-SYMS
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0
+
+## Check we print symbol versions, when they are available.
+## A default version is one that is contained in the version table (SHT_GNU_versym)
+## and only available for defined symbols. Check we use the "@@" prefix to print it.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4-undef.o
+# RUN: llvm-nm --dynamic %t4-undef.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4-undef.o -DTYPE=U \
+# RUN:     --check-prefixes=VERSIONED-SYMS,VERSIONED-UNDEF-SYMS
+
+# RUN: yaml2obj --docnum=4 -DINDEX=0x1 %s -o %t4-def.o
+# RUN: llvm-nm --dynamic %t4-def.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4-def.o -DTYPE=r \
+# RUN:     --check-prefixes=VERSIONED-SYMS,VERSIONED-DEF-SYMS
+
+#            VERSIONED-SYMS: [[TYPE]] globalversym
+#       VERSIONED-SYMS-NEXT: [[TYPE]] localversym
+# VERSIONED-UNDEF-SYMS-NEXT: [[TYPE]] version2sym@v2
+#   VERSIONED-DEF-SYMS-NEXT: [[TYPE]] version2sym@@v2
+#       VERSIONED-SYMS-NEXT: [[TYPE]] version3sym@v3hidden
+#       VERSIONED-SYMS-NEXT: [[TYPE]] version4sym@v4
+#       VERSIONED-SYMS-NEXT: [[TYPE]] version5sym@v5hidden
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Flags:   [ SHF_ALLOC ]
+## 0x8000 is a special VERSYM_HIDDEN bit.
+    Entries: [ 0, 0, 1, [[VERSYMENTRY=2]], 0x8003, 4, 0x8005 ]
+    ShSize:  [[VERSYMSIZE=<none>]]
+  - Name:         .gnu.version_d
+    Type:         SHT_GNU_verdef
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    AddressAlign: 0x4
+    Info:         0x2
+    ShOffset:     [[VERDEFOFFSET=<none>]]
+    Entries:
+      - VersionNdx: 2
+        Names:
+          - v2
+      - VersionNdx: 3
+        Names:
+          - v3hidden
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Info:  0x2
+    Dependencies:
+      - Version: 1
+        File:    file1.so
+        Entries:
+          - Name:  v4
+            Hash:  0
+            Flags: 0
+            Other: 4
+      - Version: 1
+        File:    file2.0
+        Entries:
+          - Name:  v5hidden
+            Hash:  0
+            Flags: 0
+            Other: 5
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    EntSize: [[ENTSIZE=<none>]]
+DynamicSymbols:
+  - Name:  localversym
+    Index: [[INDEX=<none>]]
+  - Name:  globalversym
+    Index: [[INDEX=<none>]]
+  - Name:  version2sym
+    Index: [[INDEX=<none>]]
+  - Name:  version3sym
+    Index: [[INDEX=<none>]]
+  - Name:  version4sym
+    Index: [[INDEX=<none>]]
+  - Name:  version5sym
+    Index: [[INDEX=<none>]]
+
+## In the following cases we check we report warnings when unable to read symbol version.
+## Check that we still print unversioned symbol names.
+
+## Case 1: check we report a warning when unable to read symbol versions
+## from a broken SHT_GNU_verdef section. In this case its sh_offset
+## field has a too large value that goes past the EOF.
+
+# RUN: yaml2obj --docnum=4 -DVERDEFOFFSET=0xffffffff %s -o %t4-broken-verdef.o
+# RUN: llvm-nm --dynamic %t4-broken-verdef.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=VERSION-ERR,VERSION-ERR1
+
+# VERSION-ERR1: warning: unable to read symbol versions: cannot read content of SHT_GNU_verdef section with index 2: section [index 2] has a sh_offset (0xffffffff) + sh_size (0x38) that is greater than the file size (0x438)
+# VERSION-ERR2: warning: unable to read symbol versions: unable to read an entry with index 1 from SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_size (255) which is not a multiple of its sh_entsize (2)
+# VERSION-ERR3: warning: unable to read symbol versions: unable to get a version for entry 3 of SHT_GNU_versym section with index 1: SHT_GNU_versym section refers to a version index 255 which is missing
+
+# VERSION-ERR-NEXT: U globalversym{{$}}
+# VERSION-ERR-NEXT: U localversym{{$}}
+# VERSION-ERR-NEXT: U version2sym{{$}}
+# VERSION-ERR-NEXT: U version3sym{{$}}
+# VERSION-ERR-NEXT: U version4sym{{$}}
+# VERSION-ERR-NEXT: U version5sym{{$}}
+
+## Case 2: check we report a warning when we are unable to read a SHT_GNU_versym section entry.
+## In this case, the section has a size that is not a multiple of its sh_entsize.
+
+# RUN: yaml2obj --docnum=4 -DVERSYMSIZE=0xff %s -o %t4-broken-versym.o
+# RUN: llvm-nm --dynamic %t4-broken-versym.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=VERSION-ERR,VERSION-ERR2
+
+## Case 3: check we report a warning when we are unable to get a version for a SHT_GNU_versym section entry.
+## In this case the SHT_GNU_versym section refers to a version index 255 which is missing.
+
+# RUN: yaml2obj --docnum=4 -DVERSYMENTRY=0xff %s -o %t4-broken-index.o
+# RUN: llvm-nm --dynamic %t4-broken-index.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefixes=VERSION-ERR,VERSION-ERR3
+
+## Case 4: check we report a warning when we are unable to get symbol flags.
+## In this case the dynamic symbol table has a wrong sh_entsize and we can't read a symbol.
+
+# RUN: yaml2obj --docnum=4 -DENTSIZE=0xff %s -o %t4-broken-dynsym.o
+# RUN: not llvm-nm --dynamic %t4-broken-dynsym.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4-broken-dynsym.o --check-prefix=VERSION-ERR4
+
+# VERSION-ERR4: warning: unable to read symbol versions: unable to read flags for symbol with index 1: section [index 4] has invalid sh_entsize: expected 24, but got 255
+# VERSION-ERR4: error: [[FILE]]: section [index 4] has invalid sh_entsize: expected 24, but got 255

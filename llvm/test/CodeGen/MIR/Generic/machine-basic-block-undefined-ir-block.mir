@@ -1,0 +1,15 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @foo() {
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+body: |
+  ; CHECK: [[@LINE+1]]:9: use of undefined IR block '%ir-block.10'
+  bb.0 (%ir-block.10):
+...

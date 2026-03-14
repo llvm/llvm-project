@@ -1,0 +1,6 @@
+# Verify we reuse the argument regexps with --function-signature
+# RUN: cp -f %S/Inputs/argument_name_reuse.ll %t.ll && %update_test_checks %t.ll --function-signature
+# RUN: diff -u %t.ll %S/Inputs/argument_name_reuse.ll.expected
+# Verify we do not reuse the argument regexps, as there are none, without --function-signature
+# RUN: cp -f %S/Inputs/argument_name_reuse.ll %t.ll && %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/argument_name_reuse.ll.plain.expected

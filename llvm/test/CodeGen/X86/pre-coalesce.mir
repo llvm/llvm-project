@@ -1,0 +1,115 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass register-coalescer -o - %s | FileCheck %s
+# Check there is no partial redundent copy left in the loop after register coalescing.
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @b = common local_unnamed_addr global ptr null, align 8
+  @a = common local_unnamed_addr global i32 0, align 4
+  
+  define i32 @foo() local_unnamed_addr {
+  entry:
+    %t0 = load ptr, ptr @b, align 8
+    %t1 = load i8, ptr %t0, align 1
+    %cmp4 = icmp eq i8 %t1, 0
+    %t2 = load i32, ptr @a, align 4
+    br i1 %cmp4, label %while.end, label %while.body.preheader
+  
+  while.body.preheader:                             ; preds = %entry
+    br label %while.body
+  
+  while.body:                                       ; preds = %while.body, %while.body.preheader
+    %t3 = phi i32 [ %add3, %while.body ], [ %t2, %while.body.preheader ]
+    %t4 = phi i8 [ %t5, %while.body ], [ %t1, %while.body.preheader ]
+    %conv = sext i8 %t4 to i32
+    %add = mul i32 %t3, 33
+    %add3 = add nsw i32 %add, %conv
+    store i32 %add3, ptr @a, align 4
+    %t5 = load i8, ptr %t0, align 1
+    %cmp = icmp eq i8 %t5, 0
+    br i1 %cmp, label %while.end, label %while.body
+  
+  while.end:                                        ; preds = %while.body, %entry
+    %.lcssa = phi i32 [ %t2, %entry ], [ %add3, %while.body ]
+    ret i32 %.lcssa
+  }
+
+...
+---
+# Check A = B and B = A copies will not exist in the loop at the same time.
+# CHECK: name: foo
+# CHECK: [[L1:bb.3]].{{[a-zA-Z0-9.]+}}:
+# CHECK: %[[REGA:.*]] = COPY %[[REGB:.*]]
+# CHECK-NOT: %[[REGB]] = COPY %[[REGA]]
+# CHECK: JCC_1 %[[L1]], 5
+
+name:            foo
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr64 }
+  - { id: 1, class: gr8 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+  - { id: 4, class: gr8 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr8 }
+  - { id: 7, class: gr32 }
+  - { id: 8, class: gr32 }
+  - { id: 9, class: gr32 }
+  - { id: 10, class: gr32 }
+  - { id: 11, class: gr32 }
+  - { id: 12, class: gr8 }
+  - { id: 13, class: gr32 }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        false
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+body:             |
+  bb.0.entry:
+    %0 = MOV64rm $rip, 1, $noreg, @b, $noreg :: (dereferenceable load (s64) from @b)
+    %12 = MOV8rm %0, 1, $noreg, 0, $noreg :: (load (s8) from %ir.t0)
+    TEST8rr %12, %12, implicit-def $eflags
+    %11 = MOV32rm $rip, 1, $noreg, @a, $noreg :: (dereferenceable load (s32) from @a)
+    JCC_1 %bb.1, 5, implicit killed $eflags
+  
+  bb.4:
+    %10 = COPY %11
+    JMP_1 %bb.3
+  
+  bb.1.while.body.preheader:
+
+  bb.2.while.body:
+    %8 = MOVSX32rr8 %12
+    %10 = COPY %11
+    %10 = SHL32ri %10, 5, implicit-def dead $eflags
+    %10 = ADD32rr %10, %11, implicit-def dead $eflags
+    %10 = ADD32rr %10, %8, implicit-def dead $eflags
+    MOV32mr $rip, 1, $noreg, @a, $noreg, %10 :: (store (s32) into @a)
+    %12 = MOV8rm %0, 1, $noreg, 0, $noreg :: (load (s8) from %ir.t0)
+    TEST8rr %12, %12, implicit-def $eflags
+    %11 = COPY %10
+    JCC_1 %bb.2, 5, implicit killed $eflags
+    JMP_1 %bb.3
+  
+  bb.3.while.end:
+    $eax = COPY %10
+    RET 0, killed $eax
+
+...

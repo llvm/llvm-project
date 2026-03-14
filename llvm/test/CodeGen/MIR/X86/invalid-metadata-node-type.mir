@@ -1,0 +1,53 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+--- |
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+
+  define void @foo() #1 {
+  entry:
+    %x.i = alloca i8, align 1
+    %y.i = alloca [256 x i8], align 16
+    %0 = bitcast ptr %x.i to ptr
+    br label %for.body
+
+  for.body:
+    %1 = bitcast ptr %y.i to ptr
+    call void @llvm.dbg.declare(metadata ptr %0, metadata !4, metadata !7) #3, !dbg !8
+    br label %for.body
+  }
+
+  attributes #0 = { nounwind readnone }
+  attributes #1 = { nounwind ssp uwtable }
+  attributes #3 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
+  !1 = !DIFile(filename: "t.c", directory: "")
+  !2 = !{}
+  !3 = !{i32 1, !"Debug Info Version", i32 3}
+  !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !6)
+  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+  !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+  !7 = !DIExpression()
+  !8 = !DILocation(line: 0, scope: !5)
+...
+---
+name:            foo
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+stack:
+  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16,
+# CHECK: [[@LINE+1]]:28: expected a reference to a 'DILocalVariable' metadata node
+      debug-info-variable: '!8', debug-info-expression: '!7',
+      debug-info-location: '!8' }
+body: |
+  bb.0.entry:
+    successors: %bb.1.for.body
+  bb.1.for.body:
+    successors: %bb.1.for.body
+
+    DBG_VALUE %stack.0.y.i, 0, !4, !7, debug-location !8
+    JMP_1 %bb.1.for.body
+...

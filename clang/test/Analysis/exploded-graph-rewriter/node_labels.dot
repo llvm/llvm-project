@@ -1,0 +1,57 @@
+// RUN: %exploded_graph_rewriter %s \
+// RUN:     | FileCheck %s -check-prefixes=CHECK,LIGHT,COLOR
+// RUN: %exploded_graph_rewriter %s --dark \
+// RUN:     | FileCheck %s -check-prefixes CHECK,DARK,COLOR
+// RUN: %exploded_graph_rewriter %s --gray \
+// RUN:     | FileCheck %s -check-prefixes=CHECK,LIGHT,GRAY
+// RUN: %exploded_graph_rewriter %s --gray --dark \
+// RUN:     | FileCheck %s -check-prefixes CHECK,DARK,GRAY
+
+// LIGHT: Node0x1 [shape=record,label=<
+// DARK:  Node0x1 [shape=record,color="white",fontcolor="gray80",label=<
+// CHECK-SAME:   <tr>
+// LIGHT-SAME:     <td bgcolor="gray70">
+// DARK-SAME:      <td bgcolor="gray20">
+// CHECK-SAME:       <b>State 0</b>
+// CHECK-SAME:     </td>
+// CHECK-SAME:   </tr>
+Node0x1 [shape=record,label=
+ "{
+    { "state_id": 0, "program_state": null,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ]
+    }
+\l}"];
+
+// CHECK: Node0x2 [
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td colspan="3" align="left">
+// COLOR-SAME:     <font color="red"><b>Bug Report Attached</b></font>
+// GRAY-SAME:      <b>Bug Report Attached</b>
+// CHECK-SAME:   </td>
+// CHECK-SAME: </tr>
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td colspan="3" align="left">
+// COLOR-SAME:     <font color="cornflowerblue"><b>Sink Node</b></font>
+// GRAY-SAME:      <b>Sink Node</b>
+// CHECK-SAME:   </td>
+// CHECK-SAME: </tr>
+Node0x2 [shape=record,label=
+ "{
+    { "state_id": 0, "program_state": null,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 2,
+          "has_report": 1, "is_sink": 1
+        }
+      ]
+    }
+\l}"];

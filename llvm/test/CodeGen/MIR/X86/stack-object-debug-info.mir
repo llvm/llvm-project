@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the stack object's debug info
+# correctly.
+--- |
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+
+  define void @foo() #1 {
+  entry:
+    %x.i = alloca i8, align 1
+    %y.i = alloca [256 x i8], align 16
+    %0 = bitcast ptr %y.i to ptr
+    br label %for.body
+
+  for.body:
+    %1 = bitcast ptr %y.i to ptr
+    call void @llvm.lifetime.end(i64 -1, ptr %1) #3
+    call void @llvm.lifetime.start(i64 -1, ptr %0) #3
+    call void @llvm.dbg.declare(metadata ptr %0, metadata !4, metadata !DIExpression()) #3, !dbg !7
+    br label %for.body
+  }
+
+  declare void @llvm.lifetime.start(i64, ptr nocapture) #2
+
+  declare void @llvm.lifetime.end(i64, ptr nocapture) #2
+
+  attributes #0 = { nounwind readnone }
+  attributes #1 = { nounwind ssp uwtable }
+  attributes #2 = { nounwind argmemonly }
+  attributes #3 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
+  !1 = !DIFile(filename: "t.c", directory: "")
+  !2 = !{}
+  !3 = !{i32 1, !"Debug Info Version", i32 3}
+  !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !8)
+  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
+  !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+  !7 = !DILocation(line: 0, scope: !5)
+  !8 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 2048, align: 8, elements: !9)
+  !9 = !{!10}
+  !10 = !DISubrange(count: 256)
+...
+---
+name:            foo
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+# CHECK-LABEL: foo
+# CHECK: stack:
+# CHECK:  - { id: 0, name: y.i, type: default, offset: 0, size: 256, alignment: 16,
+# CHECK-NEXT: callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: debug-info-variable: '!4', debug-info-expression: '!DIExpression()',
+# CHECK-NEXT: debug-info-location: '!10' }
+stack:
+  - { id: 0, name: y.i, offset: 0, size: 256, alignment: 16,
+      debug-info-variable: '!4', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!7' }
+body: |
+  bb.0.entry:
+    successors: %bb.1.for.body
+  bb.1.for.body:
+    successors: %bb.1.for.body
+
+    DBG_VALUE %stack.0.y.i, 0, !4, !DIExpression(), debug-location !7
+    JMP_1 %bb.1.for.body
+...

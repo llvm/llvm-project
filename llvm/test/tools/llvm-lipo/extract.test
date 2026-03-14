@@ -1,0 +1,14 @@
+# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
+
+# RUN: not llvm-lipo %t-universal.o -extract arm64_32 -output /dev/null 2>&1 | FileCheck --check-prefix=ARCH_NOT_IN_FILE %s
+# ARCH_NOT_IN_FILE: does not contain the specified architecture arm64_32
+
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-i386.o
+# RUN: not llvm-lipo %t-i386.o -extract arm64_32 -output /dev/null 2>&1 | FileCheck --check-prefix=INPUT_NOT_A_FAT_FILE %s
+# INPUT_NOT_A_FAT_FILE: must be a fat file when the -extract option is specified
+
+# RUN: llvm-lipo -create %t-i386.o -output %t-i386-universal.o
+# RUN: llvm-lipo -extract i386 %t-universal.o -output %t-i386-universal-extracted.o
+# RUN: cmp %t-i386-universal.o %t-i386-universal-extracted.o
+# RUN: llvm-lipo -thin i386 %t-i386-universal-extracted.o -output %t-i386-thinned.o
+# RUN: cmp %t-i386.o %t-i386-thinned.o

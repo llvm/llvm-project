@@ -1,0 +1,4 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.3a --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8r,+jsconv --disassemble < %s | FileCheck %s
+# CHECK: fjcvtzs w0, d0
+[0x00,0x00,0x7e,0x1e]

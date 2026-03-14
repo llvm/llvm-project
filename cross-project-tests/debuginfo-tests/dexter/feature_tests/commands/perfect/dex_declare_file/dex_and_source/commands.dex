@@ -1,0 +1,2 @@
+DexDeclareFile('test.cpp')
+DexExpectWatchValue('result', 0, on_line=14)

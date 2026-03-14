@@ -1,0 +1,12 @@
+---
+MainSourceFile:  ''
+Replacements:
+  - FilePath:        idontexist.h
+    Offset:          2669
+    Length:          0
+    ReplacementText: ' override'
+  - FilePath:        idontexist.h
+    Offset:          2669
+    Length:          0
+    ReplacementText: ' override'
+...

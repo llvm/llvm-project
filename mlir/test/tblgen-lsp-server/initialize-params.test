@@ -1,0 +1,31 @@
+// RUN: tblgen-lsp-server -lit-test < %s | FileCheck %s
+// Test initialize request parameters with rootUri
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"test:///workspace","capabilities":{},"trace":"off"}}
+//      CHECK:  "id": 0,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "capabilities": {
+// CHECK-NEXT:    "definitionProvider": true,
+// CHECK-NEXT:    "documentLinkProvider": {
+// CHECK-NEXT:      "resolveProvider": false
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "hoverProvider": true,
+// CHECK-NEXT:    "referencesProvider": true,
+// CHECK-NEXT:    "textDocumentSync": {
+// CHECK-NEXT:        "change": 2,
+// CHECK-NEXT:        "openClose": true,
+// CHECK-NEXT:        "save": true
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "serverInfo": {
+// CHECK-NEXT:      "name": "tblgen-lsp-server",
+// CHECK-NEXT:      "version": "{{.*}}"
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+//      CHECK:  "id": 3,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": null
+// -----
+{"jsonrpc":"2.0","method":"exit"}

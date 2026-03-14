@@ -1,0 +1,15 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t > %t.stdout.yaml
+# RUN: obj2yaml %t -o %t.file.yaml 2>&1 | count 0
+# RUN: FileCheck --input-file=%t.stdout.yaml %s
+# RUN: diff %t.stdout.yaml %t.file.yaml
+!Offload
+Members:
+  - 
+
+# CHECK: --- !Offload
+# CHECK-NEXT: Members:
+# CHECK-NEXT:   - ImageKind:       IMG_None
+# CHECK-NEXT:     OffloadKind:     OFK_None
+# CHECK-NEXT:     Flags:           0
+# CHECK-NEXT: ...

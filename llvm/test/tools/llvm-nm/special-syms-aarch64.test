@@ -1,0 +1,29 @@
+## Test --special-syms flag.
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-nm %t | count 0
+# RUN: llvm-nm %t --special-syms | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AARCH64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+    Address:         0x2000
+Symbols:
+  - Name:     $x.1
+    Section:  .text
+  - Name:     $d.1
+    Section:  .data
+
+# CHECK:      2000 d $d.1
+# CHECK-NEXT: 1000 t $x.1

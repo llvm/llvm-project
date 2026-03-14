@@ -1,0 +1,2 @@
+# RUN: not %lldb -x -b -S %S/Inputs/process_attach_pid.in 2>&1 | FileCheck %s
+# CHECK: last option requires an argument

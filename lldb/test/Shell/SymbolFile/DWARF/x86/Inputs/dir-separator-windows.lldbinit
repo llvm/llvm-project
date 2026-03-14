@@ -1,0 +1,7 @@
+image dump line-table a.c
+breakpoint set -f a.c -l 1
+breakpoint set -f C:/tmp/b.c -l 1
+
+# This will fail on non-windows systems because the path will by parsed
+# according to posix rules
+# breakpoint set -f 'C:\tmp\b.c' -l 1

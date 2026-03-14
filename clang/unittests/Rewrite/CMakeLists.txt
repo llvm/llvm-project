@@ -1,0 +1,10 @@
+add_clang_unittest(RewriteTests
+  RewriterTest.cpp
+  CLANG_LIBS
+  clangFrontend
+  clangRewrite
+  clangSerialization
+  clangTooling
+  LLVM_COMPONENTS
+  Support
+  )

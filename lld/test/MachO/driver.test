@@ -1,0 +1,6 @@
+# RUN: %lld --version | FileCheck -check-prefix=VERSION %s
+VERSION: LLD
+
+# RUN: not %lld ---help 2>&1 | FileCheck -check-prefix=SPELLHELP %s
+SPELLHELP: error: unknown argument '---help', did you mean '--help'
+# FIXME: We should also output a "no input files" error

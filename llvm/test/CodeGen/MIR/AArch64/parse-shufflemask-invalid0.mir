@@ -1,0 +1,19 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass=none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name: test_missing_comma
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+
+    %0:_(<2 x s32>) = COPY $d0
+    %2:_(<2 x s32>) = G_IMPLICIT_DEF
+
+    ; FIXME: Not ideal error
+    ; CHECK: [[@LINE+1]]:73: shufflemask should be terminated by ')'.
+    %1:_(<2 x s32>) = G_SHUFFLE_VECTOR %0(<2 x s32>), %2, shufflemask(1 0)
+    $d0 = COPY %1(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...

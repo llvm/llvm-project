@@ -1,0 +1,21 @@
+MODULE Linux arm64 38830080A082E5515922C905D23890DA0 AndroidModule.so
+INFO CODE_ID 8000833882A051E55922C905D23890DABDDEFECC
+FILE 0 /private/tmp/test/AndroidModule.c
+FUNC 162c 8 0 boom
+162c 8 8 0
+FUNC 1634 8 0 boom_hidden
+1634 8 12 0
+PUBLIC 15cc 0 __on_dlclose
+PUBLIC 15dc 0 __emutls_unregister_key
+PUBLIC 15e4 0 __on_dlclose_late
+PUBLIC 15ec 0 __atexit_handler_wrapper
+PUBLIC 1600 0 atexit
+PUBLIC 161c 0 pthread_atfork
+STACK CFI INIT 15cc 10 .cfa: sp 0 + .ra: x30
+STACK CFI INIT 15dc 8 .cfa: sp 0 + .ra: x30
+STACK CFI INIT 15e4 8 .cfa: sp 0 + .ra: x30
+STACK CFI INIT 15ec 14 .cfa: sp 0 + .ra: x30
+STACK CFI INIT 1600 1c .cfa: sp 0 + .ra: x30
+STACK CFI INIT 161c 10 .cfa: sp 0 + .ra: x30
+STACK CFI INIT 162c 8 .cfa: sp 0 + .ra: x30
+STACK CFI INIT 1634 8 .cfa: sp 0 + .ra: x30

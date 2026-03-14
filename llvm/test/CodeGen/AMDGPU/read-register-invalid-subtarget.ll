@@ -1,0 +1,14 @@
+; RUN: not llc -mtriple=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
+
+; CHECK: error: invalid register "flat_scratch_lo" for subtarget.
+
+declare i32 @llvm.read_register.i32(metadata) #0
+
+define amdgpu_kernel void @test_invalid_read_flat_scratch_lo(ptr addrspace(1) %out) nounwind {
+  store volatile i32 0, ptr addrspace(3) poison
+  %m0 = call i32 @llvm.read_register.i32(metadata !0)
+  store i32 %m0, ptr addrspace(1) %out
+  ret void
+}
+
+!0 = !{!"flat_scratch_lo"}

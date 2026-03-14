@@ -1,0 +1,73 @@
+# RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000001000000000000000000000001000000000000000000000000000000000000000000000000300AC60800000000004000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_4
+# RES_4: ; error decoding test.kd: kernel descriptor reserved bits in range (127:96) set
+# RES_4-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000300AC60800000000004000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_20
+# RES_20: ; error decoding test.kd: kernel descriptor reserved bits in range (351:192) set
+# RES_20-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300AC60800000000004000000000001 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_4_2
+# RES_4_2: ; error decoding test.kd: kernel descriptor reserved bits in range (511:480) set
+# RES_4_2-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX90A -DKD=00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_457
+# RES_457: ; error decoding test.kd: kernel descriptor reserved bits in range (457:455) set
+# RES_457-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX90A -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=WF32
+# WF32: ; error decoding test.kd: kernel descriptor reserved bit (458) set, must be zero on gfx9
+# WF32-NEXT: ; decoding failed region as bytes
+
+# RUN: yaml2obj %s -DGPU=GFX1100 -DKD=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300AC60800000000024000000000000 \
+# RUN:   | llvm-objdump --disassemble-symbols=test.kd - | FileCheck %s --check-prefix=RES_463
+# RES_463: ; error decoding test.kd: kernel descriptor reserved bits in range (463:460) set
+# RES_463-NEXT: ; decoding failed region as bytes
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      0x3
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_[[GPU]], EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4, EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 ]
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         [[KD]]
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x10
+        Symbol:          test
+        Type:            R_AMDGPU_REL64
+        Addend:          16
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .symtab
+Symbols:
+  - Name:            test.kd
+    Type:            STT_OBJECT
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x40
+  - Name:            test
+    Binding:         STB_GLOBAL
+    Other:           [ STV_PROTECTED ]
+...

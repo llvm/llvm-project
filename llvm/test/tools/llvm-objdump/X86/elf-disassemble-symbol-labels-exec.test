@@ -1,0 +1,57 @@
+## Show which labels are printed in disassembly of an executable.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump %t -d | FileCheck %s --implicit-check-not=stt_section \
+# RUN:                                   --implicit-check-not=fourth \
+# RUN:                                   --implicit-check-not=absolute \
+# RUN:                                   --implicit-check-not=other
+
+# Match this line so the implicit check-nots don't match the path.
+# CHECK: {{^.*}}file format elf64-x86-64
+
+# CHECK:     0000000000004000 <first>:
+# CHECK:     0000000000004001 <second>:
+# CHECK:     0000000000004002 <third>:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '9090909090'
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Address: 0x4004
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    0
+Symbols:
+  - Name:    first # Shows, with second, that symbol sizes are not used to delineate functions.
+    Value:   0x4000
+    Section: .text
+    Size:    0x2
+  - Name:    second
+    Value:   0x4001
+    Size:    0x1
+    Section: .text
+  - Name:    third # Shows, with fourth, that first symbol is picked.
+    Value:   0x4002
+    Section: .text
+  - Name:    fourth
+    Value:   0x4002
+    Section: .text
+  - Name:    stt_section # Shows that STT_SECTION symbols are ignored even if no other symbol present.
+    Value:   0x4003
+    Type:    STT_SECTION
+    Section: .text
+  - Name:    absolute # Show that absolute symbols are ignored.
+    Value:   0x4004
+    Index:   SHN_ABS
+  - Name:    other # Show that symbols from other sections are ignored.
+    Value:   0x4004
+    Section: .text2

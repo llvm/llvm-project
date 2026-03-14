@@ -1,0 +1,111 @@
+## Show that references in disassembly are labelled with the correct symbol.
+# RUN: yaml2obj %s --docnum=1 -o %t
+# RUN: llvm-objdump --no-print-imm-hex %t -d | FileCheck %s --check-prefix=EXEC
+
+# EXEC-LABEL: <first>:
+# EXEC-NEXT:   4000: e8 00 00 00 00                callq   0x4005 <third>
+# EXEC-LABEL: <third>:
+# EXEC-NEXT:   4005: e8 12 34 56 78                callq   0x7856741c <data1+0x7856241c>
+# EXEC-LABEL: <fourth>:
+# EXEC-NEXT:   400a: 8b 05 f0 0f 00 00             movl    4080(%rip), %eax  # 0x5000 <data1>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text1
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e800000000' # Case 1: Referencing an address with a symbol.
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x4005
+    Content: 'e812345678' # Case 2: Referencing an address without a symbol.
+  - Name:    .text3
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Address: 0x400A
+    Content: '8b05f00f0000' # Case 3: Memory operands
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x5000
+Symbols:
+  - Name:    first
+    Section: .text1
+    Value:   0x4000
+  - Name:    second
+    Section: .text1
+    Value:   0x4005
+  - Name:    third
+    Section: .text2
+    Value:   0x4005
+  - Name:    fourth
+    Section: .text3
+    Value:   0x400A
+  - Name:    data1
+    Section: .data
+    Value:   0x5000
+
+# RUN: yaml2obj %s --docnum=2 -o %t.o
+# RUN: llvm-objdump --no-print-imm-hex %t.o -d | FileCheck %s --check-prefix=REL
+
+# REL:      Disassembly of section .text1:
+# REL-EMPTY:
+# REL-NEXT: 0000000000000000 <.text1>:
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <.text1+0x5>
+# REL-EMPTY:
+# REL-NEXT: Disassembly of section .text2:
+# REL-EMPTY:
+# REL-NEXT: 0000000000000000 <.text2>:
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <sym2>
+# REL-EMPTY:
+# REL-NEXT: Disassembly of section .text3:
+# REL-EMPTY:
+# REL-NEXT: 0000000000000000 <.text3>:
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <.text3+0x5>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text1
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e800000000' # Case 1: Instruction is patched by a relocation.
+  - Name:    .rela.text1
+    Type:    SHT_RELA
+    Info:    .text1
+    Relocations:
+      - Offset: 1
+        Type:   R_X86_64_PC32
+        Symbol: sym3
+  - Name:    .text2
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e800000000' # Case 2: Referencing an address with a matching symbol in that section.
+  - Name:    .text3
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: 'e800000000' # Case 3: Referencing an address without a matching symbol in that section.
+  - Name:    .other
+    Type:    SHT_PROGBITS
+Symbols:
+  # Shouldn't be picked, despite matching value, as not in right section.
+  - Name:    sym1
+    Section: .other
+    Value:   5
+  # Symbol in correct section, with right value should be picked for disassembly of .text2.
+  - Name:    sym2
+    Section: .text2
+    Value:   5
+  # Symbol referenced by relocation could be picked for disassembly of .text1, but isn't.
+  - Name:    sym3

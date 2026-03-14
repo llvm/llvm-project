@@ -1,0 +1,10 @@
+RUN: llvm-cxxfilt -n  < %s | FileCheck --match-full-lines %s
+
+; Full test suite for dlang demangling at
+; llvm/unittests/Demangle/DLangDemangleTest.cpp
+
+CHECK: D main
+       _Dmain
+
+CHECK: _DDD
+       _DDD

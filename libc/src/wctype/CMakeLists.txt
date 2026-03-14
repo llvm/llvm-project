@@ -1,0 +1,109 @@
+add_entrypoint_object(
+  iswalpha
+  SRCS
+    iswalpha.cpp
+  HDRS
+    iswalpha.h
+  DEPENDS
+    libc.src.__support.wctype_utils    
+)
+
+add_entrypoint_object(
+  iswcntrl
+  SRCS
+    iswcntrl.cpp
+  HDRS
+    iswcntrl.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswdigit
+  SRCS
+    iswdigit.cpp
+  HDRS
+    iswdigit.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswalnum
+  SRCS
+    iswalnum.cpp
+  HDRS
+    iswalnum.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswgraph
+  SRCS
+    iswgraph.cpp
+  HDRS
+    iswgraph.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswlower
+  SRCS
+    iswlower.cpp
+  HDRS
+    iswlower.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswspace
+  SRCS
+    iswspace.cpp
+  HDRS
+    iswspace.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswblank
+  SRCS
+    iswblank.cpp
+  HDRS
+    iswblank.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswxdigit
+  SRCS
+    iswxdigit.cpp
+  HDRS
+    iswxdigit.h
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.hdr.types.wint_t
+)
+
+add_entrypoint_object(
+  iswupper
+  SRCS
+    iswupper.cpp
+  HDRS
+    iswupper.h
+  DEPENDS
+    libc.hdr.types.wint_t
+    libc.src.__support.wctype_utils
+)

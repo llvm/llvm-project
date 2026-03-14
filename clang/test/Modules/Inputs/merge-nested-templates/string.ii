@@ -1,0 +1,14 @@
+namespace std {
+  template <typename, typename Container> struct normal_iterator {
+    normal_iterator() {}
+
+    template <typename I>
+    normal_iterator(normal_iterator<I, typename Container::iterator>) {}
+  };
+
+  template <typename pointer> struct basic_string {
+    typedef normal_iterator<pointer, basic_string> iterator;
+  };
+
+  typedef basic_string<wchar_t *> wstring;
+}

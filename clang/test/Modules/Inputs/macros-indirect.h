@@ -1,0 +1,1 @@
+#define INDIRECTLY_IN_MACROS 1

@@ -1,0 +1,5 @@
+first_function,opt-level=O1
+second_function,cold
+third_function,opt-level=O1
+fourth_function,opt-level=O2
+fifth_function,foo=bar

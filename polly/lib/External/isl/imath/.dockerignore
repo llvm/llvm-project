@@ -1,0 +1,12 @@
+.git
+ChangeLog
+LICENSE
+contrib
+**/*.gz
+**/*.md
+**/*.o
+**/*.so
+**/Dockerfile
+tests/*.bc
+tests/*.scm
+tests/linux

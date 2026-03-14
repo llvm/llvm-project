@@ -1,0 +1,18 @@
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml --report_style=json --pretty | FileCheck -strict-whitespace %s
+
+; CHECK-LABEL: "Files":
+; CHECK: "A":{{.*}}1-func-1-instr-1-stack.yaml
+; CHECK-NEXT: "B":{{.*}}1-func-1-instr-1-stack.yaml
+
+; CHECK-LABEL: "InBoth":
+; CHECK: "FunctionName": "func0",
+; CHECK-NEXT: "InstCount":
+; CHECK-NEXT: 1,
+; CHECK-NEXT: 1
+; CHECK-NEXT: ],
+; CHECK-NEXT: "StackSize": [
+; CHECK-NEXT: 1,
+; CHECK-NEXT: 1
+
+; CHECK: "OnlyInA": []
+; CHECK: "OnlyInB": []

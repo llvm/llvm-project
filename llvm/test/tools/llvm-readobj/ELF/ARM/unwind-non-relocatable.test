@@ -1,0 +1,153 @@
+## Check that we dump the unwind information for a non-relocatable input properly.
+
+## Check that we correctly decode function addresses and that we are able to
+## locate corresponding STT_FUNC symbols and dump function names properly.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -u %t | FileCheck --check-prefix=UNWIND %s
+# RUN: llvm-readelf -u %t | FileCheck --check-prefix=UNWIND %s
+
+# UNWIND:      UnwindInformation {
+# UNWIND-NEXT:   UnwindIndexTable {
+# UNWIND-NEXT:     SectionIndex: 2
+# UNWIND-NEXT:     SectionName: .ARM.exidx
+# UNWIND-NEXT:     SectionOffset: 0x34
+# UNWIND-NEXT:     Entries [
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x230
+# UNWIND-NEXT:         FunctionName: func1
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x234
+# UNWIND-NEXT:         FunctionName: func2
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0x9B      ; vsp = r11
+# UNWIND-NEXT:           0x84 0x80 ; pop {fp, lr}
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x248
+# UNWIND-NEXT:         FunctionName: func3
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x24C
+# UNWIND-NEXT:         Model: CantUnwind
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x4000026B
+# UNWIND-NEXT:         FunctionName: func4
+# UNWIND-NEXT:         Model: Compact (Inline)
+# UNWIND-NEXT:         PersonalityIndex: 0
+# UNWIND-NEXT:         Opcodes [
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:           0xB0      ; finish
+# UNWIND-NEXT:         ]
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x25C
+# UNWIND-NEXT:         FunctionName: func5
+# UNWIND-NEXT:         ExceptionHandlingTable: .ARM.extab
+# UNWIND-NEXT:         TableEntryAddress: 0xAABE44
+# UNWIND-NEXT:         Model: Generic
+# UNWIND-NEXT:         PersonalityRoutineAddress: 0x33CCCF44
+# UNWIND-NEXT:         PersonalityRoutineName: personality1
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:       Entry {
+# UNWIND-NEXT:         FunctionAddress: 0x25C
+# UNWIND-NEXT:         FunctionName: func5
+# UNWIND-NEXT:         ExceptionHandlingTable: .ARM.extab
+# UNWIND-NEXT:         TableEntryAddress: 0xAABE48
+# UNWIND-NEXT:         Model: Generic
+# UNWIND-NEXT:         PersonalityRoutineAddress: 0xFFFFFFFFF811138C
+# UNWIND-NEXT:       }
+# UNWIND-NEXT:     ]
+# UNWIND-NEXT:   }
+# UNWIND-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_ARM
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x230
+  - Name:    .ARM.exidx
+    Type:    SHT_ARM_EXIDX
+    Address: 0x24C
+    Entries:
+## A. Address of .ARM.exidx (0x24C) + entry offset (0) + 0x7fffffe4 (31 bit) == 0x230 (func1).
+      - Offset: 0x7FFFFFE4
+        Value:  0x80B0B0B0 ## arbitrary opcodes.
+## B. Address of .ARM.exidx (0x24C) + entry offset (8) + 0x7fffffe0 (31 bit) == 0x234 (func2).
+      - Offset: 0x7FFFFFE0
+        Value:  0x809B8480 ## arbitrary opcodes.
+## C. Address of .ARM.exidx (0x24C) + entry offset (16) + 0x7fffffec (31 bit) == 0x248 (func3).
+      - Offset: 0x7FFFFFEC
+        Value:  0x80B0B0B0 ## arbitrary opcodes.
+## D. Address of .ARM.exidx (0x24C) + entry offset (24) + 0x7fffffe8 (31 bit) == 0x24C.
+      - Offset: 0x7FFFFFE8
+        Value:  EXIDX_CANTUNWIND
+## E. Address of .ARM.exidx (0x24C) + entry offset (32) + 0x3FFFFFFF (31 bit) == 0x4000026b (func4).
+      - Offset: 0x3FFFFFFF
+        Value:  0x80B0B0B0 ## arbitrary opcodes.
+## F. Address of .ARM.exidx (0x24C) + entry offset (40) + 0x7FFFFFE8 (31 bit) == 0x25c (func5).
+      - Offset: 0x7FFFFFE8
+## Generic model. .ARM.exidx (0x24C) + entry offset (40 + 4) + 0x00AABBCC ==
+##                0x00AABE44 == address of entry [0] in the .ARM.extab section.
+##                0x00AABE44 + 0x33221100 (31 bit, signed, .ARM.extab entry [0] value) ==
+##                  0x33cccf44 == personality1 routine address.
+        Value:  0x00AABBCC
+## G. Address of .ARM.exidx (0x24C) + entry offset (48) + 0x7FFFFFE0 (31 bit) == 0x25c (func5).
+      - Offset: 0x7FFFFFE0
+## Generic model. .ARM.exidx (0x24C) + entry offset (48 + 4) + 0x00AABBC8 ==
+##                0x00AABE48 == address of entry [1] in the .ARM.extab section.
+##                0x00AABE48 + 0x77665544 (31 bit, signed, .ARM.extab entry [1] value) ==
+##                  0xFFFFFFFFF811138C == the address of a personality routine function that does not exist.
+        Value:  0x00AABBC8
+  - Name:    .ARM.extab
+    Type:    SHT_PROGBITS
+    Address: 0x00AABE44
+    Content: "0011223344556677"
+Symbols:
+  - Name:    func1
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x230
+  - Name:    func2
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x234
+  - Name:    func3
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x248
+  - Name:    func4
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x4000026b
+  - Name:    func5
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x25c
+  - Name:  personality1
+    Type:  STT_FUNC
+    Value: 0x33cccf44

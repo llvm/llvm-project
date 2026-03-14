@@ -1,0 +1,5 @@
+Name: SomeBrokenLib
+Functions:
+  - Name: do_something_with_pointers
+    Nu llabilityOfRet: O
+    # the space is intentional, to make sure we don't crash on malformed API Notes

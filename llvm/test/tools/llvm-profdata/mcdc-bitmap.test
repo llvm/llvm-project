@@ -1,0 +1,201 @@
+# Test MC/DC bitmap reading and merging.
+
+# Merge as profdata.
+RUN: split-file %s %t
+RUN: llvm-profdata merge %t/mcdc-1.proftext %t/mcdc-2.proftext -o %t.profdata
+RUN: llvm-profdata show %t.profdata --text -all-functions | FileCheck %s --check-prefix=MCDC
+# Merge as proftext.
+RUN: llvm-profdata merge %t/mcdc-1.proftext %t/mcdc-2.proftext -o %t.proftext
+RUN: llvm-profdata show %t.proftext --text -all-functions | FileCheck %s --check-prefix=MCDC
+
+MCDC: # Num Bitmap Bytes:
+MCDC-NEXT: $1
+MCDC-NEXT: # Bitmap Byte Values:
+MCDC-NEXT: a
+MCDC: # Num Bitmap Bytes:
+MCDC-NEXT: $2
+MCDC-NEXT: # Bitmap Byte Values:
+MCDC-NEXT: 0x29
+MCDC-NEXT: 0x0
+
+# Merge as profdata.
+RUN: llvm-profdata merge %t/mcdc-3.proftext %t/mcdc-4.proftext -o %t.profdata
+RUN: llvm-profdata show %t.profdata --text -all-functions | FileCheck %s --check-prefix=MCDC2
+# Merge as proftext.
+RUN: llvm-profdata merge %t/mcdc-3.proftext %t/mcdc-4.proftext -o %t.proftext
+RUN: llvm-profdata show %t.proftext --text -all-functions | FileCheck %s --check-prefix=MCDC2
+
+MCDC2: # Num Bitmap Bytes:
+MCDC2-NEXT: $8
+MCDC2-NEXT: # Bitmap Byte Values:
+MCDC2-NEXT: 0x1
+MCDC2-NEXT: 0x2
+MCDC2-NEXT: 0x3
+MCDC2-NEXT: 0xf
+MCDC2-NEXT: 0xf
+MCDC2-NEXT: 0xe
+MCDC2-NEXT: 0xf
+MCDC2-NEXT: 0xa
+
+# Incompatible size mismatch.
+RUN: llvm-profdata merge %t/mcdc-2.proftext %t/mcdc-4.proftext -o %t.profdata 2>&1 | FileCheck %s --check-prefix=MCDC3
+# Merge as proftext
+RUN: llvm-profdata merge %t/mcdc-2.proftext %t/mcdc-4.proftext -o %t.proftext 2>&1 | FileCheck %s --check-prefix=MCDC3
+
+MCDC3: function bitmap size change detected (bitmap size mismatch)
+
+# Invalid number of bitmap bytes.
+RUN: not llvm-profdata merge %t/mcdc-3.proftext %t/mcdc-err0.proftext -o %t.proftext 2>&1 | FileCheck %s --check-prefix=MCDC4
+
+MCDC4: malformed instrumentation profile data: number of bitmap bytes is not a valid integer
+
+# Invalid bitmap byte.
+RUN: not llvm-profdata merge %t/mcdc-3.proftext %t/mcdc-err1.proftext -o %t.proftext 2>&1 | FileCheck %s --check-prefix=MCDC5
+
+MCDC5: malformed instrumentation profile data: bitmap byte is not a valid integer
+
+;--- mcdc-1.proftext
+main
+# Func Hash:
+702755447896
+# Num Counters:
+4
+# Counter Values:
+1
+0
+1
+0
+# Num Bitmask Bytes:
+$1
+# Bitmask Byte Values:
+2
+;--- mcdc-2.proftext
+main
+# Func Hash:
+702755447896
+# Num Counters:
+4
+# Counter Values:
+1
+1
+1
+1
+# Num Bitmask Bytes:
+$1
+# Bitmask Byte Values:
+8
+
+
+test3
+# Func Hash:
+15288018065
+# Num Counters:
+6
+# Counter Values:
+4
+2
+1
+0
+0
+2
+# Num Bitmask Bytes:
+$0x2
+# Bitmask Byte Values:
+0x29
+0x0
+;--- mcdc-3.proftext
+test3
+# Func Hash:
+15288018065
+# Num Counters:
+6
+# Counter Values:
+4
+2
+1
+0
+0
+2
+# Num Bitmask Bytes:
+$8
+# Bitmask Byte Values:
+0x0
+0x2
+0x3
+0xf
+0xf
+0xa
+0xc
+0x2
+;--- mcdc-4.proftext
+test3
+# Func Hash:
+15288018065
+# Num Counters:
+6
+# Counter Values:
+4
+2
+1
+0
+0
+2
+# Num Bitmask Bytes:
+$       8
+# Bitmask Byte Values:
+1
+2
+3
+4
+5
+6
+7
+8
+;--- mcdc-err0.proftext
+test3
+# Func Hash:
+15288018065
+# Num Counters:
+6
+# Counter Values:
+4
+2
+1
+0
+0
+2
+# Num Bitmask Bytes:
+$8.9
+# Bitmask Byte Values:
+1
+2
+3
+4
+5
+6
+7
+8
+;--- mcdc-err1.proftext
+test3
+# Func Hash:
+15288018065
+# Num Counters:
+6
+# Counter Values:
+4
+2
+1
+0
+0
+2
+# Num Bitmask Bytes:
+$8
+# Bitmask Byte Values:
+1
+2
+3
+4
+5.4
+6
+7
+8

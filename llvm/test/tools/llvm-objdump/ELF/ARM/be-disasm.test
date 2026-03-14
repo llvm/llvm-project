@@ -1,0 +1,91 @@
+# RUN: yaml2obj --docnum=1 -DCONTENT=FA000002E59F100CE0800001E12FFF1E4802EB00308047703141592627182818 %s | llvm-objdump --no-print-imm-hex -d --triple=armv7r - | FileCheck %s
+# RUN: yaml2obj --docnum=1 -DCONTENT=020000FA0C109FE5010080E01EFF2FE1024800EB803070473141592627182818 -DFLAG=,EF_ARM_BE8 %s | llvm-objdump --no-print-imm-hex -d --triple=armv7r - | FileCheck %s
+# RUN: yaml2obj --docnum=2 -DCONTENT=FA000002E59F100CE0800001E12FFF1E4802EB00308047703141592627182818 %s | llvm-objdump --no-print-imm-hex -d --triple=armv7r - | FileCheck %s
+
+## Test llvm-objdump disassembly of all three kinds of
+## AAELF32-compliant big-endian ELF file.
+##
+## In image files, by default AArch32 ELF stores the instructions
+## big-endian ('BE32' style), unless the EF_ARM_BE8 flag is set in the
+## ELF header, which indicates that instructions are stored
+## little-endian ('BE8' style). llvm-objdump should detect the flag and
+## handle both types, using the $a, $t and $d mapping symbols to
+## distinguish Arm instructions, Thumb instructions, and data.
+##
+## Relocatable object files always use the BE32 style. (The linker is
+## expected to byte-swap code sections, using the same the mapping
+## symbols to decide how, if it's going to generate an image with BE8
+## instruction endianness and the BE8 flag set.)
+##
+## This test checks all three cases of this. It provides llvm-objdump
+## with the BE32 and BE8 versions of the same image file, with the code
+## section byte-swapped, and the EF_ARM_BE8 flag absent and present
+## respectively to indicate that. We also provide a matching object
+## file. We expect the identical disassembly from both, apart from the
+## detail that addresses in the ELF images start at 0x8000 and section
+## offsets in the object start at 0.
+
+# CHECK:             0: fa000002      blx
+# CHECK-NEXT:        4: e59f100c      ldr     r1, [pc, #12]
+# CHECK-NEXT:        8: e0800001      add     r0, r0, r1
+# CHECK-NEXT:        c: e12fff1e      bx      lr
+# CHECK:            10: 4802          ldr     r0, [pc, #8]
+# CHECK-NEXT:       12: eb00 3080     add.w   r0, r0, r0, lsl #14
+# CHECK-NEXT:       16: 4770          bx      lr
+# CHECK:            18: 31 41 59 26   .word   0x31415926
+# CHECK-NEXT:       1c: 27 18 28 18   .word   0x27182818
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2MSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_EABI_UNKNOWN[[FLAG=]] ]
+  Entry:           0x8000
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x8000
+    Align:           0x4
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x8000
+    AddressAlign:    0x4
+    Content:         [[CONTENT]]
+Symbols:
+  - Name:            '$a'
+    Section:         .text
+    Value:           0x8000
+  - Name:            '$t'
+    Section:         .text
+    Value:           0x8010
+  - Name:            '$d'
+    Section:         .text
+    Value:           0x8018
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2MSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         [[CONTENT]]
+Symbols:
+  - Name:            '$a'
+    Section:         .text
+  - Name:            '$t'
+    Section:         .text
+    Value:           0x10
+  - Name:            '$d'
+    Section:         .text
+    Value:           0x18

@@ -1,0 +1,90 @@
+# Check that llvm-lib doesn't list the members of an archive which contains the
+# special member /<ECSYMBOLS>/.
+
+# RUN: yaml2obj --docnum=1 %s -o %t.lib
+# RUN: llvm-nm --print-armap %t.lib 2>&1 | FileCheck --check-prefix=NM1 %s
+# NM1: truncated or malformed archive (invalid EC symbols size (3))
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '3'
+    Content:         010203
+    PaddingByte:     0
+...
+
+# RUN: yaml2obj --docnum=2 %s -o %t.lib
+# RUN: llvm-nm --print-armap %t.lib 2>&1 | FileCheck --check-prefix=NM2 %s
+# NM2: truncated or malformed archive (invalid EC symbols size. Size was 7, but expected 8)
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '12'
+    Content:         010000001000000000000000
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '7'
+    Content:         02000000010001
+    PaddingByte:     0
+...
+
+# RUN: yaml2obj --docnum=3 %s -o %t.lib
+# RUN: llvm-nm --print-armap %t.lib 2>&1 | FileCheck --check-prefix=NM3 %s
+# NM3: truncated or malformed archive (invalid EC symbol index 2 is larger than member count 1)
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '12'
+    Content:         010000001000000000000000
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '8'
+    Content:         0100000002006100
+  - Name:            'a.obj'
+    Size:            '0'
+...
+
+
+# RUN: yaml2obj --docnum=4 %s -o %t.lib
+# RUN: llvm-nm --print-armap %t.lib 2>&1 | FileCheck --check-prefix=NM4 %s
+# NM4: truncated or malformed archive (invalid EC symbol index 0)
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '12'
+    Content:         010000001000000000000000
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '8'
+    Content:         0100000000006100
+  - Name:            'a.obj'
+    Size:            '0'
+...
+
+# RUN: yaml2obj --docnum=5 %s -o %t.lib
+# RUN: llvm-nm --print-armap %t.lib 2>&1 | FileCheck --check-prefix=NM5 %s
+# NM5: truncated or malformed archive (malformed EC symbol names: not null-terminated)
+
+--- !Arch
+Members:
+  - Name:            '/'
+    Size:            '0'
+  - Name:            '/'
+    Size:            '12'
+    Content:         010000001000000000000000
+  - Name:            '/<ECSYMBOLS>/'
+    Size:            '8'
+    Content:         0100000001006161
+  - Name:            'a.obj'
+    Size:            '0'
+...

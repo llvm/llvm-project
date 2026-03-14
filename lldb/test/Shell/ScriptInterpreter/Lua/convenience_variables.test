@@ -1,0 +1,15 @@
+# This tests that the convenience variables are not nil. Given that there is no
+# target we only expect the debugger to be valid.
+#
+# RUN: cat %s | %lldb --script-language lua 2>&1 | FileCheck %s
+script
+print("lldb.debugger is valid: ", tostring(lldb.debugger:IsValid()))
+print("lldb.target is valid: ", tostring(lldb.target:IsValid()))
+print("lldb.process is valid: ", tostring(lldb.process:IsValid()))
+print("lldb.thread is valid: ", tostring(lldb.thread:IsValid()))
+print("lldb.frame is valid: ", tostring(lldb.frame:IsValid()))
+# CHECK: debugger is valid: true
+# CHECK: target is valid: false
+# CHECK: process is valid: false
+# CHECK: thread is valid: false
+# CHECK: frame is valid: false

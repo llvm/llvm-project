@@ -1,0 +1,7 @@
+Test that no temporary file is left behind on error.
+
+RUN: rm -rf %t
+RUN: mkdir %t
+RUN: not llvm-ar rc %t/foo.a .
+RUN: rmdir %t
+

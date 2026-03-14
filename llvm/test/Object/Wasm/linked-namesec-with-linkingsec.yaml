@@ -1,0 +1,40 @@
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: llvm-nm -P %t.wasm | FileCheck %s
+#
+# Test that names from the linking section override those from the name section
+# CHECK:  foo T 1 3
+# CHECK-NOT: my_func_local_name
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            00
+      - Index:           1
+        Locals:
+        Body:            00
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            foo
+        Flags:           [ VISIBILITY_HIDDEN ]
+        Function:        0
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+     - Index:        1
+       Name:         my_func_local_name

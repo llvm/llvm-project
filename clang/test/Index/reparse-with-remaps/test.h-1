@@ -1,0 +1,6 @@
+
+void test1(void);
+void test2(void);
+
+/// Comment for bar
+void bar(void);

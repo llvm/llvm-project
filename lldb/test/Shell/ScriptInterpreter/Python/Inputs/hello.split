@@ -1,0 +1,10 @@
+#--- hello.in
+command script import -c baz.hello
+#--- hello.py
+import lldb
+
+def hello(debugger, command, result, internal_dict):
+    print("Hello, World!")
+
+def __lldb_init_module(debugger, internal_dict):
+    debugger.HandleCommand('command script add -f baz.hello.hello hello')

@@ -1,0 +1,52 @@
+## Check that llvm-bolt correctly processes a binary with program headers and
+## corresponding sections specified in non-ascending address order.
+
+RUN: split-file %s %t
+RUN: yaml2obj %t/yaml -o %t.exe --max-size=0
+RUN: llvm-bolt %t.exe -o %t.bolt --allow-stripped
+RUN: llvm-readelf -WS %t.bolt | FileCheck %s
+
+CHECK:      .a PROGBITS 0000000000400000 [[#%.6x, OFFSET:]] 000001
+CHECK-NEXT: .b PROGBITS 0000000000000000 [[#%.6x, OFFSET+1]] 000001
+CHECK-NEXT: .c PROGBITS 0000000000600000 [[#%.6x, OFFSET+2]] 000001
+
+#--- yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type: PT_LOAD
+    FirstSec: .a
+    LastSec: .a
+    VAddr: 0x400000
+  - Type: PT_LOAD
+    FirstSec: .b
+    LastSec: .b
+    VAddr: 0x0
+  - Type: PT_LOAD
+    FirstSec: .c
+    LastSec: .c
+    VAddr: 0x600000
+Sections:
+  - Name: .a
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: 00
+    AddressAlign: 0x1
+    Address: 0x400000
+  - Name: .b
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: 00
+    AddressAlign: 0x1
+    Address: 0x0
+  - Name: .c
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: 00
+    AddressAlign: 0x1
+    Address: 0x600000
+...

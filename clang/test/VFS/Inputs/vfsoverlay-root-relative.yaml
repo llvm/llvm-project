@@ -1,0 +1,17 @@
+{
+  'version': 0,
+  'fallthrough': true,
+  'overlay-relative': true,
+  'roots': [
+    { 'name': 'virtual',
+      'type': 'directory',
+      'contents': [
+        {
+          'external-contents': 'actual_header.h',
+          'type': 'file',
+          'name': 'virtual_header.h',
+        }
+      ]
+    }
+  ]
+}

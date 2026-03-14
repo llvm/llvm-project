@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sections --section-groups %t | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:              .group
+    Type:              SHT_GROUP
+    Info:              foo
+    Members:
+      - SectionOrType: 0xFF
+      - SectionOrType: 3
+Symbols:
+  - Name:    foo
+  - Binding: STB_GLOBAL
+
+## Check we are able to produce SHT_GROUP section with a custom Type (0xFF).
+# CHECK:       Groups {
+# CHECK-NEXT:   Group {
+# CHECK-NEXT:     Name: .group
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Link: 2
+# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     Type: COMDAT (0xFF)
+# CHECK-NEXT:     Signature: foo
+# CHECK-NEXT:     Section(s) in group [
+# CHECK-NEXT:       .strtab (3)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }

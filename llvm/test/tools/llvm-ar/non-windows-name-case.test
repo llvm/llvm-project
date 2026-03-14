@@ -1,0 +1,27 @@
+## Test that on windows, members are case insensitive.
+# UNSUPPORTED: system-windows
+
+# RUN: mkdir -p %t
+# RUN: rm -rf %t/lowerCase %t/UPPERCASE && mkdir %t/lowerCase %t/UPPERCASE
+# RUN: echo lowerCase > %t/lowerCase/file.txt
+# RUN: echo UPPERCASE > %t/UPPERCASE/FILE.TXT
+
+# RUN: rm -f %t/archive.a
+# RUN: llvm-ar rc %t/archive.a %t/lowerCase/file.txt
+# RUN: llvm-ar rc %t/archive.a %t/UPPERCASE/FILE.TXT
+# RUN: FileCheck %s -input-file=%t/archive.a --check-prefix=ARCHIVE
+
+# ARCHIVE: file.txt
+# ARCHIVE: FILE.TXT
+
+# RUN: rm -f %t/thin-archive.a
+# RUN: llvm-ar Trc %t/thin-archive.a %t/lowerCase/file.txt %t/UPPERCASE/FILE.TXT
+# RUN: llvm-ar dTP %t/thin-archive.a %t/uppercase/file.txt
+
+# RUN: FileCheck %s -input-file=%t/thin-archive.a --check-prefix=THIN-ARCHIVE -DPATH=%/t
+
+# RUN: llvm-ar dTP %t/thin-archive.a %t/LOWERCASE/FILE.TXT
+# RUN: FileCheck %s -input-file=%t/thin-archive.a --check-prefix=THIN-ARCHIVE -DPATH=%/t
+
+# THIN-ARCHIVE: [[PATH]]/lowerCase/file.txt
+# THIN-ARCHIVE: [[PATH]]/UPPERCASE/FILE.TXT

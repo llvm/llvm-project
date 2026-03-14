@@ -1,0 +1,41 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 \
+# RUN:     -start-before=prologepilog -ppc-enable-pe-vector-spills \
+# RUN:     -ppc-asm-full-reg-names -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name:            MixedSpill
+alignment:       16
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $r14 = IMPLICIT_DEF
+    $f14 = IMPLICIT_DEF
+    $lr8 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# CHECK-LABEL: MixedSpill
+# CHECK:       stdu r1, -176(r1)
+# CHECK:       stfd f14, 32(r1)
+# CHECK:       mtvsrd vs32, r14
+# CHECK:       lfd f14, 32(r1)
+# CHECK:       addi r1, r1, 176
+# CHECK:       blr
+...
+---
+name:            NoStackUpdate
+alignment:       16
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $r14 = IMPLICIT_DEF
+    $f14 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# CHECK-LABEL: NoStackUpdate
+# CHECK-NOT:   stdu
+# CHECK:       mtvsrd vs32, r14
+# CHECK:       mfvsrd r14, vs32
+# CHECK:       blr
+...

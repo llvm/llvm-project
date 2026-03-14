@@ -1,0 +1,24 @@
+# Check that the backend properly tracks debug-instr-references across the
+# post-rewrite pass.
+#
+# RUN: llc %s -mtriple=s390x-linux-gnu -run-pass=systemz-post-rewrite \
+# RUN:   -o - 2>&1 | FileCheck %s
+
+# SELRMux 1: simple replace with copy
+# SELRMux 2: simple mutation into selfhr
+# SELRMux 3: replace with if-then-else without prior copy
+# SELRMux 4: replace with if-then-else with prior copy
+# CHECK: name:            foo
+# CHECK: debugValueSubstitutions:
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 5, dstop: 0, subreg: 0 }
+# CHECK-NEXT:  - { srcinst: 3, srcop: 0, dstinst: 6, dstop: 0, subreg: 0 }
+# CHECK-NEXT:  - { srcinst: 4, srcop: 0, dstinst: 7, dstop: 0, subreg: 0 }
+# CHECK-NEXT:  - { srcinst: 4, srcop: 0, dstinst: 8, dstop: 0, subreg: 0 }
+name: foo
+body:               |
+  bb.0:
+    liveins: $r2h, $r3h, $r2l, $r3l, $cc
+    SELRMux def $r2h, renamable $r3l, renamable $r3l, 1, 2, implicit $cc, debug-instr-number 1
+    SELRMux def $r1h, renamable $r2h, renamable $r3h, 1, 2, implicit $cc, debug-instr-number 2
+    SELRMux def $r2h, renamable $r2h, renamable $r3l, 1, 2, implicit $cc, debug-instr-number 3
+    SELRMux def $r1h, renamable $r2l, renamable $r3l, 1, 2, implicit $cc, debug-instr-number 4

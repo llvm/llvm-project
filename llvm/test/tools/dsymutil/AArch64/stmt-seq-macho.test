@@ -1,0 +1,1572 @@
+## Test that verifies DW_AT_LLVM_stmt_sequence attributes are correctly patched in the dSYM
+## even when line table sequences need to be reordered due to address ordering.
+##
+## This test uses two object files (a.o and b.o) linked with b.o first so that
+## b's functions get lower addresses than a's functions. When dsymutil processes
+## the debug info, it must correctly handle the case where line table sequences
+## from different compilation units need to be interleaved by address.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj %t/stmt_seq_macho.exe.yaml -o %t/stmt_seq_macho.exe
+# RUN: yaml2obj %t/a.o.yaml -o %t/a.o
+# RUN: yaml2obj %t/b.o.yaml -o %t/b.o
+# RUN: dsymutil --flat --verify-dwarf=none -oso-prepend-path %t %t/stmt_seq_macho.exe -o %t/stmt_seq_macho.dSYM
+# RUN: llvm-dwarfdump --debug-info --debug-line -v %t/stmt_seq_macho.dSYM > %t/stmt_seq_macho.dSYM.txt
+
+## Verify that all stmt_sequence offsets point to DW_LNE_set_address opcodes
+## Extract unique stmt_sequence offsets and verify each appears as a set_address offset
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | grep "DW_AT_LLVM_stmt_sequence" | \
+# RUN:   sed 's/.*(\(0x[0-9a-f]*\)).*/\1/' | sort -u > %t/stmt_offsets.txt
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | grep "DW_LNE_set_address" | \
+# RUN:   sed 's/^\(0x[0-9a-f]*\):.*/\1/' | sort -u > %t/setaddr_offsets.txt
+# RUN: comm -23 %t/stmt_offsets.txt %t/setaddr_offsets.txt > %t/bad_offsets.txt
+# RUN: test ! -s %t/bad_offsets.txt
+
+## Ensure no sentinel/invalid offsets (0xffffffff indicates broken patching)
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | FileCheck %s -check-prefix=CHECK_NO_INVALID_OFFSET
+# CHECK_NO_INVALID_OFFSET-NOT: DW_AT_LLVM_stmt_sequence{{.*}}0xfffffff
+
+#--- stmt_seq_macho.cpp
+// This file is split into a.cpp and b.cpp by the gen script.
+// The functions are compiled into separate object files and linked
+// with b.o first, so function_b gets a lower address than function_a.
+// This triggers reordering in dsymutil's line table processing.
+
+#--- a.cpp
+// Functions in a.o - will have HIGHER addresses in the final executable
+#define ATTRIB extern "C" __attribute__((noinline))
+
+ATTRIB int function_a1(int a) {
+    int b = a + 1;
+    return b * 2;
+}
+
+ATTRIB int function_a2(int a) {
+    int b = a + 3;
+    return b + 1;
+}
+
+#--- b.cpp
+// Functions in b.o - will have LOWER addresses in the final executable
+#define ATTRIB extern "C" __attribute__((noinline))
+
+ATTRIB int function_b1(int a) {
+    int b = a - 1;
+    return b * 3;
+}
+
+ATTRIB int function_b2(int a) {
+    int b = a - 5;
+    return b + 2;
+}
+
+#--- main.cpp
+extern "C" int function_a1(int);
+extern "C" int function_a2(int);
+extern "C" int function_b1(int);
+extern "C" int function_b2(int);
+
+int main() {
+    int sum = 0;
+    sum += function_a1(1);
+    sum += function_a2(2);
+    sum += function_b1(3);
+    sum += function_b2(4);
+    return sum;
+}
+
+#--- gen
+# Compile to separate object files with stmt_sequence attributes
+clang --target=arm64-apple-macos11 \
+  -c \
+  -fdebug-compilation-dir=/private/tmp/stmt_seq \
+  -g \
+  -gdwarf-4 \
+  -fno-unwind-tables \
+  -mllvm -emit-func-debug-line-table-offsets \
+  -fno-exceptions \
+  -mno-outline \
+  -Oz \
+  a.cpp \
+  -o a.o
+
+clang --target=arm64-apple-macos11 \
+  -c \
+  -fdebug-compilation-dir=/private/tmp/stmt_seq \
+  -g \
+  -gdwarf-4 \
+  -fno-unwind-tables \
+  -mllvm -emit-func-debug-line-table-offsets \
+  -fno-exceptions \
+  -mno-outline \
+  -Oz \
+  b.cpp \
+  -o b.o
+
+clang --target=arm64-apple-macos11 \
+  -c \
+  -fdebug-compilation-dir=/private/tmp/stmt_seq \
+  -g \
+  -gdwarf-4 \
+  -fno-unwind-tables \
+  -fno-exceptions \
+  -mno-outline \
+  -Oz \
+  main.cpp \
+  -o main.o
+
+# Link with b.o FIRST so b's functions get LOWER addresses than a's functions.
+# This means when dsymutil processes a.o, its line table sequences will need
+# to be placed AFTER b.o's sequences in the output, triggering reordering.
+ld64.lld \
+  -arch arm64 \
+  -platform_version macos 11.0.0 11.0.0 \
+  -o stmt_seq_macho.exe \
+  b.o a.o main.o \
+  -oso_prefix $(pwd)/
+
+# Convert to YAML for the test
+echo "#--- a.o.yaml"
+obj2yaml a.o | sed '1a\
+IsLittleEndian: true'
+echo ""
+echo "#--- b.o.yaml"
+obj2yaml b.o | sed '1a\
+IsLittleEndian: true'
+echo ""
+echo "#--- stmt_seq_macho.exe.yaml"
+obj2yaml stmt_seq_macho.exe | sed '1a\
+IsLittleEndian: true'
+
+#--- stmt-seq-macho.yaml
+#--- a.o.yaml
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      1080
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         952
+    segname:         ''
+    vmaddr:          0
+    vmsize:          937
+    fileoff:         1112
+    filesize:        937
+    maxprot:         7
+    initprot:        7
+    nsects:          11
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            20
+        offset:          0x458
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         08781F5300090011C0035FD600100011C0035FD6
+      - sectname:        __debug_loc
+        segname:         __DWARF
+        addr:            0x14
+        size:            188
+        offset:          0x46C
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0000000000000000080000000000000001005008000000000000000C000000000000000400A301509F0000000000000000000000000000000000000000000000000800000000000000030070019F000000000000000000000000000000000C000000000000001000000000000000010050100000000000000014000000000000000400A301509F000000000000000000000000000000000C000000000000001000000000000000030070039F00000000000000000000000000000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0xD0
+        size:            99
+        offset:          0x528
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x133
+        size:            174
+        offset:          0x58B
+        align:           0
+        reloff:          0x808
+        nreloc:          3
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x6B
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x2F
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x22
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x1E1
+        size:            63
+        offset:          0x639
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x220
+        size:            88
+        offset:          0x678
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000002000000020000000C00000000000000010000000100060000000000010000003CF983303DF9833038000000480000001F000000010000002E000000000000002B000000010000006A00000000000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x278
+        size:            36
+        offset:          0x6D0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x29C
+        size:            36
+        offset:          0x6F4
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x2C0
+        size:            71
+        offset:          0x718
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000100000001000000140000000000000003000000010006000300050004000B00000000003080880B340000003700000001000000A600000024000000000000
+      - sectname:        __debug_frame
+        segname:         __DWARF
+        addr:            0x308
+        size:            72
+        offset:          0x760
+        align:           3
+        reloff:          0x820
+        nreloc:          2
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         14000000FFFFFFFF0400080001781E0C1F00000000000000140000000000000000000000000000000C0000000000000014000000000000000C000000000000000800000000000000
+        relocations:
+          - address:         0x38
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x20
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x350
+        size:            89
+        offset:          0x7A8
+        align:           0
+        reloff:          0x830
+        nreloc:          2
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x45
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x2D
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          2112
+    nsyms:           3
+    stroff:          2160
+    strsize:         40
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      2
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          27
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          14
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         12
+  StringTable:
+    - ''
+    - _function_a2
+    - _function_a1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - ''
+    - a.cpp
+    - '/'
+    - '/private/tmp/stmt_seq'
+    - function_a1
+    - function_a2
+    - int
+    - a
+    - b
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_APPLE_omit_frame_ptr
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_LLVM_stmt_sequence
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_all_calls
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+        - Code:            0x3
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0xAA
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0
+            - Value:           0x21
+            - Value:           0x1
+            - Value:           0x7
+            - Value:           0x0
+            - Value:           0x9
+            - Value:           0x1
+            - Value:           0x0
+            - Value:           0x14
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+            - Value:           0xC
+            - Value:           0x1
+            - Value:           0x27
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x1F
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0xA6
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x0
+            - Value:           0x3B
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0xA6
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x39
+            - Value:           0x3D
+            - Value:           0x1
+            - Value:           0x5
+            - Value:           0xA6
+        - AbbrCode:        0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xC
+            - Value:           0x8
+            - Value:           0x1
+            - Value:           0x3F
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x2B
+            - Value:           0x1
+            - Value:           0x9
+            - Value:           0xA6
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x5E
+            - Value:           0x3B
+            - Value:           0x1
+            - Value:           0x9
+            - Value:           0xA6
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x97
+            - Value:           0x3D
+            - Value:           0x1
+            - Value:           0xA
+            - Value:           0xA6
+        - AbbrCode:        0x0
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x37
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          85
+      Version:         4
+      PrologueLength:  29
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:            a.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_set_column
+          Data:            14
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            0
+        - Opcode:          0x17
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0x82
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            4
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            14
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            12
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0x4A
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            4
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+...
+
+#--- b.o.yaml
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      1080
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         952
+    segname:         ''
+    vmaddr:          0
+    vmsize:          937
+    fileoff:         1112
+    filesize:        937
+    maxprot:         7
+    initprot:        7
+    nsects:          11
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            20
+        offset:          0x458
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0804000B000D0051C0035FD6000C0051C0035FD6
+      - sectname:        __debug_loc
+        segname:         __DWARF
+        addr:            0x14
+        size:            188
+        offset:          0x46C
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0000000000000000080000000000000001005008000000000000000C000000000000000400A301509F00000000000000000000000000000000000000000000000008000000000000000300707F9F000000000000000000000000000000000C000000000000001000000000000000010050100000000000000014000000000000000400A301509F000000000000000000000000000000000C0000000000000010000000000000000300707B9F00000000000000000000000000000000
+      - sectname:        __debug_abbrev
+        segname:         __DWARF
+        addr:            0xD0
+        size:            99
+        offset:          0x528
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x133
+        size:            174
+        offset:          0x58B
+        align:           0
+        reloff:          0x808
+        nreloc:          3
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x6B
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x2F
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x22
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x1E1
+        size:            63
+        offset:          0x639
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x220
+        size:            88
+        offset:          0x678
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000002000000020000000C00000000000000010000000100060000000000010000005EF983305DF9833038000000480000002B000000010000006A000000000000001F000000010000002E00000000000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x278
+        size:            36
+        offset:          0x6D0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x29C
+        size:            36
+        offset:          0x6F4
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x2C0
+        size:            71
+        offset:          0x718
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         48534148010000000100000001000000140000000000000003000000010006000300050004000B00000000003080880B340000003700000001000000A600000024000000000000
+      - sectname:        __debug_frame
+        segname:         __DWARF
+        addr:            0x308
+        size:            72
+        offset:          0x760
+        align:           3
+        reloff:          0x820
+        nreloc:          2
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         14000000FFFFFFFF0400080001781E0C1F00000000000000140000000000000000000000000000000C0000000000000014000000000000000C000000000000000800000000000000
+        relocations:
+          - address:         0x38
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x20
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x350
+        size:            89
+        offset:          0x7A8
+        align:           0
+        reloff:          0x830
+        nreloc:          2
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        relocations:
+          - address:         0x45
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x2D
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           720896
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          2112
+    nsyms:           3
+    stroff:          2160
+    strsize:         40
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      2
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          27
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          14
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         12
+  StringTable:
+    - ''
+    - _function_b2
+    - _function_b1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+DWARF:
+  debug_str:
+    - ''
+    - b.cpp
+    - '/'
+    - '/private/tmp/stmt_seq'
+    - function_b1
+    - function_b2
+    - int
+    - a
+    - b
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_APPLE_omit_frame_ptr
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_LLVM_stmt_sequence
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_call_all_calls
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_APPLE_optimized
+              Form:            DW_FORM_flag_present
+        - Code:            0x3
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x5
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+  debug_info:
+    - Length:          0xAA
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x0
+            - Value:           0x21
+            - Value:           0x1
+            - Value:           0x7
+            - Value:           0x0
+            - Value:           0x9
+            - Value:           0x1
+            - Value:           0x0
+            - Value:           0x14
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+            - Value:           0xC
+            - Value:           0x1
+            - Value:           0x27
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x1F
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0xA6
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x0
+            - Value:           0x3B
+            - Value:           0x1
+            - Value:           0x4
+            - Value:           0xA6
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x39
+            - Value:           0x3D
+            - Value:           0x1
+            - Value:           0x5
+            - Value:           0xA6
+        - AbbrCode:        0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xC
+            - Value:           0x8
+            - Value:           0x1
+            - Value:           0x3F
+            - Value:           0x1
+              BlockData:       [ 0x6F ]
+            - Value:           0x1
+            - Value:           0x2B
+            - Value:           0x1
+            - Value:           0x9
+            - Value:           0xA6
+            - Value:           0x1
+            - Value:           0x1
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x5E
+            - Value:           0x3B
+            - Value:           0x1
+            - Value:           0x9
+            - Value:           0xA6
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x97
+            - Value:           0x3D
+            - Value:           0x1
+            - Value:           0xA
+            - Value:           0xA6
+        - AbbrCode:        0x0
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x37
+            - Value:           0x5
+            - Value:           0x4
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          85
+      Version:         4
+      PrologueLength:  29
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      Files:
+        - Name:            b.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_set_column
+          Data:            14
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            0
+        - Opcode:          0x17
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0x82
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            4
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            14
+        - Opcode:          DW_LNS_set_prologue_end
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            12
+        - Opcode:          DW_LNS_advance_line
+          SData:           10
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_set_column
+          Data:            5
+        - Opcode:          DW_LNS_negate_stmt
+          Data:            0
+        - Opcode:          0x4A
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            4
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+...
+
+#--- stmt_seq_macho.exe.yaml
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x2
+  ncmds:           13
+  sizeofcmds:      608
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x1000002A0
+        size:            116
+        offset:          0x2A0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         0804000B000D0051C0035FD6000C0051C0035FD608781F5300090011C0035FD600100011C0035FD6F44FBEA9FD7B01A9FD43009120008052F7FFFF97F30300AA40008052F7FFFF971400130B60008052ECFFFF97F30300AA80008052ECFFFF976802000B8002080BFD7B41A9F44FC2A8C0035FD6
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294983680
+    vmsize:          1008
+    fileoff:         16384
+    filesize:        1008
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      16384
+    export_size:     104
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16496
+    nsyms:           25
+    stroff:          16896
+    strsize:         184
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       19
+    iextdefsym:      19
+    nextdefsym:      6
+    iundefsym:       25
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C4417-5555-3144-A18D-150CDE11EB04
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           720896
+    sdk:             720896
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1245445
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        712
+    stacksize:       0
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16488
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16496
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         17088
+    datasize:        304
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      44
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      48
+            Name:            main
+            Flags:           0x0
+            Address:         0x2C8
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    0
+            NodeOffset:      53
+            Name:            function_
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+            Children:
+              - TerminalSize:    0
+                NodeOffset:      61
+                Name:            b
+                Flags:           0x0
+                Address:         0x0
+                Other:           0x0
+                ImportName:      ''
+                Children:
+                  - TerminalSize:    3
+                    NodeOffset:      69
+                    Name:            '2'
+                    Flags:           0x0
+                    Address:         0x2AC
+                    Other:           0x0
+                    ImportName:      ''
+                  - TerminalSize:    3
+                    NodeOffset:      74
+                    Name:            '1'
+                    Flags:           0x0
+                    Address:         0x2A0
+                    Other:           0x0
+                    ImportName:      ''
+              - TerminalSize:    0
+                NodeOffset:      79
+                Name:            a
+                Flags:           0x0
+                Address:         0x0
+                Other:           0x0
+                ImportName:      ''
+                Children:
+                  - TerminalSize:    3
+                    NodeOffset:      87
+                    Name:            '2'
+                    Flags:           0x0
+                    Address:         0x2C0
+                    Other:           0x0
+                    ImportName:      ''
+                  - TerminalSize:    3
+                    NodeOffset:      92
+                    Name:            '1'
+                    Flags:           0x0
+                    Address:         0x2B4
+                    Other:           0x0
+                    ImportName:      ''
+  NameList:
+    - n_strx:          80
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          108
+      n_type:          0x66
+      n_sect:          0
+      n_desc:          1
+      n_value:         0
+    - n_strx:          8
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294967968
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         12
+    - n_strx:          21
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294967980
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         8
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          112
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          140
+      n_type:          0x66
+      n_sect:          0
+      n_desc:          1
+      n_value:         0
+    - n_strx:          34
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294967988
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         12
+    - n_strx:          47
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968000
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         8
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          144
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          175
+      n_type:          0x66
+      n_sect:          0
+      n_desc:          1
+      n_value:         0
+    - n_strx:          2
+      n_type:          0x24
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968008
+    - n_strx:          1
+      n_type:          0x24
+      n_sect:          0
+      n_desc:          0
+      n_value:         76
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968008
+    - n_strx:          8
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294967968
+    - n_strx:          21
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294967980
+    - n_strx:          34
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294967988
+    - n_strx:          47
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968000
+    - n_strx:          60
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+  StringTable:
+    - ' '
+    - _main
+    - _function_b1
+    - _function_b2
+    - _function_a1
+    - _function_a2
+    - __mh_execute_header
+    - '/private/tmp/stmt_seq/b.cpp'
+    - b.o
+    - '/private/tmp/stmt_seq/a.cpp'
+    - a.o
+    - '/private/tmp/stmt_seq/main.cpp'
+    - main.o
+    - ''
+    - ''
+  FunctionStarts:  [ 0x2A0, 0x2AC, 0x2B4, 0x2C0, 0x2C8 ]
+...

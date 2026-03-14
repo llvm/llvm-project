@@ -1,0 +1,38 @@
+RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext
+RUN: diff -b %t.proftext %S/Inputs/cs-sample.proftext
+
+RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext -sample-merge-cold-context -profile-summary-cold-count=500
+RUN: FileCheck %s --input-file %t.proftext --check-prefixes=CHECK-TRIM,CHECK-MERGE
+RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext -sample-merge-cold-context -sample-trim-cold-context -profile-summary-cold-count=500
+RUN: FileCheck %s --input-file %t.proftext --check-prefixes=CHECK-TRIM,CHECK-END
+RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext -sample-merge-cold-context -sample-trim-cold-context -profile-summary-cutoff-cold=990000
+RUN: FileCheck %s --input-file %t.proftext --check-prefixes=CHECK-TRIM,CHECK-END
+
+CHECK-TRIM:      [main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]:1467299:11
+CHECK-TRIM-NEXT:  0: 6
+CHECK-TRIM-NEXT:  1: 6
+CHECK-TRIM-NEXT:  3: 287884
+CHECK-TRIM-NEXT:  4: 287864 _Z3fibi:315608
+CHECK-TRIM-NEXT:  15: 23
+CHECK-TRIM-NEXT: [main:3.1 @ _Z5funcBi:1 @ _Z8funcLeafi]:500853:20
+CHECK-TRIM-NEXT:  0: 15
+CHECK-TRIM-NEXT:  1: 15
+CHECK-TRIM-NEXT:  3: 74946
+CHECK-TRIM-NEXT:  4: 74941 _Z3fibi:82359
+CHECK-TRIM-NEXT:  10: 23324
+CHECK-TRIM-NEXT:  11: 23327 _Z3fibi:25228
+CHECK-TRIM-NEXT:  15: 11
+CHECK-TRIM-NEXT:  !Attributes: 1
+CHECK-END-NOT:   [
+CHECK-MERGE:     [_Z5funcBi]:360:32
+CHECK-MERGE-NEXT: 0: 32
+CHECK-MERGE-NEXT: 1: 32 _Z8funcLeafi:20
+CHECK-MERGE-NEXT: 3: 12
+CHECK-MERGE-NEXT:[main]:308:12
+CHECK-MERGE-NEXT: 2: 24
+CHECK-MERGE-NEXT: 3: 28 _Z5funcAi:18
+CHECK-MERGE-NEXT: 3.1: 28 _Z5funcBi:30
+CHECK-MERGE-NEXT:[_Z5funcAi]:99:11
+CHECK-MERGE-NEXT: 0: 10
+CHECK-MERGE-NEXT: 1: 10 _Z8funcLeafi:11
+CHECK-MERGE-NEXT: 3: 24

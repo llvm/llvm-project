@@ -1,0 +1,4 @@
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=debug_info_v5.dwo -dwarf-version=5 %p/../Inputs/overflow/debug_info_v5.s -o debug_info_v5.o
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=main_v5.dwo -dwarf-version=5 %p/../Inputs/overflow/main_v5.s -o main_v5.o
+RUN: not llvm-dwp debug_info_v5.dwo main_v5.dwo -o overflow.dwp 2>&1 | FileCheck %s
+CHECK: error: {{.*}} Section Contribution Offset overflow 4G. Previous Offset {{.*}}, After overflow offset {{.*}}.

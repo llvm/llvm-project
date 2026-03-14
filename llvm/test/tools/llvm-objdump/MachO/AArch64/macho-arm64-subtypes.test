@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %tarm64-all.o -DSUBTYPE=0x0
+# RUN: llvm-objdump -p %tarm64-all.o | FileCheck --strict-whitespace %s --check-prefixes="COMMON,ALL"
+
+# RUN: yaml2obj %s -o %tarm64-v8.o -DSUBTYPE=0x1
+# RUN: llvm-objdump -p %tarm64-v8.o | FileCheck --strict-whitespace %s --check-prefixes="COMMON,V8"
+
+# RUN: yaml2obj %s -o %tarm64e.o -DSUBTYPE=0x2
+# RUN: llvm-objdump -p %tarm64e.o | FileCheck --strict-whitespace %s --check-prefixes="COMMON,E"
+
+# COMMON:      Mach header
+# COMMON-NEXT:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
+# ALL-NEXT:    MH_MAGIC_64   ARM64        ALL  0x00      OBJECT     0          0 0x00000000
+# V8-NEXT:     MH_MAGIC_64   ARM64         V8  0x00      OBJECT     0          0 0x00000000
+# E-NEXT:      MH_MAGIC_64   ARM64          E  0x00      OBJECT     0          0 0x00000000
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      [[SUBTYPE]]
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
+...

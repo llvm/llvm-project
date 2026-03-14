@@ -1,0 +1,31 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-call-pc-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-call-pc-helper.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections -reorder-blocks=reverse --debug-thread-count=4 --cu-processing-batch-size=4
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe > %tmain.txt
+# RUN: llvm-objdump %t.exe --disassemble >> %tmain.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe.bolt > %tmainbolt.txt
+# RUN: llvm-objdump %t.exe.bolt --disassemble >> %tmainbolt.txt
+# RUN: cat %tmain.txt | FileCheck --check-prefix=PRECHECK %s
+# RUN: cat %tmainbolt.txt | FileCheck --check-prefix=POSTCHECK %s
+
+## Test checks that DW_AT_call_pc address points to a correct address for jmp instruction.
+
+# PRECHECK: DW_TAG_call_site [6]
+# PRECHECK-NEXT: DW_AT_call_origin [DW_FORM_ref4]
+# PRECHECK-NEXT: DW_AT_call_tail_call
+# PRECHECK-NEXT: DW_AT_call_pc [DW_FORM_addrx]
+# PRECHECK-SAME: address = 0x[[#%x,ADDR:]])
+# PRECHECK: [[#ADDR]]:
+# PRECHECK-SAME: jmp
+
+# POSTCHECK: DW_TAG_call_site [6]
+# POSTCHECK-NEXT: DW_AT_call_origin [DW_FORM_ref4]
+# POSTCHECK-NEXT: DW_AT_call_tail_call
+# POSTCHECK-NEXT: DW_AT_call_pc [DW_FORM_addrx]
+# POSTCHECK-SAME: address = 0x[[#%x,ADDR:]])
+# POSTCHECK: <main>:
+# POSTCHECK: [[#ADDR]]:
+# POSTCHECK-SAME: jmp

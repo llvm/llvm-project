@@ -1,0 +1,52 @@
+set(LLVM_LINK_COMPONENTS
+  Option
+  FrontendOpenMP
+  Support
+  TargetParser
+  )
+
+add_subdirectory(Core)
+add_subdirectory(Inclusions)
+add_subdirectory(Refactoring)
+add_subdirectory(ASTDiff)
+add_subdirectory(Syntax)
+add_subdirectory(Transformer)
+
+add_clang_library(clangTooling
+  AllTUsExecution.cpp
+  ArgumentsAdjusters.cpp
+  CommonOptionsParser.cpp
+  CompilationDatabase.cpp
+  DependencyScanningTool.cpp
+  Execution.cpp
+  ExpandResponseFilesCompilationDatabase.cpp
+  FileMatchTrie.cpp
+  FixIt.cpp
+  GuessTargetAndModeCompilationDatabase.cpp
+  InterpolatingCompilationDatabase.cpp
+  JSONCompilationDatabase.cpp
+  LocateToolCompilationDatabase.cpp
+  Refactoring.cpp
+  RefactoringCallbacks.cpp
+  StandaloneExecution.cpp
+  Tooling.cpp
+
+  DEPENDS
+  ClangDriverOptions
+  omp_gen
+
+  LINK_LIBS
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangDependencyScanning
+  clangDriver
+  clangOptions
+  clangFormat
+  clangFrontend
+  clangLex
+  clangRewrite
+  clangSerialization
+  clangToolingCore
+  ${LLVM_PTHREAD_LIB}
+  )

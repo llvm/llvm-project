@@ -1,0 +1,49 @@
+//===-- llvm/CodeGen/MachineModuleInfo.h ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
+#define LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
+
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Support/Compiler.h"
+
+namespace llvm {
+
+class AbstractSlotTrackerStorage;
+class Function;
+class MachineModuleInfo;
+class MachineFunction;
+class Module;
+
+using MFGetterFnT = function_ref<MachineFunction *(const Function &)>;
+
+class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
+  const Function &TheFunction;
+  const MachineFunction *TheMF;
+  unsigned MDNStartSlot = 0, MDNEndSlot = 0;
+
+  void processMachineFunctionMetadata(AbstractSlotTrackerStorage *AST,
+                                      const MachineFunction &MF);
+  void processMachineModule(AbstractSlotTrackerStorage *AST, const Module *M,
+                            bool ShouldInitializeAllMetadata);
+  void processMachineFunction(AbstractSlotTrackerStorage *AST,
+                              const Function *F,
+                              bool ShouldInitializeAllMetadata);
+
+public:
+  MachineModuleSlotTracker(MFGetterFnT Fn, const MachineFunction *MF,
+                           bool ShouldInitializeAllMetadata = true);
+  ~MachineModuleSlotTracker() override;
+
+  void collectMachineMDNodes(MachineMDNodeListType &L) const;
+};
+
+} // namespace llvm
+
+#endif // LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H

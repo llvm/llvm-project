@@ -1,0 +1,496 @@
+## This test verifies that the linkedit segment is
+## laid out in the right order.
+
+# RUN: yaml2obj %s -o %t.original
+# RUN: llvm-objcopy %t.original %t.copy
+# RUN: obj2yaml %t.copy > %t.yaml
+## Print the results several times in order to capture the linkedit offsets
+## in the order they are needed, but still following the order of the load
+## commands where they appear.
+# RUN: cat %t.yaml %t.yaml %t.yaml | FileCheck %s
+
+# CHECK: cmd:             LC_SEGMENT_64
+# CHECK: segname:         __LINKEDIT
+# CHECK: fileoff:         [[#LINKEDIT_FILEOFF:]]
+# CHECK: filesize:        [[#LINKEDIT_FILESIZE:]]
+
+# CHECK: cmd:             LC_DYLD_INFO_ONLY
+# CHECK: rebase_off:      [[#REBASE_OFF: LINKEDIT_FILEOFF]]
+# CHECK: rebase_size:     [[#REBASE_SIZE:]]
+# CHECK: bind_off:        [[#BIND_OFF: REBASE_OFF + REBASE_SIZE]]
+# CHECK: bind_size:       [[#BIND_SIZE:]]
+# CHECK: weak_bind_off:   [[#WEAK_BIND_OFF: BIND_OFF + BIND_SIZE]]
+# CHECK: weak_bind_size:  [[#WEAK_BIND_SIZE:]]
+# CHECK: lazy_bind_off:   [[#LAZY_BIND_OFF: WEAK_BIND_OFF + WEAK_BIND_SIZE]]
+# CHECK: lazy_bind_size:  [[#LAZY_BIND_SIZE:]]
+# CHECK: export_off:      [[#EXPORTS_OFF:LAZY_BIND_OFF + LAZY_BIND_SIZE]]
+# CHECK: export_size:     [[#EXPORTS_SIZE:]]
+
+# CHECK: cmd:             LC_FUNCTION_STARTS
+# CHECK: dataoff:         [[#FUNCTION_STARTS_FILEOFF: EXPORTS_OFF + EXPORTS_SIZE]]
+# CHECK: datasize:        [[#FUNCTION_STARTS_FILESIZE:]]
+
+# CHECK: cmd:             LC_DATA_IN_CODE
+# CHECK: dataoff:         [[#DATA_IN_CODE_FILEOFF: FUNCTION_STARTS_FILEOFF + FUNCTION_STARTS_FILESIZE]]
+# CHECK: datasize:        [[#DATA_IN_CODE_FILESIZE:]]
+
+## Jump over LC_CODE_SIGNATURE, which needs to be checked last
+
+# CHECK: --- !mach-o
+
+# CHECK: cmd:             LC_SYMTAB
+# CHECK: symoff:          [[#SYMTAB_SYMOFF: DATA_IN_CODE_FILEOFF + DATA_IN_CODE_FILESIZE]]
+# CHECK: nsyms:           [[#SYMTAB_NSYMS:]]
+
+## Skip over the strings table offset/size (part of LC_SYMTAB) until next loop.
+
+# CHECK: cmd:             LC_DYSYMTAB
+# CHECK: indirectsymoff:  [[#DYSYMTAB_INDIRECTSYMOFF: SYMTAB_SYMOFF + mul(SYMTAB_NSYMS, 16)]]
+# CHECK: nindirectsyms:   [[#DYSYMTAB_NINDIRECTSYMS:]]
+
+# CHECK: --- !mach-o
+
+# CHECK: cmd:             LC_SYMTAB
+# CHECK: stroff:          [[#SYMTAB_STROFF: DYSYMTAB_INDIRECTSYMOFF + mul(DYSYMTAB_NINDIRECTSYMS, 4)]]
+# CHECK: strsize:         [[#SYMTAB_STRSIZE:]]
+
+# CHECK: cmd:             LC_CODE_SIGNATURE
+## LC_CODE_SIGNATURE needs to be aligned to 16 bytes boundaries.
+# CHECK: dataoff:         [[#CODE_SIGNATURE_FILEOFF: mul(div(SYMTAB_STROFF + SYMTAB_STRSIZE + 8, 16), 16)]]
+# CHECK: datasize:        [[#CODE_SIGNATURE_FILESIZE:LINKEDIT_FILEOFF + LINKEDIT_FILESIZE - CODE_SIGNATURE_FILEOFF]]
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           18
+  sizeofcmds:      1352
+  flags:           0x210085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100003F80
+        size:            16
+        offset:          0x3F80
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         E80B000000E80C000000C39000000000
+      - sectname:        __stubs
+        segname:         __TEXT
+        addr:            0x100003F90
+        size:            12
+        offset:          0x3F90
+        align:           1
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000408
+        reserved1:       0x0
+        reserved2:       0x6
+        reserved3:       0x0
+        content:         FF256A400000FF256C400000
+      - sectname:        __stub_helper
+        segname:         __TEXT
+        addr:            0x100003F9C
+        size:            26
+        offset:          0x3F9C
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         4C8D1D6D4000004153FF2555000000906800000000E9E6FFFFFF
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x100003FB8
+        size:            72
+        offset:          0x3FB8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000803F00003400000034000000913F00000000000034000000030000000C000100100001000000000000000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA_CONST
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           16
+    Sections:
+      - sectname:        __got
+        segname:         __DATA_CONST
+        addr:            0x100004000
+        size:            8
+        offset:          0x4000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x6
+        reserved1:       0x2
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         __DATA
+    vmaddr:          4295000064
+    vmsize:          16384
+    fileoff:         32768
+    filesize:        16384
+    maxprot:         3
+    initprot:        3
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __la_symbol_ptr
+        segname:         __DATA
+        addr:            0x100008000
+        size:            16
+        offset:          0x8000
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x7
+        reserved1:       0x3
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         AC3F0000010000000000000000000000
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100008010
+        size:            8
+        offset:          0x8010
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4295016448
+    vmsize:          16384
+    fileoff:         49152
+    filesize:        920
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      49152
+    rebase_size:     8
+    bind_off:        49160
+    bind_size:       56
+    weak_bind_off:   49216
+    weak_bind_size:  32
+    lazy_bind_off:   49248
+    lazy_bind_size:  16
+    export_off:      49264
+    export_size:     48
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          49328
+    nsyms:           6
+    stroff:          49448
+    strsize:         80
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      2
+    iundefsym:       3
+    nundefsym:       3
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  49424
+    nindirectsyms:   5
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         32
+    name:            12
+    Content:         '/usr/lib/dyld'
+    ZeroPadBytes:    7
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            D565F8BE-1140-391A-BD6E-9CED386430F2
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           786432
+    sdk:             787200
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         50069504
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        16256
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 0
+      compatibility_version: 0
+    Content:         libFoo-classic.dylib
+    ZeroPadBytes:    4
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 85943299
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         49312
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         49320
+    datasize:        8
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         49536
+    datasize:        536
+LinkEditData:
+  RebaseOpcodes:
+    - Opcode:          REBASE_OPCODE_SET_TYPE_IMM
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             3
+      ExtraData:       [ 0x0 ]
+    - Opcode:          REBASE_OPCODE_DO_REBASE_IMM_TIMES
+      Imm:             1
+    - Opcode:          REBASE_OPCODE_DONE
+      Imm:             0
+  BindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _weak_foo
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             3
+      ULEBExtraData:   [ 0x8 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB
+      Imm:             0
+      ULEBExtraData:   [ 0xFFFFFFFFFFFFFFF8 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             2
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          dyld_stub_binder
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             2
+      ULEBExtraData:   [ 0x0 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  WeakBindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _weak_foo
+    - Opcode:          BIND_OPCODE_SET_TYPE_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             3
+      ULEBExtraData:   [ 0x8 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND_ADD_ADDR_ULEB
+      Imm:             0
+      ULEBExtraData:   [ 0xFFFFFFFFFFFFFFF8 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  LazyBindOpcodes:
+    - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
+      Imm:             3
+      ULEBExtraData:   [ 0x0 ]
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
+      Imm:             1
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
+      Imm:             0
+      Symbol:          _foo
+    - Opcode:          BIND_OPCODE_DO_BIND
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+    - Opcode:          BIND_OPCODE_DONE
+      Imm:             0
+      Symbol:          ''
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    0
+        NodeOffset:      5
+        Name:            _
+        Flags:           0x0
+        Address:         0x0
+        Other:           0x0
+        ImportName:      ''
+        Children:
+          - TerminalSize:    2
+            NodeOffset:      33
+            Name:            _mh_execute_header
+            Flags:           0x0
+            Address:         0x0
+            Other:           0x0
+            ImportName:      ''
+          - TerminalSize:    3
+            NodeOffset:      37
+            Name:            main
+            Flags:           0x0
+            Address:         0x3F80
+            Other:           0x0
+            ImportName:      ''
+  NameList:
+    - n_strx:          60
+      n_type:          0xE
+      n_sect:          7
+      n_desc:          0
+      n_value:         4295000080
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294983552
+    - n_strx:          28
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+    - n_strx:          33
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          384
+      n_value:         0
+    - n_strx:          43
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          512
+      n_value:         0
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - _foo
+    - _weak_foo
+    - dyld_stub_binder
+    - __dyld_private
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+  IndirectSymbols: [ 0x3, 0x4, 0x5, 0x3, 0x4 ]
+  FunctionStarts:  [ 0x3F80 ]
+  DataInCode:
+    - Offset:          0x3F8C
+      Length:          4
+      Kind:            0x4
+...

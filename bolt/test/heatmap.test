@@ -1,0 +1,6 @@
+## Verifies basic functioning of heatmap mode
+
+REQUIRES: system-linux
+
+RUN: llvm-bolt-heatmap --help | FileCheck %s
+CHECK: USAGE: llvm-bolt-heatmap [options] <executable>

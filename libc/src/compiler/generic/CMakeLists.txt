@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  __stack_chk_fail
+  SRCS
+    __stack_chk_fail.cpp
+  HDRS
+    ../__stack_chk_fail.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.OSUtil.osutil
+    libc.src.stdlib.abort
+)

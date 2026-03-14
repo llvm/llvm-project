@@ -1,0 +1,14 @@
+# RUN: llvm-mc %s --triple x86_64-apple-darwin -filetype=obj -o %t.o
+# RUN: llvm-objdump --macho --info-plist %t.o | FileCheck %s
+# RUN: llvm-otool -P %t.o | FileCheck %s
+# RUN: llvm-objdump --macho --info-plist --no-leading-headers %t.o | FileCheck --check-prefix=NOHEADER %s
+# RUN: llvm-otool -PX %t.o | FileCheck --check-prefix=NOHEADER %s
+
+.section __TEXT, __info_plist
+.asciz "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+
+# CHECK: Contents of (__TEXT,__info_plist) section
+# CHECK: <?xml version="1.0" encoding="UTF-8"?>
+
+# NOHEADER-NOT: Contents of (__TEXT,__info_plist) section
+# NOHEADER: <?xml version="1.0" encoding="UTF-8"?>

@@ -1,0 +1,16 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+ssbs  -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8.5a -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
+# RUN: llvm-mc -triple=aarch64 -mcpu=cortex-a76 -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mcpu=cortex-a76ae -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8r -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
+# RUN: llvm-mc -triple=aarch64 -mattr=-ssbs  -disassemble < %s | FileCheck %s --check-prefix=NOSPECID
+
+[0x3f 0x41 0x03 0xd5]
+[0xc3 0x42 0x1b 0xd5]
+[0xc2 0x42 0x3b 0xd5]
+# CHECK:    msr SSBS, #1
+# CHECK:    msr SSBS, x3
+# CHECK:    mrs x2, SSBS
+# NOSPECID: msr S0_3_C4_C1_1, xzr
+# NOSPECID: msr S3_3_C4_C2_6, x3
+# NOSPECID: mrs x2, S3_3_C4_C2_6

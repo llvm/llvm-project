@@ -1,0 +1,10 @@
+add_clang_unittest(ClangSupportTests
+  TimeProfilerTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangBasic
+  clangFrontend
+  clangSerialization
+  LLVM_COMPONENTS
+  Support
+  )

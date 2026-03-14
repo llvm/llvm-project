@@ -1,0 +1,114 @@
+--- |
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
+
+  ; Sometimes, variables can have multiple locations, and when control flow
+  ; merges LiveDebugValues has a hard time picking which one the variable lives
+  ; in. Test two of these scenarios that old LiveDebugValues can't handle: when
+  ; a value is in two registers, and when a value is both in a register and
+  ; on the stack.
+
+  ; In a register:
+
+  ; CHECK-LABEL: bb.0.entry:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+  ; CHECK-LABEL: bb.1.bb1:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+  ; CHECK-LABEL: bb.2.bb2:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+  ; CHECK-LABEL: bb.3.bb3:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+
+  ; On the stack: we move from $rbp to a stack slot in bb4, but join back on
+  ; $rbp in bb6.
+
+  ; CHECK-LABEL: bb.4:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+  ; CHECK:       DBG_VALUE $rsp, 0, !16, !DIExpression()
+  ; CHECK-LABEL: bb.5:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+  ; CHECK-LABEL: bb.6:
+  ; CHECK:       DBG_VALUE $rbp, $noreg, !16, !DIExpression()
+
+  declare i64 @bees(i64 %arg);
+
+  define i32 @_Z8bb_to_bb(i64 %arg) local_unnamed_addr !dbg !12 {
+  entry:
+    br label %bb1, !dbg !17
+  bb1:
+    br label %bb2, !dbg !17
+  bb2:
+    br label %bb3, !dbg !17
+  bb3:
+    ret i32 0, !dbg !17
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!7, !8, !9, !10}
+  !llvm.ident = !{!11}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3, debugInfoForProfiling: true, nameTableKind: None)
+  !1 = !DIFile(filename: "main.cpp", directory: "F:\")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+  !5 = distinct !DIGlobalVariable(name: "start", scope: !0, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true)
+  !6 = !DIBasicType(name: "int", size: 64, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 1, !"wchar_size", i32 2}
+  !10 = !{i32 7, !"PIC Level", i32 2}
+  !11 = !{!"clang version 10.0.0"}
+  !12 = distinct !DISubprogram(name: "bb_to_bb", linkageName: "bb_to_bb", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!6, !6}
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "myVar", scope: !12, file: !1, line: 7, type: !6)
+  !17 = !DILocation(line: 10, scope: !12)
+
+...
+---
+name: _Z8bb_to_bb
+tracksRegLiveness: true
+debugInstrRef: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:  |
+  bb.0.entry:
+  liveins: $rdi
+    successors: %bb.1, %bb.2
+    $rbp = MOV64rr $rdi, debug-location !17
+    DBG_VALUE $rbp, $noreg, !16, !DIExpression(), debug-location !17
+    dead $rcx = MOV64ri 0, debug-location !17
+    CALL64pcrel32 @bees, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-location !17
+    CMP64ri8 renamable $rax, 1, implicit-def $eflags, debug-location !17
+    JCC_1 %bb.2, 4, implicit killed $eflags, debug-location !17
+  bb.1.bb1:
+  liveins: $rax, $rbp
+    successors: %bb.3
+    $rbp = MOV64ri 0, debug-location !17
+    DBG_VALUE $rbp, $noreg, !16, !DIExpression(), debug-location !17
+    JMP_1 %bb.3
+  bb.2.bb2:
+  liveins: $rax, $rbp
+    successors: %bb.3
+    $rax = MOV64ri 0, debug-location !17
+  bb.3.bb3:
+  liveins: $rax, $rbp
+    $rdi = MOV64rr $rbp, debug-location !17
+    CALL64pcrel32 @bees, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-location !17
+    CMP64ri8 renamable $rax, 1, implicit-def $eflags, debug-location !17
+    JCC_1 %bb.5, 4, implicit killed $eflags, debug-location !17
+  bb.4:
+  liveins: $rax, $rbp
+    MOV64mr $rsp, 1, $noreg, 8, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
+    JMP_1 %bb.6
+  bb.5:
+  liveins: $rax, $rbp
+  bb.6:
+  liveins: $rax, $rbp
+    RET64 $rax, debug-location !17
+...

@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -passes=si-shrink-instructions --verify-machineinstrs %s -o - | FileCheck %s
+
+# Make sure immediate folding into V_CNDMASK respects constant bus restrictions.
+---
+
+name:            shrink_cndmask_illegal_imm_folding
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: shrink_cndmask_illegal_imm_folding
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK: [[MOV:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 32768, implicit $exec
+    ; CHECK: V_CMP_EQ_U32_e32 0, [[COPY]], implicit-def $vcc, implicit $exec
+    ; CHECK: V_CNDMASK_B32_e32 [[MOV]], killed [[COPY]], implicit $vcc, implicit $exec
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_MOV_B32_e32 32768, implicit $exec
+    V_CMP_EQ_U32_e32 0, %0:vgpr_32, implicit-def $vcc, implicit $exec
+    %2:vgpr_32 = V_CNDMASK_B32_e64 0, %1:vgpr_32, 0, killed %0:vgpr_32, $vcc, implicit $exec
+    S_NOP 0
+
+...

@@ -1,0 +1,21 @@
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_LINE_NUMS_STRIPPED ]
+sections:
+  - Name:            .rsrc
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     000000000000000000000000000001001800000018000080000000000000000000000000000001000100000030000080000000000000000000000000000001000100000048000000580000000E00000000000000000000006D616E69666573742D6C616E67310000
+    Relocations:
+      - VirtualAddress:  72
+        SymbolName:      .rsrc
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+symbols:
+  - Name:            .rsrc
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+...

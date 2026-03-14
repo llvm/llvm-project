@@ -1,0 +1,99 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses virtual register definitions and
+# references correctly.
+
+--- |
+
+  define i32 @bar(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+  define i32 @foo(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+...
+---
+name:            bar
+tracksRegLiveness: true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+body: |
+  bb.0.entry:
+    successors: %bb.2.exit, %bb.1.less
+    liveins: $edi
+    ; CHECK:      %0:gr32 = COPY $edi
+    ; CHECK-NEXT: %1:gr32 = SUB32ri8 %0, 10
+    %0 = COPY $edi
+    %1 = SUB32ri8 %0, 10, implicit-def $eflags
+    JCC_1 %bb.2.exit, 15, implicit $eflags
+    JMP_1 %bb.1.less
+
+  bb.1.less:
+    ; CHECK:      %2:gr32 = MOV32r0
+    ; CHECK-NEXT: $eax = COPY %2
+    %2 = MOV32r0 implicit-def $eflags
+    $eax = COPY %2
+    RET64 $eax
+
+  bb.2.exit:
+    $eax = COPY %0
+    RET64 $eax
+...
+---
+name:            foo
+tracksRegLiveness: true
+# CHECK: name: foo
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 1, class: gr32, preferred-register: '', flags: [   ] }
+# CHECK-NEXT:   - { id: 2, class: gr32, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 2, class: gr32 }
+  - { id: 0, class: gr32 }
+  - { id: 10, class: gr32 }
+body: |
+  bb.0.entry:
+    successors: %bb.2.exit, %bb.1.less
+    liveins: $edi
+    ; CHECK:      %0:gr32 = COPY $edi
+    ; CHECK-NEXT: %1:gr32 = SUB32ri8 %0, 10
+    %2 = COPY $edi
+    %0 = SUB32ri8 %2, 10, implicit-def $eflags
+    JCC_1 %bb.2.exit, 15, implicit $eflags
+    JMP_1 %bb.1.less
+
+  bb.1.less:
+    ; CHECK:      %2:gr32 = MOV32r0
+    ; CHECK-NEXT: $eax = COPY %2
+    %10 = MOV32r0 implicit-def $eflags
+    $eax = COPY %10
+    RET64 $eax
+
+  bb.2.exit:
+    ; CHECK: $eax = COPY %0
+    $eax = COPY %2
+    RET64 $eax
+...

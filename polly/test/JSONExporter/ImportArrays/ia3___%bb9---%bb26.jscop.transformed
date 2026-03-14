@@ -1,0 +1,51 @@
+{
+   "arrays" : [
+       {
+         "sizes" : [ "*", "1024" ],
+	 "type" : "double"
+      },
+      {
+         "name" : "MemRef_A",
+         "sizes" : [ "*", "1056" ],
+         "type" : "double"
+      },
+      {
+         "name" : "D",
+         "sizes" : [ "270336" ],
+         "type" : "double"
+      },
+      {
+         "name" : "E",
+         "sizes" : [ "270336", "200000" ],
+         "type" : "double"
+      },
+      {
+         "name" : "F",
+         "sizes" : [ "270336" ],
+         "type" : "i64"
+      }
+   ],
+   "context" : "{  :  }",
+   "name" : "%bb9---%bb26",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_bb12[i0, i1, i2] -> E[i2, i0] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "{ Stmt_bb12[i0, i1, i2] -> MemRef_beta[] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "{ Stmt_bb12[i0, i1, i2] -> MemRef_A[i0, i1] }"
+            }
+         ],
+         "domain" : "{ Stmt_bb12[i0, i1, i2] : 0 <= i0 <= 1055 and 0 <= i1 <= 1055 and 0 <= i2 <= 1023 }",
+         "name" : "Stmt_bb12",
+         "schedule" : "{ Stmt_bb12[i0, i1, i2] -> [i0, i1, i2] }"
+      }
+   ]
+}

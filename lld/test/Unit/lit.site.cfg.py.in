@@ -1,0 +1,12 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+
+config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
+config.shlibdir = lit_config.substitute(path(r"@SHLIBDIR@"))
+config.lld_obj_root = path(r"@LLD_BINARY_DIR@")
+config.lld_src_dir = path(r"@LLD_SOURCE_DIR@")
+
+# Let the main config do the real work.
+lit_config.load_config(
+    config, os.path.join(config.lld_src_dir, "test/Unit/lit.cfg.py"))

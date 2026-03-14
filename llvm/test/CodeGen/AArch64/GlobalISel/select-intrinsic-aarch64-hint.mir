@@ -1,0 +1,29 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @hint() { ret void }
+...
+
+---
+# Check that we select a 'hint' intrinsic into a HINT instruction.
+# CHECK-LABEL: name: hint
+name:            hint
+legalized:       true
+regBankSelected: true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
+registers:
+  - { id: 0, class: gpr }
+
+# CHECK:  body:
+# CHECK:    HINT 1
+body:             |
+  bb.0:
+    liveins: $w0
+
+    %0(s32) = G_CONSTANT i32 1
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.hint), %0
+...

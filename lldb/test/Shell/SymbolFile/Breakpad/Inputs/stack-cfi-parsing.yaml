@@ -1,0 +1,36 @@
+--- !minidump
+Streams:         
+  - Type:            ThreadList
+    Threads:         
+      - Thread Id:       0x00003E81
+        Context:         DEAD
+        Stack:           
+          Start of Memory Range: 0x00007FFCEB34A000
+          Content:         DEAD
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000400000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/stack-cfi-parsing.out'
+        CodeView Record: 4C457042E35C283BC327C28762DB788BF5A4078BE2351448
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 40
+    Platform ID:     Linux
+    CSD Version:     'Linux 3.13.0-91-generic'
+    CPU:             
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	linux-x86_64
+      State:	t (tracing stop)
+      Tgid:	29917
+      Ngid:	0
+      Pid:	29917
+      PPid:	29370
+
+...

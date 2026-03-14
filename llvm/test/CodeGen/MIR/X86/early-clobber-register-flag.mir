@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses the 'early-clobber' register
+# flags correctly.
+
+--- |
+
+  declare void @foo(i32)
+
+  define void @test(i32 %a, i32 %b) #0 {
+  entry:
+    %c = add i32 %a, %b
+    call void asm sideeffect "nop", "~{ax},~{di}"()
+    call void @foo(i32 %c)
+    ret void
+  }
+
+  attributes #0 = { optsize }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+  - { reg: '$esi' }
+frameInfo:
+  stackSize:     8
+  adjustsStack:  true
+  hasCalls:      true
+body: |
+  bb.0.entry:
+    liveins: $edi, $esi
+
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    $ecx = COPY $edi
+    $ecx = ADD32rr killed $ecx, killed $esi, implicit-def dead $eflags
+  ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $ax, 12 /* clobber */, implicit-def dead early-clobber $di
+    INLINEASM &nop, 1, 12, implicit-def dead early-clobber $ax, 12, implicit-def dead early-clobber $di
+    $edi = COPY killed $ecx
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp
+    $rax = POP64r implicit-def $rsp, implicit $rsp
+    RET64
+...

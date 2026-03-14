@@ -1,0 +1,5 @@
+module a { header "a.h" export * }
+module b {
+  module b1 { header "b1.h" export * }
+  module b2 { header "b2.h" export * }
+}

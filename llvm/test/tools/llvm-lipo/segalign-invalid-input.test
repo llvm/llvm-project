@@ -1,0 +1,29 @@
+# RUN: yaml2obj %p/Inputs/arm64-slice.yaml -o %t-arm64.o
+# RUN: yaml2obj %p/Inputs/armv7-slice.yaml -o %t-armv7.o
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign a 2>&1 | FileCheck --check-prefix=MISSING_ARG %s
+# MISSING_ARG: error: missing argument to -segalign option
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -o %t.o -segalign arm64 10 2>&1 | FileCheck --check-prefix=MISSING_ACTION %s
+# MISSING_ACTION: error: at least one action should be specified
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign arm6 10 2>&1 | FileCheck --check-prefix=INVALID_ARCH %s
+# INVALID_ARCH: error: Invalid architecture: arm6
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign arm64 15.7 2>&1 | FileCheck --check-prefix=INVALID_ALIGN_NOT_HEX %s
+# INVALID_ALIGN_NOT_HEX: error: argument to -segalign <arch_type> 15.7 (hex) is not a proper hexadecimal number
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign arm64 15 2>&1 | FileCheck --check-prefix=INVALID_ALIGN_HEX %s
+# INVALID_ALIGN_HEX: error: argument to -segalign <arch_type> 15 (hex) must be a non-zero power of two
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign arm64 0 2>&1 | FileCheck --check-prefix=INVALID_ALIGN_ZERO %s
+# INVALID_ALIGN_ZERO: error: argument to -segalign <arch_type> 0 (hex) must be a non-zero power of two
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign arm64 10000 2>&1 | FileCheck --check-prefix=INVALID_ALIGN_BIG %s
+# INVALID_ALIGN_BIG: error: argument to -segalign <arch_type> 10000 (hex) must be less than or equal to the maximum section align 2^15
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign arm64 100 -segalign arm64 200 2>&1 | FileCheck --check-prefix=DUPLICATE_ALIGN %s
+# DUPLICATE_ALIGN: error: -segalign arm64 <alignment_value> specified multiple times: 256, 512
+
+# RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign i386 100 2>&1 | FileCheck --check-prefix=EXCLUDED_ALIGN %s
+# EXCLUDED_ALIGN: error: -segalign i386 <value> specified but resulting fat file does not contain that architecture

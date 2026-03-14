@@ -1,0 +1,3 @@
+module foo {}
+
+extern module external "diagnostics-aux-2.modulemap"

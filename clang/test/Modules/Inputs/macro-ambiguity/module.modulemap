@@ -1,0 +1,25 @@
+module a {
+  header "Inputs/macro-ambiguity/a/quote/a_quote.h"
+  header "Inputs/macro-ambiguity/a/system/a_system.h"
+  export *
+}
+module b [system] {
+  header "Inputs/macro-ambiguity/b/quote/b_quote.h"
+  header "Inputs/macro-ambiguity/b/system/b_system.h"
+  export *
+}
+module c {
+  header "Inputs/macro-ambiguity/c/quote/c_quote.h"
+  header "Inputs/macro-ambiguity/c/system/c_system.h"
+  export *
+}
+module d [system] {
+  header "Inputs/macro-ambiguity/d/quote/d_quote.h"
+  header "Inputs/macro-ambiguity/d/system/d_system.h"
+  export *
+}
+module e {
+  textual header "Inputs/macro-ambiguity/e/quote/e_quote.h"
+  textual header "Inputs/macro-ambiguity/e/system/e_system.h"
+  export *
+}

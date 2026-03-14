@@ -1,0 +1,6 @@
+# RUN: llc -filetype=obj -o %t.o %S/Inputs/main-ret-0.ll
+# RUN: cp %t.o %t.a
+# RUN: not llvm-jitlink -noexec %t.o %t.a
+#
+# Try to load an object file as if it were an archive. Should result in an
+# error, rather than a crash.

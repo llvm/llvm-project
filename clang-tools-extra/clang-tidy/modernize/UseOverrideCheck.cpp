@@ -1,0 +1,179 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "UseOverrideCheck.h"
+#include "../utils/LexerUtils.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::modernize {
+
+UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreDestructors(Options.get("IgnoreDestructors", false)),
+      IgnoreTemplateInstantiations(
+          Options.get("IgnoreTemplateInstantiations", false)),
+      AllowOverrideAndFinal(Options.get("AllowOverrideAndFinal", false)),
+      OverrideSpelling(Options.get("OverrideSpelling", "override")),
+      FinalSpelling(Options.get("FinalSpelling", "final")) {}
+
+void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreDestructors", IgnoreDestructors);
+  Options.store(Opts, "IgnoreTemplateInstantiations",
+                IgnoreTemplateInstantiations);
+  Options.store(Opts, "AllowOverrideAndFinal", AllowOverrideAndFinal);
+  Options.store(Opts, "OverrideSpelling", OverrideSpelling);
+  Options.store(Opts, "FinalSpelling", FinalSpelling);
+}
+
+void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
+  auto IgnoreDestructorMatcher =
+      IgnoreDestructors ? cxxMethodDecl(unless(cxxDestructorDecl()))
+                        : cxxMethodDecl();
+  auto IgnoreTemplateInstantiationsMatcher =
+      IgnoreTemplateInstantiations
+          ? cxxMethodDecl(unless(ast_matchers::isTemplateInstantiation()))
+          : cxxMethodDecl();
+  Finder->addMatcher(cxxMethodDecl(isOverride(),
+                                   IgnoreTemplateInstantiationsMatcher,
+                                   IgnoreDestructorMatcher)
+                         .bind("method"),
+                     this);
+}
+
+// Re-lex the tokens to get precise locations to insert 'override' and remove
+// 'virtual'.
+static SmallVector<Token, 16>
+parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
+  const SourceManager &Sources = *Result.SourceManager;
+  const std::pair<FileID, unsigned> LocInfo =
+      Sources.getDecomposedLoc(Range.getBegin());
+  const StringRef File = Sources.getBufferData(LocInfo.first);
+  const char *TokenBegin = File.data() + LocInfo.second;
+  Lexer RawLexer(Sources.getLocForStartOfFile(LocInfo.first),
+                 Result.Context->getLangOpts(), File.begin(), TokenBegin,
+                 File.end());
+  SmallVector<Token, 16> Tokens;
+  Token Tok;
+  int NestedParens = 0;
+  while (!RawLexer.LexFromRawLexer(Tok)) {
+    if ((Tok.is(tok::semi) || Tok.is(tok::l_brace)) && NestedParens == 0)
+      break;
+    if (Sources.isBeforeInTranslationUnit(Range.getEnd(), Tok.getLocation()))
+      break;
+    if (Tok.is(tok::l_paren))
+      ++NestedParens;
+    else if (Tok.is(tok::r_paren))
+      --NestedParens;
+    if (Tok.is(tok::raw_identifier)) {
+      IdentifierInfo &Info = Result.Context->Idents.get(StringRef(
+          Sources.getCharacterData(Tok.getLocation()), Tok.getLength()));
+      Tok.setIdentifierInfo(&Info);
+      Tok.setKind(Info.getTokenID());
+    }
+    Tokens.push_back(Tok);
+  }
+  return Tokens;
+}
+
+void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *Method = Result.Nodes.getNodeAs<FunctionDecl>("method");
+  const SourceManager &Sources = *Result.SourceManager;
+
+  ASTContext &Context = *Result.Context;
+
+  assert(Method != nullptr);
+  if (Method->getInstantiatedFromMemberFunction() != nullptr)
+    Method = Method->getInstantiatedFromMemberFunction();
+
+  if (Method->isImplicit() || Method->getLocation().isMacroID() ||
+      Method->isOutOfLine())
+    return;
+
+  const bool HasVirtual = Method->isVirtualAsWritten();
+  const bool HasOverride = Method->getAttr<OverrideAttr>();
+  const bool HasFinal = Method->getAttr<FinalAttr>();
+
+  const bool OnlyVirtualSpecified = HasVirtual && !HasOverride && !HasFinal;
+  const unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
+
+  if ((!OnlyVirtualSpecified && KeywordCount == 1) ||
+      (!HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal))
+    return; // Nothing to do.
+
+  std::string Message;
+  if (OnlyVirtualSpecified) {
+    Message = "prefer using '%0' or (rarely) '%1' instead of 'virtual'";
+  } else if (KeywordCount == 0) {
+    Message = "annotate this function with '%0' or (rarely) '%1'";
+  } else {
+    const StringRef Redundant =
+        HasVirtual ? (HasOverride && HasFinal && !AllowOverrideAndFinal
+                          ? "'virtual' and '%0' are"
+                          : "'virtual' is")
+                   : "'%0' is";
+    const StringRef Correct = HasFinal ? "'%1'" : "'%0'";
+
+    Message = (llvm::Twine(Redundant) +
+               " redundant since the function is already declared " + Correct)
+                  .str();
+  }
+
+  auto Diag = diag(Method->getLocation(), Message)
+              << OverrideSpelling << FinalSpelling;
+
+  const CharSourceRange FileRange = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(Method->getSourceRange()), Sources,
+      getLangOpts());
+
+  if (!FileRange.isValid())
+    return;
+
+  // FIXME: Instead of re-lexing and looking for the 'virtual' token,
+  // store the location of 'virtual' in each FunctionDecl.
+  const SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
+
+  // Add 'override' on inline declarations that don't already have it.
+  if (!HasFinal && !HasOverride) {
+    // If the override macro has been specified just ensure it exists,
+    // if not don't apply a fixit but keep the warning.
+    if (OverrideSpelling != "override" &&
+        !Context.Idents.get(OverrideSpelling).hasMacroDefinition())
+      return;
+
+    Diag << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(
+            Method->getTypeSourceInfo()->getTypeLoc().getEndLoc(), 0, Sources,
+            getLangOpts()),
+        (" " + OverrideSpelling).str());
+  }
+
+  if (HasFinal && HasOverride && !AllowOverrideAndFinal)
+    Diag << FixItHint::CreateRemoval(
+        Method->getAttr<OverrideAttr>()->getLocation());
+
+  if (HasVirtual) {
+    for (const Token Tok : Tokens) {
+      if (Tok.is(tok::kw_virtual)) {
+        std::optional<Token> NextToken =
+            utils::lexer::findNextTokenIncludingComments(
+                Tok.getEndLoc(), Sources, getLangOpts());
+        if (NextToken.has_value()) {
+          Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+              Tok.getLocation(), NextToken->getLocation()));
+          break;
+        }
+      }
+    }
+  }
+}
+
+} // namespace clang::tidy::modernize

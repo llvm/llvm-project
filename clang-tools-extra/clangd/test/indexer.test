@@ -1,0 +1,9 @@
+# RUN: rm -rf %t.cpp
+# RUN: touch %t.cpp
+#
+# Make sure compile flags are adjusted for clangd. `--save-temps` creates a
+# `.ii` file and `-verify` triggers extra diagnostics generation. Clangd should
+# strip those.
+# RUN: clangd-indexer %t.cpp -- -Xclang -verify --save-temps -- 2>&1 | FileCheck %s
+# CHECK-NOT: error: no expected directives found: consider use of 'expected-no-diagnostics'
+# RUN: not ls %t.ii

@@ -1,0 +1,8 @@
+module MyHeader1 {
+  header "my_header_1.h"
+}
+
+module MyHeader2 {
+  header "my_header_2.h"
+  export *
+}

@@ -1,0 +1,34 @@
+# RUN: yaml2obj %S/Inputs/inlined-file0-line0-col0.yaml -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+#  1 void abort(void);
+#  2 int g1 = 4, g2 = 6;
+#  3
+#  4 inline __attribute__((always_inline)) void bar(int q) {
+#  5   if (q > 5)
+#  6     abort();
+#  7 }
+#  8
+#  9 inline __attribute__((always_inline)) void foo(int q) {
+# 10   bar(q);
+# 11 }
+# 12
+# 13 int main() {
+# 14   foo(g1);
+# 15   foo(g2);
+# 16   return 0;
+# 17 }
+
+# The input object file contains a single abort invocation for the two inlined
+# instances of foo() in main() at line 0. As the file, line and column numbers
+# are all 0, file and line number information would be missing for foo and main
+# in the lookup information.
+#
+# A line number 0 is not printed for main in this case, but the same holds
+# for a non-inlined location with line number 0.
+
+# CHECK: Summary: inlined-file0-line0-col0.test.tmp`main + 30 [inlined] bar + 4 at inlined-file0-line0-col0.c:6:5
+# CHECK-NEXT:     inlined-file0-line0-col0.test.tmp`main + 26 [inlined] foo at inlined-file0-line0-col0.c:10:3
+# CHECK-NEXT:     inlined-file0-line0-col0.test.tmp`main + 26 at inlined-file0-line0-col0.c
+
+image lookup -a 0x1e

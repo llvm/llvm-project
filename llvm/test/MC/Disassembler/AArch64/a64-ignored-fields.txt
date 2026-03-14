@@ -1,0 +1,9 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=fp-armv8 -disassemble -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=arm64 -mattr=fp-armv8 -disassemble -show-encoding < %s | FileCheck %s
+
+# The "Rm" bits are ignored, but the canonical representation has them filled
+# with 0s. This is what we should produce even if the input bit-pattern had
+# something else there.
+
+# CHECK: fcmp    s31, #0.0               // encoding: [0xe8,0x23,0x20,0x1e]
+0xe8 0x23 0x33 0x1e
