@@ -89,14 +89,13 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:    bb3:
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP6]]>
 ; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP4]]> ir<%add1>/vp<[[VP6]]>
-; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, vp<[[VP7]]>
+; CHECK-NEXT:      EMIT ir<%add3> = add ir<%iv>, ir<3>, ir<%c0>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb4:
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP7]]> ir<%iv>/vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/ir<%c0> ir<%iv>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
@@ -119,8 +118,7 @@ bb0:
 ;       bb3  /
 ;         \ /
 ;         bb4
-; TODO: bb3 can reuse bb1's mask.
-; Verify that bb4 is unmasked.
+; Verify that bb3 reuse bb1's mask and bb4 is unmasked.
   %iv = phi i64 [0, %entry], [%iv.next, %bb4]
   %gep = getelementptr i64, ptr %a, i64 %iv
   %c0 = icmp sle i64 %iv, 0

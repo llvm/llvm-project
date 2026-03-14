@@ -96,7 +96,7 @@ protected:
     FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), false);
     F = Function::Create(FTy, GlobalValue::ExternalLinkage, "f", M.get());
     ScalarHeader = BasicBlock::Create(C, "scalar.header", F);
-    BranchInst::Create(ScalarHeader, ScalarHeader);
+    UncondBrInst::Create(ScalarHeader, ScalarHeader);
   }
 
   VPlan &getPlan() {

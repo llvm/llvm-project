@@ -311,7 +311,7 @@ class GuardWideningImpl {
                                               getCondition(ToWiden), *InsertPt);
 
     if (isGuardAsWidenableBranch(ToWiden)) {
-      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
+      setWidenableBranchCond(cast<CondBrInst>(ToWiden), Result);
       return;
     }
     setCondition(ToWiden, Result);

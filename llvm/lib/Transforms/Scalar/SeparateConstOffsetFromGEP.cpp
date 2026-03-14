@@ -530,8 +530,10 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
   // Calculate the threshold
   APInt Threshold;
   unsigned N = Add->getType()->getIntegerBitWidth();
-  uint64_t Stride =
-      DL.getTypeAllocSize(GEP->getSourceElementType()).getFixedValue();
+  TypeSize ElemSize = DL.getTypeAllocSize(GEP->getSourceElementType());
+  if (ElemSize.isScalable())
+    return false;
+  uint64_t Stride = ElemSize.getFixedValue();
   if (!CI->isNegative()) {
     // (2^(N-1) - C + 1) * stride
     Threshold = (APInt::getSignedMinValue(N).zext(128) -
@@ -572,7 +574,9 @@ static bool canReorderAddSextToGEP(const GetElementPtrInst *GEP,
       if (!AllocSize->isScalable())
         ObjSize = AllocSize->getFixedValue();
   } else if (const auto *GV = dyn_cast<GlobalVariable>(Base)) {
-    ObjSize = DL.getTypeAllocSize(GV->getValueType()).getFixedValue();
+    TypeSize GVSize = DL.getTypeAllocSize(GV->getValueType());
+    if (!GVSize.isScalable())
+      ObjSize = GVSize.getFixedValue();
   }
   if (ObjSize > 0 && APInt(128, ObjSize).ult(Threshold))
     return true;

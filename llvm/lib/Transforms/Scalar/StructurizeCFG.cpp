@@ -479,6 +479,13 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
 
   if (!ElseSucc || !CommonDominator)
     return;
+  // Only hoist in a simple if-else: ThenBB must branch directly to ElseSucc
+  // and ElseSucc must have exactly 2 predecessors (ThenBB and ElseBB).
+  // simplifyHoistedPhis assumes this exact shape; with additional predecessors
+  // the hoisted value leaks into unrelated control-flow paths.
+  if (ThenBB->getSingleSuccessor() != ElseSucc ||
+      !ElseSucc->hasNPredecessors(2))
+    return;
   Instruction *Term = CommonDominator->getTerminator();
   for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
