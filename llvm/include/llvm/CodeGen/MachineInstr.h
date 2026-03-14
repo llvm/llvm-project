@@ -79,9 +79,9 @@ public:
   /// otherwise easily derivable from the IR text.
   ///
   enum CommentFlag : uint8_t {
-    ReloadReuse = 0x1,    // higher bits are reserved for target dep comments.
+    ReloadReuse = 0x1, // higher bits are reserved for target dep comments.
     NoSchedComment = 0x2,
-    TAsmComments = 0x4    // Target Asm comments should start from this value.
+    TAsmComments = 0x4 // Target Asm comments should start from this value.
   };
 
   enum MIFlag {
