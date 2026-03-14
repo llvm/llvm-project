@@ -1581,7 +1581,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   {
     unsigned NewBTC = (Info.TripCount / 8) - 1;
     BasicBlock *LoopBlk = CurLoop->getLoopLatch();
-    BranchInst *BrInst = cast<BranchInst>(LoopBlk->getTerminator());
+    CondBrInst *BrInst = cast<CondBrInst>(LoopBlk->getTerminator());
     CmpPredicate ExitPred = BrInst->getSuccessor(0) == LoopBlk
                                 ? ICmpInst::Predicate::ICMP_NE
                                 : ICmpInst::Predicate::ICMP_EQ;
@@ -1707,9 +1707,9 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 /// behavior, the variable involved in the comparison is returned. This function
 /// will be called to see if the precondition and postcondition of the loop are
 /// in desirable form.
-static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
+static Value *matchCondition(CondBrInst *BI, BasicBlock *LoopEntry,
                              bool JmpOnZero = false) {
-  if (!BI || !BI->isConditional())
+  if (!BI)
     return nullptr;
 
   ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
@@ -1750,11 +1750,7 @@ public:
 
     // It should have a preheader and a branch instruction.
     BasicBlock *Preheader = CurLoop->getLoopPreheader();
-    if (!Preheader)
-      return false;
-
-    BranchInst *EntryBI = dyn_cast<BranchInst>(Preheader->getTerminator());
-    if (!EntryBI)
+    if (!Preheader || !isa<UncondBrInst, CondBrInst>(Preheader->getTerminator()))
       return false;
 
     // The loop exit must be conditioned on an icmp with 0 the null terminator.
@@ -1766,7 +1762,7 @@ public:
     if (!LoopBody || LoopBody->size() >= 15)
       return false;
 
-    BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+    CondBrInst *LoopTerm = dyn_cast<CondBrInst>(LoopBody->getTerminator());
     Value *LoopCond = matchCondition(LoopTerm, LoopBody);
     if (!LoopCond)
       return false;
@@ -1923,8 +1919,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   BasicBlock *LoopBody = *CurLoop->block_begin();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
-  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
-  assert(Preheader && LoopBody && LoopExitBB && LoopTerm &&
+  CondBrInst *LoopTerm = cast<CondBrInst>(LoopBody->getTerminator());
+  assert(Preheader && LoopBody && LoopExitBB &&
          "Should be verified to be valid by StrlenVerifier");
 
   if (Verifier.OpWidth == 8) {
@@ -1987,8 +1983,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   // LoopDeletion only delete invariant loops with known trip-count. We can
   // update the condition so it will reliablely delete the invariant loop
-  assert(LoopTerm->getNumSuccessors() == 2 &&
-         (LoopTerm->getSuccessor(0) == LoopBody ||
+  assert((LoopTerm->getSuccessor(0) == LoopBody ||
           LoopTerm->getSuccessor(1) == LoopBody) &&
          "loop body must have a successor that is it self");
   ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
@@ -2012,11 +2007,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 /// comparison between a variable and a constant, and if the comparison is false
 /// the control yields to the loop entry. If the branch matches the behaviour,
 /// the variable involved in the comparison is returned.
-static Value *matchShiftULTCondition(BranchInst *BI, BasicBlock *LoopEntry,
+static Value *matchShiftULTCondition(CondBrInst *BI, BasicBlock *LoopEntry,
                                      APInt &Threshold) {
-  if (!BI || !BI->isConditional())
-    return nullptr;
-
   ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)
     return nullptr;
@@ -2087,9 +2079,10 @@ static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
   LoopEntry = *(CurLoop->block_begin());
 
   // step 1: Check if the loop-back branch is in desirable form.
-  if (Value *T = matchShiftULTCondition(
-          dyn_cast<BranchInst>(LoopEntry->getTerminator()), LoopEntry,
-          Threshold))
+  auto *EntryBI = dyn_cast<CondBrInst>(LoopEntry->getTerminator());
+  if (!EntryBI)
+    return false;
+  if (Value *T = matchShiftULTCondition(EntryBI, LoopEntry, Threshold))
     DefX = dyn_cast<Instruction>(T);
   else
     return false;
@@ -2190,7 +2183,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 1: Check if the loop-back branch is in desirable form.
   {
     if (Value *T = matchCondition(
-            dyn_cast<BranchInst>(LoopEntry->getTerminator()), LoopEntry))
+            dyn_cast<CondBrInst>(LoopEntry->getTerminator()), LoopEntry))
       DefX2 = dyn_cast<Instruction>(T);
     else
       return false;
@@ -2265,7 +2258,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 5: check if the precondition is in this form:
   //   "if (x != 0) goto loop-head ; else goto somewhere-we-don't-care;"
   {
-    auto *PreCondBr = dyn_cast<BranchInst>(PreCondBB->getTerminator());
+    auto *PreCondBr = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
     Value *T = matchCondition(PreCondBr, CurLoop->getLoopPreheader());
     if (T != PhiX->getOperand(0) && T != PhiX->getOperand(1))
       return false;
@@ -2319,7 +2312,7 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
 
   // step 1: Check if the loop-back branch is in desirable form.
   if (Value *T = matchCondition(
-          dyn_cast<BranchInst>(LoopEntry->getTerminator()), LoopEntry))
+          dyn_cast<CondBrInst>(LoopEntry->getTerminator()), LoopEntry))
     DefX = dyn_cast<Instruction>(T);
   else
     return false;
@@ -2438,9 +2431,7 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
     auto *PreCondBB = PH->getSinglePredecessor();
     if (!PreCondBB)
       return false;
-    auto *PreCondBI = dyn_cast<BranchInst>(PreCondBB->getTerminator());
-    if (!PreCondBI)
-      return false;
+    auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
     if (matchCondition(PreCondBI, PH) != InitX)
       return false;
     ZeroCheck = true;
@@ -2520,7 +2511,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
   auto *PreCondBB = PH->getSinglePredecessor();
   if (!PreCondBB)
     return false;
-  auto *PreCondBI = dyn_cast<BranchInst>(PreCondBB->getTerminator());
+  auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
   if (!PreCondBI)
     return false;
 
@@ -2577,8 +2568,8 @@ bool LoopIdiomRecognize::recognizePopcount() {
   BasicBlock *PH = CurLoop->getLoopPreheader();
   if (!PH || &PH->front() != PH->getTerminator())
     return false;
-  auto *EntryBI = dyn_cast<BranchInst>(PH->getTerminator());
-  if (!EntryBI || EntryBI->isConditional())
+  auto *EntryBI = dyn_cast<UncondBrInst>(PH->getTerminator());
+  if (!EntryBI)
     return false;
 
   // It should have a precondition block where the generated popcount intrinsic
@@ -2586,8 +2577,8 @@ bool LoopIdiomRecognize::recognizePopcount() {
   auto *PreCondBB = PH->getSinglePredecessor();
   if (!PreCondBB)
     return false;
-  auto *PreCondBI = dyn_cast<BranchInst>(PreCondBB->getTerminator());
-  if (!PreCondBI || PreCondBI->isUnconditional())
+  auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
+  if (!PreCondBI)
     return false;
 
   Instruction *CntInst;
@@ -2658,10 +2649,8 @@ void LoopIdiomRecognize::transformLoopToCountable(
     Intrinsic::ID IntrinID, BasicBlock *Preheader, Instruction *CntInst,
     PHINode *CntPhi, Value *InitX, Instruction *DefX, const DebugLoc &DL,
     bool ZeroCheck, bool IsCntPhiUsedOutsideLoop, bool InsertSub) {
-  BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
-
   // Step 1: Insert the CTLZ/CTTZ instruction at the end of the preheader block
-  IRBuilder<> Builder(PreheaderBr);
+  IRBuilder<> Builder(Preheader->getTerminator());
   Builder.SetCurrentDebugLocation(DL);
 
   // If there are no uses of CntPhi crate:
@@ -2717,7 +2706,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
   //   ...
   //   Br: loop if (Dec != 0)
   BasicBlock *Body = *(CurLoop->block_begin());
-  auto *LbBr = cast<BranchInst>(Body->getTerminator());
+  auto *LbBr = cast<CondBrInst>(Body->getTerminator());
   ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
 
   PHINode *TcPhi = PHINode::Create(CountTy, 2, "tcphi");
@@ -2752,7 +2741,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
                                                  Instruction *CntInst,
                                                  PHINode *CntPhi, Value *Var) {
   BasicBlock *PreHead = CurLoop->getLoopPreheader();
-  auto *PreCondBr = cast<BranchInst>(PreCondBB->getTerminator());
+  auto *PreCondBr = cast<CondBrInst>(PreCondBB->getTerminator());
   const DebugLoc &DL = CntInst->getDebugLoc();
 
   // Assuming before transformation, the loop is following:
@@ -2823,7 +2812,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   //     do { cnt++; x &= x-1; t--) } while (t > 0);
   BasicBlock *Body = *(CurLoop->block_begin());
   {
-    auto *LbBr = cast<BranchInst>(Body->getTerminator());
+    auto *LbBr = cast<CondBrInst>(Body->getTerminator());
     ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
     Type *Ty = TripCnt->getType();
 
