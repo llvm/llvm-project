@@ -362,7 +362,8 @@ private:
   unsigned TypeSpecSat : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned ConstrainedAuto : 1;
-  // Track conflicting type specifier when 'auto' is set (for Finish() detection)
+  // Track conflicting type specifier when 'auto' is set (for Finish()
+  // detection)
   LLVM_PREFERRED_TYPE(TST)
   unsigned ConflictingTypeSpecifier : 7;
 
