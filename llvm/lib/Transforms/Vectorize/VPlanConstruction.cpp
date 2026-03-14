@@ -971,9 +971,7 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   }
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan,
-                                     bool RequiresScalarEpilogueCheck,
-                                     bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   // If MiddleVPBB has a single successor then the original loop does not exit
@@ -1006,9 +1004,7 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan,
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
-  if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getFalse();
-  else if (TailFolded)
+  if (TailFolded)
     Cmp = Plan.getTrue();
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),

@@ -8135,6 +8135,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       CM.getInLoopReductions(), Hints.allowReordering());
 
   VPlanTransforms::simplifyRecipes(*VPlan0);
+  VPlanTransforms::handleEarlyExits(*VPlan0, Legal->hasUncountableEarlyExit());
+  VPlanTransforms::addMiddleCheck(*VPlan0, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *VPlan0);
+  if (CM.foldTailByMasking())
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *VPlan0);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize,
+                           *VPlan0);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8181,13 +8188,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
-  VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
-                                  CM.foldTailByMasking());
-
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *Plan);
-  if (CM.foldTailByMasking())
-    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *Plan);
+  // Update the branch in the middle block if a scalar epilogue is required.
+  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
+  if (!RequiresScalarEpilogueCheck && MiddleVPBB->getNumSuccessors() == 2) {
+    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
+    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
+           "second successor must be scalar preheader");
+    BranchOnCond->setOperand(0, Plan->getFalse());
+  }
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8240,11 +8248,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   }
 
   // ---------------------------------------------------------------------------
-  // Predicate and linearize the top-level loop region.
-  // ---------------------------------------------------------------------------
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan);
-
-  // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
@@ -8256,7 +8259,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
-  auto *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
 
   // Collect blocks that need predication for in-loop reduction recipes.
@@ -8433,8 +8435,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       /*AllowReordering=*/false);
   VPlanTransforms::handleEarlyExits(*Plan,
                                     /*HasUncountableExit*/ false);
-  VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
-                                  /*TailFolded*/ false);
+  VPlanTransforms::addMiddleCheck(*Plan, /*TailFolded*/ false);
 
   VPlanTransforms::createLoopRegions(*Plan);
 
