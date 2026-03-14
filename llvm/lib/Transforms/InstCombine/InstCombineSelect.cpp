@@ -3595,11 +3595,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false)) {
       // (A || B) || C --> A || (B | C)
-      return replaceInstUsesWith(
-          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal), "",
-                                      ProfcheckDisableMetadataFixes
-                                          ? nullptr
-                                          : cast<SelectInst>(CondVal)));
+      Value *LOr = Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal));
+      if (auto *I = dyn_cast<Instruction>(LOr)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
+      }
+      return replaceInstUsesWith(SI, LOr);
     }
 
     // (A && B) || (C && B) --> (A || C) && B
@@ -3611,11 +3611,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto AndFactorization = [&](Value *Common, Value *InnerCond,
                                   Value *InnerVal,
                                   bool SelFirst = false) -> Instruction * {
-        Value *InnerSel = Builder.CreateSelect(InnerCond, One, InnerVal);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, One, InnerVal, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (FalseLogicAnd || (CondLogicAnd && Common == A))
-          return SelectInst::Create(Common, InnerSel, Zero);
+          return createSelectInstWithUnknownProfile(Common, InnerSel, Zero);
         else
           return BinaryOperator::CreateAnd(Common, InnerSel);
       };
@@ -3640,11 +3641,11 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true)) {
       // (A && B) && C --> A && (B & C)
-      return replaceInstUsesWith(
-          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal), "",
-                                       ProfcheckDisableMetadataFixes
-                                           ? nullptr
-                                           : cast<SelectInst>(CondVal)));
+      Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal));
+      if (auto *I = dyn_cast<Instruction>(LAnd)) {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
+      }
+      return replaceInstUsesWith(SI, LAnd);
     }
 
     // (A || B) && (C || B) --> (A && C) || B
@@ -3656,11 +3657,12 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       auto OrFactorization = [&](Value *Common, Value *InnerCond,
                                  Value *InnerVal,
                                  bool SelFirst = false) -> Instruction * {
-        Value *InnerSel = Builder.CreateSelect(InnerCond, InnerVal, Zero);
+        Value *InnerSel = Builder.CreateSelectWithUnknownProfile(
+            InnerCond, InnerVal, Zero, DEBUG_TYPE);
         if (SelFirst)
           std::swap(Common, InnerSel);
         if (TrueLogicOr || (CondLogicOr && Common == A))
-          return SelectInst::Create(Common, One, InnerSel);
+          return createSelectInstWithUnknownProfile(Common, One, InnerSel);
         else
           return BinaryOperator::CreateOr(Common, InnerSel);
       };
@@ -3738,28 +3740,36 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (~a | c), a, b -> select a, (select c, true, b), false
   if (match(CondVal,
             m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
-    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
-    return SelectInst::Create(TrueVal, OrV, Zero);
+    // TODO(#183864): We could improve the profile if P(~a | c) < 0.5, which
+    // implies strong bounds on both operands (P(a) is high, P(c) is low).
+    Value *OrV =
+        Builder.CreateSelectWithUnknownProfile(C, One, FalseVal, DEBUG_TYPE);
+    return createSelectInstWithUnknownProfile(TrueVal, OrV, Zero);
   }
   // select (c & b), a, b -> select b, (select ~c, true, a), false
   if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
-      return SelectInst::Create(FalseVal, OrV, Zero);
+      Value *OrV = Builder.CreateSelectWithUnknownProfile(NotC, One, TrueVal,
+                                                          DEBUG_TYPE);
+      return createSelectInstWithUnknownProfile(FalseVal, OrV, Zero);
     }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
   if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
     if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
-      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-      return SelectInst::Create(TrueVal, One, AndV);
+      // TODO(#183864): We could improve the profile if P(a | c) < 0.5, which
+      // implies strong bounds on both operands (both P(a) and P(c) are low).
+      Value *AndV = Builder.CreateSelectWithUnknownProfile(NotC, FalseVal, Zero,
+                                                           DEBUG_TYPE);
+      return createSelectInstWithUnknownProfile(TrueVal, One, AndV);
     }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
   if (match(CondVal,
             m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
-    Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
-    return SelectInst::Create(FalseVal, One, AndV);
+    Value *AndV =
+        Builder.CreateSelectWithUnknownProfile(C, TrueVal, Zero, DEBUG_TYPE);
+    return createSelectInstWithUnknownProfile(FalseVal, One, AndV);
   }
 
   if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
@@ -4865,9 +4875,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
-        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this))
-          return SelectInst::Create(A, IsAnd ? V : TrueVal,
-                                    IsAnd ? FalseVal : V);
+        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
+          return SelectInst::Create(
+              A, IsAnd ? V : TrueVal, IsAnd ? FalseVal : V, "", nullptr,
+              ProfcheckDisableMetadataFixes ? nullptr : &SI);
+        }
     }
 
     return nullptr;

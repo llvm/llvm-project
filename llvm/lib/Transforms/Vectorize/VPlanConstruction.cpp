@@ -1460,14 +1460,20 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   ...extract-last-active replaces compute-reduction-result.
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
-  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
-  for (auto &Phi : make_early_inc_range(
-           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+  SmallVector<VPReductionPHIRecipe *, 4> Phis;
+  for (VPRecipeBase &Phi :
+       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
-    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
-                     PhiR->getRecurrenceKind()))
-      continue;
+    if (PhiR && RecurrenceDescriptor::isFindLastRecurrenceKind(
+                    PhiR->getRecurrenceKind()))
+      Phis.push_back(PhiR);
+  }
 
+  if (Phis.empty())
+    return true;
+
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
+  for (VPReductionPHIRecipe *PhiR : Phis) {
     // Find the condition for the select/blend.
     VPValue *BackedgeSelect = PhiR->getBackedgeValue();
     VPValue *CondSelect = BackedgeSelect;

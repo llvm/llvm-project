@@ -116,6 +116,7 @@ static_library("LLVMMipsCodeGen") {
     "MipsSEInstrInfo.cpp",
     "MipsSERegisterInfo.cpp",
     "MipsSelectionDAGInfo.cpp",
+    "MipsSetMachineRegisterFlags.cpp",
     "MipsSubtarget.cpp",
     "MipsTargetMachine.cpp",
     "MipsTargetObjectFile.cpp",

@@ -375,7 +375,7 @@ void BranchProbabilityInfo::getLoopExitBlocks(
 bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
   const Instruction *TI = BB->getTerminator();
   assert(TI->getNumSuccessors() > 1 && "expected more than one successor!");
-  if (!(isa<BranchInst>(TI) || isa<SwitchInst>(TI) || isa<IndirectBrInst>(TI) ||
+  if (!(isa<CondBrInst>(TI) || isa<SwitchInst>(TI) || isa<IndirectBrInst>(TI) ||
         isa<InvokeInst>(TI) || isa<CallBrInst>(TI)))
     return false;
 
@@ -509,8 +509,8 @@ bool BranchProbabilityInfo::calcMetadataWeights(const BasicBlock *BB) {
 // Calculate Edge Weights using "Pointer Heuristics". Predict a comparison
 // between two pointer or pointer and NULL will fail.
 bool BranchProbabilityInfo::calcPointerHeuristics(const BasicBlock *BB) {
-  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  const CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   Value *Cond = BI->getCondition();
@@ -559,8 +559,8 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
   // 1/MAX. We could therefore be more precise in how unlikely we consider
   // blocks to be, but it would require more careful examination of the form
   // of the comparison expression.
-  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  const CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return;
 
   // Check if the branch is based on an instruction compared with a constant
@@ -957,8 +957,8 @@ bool BranchProbabilityInfo::calcEstimatedHeuristics(const BasicBlock *BB) {
 
 bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
                                                const TargetLibraryInfo *TLI) {
-  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  const CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   Value *Cond = BI->getCondition();
@@ -1023,8 +1023,8 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
 }
 
 bool BranchProbabilityInfo::calcFloatingPointHeuristics(const BasicBlock *BB) {
-  const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
-  if (!BI || !BI->isConditional())
+  const CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator());
+  if (!BI)
     return false;
 
   Value *Cond = BI->getCondition();

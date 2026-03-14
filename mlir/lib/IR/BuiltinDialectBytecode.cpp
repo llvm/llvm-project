@@ -149,16 +149,15 @@ static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
 }
 
 static LogicalResult
-readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
-                             SmallVectorImpl<char> &rawData) {
+readDenseTypedElementsAttr(DialectBytecodeReader &reader, ShapedType type,
+                           SmallVectorImpl<char> &rawData) {
   // Validate that the element type implements DenseElementTypeInterface.
   // Without this check, downstream code unconditionally calls
   // getDenseElementBitWidth() which asserts on unsupported types.
   if (!llvm::isa<DenseElementType>(type.getElementType())) {
-    reader.emitError()
-        << "DenseIntOrFPElementsAttr element type must implement "
-           "DenseElementTypeInterface, but got: "
-        << type.getElementType();
+    reader.emitError() << "DenseTypedElementsAttr element type must implement "
+                          "DenseElementTypeInterface, but got: "
+                       << type.getElementType();
     return failure();
   }
 
@@ -179,8 +178,18 @@ readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
   // cheap.
   size_t numElements = type.getNumElements();
   size_t packedSize = llvm::divideCeil(numElements, 8);
+
+  // Unpack splats to single element 0x01 to match unpacked splat format.
+  if (blob.size() == 1 && blob[0] == static_cast<char>(~0x00)) {
+    rawData.resize(1);
+    rawData[0] = 0x01;
+    return success();
+  }
+
+  // Unpack the blob if it's packed.
+  // Splat and blob.size() == packedSize for all N<=8 elements are ambiguous,
+  // non 0xFF means not splat so must be unpacked.
   if (blob.size() == packedSize && blob.size() != numElements) {
-    // Unpack the blob.
     rawData.resize(numElements);
     for (size_t i = 0; i < numElements; ++i)
       rawData[i] = (blob[i / 8] & (1 << (i % 8))) ? 1 : 0;
@@ -191,8 +200,8 @@ readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
   return success();
 }
 
-static void writeDenseIntOrFPElementsAttr(DialectBytecodeWriter &writer,
-                                          DenseIntOrFPElementsAttr attr) {
+static void writeDenseTypedElementsAttr(DialectBytecodeWriter &writer,
+                                        DenseTypedElementsAttr attr) {
   // Check to see if this is an i1 dense attribute.
   if (attr.getElementType().isInteger(1)) {
     // Pack the data.
@@ -200,9 +209,11 @@ static void writeDenseIntOrFPElementsAttr(DialectBytecodeWriter &writer,
     ArrayRef<char> rawData = attr.getRawData();
 
     // If the attribute is a splat, we can just splat the value directly.
+    // Use 0xFF to avoid ambiguity with packed format of <=8 elements,
+    // written ~0x00 to ensure proper compilation with signed chars.
     if (attr.isSplat()) {
       data.resize(1);
-      data[0] = rawData[0] ? 0xFF : 0x00;
+      data[0] = rawData[0] ? ~0x00 : 0x00;
       writer.writeUnownedBlob(data);
       return;
     }
@@ -249,6 +260,41 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   LogicalResult writeType(Type type,
                           DialectBytecodeWriter &writer) const override {
     return ::writeType(type, writer);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Version
+
+  void writeVersion(DialectBytecodeWriter &writer) const override {
+    auto configVersion = writer.getDialectVersion(getDialect()->getNamespace());
+    // Write version set in config.
+    if (succeeded(configVersion)) {
+      auto *version =
+          static_cast<const BuiltinDialectVersion *>(*configVersion);
+      writer.writeVarInt(static_cast<uint64_t>(version->getVersion()));
+      return;
+    }
+    // Else, write current set version version if not 0.
+    if (auto version = cast<BuiltinDialect>(getDialect())->getVersion();
+        version && version->getVersion() > 0) {
+      writer.writeVarInt(static_cast<uint64_t>(version->getVersion()));
+    }
+  }
+
+  std::unique_ptr<DialectVersion>
+  readVersion(DialectBytecodeReader &reader) const override {
+    uint64_t version;
+    if (failed(reader.readVarInt(version)))
+      return nullptr;
+
+    auto dialectVersion = std::make_unique<BuiltinDialectVersion>(version);
+    if (BuiltinDialectVersion::getCurrentVersion() < *dialectVersion) {
+      reader.emitError()
+          << "reading newer builtin dialect version than supported";
+      return nullptr;
+    }
+
+    return dialectVersion;
   }
 };
 } // namespace

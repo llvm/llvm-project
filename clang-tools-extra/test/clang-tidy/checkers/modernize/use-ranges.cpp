@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -isystem %clang_tidy_headers -I %S/Inputs/
-// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -isystem %clang_tidy_headers -I %S/Inputs/
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/
+// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES-CPP23: #include <numeric>
