@@ -250,16 +250,16 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   // Currently only allow PredBB to have two predecessors, one being BB.
   // Update BI to branch to BB's only successor instead of BB.
-  BranchInst *PredBB_BI;
+  CondBrInst *PredBB_BI;
   BasicBlock *NewSucc = nullptr;
   unsigned FallThruPath;
   if (PredecessorWithTwoSuccessors) {
-    if (!(PredBB_BI = dyn_cast<BranchInst>(PTI)))
+    if (!(PredBB_BI = dyn_cast<CondBrInst>(PTI)))
       return false;
-    BranchInst *BB_JmpI = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!BB_JmpI || !BB_JmpI->isUnconditional())
+    UncondBrInst *BB_JmpI = dyn_cast<UncondBrInst>(BB->getTerminator());
+    if (!BB_JmpI)
       return false;
-    NewSucc = BB_JmpI->getSuccessor(0);
+    NewSucc = BB_JmpI->getSuccessor();
     FallThruPath = PredBB_BI->getSuccessor(0) == BB ? 0 : 1;
   }
 
@@ -746,7 +746,7 @@ BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
   // Rewire control flow from callbr to the new target block.
   CallBr->setSuccessor(SuccIdx, CallBrTarget);
   // Jump from the new target block to the original successor.
-  BranchInst::Create(Succ, CallBrTarget);
+  UncondBrInst::Create(Succ, CallBrTarget);
 
   bool Updated =
       updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
@@ -853,7 +853,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 
   if (LandingPadReplacement) {
     auto *NewLP = OriginalPad->clone();
-    auto *Terminator = BranchInst::Create(Succ, NewBB);
+    auto *Terminator = UncondBrInst::Create(Succ, NewBB);
     NewLP->insertBefore(Terminator->getIterator());
     LandingPadReplacement->addIncoming(NewLP, NewBB);
   } else {
@@ -1190,7 +1190,7 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old,
 /// Update the PHI nodes in OrigBB to include the values coming from NewBB.
 /// This also updates AliasAnalysis, if available.
 static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
-                           ArrayRef<BasicBlock *> Preds, BranchInst *BI,
+                           ArrayRef<BasicBlock *> Preds, Instruction *BI,
                            bool HasLoopExit) {
   // Otherwise, create a new PHI node in NewBB for each PHI node in OrigBB.
   SmallPtrSet<BasicBlock *, 16> PredSet(llvm::from_range, Preds);
@@ -1283,7 +1283,7 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
       BB->getContext(), BB->getName() + Suffix, BB->getParent(), BB);
 
   // The new block unconditionally branches to the old block.
-  BranchInst *BI = BranchInst::Create(BB, NewBB);
+  UncondBrInst *BI = UncondBrInst::Create(BB, NewBB);
 
   Loop *L = nullptr;
   BasicBlock *OldLatch = nullptr;
@@ -1381,7 +1381,7 @@ static void SplitLandingPadPredecessorsImpl(
   NewBBs.push_back(NewBB1);
 
   // The new block unconditionally branches to the old block.
-  BranchInst *BI1 = BranchInst::Create(OrigBB, NewBB1);
+  UncondBrInst *BI1 = UncondBrInst::Create(OrigBB, NewBB1);
   BI1->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB1 instead of OrigBB.
@@ -1422,7 +1422,7 @@ static void SplitLandingPadPredecessorsImpl(
     NewBBs.push_back(NewBB2);
 
     // The new block unconditionally branches to the old block.
-    BranchInst *BI2 = BranchInst::Create(OrigBB, NewBB2);
+    UncondBrInst *BI2 = UncondBrInst::Create(OrigBB, NewBB2);
     BI2->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
     // Move the remaining edges from OrigBB to point to NewBB2.
@@ -1617,7 +1617,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
       if (Unreachable)
         (void)new UnreachableInst(C, BB);
       else {
-        (void)BranchInst::Create(Tail, BB);
+        (void)UncondBrInst::Create(Tail, BB);
         ToTailEdge = true;
       }
       BB->getTerminator()->setDebugLoc(SplitBefore->getDebugLoc());
@@ -1630,8 +1630,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
   handleBlock(ElseBlock, UnreachableElse, FalseBlock, ElseToTailEdge);
 
   Instruction *HeadOldTerm = Head->getTerminator();
-  BranchInst *HeadNewTerm =
-      BranchInst::Create(/*ifTrue*/ TrueBlock, /*ifFalse*/ FalseBlock, Cond);
+  CondBrInst *HeadNewTerm = CondBrInst::Create(Cond, TrueBlock, FalseBlock);
   HeadNewTerm->setMetadata(LLVMContext::MD_prof, BranchWeights);
   ReplaceInstWithInst(HeadOldTerm, HeadNewTerm);
 

@@ -146,15 +146,9 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   // Check predecessors of \param BB.
   SmallPtrSet<BasicBlock *, 16> Preds(llvm::from_range, predecessors(BB));
   for (BasicBlock *Pred : Preds) {
-    BranchInst *PBI = dyn_cast<BranchInst>(Pred->getTerminator());
-
-    // All predecessors should terminate with a branch.
-    if (!PBI)
-      return false;
-
     BasicBlock *PP = Pred->getSinglePredecessor();
 
-    if (PBI->isUnconditional()) {
+    if (isa<UncondBrInst>(Pred->getTerminator())) {
       // Case 1: Pred (BB3) is an unconditional block, it should
       // have a single predecessor (BB2) that is also a predecessor
       // of \param BB (BB4) and should not have address-taken.
@@ -169,7 +163,9 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     }
 
     // Only conditional branches are allowed beyond this point.
-    assert(PBI->isConditional());
+    CondBrInst *PBI = dyn_cast<CondBrInst>(Pred->getTerminator());
+    if (!PBI)
+      return false;
 
     // Condition's unique use should be the branch instruction.
     Value *PC = PBI->getCondition();
@@ -216,13 +212,9 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     if (!Preds.contains(PS)) {
       // Case 2.
       LastCondBlock = Pred;
-    } else {
-      // Case 1
-      BranchInst *BPS = dyn_cast<BranchInst>(PS->getTerminator());
-      if (BPS && BPS->isUnconditional()) {
-        // Case 1: PS(BB3) should be an unconditional branch.
-        LastCondBlock = Pred;
-      }
+    } else if (isa<UncondBrInst>(PS->getTerminator())) {
+      // Case 1: PS(BB3) should be an unconditional branch.
+      LastCondBlock = Pred;
     }
   }
 
@@ -232,16 +224,14 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   Instruction *TBB = LastCondBlock->getTerminator();
   BasicBlock *PS1 = TBB->getSuccessor(0);
   BasicBlock *PS2 = TBB->getSuccessor(1);
-  BranchInst *PBI1 = dyn_cast<BranchInst>(PS1->getTerminator());
-  BranchInst *PBI2 = dyn_cast<BranchInst>(PS2->getTerminator());
+  UncondBrInst *PBI1 = dyn_cast<UncondBrInst>(PS1->getTerminator());
+  UncondBrInst *PBI2 = dyn_cast<UncondBrInst>(PS2->getTerminator());
 
   // If PS1 does not jump into PS2, but PS2 jumps into PS1,
   // attempt branch inversion.
-  if (!PBI1 || !PBI1->isUnconditional() ||
-      (PS1->getTerminator()->getSuccessor(0) != PS2)) {
+  if (!PBI1 || (PS1->getTerminator()->getSuccessor(0) != PS2)) {
     // Check whether PS2 jumps into PS1.
-    if (!PBI2 || !PBI2->isUnconditional() ||
-        (PS2->getTerminator()->getSuccessor(0) != PS1))
+    if (!PBI2 || (PS2->getTerminator()->getSuccessor(0) != PS1))
       return false;
 
     // Do branch inversion.
@@ -249,7 +239,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     bool EverChanged = false;
     for (; CurrBlock != FirstCondBlock;
          CurrBlock = CurrBlock->getSinglePredecessor()) {
-      auto *BI = cast<BranchInst>(CurrBlock->getTerminator());
+      auto *BI = cast<CondBrInst>(CurrBlock->getTerminator());
       auto *CI = dyn_cast<CmpInst>(BI->getCondition());
       if (!CI)
         continue;
@@ -266,7 +256,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
   }
 
   // PS1 must have a conditional branch.
-  if (!PBI1 || !PBI1->isUnconditional())
+  if (!PBI1)
     return false;
 
   // PS2 should not contain PHI node.
@@ -276,7 +266,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 
   // Do the transformation.
   BasicBlock *CB;
-  BranchInst *PBI = cast<BranchInst>(FirstCondBlock->getTerminator());
+  CondBrInst *PBI = cast<CondBrInst>(FirstCondBlock->getTerminator());
   bool Iteration = true;
   IRBuilder<>::InsertPointGuard Guard(Builder);
   Value *PC = PBI->getCondition();
@@ -286,7 +276,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
     // Delete the conditional branch.
     FirstCondBlock->back().eraseFromParent();
     FirstCondBlock->splice(FirstCondBlock->end(), CB);
-    PBI = cast<BranchInst>(FirstCondBlock->getTerminator());
+    PBI = cast<CondBrInst>(FirstCondBlock->getTerminator());
     Value *CC = PBI->getCondition();
     // Merge conditions.
     Builder.SetInsertPoint(PBI);
