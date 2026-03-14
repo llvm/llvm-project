@@ -2015,7 +2015,11 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
     return std::nullopt;
 
   bool is_signed = false;
-  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
+  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed) ||
+                           clang_type.IsPointerOrReferenceType() ||
+                           clang_type.IsMemberFunctionPointerType() ||
+                           clang_type.IsMemberDataPointerType() ||
+                           clang_type.IsNullPtrType();
 
   llvm::APSInt apint(*bit_width, !is_signed);
   apint = value;
@@ -2023,13 +2027,21 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
   if (is_integral)
     return clang::APValue(apint);
 
+  if (clang_type.IsRealFloatingPointType()) {
+    return clang::APValue(llvm::APFloat(
+        ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+  }
+
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (!clang_type.IsRealFloatingPointType())
-    return std::nullopt;
 
-  return clang::APValue(llvm::APFloat(
-      ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+  LLDB_LOG(GetLog(LLDBLog::Types),
+           "MakeAPValue: Unsupported NTTP type class: {0}",
+           clang_type.GetTypeClass());
+
+  lldbassert(false && "Unsupported type for non-type template parameter");
+
+  return std::nullopt;
 }
 
 bool DWARFASTParserClang::ParseTemplateDIE(
