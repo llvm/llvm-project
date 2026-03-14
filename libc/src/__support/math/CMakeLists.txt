@@ -381,7 +381,6 @@ add_header_library(
     libc.src.__support.macros.optimization
 )
 
-
 add_header_library(
   asinbf16
   HDRS

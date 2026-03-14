@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/asinbf16.h"
-#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/math/asinbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
