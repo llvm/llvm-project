@@ -1277,7 +1277,6 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   mlir::Value gtRes =
       builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
 
-
   mlir::Value transformedResult;
   if (cmpInfo.getOrdering() != CmpOrdering::Partial) {
     // Total ordering
