@@ -24,10 +24,11 @@ bb2:
 
 define zeroext i1 @switch_ob_one_two_cases2(i32 %arg) {
 ; CHECK-LABEL: @switch_ob_one_two_cases2(
-; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[ARG:%.*]], 7
-; CHECK-NEXT:    [[I1:%.*]] = icmp eq i32 [[ARG]], 11
-; CHECK-NEXT:    [[I2:%.*]] = or i1 [[I]], [[I1]]
-; CHECK-NEXT:    ret i1 [[I2]]
+; CHECK-NEXT:  switch.return:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG:%.*]], -7
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -5
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %i = icmp eq i32 %arg, 7
   %i1 = icmp eq i32 %arg, 11
