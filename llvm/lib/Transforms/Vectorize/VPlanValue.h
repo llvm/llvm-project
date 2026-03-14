@@ -194,7 +194,7 @@ public:
   const VPRecipeBase *getDefiningRecipe() const;
 
   /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return SubclassID == VPVRecipeValueSC; }
+  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
 
   /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;

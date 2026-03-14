@@ -3889,6 +3889,7 @@ public:
     return 0;
   }
 
+  /// Return the canonical IV being widened.
   VPRegionValue *getCanonicalIV() const {
     return cast<VPRegionValue>(getOperand(0));
   }

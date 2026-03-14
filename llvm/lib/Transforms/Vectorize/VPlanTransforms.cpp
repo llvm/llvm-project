@@ -2164,9 +2164,15 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
         if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
           return R->isCanonical();
-        return isa<VPCanonicalIVPHIRecipe, VPCurrentIterationPHIRecipe,
-                   VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
+        return isa<VPCurrentIterationPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
+                   VPPhi>(&Phi);
       })) {
+    // Replace the canonical IV with its start value (0) since the loop
+    // executes exactly once.
+    auto *CanIV = VectorRegion->getCanonicalIV();
+    CanIV->replaceAllUsesWith(
+        Plan.getConstantInt(VectorRegion->getCanonicalIVType(), 0));
+
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
       if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&HeaderR)) {
         VPBuilder Builder(Plan.getVectorPreheader());
@@ -3335,8 +3341,8 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *NextIter = Builder.createAdd(OpVPEVL, CurrentIteration,
                                      CanonicalIVIncrement->getDebugLoc(),
                                      "current.iteration.next",
-                                     {LoopRegion->hasCanonicalIVNUW(),
-                                      /*HasNSW=*/false});
+                                     {CanonicalIVIncrement->hasNoUnsignedWrap(),
+                                      CanonicalIVIncrement->hasNoSignedWrap()});
   CurrentIteration->addOperand(NextIter);
 
   VPValue *NextAVL =
@@ -3385,16 +3391,12 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
   CurrentIteration->replaceAllUsesWith(ScalarR);
   CurrentIteration->eraseFromParent();
 
-  // The canonical IV phi is at the front of the header after dissolution.
   // Replace CanonicalIVInc with CurrentIteration increment.
-  auto *CanonicalIV = cast<VPPhi>(&HeaderVPBB->front());
-  for (VPUser *U : make_early_inc_range(CanonicalIV->users())) {
-    if (match(U,
-              m_c_Add(m_Specific(CanonicalIV), m_Specific(&Plan.getVFxUF())))) {
-      auto *R = cast<VPInstruction>(U);
-      R->replaceAllUsesWith(CurrentIterationIncr);
-      R->eraseFromParent();
-    }
+  auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
+  if (auto *CanIVInc =
+          vputils::findCanonicalIVIncrement(CanonicalIV, &Plan.getVFxUF())) {
+    CanIVInc->replaceAllUsesWith(CurrentIterationIncr);
+    CanIVInc->eraseFromParent();
   }
 }
 
@@ -3433,7 +3435,8 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (match(LatchBr, m_BranchOnCond(m_True())))
     return;
 
-  VPValue *CanIVInc = LoopRegion->getOrCreateCanonicalIVIncrement();
+  VPValue *CanIVInc = vputils::findCanonicalIVIncrement(
+      LoopRegion->getCanonicalIV(), &Plan.getVFxUF());
   assert(
       match(LatchBr, m_BranchOnCond(m_SpecificCmp(
                          CmpInst::ICMP_EQ, m_Specific(CanIVInc),
@@ -5503,9 +5506,8 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  VPInstruction *Inc = VectorLoop->getOrCreateCanonicalIVIncrement();
-  VPBuilder PHBuilder(Plan.getVectorPreheader());
-  auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
+  VPInstruction *CanIVInc = VectorLoop->getOrCreateCanonicalIVIncrement();
+  VPBasicBlock *VectorPH = Plan.getVectorPreheader();
   VPBuilder PHBuilder(VectorPH, VectorPH->begin());
 
   VPValue *UF = &Plan.getUF();
@@ -5517,7 +5519,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
                                          {true, false});
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
-  Step = UF;
+    Step = UF;
     Type *CanIVTy = VectorLoop->getCanonicalIVType();
     Plan.getVF().replaceAllUsesWith(Plan.getConstantInt(CanIVTy, 1));
   }
@@ -5525,7 +5527,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,
                              RequiresScalarEpilogue, Step);
 
-  Inc->setOperand(1, Step);
+  CanIVInc->setOperand(1, Step);
   Plan.getVFxUF().replaceAllUsesWith(Step);
 
   removeDeadRecipes(Plan);

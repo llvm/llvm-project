@@ -359,7 +359,7 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // Live-in, symbolic and region-values must be uniform across their scope.
+  // Live-in, symbolic and region-values represent single-scalar values.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 
@@ -641,6 +641,40 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   if (MDNode *AliasScopeMD = M->getMetadata(LLVMContext::MD_alias_scope))
     Loc.AATags.Scope = AliasScopeMD;
   return Loc;
+}
+
+VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV,
+                                                 VPValue *VFxUF) {
+  using namespace VPlanPatternMatch;
+  if (auto *R =
+          findUserOf(CanIV, m_c_Add(m_Specific(CanIV), m_Specific(VFxUF))))
+    return cast<VPInstruction>(R);
+
+  // If CanIV is a region value, also try to find the increment via the
+  // terminator of the exiting block.
+  if (auto *RegionV = dyn_cast<VPRegionValue>(CanIV)) {
+    auto *Region = RegionV->getDefiningRegion();
+    auto *ExitingLatch = cast<VPBasicBlock>(Region->getExiting());
+    auto *ExitingTerm = ExitingLatch->getTerminator();
+    VPInstruction *CanIVInc = nullptr;
+    if (match(ExitingTerm,
+              m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue())) &&
+        match(CanIVInc,
+              m_c_Add(m_Specific(CanIV),
+                      m_Specific(&Region->getPlan()->getVectorTripCount()))))
+      return CanIVInc;
+
+    VPValue *Cond = nullptr;
+    if (match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
+        match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),
+                                   m_VPValue())) &&
+        match(CanIVInc,
+              m_c_Add(m_CombineOr(m_Specific(CanIV),
+                                  m_c_Add(m_Specific(CanIV), m_LiveIn())),
+                      m_VPValue())))
+      return CanIVInc;
+  }
+  return nullptr;
 }
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects

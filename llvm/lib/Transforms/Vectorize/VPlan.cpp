@@ -749,14 +749,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
-  VPRegionBlock *NewRegion;
-  if (isReplicator()) {
-    NewRegion = Plan.createReplicateRegion(NewEntry, NewExiting, getName());
-  } else {
-    NewRegion =
-        Plan.createLoopRegion(getCanonicalIVType(), getCanonicalIVDebugLoc(),
-                              getName(), NewEntry, NewExiting);
-  }
+  VPRegionBlock *NewRegion =
+      isReplicator()
+          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
+          : Plan.createLoopRegion(getCanonicalIVType(),
+                                  getCanonicalIVDebugLoc(), getName(), NewEntry,
+                                  NewExiting);
 
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
@@ -813,6 +811,7 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
+    // Neglect the cost of canonical IV, matching the legacy cost model.
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
@@ -844,9 +843,9 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << (isReplicator() ? "<xVFxUF> " : "<x1> ") << getName() << ": {";
   auto NewIndent = Indent + "  ";
-  if (!isReplicator()) {
+  if (auto *CanIV = getCanonicalIV()) {
     O << '\n';
-    getCanonicalIV()->print(O, SlotTracker);
+    CanIV->print(O, SlotTracker);
     O << " = CANONICAL-IV\n";
   }
   for (auto *BlockBase : vp_depth_first_shallow(Entry)) {
@@ -865,12 +864,12 @@ void VPRegionBlock::dissolveToCFGLoop() {
   auto *CanIV = getCanonicalIV();
   if (CanIV->getNumUsers() > 0) {
     VPlan &Plan = *getPlan();
+    auto *Zero = Plan.getConstantInt(CanIV->getType(), 0);
+    auto DL = CanIV->getDebugLoc();
+    VPBuilder HeaderBuilder(Header, Header->begin());
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
     auto *ScalarR =
-        VPBuilder(Header, Header->begin())
-            .createScalarPhi(
-                {Plan.getConstantInt(CanIV->getType(), 0), CanIVInc},
-                CanIV->getDebugLoc(), "index");
+        HeaderBuilder.createScalarPhi({Zero, CanIVInc}, DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
 
@@ -887,33 +886,14 @@ void VPRegionBlock::dissolveToCFGLoop() {
 
 VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   // TODO: Represent the increment as VPRegionValue as well.
-  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPRegionValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
 
-  auto *ExitingTerm = ExitingLatch->getTerminator();
-  VPInstruction *CanIVInc = nullptr;
-  // Try to match BranchOnCount(increment, trip_count) for main loop.
-  if (match(ExitingTerm,
-            m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
-    assert(match(CanIVInc, m_c_Add(m_Specific(CanIV), m_LiveIn())) &&
-           "unexpected increment");
-    return CanIVInc;
-  }
+  if (auto *Inc =
+          vputils::findCanonicalIVIncrement(CanIV, &getPlan()->getVFxUF()))
+    return Inc;
 
-  // Try to match BranchOnCond(ICmp EQ(increment, trip_count)) for epilogue
-  // loops or transformed loops (like using EVL or narrowing interleave groups).
-  VPValue *Cond = nullptr;
-  if ((match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
-       match(Cond,
-             m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),
-                            m_Specific(&getPlan()->getVectorTripCount()))) &&
-       match(CanIVInc,
-             m_c_Add(m_CombineOr(m_Specific(CanIV),
-                                 m_c_Add(m_Specific(CanIV), m_LiveIn())),
-                     m_VPValue()))))
-    return CanIVInc;
-
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   return VPBuilder(ExitingLatch->getTerminator())
       .createOverflowingOp(Instruction::Add, {CanIV, &getPlan()->getVFxUF()},
                            {hasCanonicalIVNUW(), /* HasNSW */ false},

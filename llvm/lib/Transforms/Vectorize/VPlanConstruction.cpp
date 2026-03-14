@@ -434,9 +434,13 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // Get type info and debug location from the scalar phi corresponding to the
-  // canonical IV for outermost loops.
+  // canonical IV of the outermost (to be vectorized) loop.
   auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto *ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
+  Type *CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
+  DebugLoc DL = ScalarCanIV->getDebugLoc();
+
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
@@ -444,13 +448,9 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
 
   // Create an empty region first and insert it between PreheaderVPBB and
-  // exit blocks, taking care to preserve the original predecessor & successor
-  // order of blocks. Set region entry and exiting after both HeaderVPB and
-  // LatchVPBB have been disconnected from their predecessors/successors.
-  auto *ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
-  Type *CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
-  DebugLoc DL = ScalarCanIV->getDebugLoc();
-
+  // the exit blocks, taking care to preserve the original predecessor &
+  // successor order of blocks. Set region entry and exiting after both
+  // HeaderVPB and LatchVPBB have been disconnected from their
   auto *R = Plan.createLoopRegion(CanIVTy, DL);
 
   // Transfer latch's successors to the region.
@@ -460,8 +460,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
 
-  // Update canonical IV users for the top-level region only.
-  if (Plan.getEntry() == PreheaderVPBB->getSinglePredecessor()) {
+  // Update canonical IV users for the outermost loop only.
+  if (HeaderVPB == OutermostHeaderVPBB) {
     ScalarCanIV->replaceAllUsesWith(R->getCanonicalIV());
     ScalarCanIV->eraseFromParent();
   }
@@ -476,6 +476,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
+  // Add a VPPhi for the canonical IV starting at 0 as first recipe in header.
   auto *CanonicalIVPHI = new VPPhi(Plan.getConstantInt(IdxTy, 0), {}, DL);
   HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
 
@@ -765,12 +766,8 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
+  for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
     auto *PhiR = cast<VPPhi>(&R);
-    // Skip phis without underlying instructions (e.g., the canonical IV created
-    // by addCanonicalIVRecipes).
-    if (!PhiR->getUnderlyingValue())
-      continue;
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(HeaderPhiR);
