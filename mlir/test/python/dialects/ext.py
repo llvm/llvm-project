@@ -556,9 +556,9 @@ def testExtDialectWithType():
         arr: Result[Array]
 
     class MakeArray3Op(TestType.Operation, name="make_array3"):
-        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]] = (
-            infer_type()
-        )
+        arr: Result[
+            Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]
+        ] = infer_type()
 
     with Context(), Location.unknown():
         TestType.load()
