@@ -1709,9 +1709,6 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
 /// in desirable form.
 static Value *matchCondition(CondBrInst *BI, BasicBlock *LoopEntry,
                              bool JmpOnZero = false) {
-  if (!BI)
-    return nullptr;
-
   ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)
     return nullptr;
@@ -1764,6 +1761,8 @@ public:
       return false;
 
     CondBrInst *LoopTerm = dyn_cast<CondBrInst>(LoopBody->getTerminator());
+    if (!LoopTerm)
+      return false;
     Value *LoopCond = matchCondition(LoopTerm, LoopBody);
     if (!LoopCond)
       return false;
@@ -2183,11 +2182,10 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
 
   // step 1: Check if the loop-back branch is in desirable form.
   {
-    if (Value *T = matchCondition(
-            dyn_cast<CondBrInst>(LoopEntry->getTerminator()), LoopEntry))
-      DefX2 = dyn_cast<Instruction>(T);
-    else
+    auto *LoopTerm = dyn_cast<CondBrInst>(LoopEntry->getTerminator());
+    if (!LoopTerm)
       return false;
+    DefX2 = dyn_cast_or_null<Instruction>(matchCondition(LoopTerm, LoopEntry));
   }
 
   // step 2: detect instructions corresponding to "x2 = x1 & (x1 - 1)"
@@ -2260,6 +2258,8 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   //   "if (x != 0) goto loop-head ; else goto somewhere-we-don't-care;"
   {
     auto *PreCondBr = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
+    if (!PreCondBr)
+      return false;
     Value *T = matchCondition(PreCondBr, CurLoop->getLoopPreheader());
     if (T != PhiX->getOperand(0) && T != PhiX->getOperand(1))
       return false;
@@ -2312,11 +2312,10 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   LoopEntry = *(CurLoop->block_begin());
 
   // step 1: Check if the loop-back branch is in desirable form.
-  if (Value *T = matchCondition(
-          dyn_cast<CondBrInst>(LoopEntry->getTerminator()), LoopEntry))
-    DefX = dyn_cast<Instruction>(T);
-  else
+  auto *LoopTerm = dyn_cast<CondBrInst>(LoopEntry->getTerminator());
+  if (!LoopTerm)
     return false;
+  DefX = dyn_cast_or_null<Instruction>(matchCondition(LoopTerm, LoopEntry));
 
   // step 2: detect instructions corresponding to "x.next = x >> 1 or x << 1"
   if (!DefX || !DefX->isShift())
@@ -2433,6 +2432,8 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
     if (!PreCondBB)
       return false;
     auto *PreCondBI = dyn_cast<CondBrInst>(PreCondBB->getTerminator());
+    if (!PreCondBI)
+      return false;
     if (matchCondition(PreCondBI, PH) != InitX)
       return false;
     ZeroCheck = true;

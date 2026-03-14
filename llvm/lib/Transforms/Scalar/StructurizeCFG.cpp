@@ -554,6 +554,7 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 
   } else {
     // Test for successors as back edge
+    // TODO: support other terminators other than branches.
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
     if (isa<UncondBrInst, CondBrInst>(BB->getTerminator()))
       for (BasicBlock *Succ : successors(BB))
