@@ -199,6 +199,11 @@ public:
   const VPBlocksTy &getSuccessors() const { return Successors; }
   VPBlocksTy &getSuccessors() { return Successors; }
 
+  /// Returns true if this block has any successors.
+  bool hasSuccessors() const { return !Successors.empty(); }
+  /// Returns true if this block has any predecessors.
+  bool hasPredecessors() const { return !Predecessors.empty(); }
+
   iterator_range<VPBlockBase **> successors() { return Successors; }
   iterator_range<VPBlockBase **> predecessors() { return Predecessors; }
 
@@ -219,9 +224,6 @@ public:
 
   size_t getNumSuccessors() const { return Successors.size(); }
   size_t getNumPredecessors() const { return Predecessors.size(); }
-
-  /// Returns true if this block has any predecessors.
-  bool hasPredecessors() const { return !Predecessors.empty(); }
 
   /// An Enclosing Block of a block B is any block containing B, including B
   /// itself. \return the closest enclosing block starting from "this", which
@@ -4441,8 +4443,8 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
         IsReplicator(IsReplicator) {
-    assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
-    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
+    assert(!Entry->hasPredecessors() && "Entry block has predecessors.");
+    assert(!Exiting->hasSuccessors() && "Exit block has successors.");
     Entry->setParent(this);
     Exiting->setParent(this);
   }
@@ -4464,7 +4466,7 @@ public:
   /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
   /// EntryBlock must have no predecessors.
   void setEntry(VPBlockBase *EntryBlock) {
-    assert(EntryBlock->getPredecessors().empty() &&
+    assert(!EntryBlock->hasPredecessors() &&
            "Entry block cannot have predecessors.");
     Entry = EntryBlock;
     EntryBlock->setParent(this);
@@ -4476,7 +4478,7 @@ public:
   /// Set \p ExitingBlock as the exiting VPBlockBase of this VPRegionBlock. \p
   /// ExitingBlock must have no successors.
   void setExiting(VPBlockBase *ExitingBlock) {
-    assert(ExitingBlock->getSuccessors().empty() &&
+    assert(!ExitingBlock->hasSuccessors() &&
            "Exit block cannot have successors.");
     Exiting = ExitingBlock;
     ExitingBlock->setParent(this);
