@@ -74,7 +74,7 @@ private:
         __fn_ptr = reinterpret_cast<void (*)()>(__ptr);
       }
     }
-  } __storage_;
+  };
 
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __get(__storage_t __storage) {
@@ -89,6 +89,8 @@ private:
       return reinterpret_cast<_Tp*>(__storage.__fn_ptr);
     }
   }
+
+  __storage_t __storage_;
 
   using __call_t _LIBCPP_NODEBUG = _Rp (*)(__storage_t, _ArgTypes&&...) noexcept(__is_noexcept);
   __call_t __call_;
@@ -126,7 +128,7 @@ public:
   }
 
   template <auto _Fn, class _Up, class _Tp = remove_reference_t<_Up>>
-    requires(!is_rvalue_reference_v<_Up &&>) && __is_invocable_using<decltype(_Fn), _LIBCPP_FUNCTION_REF_CV _Tp&>
+    requires(!is_rvalue_reference_v<_Up &&>) && __is_invocable_using<const decltype(_Fn)&, _LIBCPP_FUNCTION_REF_CV _Tp&>
   _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_arg_t<_Fn>, _Up&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
         __call_([](__storage_t __storage, _ArgTypes&&... __args) static noexcept(__is_noexcept) -> _Rp {

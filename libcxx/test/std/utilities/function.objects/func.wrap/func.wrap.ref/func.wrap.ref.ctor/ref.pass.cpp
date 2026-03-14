@@ -146,6 +146,15 @@ struct F {
   constexpr int operator()(auto&&...) const { return 6 + i; }
 };
 
+struct Int {
+  int i;
+  constexpr Int(int ii) noexcept : i(ii) {}
+};
+
+struct NeedsConversion {
+  constexpr int operator()(Int x, Int y, Int z) const noexcept { return x.i + y.i + z.i; }
+};
+
 constexpr bool test() {
   {
     std::function_ref<void()> f(l1);
@@ -191,6 +200,22 @@ constexpr bool test() {
     std::function_ref<int() const> f2(f);
     assert(f2() == 11);
     assert(std::as_const(f2)() == 11);
+  }
+  {
+    // with conversions
+    NeedsConversion c{};
+
+    std::function_ref<Int(int, int, int)> f(c);
+    assert(f(1, 2, 3).i == 6);
+
+    std::function_ref<Int(int, int, int) const> f2(c);
+    assert(f2(1, 2, 3).i == 6);
+
+    std::function_ref<Int(int, int, int) noexcept> f3(c);
+    assert(f3(1, 2, 3).i == 6);
+
+    std::function_ref<Int(int, int, int) const noexcept> f4(c);
+    assert(f4(1, 2, 3).i == 6);
   }
 
   return true;

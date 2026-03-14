@@ -80,6 +80,13 @@ int fn() { return 42; }
 
 int fn_noexcept(int i, A a) noexcept { return i + a.i; }
 
+struct Int {
+  int i;
+  Int(int ii) noexcept : i(ii) {}
+};
+
+int needs_conversion(Int x, Int y, Int z) noexcept { return x.i + y.i + z.i; }
+
 void test() {
   {
     // simple case
@@ -110,6 +117,19 @@ void test() {
     // const noexcept
     std::function_ref<int(int, A) const noexcept> f(&fn_noexcept);
     assert(f(4, A{5}) == 9);
+  }
+  {
+    std::function_ref<Int(int, int, int)> f(&needs_conversion);
+    assert(f(1, 2, 3).i == 6);
+
+    std::function_ref<Int(int, int, int) const> f2(&needs_conversion);
+    assert(f2(1, 2, 3).i == 6);
+
+    std::function_ref<Int(int, int, int) noexcept> f3(&needs_conversion);
+    assert(f3(1, 2, 3).i == 6);
+
+    std::function_ref<Int(int, int, int) const noexcept> f4(&needs_conversion);
+    assert(f4(1, 2, 3).i == 6);
   }
 }
 
