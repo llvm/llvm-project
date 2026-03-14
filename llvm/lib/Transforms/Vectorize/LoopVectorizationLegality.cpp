@@ -537,7 +537,8 @@ public:
     const SCEV *NewStep =
         SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
     const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
-    const SCEV *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
+    const SCEV *NewStart =
+        SE.getAddExpr(Expr->getStart(), SCEVUse(ScaledOffset));
     return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
   }
 
@@ -1764,7 +1765,8 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     case Instruction::Load:
     case Instruction::Store:
     case Instruction::PHI:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
       // These are checked separately.
       return true;
     default:

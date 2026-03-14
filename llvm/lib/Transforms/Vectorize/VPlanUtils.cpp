@@ -149,11 +149,10 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   }
 
   // Helper to create SCEVs for binary and unary operations.
-  auto CreateSCEV =
-      [&](ArrayRef<VPValue *> Ops,
-          function_ref<const SCEV *(ArrayRef<const SCEV *>)> CreateFn)
+  auto CreateSCEV = [&](ArrayRef<VPValue *> Ops,
+                        function_ref<const SCEV *(ArrayRef<SCEVUse>)> CreateFn)
       -> const SCEV * {
-    SmallVector<const SCEV *, 2> SCEVOps;
+    SmallVector<SCEVUse, 2> SCEVOps;
     for (VPValue *Op : Ops) {
       const SCEV *S = getSCEVExprForVPValue(Op, PSE, L);
       if (isa<SCEVCouldNotCompute>(S))
@@ -165,46 +164,46 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
 
   VPValue *LHSVal, *RHSVal;
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   if (match(V, m_Sub(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMinusSCEV(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   if (match(V, m_Not(m_VPValue(LHSVal)))) {
     // not X = xor X, -1 = -1 - X
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMinusSCEV(SE.getMinusOne(Ops[0]->getType()), Ops[0]);
     });
   }
   if (match(V, m_Mul(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
   if (match(V,
             m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
     });
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
   if (match(V, m_c_BinaryAnd(m_VPValue(LHSVal), m_APInt(Mask))) &&
       (*Mask + 1).isPowerOf2())
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
     });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getTruncateExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_ZExt(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getZeroExtendExpr(Ops[0], DestTy);
     });
   }
@@ -225,35 +224,35 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                SE.getSignExtendExpr(V2, DestTy), SCEV::FlagNSW);
     }
 
-    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSignExtendExpr(Ops[0], DestTy);
     });
   }
   if (match(V,
             m_Intrinsic<Intrinsic::umax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUMaxExpr(Ops[0], Ops[1]);
     });
   if (match(V,
             m_Intrinsic<Intrinsic::smax>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMaxExpr(Ops[0], Ops[1]);
     });
   if (match(V,
             m_Intrinsic<Intrinsic::umin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUMinExpr(Ops[0], Ops[1]);
     });
   if (match(V,
             m_Intrinsic<Intrinsic::smin>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMinExpr(Ops[0], Ops[1]);
     });
 
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
   if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
-    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<const SCEV *> Ops) {
+    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
     });
     return PSE.getPredicatedSCEV(GEPExpr);

@@ -3057,7 +3057,7 @@ bool JumpThreadingPass::processGuards(BasicBlock *BB) {
   if (!Parent || Parent != Pred2->getSinglePredecessor())
     return false;
 
-  if (auto *BI = dyn_cast<BranchInst>(Parent->getTerminator()))
+  if (auto *BI = dyn_cast<CondBrInst>(Parent->getTerminator()))
     for (auto &I : *BB)
       if (isGuard(&I) && threadGuard(BB, cast<IntrinsicInst>(&I), BI))
         return true;
@@ -3069,9 +3069,7 @@ bool JumpThreadingPass::processGuards(BasicBlock *BB) {
 /// to one of its branches, in case if diamond's condition implies guard's
 /// condition.
 bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
-                                    BranchInst *BI) {
-  assert(BI->getNumSuccessors() == 2 && "Wrong number of successors?");
-  assert(BI->isConditional() && "Unconditional branch has 2 successors?");
+                                    CondBrInst *BI) {
   Value *GuardCond = Guard->getArgOperand(0);
   Value *BranchCond = BI->getCondition();
   BasicBlock *TrueDest = BI->getSuccessor(0);

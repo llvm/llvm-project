@@ -699,14 +699,29 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         }
         if enableSyntheticChildDebugging:
             verify_children["[raw]"] = {
-                "contains": {"type": ["vector"]},
+                "equals": {"type": "std::vector<int>", "value": "size=5"},
                 "readOnly": True,
             }
 
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
         ]["variables"]
-        self.verify_variables(verify_children, children)
+        varref_dict = {}
+        self.verify_variables(verify_children, children, varref_dict)
+
+        if enableSyntheticChildDebugging:
+            self.assertIn(
+                "small_vector",
+                varref_dict,
+                "'evaluateName' for '[raw]' field should be the original variable name.",
+            )
+            raw_children = self.dap_server.request_variables(
+                varref_dict["small_vector"]
+            )
+            self.assertTrue(
+                len(raw_children["body"]["variables"]) > 0,
+                "Expected std::vector to contain a raw underlying value with internal properties.",
+            )
 
     @skipIfWindows
     def test_return_variables(self):

@@ -218,7 +218,7 @@ void l4() {
 // CIR:     cir.for : cond {
 // CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:       %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:       %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[END]]
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     } body {
 // CIR:       %[[CUR:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
@@ -329,7 +329,7 @@ void l5() {
 // CIR:     cir.for : cond {
 // CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:       %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
+// CIR:       %[[CMP:.*]] = cir.cmp ne %[[CUR]], %[[END]]
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     } body {
 // CIR:       %[[CUR:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]

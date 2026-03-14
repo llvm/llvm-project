@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cmath>
 #include <optional>
 using namespace llvm;
@@ -685,6 +686,13 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
          "Expected the same scalar types");
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
+  // For now, skip all fixed vector cost analysis when P extension is available
+  // to avoid crashes in getMinRVVVectorSizeInBits()
+  if (ST->hasStdExtP() && isa<FixedVectorType>(SrcTy))
+    return 1;
+
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // First, handle cases where having a fixed length vector enables us to
@@ -1702,6 +1710,51 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                CmpInst::FCMP_UNO, CostKind);
     return Cost;
   }
+  case Intrinsic::experimental_vector_extract_last_active: {
+    auto *ValTy = cast<VectorType>(ICA.getArgTypes()[0]);
+    auto *MaskTy = cast<VectorType>(ICA.getArgTypes()[1]);
+
+    auto ValLT = getTypeLegalizationCost(ValTy);
+    auto MaskLT = getTypeLegalizationCost(MaskTy);
+
+    // TODO: Return cheaper cost when the entire lane is inactive.
+    // The expected asm sequence is:
+    // vcpop.m a0, v0
+    // beqz a0, exit # Return passthru when the entire lane is inactive.
+    // vid v10, v0.t
+    // vredmaxu.vs v10, v10, v10
+    // vmv.x.s a0, v10
+    // zext.b a0, a0
+    // vslidedown.vx v8, v8, a0
+    // vmv.x.s a0, v8
+    // exit:
+    //   ...
+
+    // Find a suitable type for a stepvector.
+    ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
+    unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
+        MaskTy->getScalarType(), MaskTy->getElementCount(),
+        /*ZeroIsPoison=*/true, &VScaleRange);
+    EltWidth = std::max(EltWidth, MaskTy->getScalarSizeInBits());
+    Type *StepTy = Type::getIntNTy(MaskTy->getContext(), EltWidth);
+    auto *StepVecTy = VectorType::get(StepTy, ValTy->getElementCount());
+    auto StepLT = getTypeLegalizationCost(StepVecTy);
+    InstructionCost Cost = 0;
+    unsigned Opcodes[] = {RISCV::VID_V, RISCV::VREDMAXU_VS, RISCV::VMV_X_S};
+
+    Cost += MaskLT.first *
+            getRISCVInstructionCost(RISCV::VCPOP_M, MaskLT.second, CostKind);
+    Cost += getCFInstrCost(Instruction::CondBr, CostKind, nullptr);
+    Cost += StepLT.first *
+            getRISCVInstructionCost(Opcodes, StepLT.second, CostKind);
+    Cost += getCastInstrCost(Instruction::ZExt,
+                             Type::getInt64Ty(ValTy->getContext()), StepTy,
+                             TTI::CastContextHint::None, CostKind, nullptr);
+    Cost += ValLT.first *
+            getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI, RISCV::VMV_X_S},
+                                    ValLT.second, CostKind);
+    return Cost;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1985,7 +2038,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
 
@@ -2004,7 +2057,7 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
         ExtraCost = 1 +
                     getCastInstrCost(Instruction::UIToFP, DstTy, SrcTy,
                                      TTI::CastContextHint::None, CostKind) +
-                    getCFInstrCost(Instruction::Br, CostKind);
+                    getCFInstrCost(Instruction::CondBr, CostKind);
       }
       break;
     }
@@ -3536,8 +3589,7 @@ bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
     // break point in the code - the end of a block with an unconditional
     // terminator.
     if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
+        isa<UncondBrInst>(I->getNextNode()))
       return true;
 
     if (I->getOpcode() == Instruction::Add ||
@@ -3557,4 +3609,55 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
     return false;
 
   return BaseT::shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
+}
+
+std::optional<Instruction *>
+RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  // If all operands of a vmv.v.x are constant, fold a bitcast(vmv.v.x) to scale
+  // the vmv.v.x, enabling removal of the bitcast. The transform helps avoid
+  // creating redundant masks.
+  const DataLayout &DL = IC.getDataLayout();
+  if (II.user_empty())
+    return {};
+  auto *TargetVecTy = dyn_cast<ScalableVectorType>(II.user_back()->getType());
+  if (!TargetVecTy)
+    return {};
+  const APInt *Scalar;
+  uint64_t VL;
+  if (!match(&II, m_Intrinsic<Intrinsic::riscv_vmv_v_x>(
+                      m_Poison(), m_APInt(Scalar), m_ConstantInt(VL))) ||
+      !all_of(II.users(), [TargetVecTy](User *U) {
+        return U->getType() == TargetVecTy && match(U, m_BitCast(m_Value()));
+      }))
+    return {};
+  auto *SourceVecTy = cast<ScalableVectorType>(II.getType());
+  unsigned TargetEltBW = DL.getTypeSizeInBits(TargetVecTy->getElementType());
+  unsigned SourceEltBW = DL.getTypeSizeInBits(SourceVecTy->getElementType());
+  if (TargetEltBW % SourceEltBW)
+    return {};
+  unsigned TargetScale = TargetEltBW / SourceEltBW;
+  if (VL % TargetScale)
+    return {};
+  Type *VLTy = II.getOperand(2)->getType();
+  ElementCount SourceEC = SourceVecTy->getElementCount();
+  unsigned NewEltBW = SourceEltBW * TargetScale;
+  if (!SourceEC.isKnownMultipleOf(TargetScale) ||
+      !DL.fitsInLegalInteger(NewEltBW))
+    return {};
+  auto *NewEltTy = IntegerType::get(II.getContext(), NewEltBW);
+  if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, NewEltTy)))
+    return {};
+  ElementCount NewEC = SourceEC.divideCoefficientBy(TargetScale);
+  Type *RetTy = VectorType::get(NewEltTy, NewEC);
+  assert(SourceVecTy->canLosslesslyBitCastTo(RetTy) &&
+         "Lossless bitcast between types expected");
+  APInt NewScalar = APInt::getSplat(NewEltBW, *Scalar);
+  return IC.replaceInstUsesWith(
+      II,
+      IC.Builder.CreateBitCast(
+          IC.Builder.CreateIntrinsic(
+              RetTy, Intrinsic::riscv_vmv_v_x,
+              {PoisonValue::get(RetTy), ConstantInt::get(NewEltTy, NewScalar),
+               ConstantInt::get(VLTy, VL / TargetScale)}),
+          SourceVecTy));
 }
