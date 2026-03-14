@@ -41,8 +41,8 @@ using Foo = n1::Foo;
 // CHECK-FIXES: using n1::Foo;
 
 using Bar = ::n1::Bar;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using ::n1::Bar;
 
 using Attr = n1::Attr __attribute__((aligned(8)));
@@ -56,28 +56,28 @@ using Foo [[deprecated("alias attr")]] = n1::Foo;
 } // namespace alias_attr
 
 using Deep = n2::n3::Deep;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using n2::n3::Deep;
 
 using TypedefFoo = td::TypedefFoo;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using td::TypedefFoo;
 
 using GlobalType = ::GlobalType;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using ::GlobalType;
 
 using PlainEnum = n1::PlainEnum;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using n1::PlainEnum;
 
 using ScopedEnum = n1::ScopedEnum;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using n1::ScopedEnum;
 
 using Inner = Outer::Inner;
@@ -120,13 +120,13 @@ using Elab = class n1::Elab;
 // CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
 
 using Commented /*comment*/ = n1::Commented;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using{{[ ]+}}/*comment*/{{[ ]+}}n1::Commented;
 
 using AfterType = n1::AfterType /*rhs-comment*/;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
-// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: type alias is redundant; use a using-declaration instead
+// CHECK-MESSAGES-NS: :[[@LINE-2]]:7: warning: type alias is redundant; use a using-declaration instead
 // CHECK-FIXES: using n1::AfterType /*rhs-comment*/;
 
 #define DECL_END ;
@@ -155,7 +155,7 @@ struct Base {
 
 struct Derived : Base {
   using T = Base::T;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: type alias is redundant; use a using-declaration instead
   // CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
   // CHECK-FIXES: using Base::T;
 };
@@ -168,7 +168,7 @@ struct ClassScopeNamespaceAlias {
 
 void local_scope() {
   using LocalType = n1::LocalType;
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: type alias is redundant; use a using-declaration instead [readability-redundant-qualified-alias]
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: type alias is redundant; use a using-declaration instead
   // CHECK-MESSAGES-NS-NOT: warning: type alias is redundant; use a using-declaration instead
   // CHECK-FIXES: using n1::LocalType;
 }

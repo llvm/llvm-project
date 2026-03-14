@@ -8,13 +8,6 @@
 
 #include "RedundantQualifiedAliasCheck.h"
 #include "../utils/LexerUtils.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/TypeLoc.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/SourceManager.h"
 #include <cassert>
 #include <optional>
 
@@ -122,7 +115,7 @@ AST_MATCHER(TypeLoc, isNonDependentTypeLoc) {
   return !Node.getType().isNull() && !Node.getType()->isDependentType();
 }
 
-AST_MATCHER(TypeLoc, isNonElaboratedNominalTypeLoc) {
+AST_MATCHER(TypeLoc, isNonElaboratedTypeLoc) {
   const auto IsNonElaboratedTypeLoc = [](auto TL) {
     return !TL.isNull() && !TL.getElaboratedKeywordLoc().isValid();
   };
@@ -179,7 +172,7 @@ void RedundantQualifiedAliasCheck::registerMatchers(MatchFinder *Finder) {
       allOf(hasParent(declStmt().bind("initDeclStmt")),
             hasAncestor(ControlFlowInitStatementMatcher));
   const auto RewriteableTypeLoc =
-      typeLoc(allOf(isNonDependentTypeLoc(), isNonElaboratedNominalTypeLoc(),
+      typeLoc(allOf(isNonDependentTypeLoc(), isNonElaboratedTypeLoc(),
                     isMacroFreeTypeLoc(), hasNoTrailingSyntaxAfterTypeLoc()))
           .bind("loc");
 
