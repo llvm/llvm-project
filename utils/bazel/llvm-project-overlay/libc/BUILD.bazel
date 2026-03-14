@@ -2102,6 +2102,21 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_wchar_string_converter",
+    hdrs = ["src/__support/wchar/string_converter.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_wchar_character_converter",
+        ":__support_wchar_mbstate",
+        ":types_char32_t",
+        ":types_char8_t",
+        ":types_size_t",
+    ],
+)
+
 ########################## externally shared targets ###########################
 
 libc_header_library(
@@ -10015,12 +10030,16 @@ libc_support_library(
         ":__support_stringutil",
         ":__support_uint128",
         ":__support_wchar_mbstate",
+        ":__support_wchar_string_converter",
         ":__support_wchar_wcrtomb",
         ":hdr_limits_macros",
         ":hdr_wchar_macros",
         ":printf_config",
         ":printf_core_structs",
         ":printf_writer",
+        ":string_utils",
+        ":types_char32_t",
+        ":types_char8_t",
         ":types_wchar_t",
         ":types_wint_t",
     ],
