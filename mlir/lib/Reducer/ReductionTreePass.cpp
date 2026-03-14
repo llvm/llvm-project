@@ -161,8 +161,12 @@ static LogicalResult eraseAllOpsInRegion(ModuleOp module, Region &region,
   // Setting the ranges to {{0, 0}} will result in the deletion of all ops
   // within the region.
   std::vector<ReductionNode::Range> ranges{{0, 0}};
-  ReductionNode *root = allocator.Allocate();
-  new (root) ReductionNode(nullptr, ranges, allocator);
+
+  // We allocate memory on the stack, and the 'allocator' is only used to
+  // construct the 'root node'. Since we won't be constructing any child nodes
+  // for emptyRegionNode, it is only used within the current scope.
+  ReductionNode emptyRegionNode(nullptr, ranges, allocator);
+  ReductionNode *root = &emptyRegionNode;
 
   // Create a copy of the current IR.
   if (failed(root->initialize(module, region)))
