@@ -1189,10 +1189,6 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  ReturnInst *CreateAggregateRet(Value *const *RetVals, unsigned N) {
-    return CreateAggregateRet({RetVals, N});
-  }
-
   /// Create an unconditional 'br label X' instruction.
   UncondBrInst *CreateBr(BasicBlock *Dest) {
     return Insert(UncondBrInst::Create(Dest));

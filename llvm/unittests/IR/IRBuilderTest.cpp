@@ -1418,7 +1418,7 @@ TEST_F(IRBuilderTest, finalizeSubprogram) {
 
 TEST_F(IRBuilderTest, CreateAggregateRet) {
   IRBuilder<> Builder(BB);
-  // Terminate the function/block created in SetUp()
+  // Terminate the function/block created in SetUp.
   Builder.CreateRetVoid();
 
   Type *AggType =
@@ -1428,22 +1428,11 @@ TEST_F(IRBuilderTest, CreateAggregateRet) {
 
   FunctionType *FTy = FunctionType::get(AggType, /*isVarArg=*/false);
 
-  {
-    Function *F1 =
-        Function::Create(FTy, Function::ExternalLinkage, "F1", M.get());
-    BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", F1);
-    IRBuilder<> CalleeBuilder(CalleeBB);
-    Value *RVs[] = {RV0, RV1};
-    CalleeBuilder.CreateAggregateRet(RVs, 2);
-  }
-
-  {
-    Function *F2 =
-        Function::Create(FTy, Function::ExternalLinkage, "F2", M.get());
-    BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", F2);
-    IRBuilder<> CalleeBuilder(CalleeBB);
-    CalleeBuilder.CreateAggregateRet({RV0, RV1});
-  }
+  Function *F1 =
+      Function::Create(FTy, Function::ExternalLinkage, "F2", M.get());
+  BasicBlock *CalleeBB = BasicBlock::Create(Ctx, "", F1);
+  IRBuilder<> CalleeBuilder(CalleeBB);
+  CalleeBuilder.CreateAggregateRet({RV0, RV1});
 
   EXPECT_FALSE(verifyModule(*M));
 }
