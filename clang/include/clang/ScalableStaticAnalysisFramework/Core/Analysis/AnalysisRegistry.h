@@ -1,0 +1,95 @@
+//===- AnalysisRegistry.h -------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Unified registry for both SummaryAnalysis and DerivedAnalysis subclasses.
+//
+// To register an analysis, add a static Add<AnalysisT> in its translation
+// unit:
+//
+//   static AnalysisRegistry::Add<MyAnalysis>
+//       Registered("One-line description of MyAnalysis");
+//
+// The registry entry name is derived automatically from
+// MyAnalysis::analysisName(), so name-mismatch bugs are impossible.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
+
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
+#include "llvm/Support/Registry.h"
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace clang::ssaf {
+
+/// Unified registry for SummaryAnalysis and DerivedAnalysis implementations.
+///
+/// Internally uses a single llvm::Registry<AnalysisBase>. The correct kind
+/// is carried by the AnalysisBase::TheKind tag set in each subclass
+/// constructor.
+class AnalysisRegistry {
+  using RegistryT = llvm::Registry<AnalysisBase>;
+
+  AnalysisRegistry() = delete;
+
+public:
+  /// Registers AnalysisT with the unified registry.
+  ///
+  /// The registry entry name is derived automatically from
+  /// AnalysisT::ResultType::analysisName(), so name-mismatch bugs are
+  /// impossible.
+  ///
+  /// Add objects must be declared static at namespace scope.
+  template <typename AnalysisT> struct Add {
+    static_assert(std::is_base_of_v<SummaryAnalysisBase, AnalysisT> ||
+                      std::is_base_of_v<DerivedAnalysisBase, AnalysisT>,
+                  "AnalysisT must derive from SummaryAnalysis<...> or "
+                  "DerivedAnalysis<...>");
+
+    explicit Add(llvm::StringRef Desc)
+        : Name(AnalysisT::ResultType::analysisName().str().str()),
+          Node(Name, Desc) {
+      if (contains(Name)) {
+        ErrorBuilder::fatal("duplicate analysis registration for '{0}'", Name);
+      }
+      analysisNames.push_back(AnalysisT::ResultType::analysisName());
+    }
+
+    Add(const Add &) = delete;
+    Add &operator=(const Add &) = delete;
+
+  private:
+    std::string Name;
+    RegistryT::Add<AnalysisT> Node;
+  };
+
+  /// Returns true if an analysis is registered under \p Name.
+  static bool contains(llvm::StringRef Name);
+
+  /// Returns the names of all registered analyses.
+  static const std::vector<AnalysisName> &names();
+
+  /// Instantiates the analysis registered under \p Name, or returns
+  /// std::nullopt if no such analysis is registered.
+  static std::optional<std::unique_ptr<AnalysisBase>>
+  instantiate(llvm::StringRef Name);
+
+private:
+  static std::vector<AnalysisName> analysisNames;
+};
+
+} // namespace clang::ssaf
+
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H

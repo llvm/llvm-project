@@ -34,6 +34,7 @@ class LUSummary {
   friend class LUSummaryConsumer;
   friend class SerializationFormat;
   friend class TestFixture;
+  friend class AnalysisDriver;
 
   NestedBuildNamespace LUNamespace;
 

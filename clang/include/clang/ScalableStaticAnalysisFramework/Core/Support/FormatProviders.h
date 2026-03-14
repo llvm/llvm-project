@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUPPORT_FORMATPROVIDERS_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUPPORT_FORMATPROVIDERS_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
@@ -23,6 +24,13 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+
+template <> struct format_provider<clang::ssaf::AnalysisName> {
+  static void format(const clang::ssaf::AnalysisName &Val, raw_ostream &OS,
+                     StringRef Style) {
+    OS << Val;
+  }
+};
 
 template <> struct format_provider<clang::ssaf::EntityId> {
   static void format(const clang::ssaf::EntityId &Val, raw_ostream &OS,
