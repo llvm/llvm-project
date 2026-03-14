@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -34,8 +34,7 @@
 // 64-bit vector (vset_lane_*)
 //===------------------------------------------------------===//
 
-// LLVM-LABEL: @test_vset_lane_u8(
-// CIR-LABEL: @test_vset_lane_u8(
+// ALL-LABEL: @test_vset_lane_u8(
 uint8x8_t test_vset_lane_u8(uint8_t a, uint8x8_t b) {
 // CIR: cir.vec.insert
 
@@ -44,8 +43,7 @@ uint8x8_t test_vset_lane_u8(uint8_t a, uint8x8_t b) {
   return vset_lane_u8(a, b, 7);
 }
 
-// LLVM-LABEL: @test_vset_lane_u16(
-// CIR-LABEL: @test_vset_lane_u16(
+// ALL-LABEL: @test_vset_lane_u16(
 uint16x4_t test_vset_lane_u16(uint16_t a, uint16x4_t b) {
 // CIR: cir.vec.insert
 
@@ -54,8 +52,7 @@ uint16x4_t test_vset_lane_u16(uint16_t a, uint16x4_t b) {
   return vset_lane_u16(a, b, 3);
 }
 
-// LLVM-LABEL: @test_vset_lane_u32(
-// CIR-LABEL: @test_vset_lane_u32(
+// ALL-LABEL: @test_vset_lane_u32(
 uint32x2_t test_vset_lane_u32(uint32_t a, uint32x2_t b) {
 // CIR: cir.vec.insert
 
@@ -64,8 +61,7 @@ uint32x2_t test_vset_lane_u32(uint32_t a, uint32x2_t b) {
   return vset_lane_u32(a, b, 1);
 }
 
-// LLVM-LABEL: @test_vset_lane_s8(
-// CIR-LABEL: @test_vset_lane_s8(
+// ALL-LABEL: @test_vset_lane_s8(
 int8x8_t test_vset_lane_s8(int8_t a, int8x8_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !s8i>
 
@@ -74,8 +70,7 @@ int8x8_t test_vset_lane_s8(int8_t a, int8x8_t b) {
   return vset_lane_s8(a, b, 7);
 }
 
-// LLVM-LABEL: @test_vset_lane_s16(
-// CIR-LABEL: @test_vset_lane_s16(
+// ALL-LABEL: @test_vset_lane_s16(
 int16x4_t test_vset_lane_s16(int16_t a, int16x4_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<4 x !s16i>
 
@@ -84,8 +79,7 @@ int16x4_t test_vset_lane_s16(int16_t a, int16x4_t b) {
   return vset_lane_s16(a, b, 3);
 }
 
-// LLVM-LABEL: @test_vset_lane_s32(
-// CIR-LABEL: @test_vset_lane_s32(
+// ALL-LABEL: @test_vset_lane_s32(
 int32x2_t test_vset_lane_s32(int32_t a, int32x2_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<2 x !s32i>
 
@@ -94,8 +88,7 @@ int32x2_t test_vset_lane_s32(int32_t a, int32x2_t b) {
   return vset_lane_s32(a, b, 1);
 }
 
-// LLVM-LABEL: @test_vset_lane_f32(
-// CIR-LABEL: @test_vset_lane_f32(
+// ALL-LABEL: @test_vset_lane_f32(
 float32x2_t test_vset_lane_f32(float32_t a, float32x2_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<2 x !cir.float>
 
@@ -104,8 +97,7 @@ float32x2_t test_vset_lane_f32(float32_t a, float32x2_t b) {
   return vset_lane_f32(a, b, 1);
 }
 
-// LLVM-LABEL: @test_vset_lane_s64(
-// CIR-LABEL: @test_vset_lane_s64(
+// ALL-LABEL: @test_vset_lane_s64(
 int64x1_t test_vset_lane_s64(int64_t a, int64x1_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<1 x !s64i>
 
@@ -114,8 +106,7 @@ int64x1_t test_vset_lane_s64(int64_t a, int64x1_t b) {
   return vset_lane_s64(a, b, 0);
 }
 
-// LLVM-LABEL: @test_vset_lane_u64(
-// CIR-LABEL: @test_vset_lane_u64(
+// ALL-LABEL: @test_vset_lane_u64(
 uint64x1_t test_vset_lane_u64(uint64_t a, uint64x1_t b) {
 // CIR: cir.vec.insert
 
@@ -124,8 +115,7 @@ uint64x1_t test_vset_lane_u64(uint64_t a, uint64x1_t b) {
   return vset_lane_u64(a, b, 0);
 }
 
-// LLVM-LABEL: @test_vset_lane_f64(
-// CIR-LABEL: @test_vset_lane_f64(
+// ALL-LABEL: @test_vset_lane_f64(
 float64x1_t test_vset_lane_f64(float64_t a, float64x1_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<1 x !cir.double>
 
@@ -134,8 +124,7 @@ float64x1_t test_vset_lane_f64(float64_t a, float64x1_t b) {
   return vset_lane_f64(a, b, 0);
 }
 
-// LLVM-LABEL: @test_vset_lane_bf16(
-// CIR-LABEL: @test_vset_lane_bf16(
+// ALL-LABEL: @test_vset_lane_bf16(
 bfloat16x4_t test_vset_lane_bf16(bfloat16_t a, bfloat16x4_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<4 x !cir.bf16>
 
@@ -148,8 +137,7 @@ bfloat16x4_t test_vset_lane_bf16(bfloat16_t a, bfloat16x4_t b) {
 // 128-bit vector (vsetq_lane_*)
 //===------------------------------------------------------===//
 
-// LLVM-LABEL: @test_vsetq_lane_u8(
-// CIR-LABEL: @test_vsetq_lane_u8(
+// ALL-LABEL: @test_vsetq_lane_u8(
 uint8x16_t test_vsetq_lane_u8(uint8_t a, uint8x16_t b) {
 // CIR: cir.vec.insert
 
@@ -158,8 +146,7 @@ uint8x16_t test_vsetq_lane_u8(uint8_t a, uint8x16_t b) {
   return vsetq_lane_u8(a, b, 15);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_u16(
-// CIR-LABEL: @test_vsetq_lane_u16(
+// ALL-LABEL: @test_vsetq_lane_u16(
 uint16x8_t test_vsetq_lane_u16(uint16_t a, uint16x8_t b) {
 // CIR: cir.vec.insert
 
@@ -168,8 +155,7 @@ uint16x8_t test_vsetq_lane_u16(uint16_t a, uint16x8_t b) {
   return vsetq_lane_u16(a, b, 7);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_u32(
-// CIR-LABEL: @test_vsetq_lane_u32(
+// ALL-LABEL: @test_vsetq_lane_u32(
 uint32x4_t test_vsetq_lane_u32(uint32_t a, uint32x4_t b) {
 // CIR: cir.vec.insert
 
@@ -178,8 +164,7 @@ uint32x4_t test_vsetq_lane_u32(uint32_t a, uint32x4_t b) {
   return vsetq_lane_u32(a, b, 3);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_s8(
-// CIR-LABEL: @test_vsetq_lane_s8(
+// ALL-LABEL: @test_vsetq_lane_s8(
 int8x16_t test_vsetq_lane_s8(int8_t a, int8x16_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<16 x !s8i>
 
@@ -188,8 +173,7 @@ int8x16_t test_vsetq_lane_s8(int8_t a, int8x16_t b) {
   return vsetq_lane_s8(a, b, 15);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_s16(
-// CIR-LABEL: @test_vsetq_lane_s16(
+// ALL-LABEL: @test_vsetq_lane_s16(
 int16x8_t test_vsetq_lane_s16(int16_t a, int16x8_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !s16i>
 
@@ -198,8 +182,7 @@ int16x8_t test_vsetq_lane_s16(int16_t a, int16x8_t b) {
   return vsetq_lane_s16(a, b, 7);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_s32(
-// CIR-LABEL: @test_vsetq_lane_s32(
+// ALL-LABEL: @test_vsetq_lane_s32(
 int32x4_t test_vsetq_lane_s32(int32_t a, int32x4_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<4 x !s32i>
 
@@ -208,8 +191,7 @@ int32x4_t test_vsetq_lane_s32(int32_t a, int32x4_t b) {
   return vsetq_lane_s32(a, b, 3);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_f32(
-// CIR-LABEL: @test_vsetq_lane_f32(
+// ALL-LABEL: @test_vsetq_lane_f32(
 float32x4_t test_vsetq_lane_f32(float32_t a, float32x4_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<4 x !cir.float>
 
@@ -218,8 +200,7 @@ float32x4_t test_vsetq_lane_f32(float32_t a, float32x4_t b) {
   return vsetq_lane_f32(a, b, 3);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_s64(
-// CIR-LABEL: @test_vsetq_lane_s64(
+// ALL-LABEL: @test_vsetq_lane_s64(
 int64x2_t test_vsetq_lane_s64(int64_t a, int64x2_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<2 x !s64i>
 
@@ -228,8 +209,7 @@ int64x2_t test_vsetq_lane_s64(int64_t a, int64x2_t b) {
   return vsetq_lane_s64(a, b, 1);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_u64(
-// CIR-LABEL: @test_vsetq_lane_u64(
+// ALL-LABEL: @test_vsetq_lane_u64(
 uint64x2_t test_vsetq_lane_u64(uint64_t a, uint64x2_t b) {
 // CIR: cir.vec.insert
 
@@ -238,8 +218,7 @@ uint64x2_t test_vsetq_lane_u64(uint64_t a, uint64x2_t b) {
   return vsetq_lane_u64(a, b, 1);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_f64(
-// CIR-LABEL: @test_vsetq_lane_f64(
+// ALL-LABEL: @test_vsetq_lane_f64(
 float64x2_t test_vsetq_lane_f64(float64_t a, float64x2_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<2 x !cir.double>
 
@@ -248,8 +227,7 @@ float64x2_t test_vsetq_lane_f64(float64_t a, float64x2_t b) {
   return vsetq_lane_f64(a, b, 1);
 }
 
-// LLVM-LABEL: @test_vsetq_lane_bf16(
-// CIR-LABEL: @test_vsetq_lane_bf16(
+// ALL-LABEL: @test_vsetq_lane_bf16(
 bfloat16x8_t test_vsetq_lane_bf16(bfloat16_t a, bfloat16x8_t b) {
 // CIR: cir.vec.insert %{{.*}}, %{{.*}}[%{{.*}} : {{.*}}] : !cir.vector<8 x !cir.bf16>
 
