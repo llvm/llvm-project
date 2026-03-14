@@ -6313,9 +6313,9 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
       if (DemandedElts[I] && SVN->getMaskElt(I) < 0)
         return false;
     
-    return (!DemandedLHS || 
+    return (!DemandedLHS ||
             isKnownNeverZero(Op.getOperand(0), DemandedLHS, Depth + 1)) &&
-           (!DemandedRHS || 
+           (!DemandedRHS ||
             isKnownNeverZero(Op.getOperand(1), DemandedRHS, Depth + 1));
   }
 
