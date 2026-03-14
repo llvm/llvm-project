@@ -1277,25 +1277,29 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   mlir::Value gtRes =
       builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
 
-  mlir::Value lt =
-      builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
-  mlir::Value eq =
-      builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
 
   mlir::Value transformedResult;
   if (cmpInfo.getOrdering() != CmpOrdering::Partial) {
     // Total ordering
+    mlir::Value lt =
+        builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
     mlir::Value selectOnLt = builder.createSelect(loc, lt, ltRes, gtRes);
+    mlir::Value eq =
+        builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
     transformedResult = builder.createSelect(loc, eq, eqRes, selectOnLt);
   } else {
     // Partial ordering
     cir::ConstantOp unorderedRes = builder.getConstantInt(
         loc, op.getType(), cmpInfo.getUnordered().value());
 
+    mlir::Value eq =
+        builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
     mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
     mlir::Value gt =
         builder.createCompare(loc, CmpOpKind::gt, op.getLhs(), op.getRhs());
     mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
+    mlir::Value lt =
+        builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
   }
 

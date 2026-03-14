@@ -32,19 +32,17 @@ auto three_way_strong(int x, int y) {
 // AFTER-NEXT:   %[[EQ:.*]] = cir.const #cir.int<0> : !s8i{{.*}}
 // AFTER-NEXT:   %[[GT:.*]] = cir.const #cir.int<1> : !s8i{{.*}}
 // AFTER-NEXT:   %[[CMP_LT:.*]] = cir.cmp lt %[[LHS]], %[[RHS]] : !s32i{{.*}}
-// AFTER-NEXT:   %[[CMP_EQ:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !s32i{{.*}}
 // AFTER-NEXT:   %[[SELECT_1:.*]] = cir.select if %[[CMP_LT]] then %[[LT]] else %[[GT]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
+// AFTER-NEXT:   %[[CMP_EQ:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !s32i{{.*}}
 // AFTER-NEXT:   %[[SELECT_2:.*]] = cir.select if %[[CMP_EQ]] then %[[EQ]] else %[[SELECT_1]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
-// AFTER-NEXT:   %{{.+}} = cir.get_member %{{.+}}[0] {{.*}} "__value_"{{.*}}
-// AFTER-NEXT:   cir.store align(1) %[[SELECT_2]], %{{.+}} : !s8i, !cir.ptr<!s8i>{{.*}}
-// AFTER-NEXT:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering{{.*}}
+// AFTER:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering{{.*}}
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Astrong_ordering{{.*}}
 
 // LLVM:  %[[LHS:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM-NEXT:  %[[RHS:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM-NEXT:  %[[CMP_LT:.*]] = icmp slt i32 %[[LHS]], %[[RHS]]
-// LLVM-NEXT:  %[[CMP_EQ:.*]] = icmp eq i32 %[[LHS]], %[[RHS]]
 // LLVM-NEXT:  %[[SEL_LT_GT:.*]] = select i1 %[[CMP_LT]], i8 -1, i8 1
+// LLVM-NEXT:  %[[CMP_EQ:.*]] = icmp eq i32 %[[LHS]], %[[RHS]]
 // LLVM-NEXT:  %[[RES:.*]] = select i1 %[[CMP_EQ]], i8 0, i8 %[[SEL_LT_GT]]
 
 // OGCG:  %[[LHS:.*]] = load i32, ptr %{{.*}}, align 4
@@ -68,25 +66,23 @@ auto three_way_partial(float x, float y) {
 // AFTER-NEXT:   %[[LT:.*]] = cir.const #cir.int<-1> : !s8i{{.*}}
 // AFTER-NEXT:   %[[EQ:.*]] = cir.const #cir.int<0> : !s8i{{.*}}
 // AFTER-NEXT:   %[[GT:.*]] = cir.const #cir.int<1> : !s8i{{.*}}
-// AFTER-NEXT:   %[[CMP_LT:.*]] = cir.cmp lt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
-// AFTER-NEXT:   %[[CMP_EQ:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[UNORDERED:.*]] = cir.const #cir.int<-127> : !s8i{{.*}}
+// AFTER-NEXT:   %[[CMP_EQ:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[SELECT_1:.*]] = cir.select if %[[CMP_EQ]] then %[[EQ]] else %[[UNORDERED]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
 // AFTER-NEXT:   %[[CMP_GT:.*]] = cir.cmp gt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[SELECT_2:.*]] = cir.select if %[[CMP_GT]] then %[[GT]] else %[[SELECT_1]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
+// AFTER-NEXT:   %[[CMP_LT:.*]] = cir.cmp lt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[SELECT_3:.*]] = cir.select if %[[CMP_LT]] then %[[LT]] else %[[SELECT_2]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
-// AFTER-NEXT:   %{{.+}} = cir.get_member %{{.+}}[0] {{.*}} "__value_"{{.*}}
-// AFTER-NEXT:   cir.store align(1) %[[SELECT_3]], %{{.+}} : !s8i, !cir.ptr<!s8i>{{.*}}
-// AFTER-NEXT:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>, !rec_std3A3A__13A3Apartial_ordering{{.*}}
+// AFTER:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>, !rec_std3A3A__13A3Apartial_ordering{{.*}}
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Apartial_ordering{{.*}}
 
 // LLVM:  %[[LHS:.*]] = load float, ptr %{{.*}}, align 4
 // LLVM:  %[[RHS:.*]] = load float, ptr %{{.*}}, align 4
-// LLVM:  %[[CMP_LT:.*]] = fcmp olt float %[[LHS]], %[[RHS]]
 // LLVM:  %[[CMP_EQ:.*]] = fcmp oeq float %[[LHS]], %[[RHS]]
 // LLVM:  %[[SEL_EQ_UN:.*]] = select i1 %[[CMP_EQ]], i8 0, i8 -127
 // LLVM:  %[[CMP_GT:.*]] = fcmp ogt float %[[LHS]], %[[RHS]]
 // LLVM:  %[[SEL_GT_EQUN:.*]] = select i1 %[[CMP_GT]], i8 1, i8 %[[SEL_EQ_UN]]
+// LLVM:  %[[CMP_LT:.*]] = fcmp olt float %[[LHS]], %[[RHS]]
 // LLVM:  %[[RES:.*]] = select i1 %[[CMP_LT]], i8 -1, i8 %[[SEL_GT_EQUN]]
 
 // OGCG:  %[[LHS:.*]] = load float, ptr %{{.*}}, align 4
