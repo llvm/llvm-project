@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_MATH_COPYSIGNF_H
 #define LLVM_LIBC_SHARED_MATH_COPYSIGNF_H
 
+#include "shared/libc_common.h"
 #include "src/__support/math/copysignf.h"
 
 namespace LIBC_NAMESPACE_DECL {
