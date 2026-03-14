@@ -134,8 +134,8 @@ LIBC_INLINE bfloat16 log_bf16(bfloat16 x) {
   // Get unbiased exponent
   e += x_u >> FPBits::FRACTION_LEN;
 
-  return fputil::cast<bfloat16>(
-      fputil::multiply_add(static_cast<float>(e), BF16_LOGF_2, LOG_1_PLUS_M[m]));
+  return fputil::cast<bfloat16>(fputil::multiply_add(
+      static_cast<float>(e), BF16_LOGF_2, LOG_1_PLUS_M[m]));
 }
 
 } // namespace math
