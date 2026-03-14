@@ -9,7 +9,7 @@ struct S {
 
 // CHECK: @CBArrays.cb = global target("dx.CBuffer", [[CBLayout]])
 // CHECK: @c1 = external hidden addrspace(2) global <{ [1 x <{ float, target("dx.Padding", 12) }>], float }>, align 4
-// CHECK: @c2 = external hidden addrspace(2) global [2 x <4 x i32>], align 16
+// CHECK: @c2 = external hidden addrspace(2) global [2 x <4 x i32>], align 4
 // CHECK: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12) }>], <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>, align 4
 // CHECK: @c4 = external hidden addrspace(2) global <{ [1 x <{ %S, target("dx.Padding", 8) }>], %S }>, align 1
 
@@ -157,7 +157,7 @@ void arr_assign8() {
 // See https://github.com/llvm/wg-hlsl/issues/351
 //
 // CHECK-LABEL: define hidden void {{.*}}arr_assign9
-// CHECK: [[C:%.*]] = alloca [2 x <4 x i32>], align 16
+// CHECK: [[C:%.*]] = alloca [2 x <4 x i32>], align 4
 // CHECK-NEXT: [[V0:%.*]] = getelementptr inbounds [2 x <4 x i32>], ptr [[C]], i32 0
 // CHECK-NEXT: [[L0:%.*]] = load <4 x i32>, ptr addrspace(2) @c2, align 4
 // CHECK-NEXT: store <4 x i32> [[L0]], ptr [[V0]], align 4

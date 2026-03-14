@@ -340,7 +340,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
                                        const LangOptions &Opts) {
 #ifndef NDEBUG
   // Don't verify non-standard ABI configurations.
-  if (Opts.AlignDouble || Opts.OpenCL || Opts.HLSL)
+  if (Opts.AlignDouble || Opts.OpenCL)
     return;
 
   llvm::Triple Triple = Target.getTriple();
@@ -393,6 +393,15 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
   Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+
+  if (Target.vectorsAreElementAligned() != DL.vectorsAreElementAligned()) {
+    llvm::errs() << "Datalayout for target " << Triple.str()
+                 << " sets element-aligned vectors to '"
+                 << Target.vectorsAreElementAligned()
+                 << "' but clang specifies '" << DL.vectorsAreElementAligned()
+                 << "'\n";
+    abort();
+  }
 #endif
 }
 
