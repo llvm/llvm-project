@@ -3779,9 +3779,9 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       if (HasImport)
         AssociatedCommentLines.push_back(Line);
     } else if (Trimmed.starts_with("/*")) {
-      const auto EndPos = Code.find("*/", Prev + 2);
-      Pos = EndPos != StringRef::npos ? Code.find('\n', EndPos + 2)
-                                      : StringRef::npos;
+      Pos = Code.find("*/", Pos + 2);
+      if (Pos != StringRef::npos)
+        Pos = Code.find('\n', Pos + 2);
       if (HasImport) {
         // Extend `Line` for a multiline comment to include all lines the
         // comment spans.
