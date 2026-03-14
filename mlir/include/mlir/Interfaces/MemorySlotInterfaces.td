@@ -318,12 +318,13 @@ def PromotableRegionOpInterface
         regions, but before the actual removal of the blocking uses.
 
         Returns the new reaching definition at the exit of the operation. For
-        this purpose, mutation is allowed under the following constraints:
+        this purpose, mutation of the operation is allowed under the following
+        constraints:
         1. If a region is deleted, all of its content must have been moved out
            (not copied) to a new empty region that remains valid after the
            deletion.
-        2. Mutation must not change control flow within existing or moved
-           regions. This includes adding, removing or reordering blocks.
+        2. Mutation must not change control flow within or between existing or
+           moved regions. This includes adding, removing or reordering blocks.
         3. Mutation must not modify or add operations that interact with the
            value of the slot.
 
