@@ -3743,7 +3743,7 @@ namespace {
 constexpr StringRef
     JavaImportRegexPattern("^import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;");
 
-constexpr StringRef JavaPackageRegexPattern("^package[\t ]+");
+constexpr StringRef JavaPackageRegexPattern("^package[\t ]");
 
 } // anonymous namespace
 
