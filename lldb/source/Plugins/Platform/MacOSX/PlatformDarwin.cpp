@@ -102,6 +102,7 @@ public:
     llvm::replace(m_sanitized_name, '.', '_');
     llvm::replace(m_sanitized_name, ' ', '_');
     llvm::replace(m_sanitized_name, '-', '_');
+    llvm::replace(m_sanitized_name, '+', 'x');
 
     if (script_interpreter &&
         script_interpreter->IsReservedWord(m_sanitized_name.c_str())) {

@@ -1924,6 +1924,25 @@ bool MIParser::parseInlineAsmOperand(MachineOperand &Dest) {
   // Create the flag with default of 1 operand.
   InlineAsm::Flag F(K, 1);
 
+  // Parse optional tiedto constraint: tiedto:$N.
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "tiedto") {
+    lex();
+    if (Token.isNot(MIToken::colon))
+      return error("expected ':' after 'tiedto'");
+    lex();
+    if (Token.isNot(MIToken::NamedRegister))
+      return error("expected '$N' operand number after 'tiedto:'");
+    unsigned OperandNo;
+    if (Token.stringValue().getAsInteger(10, OperandNo))
+      return error("invalid operand number in tiedto constraint");
+    lex();
+
+    F.setMatchingOp(OperandNo);
+
+    Dest = MachineOperand::CreateImm(F);
+    return false;
+  }
+
   // Parse optional constraint after ':'.
   if (Token.isNot(MIToken::colon)) {
     Dest = MachineOperand::CreateImm(F);
