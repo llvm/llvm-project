@@ -8232,93 +8232,73 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, Sum, Carry);
     }
   } else {
-    // If we cannot split in two halves. Let's look for a smaller chunk
-    // width where (1 << ChunkWidth) mod Divisor == 1.
-    // This ensures that the sum of all such chunks modulo Divisor
-    // is equivalent to the original value modulo Divisor.
+    // If we cannot split in two halves, look for a smaller chunk width W
+    // such that (1 << W) % Divisor == 1.
     const APInt &Divisor = CN->getAPIntValue();
     unsigned BitWidth = VT.getScalarSizeInBits();
     unsigned BestChunkWidth = 0;
 
-    // Determine the largest legal scalar integer type we can safely use
-    // for chunk operations.
+    // Determine the legal scalar integer type for chunk operations (e.g., i64).
     EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    unsigned LegalWidth = LegalVT.getScalarSizeInBits();
+    unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
 
-    // Clamp to the original bit width.
-    unsigned MaxChunk =
-        std::min<unsigned>(LegalVT.getScalarSizeInBits(), BitWidth);
-
-    // Find the largest W in (MaxChunk/2, MaxChunk] such that
-    // 2^W ≡ 1 (mod Divisor).  If this holds, the value can be
-    // reduced modulo Divisor by summing W-bit chunks.
-    //
-    // Instead of constructing 2^W for each candidate, compute
-    // 2^MaxChunk mod Divisor once and walk downward, maintaining:
-    //
-    //   Mod == 2^i mod Divisor
-    //
-    // For each decrement of i, update Mod by multiplying with
-    // the modular inverse of 2 (Divisor is known to be odd here).
-    // Compute 2^MaxChunk mod Divisor
+    // Precompute 2^MaxChunk mod Divisor
     APInt Mod(Divisor.getBitWidth(), 1);
     for (unsigned k = 0; k < MaxChunk; ++k)
-      Mod = (Mod.shl(1)).urem(Divisor);
+      Mod = Mod.shl(1).urem(Divisor);
 
-    // Since Divisor is odd, inverse of 2 mod D is (D+1)/2
+    // Since Divisor is odd, modular inverse of 2 is (Divisor + 1) / 2
     APInt Inv2 = (Divisor + 1).lshr(1);
 
-    // Walk downward to find largest valid W
+    // Search for W where 2^W % Divisor == 1
     for (unsigned i = MaxChunk; i > MaxChunk / 2; --i) {
       if (Mod.isOne()) {
-        BestChunkWidth = i;
-        break;
+        // Safety Check: Ensure (NumChunks * MaxChunkValue) doesn't overflow
+        // LegalVT
+        unsigned NumChunks = divideCeil(BitWidth, i);
+        // if the ChunkWidth (i) plus the Potential Carry Bits is less than the
+        // Register Width (64), we have enough "slack" at the top of the
+        // register to let the carries pile up safely. Max sum is NumChunks *
+        // (2^i - 1) so by approximation we need NumChunks × 2^i < 2^L. Taking
+        // log on both size we have log2(NumChunks) + i < L.
+        if (i + Log2_32_Ceil(NumChunks) < LegalWidth) {
+          BestChunkWidth = i;
+          break;
+        }
       }
-
-      // Move from 2^i to 2^(i-1)
       Mod = (Mod * Inv2).urem(Divisor);
     }
 
-    // If we found a good chunk width, slice the number and sum the pieces.
     if (!BestChunkWidth)
       return false;
 
-    EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
-
     SDValue In =
         LL ? DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH) : N->getOperand(0);
+    SDValue TotalSum = DAG.getConstant(0, dl, LegalVT);
+    APInt MaskVal = APInt::getLowBitsSet(LegalWidth, BestChunkWidth);
+    SDValue Mask = DAG.getConstant(MaskVal, dl, LegalVT);
 
-    SmallVector<SDValue, 8> Parts;
-    // Split into fixed-size chunks
     for (unsigned i = 0; i < BitWidth; i += BestChunkWidth) {
       SDValue Shift = DAG.getShiftAmountConstant(i, VT, dl);
       SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
-      Chunk = DAG.getNode(ISD::TRUNCATE, dl, ChunkVT, Chunk);
-      Parts.push_back(Chunk);
-    }
-    assert(!Parts.empty() && "Failed to split divisor into chunks");
-    Sum = Parts[0];
-
-    // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
-    // same logic as used in above if condition.
-    SDValue Carry = DAG.getConstant(0, dl, ChunkVT);
-    EVT SetCCType =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ChunkVT);
-    for (unsigned i = 1; i < Parts.size(); ++i) {
-      if (isOperationLegalOrCustom(ISD::UADDO_CARRY, ChunkVT)) {
-        SDVTList VTList = DAG.getVTList(ChunkVT, SetCCType);
-        SDValue UAdd = DAG.getNode(ISD::UADDO, dl, VTList, Sum, Parts[i]);
-        Sum = DAG.getNode(ISD::UADDO_CARRY, dl, VTList, UAdd, Carry,
-                          UAdd.getValue(1));
-      } else {
-        SDValue Add = DAG.getNode(ISD::ADD, dl, ChunkVT, Sum, Parts[i]);
-        SDValue NewCarry = DAG.getSetCC(dl, SetCCType, Add, Sum, ISD::SETULT);
-        NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
-        Sum = DAG.getNode(ISD::ADD, dl, ChunkVT, Add, Carry);
-        Carry = NewCarry;
-      }
+      // Truncate to LegalVT
+      SDValue TruncChunk = DAG.getNode(ISD::TRUNCATE, dl, LegalVT, Chunk);
+      // For the last chunk, we might not need a mask if it's smaller than
+      // BestChunkWidth, but applying it is always safe.
+      SDValue MaskedChunk =
+          DAG.getNode(ISD::AND, dl, LegalVT, TruncChunk, Mask);
+      TotalSum = DAG.getNode(ISD::ADD, dl, LegalVT, TotalSum, MaskedChunk);
     }
 
-    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, Sum);
+    // Final reduction: TotalSum % Divisor.
+    // Since TotalSum is in LegalVT, this UREM will be lowered via magic
+    // multiplication.
+    SDValue ResRem =
+        DAG.getNode(ISD::UREM, dl, LegalVT, TotalSum,
+                    DAG.getConstant(Divisor.trunc(LegalWidth), dl, LegalVT));
+
+    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, ResRem);
   }
 
   // If we didn't find a sum, we can't do the expansion.

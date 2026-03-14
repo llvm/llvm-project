@@ -32,6 +32,7 @@ define i128 @test1(i128 %x) nounwind {
   ret i128 %tmp
 }
 
+; X86 doesn't have __divti3, so the urem is expanded into a loop.
 define i128 @test2(i128 %x) nounwind {
 ; X86-LABEL: test2:
 ; X86:       # %bb.0: # %_udiv-special-cases
@@ -324,11 +325,11 @@ define i128 @test2(i128 %x) nounwind {
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-; X86 doesn't have __divti3, so the urem is expanded into a loop.
   %tmp = udiv i128 %x, -73786976294838206464
   ret i128 %tmp
 }
 
+; X86 doesn't have __divti3, so the urem is expanded into a loop.
 define i128 @test3(i128 %x) nounwind {
 ; X86-LABEL: test3:
 ; X86:       # %bb.0: # %_udiv-special-cases
@@ -635,7 +636,6 @@ define i128 @test3(i128 %x) nounwind {
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-; X86 doesn't have __divti3, so the urem is expanded into a loop.
   %tmp = udiv i128 %x, -73786976294838206467
   ret i128 %tmp
 }
@@ -941,26 +941,30 @@ define i128 @div_by_7(i128 %x) {
 ;
 ; X64-LABEL: div_by_7:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    movq %rdi, %rdx
-; X64-NEXT:    andq %rax, %rdx
-; X64-NEXT:    movq %rdi, %r8
-; X64-NEXT:    shrdq $63, %rsi, %r8
-; X64-NEXT:    addq %rdi, %r8
-; X64-NEXT:    movq %r8, %r9
-; X64-NEXT:    andq %rax, %r9
-; X64-NEXT:    movq %rsi, %rcx
-; X64-NEXT:    shrq $62, %rcx
-; X64-NEXT:    cmpq %rdx, %r9
-; X64-NEXT:    adcq %r8, %rcx
+; X64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    shrdq $60, %rsi, %rdx
+; X64-NEXT:    andq %rax, %rdx
+; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    shrq $56, %rcx
+; X64-NEXT:    addq %rdx, %rcx
 ; X64-NEXT:    movabsq $5270498306774157605, %rdx # imm = 0x4924924924924925
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdx
-; X64-NEXT:    shrq %rdx
-; X64-NEXT:    leaq (,%rdx,8), %rax
+; X64-NEXT:    movq %rdx, %r8
+; X64-NEXT:    shrq %r8
+; X64-NEXT:    leaq (,%r8,8), %rax
+; X64-NEXT:    subq %rax, %r8
+; X64-NEXT:    addq %rcx, %r8
+; X64-NEXT:    movabsq $2635249153387078803, %rcx # imm = 0x2492492492492493
+; X64-NEXT:    movq %r8, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    leal (,%rdx,8), %eax
 ; X64-NEXT:    subq %rax, %rdx
-; X64-NEXT:    addq %rcx, %rdx
+; X64-NEXT:    addq %r8, %rdx
 ; X64-NEXT:    subq %rdx, %rdi
 ; X64-NEXT:    sbbq $0, %rsi
 ; X64-NEXT:    movabsq $-5270498306774157605, %rcx # imm = 0xB6DB6DB6DB6DB6DB
@@ -1279,21 +1283,22 @@ define i128 @div_by_9(i128 %x) {
 ; X64-LABEL: div_by_9:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    andq %rax, %rcx
 ; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    shrdq $60, %rsi, %rdx
 ; X64-NEXT:    andq %rax, %rdx
-; X64-NEXT:    movq %rdi, %r8
-; X64-NEXT:    shrdq $60, %rsi, %r8
-; X64-NEXT:    addq %rdi, %r8
-; X64-NEXT:    movq %r8, %r9
-; X64-NEXT:    andq %rax, %r9
+; X64-NEXT:    addq %rcx, %rdx
 ; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    shrq $56, %rcx
-; X64-NEXT:    cmpq %rdx, %r9
-; X64-NEXT:    adcq %r8, %rcx
-; X64-NEXT:    andq %rax, %rcx
-; X64-NEXT:    movabsq $2049638230412172402, %rdx # imm = 0x1C71C71C71C71C72
+; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    movabsq $2049638230412172402, %r8 # imm = 0x1C71C71C71C71C72
 ; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %rdx
+; X64-NEXT:    mulq %r8
+; X64-NEXT:    leaq (%rdx,%rdx,8), %rax
+; X64-NEXT:    subq %rax, %rcx
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    mulq %r8
 ; X64-NEXT:    leaq (%rdx,%rdx,8), %rax
 ; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    subq %rcx, %rdi
@@ -1614,29 +1619,33 @@ define i128 @div_by_11(i128 %x) {
 ; X64-LABEL: div_by_11:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    andq %rax, %rcx
 ; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    shrdq $60, %rsi, %rdx
 ; X64-NEXT:    andq %rax, %rdx
-; X64-NEXT:    movq %rdi, %r8
-; X64-NEXT:    shrdq $60, %rsi, %r8
-; X64-NEXT:    addq %rdi, %r8
-; X64-NEXT:    movq %r8, %r9
-; X64-NEXT:    andq %rax, %r9
+; X64-NEXT:    addq %rcx, %rdx
 ; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    shrq $56, %rcx
-; X64-NEXT:    cmpq %rdx, %r9
-; X64-NEXT:    adcq %r8, %rcx
-; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    movabsq $3353953467947191203, %r8 # imm = 0x2E8BA2E8BA2E8BA3
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    mulq %r8
+; X64-NEXT:    shrq %rdx
+; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
+; X64-NEXT:    leaq (%rdx,%rax,2), %rax
+; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    movabsq $1676976733973595602, %rdx # imm = 0x1745D1745D1745D2
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
+; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    leaq (%rdx,%rax,2), %rax
 ; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    subq %rcx, %rdi
 ; X64-NEXT:    sbbq $0, %rsi
 ; X64-NEXT:    movabsq $-6707906935894382406, %rcx # imm = 0xA2E8BA2E8BA2E8BA
 ; X64-NEXT:    imulq %rdi, %rcx
-; X64-NEXT:    movabsq $3353953467947191203, %r8 # imm = 0x2E8BA2E8BA2E8BA3
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %r8
 ; X64-NEXT:    addq %rcx, %rdx
@@ -2263,18 +2272,22 @@ define i128 @div_by_25(i128 %x) {
 ; X64-LABEL: div_by_25:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; X64-NEXT:    movq %rdi, %rcx
+; X64-NEXT:    andq %rax, %rcx
 ; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    shrdq $60, %rsi, %rdx
 ; X64-NEXT:    andq %rax, %rdx
-; X64-NEXT:    movq %rdi, %r8
-; X64-NEXT:    shrdq $60, %rsi, %r8
-; X64-NEXT:    addq %rdi, %r8
-; X64-NEXT:    movq %r8, %r9
-; X64-NEXT:    andq %rax, %r9
+; X64-NEXT:    addq %rcx, %rdx
 ; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    shrq $56, %rcx
-; X64-NEXT:    cmpq %rdx, %r9
-; X64-NEXT:    adcq %r8, %rcx
-; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    movabsq $2951479051793528259, %rdx # imm = 0x28F5C28F5C28F5C3
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    mulq %rdx
+; X64-NEXT:    shrq $2, %rdx
+; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
+; X64-NEXT:    leaq (%rax,%rax,4), %rax
+; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    movabsq $737869762948382065, %rdx # imm = 0xA3D70A3D70A3D71
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdx
@@ -2930,22 +2943,25 @@ define i128 @rem_by_7(i128 %x) {
 ;
 ; X64-LABEL: rem_by_7:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    shrdq $63, %rsi, %rcx
-; X64-NEXT:    addq %rdi, %rcx
-; X64-NEXT:    andq %rax, %rdi
-; X64-NEXT:    movq %rcx, %rdx
-; X64-NEXT:    andq %rax, %rdx
-; X64-NEXT:    shrq $62, %rsi
-; X64-NEXT:    cmpq %rdi, %rdx
-; X64-NEXT:    adcq %rsi, %rcx
-; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    movabsq $1152921504606846975, %rcx # imm = 0xFFFFFFFFFFFFFFF
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andq %rcx, %rax
+; X64-NEXT:    shrdq $60, %rsi, %rdi
+; X64-NEXT:    andq %rdi, %rcx
+; X64-NEXT:    addq %rax, %rcx
+; X64-NEXT:    shrq $56, %rsi
+; X64-NEXT:    addq %rsi, %rcx
 ; X64-NEXT:    movabsq $5270498306774157605, %rdx # imm = 0x4924924924924925
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    shrq %rdx
 ; X64-NEXT:    leaq (,%rdx,8), %rax
+; X64-NEXT:    subq %rax, %rdx
+; X64-NEXT:    addq %rdx, %rcx
+; X64-NEXT:    movabsq $2635249153387078803, %rdx # imm = 0x2492492492492493
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    mulq %rdx
+; X64-NEXT:    leal (,%rdx,8), %eax
 ; X64-NEXT:    subq %rax, %rdx
 ; X64-NEXT:    addq %rdx, %rcx
 ; X64-NEXT:    movq %rcx, %rax

@@ -872,22 +872,22 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV32IM-NEXT:    lw s3, 8(a1)
 ; RV32IM-NEXT:    lw s4, 12(a1)
 ; RV32IM-NEXT:    lui a1, 1024
-; RV32IM-NEXT:    lui a5, 45590
+; RV32IM-NEXT:    slli a5, a4, 10
+; RV32IM-NEXT:    srli a6, a2, 22
+; RV32IM-NEXT:    or a5, a6, a5
+; RV32IM-NEXT:    lui a6, 45590
 ; RV32IM-NEXT:    addi a1, a1, -1
-; RV32IM-NEXT:    addi a5, a5, 1069
-; RV32IM-NEXT:    slli a6, a4, 10
-; RV32IM-NEXT:    srli a7, a2, 22
-; RV32IM-NEXT:    or a6, a7, a6
-; RV32IM-NEXT:    and a7, a2, a1
+; RV32IM-NEXT:    addi a6, a6, 1069
+; RV32IM-NEXT:    and a2, a2, a1
 ; RV32IM-NEXT:    srli a4, a4, 12
-; RV32IM-NEXT:    add a2, a2, a6
-; RV32IM-NEXT:    and a6, a2, a1
 ; RV32IM-NEXT:    add a2, a2, a4
-; RV32IM-NEXT:    sltu a4, a6, a7
-; RV32IM-NEXT:    add a2, a2, a4
-; RV32IM-NEXT:    and a1, a2, a1
-; RV32IM-NEXT:    mulhu a2, a1, a5
+; RV32IM-NEXT:    and a1, a5, a1
+; RV32IM-NEXT:    add a1, a2, a1
+; RV32IM-NEXT:    mulhu a2, a1, a6
 ; RV32IM-NEXT:    li a4, 23
+; RV32IM-NEXT:    mul a2, a2, a4
+; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    mulhu a2, a1, a6
 ; RV32IM-NEXT:    mul a2, a2, a4
 ; RV32IM-NEXT:    sub s7, a1, a2
 ; RV32IM-NEXT:    li a2, 1
