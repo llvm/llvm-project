@@ -165,8 +165,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     buildAssignType(B, ElementType, LI);
     return LI;
   }
-  Value *loadVectorFromArrayHelper(IRBuilder<> &B, FixedVectorType *TargetType,
-                                   SmallVector<Value *, 4> &LoadedElements) {
+  Value *
+  buildVectorFromLoadedElements(IRBuilder<> &B, FixedVectorType *TargetType,
+                                SmallVector<Value *, 4> &LoadedElements) {
     // Build the vector from the loaded elements.
     Value *NewVector = PoisonValue::get(TargetType);
     buildAssignType(B, TargetType, NewVector);
@@ -209,7 +210,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       LoadedElements.push_back(makeExtractElement(B, TargetElemTy, LoadVec,
                                                   ElementIndexInArrayElem));
     }
-    return loadVectorFromArrayHelper(B, TargetType, LoadedElements);
+    return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
   }
   // Loads elements from an array and constructs a vector.
   Value *loadVectorFromArray(IRBuilder<> &B, FixedVectorType *TargetType,
@@ -232,7 +233,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
       buildAssignType(B, TargetType->getElementType(), Load);
       LoadedElements.push_back(Load);
     }
-    return loadVectorFromArrayHelper(B, TargetType, LoadedElements);
+    return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
   }
 
   // Stores elements from a vector into an array.
