@@ -1117,10 +1117,9 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
     return BranchProbability(llvm::count(successors(Src), Dst), succ_size(Src));
 
   auto Prob = BranchProbability::getZero();
-  for (const_succ_iterator B = succ_begin(Src), I = B, E = succ_end(Src);
-       I != E; ++I)
-    if (*I == Dst)
-      Prob += Probs.find(std::make_pair(Src, std::distance(B, I)))->second;
+  for (auto It : enumerate(successors(Src)))
+    if (It.value() == Dst)
+      Prob += Probs.find(std::make_pair(Src, It.index()))->second;
 
   return Prob;
 }
