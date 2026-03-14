@@ -408,7 +408,7 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
   // suffix might start in one private symbol and end with the common
   // suffix in another.
   auto isPrivate = [&](const BinaryData *BD) {
-    auto Prefix = std::string("PG") + BC.AsmInfo->getPrivateGlobalPrefix();
+    auto Prefix = std::string("PG") + BC.AsmInfo->getInternalSymbolPrefix();
     return BD->getName().starts_with(Prefix.str());
   };
   auto Range = BC.getBinaryDataForSection(Section);

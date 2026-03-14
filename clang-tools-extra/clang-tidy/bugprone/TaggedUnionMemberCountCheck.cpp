@@ -43,7 +43,7 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
   // is used for matching.
   //
   // For precedence, see commit: 5b07de1a5faf4a22ae6fd982b877c5e7e3a76559
-  clang::ast_matchers::internal::BoundNodesTreeBuilder TempBuilder;
+  ast_matchers::internal::BoundNodesTreeBuilder TempBuilder;
 
   const FieldDecl *FirstMatch = nullptr;
   for (const FieldDecl *Field : Node.fields()) {
@@ -55,7 +55,7 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
   }
 
   if (FirstMatch) {
-    Builder->setBinding(BindName, clang::DynTypedNode::create(*FirstMatch));
+    Builder->setBinding(BindName, DynTypedNode::create(*FirstMatch));
     return true;
   }
   return false;

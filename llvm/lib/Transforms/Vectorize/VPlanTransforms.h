@@ -239,11 +239,6 @@ struct VPlanTransforms {
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
 
-  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
-  /// is known to be <= VF, replacing them with the AVL directly.
-  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
-                               PredicatedScalarEvolution &PSE);
-
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
   /// block merging.
@@ -405,10 +400,12 @@ struct VPlanTransforms {
                                      PredicatedScalarEvolution &PSE);
 
   /// Materialize vector trip count computations to a set of VPInstructions.
+  /// \p Step is used as the step value for the trip count computation.
   static void materializeVectorTripCount(VPlan &Plan,
                                          VPBasicBlock *VectorPHVPBB,
                                          bool TailByMasking,
-                                         bool RequiresScalarEpilogue);
+                                         bool RequiresScalarEpilogue,
+                                         VPValue *Step);
 
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.
