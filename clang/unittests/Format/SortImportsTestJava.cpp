@@ -380,7 +380,7 @@ TEST_F(SortImportsTestJava, SortImportsAfterPackageStatement) {
   EXPECT_EQ("package org.a;\n"
             "\n"
             "import org.a;\n"
-            "import org.b;\n",
+            "import org.b;",
             sort("package org.a;\n"
                  "\n"
                  "import org.b;\n"
