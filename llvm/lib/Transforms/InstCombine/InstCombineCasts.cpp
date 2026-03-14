@@ -237,7 +237,13 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
     // legal type.
     if (!Src->getType()->isIntegerTy() || !CI.getType()->isIntegerTy() ||
         shouldChangeType(CI.getSrcTy(), CI.getType()))
-      if (Instruction *NV = foldOpIntoPhi(CI, PN))
+      if (Instruction *NV =
+              foldOpIntoPhi(CI, PN,
+                            /*AllowMultipleUses=*/
+                            is_contained({Instruction::Trunc, Instruction::ZExt,
+                                          Instruction::SExt},
+                                         CI.getOpcode()) &&
+                                all_of(PN->operands(), IsaPred<ConstantInt>)))
         return NV;
   }
 

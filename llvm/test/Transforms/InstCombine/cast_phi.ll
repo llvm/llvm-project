@@ -393,9 +393,9 @@ define i32 @zext_constants_multi_use(i8 %x) {
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 5, [[T]] ], [ 255, [[F]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 5, [[T]] ], [ -1, [[F]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[P]])
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[P]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -425,9 +425,9 @@ define i32 @sext_constants_multi_use(i8 %x) {
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 5, [[T]] ], [ -1, [[F]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 5, [[T]] ], [ -1, [[F]] ]
 ; CHECK-NEXT:    call void @use8(i8 [[P]])
-; CHECK-NEXT:    [[R:%.*]] = sext i8 [[P]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -457,9 +457,9 @@ define i8 @trunc_constants_multi_use(i8 %x) {
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ 5, [[T]] ], [ -1, [[F]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 5, [[T]] ], [ -1, [[F]] ]
 ; CHECK-NEXT:    call void @use32(i32 [[P]])
-; CHECK-NEXT:    [[R:%.*]] = trunc nsw i32 [[P]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
