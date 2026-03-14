@@ -95,6 +95,8 @@ bool RISCVMoveMerge::isEvenRegisterCopy(const DestSourcePair &RegPair) {
   if (Source == Destination)
     return false;
 
+  if (!ST->hasStdExtZdinx() && !ST->hasStdExtP())
+    return false;
   Register SrcPair = TRI->getMatchingSuperReg(Source, RISCV::sub_gpr_even,
                                               &RISCV::GPRPairRegClass);
   Register DestPair = TRI->getMatchingSuperReg(Destination, RISCV::sub_gpr_even,
@@ -110,6 +112,8 @@ bool RISCVMoveMerge::isOddRegisterCopy(const DestSourcePair &RegPair) {
   if (Source == Destination)
     return false;
 
+  if (!ST->hasStdExtZdinx() && !ST->hasStdExtP())
+    return false;
   Register SrcPair = TRI->getMatchingSuperReg(Source, RISCV::sub_gpr_odd,
                                               &RISCV::GPRPairRegClass);
   Register DestPair = TRI->getMatchingSuperReg(Destination, RISCV::sub_gpr_odd,
