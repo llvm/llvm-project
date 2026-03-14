@@ -1237,7 +1237,7 @@ float4 floor(float4);
 /// \brief Returns the double-precision fused multiply-addition of a * b + c.
 /// \param a The first value in the fused multiply-addition.
 /// \param b The second value in the fused multiply-addition.
-/// \param The third value in the fused multiply-addition.
+/// \param c The third value in the fused multiply-addition.
 
 // double scalars and vectors
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_fma)

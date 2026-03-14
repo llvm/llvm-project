@@ -2179,11 +2179,9 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
                             Sema::EltwiseBuiltinArgTyRestriction ArgTyRestr,
                             int ArgOrdinal) {
   clang::QualType EltTy =
-      ArgTy->isVectorType()
-          ? ArgTy->getAs<clang::VectorType>()->getElementType()
-      : ArgTy->isMatrixType()
-          ? ArgTy->getAs<clang::MatrixType>()->getElementType()
-          : ArgTy;
+      ArgTy->isVectorType()   ? ArgTy->getAs<VectorType>()->getElementType()
+      : ArgTy->isMatrixType() ? ArgTy->getAs<MatrixType>()->getElementType()
+                              : ArgTy;
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:

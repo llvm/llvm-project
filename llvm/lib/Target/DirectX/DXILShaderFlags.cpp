@@ -106,7 +106,7 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   }
 }
 
-static bool checkFmaOps(Intrinsic::ID IID) {
+static bool checkDoubleExtensionOps(Intrinsic::ID IID) {
   switch (IID) {
   default:
     return false;
@@ -252,7 +252,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
 
-    CSF.DX11_1_DoubleExtensions |= checkFmaOps(CI->getIntrinsicID());
+    CSF.DX11_1_DoubleExtensions |=
+        checkDoubleExtensionOps(CI->getIntrinsicID());
     CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }
