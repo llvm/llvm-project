@@ -8238,7 +8238,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     unsigned BitWidth = VT.getScalarSizeInBits();
     unsigned BestChunkWidth = 0;
 
-    // Determine the legal scalar integer type for chunk operations (e.g., i64).
+    // Determine the legal scalar integer type for chunk operations.
     EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
     unsigned LegalWidth = LegalVT.getScalarSizeInBits();
     unsigned MaxChunk = std::min<unsigned>(LegalWidth, BitWidth);
@@ -8259,9 +8259,10 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         unsigned NumChunks = divideCeil(BitWidth, i);
         // if the ChunkWidth (i) plus the Potential Carry Bits is less than the
         // Register Width (64), we have enough "slack" at the top of the
-        // register to let the carries pile up safely. Max sum is NumChunks *
-        // (2^i - 1) so by approximation we need NumChunks × 2^i < 2^L. Taking
-        // log on both size we have log2(NumChunks) + i < L.
+        // register to let the carries pile up safely.
+        // Max sum is NumChunks * (2^i - 1) so by approximation we need
+        // NumChunks × 2^i < 2^L. Taking log on both size we will have
+        // log2(NumChunks) + i < L.
         if (i + Log2_32_Ceil(NumChunks) < LegalWidth) {
           BestChunkWidth = i;
           break;
