@@ -1714,10 +1714,10 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::CXX_FAST_TLS:
     if (!getTM().isAAPCS_ABI()) {
-      if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() && !isVarArg)
+      if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() && !isVarArg)
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
-    } else if (Subtarget->hasVFP2Base() && !Subtarget->isThumb1Only() &&
+    } else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
                !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
@@ -3201,11 +3201,10 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto C = const_cast<Constant*>(CP->getConstVal());
     auto M = DAG.getMachineFunction().getFunction().getParent();
     auto GV = new GlobalVariable(
-                    *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
-                    Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
-                    Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
-                    Twine(AFI->createPICLabelUId())
-                  );
+        *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
+        Twine(DAG.getDataLayout().getInternalSymbolPrefix()) + "CP" +
+            Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
+            Twine(AFI->createPICLabelUId()));
     SDValue GA = DAG.getTargetGlobalAddress(dyn_cast<GlobalValue>(GV),
                                             dl, PtrVT);
     return LowerGlobalAddress(GA, DAG);
@@ -3537,7 +3536,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   // size (implying the constant is no larger than 4 bytes).
   const Function &F = DAG.getMachineFunction().getFunction();
 
-  // We rely on this decision to inline being idemopotent and unrelated to the
+  // We rely on this decision to inline being idempotent and unrelated to the
   // use-site. We know that if we inline a variable at one use site, we'll
   // inline it elsewhere too (and reuse the constant pool entry). Fast-isel
   // doesn't know about this optimization, so bail out if it's enabled else
@@ -4985,7 +4984,7 @@ static bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
 // pattern. This function tries to match one of these and will return a SSAT
 // node if successful.
 //
-// USAT works similarily to SSAT but bounds on the interval [0, k] where k + 1
+// USAT works similarly to SSAT but bounds on the interval [0, k] where k + 1
 // is a power of 2.
 static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
   EVT VT = Op.getValueType();
@@ -5097,6 +5096,54 @@ bool ARMTargetLowering::isUnsupportedFloatingType(EVT VT) const {
   return false;
 }
 
+static SDValue matchCSET(unsigned &Opcode, bool &InvertCond, SDValue TrueVal,
+                         SDValue FalseVal, const ARMSubtarget *Subtarget) {
+  ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
+  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+  if (!CFVal || !CTVal || !Subtarget->hasV8_1MMainlineOps())
+    return SDValue();
+
+  unsigned TVal = CTVal->getZExtValue();
+  unsigned FVal = CFVal->getZExtValue();
+
+  Opcode = 0;
+  InvertCond = false;
+  if (TVal == ~FVal) {
+    Opcode = ARMISD::CSINV;
+  } else if (TVal == ~FVal + 1) {
+    Opcode = ARMISD::CSNEG;
+  } else if (TVal + 1 == FVal) {
+    Opcode = ARMISD::CSINC;
+  } else if (TVal == FVal + 1) {
+    Opcode = ARMISD::CSINC;
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  } else {
+    return SDValue();
+  }
+
+  // If one of the constants is cheaper than another, materialise the
+  // cheaper one and let the csel generate the other.
+  if (Opcode != ARMISD::CSINC &&
+      HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  }
+
+  // Attempt to use ZR checking TVal is 0, possibly inverting the condition
+  // to get there. CSINC not is invertable like the other two (~(~a) == a,
+  // -(-a) == a, but (a+1)+1 != a).
+  if (FVal == 0 && Opcode != ARMISD::CSINC) {
+    std::swap(TrueVal, FalseVal);
+    std::swap(TVal, FVal);
+    InvertCond = !InvertCond;
+  }
+
+  return TrueVal;
+}
+
 SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -5132,7 +5179,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TrueVal = Op.getOperand(2);
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
-  ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
 
@@ -5155,51 +5201,18 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
-      LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
-    unsigned TVal = CTVal->getZExtValue();
-    unsigned FVal = CFVal->getZExtValue();
-    unsigned Opcode = 0;
-
-    if (TVal == ~FVal) {
-      Opcode = ARMISD::CSINV;
-    } else if (TVal == ~FVal + 1) {
-      Opcode = ARMISD::CSNEG;
-    } else if (TVal + 1 == FVal) {
-      Opcode = ARMISD::CSINC;
-    } else if (TVal == FVal + 1) {
-      Opcode = ARMISD::CSINC;
-      std::swap(TrueVal, FalseVal);
-      std::swap(TVal, FVal);
-      CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-    }
-
-    if (Opcode) {
-      // If one of the constants is cheaper than another, materialise the
-      // cheaper one and let the csel generate the other.
-      if (Opcode != ARMISD::CSINC &&
-          HasLowerConstantMaterializationCost(FVal, TVal, Subtarget)) {
-        std::swap(TrueVal, FalseVal);
-        std::swap(TVal, FVal);
+  if (LHS.getValueType() == MVT::i32) {
+    unsigned Opcode;
+    bool InvertCond;
+    if (SDValue Op =
+            matchCSET(Opcode, InvertCond, TrueVal, FalseVal, Subtarget)) {
+      if (InvertCond)
         CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-      }
-
-      // Attempt to use ZR checking TVal is 0, possibly inverting the condition
-      // to get there. CSINC not is invertable like the other two (~(~a) == a,
-      // -(-a) == a, but (a+1)+1 != a).
-      if (FVal == 0 && Opcode != ARMISD::CSINC) {
-        std::swap(TrueVal, FalseVal);
-        std::swap(TVal, FVal);
-        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
-      }
-
-      // Drops F's value because we can get it by inverting/negating TVal.
-      FalseVal = TrueVal;
 
       SDValue ARMcc;
       SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
-      EVT VT = TrueVal.getValueType();
-      return DAG.getNode(Opcode, dl, VT, TrueVal, FalseVal, ARMcc, Cmp);
+      EVT VT = Op.getValueType();
+      return DAG.getNode(Opcode, dl, VT, Op, Op, ARMcc, Cmp);
     }
   }
 
@@ -5407,6 +5420,13 @@ SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
+static SDValue getInvertedARMCondCode(SDValue ARMcc, SelectionDAG &DAG) {
+  ARMCC::CondCodes CondCode =
+      (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  CondCode = ARMCC::getOppositeCondition(CondCode);
+  return DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+}
+
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond = Op.getOperand(1);
@@ -5431,10 +5451,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Value, OverflowCmp) = getARMXALUOOp(Cond, DAG, ARMcc);
 
     // Reverse the condition code.
-    ARMCC::CondCodes CondCode =
-        (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-    CondCode = ARMCC::getOppositeCondition(CondCode);
-    ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+    ARMcc = getInvertedARMCondCode(ARMcc, DAG);
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
                        OverflowCmp);
@@ -5482,10 +5499,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
     if ((CC == ISD::SETNE) != isOneConstant(RHS)) {
       // Reverse the condition code.
-      ARMCC::CondCodes CondCode =
-          (ARMCC::CondCodes)cast<const ConstantSDNode>(ARMcc)->getZExtValue();
-      CondCode = ARMCC::getOppositeCondition(CondCode);
-      ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+      ARMcc = getInvertedARMCondCode(ARMcc, DAG);
     }
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
@@ -7313,7 +7327,7 @@ static bool isVMOVNTruncMask(ArrayRef<int> M, EVT ToVT, bool rev) {
   if (NumElts != M.size())
     return false;
 
-  // Test if the Trunc can be convertable to a VMOVN with this shuffle. We are
+  // Test if the Trunc can be convertible to a VMOVN with this shuffle. We are
   // looking for patterns of:
   // !rev: 0 N/2 1 N/2+1 2 N/2+2 ...
   //  rev: N/2 0 N/2+1 1 N/2+2 2 ...
@@ -14986,7 +15000,7 @@ static SDValue PerformCMPZCombine(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue PerformCSETCombine(SDNode *N, SelectionDAG &DAG) {
-  // Fold away an unneccessary CMPZ/CSINC
+  // Fold away an unnecessary CMPZ/CSINC
   // CSXYZ A, B, C1 (CMPZ (CSINC 0, 0, C2, D), 0) ->
   // if C1==EQ -> CSXYZ A, B, C2, D
   // if C1==NE -> CSXYZ A, B, NOT(C2), D
@@ -15980,7 +15994,7 @@ static bool TryCombineBaseUpdate(struct BaseUpdateTarget &Target,
   //   intrinsics, so, likewise, there's nothing to do.
   // - generic load/store instructions: the alignment is specified as an
   //   explicit operand, rather than implicitly as the standard alignment
-  //   of the memory type (like the intrisics).  We need to change the
+  //   of the memory type (like the intrinsics).  We need to change the
   //   memory type to match the explicit alignment.  That way, we don't
   //   generate non-standard-aligned ARMISD::VLDx nodes.
   if (isa<LSBaseSDNode>(N)) {
@@ -16610,7 +16624,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   if (FromVT.getVectorNumElements() % NumElements != 0)
     return SDValue();
 
-  // Test if the Trunc will be convertable to a VMOVN with a shuffle, and if so
+  // Test if the Trunc will be convertible to a VMOVN with a shuffle, and if so
   // use the VMOVN over splitting the store. We are looking for patterns of:
   // !rev: 0 N 1 N+1 2 N+2 ...
   //  rev: N 0 N+1 1 N+2 2 ...
@@ -16870,7 +16884,7 @@ static SDValue PerformVCVTCombine(SDNode *N, SelectionDAG &DAG,
     // These instructions only exist converting from f32 to i32. We can handle
     // smaller integers by generating an extra truncate, but larger ones would
     // be lossy. We also can't handle anything other than 2 or 4 lanes, since
-    // these intructions only support v2i32/v4i32 types.
+    // these instructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -17011,7 +17025,7 @@ static SDValue PerformVMulVCTPCombine(SDNode *N, SelectionDAG &DAG,
     // These instructions only exist converting from i32 to f32. We can handle
     // smaller integers by generating an extra extend, but larger ones would
     // be lossy. We also can't handle anything other than 2 or 4 lanes, since
-    // these intructions only support v2i32/v4i32 types.
+    // these instructions only support v2i32/v4i32 types.
     return SDValue();
   }
 
@@ -18397,7 +18411,7 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   if (!VT.isInteger())
       return SDValue();
 
-  // Fold away an unneccessary CMPZ/CMOV
+  // Fold away an unnecessary CMPZ/CMOV
   // CMOV A, B, C1, (CMPZ (CMOV 1, 0, C2, D), 0) ->
   // if C1==EQ -> CMOV A, B, C2, D
   // if C1==NE -> CMOV A, B, NOT(C2), D

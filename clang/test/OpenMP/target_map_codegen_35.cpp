@@ -27,15 +27,15 @@ public:
   void foo();
 };
 
-// CK35-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 0, i64 8]
+// CK35-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 8, i64 0]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | PTR_AND_OBJ | TO = 0x1000000000011
-// CK35-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [3 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000011]]]
-// CK35-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 8]
+// CK35-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000011]], i64 288]
+// CK35-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 8, i64 0]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | PTR_AND_OBJ | FROM = 0x1000000000012
-// CK35-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [2 x i64] [i64 [[#0x20]], i64 [[#0x1000000000012]]]
+// CK35-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [3 x i64] [i64 [[#0x20]], i64 [[#0x1000000000012]], i64 288]
 
 void ref_map() {
   double b;

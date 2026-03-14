@@ -152,6 +152,7 @@ struct basic_string_view {
   basic_string_view(const T *);
   const T *begin() const;
   const T *data() const;
+  int size() const;
 };
 using string_view = basic_string_view<char>;
 
@@ -174,6 +175,8 @@ struct basic_string {
   basic_string& operator=(const basic_string&);
   basic_string& operator+=(const basic_string&);
   basic_string& operator+=(const T*);
+  void push_back(T);
+  void clear();
   const T *c_str() const;
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
@@ -188,6 +191,7 @@ struct unique_ptr {
   ~unique_ptr();
   T* release();
   T &operator*();
+  T *operator->();
   T *get() const;
 };
 
@@ -204,6 +208,7 @@ struct optional {
   template<typename U>
   optional(optional<U>&& __t);
 
+  T *operator->();
   T &operator*() &;
   T &&operator*() &&;
   T &value() &;
