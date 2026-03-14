@@ -39,7 +39,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
+#if _LIBCPP_STD_VER >= 26
 
 template <class...>
 class function_ref;
@@ -178,6 +178,6 @@ struct __function_ref_bind<_Rp (_Gp::*)(_ArgTypes...) _LIBCPP_FUNCTION_REF_CV & 
   using type _LIBCPP_NODEBUG = _Rp(_ArgTypes...) noexcept(__is_noexcept);
 };
 
-#endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD

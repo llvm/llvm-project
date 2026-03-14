@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
+#if _LIBCPP_STD_VER >= 26
 
 template <class...>
 class function_ref;
@@ -60,7 +60,7 @@ function_ref(constant_arg_t<_Fn>) -> function_ref<remove_pointer_t<decltype(_Fn)
 template <auto _Fn, class _Tp>
 function_ref(constant_arg_t<_Fn>, _Tp&&) -> function_ref<__function_ref_bind_t<decltype(_Fn), _Tp&>>;
 
-#endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_FUNCTION_REF
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
