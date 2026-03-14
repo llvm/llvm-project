@@ -43,6 +43,7 @@
 /lldb/**/*Swift* @adrian-prantl
 # END SWIFT
 /lldb/ @JDevlieghere
+/lldb/**/*FreeBSD* @mchoo7
 
 # MLIR Interfaces.
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
