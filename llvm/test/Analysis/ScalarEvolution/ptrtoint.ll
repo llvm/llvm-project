@@ -218,7 +218,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X64-NEXT:    %i7 = getelementptr inbounds i32, ptr %in, i64 %i6
 ; X64-NEXT:    --> {%in,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + %in) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i8 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X64-NEXT:    --> {(ptrtoaddr ptr %in to i64),+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * (zext i32 %count to i64))<nuw><nsw> + (ptrtoaddr ptr %in to i64)) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:    %i9 = add nuw nsw i64 %i6, 1
 ; X64-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
@@ -236,7 +236,7 @@ define void @ptrtoint_of_addrec(ptr %in, i32 %count) {
 ; X32-NEXT:    %i7 = getelementptr inbounds i32, ptr %in, i64 %i6
 ; X32-NEXT:    --> {%in,+,4}<%loop> U: full-set S: full-set Exits: (-4 + (4 * %count) + %in) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:    %i8 = ptrtoint ptr %i7 to i64
-; X32-NEXT:    --> %i8 U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    --> (zext i32 {(ptrtoaddr ptr %in to i32),+,4}<%loop> to i64) U: [0,4294967296) S: [0,4294967296) Exits: (zext i32 (-4 + (4 * %count) + (ptrtoaddr ptr %in to i32)) to i64) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:    %i9 = add nuw nsw i64 %i6, 1
 ; X32-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (zext i32 %count to i64) LoopDispositions: { %loop: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrec
@@ -374,7 +374,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i8 = load i8, ptr %i7, align 1
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,-1) S: [0,-1) Exits: (-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
@@ -400,7 +400,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i8 = load i8, ptr %i7, align 1
 ; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X32-NEXT:    --> %i9 U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    --> {(zext i32 (ptrtoaddr ptr %arg to i32) to i64),+,1}<nuw><%bb6> U: [0,8589934590) S: [0,8589934590) Exits: ((zext i32 (-1 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) to i64) + (zext i32 (ptrtoaddr ptr %arg to i32) to i64)) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 (-1 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
@@ -451,7 +451,7 @@ define void @pr46786_c26_char_cmp_ops_swapped(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i8 = load i8, ptr %i7, align 1
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,-1) S: [0,-1) Exits: (-1 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
@@ -477,7 +477,7 @@ define void @pr46786_c26_char_cmp_ops_swapped(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i8 = load i8, ptr %i7, align 1
 ; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X32-NEXT:    --> %i9 U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    --> {(zext i32 (ptrtoaddr ptr %arg to i32) to i64),+,1}<nuw><%bb6> U: [0,8589934590) S: [0,8589934590) Exits: ((zext i32 (-1 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) to i64) + (zext i32 (ptrtoaddr ptr %arg to i32) to i64)) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 (-1 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
@@ -535,7 +535,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X64-NEXT:    %i8 = load i32, ptr %i7, align 4
 ; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> + (ptrtoaddr ptr %arg to i64)) LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> {0,+,4}<nuw><%bb6> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (4 * ((-4 + (-1 * (ptrtoaddr ptr %arg to i64)) + (ptrtoaddr ptr %arg1 to i64)) /u 4))<nuw> LoopDispositions: { %bb6: Computable }
 ; X64-NEXT:    %i11 = ashr exact i64 %i10, 2
@@ -563,7 +563,7 @@ define void @pr46786_c26_int(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i8 = load i32, ptr %i7, align 4
 ; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i9 = ptrtoint ptr %i7 to i64
-; X32-NEXT:    --> %i9 U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    --> {(zext i32 (ptrtoaddr ptr %arg to i32) to i64),+,4}<nuw><%bb6> U: [0,8589934588) S: [0,8589934588) Exits: ((zext i32 (ptrtoaddr ptr %arg to i32) to i64) + (4 * ((zext i32 (-4 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) to i64) /u 4))<nuw><nsw>) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,4}<nuw><%bb6> U: [0,4294967293) S: [0,4294967293) Exits: (4 * ((zext i32 (-4 + (-1 * (ptrtoaddr ptr %arg to i32)) + (ptrtoaddr ptr %arg1 to i32)) to i64) /u 4))<nuw><nsw> LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = ashr exact i64 %i10, 2

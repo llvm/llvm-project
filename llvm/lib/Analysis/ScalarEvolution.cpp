@@ -8091,20 +8091,33 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       if (BO->Op)
         Flags = getNoWrapFlagsFromUB(BO->Op);
 
-      // Special case: sub (ptrtoint p1), (ptrtoint p2) -> subtract of ptrtoaddr
-      // expressions. While we don't model ptrtoint directly in SCEV, the
+      // Try to use ptrtoaddr for subtracts with at least one ptrtoint
+      // operand. While we don't model ptrtoint directly in SCEV, the
       // difference between two pointer addresses is well-defined.
       Value *PtrLHS, *PtrRHS;
-      if (match(BO->LHS, m_PtrToInt(m_Value(PtrLHS))) &&
-          match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)))) {
-        const SCEV *AddrLHS = getPtrToAddrExpr(getSCEV(PtrLHS));
-        const SCEV *AddrRHS = getPtrToAddrExpr(getSCEV(PtrRHS));
-        if (!isa<SCEVCouldNotCompute>(AddrLHS) &&
-            !isa<SCEVCouldNotCompute>(AddrRHS)) {
-          Type *Ty = BO->LHS->getType();
-          return getMinusSCEV(getTruncateOrZeroExtend(AddrLHS, Ty),
-                              getTruncateOrZeroExtend(AddrRHS, Ty), Flags);
-        }
+      bool HasPtrLHS = match(BO->LHS, m_PtrToInt(m_Value(PtrLHS)));
+      bool HasPtrRHS = match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)));
+      if (HasPtrLHS || HasPtrRHS) {
+        // Convert a ptrtoint operand to ptrtoaddr. When only one side
+        // is ptrtoint, skip SCEVUnknown pointers since wrapping them
+        // in ptrtoaddr adds no useful structure.
+        auto GetOp = [&](bool HasPtr, Value *PtrOp, Value *IntOp,
+                         bool OtherHasPtr) -> const SCEV * {
+          if (HasPtr) {
+            const SCEV *PtrSCEV = getSCEV(PtrOp);
+            if (OtherHasPtr || !isa<SCEVUnknown>(PtrSCEV)) {
+              const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
+              if (!isa<SCEVCouldNotCompute>(Addr) &&
+                  getTypeSizeInBits(IntOp->getType()) <=
+                      getTypeSizeInBits(Addr->getType()))
+                return getTruncateOrZeroExtend(Addr, IntOp->getType());
+            }
+          }
+          return getSCEV(IntOp);
+        };
+        const SCEV *L = GetOp(HasPtrLHS, PtrLHS, BO->LHS, HasPtrRHS);
+        const SCEV *R = GetOp(HasPtrRHS, PtrRHS, BO->RHS, HasPtrLHS);
+        return getMinusSCEV(L, R, Flags);
       }
 
       LHS = getSCEV(BO->LHS);
@@ -8376,9 +8389,14 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   }
 
   case Instruction::PtrToInt: {
-    // IMPORTANT: Do NOT use getPtrToAddrExpr here! Using SCEVPtrToAddr for
-    // PtrToInt is NOT safe because the expander may replace IR ptrtoint with
-    // ptrtoaddr, which changes semantics. We must keep ptrtoint as SCEVUnknown.
+    // Keep ptrtoint as SCEVUnknown, except ptrtoint of a pointer add-rec to
+    // preserve the integer induction structure.
+    const SCEV *PtrSCEV = getSCEV(U->getOperand(0));
+    if (isa<SCEVAddRecExpr>(PtrSCEV)) {
+      const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
+      if (!isa<SCEVCouldNotCompute>(Addr))
+        return Addr;
+    }
     return getUnknown(V);
   }
   case Instruction::IntToPtr:
