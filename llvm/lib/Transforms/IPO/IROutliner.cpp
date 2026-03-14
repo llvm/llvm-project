@@ -1524,9 +1524,8 @@ static BasicBlock *findOrCreatePHIBlock(OutlinableGroup &Group, Value *RetVal) {
                                             ReturnBB->getParent());
   PhiBlockForRetVal->second = PHIBlock;
 
-  // We find the predecessors of the return block in the newly created outlined
-  // function in order to point them to the new PHIBlock rather than the already
-  // existing return block.
+  // We replace all branches to the return block in the newly created outlined
+  // function to point to the new PHIBlock.
   ReturnBB->replaceAllUsesWith(PHIBlock);
 
   UncondBrInst::Create(ReturnBB, PHIBlock);
