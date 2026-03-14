@@ -13,7 +13,6 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
 LIBC_INLINE double fmaximum_mag_num(double x, double y) {
