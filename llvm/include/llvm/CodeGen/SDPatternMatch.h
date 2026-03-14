@@ -962,6 +962,106 @@ inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
 }
 
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_FShL(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return m_TernaryOp(ISD::FSHL, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_FShR(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return m_TernaryOp(ISD::FSHR, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P, bool Left>
+struct FunnelShiftLike_match {
+  T0_P Op0;
+  T1_P Op1;
+  T2_P Op2;
+
+  FunnelShiftLike_match(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2)
+      : Op0(Op0), Op1(Op1), Op2(Op2) {}
+
+  static bool hasComplementaryConstantShifts(SDValue ShlAmt, SDValue SrlAmt,
+                                             unsigned BitWidth) {
+    return ISD::matchBinaryPredicate(
+        ShlAmt, SrlAmt, [BitWidth](ConstantSDNode *ShlC, ConstantSDNode *SrlC) {
+          if (!ShlC || !SrlC)
+            return false;
+
+          const APInt &ShlV = ShlC->getAPIntValue();
+          const APInt &SrlV = SrlC->getAPIntValue();
+          unsigned SumWidth = ShlV.getBitWidth();
+          if (SrlV.getBitWidth() > SumWidth)
+            SumWidth = SrlV.getBitWidth();
+          ++SumWidth;
+
+          return ShlV.zext(SumWidth) + SrlV.zext(SumWidth) ==
+                 APInt(SumWidth, BitWidth);
+        });
+  }
+
+  template <typename MatchContext>
+  bool matchOperands(const MatchContext &Ctx, SDValue X, SDValue Y, SDValue Z) {
+    return Op0.match(Ctx, X) && Op1.match(Ctx, Y) && Op2.match(Ctx, Z);
+  }
+
+  template <typename MatchContext>
+  bool matchShiftOr(const MatchContext &Ctx, SDValue ShlOp, SDValue SrlOp,
+                    unsigned BitWidth) {
+    SDValue X, Y, ShlAmt, SrlAmt;
+    if (!sd_context_match(ShlOp, Ctx, m_Shl(m_Value(X), m_Value(ShlAmt))) ||
+        !sd_context_match(SrlOp, Ctx, m_Srl(m_Value(Y), m_Value(SrlAmt))) ||
+        !hasComplementaryConstantShifts(ShlAmt, SrlAmt, BitWidth))
+      return false;
+
+    return matchOperands(Ctx, X, Y, Left ? ShlAmt : SrlAmt);
+  }
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Opc(Left ? ISD::FSHL : ISD::FSHR))) {
+      EffectiveOperands<false> EO(N, Ctx);
+      assert(EO.Size == 3);
+      return matchOperands(Ctx, N->getOperand(EO.FirstIndex),
+                           N->getOperand(EO.FirstIndex + 1),
+                           N->getOperand(EO.FirstIndex + 2));
+    }
+
+    if (sd_context_match(N, Ctx, m_Opc(Left ? ISD::ROTL : ISD::ROTR))) {
+      EffectiveOperands<false> EO(N, Ctx);
+      assert(EO.Size == 2);
+      SDValue X = N->getOperand(EO.FirstIndex);
+      return matchOperands(Ctx, X, X, N->getOperand(EO.FirstIndex + 1));
+    }
+
+    if (sd_context_match(N, Ctx, m_Opc(ISD::OR))) {
+      EffectiveOperands<false> EO(N, Ctx);
+      assert(EO.Size == 2);
+      SDValue LHS = N->getOperand(EO.FirstIndex);
+      SDValue RHS = N->getOperand(EO.FirstIndex + 1);
+      unsigned BitWidth = N.getValueType().getScalarSizeInBits();
+      return matchShiftOr(Ctx, LHS, RHS, BitWidth) ||
+             matchShiftOr(Ctx, RHS, LHS, BitWidth);
+    }
+
+    return false;
+  }
+};
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline FunnelShiftLike_match<T0_P, T1_P, T2_P, true>
+m_FShLLike(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return FunnelShiftLike_match<T0_P, T1_P, T2_P, true>(Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline FunnelShiftLike_match<T0_P, T1_P, T2_P, false>
+m_FShRLike(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return FunnelShiftLike_match<T0_P, T1_P, T2_P, false>(Op0, Op1, Op2);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_Clmul(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::CLMUL, L, R);
