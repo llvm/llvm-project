@@ -215,6 +215,8 @@ if (APPLE)
   if (LLDB_ENABLE_MTE)
     message(STATUS "Running the LLDB test suite with MTE")
   endif()
+else()
+  set(LLDB_ENABLE_MTE OFF)
 endif()
 
 if (LLDB_ENABLE_PYTHON)
