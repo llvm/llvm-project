@@ -479,14 +479,26 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS) {
       (AddrTableStart - HeaderSize) +
       (AddrInfoOffsetsStart - AddrTableStart - AddrTableSize);
 
-  OS << "GSYM Statistics for \"" << GSYMPath << "\":\n";
-  OS << "  File size:           " << FileSize << " bytes\n";
-  OS << "  Header:              " << HeaderSize << " bytes\n";
-  OS << "  Address table:       " << AddrTableSize << " bytes\n";
-  OS << "  Addr info offsets:   " << AddrInfoOffsetsSize << " bytes\n";
-  OS << "  File table:          " << FileTableSize << " bytes\n";
-  OS << "  String table:        " << StrtabSize << " bytes\n";
-  OS << "  Function info data:  " << FuncInfoSize << " bytes\n";
+  // Helper for comma-separated number and right-justify formatting
+  auto Format = [](uint64_t Value) {
+    std::string Num = std::to_string(Value);
+    int InsertPosition = Num.length() - 3;
+    while (InsertPosition > 0) {
+      Num.insert(InsertPosition, ",");
+      InsertPosition -= 3;
+    }
+    // Right justify the number to 14 characters (10,000,000,000).
+    return std::string(std::max((size_t)0, 14 - Num.length()), ' ') + Num;
+  };
+
+  OS << "GSYM statistics for \"" << GSYMPath << "\":\n";
+  OS << "  File size:          " << Format(FileSize) << " bytes\n";
+  OS << "  Header:             " << Format(HeaderSize) << " bytes\n";
+  OS << "  Address table:      " << Format(AddrTableSize) << " bytes\n";
+  OS << "  Addr info offsets:  " << Format(AddrInfoOffsetsSize) << " bytes\n";
+  OS << "  File table:         " << Format(FileTableSize) << " bytes\n";
+  OS << "  String table:       " << Format(StrtabSize) << " bytes\n";
+  OS << "  Function info data: " << Format(FuncInfoSize) << " bytes\n";
 
   // Collect per-InfoType statistics across all functions.
   std::map<uint32_t, uint64_t> InfoTypeStats;
@@ -502,15 +514,15 @@ void GsymReader::dumpStatistics(StringRef GSYMPath, raw_ostream &OS) {
   auto PrintInfoType = [&](const char *Name, uint32_t Type) {
     auto It = InfoTypeStats.find(Type);
     if (It != InfoTypeStats.end())
-      OS << "    " << Name << It->second << " bytes\n";
+      OS << "    " << Name << Format(It->second) << " bytes\n";
   };
-  PrintInfoType("Line table info:   ", 1);
-  PrintInfoType("Inline info:       ", 2);
-  PrintInfoType("Merged func info:  ", 3);
-  PrintInfoType("Call site info:    ", 4);
+  PrintInfoType("Line table info:  ", 1);
+  PrintInfoType("Inline info:      ", 2);
+  PrintInfoType("Merged func info: ", 3);
+  PrintInfoType("Call site info:   ", 4);
 
-  OS << "  Padding:             " << Padding << " bytes\n";
-  OS << "  Number of addresses: " << Hdr.NumAddresses << "\n";
+  OS << "  Padding:            " << Format(Padding) << " bytes\n";
+  OS << "  Number of addresses:" << Format(Hdr.NumAddresses) << "\n";
 }
 
 void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
