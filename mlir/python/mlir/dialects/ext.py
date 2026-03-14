@@ -17,7 +17,7 @@ from typing import (
 from collections.abc import Sequence
 from dataclasses import dataclass
 from inspect import Parameter, Signature
-from types import UnionType
+from types import UnionType, SimpleNamespace
 from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
@@ -34,6 +34,7 @@ __all__ = [
     "Region",
     "Type",
     "Attribute",
+    "infer_type",
     "register_dialect",
     "register_operation",
 ]
@@ -59,6 +60,9 @@ def register_operation(
 
 
 def construct_instance(origin, args):
+    if not issubclass(origin, ir.Type | ir.Attribute):
+        raise TypeError(f"unsupported type in constraints: {origin}")
+
     # `origin.get` is to construct an instance of MLIR type or attribute.
     return origin.get(
         *(
@@ -126,21 +130,48 @@ class ConstraintLoweringContext:
         raise TypeError(f"unsupported type in constraints: {type_}")
 
 
-def infer_type(type_) -> Optional[Callable[[], ir.Type]]:
+@dataclass
+class Marker:
+    infer_type: bool = False
+    default_is_none: bool = False
+
+    def __post_init__(self):
+        if self.infer_type and self.default_is_none:
+            raise ValueError(
+                "a field cannot be marked with both infer_type and default_is_none"
+            )
+
+    def kw_only(self) -> bool:
+        return self.default_is_none or self.infer_type
+
+
+def infer_type() -> Any:
+    """
+    A marker to indicate that the type of a result should be inferred.
+    It can only be used in `Result` definitions.
+    """
+
+    return Marker(infer_type=True)
+
+
+def infer_type_impl(type_) -> Callable[[], ir.Type]:
     """
     A function to infer ir.Type from type annotation.
-    Returns a callable that returns the inferred ir.Type,
-    or None if the type cannot be inferred.
+    Returns a callable that returns the inferred ir.Type.
     We use callables so that MLIR contexts are not required
     while calling this function.
     """
 
     origin = get_origin(type_)
-    if origin and issubclass(origin, ir.Type):
-        return lambda: construct_instance(origin, get_args(type_))
+    if origin and issubclass(origin, ir.Type | ir.Attribute):
+        args = [
+            infer_type_impl(arg) if get_origin(arg) else lambda: arg
+            for arg in get_args(type_)
+        ]
+        return lambda: origin.get(*[arg() for arg in args])
     elif isinstance(type_, TypeVar):
-        return infer_type(type_.__bound__)
-    return None
+        return infer_type_impl(type_.__bound__)
+    raise TypeError(f"unsupported type for inferring: {type_}")
 
 
 @dataclass
@@ -151,9 +182,12 @@ class FieldDef:
 
     name: str
     variadicity: Variadicity
+    constraint: Any
+
+    kw_only: bool = False
 
     @staticmethod
-    def from_type_hint(name, type_) -> "FieldDef":
+    def from_type_hint(name, type_, marker) -> "FieldDef":
         variadicity = Variadicity.single
         if inner := match_optional(type_):
             variadicity = Variadicity.optional
@@ -164,29 +198,57 @@ class FieldDef:
 
         origin = get_origin(type_)
         if origin is ir.OpResult:
-            return ResultDef(name, variadicity, get_args(type_)[0])
+            constraint = get_args(type_)[0]
+            return ResultDef(
+                name,
+                variadicity,
+                constraint,
+                kw_only=marker.kw_only(),
+                infer_type=infer_type_impl(constraint) if marker.infer_type else None,
+            )
         elif origin is ir.Value:
-            return OperandDef(name, variadicity, get_args(type_)[0])
+            return OperandDef(
+                name,
+                variadicity,
+                get_args(type_)[0],
+                kw_only=marker.kw_only(),
+            )
         elif issubclass(origin or type_, ir.Attribute):
             return AttributeDef(name, variadicity, type_)
         elif type_ is ir.Region:
-            return RegionDef(name, variadicity)
-        raise TypeError(f"unsupported type in operation definition: {type_}")
+            return RegionDef(name, variadicity, Any)
+        raise TypeError(
+            f"unsupported type for field '{name}' in operation definition: {type_}"
+        )
 
 
 @dataclass
 class OperandDef(FieldDef):
-    constraint: Any
+    def __post_init__(self):
+        if self.variadicity != Variadicity.optional and self.kw_only:
+            raise ValueError(f"only optional operand can be a keyword parameter")
 
 
 @dataclass
 class ResultDef(FieldDef):
-    constraint: Any
+    infer_type: Callable[[], ir.Type] | None = None
+
+    def __post_init__(self):
+        if (
+            self.variadicity != Variadicity.optional
+            and not self.infer_type
+            and self.kw_only
+        ):
+            raise ValueError(f"only optional result can be a keyword parameter")
+
+        if self.infer_type and self.variadicity != Variadicity.single:
+            raise ValueError(
+                f"type of variadic or optional result '{self.name}' cannot be inferred"
+            )
 
 
 @dataclass
 class AttributeDef(FieldDef):
-    constraint: Any
 
     def __post_init__(self):
         if self.variadicity != Variadicity.single:
@@ -284,7 +346,17 @@ class Operation(ir.OpView):
             if hasattr(base, "_fields"):
                 fields.extend(base._fields)
         for key, value in cls.__annotations__.items():
-            field = FieldDef.from_type_hint(key, value)
+            # if the class variable is not defined, we treat it as a default marker;
+            # if it is assigned with `None`, we treat it as a marker with `default_is_none=True`.
+            # e.g. x : int         # default marker
+            #      y : int = None  # marker with default_is_none=True
+            marker = cls.__dict__.get(key, Marker()) or Marker(default_is_none=True)
+            # treat all other values as invalid
+            if not isinstance(marker, Marker):
+                raise TypeError(
+                    f"the field specifier of field '{key}' is not supported"
+                )
+            field = FieldDef.from_type_hint(key, value, marker)
             fields.append(field)
 
         cls._fields = fields
@@ -353,27 +425,17 @@ class Operation(ir.OpView):
         return None
 
     @staticmethod
-    def _generate_init_signature(
-        fields: List[FieldDef], can_infer_types: bool
-    ) -> Signature:
-        result_args = (
-            [] if can_infer_types else [i for i in fields if isinstance(i, ResultDef)]
-        )
-        # results are placed at the beginning of the parameter list,
-        # but operands and attributes can appear in any relative order.
-        args = result_args + [
-            i for i in fields if not isinstance(i, ResultDef | RegionDef)
-        ]
-        positional_args = [
-            i.name for i in args if i.variadicity != Variadicity.optional
-        ]
-        optional_args = [i.name for i in args if i.variadicity == Variadicity.optional]
+    def _generate_init_signature(fields: List[FieldDef]) -> Signature:
+        args = [i for i in fields if not isinstance(i, RegionDef)]
 
         params = [Parameter("self", Parameter.POSITIONAL_ONLY)]
-        for i in positional_args:
-            params.append(Parameter(i, Parameter.POSITIONAL_OR_KEYWORD))
-        for i in optional_args:
-            params.append(Parameter(i, Parameter.KEYWORD_ONLY, default=None))
+
+        for i in args:
+            if i.kw_only:
+                params.append(Parameter(i.name, Parameter.KEYWORD_ONLY, default=None))
+            else:
+                params.append(Parameter(i.name, Parameter.POSITIONAL_OR_KEYWORD))
+
         params.append(Parameter("loc", Parameter.KEYWORD_ONLY, default=None))
         params.append(Parameter("ip", Parameter.KEYWORD_ONLY, default=None))
 
@@ -382,15 +444,8 @@ class Operation(ir.OpView):
     @classmethod
     def _generate_init_method(cls, fields: List[FieldDef]) -> None:
         operands, attrs, results, regions = partition_fields(fields)
-        inferred_types = [infer_type(i.constraint) for i in results]
 
-        # we infer result types only when all result types can be inferred
-        # and all results are single (not optional or variadic)
-        can_infer_types = all(inferred_types) and all(
-            i.variadicity == Variadicity.single for i in results
-        )
-
-        init_sig = cls._generate_init_signature(fields, can_infer_types)
+        init_sig = cls._generate_init_signature(fields)
 
         def __init__(*args, **kwargs):
             bound = init_sig.bind(*args, **kwargs)
@@ -398,11 +453,10 @@ class Operation(ir.OpView):
             args = bound.arguments
 
             _operands = [args[operand.name] for operand in operands]
-            _results = (
-                [t() for t in inferred_types]
-                if can_infer_types
-                else [args[result.name] for result in results]
-            )
+            _results = [
+                result.infer_type() if result.infer_type else args[result.name]
+                for result in results
+            ]
             _attributes = dict(
                 (attr.name, args[attr.name])
                 for attr in attrs

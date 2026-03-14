@@ -90,7 +90,7 @@ class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
 class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
     target: ext.Operand[transform.AnyOpType]
     attr_name: ir.StringAttr
-    attr_as_param: ext.Result[transform.AnyParamType[()]]
+    attr_as_param: ext.Result[transform.AnyParamType[()]] = ext.infer_type()
 
     @classmethod
     def attach_interface_impls(cls, ctx=None):
@@ -153,7 +153,7 @@ class PrintParamOp(MyTransform.Operation, name="print_param"):
 @ext.register_operation(MyTransform)
 class OneOpInOneOpOut(MyTransform.Operation, name="one_op_in_one_op_out"):
     target: ext.Operand[transform.AnyOpType]
-    res: ext.Result[transform.AnyOpType[()]]
+    res: ext.Result[transform.AnyOpType[()]] = ext.infer_type()
 
 
 # CHECK-LABEL: Test: OneOpInOneOpOutTransformOpInterface
@@ -282,9 +282,9 @@ class OpValParamInParamOpValOut(
     val_arg: ext.Operand[transform.AnyValueType]
     param_arg: ext.Operand[transform.AnyParamType]
     # results
-    param_res: ext.Result[transform.AnyParamType[()]]
-    op_res: ext.Result[transform.AnyOpType[()]]
-    value_res: ext.Result[transform.AnyValueType[()]]
+    param_res: ext.Result[transform.AnyParamType[()]] = ext.infer_type()
+    op_res: ext.Result[transform.AnyOpType[()]] = ext.infer_type()
+    value_res: ext.Result[transform.AnyValueType[()]] = ext.infer_type()
 
 
 # CHECK-LABEL: Test: OpValParamInParamOpValOutTransformOpInterface
@@ -382,12 +382,12 @@ def OpValParamInParamOpValOutTransformOpInterface():
 class OpsParamsInValuesParamOut(
     MyTransform.Operation, name="ops_params_in_values_param_out"
 ):
-    # operands
-    ops: Sequence[ext.Operand[transform.AnyOpType]]
-    params: Sequence[ext.Operand[transform.AnyParamType]]
     # results
     values: Sequence[ext.Result[transform.AnyValueType]]
     param: ext.Result[transform.AnyParamType]
+    # operands
+    ops: Sequence[ext.Operand[transform.AnyOpType]]
+    params: Sequence[ext.Operand[transform.AnyParamType]]
 
 
 # CHECK-LABEL: Test: OpsParamsInValuesParamOutTransformOpInterface
