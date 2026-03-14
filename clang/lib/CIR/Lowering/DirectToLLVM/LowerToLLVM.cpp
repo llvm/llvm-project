@@ -4663,7 +4663,7 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
   // CIR operand type.
   for (auto const &[cirOpAttr, cirOp] :
        zip(op.getOperandAttrs(), cirOperands)) {
-    if (!cirOpAttr) {
+    if (!mlir::isa<mlir::UnitAttr>(cirOpAttr)) {
       opAttrs.push_back(mlir::Attribute());
       continue;
     }
