@@ -660,12 +660,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                             KernelArgs.ThreadLimit[2]};
   uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
                            KernelArgs.NumTeams[2]};
-  if (!isBareMode()) {
-    NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
-    NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
-                                NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
-  }
-
   auto DynBlockMemConfOrErr =
       prepareBlockMemory(GenericDevice, KernelArgs, NumBlocks[0]);
   if (!DynBlockMemConfOrErr)
