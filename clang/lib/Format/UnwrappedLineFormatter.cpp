@@ -487,7 +487,8 @@ private:
             const FormatToken *PreviousPrevious =
                 Previous->getPreviousNonComment();
             if (PreviousPrevious &&
-                PreviousPrevious->isOneOf(tok::kw_class, tok::kw_struct)) {
+                PreviousPrevious->isOneOf(tok::kw_class, tok::kw_struct,
+                                          tok::kw_union)) {
               return 0;
             }
           }
@@ -640,7 +641,7 @@ private:
 
     // Previous line begins record, current line block.
     if (I != AnnotatedLines.begin() &&
-        I[-1]->First->isOneOf(tok::kw_struct, tok::kw_class, tok::kw_union)) {
+        I[-1]->First->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union)) {
       const bool IsEmptyBlock =
           Line->Last->is(tok::l_brace) && NextLine->First->is(tok::r_brace);
 
