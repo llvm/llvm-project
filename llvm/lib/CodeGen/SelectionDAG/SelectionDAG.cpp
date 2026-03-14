@@ -6314,9 +6314,9 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
         return false;
     
     return (!DemandedLHS || 
-	    isKnownNeverZero(Op.getOperand(0), DemandedLHS, Depth + 1)) &&
-	   (!DemandedRHS || 
-	    isKnownNeverZero(Op.getOperand(1), DemandedRHS, Depth + 1));
+            isKnownNeverZero(Op.getOperand(0), DemandedLHS, Depth + 1)) &&
+           (!DemandedRHS || 
+            isKnownNeverZero(Op.getOperand(1), DemandedRHS, Depth + 1));
   }
 
   case ISD::UADDSAT:
