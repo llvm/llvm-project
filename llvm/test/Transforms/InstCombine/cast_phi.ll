@@ -378,3 +378,103 @@ exit:
   %ext = zext i8 %iv to i32
   ret i32 %ext
 }
+
+
+declare void @use8(i8)
+declare void @use32(i32)
+
+define i32 @zext_constants_multi_use(i8 %x) {
+; CHECK-LABEL: @zext_constants_multi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 5, [[T]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    call void @use8(i8 [[P]])
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[P]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp = icmp eq i8 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  br label %exit
+
+f:
+  br label %exit
+
+exit:
+  %p = phi i8 [ 5, %t ], [ -1, %f ]
+  call void @use8(i8 %p)
+  %r = zext i8 %p to i32
+  ret i32 %r
+}
+
+define i32 @sext_constants_multi_use(i8 %x) {
+; CHECK-LABEL: @sext_constants_multi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ 5, [[T]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    call void @use8(i8 [[P]])
+; CHECK-NEXT:    [[R:%.*]] = sext i8 [[P]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp = icmp eq i8 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  br label %exit
+
+f:
+  br label %exit
+
+exit:
+  %p = phi i8 [ 5, %t ], [ -1, %f ]
+  call void @use8(i8 %p)
+  %r = sext i8 %p to i32
+  ret i32 %r
+}
+
+define i8 @trunc_constants_multi_use(i8 %x) {
+; CHECK-LABEL: @trunc_constants_multi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 5, [[T]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    call void @use32(i32 [[P]])
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i32 [[P]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %cmp = icmp eq i8 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  br label %exit
+
+f:
+  br label %exit
+
+exit:
+  %p = phi i32 [ 5, %t ], [ -1, %f ]
+  call void @use32(i32 %p)
+  %r = trunc i32 %p to i8
+  ret i8 %r
+}
