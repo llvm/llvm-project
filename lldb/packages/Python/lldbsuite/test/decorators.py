@@ -1145,6 +1145,17 @@ def is_running_under_asan():
     return None
 
 
+def is_running_under_mte():
+    if configuration.mte_enabled:
+        return "MTE unsupported"
+    return None
+
+
+def skipIfMTE(func):
+    """Skip this test when running with MTE (Memory Tagging Extension) enabled."""
+    return skipTestIfFn(is_running_under_mte)(func)
+
+
 def skipUnlessAddressSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 

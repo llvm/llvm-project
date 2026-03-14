@@ -29414,6 +29414,14 @@ TEST_F(FormatTest, UnbalancedAngleBrackets) {
 
   verifyNoCrash("typename foo<bar>::value, const String &>::type f();",
                 getLLVMStyleWithColumns(50));
+
+  verifyNoCrash(
+      ">\n"
+      " f({\n"
+      "   {}inner> () __attribute __attribute__((foo())) int foo(void)\n"
+      "   {};\n"
+      "   }, );",
+      getLLVMStyleWithColumns(70));
 }
 
 TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
