@@ -68,7 +68,8 @@ def PromotableAllocationOpInterface
     >,
     InterfaceMethod<[{
         Hook triggered once the promotion of a slot is complete. This can
-        also clean up the created default value if necessary.
+        also clean up the created default value if necessary. The default
+        value may be a null value if no default value was created.
         This will only be called for slots declared by this operation.
 
         Must return a new promotable allocation op if this operation produced
