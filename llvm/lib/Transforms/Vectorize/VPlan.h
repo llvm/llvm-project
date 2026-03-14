@@ -4443,14 +4443,14 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
         IsReplicator(IsReplicator) {
-    assert(!Entry->hasPredecessors() && "Entry block has predecessors.");
-    assert(!Exiting->hasSuccessors() && "Exit block has successors.");
-    Entry->setParent(this);
-    Exiting->setParent(this);
+    if (Entry) {
+      assert(!Entry->hasPredecessors() && "Entry block has predecessors.");
+      assert(Exiting && "Must also pass Exiting if Entry is passed.");
+      assert(!Exiting->hasSuccessors() && "Exit block has successors.");
+      Entry->setParent(this);
+      Exiting->setParent(this);
+    }
   }
-  VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
-        IsReplicator(IsReplicator) {}
 
 public:
   ~VPRegionBlock() override = default;
@@ -4901,8 +4901,7 @@ public:
   VPRegionBlock *createLoopRegion(const std::string &Name = "",
                                   VPBlockBase *Entry = nullptr,
                                   VPBlockBase *Exiting = nullptr) {
-    auto *VPB = Entry ? new VPRegionBlock(Entry, Exiting, Name)
-                      : new VPRegionBlock(Name);
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
