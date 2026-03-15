@@ -13,13 +13,13 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 define amdgpu_kernel void @buffer_load_lds_reassociate_offsets(ptr addrspace(1) inreg %ptr) {
 ; CHECK-LABEL: buffer_load_lds_reassociate_offsets:
-; CHECK:       ; %bb.1:
+; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_branch .LBB0_0
+; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:    .p2align 8
-; CHECK-NEXT:  ; %bb.2:
-; CHECK-NEXT:  .LBB0_0:
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v0, 0x600, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 1, v0

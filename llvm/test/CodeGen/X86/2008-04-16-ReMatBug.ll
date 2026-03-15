@@ -17,15 +17,15 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je LBB0_1
-; CHECK-NEXT:  ## %bb.3: ## %bb28
+; CHECK-NEXT:    je LBB0_7
+; CHECK-NEXT:  ## %bb.1: ## %bb28
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    movw $-2, %si
-; CHECK-NEXT:    jne LBB0_6
-; CHECK-NEXT:  ## %bb.4: ## %bb37
+; CHECK-NEXT:    jne LBB0_4
+; CHECK-NEXT:  ## %bb.2: ## %bb37
 ; CHECK-NEXT:    movw $0, 40(%edi)
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    leal (,%ecx,4), %ecx
@@ -48,22 +48,22 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je LBB0_1
-; CHECK-NEXT:  ## %bb.5:
+; CHECK-NEXT:    je LBB0_7
+; CHECK-NEXT:  ## %bb.3:
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:  LBB0_6: ## %done
+; CHECK-NEXT:  LBB0_4: ## %done
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je LBB0_7
-; CHECK-NEXT:  ## %bb.8: ## %bb167
+; CHECK-NEXT:    je LBB0_6
+; CHECK-NEXT:  ## %bb.5: ## %bb167
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movl L_iodbcdm_global_lock$non_lazy_ptr, %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll _pthread_mutex_unlock
 ; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    jmp LBB0_2
-; CHECK-NEXT:  LBB0_7: ## %bb150
+; CHECK-NEXT:    jmp LBB0_8
+; CHECK-NEXT:  LBB0_6: ## %bb150
 ; CHECK-NEXT:    movswl %si, %eax
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movswl %cx, %ecx
@@ -81,9 +81,9 @@ define i16 @SQLDriversW(ptr %henv, i16 zeroext  %fDir, ptr %szDrvDesc, i16 signe
 ; CHECK-NEXT:    pushl $1
 ; CHECK-NEXT:    calll _trace_SQLDriversW
 ; CHECK-NEXT:    addl $48, %esp
-; CHECK-NEXT:  LBB0_1: ## %bb
+; CHECK-NEXT:  LBB0_7: ## %bb
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  LBB0_2: ## %bb
+; CHECK-NEXT:  LBB0_8: ## %bb
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

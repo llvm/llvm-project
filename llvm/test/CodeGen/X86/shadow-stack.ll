@@ -133,22 +133,22 @@ define i32 @foo(i32 %i) local_unnamed_addr {
 ; X86_64-NEXT:    movq (%rax), %rax
 ; X86_64-NEXT:    movq %rbp, (%rax)
 ; X86_64-NEXT:    movq %rsp, 16(%rax)
-; X86_64-NEXT:    leaq LBB1_4(%rip), %rcx
+; X86_64-NEXT:    leaq LBB1_2(%rip), %rcx
 ; X86_64-NEXT:    movq %rcx, 8(%rax)
 ; X86_64-NEXT:    xorq %rcx, %rcx
 ; X86_64-NEXT:    rdsspq %rcx
 ; X86_64-NEXT:    movq %rcx, 24(%rax)
-; X86_64-NEXT:    #EH_SjLj_Setup LBB1_4
+; X86_64-NEXT:    #EH_SjLj_Setup LBB1_2
 ; X86_64-NEXT:  ## %bb.1: ## %entry
 ; X86_64-NEXT:    xorl %eax, %eax
-; X86_64-NEXT:    jmp LBB1_2
-; X86_64-NEXT:  LBB1_4: ## Block address taken
+; X86_64-NEXT:    jmp LBB1_3
+; X86_64-NEXT:  LBB1_2: ## Block address taken
 ; X86_64-NEXT:    ## %entry
 ; X86_64-NEXT:    movl $1, %eax
-; X86_64-NEXT:  LBB1_2: ## %entry
+; X86_64-NEXT:  LBB1_3: ## %entry
 ; X86_64-NEXT:    testl %eax, %eax
 ; X86_64-NEXT:    je LBB1_5
-; X86_64-NEXT:  ## %bb.3: ## %if.end
+; X86_64-NEXT:  ## %bb.4: ## %if.end
 ; X86_64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
 ; X86_64-NEXT:    shll $2, %eax
 ; X86_64-NEXT:    leal (%rax,%rax,2), %eax
@@ -182,21 +182,21 @@ define i32 @foo(i32 %i) local_unnamed_addr {
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    movl %ebp, (%eax)
 ; X86-NEXT:    movl %esp, 16(%eax)
-; X86-NEXT:    movl $LBB1_4, 4(%eax)
+; X86-NEXT:    movl $LBB1_2, 4(%eax)
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    rdsspd %ecx
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    #EH_SjLj_Setup LBB1_4
+; X86-NEXT:    #EH_SjLj_Setup LBB1_2
 ; X86-NEXT:  ## %bb.1: ## %entry
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    jmp LBB1_2
-; X86-NEXT:  LBB1_4: ## Block address taken
+; X86-NEXT:    jmp LBB1_3
+; X86-NEXT:  LBB1_2: ## Block address taken
 ; X86-NEXT:    ## %entry
 ; X86-NEXT:    movl $1, %eax
-; X86-NEXT:  LBB1_2: ## %entry
+; X86-NEXT:  LBB1_3: ## %entry
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    je LBB1_5
-; X86-NEXT:  ## %bb.3: ## %if.end
+; X86-NEXT:  ## %bb.4: ## %if.end
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %eax

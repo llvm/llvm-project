@@ -8,13 +8,13 @@ define void @reduce(i32, i32, i32, i32, i32, i32, ...) nounwind {
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    testb   %al, %al
-; CHECK-NEXT:    je      .LBB0_1
-; CHECK-NEXT: .LBB0_2:
-; CHECK-NEXT:    addq    $56, %rsp
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT: .LBB0_3:
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
@@ -25,7 +25,7 @@ define void @reduce(i32, i32, i32, i32, i32, i32, ...) nounwind {
 ; CHECK-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT: .LBB0_1:
+; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, 16
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax

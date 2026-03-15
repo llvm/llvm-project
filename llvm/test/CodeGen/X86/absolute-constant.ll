@@ -11,21 +11,21 @@ define void @bar(ptr %x) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $foo, (%rdi)
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp xf@PLT # TAILCALL
-; CHECK-NEXT:  .LBB0_1: # %if.end
+; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; PIC-LABEL: bar:
 ; PIC:       # %bb.0: # %entry
 ; PIC-NEXT:    testb $foo, (%rdi)
-; PIC-NEXT:    je .LBB0_1
-; PIC-NEXT:  # %bb.2: # %if.then
+; PIC-NEXT:    je .LBB0_2
+; PIC-NEXT:  # %bb.1: # %if.then
 ; PIC-NEXT:    xorl %eax, %eax
 ; PIC-NEXT:    jmp xf@PLT # TAILCALL
-; PIC-NEXT:  .LBB0_1: # %if.end
+; PIC-NEXT:  .LBB0_2: # %if.end
 ; PIC-NEXT:    retq
 entry:
   %0 = load i8, ptr %x, align 1

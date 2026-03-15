@@ -5,10 +5,10 @@ define i32 @imp_null_check_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp0:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB0_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB0_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB0_1: ## %is_null
+; CHECK-NEXT:  LBB0_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -29,10 +29,10 @@ define i32 @imp_null_check_unordered_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_unordered_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp1:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB1_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB1_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB1_1: ## %is_null
+; CHECK-NEXT:  LBB1_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -55,11 +55,11 @@ define i32 @imp_null_check_seq_cst_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_seq_cst_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB2_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    je LBB2_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB2_1: ## %is_null
+; CHECK-NEXT:  LBB2_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -80,11 +80,11 @@ define i32 @imp_null_check_volatile_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_volatile_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB3_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    je LBB3_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB3_1: ## %is_null
+; CHECK-NEXT:  LBB3_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -105,10 +105,10 @@ define i8 @imp_null_check_load_i8(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_i8:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp2:
-; CHECK-NEXT:    movb (%rdi), %al ## on-fault: LBB4_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movb (%rdi), %al ## on-fault: LBB4_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB4_1: ## %is_null
+; CHECK-NEXT:  LBB4_2: ## %is_null
 ; CHECK-NEXT:    movb $42, %al
 ; CHECK-NEXT:    retq
 
@@ -129,13 +129,13 @@ define i256 @imp_null_check_load_i256(ptr %x) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:  Ltmp3:
-; CHECK-NEXT:    movaps (%rsi), %xmm0 ## on-fault: LBB5_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movaps (%rsi), %xmm0 ## on-fault: LBB5_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movaps 16(%rsi), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, 16(%rax)
 ; CHECK-NEXT:    movaps %xmm0, (%rax)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB5_1: ## %is_null
+; CHECK-NEXT:  LBB5_2: ## %is_null
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, 16(%rax)
 ; CHECK-NEXT:    movq $0, 8(%rax)
@@ -160,10 +160,10 @@ define i32 @imp_null_check_gep_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_gep_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp4:
-; CHECK-NEXT:    movl 128(%rdi), %eax ## on-fault: LBB6_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl 128(%rdi), %eax ## on-fault: LBB6_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB6_1: ## %is_null
+; CHECK-NEXT:  LBB6_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -184,11 +184,11 @@ define i32 @imp_null_check_add_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_add_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp5:
-; CHECK-NEXT:    addl (%rdi), %esi ## on-fault: LBB7_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    addl (%rdi), %esi ## on-fault: LBB7_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB7_1: ## %is_null
+; CHECK-NEXT:  LBB7_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -209,11 +209,11 @@ define i32 @imp_null_check_sub_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_sub_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp6:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB8_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB8_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    subl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB8_1: ## %is_null
+; CHECK-NEXT:  LBB8_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -234,11 +234,11 @@ define i32 @imp_null_check_mul_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_mul_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp7:
-; CHECK-NEXT:    imull (%rdi), %esi ## on-fault: LBB9_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    imull (%rdi), %esi ## on-fault: LBB9_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB9_1: ## %is_null
+; CHECK-NEXT:  LBB9_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -259,12 +259,12 @@ define i32 @imp_null_check_udiv_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_udiv_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp8:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB10_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB10_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB10_1: ## %is_null
+; CHECK-NEXT:  LBB10_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -285,12 +285,12 @@ define i32 @imp_null_check_shl_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_shl_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp9:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB11_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB11_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB11_1: ## %is_null
+; CHECK-NEXT:  LBB11_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -311,12 +311,12 @@ define i32 @imp_null_check_lshr_result(ptr %x, i32 %p) {
 ; CHECK-LABEL: imp_null_check_lshr_result:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp10:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB12_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB12_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB12_1: ## %is_null
+; CHECK-NEXT:  LBB12_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -340,12 +340,12 @@ define i32 @imp_null_check_hoist_over_unrelated_load(ptr %x, ptr %y, ptr %z) {
 ; CHECK-LABEL: imp_null_check_hoist_over_unrelated_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp11:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB13_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB13_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    movl (%rsi), %ecx
 ; CHECK-NEXT:    movl %ecx, (%rdx)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB13_1: ## %is_null
+; CHECK-NEXT:  LBB13_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -369,14 +369,14 @@ define i32 @imp_null_check_via_mem_comparision(ptr %x, i32 %val) {
 ; CHECK-NEXT:  Ltmp12:
 ; CHECK-NEXT:    cmpl %esi, 4(%rdi) ## on-fault: LBB14_3
 ; CHECK-NEXT:  ## %bb.1: ## %not_null
-; CHECK-NEXT:    jge LBB14_2
-; CHECK-NEXT:  ## %bb.4: ## %ret_100
+; CHECK-NEXT:    jge LBB14_4
+; CHECK-NEXT:  ## %bb.2: ## %ret_100
 ; CHECK-NEXT:    movl $100, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB14_3: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB14_2: ## %ret_200
+; CHECK-NEXT:  LBB14_4: ## %ret_200
 ; CHECK-NEXT:    movl $200, %eax
 ; CHECK-NEXT:    retq
 
@@ -405,12 +405,12 @@ define i32 @imp_null_check_gep_load_with_use_dep(ptr %x, i32 %a) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    ## kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:  Ltmp13:
-; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB15_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB15_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    addl %edi, %esi
 ; CHECK-NEXT:    leal 4(%rax,%rsi), %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB15_1: ## %is_null
+; CHECK-NEXT:  LBB15_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -436,12 +436,12 @@ define i32 @imp_null_check_load_fence1(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_fence1:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB16_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    je LBB16_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    ##MEMBARRIER
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB16_1: ## %is_null
+; CHECK-NEXT:  LBB16_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -464,12 +464,12 @@ define i32 @imp_null_check_load_fence2(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_fence2:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB17_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    je LBB17_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB17_1: ## %is_null
+; CHECK-NEXT:  LBB17_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -490,10 +490,10 @@ define void @imp_null_check_store(ptr %x) {
 ; CHECK-LABEL: imp_null_check_store:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp14:
-; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB18_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB18_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB18_1: ## %is_null
+; CHECK-NEXT:  LBB18_2: ## %is_null
 ; CHECK-NEXT:    retq
 
  entry:
@@ -513,10 +513,10 @@ define void @imp_null_check_unordered_store(ptr %x) {
 ; CHECK-LABEL: imp_null_check_unordered_store:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp15:
-; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB19_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl $1, (%rdi) ## on-fault: LBB19_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB19_1: ## %is_null
+; CHECK-NEXT:  LBB19_2: ## %is_null
 ; CHECK-NEXT:    retq
 
  entry:
@@ -535,10 +535,10 @@ define i32 @imp_null_check_neg_gep_load(ptr %x) {
 ; CHECK-LABEL: imp_null_check_neg_gep_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp16:
-; CHECK-NEXT:    movl -128(%rdi), %eax ## on-fault: LBB20_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movl -128(%rdi), %eax ## on-fault: LBB20_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB20_1: ## %is_null
+; CHECK-NEXT:  LBB20_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -564,10 +564,10 @@ define i64 @imp_null_check_load_shift_addr(ptr %x) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    shlq $6, %rdi
 ; CHECK-NEXT:  Ltmp17:
-; CHECK-NEXT:    movq 8(%rdi), %rax ## on-fault: LBB21_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movq 8(%rdi), %rax ## on-fault: LBB21_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB21_1: ## %is_null
+; CHECK-NEXT:  LBB21_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -593,10 +593,10 @@ define i64 @imp_null_check_load_shift_by_3_addr(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_shift_by_3_addr:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp18:
-; CHECK-NEXT:    movq 8(,%rdi,8), %rax ## on-fault: LBB22_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movq 8(,%rdi,8), %rax ## on-fault: LBB22_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB22_1: ## %is_null
+; CHECK-NEXT:  LBB22_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 
@@ -620,10 +620,10 @@ define i64 @imp_null_check_load_shift_add_addr(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_shift_add_addr:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:  Ltmp19:
-; CHECK-NEXT:    movq 3526(,%rdi,8), %rax ## on-fault: LBB23_1
-; CHECK-NEXT:  ## %bb.2: ## %not_null
+; CHECK-NEXT:    movq 3526(,%rdi,8), %rax ## on-fault: LBB23_2
+; CHECK-NEXT:  ## %bb.1: ## %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB23_1: ## %is_null
+; CHECK-NEXT:  LBB23_2: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 

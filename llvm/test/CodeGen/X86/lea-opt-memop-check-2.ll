@@ -11,11 +11,11 @@ define i32 @test() nounwind optsize {
   %r = tail call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
   ret i32 %r
 ; CHECK-LABEL: test:
-; CHECK:	leaq .LBB0_3(%rip), %r[[REG:[a-z]+]]
+; CHECK:	leaq .LBB0_2(%rip), %r[[REG:[a-z]+]]
 ; CHECK:	movq %r[[REG]], buf+8(%rip)
-; CHECK:	#EH_SjLj_Setup .LBB0_3
+; CHECK:	#EH_SjLj_Setup .LBB0_2
 ; CHECK:	xorl %e[[REG]], %e[[REG]]
-; CHECK:	jmp .LBB0_2
-; CHECK-LABEL: .LBB0_3: # Block address taken
-; CHECK-LABEL: .LBB0_2:
+; CHECK:	jmp .LBB0_3
+; CHECK-LABEL: .LBB0_2: # Block address taken
+; CHECK-LABEL: .LBB0_3:
 }

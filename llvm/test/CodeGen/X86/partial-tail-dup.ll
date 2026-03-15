@@ -8,9 +8,9 @@
 ;
 ; CHECK-LABEL: test1
 ; CHECK:       %p1
-; CHECK:       .LBB0_4: # %dupbb
+; CHECK:       .LBB0_3: # %dupbb
 ; CHECK:       %p2
-; CHECK:       jmp .LBB0_4
+; CHECK:       jmp .LBB0_3
 
 define void @test1(ptr %p) !prof !1 {
 entry:
@@ -47,7 +47,7 @@ end:
 ;
 ; CHECK-LABEL: test2
 ; CHECK:       %p1
-; CHECK:       .LBB1_8: # %dupbb
+; CHECK:       .LBB1_4: # %dupbb
 ;
 ; CHECK:       %p2
 ; CHECK:       callq c
@@ -56,9 +56,9 @@ end:
 ; CHECK-NEXT:  jmp
 ;
 ; CHECK:       %p3
-; CHECK:       jmp .LBB1_8
+; CHECK:       jmp .LBB1_4
 ; CHECK:       %p4
-; CHECK:       jmp .LBB1_8
+; CHECK:       jmp .LBB1_4
 
 define void @test2(ptr %p) !prof !1 {
 entry:
@@ -119,7 +119,7 @@ end:
 ;
 ; CHECK-LABEL: test3
 ; CHECK:       %p1
-; CHECK:       .LBB2_6: # %dupbb
+; CHECK:       .LBB2_4: # %dupbb
 ;
 ; CHECK:       %p2
 ; CHECK:       callq c
@@ -128,7 +128,7 @@ end:
 ; CHECK-NEXT:  jmp
 ;
 ; CHECK:       %p3
-; CHECK:       jne .LBB2_6
+; CHECK:       jne .LBB2_4
 
 define void @test3(ptr %p) !prof !1 {
 entry:

@@ -9,9 +9,9 @@ define amdgpu_kernel void @preload_ptr_kernarg_header(ptr inreg %arg) {
 ; ASM-LABEL: preload_ptr_kernarg_header:
 ; ASM:         s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; ASM-NEXT:    s_waitcnt lgkmcnt(0)
-; ASM-NEXT:    s_branch .LBB0_0
+; ASM-NEXT:    s_branch .LBB0_2
 ; ASM-NEXT:    .p2align 8
-; ASM-NEXT:  .LBB0_0:
+; ASM-NEXT:  .LBB0_2:
 ; ASM-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
 ; ASM-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; ASM-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
@@ -27,9 +27,9 @@ define amdgpu_kernel void @preload_i32_kernarg_header(ptr inreg %arg, i32 inreg 
 ; ASM:         s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; ASM-NEXT:    s_load_dword s10, s[4:5], 0x8
 ; ASM-NEXT:    s_waitcnt lgkmcnt(0)
-; ASM-NEXT:    s_branch .LBB1_0
+; ASM-NEXT:    s_branch .LBB1_2
 ; ASM-NEXT:    .p2align 8
-; ASM-NEXT:  .LBB1_0:
+; ASM-NEXT:  .LBB1_2:
 ; ASM-NEXT:    v_mov_b64_e32 v[0:1], s[8:9]
 ; ASM-NEXT:    v_mov_b32_e32 v2, s10
 ; ASM-NEXT:    flat_store_dword v[0:1], v2

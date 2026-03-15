@@ -26,21 +26,21 @@ define cc 11 {i32, i32} @test_basic_hipecc(i32 %hp, i32 %p) {
   ; X32-Linux-LABEL:       test_basic_hipecc:
   ; X32-Linux:       leal -140(%esp), %ebx
   ; X32-Linux-NEXT:  cmpl 120(%ebp), %ebx
-  ; X32-Linux-NEXT:  jb .LBB1_1
+  ; X32-Linux-NEXT:  jb .LBB1_2
 
   ; X32-Linux:       ret
 
-  ; X32-Linux:       .LBB1_1:
+  ; X32-Linux:       .LBB1_2:
   ; X32-Linux-NEXT:  calll inc_stack_0
 
   ; X64-Linux-LABEL:       test_basic_hipecc:
   ; X64-Linux:       leaq -184(%rsp), %r14
   ; X64-Linux-NEXT:  cmpq 120(%rbp), %r14
-  ; X64-Linux-NEXT:  jb .LBB1_1
+  ; X64-Linux-NEXT:  jb .LBB1_2
 
   ; X64-Linux:       ret
 
-  ; X64-Linux:       .LBB1_1:
+  ; X64-Linux:       .LBB1_2:
   ; X64-Linux-NEXT:  callq inc_stack_0
 
   %mem = alloca i32, i32 10

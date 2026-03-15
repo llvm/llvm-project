@@ -45,10 +45,10 @@ return:                                           ; preds = %entry, %__except
 
 ; CHECK-LABEL: _invokewrapper:                         # @invokewrapper
 ; CHECK:         calll   *8(%ebp)
-; CHECK: LBB0_2:                                 # %return
+; CHECK: LBB0_1:                                 # %return
 
-; CHECK: LBB0_1:                                 # %__except.ret
-; CHECK-NEXT:         $ehgcr_0_1:
+; CHECK: LBB0_2:                                 # %__except.ret
+; CHECK-NEXT:         $ehgcr_0_2:
 ; CHECK-NEXT:         movl    -24(%ebp), %esp
 ; CHECK-NEXT:         addl    $12, %ebp
 

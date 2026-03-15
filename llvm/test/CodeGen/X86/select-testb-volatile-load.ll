@@ -9,11 +9,11 @@ define void @testb_volatile(ptr%ptrptr) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    testl $1, (%rax)
-; CHECK-NEXT:    jne LBB0_1
-; CHECK-NEXT:  ## %bb.2: ## %exit
+; CHECK-NEXT:    jne LBB0_2
+; CHECK-NEXT:  ## %bb.1: ## %exit
 ; CHECK-NEXT:    movl $1, (%rax)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB0_1: ## %bb2
+; CHECK-NEXT:  LBB0_2: ## %bb2
 ; CHECK-NEXT:    movl $0, (%rax)
 ; CHECK-NEXT:    retq
 entry:

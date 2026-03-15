@@ -49,9 +49,9 @@ begin:                                            ; preds = %next2, %next
 
 ; case (2): conditional jmp
 ; CHECK:        w0 *= w1
-; CHECK-NEXT:   if w0 > w2 goto LBB0_7
+; CHECK-NEXT:   if w0 > w2 goto LBB0_3
 ; CHECK:        goto LBB0_4
-; CHECK-LABEL:  LBB0_7:
+; CHECK-LABEL:  LBB0_3:
 ; CHECK:        gotol
 
 ; CHECK-LABEL:  LBB0_4:

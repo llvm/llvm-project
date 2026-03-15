@@ -5,10 +5,10 @@ define void @test(<2 x ptr> %ptr) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %loop.127.preheader
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %loop.127.preheader
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %ifmerge.89
+; CHECK-NEXT:  .LBB0_2: # %ifmerge.89
 ; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpbroadcastw (%rax), %xmm2

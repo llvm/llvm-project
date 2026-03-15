@@ -12,14 +12,14 @@ define i32 @atomic_and_flags_1(ptr %p, i32 %a, i32 %b) {
 ; X64-NEXT:  # %bb.1: # %L1
 ; X64-NEXT:    incb (%rdi)
 ; X64-NEXT:    cmpl %edx, %esi
-; X64-NEXT:    jne .LBB0_2
-; X64-NEXT:  # %bb.4: # %L3
+; X64-NEXT:    jne .LBB0_4
+; X64-NEXT:  # %bb.2: # %L3
 ; X64-NEXT:    movl $3, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB0_3: # %L2
 ; X64-NEXT:    movl $2, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB0_2: # %L4
+; X64-NEXT:  .LBB0_4: # %L4
 ; X64-NEXT:    movl $4, %eax
 ; X64-NEXT:    retq
 ;
@@ -33,14 +33,14 @@ define i32 @atomic_and_flags_1(ptr %p, i32 %a, i32 %b) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    incb (%edx)
 ; X86-NEXT:    cmpl %eax, %ecx
-; X86-NEXT:    jne .LBB0_2
-; X86-NEXT:  # %bb.4: # %L3
+; X86-NEXT:    jne .LBB0_4
+; X86-NEXT:  # %bb.2: # %L3
 ; X86-NEXT:    movl $3, %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_3: # %L2
 ; X86-NEXT:    movl $2, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_2: # %L4
+; X86-NEXT:  .LBB0_4: # %L4
 ; X86-NEXT:    movl $4, %eax
 ; X86-NEXT:    retl
   ; Generate flags value, and use it.
@@ -78,14 +78,14 @@ define i32 @atomic_and_flags_2(ptr %p, i32 %a, i32 %b) {
 ; X64-NEXT:  # %bb.1: # %L1
 ; X64-NEXT:    addb $2, (%rdi)
 ; X64-NEXT:    cmpl %edx, %esi
-; X64-NEXT:    jne .LBB1_2
-; X64-NEXT:  # %bb.4: # %L3
+; X64-NEXT:    jne .LBB1_4
+; X64-NEXT:  # %bb.2: # %L3
 ; X64-NEXT:    movl $3, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_3: # %L2
 ; X64-NEXT:    movl $2, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB1_2: # %L4
+; X64-NEXT:  .LBB1_4: # %L4
 ; X64-NEXT:    movl $4, %eax
 ; X64-NEXT:    retq
 ;
@@ -99,14 +99,14 @@ define i32 @atomic_and_flags_2(ptr %p, i32 %a, i32 %b) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addb $2, (%edx)
 ; X86-NEXT:    cmpl %eax, %ecx
-; X86-NEXT:    jne .LBB1_2
-; X86-NEXT:  # %bb.4: # %L3
+; X86-NEXT:    jne .LBB1_4
+; X86-NEXT:  # %bb.2: # %L3
 ; X86-NEXT:    movl $3, %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB1_3: # %L2
 ; X86-NEXT:    movl $2, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB1_2: # %L4
+; X86-NEXT:  .LBB1_4: # %L4
 ; X86-NEXT:    movl $4, %eax
 ; X86-NEXT:    retl
   %cmp = icmp eq i32 %a, %b

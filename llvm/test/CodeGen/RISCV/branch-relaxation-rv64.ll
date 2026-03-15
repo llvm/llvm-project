@@ -50,20 +50,20 @@ define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    bnez a0, .LBB1_1
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    jump .LBB1_2, a0
-; CHECK-NEXT:  .LBB1_1: # %iftrue
+; CHECK-NEXT:    bnez a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    jump .LBB1_3, a0
+; CHECK-NEXT:  .LBB1_2: # %iftrue
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB1_3
-; CHECK-NEXT:  .LBB1_2: # %jmp
+; CHECK-NEXT:    j .LBB1_4
+; CHECK-NEXT:  .LBB1_3: # %jmp
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB1_3: # %tail
+; CHECK-NEXT:  .LBB1_4: # %tail
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -73,20 +73,20 @@ define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK-ZICFILP-NEXT:    lpad 0
 ; CHECK-ZICFILP-NEXT:    addi sp, sp, -16
 ; CHECK-ZICFILP-NEXT:    andi a0, a0, 1
-; CHECK-ZICFILP-NEXT:    bnez a0, .LBB1_1
-; CHECK-ZICFILP-NEXT:  # %bb.4:
-; CHECK-ZICFILP-NEXT:    jump .LBB1_2, t2
-; CHECK-ZICFILP-NEXT:  .LBB1_1: # %iftrue
+; CHECK-ZICFILP-NEXT:    bnez a0, .LBB1_2
+; CHECK-ZICFILP-NEXT:  # %bb.1:
+; CHECK-ZICFILP-NEXT:    jump .LBB1_3, t2
+; CHECK-ZICFILP-NEXT:  .LBB1_2: # %iftrue
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    #NO_APP
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    .zero 1048576
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    j .LBB1_3
-; CHECK-ZICFILP-NEXT:  .LBB1_2: # %jmp
+; CHECK-ZICFILP-NEXT:    j .LBB1_4
+; CHECK-ZICFILP-NEXT:  .LBB1_3: # %jmp
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:  .LBB1_3: # %tail
+; CHECK-ZICFILP-NEXT:  .LBB1_4: # %tail
 ; CHECK-ZICFILP-NEXT:    li a0, 1
 ; CHECK-ZICFILP-NEXT:    addi sp, sp, 16
 ; CHECK-ZICFILP-NEXT:    ret
@@ -225,18 +225,18 @@ define void @relax_jal_spill_64() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li t6, 31
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    beq t5, t6, .LBB2_1
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    beq t5, t6, .LBB2_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    jump .LBB2_4, s11
-; CHECK-NEXT:  .LBB2_1: # %branch_1
+; CHECK-NEXT:    jump .LBB2_3, s11
+; CHECK-NEXT:  .LBB2_2: # %branch_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB2_2
-; CHECK-NEXT:  .LBB2_4: # %branch_2
+; CHECK-NEXT:    j .LBB2_4
+; CHECK-NEXT:  .LBB2_3: # %branch_2
 ; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:  .LBB2_2: # %branch_2
+; CHECK-NEXT:  .LBB2_4: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
 ; CHECK-NEXT:    #NO_APP
@@ -466,18 +466,18 @@ define void @relax_jal_spill_64() {
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    li t6, 31
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    beq t5, t6, .LBB2_1
-; CHECK-ZICFILP-NEXT:  # %bb.3:
+; CHECK-ZICFILP-NEXT:    beq t5, t6, .LBB2_2
+; CHECK-ZICFILP-NEXT:  # %bb.1:
 ; CHECK-ZICFILP-NEXT:    sd t2, 0(sp) # 8-byte Folded Spill
-; CHECK-ZICFILP-NEXT:    jump .LBB2_4, t2
-; CHECK-ZICFILP-NEXT:  .LBB2_1: # %branch_1
+; CHECK-ZICFILP-NEXT:    jump .LBB2_3, t2
+; CHECK-ZICFILP-NEXT:  .LBB2_2: # %branch_1
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    .zero 1048576
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    j .LBB2_2
-; CHECK-ZICFILP-NEXT:  .LBB2_4: # %branch_2
+; CHECK-ZICFILP-NEXT:    j .LBB2_4
+; CHECK-ZICFILP-NEXT:  .LBB2_3: # %branch_2
 ; CHECK-ZICFILP-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
-; CHECK-ZICFILP-NEXT:  .LBB2_2: # %branch_2
+; CHECK-ZICFILP-NEXT:  .LBB2_4: # %branch_2
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    # reg use ra
 ; CHECK-ZICFILP-NEXT:    #NO_APP
@@ -786,18 +786,18 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li t6, 31
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    beq t5, t6, .LBB3_1
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    beq t5, t6, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    jump .LBB3_4, s11
-; CHECK-NEXT:  .LBB3_1: # %branch_1
+; CHECK-NEXT:    jump .LBB3_3, s11
+; CHECK-NEXT:  .LBB3_2: # %branch_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB3_2
-; CHECK-NEXT:  .LBB3_4: # %branch_2
+; CHECK-NEXT:    j .LBB3_4
+; CHECK-NEXT:  .LBB3_3: # %branch_2
 ; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:  .LBB3_2: # %branch_2
+; CHECK-NEXT:  .LBB3_4: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
 ; CHECK-NEXT:    #NO_APP
@@ -1036,18 +1036,18 @@ define void @relax_jal_spill_64_adjust_spill_slot() {
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    li t6, 31
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    beq t5, t6, .LBB3_1
-; CHECK-ZICFILP-NEXT:  # %bb.3:
+; CHECK-ZICFILP-NEXT:    beq t5, t6, .LBB3_2
+; CHECK-ZICFILP-NEXT:  # %bb.1:
 ; CHECK-ZICFILP-NEXT:    sd t2, 0(sp) # 8-byte Folded Spill
-; CHECK-ZICFILP-NEXT:    jump .LBB3_4, t2
-; CHECK-ZICFILP-NEXT:  .LBB3_1: # %branch_1
+; CHECK-ZICFILP-NEXT:    jump .LBB3_3, t2
+; CHECK-ZICFILP-NEXT:  .LBB3_2: # %branch_1
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    .zero 1048576
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    j .LBB3_2
-; CHECK-ZICFILP-NEXT:  .LBB3_4: # %branch_2
+; CHECK-ZICFILP-NEXT:    j .LBB3_4
+; CHECK-ZICFILP-NEXT:  .LBB3_3: # %branch_2
 ; CHECK-ZICFILP-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
-; CHECK-ZICFILP-NEXT:  .LBB3_2: # %branch_2
+; CHECK-ZICFILP-NEXT:  .LBB3_4: # %branch_2
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    # reg use ra
 ; CHECK-ZICFILP-NEXT:    #NO_APP
@@ -1351,22 +1351,22 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li t6, 31
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    bne t5, t6, .LBB4_2
-; CHECK-NEXT:    j .LBB4_1
-; CHECK-NEXT:  .LBB4_8: # %dest_1
-; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    bne t5, t6, .LBB4_3
+; CHECK-NEXT:    j .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: # %dest_1
+; CHECK-NEXT:    ld s11, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:  .LBB4_2: # %dest_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 1
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB4_3
-; CHECK-NEXT:  .LBB4_2: # %cond_2
-; CHECK-NEXT:    bne t3, t4, .LBB4_5
-; CHECK-NEXT:  .LBB4_3: # %dest_2
+; CHECK-NEXT:    j .LBB4_4
+; CHECK-NEXT:  .LBB4_3: # %cond_2
+; CHECK-NEXT:    bne t3, t4, .LBB4_6
+; CHECK-NEXT:  .LBB4_4: # %dest_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB4_4: # %dest_3
+; CHECK-NEXT:  .LBB4_5: # %dest_3
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 3
 ; CHECK-NEXT:    #NO_APP
@@ -1483,16 +1483,16 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_5: # %cond_3
+; CHECK-NEXT:  .LBB4_6: # %cond_3
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:    beq t1, t2, .LBB4_4
-; CHECK-NEXT:  # %bb.6: # %space
+; CHECK-NEXT:    beq t1, t2, .LBB4_5
+; CHECK-NEXT:  # %bb.7: # %space
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  # %bb.7: # %space
+; CHECK-NEXT:  # %bb.8: # %space
 ; CHECK-NEXT:    sd s11, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    jump .LBB4_8, s11
+; CHECK-NEXT:    jump .LBB4_1, s11
 ;
 ; CHECK-ZICFILP-LABEL: relax_jal_spill_64_restore_block_correspondence:
 ; CHECK-ZICFILP:       # %bb.0: # %entry
@@ -1610,22 +1610,22 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    li t6, 31
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    bne t5, t6, .LBB4_2
-; CHECK-ZICFILP-NEXT:    j .LBB4_1
-; CHECK-ZICFILP-NEXT:  .LBB4_8: # %dest_1
-; CHECK-ZICFILP-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
+; CHECK-ZICFILP-NEXT:    bne t5, t6, .LBB4_3
+; CHECK-ZICFILP-NEXT:    j .LBB4_2
 ; CHECK-ZICFILP-NEXT:  .LBB4_1: # %dest_1
+; CHECK-ZICFILP-NEXT:    ld t2, 0(sp) # 8-byte Folded Reload
+; CHECK-ZICFILP-NEXT:  .LBB4_2: # %dest_1
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    # dest 1
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:    j .LBB4_3
-; CHECK-ZICFILP-NEXT:  .LBB4_2: # %cond_2
-; CHECK-ZICFILP-NEXT:    bne t3, t4, .LBB4_5
-; CHECK-ZICFILP-NEXT:  .LBB4_3: # %dest_2
+; CHECK-ZICFILP-NEXT:    j .LBB4_4
+; CHECK-ZICFILP-NEXT:  .LBB4_3: # %cond_2
+; CHECK-ZICFILP-NEXT:    bne t3, t4, .LBB4_6
+; CHECK-ZICFILP-NEXT:  .LBB4_4: # %dest_2
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    # dest 2
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:  .LBB4_4: # %dest_3
+; CHECK-ZICFILP-NEXT:  .LBB4_5: # %dest_3
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    # dest 3
 ; CHECK-ZICFILP-NEXT:    #NO_APP
@@ -1742,16 +1742,16 @@ define void @relax_jal_spill_64_restore_block_correspondence() {
 ; CHECK-ZICFILP-NEXT:    addi sp, sp, 112
 ; CHECK-ZICFILP-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-ZICFILP-NEXT:    ret
-; CHECK-ZICFILP-NEXT:  .LBB4_5: # %cond_3
+; CHECK-ZICFILP-NEXT:  .LBB4_6: # %cond_3
 ; CHECK-ZICFILP-NEXT:    .cfi_restore_state
-; CHECK-ZICFILP-NEXT:    beq t1, t2, .LBB4_4
-; CHECK-ZICFILP-NEXT:  # %bb.6: # %space
+; CHECK-ZICFILP-NEXT:    beq t1, t2, .LBB4_5
+; CHECK-ZICFILP-NEXT:  # %bb.7: # %space
 ; CHECK-ZICFILP-NEXT:    #APP
 ; CHECK-ZICFILP-NEXT:    .zero 1048576
 ; CHECK-ZICFILP-NEXT:    #NO_APP
-; CHECK-ZICFILP-NEXT:  # %bb.7: # %space
+; CHECK-ZICFILP-NEXT:  # %bb.8: # %space
 ; CHECK-ZICFILP-NEXT:    sd t2, 0(sp) # 8-byte Folded Spill
-; CHECK-ZICFILP-NEXT:    jump .LBB4_8, t2
+; CHECK-ZICFILP-NEXT:    jump .LBB4_1, t2
 entry:
   %ra = call i64 asm sideeffect "addi ra, x0, 1", "={ra}"()
   %t0 = call i64 asm sideeffect "addi t0, x0, 5", "={t0}"()

@@ -2056,6 +2056,9 @@ void AsmPrinter::emitDanglingPrefetchTargets() {
 /// EmitFunctionBody - This method emits the body and trailer for a
 /// function.
 void AsmPrinter::emitFunctionBody() {
+  // Renumber blocks for consistent output of labels.
+  MF->RenumberBlocks();
+
   emitFunctionHeader();
 
   // Emit target-specific gunk before the function body.
@@ -2068,7 +2071,8 @@ void AsmPrinter::emitFunctionBody() {
       OwnedMDT = std::make_unique<MachineDominatorTree>();
       OwnedMDT->recalculate(*MF);
       MDT = OwnedMDT.get();
-    }
+    } else
+      MDT->updateBlockNumbers(); // We renumbered the function above.
 
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
     MLI = GetMLI(*MF);

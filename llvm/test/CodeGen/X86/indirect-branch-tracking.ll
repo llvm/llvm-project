@@ -132,7 +132,7 @@ define i32 @test4() {
 ; ALL-LABEL:   test4
 ; X86_64:      endbr64
 ; X86:         endbr32
-; ALL:         .LBB3_3:
+; ALL:         .LBB3_2:
 ; X86_64-NEXT: endbr64
 ; X86-NEXT:    endbr32
   %fp = tail call ptr @llvm.frameaddress(i32 0)

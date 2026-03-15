@@ -21,11 +21,11 @@ define i64 @andnot_rotl_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    jne .LBB0_1
-; X86-NOBMI-NEXT:  # %bb.2:
+; X86-NOBMI-NEXT:    jne .LBB0_2
+; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    jmp .LBB0_3
-; X86-NOBMI-NEXT:  .LBB0_1:
+; X86-NOBMI-NEXT:  .LBB0_2:
 ; X86-NOBMI-NEXT:    movl %esi, %edx
 ; X86-NOBMI-NEXT:    movl %eax, %esi
 ; X86-NOBMI-NEXT:  .LBB0_3:
@@ -47,11 +47,11 @@ define i64 @andnot_rotl_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    testb $32, %cl
-; X86-BMI-NEXT:    jne .LBB0_1
-; X86-BMI-NEXT:  # %bb.2:
+; X86-BMI-NEXT:    jne .LBB0_2
+; X86-BMI-NEXT:  # %bb.1:
 ; X86-BMI-NEXT:    movl %eax, %esi
 ; X86-BMI-NEXT:    jmp .LBB0_3
-; X86-BMI-NEXT:  .LBB0_1:
+; X86-BMI-NEXT:  .LBB0_2:
 ; X86-BMI-NEXT:    movl %edx, %esi
 ; X86-BMI-NEXT:    movl %eax, %edx
 ; X86-BMI-NEXT:  .LBB0_3:
@@ -202,11 +202,11 @@ define i64 @andnot_rotl_i64_multiuse_rot(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    notl %edx
 ; X86-NEXT:    notl %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    jne .LBB4_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB4_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    jmp .LBB4_3
-; X86-NEXT:  .LBB4_1:
+; X86-NEXT:  .LBB4_2:
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:  .LBB4_3:
@@ -262,11 +262,11 @@ define i64 @andnot_rotr_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    testb $32, %cl
-; X86-NOBMI-NEXT:    je .LBB5_1
-; X86-NOBMI-NEXT:  # %bb.2:
+; X86-NOBMI-NEXT:    je .LBB5_2
+; X86-NOBMI-NEXT:  # %bb.1:
 ; X86-NOBMI-NEXT:    movl %eax, %edx
 ; X86-NOBMI-NEXT:    jmp .LBB5_3
-; X86-NOBMI-NEXT:  .LBB5_1:
+; X86-NOBMI-NEXT:  .LBB5_2:
 ; X86-NOBMI-NEXT:    movl %esi, %edx
 ; X86-NOBMI-NEXT:    movl %eax, %esi
 ; X86-NOBMI-NEXT:  .LBB5_3:
@@ -288,11 +288,11 @@ define i64 @andnot_rotr_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    testb $32, %cl
-; X86-BMI-NEXT:    je .LBB5_1
-; X86-BMI-NEXT:  # %bb.2:
+; X86-BMI-NEXT:    je .LBB5_2
+; X86-BMI-NEXT:  # %bb.1:
 ; X86-BMI-NEXT:    movl %eax, %esi
 ; X86-BMI-NEXT:    jmp .LBB5_3
-; X86-BMI-NEXT:  .LBB5_1:
+; X86-BMI-NEXT:  .LBB5_2:
 ; X86-BMI-NEXT:    movl %edx, %esi
 ; X86-BMI-NEXT:    movl %eax, %edx
 ; X86-BMI-NEXT:  .LBB5_3:

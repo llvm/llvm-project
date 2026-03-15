@@ -21,7 +21,7 @@
 ; CHECK:         retl
 
 ;       No FPO directives in the catchpad for now.
-; CHECK: "?catch$2@?0??f@@YAXXZ@4HA":
+; CHECK: "?catch$3@?0??f@@YAXXZ@4HA":
 ; CHECK-NOT: .cv_fpo
 ; CHECK:         retl                            # CATCHRET
 ;   FIXME: This endproc is for the parent function. To get FPO data for

@@ -74,11 +74,11 @@ define i8 @main() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, do_not_optimize(%rip)
 ; CHECK-NEXT:    cmpb $0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    jns .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
+; CHECK-NEXT:    jns .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:  .LBB0_3: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50
 ; CHECK-NEXT:    movzbl 16(%rax), %eax

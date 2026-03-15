@@ -8,22 +8,22 @@ define i64 @foo(i64 %x) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shrl $15, %eax
 ; X86-NEXT:    cmpl $65509, %eax # imm = 0xFFE5
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2: # %if.end
+; X86-NEXT:    je .LBB0_2
+; X86-NEXT:  # %bb.1: # %if.end
 ; X86-NEXT:    movl $3, %eax
 ; X86-NEXT:    movl $2146598912, %edx # imm = 0x7FF28000
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_1: # %if.then
+; X86-NEXT:  .LBB0_2: # %if.then
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    shrq $47, %rdi
 ; X64-NEXT:    cmpl $65509, %edi # imm = 0xFFE5
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # %bb.2: # %if.end
+; X64-NEXT:    je .LBB0_2
+; X64-NEXT:  # %bb.1: # %if.end
 ; X64-NEXT:    movabsq $9219572124669181955, %rax # imm = 0x7FF2800000000003
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB0_1: # %if.then
+; X64-NEXT:  .LBB0_2: # %if.then
 entry:
   %shr.mask = and i64 %x, -140737488355328
   %cmp = icmp eq i64 %shr.mask, 9219572124669181952

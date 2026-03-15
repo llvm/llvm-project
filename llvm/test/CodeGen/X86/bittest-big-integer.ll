@@ -1567,30 +1567,30 @@ define i32 @blsr_u512(ptr %word) nounwind {
 ; X86-NEXT:    orl %ecx, %esi
 ; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    je .LBB26_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    je .LBB26_3
+; X86-NEXT:  # %bb.1: # %cond.false
 ; X86-NEXT:    testl %ebx, %ebx
 ; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    jne .LBB26_3
-; X86-NEXT:  # %bb.4: # %cond.false
+; X86-NEXT:    jne .LBB26_4
+; X86-NEXT:  # %bb.2: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %eax
 ; X86-NEXT:    jmp .LBB26_5
-; X86-NEXT:  .LBB26_1:
-; X86-NEXT:    movl $512, %ecx # imm = 0x200
-; X86-NEXT:    jmp .LBB26_41
 ; X86-NEXT:  .LBB26_3:
+; X86-NEXT:    movl $512, %ecx # imm = 0x200
+; X86-NEXT:    jmp .LBB26_36
+; X86-NEXT:  .LBB26_4:
 ; X86-NEXT:    rep bsfl %ebx, %eax
 ; X86-NEXT:  .LBB26_5: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB26_6
-; X86-NEXT:  # %bb.7: # %cond.false
+; X86-NEXT:    jne .LBB26_7
+; X86-NEXT:  # %bb.6: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    jmp .LBB26_8
-; X86-NEXT:  .LBB26_6:
+; X86-NEXT:  .LBB26_7:
 ; X86-NEXT:    rep bsfl %ecx, %ecx
 ; X86-NEXT:  .LBB26_8: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
@@ -1602,105 +1602,105 @@ define i32 @blsr_u512(ptr %word) nounwind {
 ; X86-NEXT:  .LBB26_10: # %cond.false
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; X86-NEXT:    jne .LBB26_11
-; X86-NEXT:  # %bb.12: # %cond.false
+; X86-NEXT:    jne .LBB26_13
+; X86-NEXT:  # %bb.11: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    je .LBB26_15
-; X86-NEXT:  .LBB26_14:
+; X86-NEXT:    je .LBB26_14
+; X86-NEXT:  .LBB26_12:
 ; X86-NEXT:    rep bsfl %edx, %edx
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-NEXT:    je .LBB26_17
-; X86-NEXT:    jmp .LBB26_18
-; X86-NEXT:  .LBB26_11:
+; X86-NEXT:    je .LBB26_15
+; X86-NEXT:    jmp .LBB26_16
+; X86-NEXT:  .LBB26_13:
 ; X86-NEXT:    rep bsfl %esi, %ecx
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB26_14
-; X86-NEXT:  .LBB26_15: # %cond.false
+; X86-NEXT:    jne .LBB26_12
+; X86-NEXT:  .LBB26_14: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %edx
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-NEXT:    jne .LBB26_18
-; X86-NEXT:  .LBB26_17: # %cond.false
+; X86-NEXT:    jne .LBB26_16
+; X86-NEXT:  .LBB26_15: # %cond.false
 ; X86-NEXT:    addl $64, %edx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:  .LBB26_18: # %cond.false
+; X86-NEXT:  .LBB26_16: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    jne .LBB26_20
-; X86-NEXT:  # %bb.19: # %cond.false
+; X86-NEXT:    jne .LBB26_18
+; X86-NEXT:  # %bb.17: # %cond.false
 ; X86-NEXT:    subl $-128, %ecx
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:  .LBB26_20: # %cond.false
+; X86-NEXT:  .LBB26_18: # %cond.false
 ; X86-NEXT:    addl $256, %eax # imm = 0x100
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; X86-NEXT:    jne .LBB26_21
-; X86-NEXT:  # %bb.22: # %cond.false
+; X86-NEXT:    jne .LBB26_20
+; X86-NEXT:  # %bb.19: # %cond.false
 ; X86-NEXT:    rep bsfl %edi, %ebx
 ; X86-NEXT:    addl $32, %ebx
-; X86-NEXT:    jmp .LBB26_23
-; X86-NEXT:  .LBB26_21:
+; X86-NEXT:    jmp .LBB26_21
+; X86-NEXT:  .LBB26_20:
 ; X86-NEXT:    rep bsfl %edx, %ebx
-; X86-NEXT:  .LBB26_23: # %cond.false
+; X86-NEXT:  .LBB26_21: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB26_24
-; X86-NEXT:  # %bb.25: # %cond.false
+; X86-NEXT:    jne .LBB26_23
+; X86-NEXT:  # %bb.22: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    orl %edi, %edx
-; X86-NEXT:    je .LBB26_27
-; X86-NEXT:    jmp .LBB26_28
-; X86-NEXT:  .LBB26_24:
+; X86-NEXT:    je .LBB26_24
+; X86-NEXT:    jmp .LBB26_25
+; X86-NEXT:  .LBB26_23:
 ; X86-NEXT:    rep bsfl %ecx, %ecx
 ; X86-NEXT:    orl %edi, %edx
-; X86-NEXT:    jne .LBB26_28
-; X86-NEXT:  .LBB26_27: # %cond.false
+; X86-NEXT:    jne .LBB26_25
+; X86-NEXT:  .LBB26_24: # %cond.false
 ; X86-NEXT:    addl $64, %ecx
 ; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:  .LBB26_28: # %cond.false
+; X86-NEXT:  .LBB26_25: # %cond.false
 ; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; X86-NEXT:    jne .LBB26_29
-; X86-NEXT:  # %bb.30: # %cond.false
+; X86-NEXT:    jne .LBB26_28
+; X86-NEXT:  # %bb.26: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %ecx
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    je .LBB26_33
-; X86-NEXT:  .LBB26_32:
+; X86-NEXT:    je .LBB26_29
+; X86-NEXT:  .LBB26_27:
 ; X86-NEXT:    rep bsfl %edx, %edx
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-NEXT:    je .LBB26_35
-; X86-NEXT:    jmp .LBB26_36
-; X86-NEXT:  .LBB26_29:
+; X86-NEXT:    je .LBB26_30
+; X86-NEXT:    jmp .LBB26_31
+; X86-NEXT:  .LBB26_28:
 ; X86-NEXT:    rep bsfl %esi, %ecx
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    jne .LBB26_32
-; X86-NEXT:  .LBB26_33: # %cond.false
+; X86-NEXT:    jne .LBB26_27
+; X86-NEXT:  .LBB26_29: # %cond.false
 ; X86-NEXT:    rep bsfl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    addl $32, %edx
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-NEXT:    jne .LBB26_36
-; X86-NEXT:  .LBB26_35: # %cond.false
+; X86-NEXT:    jne .LBB26_31
+; X86-NEXT:  .LBB26_30: # %cond.false
 ; X86-NEXT:    addl $64, %edx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:  .LBB26_36: # %cond.false
+; X86-NEXT:  .LBB26_31: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    movl %edi, %esi
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    jne .LBB26_38
-; X86-NEXT:  # %bb.37: # %cond.false
+; X86-NEXT:    jne .LBB26_33
+; X86-NEXT:  # %bb.32: # %cond.false
 ; X86-NEXT:    subl $-128, %ecx
 ; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:  .LBB26_38: # %cond.false
+; X86-NEXT:  .LBB26_33: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
@@ -1713,12 +1713,12 @@ define i32 @blsr_u512(ptr %word) nounwind {
 ; X86-NEXT:    orl %ecx, %esi
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    jne .LBB26_40
-; X86-NEXT:  # %bb.39: # %cond.false
+; X86-NEXT:    jne .LBB26_35
+; X86-NEXT:  # %bb.34: # %cond.false
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:  .LBB26_40: # %cond.false
+; X86-NEXT:  .LBB26_35: # %cond.false
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; X86-NEXT:  .LBB26_41: # %cond.end
+; X86-NEXT:  .LBB26_36: # %cond.end
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    shrl $3, %esi

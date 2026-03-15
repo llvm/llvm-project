@@ -137,11 +137,11 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK-NEXT:         .long   .Ltmp2@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp3@IMGREL
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
-; CHECK-NEXT:         .long   .LBB1_3@IMGREL
+; CHECK-NEXT:         .long   .LBB1_4@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp6@IMGREL
 ; CHECK-NEXT:         .long   .Ltmp7@IMGREL
 ; CHECK-NEXT:         .long   "?filt$0@0@main@@"@IMGREL
-; CHECK-NEXT:         .long   .LBB1_3@IMGREL
+; CHECK-NEXT:         .long   .LBB1_4@IMGREL
 ; CHECK-NEXT: .Llsda_end0:
 
 ; CHECK:         .text

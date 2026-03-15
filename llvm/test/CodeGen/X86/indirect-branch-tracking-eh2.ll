@@ -23,16 +23,16 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; NUM-NEXT:    movq $GCC_except_table0, -112(%rbp)
 ; NUM-NEXT:    movq %rbp, -104(%rbp)
 ; NUM-NEXT:    movq %rsp, -88(%rbp)
-; NUM-NEXT:    movq $.LBB0_9, -96(%rbp)
+; NUM-NEXT:    movq $.LBB0_3, -96(%rbp)
 ; NUM-NEXT:    leaq -152(%rbp), %rdi
 ; NUM-NEXT:    callq _Unwind_SjLj_Register@PLT
 ; NUM-NEXT:    movl $1, -144(%rbp)
-; NUM-NEXT:  .Ltmp0:
+; NUM-NEXT:  .Ltmp0: # EH_LABEL
 ; NUM-NEXT:    callq _Z3foov
-; NUM-NEXT:  .Ltmp1:
+; NUM-NEXT:  .Ltmp1: # EH_LABEL
 ; NUM-NEXT:  # %bb.1: # %invoke.cont
 ; NUM-NEXT:    movl $1, -44(%rbp)
-; NUM-NEXT:  .LBB0_7: # %return
+; NUM-NEXT:  .LBB0_2: # %return
 ; NUM-NEXT:    movl -44(%rbp), %ebx
 ; NUM-NEXT:    leaq -152(%rbp), %rdi
 ; NUM-NEXT:    callq _Unwind_SjLj_Unregister@PLT
@@ -45,26 +45,26 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; NUM-NEXT:    popq %r15
 ; NUM-NEXT:    popq %rbp
 ; NUM-NEXT:    retq
-; NUM-NEXT:  .LBB0_9:
+; NUM-NEXT:  .LBB0_3:
 ; NUM-NEXT:    endbr64
 ; NUM-NEXT:    movl -144(%rbp), %eax
 ; NUM-NEXT:    cmpl $1, %eax
-; NUM-NEXT:    jb .LBB0_10
-; NUM-NEXT:  # %bb.11:
+; NUM-NEXT:    jb .LBB0_5
+; NUM-NEXT:  # %bb.4:
 ; NUM-NEXT:    ud2
-; NUM-NEXT:  .LBB0_10:
+; NUM-NEXT:  .LBB0_5:
 ; NUM-NEXT:    leaq .LJTI0_0(%rip), %rcx
 ; NUM-NEXT:    jmpq *(%rcx,%rax,8)
-; NUM-NEXT:  .LBB0_2: # %lpad
-; NUM-NEXT:  .Ltmp2:
+; NUM-NEXT:  .LBB0_6: # %lpad
+; NUM-NEXT:  .Ltmp2: # EH_LABEL
 ; NUM-NEXT:    endbr64
 ; NUM-NEXT:    movl -140(%rbp), %ecx
 ; NUM-NEXT:    movl -136(%rbp), %eax
 ; NUM-NEXT:    movq %rcx, -56(%rbp)
 ; NUM-NEXT:    movl %eax, -64(%rbp)
 ; NUM-NEXT:    cmpl $2, %eax
-; NUM-NEXT:    jne .LBB0_4
-; NUM-NEXT:  # %bb.3: # %catch3
+; NUM-NEXT:    jne .LBB0_8
+; NUM-NEXT:  # %bb.7: # %catch3
 ; NUM-NEXT:    movq -56(%rbp), %rdi
 ; NUM-NEXT:    movl $-1, -144(%rbp)
 ; NUM-NEXT:    callq __cxa_begin_catch
@@ -72,11 +72,11 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; NUM-NEXT:    movl %eax, -60(%rbp)
 ; NUM-NEXT:    xorl %ecx, %ecx
 ; NUM-NEXT:    cmpl $5, %eax
-; NUM-NEXT:    jmp .LBB0_6
-; NUM-NEXT:  .LBB0_4: # %catch.fallthrough
+; NUM-NEXT:    jmp .LBB0_10
+; NUM-NEXT:  .LBB0_8: # %catch.fallthrough
 ; NUM-NEXT:    cmpl $1, %eax
-; NUM-NEXT:    jne .LBB0_8
-; NUM-NEXT:  # %bb.5: # %catch
+; NUM-NEXT:    jne .LBB0_11
+; NUM-NEXT:  # %bb.9: # %catch
 ; NUM-NEXT:    movq -56(%rbp), %rdi
 ; NUM-NEXT:    movl $-1, -144(%rbp)
 ; NUM-NEXT:    callq __cxa_begin_catch
@@ -84,13 +84,13 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; NUM-NEXT:    movb %al, -45(%rbp)
 ; NUM-NEXT:    xorl %ecx, %ecx
 ; NUM-NEXT:    cmpb $3, %al
-; NUM-NEXT:  .LBB0_6: # %return
+; NUM-NEXT:  .LBB0_10: # %return
 ; NUM-NEXT:    setne %cl
 ; NUM-NEXT:    movl %ecx, -44(%rbp)
 ; NUM-NEXT:    movl $-1, -144(%rbp)
 ; NUM-NEXT:    callq __cxa_end_catch
-; NUM-NEXT:    jmp .LBB0_7
-; NUM-NEXT:  .LBB0_8: # %eh.resume
+; NUM-NEXT:    jmp .LBB0_2
+; NUM-NEXT:  .LBB0_11: # %eh.resume
 ; NUM-NEXT:    movl $-1, -144(%rbp)
 ;
 ; SJLJ-LABEL: main:
@@ -109,16 +109,16 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; SJLJ-NEXT:    movq $GCC_except_table0, -112(%rbp)
 ; SJLJ-NEXT:    movq %rbp, -104(%rbp)
 ; SJLJ-NEXT:    movq %rsp, -88(%rbp)
-; SJLJ-NEXT:    movq $.LBB0_9, -96(%rbp)
+; SJLJ-NEXT:    movq $.LBB0_3, -96(%rbp)
 ; SJLJ-NEXT:    leaq -152(%rbp), %rdi
 ; SJLJ-NEXT:    callq _Unwind_SjLj_Register@PLT
 ; SJLJ-NEXT:    movl $1, -144(%rbp)
-; SJLJ-NEXT:  .Ltmp0:
+; SJLJ-NEXT:  .Ltmp0: # EH_LABEL
 ; SJLJ-NEXT:    callq _Z3foov
-; SJLJ-NEXT:  .Ltmp1:
+; SJLJ-NEXT:  .Ltmp1: # EH_LABEL
 ; SJLJ-NEXT:  # %bb.1: # %invoke.cont
 ; SJLJ-NEXT:    movl $1, -44(%rbp)
-; SJLJ-NEXT:  .LBB0_7: # %return
+; SJLJ-NEXT:  .LBB0_2: # %return
 ; SJLJ-NEXT:    movl -44(%rbp), %ebx
 ; SJLJ-NEXT:    leaq -152(%rbp), %rdi
 ; SJLJ-NEXT:    callq _Unwind_SjLj_Unregister@PLT
@@ -131,26 +131,26 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; SJLJ-NEXT:    popq %r15
 ; SJLJ-NEXT:    popq %rbp
 ; SJLJ-NEXT:    retq
-; SJLJ-NEXT:  .LBB0_9:
+; SJLJ-NEXT:  .LBB0_3:
 ; SJLJ-NEXT:    endbr64
 ; SJLJ-NEXT:    movl -144(%rbp), %eax
 ; SJLJ-NEXT:    cmpl $1, %eax
-; SJLJ-NEXT:    jb .LBB0_10
-; SJLJ-NEXT:  # %bb.11:
+; SJLJ-NEXT:    jb .LBB0_5
+; SJLJ-NEXT:  # %bb.4:
 ; SJLJ-NEXT:    ud2
-; SJLJ-NEXT:  .LBB0_10:
+; SJLJ-NEXT:  .LBB0_5:
 ; SJLJ-NEXT:    leaq .LJTI0_0(%rip), %rcx
 ; SJLJ-NEXT:    jmpq *(%rcx,%rax,8)
-; SJLJ-NEXT:  .LBB0_2: # %lpad
-; SJLJ-NEXT:  .Ltmp2:
+; SJLJ-NEXT:  .LBB0_6: # %lpad
+; SJLJ-NEXT:  .Ltmp2: # EH_LABEL
 ; SJLJ-NEXT:    endbr64
 ; SJLJ-NEXT:    movl -140(%rbp), %ecx
 ; SJLJ-NEXT:    movl -136(%rbp), %eax
 ; SJLJ-NEXT:    movq %rcx, -56(%rbp)
 ; SJLJ-NEXT:    movl %eax, -64(%rbp)
 ; SJLJ-NEXT:    cmpl $2, %eax
-; SJLJ-NEXT:    jne .LBB0_4
-; SJLJ-NEXT:  # %bb.3: # %catch3
+; SJLJ-NEXT:    jne .LBB0_8
+; SJLJ-NEXT:  # %bb.7: # %catch3
 ; SJLJ-NEXT:    movq -56(%rbp), %rdi
 ; SJLJ-NEXT:    movl $-1, -144(%rbp)
 ; SJLJ-NEXT:    callq __cxa_begin_catch
@@ -158,11 +158,11 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; SJLJ-NEXT:    movl %eax, -60(%rbp)
 ; SJLJ-NEXT:    xorl %ecx, %ecx
 ; SJLJ-NEXT:    cmpl $5, %eax
-; SJLJ-NEXT:    jmp .LBB0_6
-; SJLJ-NEXT:  .LBB0_4: # %catch.fallthrough
+; SJLJ-NEXT:    jmp .LBB0_10
+; SJLJ-NEXT:  .LBB0_8: # %catch.fallthrough
 ; SJLJ-NEXT:    cmpl $1, %eax
-; SJLJ-NEXT:    jne .LBB0_8
-; SJLJ-NEXT:  # %bb.5: # %catch
+; SJLJ-NEXT:    jne .LBB0_11
+; SJLJ-NEXT:  # %bb.9: # %catch
 ; SJLJ-NEXT:    movq -56(%rbp), %rdi
 ; SJLJ-NEXT:    movl $-1, -144(%rbp)
 ; SJLJ-NEXT:    callq __cxa_begin_catch
@@ -170,13 +170,13 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; SJLJ-NEXT:    movb %al, -45(%rbp)
 ; SJLJ-NEXT:    xorl %ecx, %ecx
 ; SJLJ-NEXT:    cmpb $3, %al
-; SJLJ-NEXT:  .LBB0_6: # %return
+; SJLJ-NEXT:  .LBB0_10: # %return
 ; SJLJ-NEXT:    setne %cl
 ; SJLJ-NEXT:    movl %ecx, -44(%rbp)
 ; SJLJ-NEXT:    movl $-1, -144(%rbp)
 ; SJLJ-NEXT:    callq __cxa_end_catch
-; SJLJ-NEXT:    jmp .LBB0_7
-; SJLJ-NEXT:  .LBB0_8: # %eh.resume
+; SJLJ-NEXT:    jmp .LBB0_2
+; SJLJ-NEXT:  .LBB0_11: # %eh.resume
 ; SJLJ-NEXT:    movl $-1, -144(%rbp)
 entry:
   %retval = alloca i32, align 4

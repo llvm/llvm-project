@@ -26,7 +26,7 @@ b2:                                           ; preds = %b0
 ; LINUX-SECTIONS1:  foo:
 ; LINUX-SECTIONS1:  # %bb.0:             # %b0
 ; LINUX-SECTIONS1:    jne foo.cold
-; LINUX-SECTIONS1:  # %bb.2:             # %b2
+; LINUX-SECTIONS1:  # %bb.1:             # %b2
 ; LINUX-SECTIONS1:    retq
 ; LINUX-SECTIONS1:    .section .text.split.foo,"ax",@progbits
 ; LINUX-SECTIONS1:  foo.cold:            # %b1

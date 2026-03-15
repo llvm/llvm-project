@@ -51,14 +51,14 @@ define void @h(float %i) {
 ; CHECK-NEXT:    movl %ecx, 12(%esi)
 ; CHECK-NEXT:    fildl 12(%esi)
 ; CHECK-NEXT:    movl _c, %edx
-; CHECK-NEXT:    jmp LBB0_3
+; CHECK-NEXT:    jmp LBB0_4
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_5: # %for.inc
-; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:  LBB0_3: # %for.inc
+; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    fxch %st(5)
 ; CHECK-NEXT:    fadd %st(4), %st
 ; CHECK-NEXT:    fxch %st(5)
-; CHECK-NEXT:  LBB0_3: # %for.cond1
+; CHECK-NEXT:  LBB0_4: # %for.cond1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fld %st(5)
 ; CHECK-NEXT:    fmul %st(4), %st
@@ -71,12 +71,12 @@ define void @h(float %i) {
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jbe LBB0_5
-; CHECK-NEXT:  # %bb.4: # %if.then
-; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    jbe LBB0_3
+; CHECK-NEXT:  # %bb.5: # %if.then
+; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    flds 8(%esi) # 4-byte Folded Reload
 ; CHECK-NEXT:    fstps (%edx,%ecx,4)
-; CHECK-NEXT:    jmp LBB0_5
+; CHECK-NEXT:    jmp LBB0_3
 entry:
   %0 = load i32, ptr @a, align 4
   %1 = alloca i8, i32 %0, align 16

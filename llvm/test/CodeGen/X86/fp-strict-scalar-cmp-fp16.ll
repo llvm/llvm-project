@@ -1757,11 +1757,11 @@ define void @foo(half %0, half %1) #0 {
 ; SSE2-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
 ; SSE2-NEXT:    ucomiss (%rsp), %xmm0 # 4-byte Folded Reload
-; SSE2-NEXT:    jbe .LBB28_1
-; SSE2-NEXT:  # %bb.2:
+; SSE2-NEXT:    jbe .LBB28_2
+; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    jmp bar@PLT # TAILCALL
-; SSE2-NEXT:  .LBB28_1:
+; SSE2-NEXT:  .LBB28_2:
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;

@@ -365,11 +365,11 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE2_64-LABEL: u64_to_f:
 ; SSE2_64:       # %bb.0:
 ; SSE2_64-NEXT:    testq %rdi, %rdi
-; SSE2_64-NEXT:    js .LBB6_1
-; SSE2_64-NEXT:  # %bb.2:
+; SSE2_64-NEXT:    js .LBB6_2
+; SSE2_64-NEXT:  # %bb.1:
 ; SSE2_64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE2_64-NEXT:    retq
-; SSE2_64-NEXT:  .LBB6_1:
+; SSE2_64-NEXT:  .LBB6_2:
 ; SSE2_64-NEXT:    movq %rdi, %rax
 ; SSE2_64-NEXT:    shrq %rax
 ; SSE2_64-NEXT:    andl $1, %edi

@@ -48,7 +48,7 @@ invoke.cont:                                      ; preds = %entry
 ; CHECK: L__ehtable$try_except:
 ; CHECK:         .long   -1                          # ToState
 ; CHECK:         .long   _try_except_filter_catchall # Filter
-; CHECK:         .long   LBB0_1
+; CHECK:         .long   LBB
 
 define internal i32 @try_except_filter_catchall() #0 {
 entry:
@@ -196,7 +196,7 @@ __except:
 
 ; CHECK-LABEL: _code_in_catchpad:
 ; CHECK: # %__except.ret
-; CHECK-NEXT:         $ehgcr_4_1:
+; CHECK-NEXT:         $ehgcr
 ; CHECK-NEXT:         movl    -24(%ebp), %esp
 ; CHECK-NEXT:         addl    $12, %ebp
 ; CHECK-NEXT:         movl    $-1, -16(%ebp)

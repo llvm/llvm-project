@@ -203,15 +203,15 @@ define i64 @test_i64_smax(i64 %a) nounwind {
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    testl %edx, %edx
 ; X86-NOBMI-NEXT:    movl $0, %eax
-; X86-NOBMI-NEXT:    jns .LBB6_1
-; X86-NOBMI-NEXT:  # %bb.2:
-; X86-NOBMI-NEXT:    jle .LBB6_3
-; X86-NOBMI-NEXT:  .LBB6_4:
+; X86-NOBMI-NEXT:    jns .LBB6_3
+; X86-NOBMI-NEXT:  # %bb.1:
+; X86-NOBMI-NEXT:    jle .LBB6_4
+; X86-NOBMI-NEXT:  .LBB6_2:
 ; X86-NOBMI-NEXT:    retl
-; X86-NOBMI-NEXT:  .LBB6_1:
-; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI-NEXT:    jg .LBB6_4
 ; X86-NOBMI-NEXT:  .LBB6_3:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    jg .LBB6_2
+; X86-NOBMI-NEXT:  .LBB6_4:
 ; X86-NOBMI-NEXT:    xorl %edx, %edx
 ; X86-NOBMI-NEXT:    retl
   %r = call i64 @llvm.smax.i64(i64 %a, i64 0)

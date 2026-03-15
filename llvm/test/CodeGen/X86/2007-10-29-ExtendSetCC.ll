@@ -29,13 +29,13 @@ define signext i16 @t_freeze(ptr %p)   {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movswl (%ecx), %eax
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    js .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %cond_next
+; CHECK-NEXT:    js .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %cond_next
 ; CHECK-NEXT:    andl $15, %eax
 ; CHECK-NEXT:    movl %eax, (%ecx)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_1: # %cond_true
+; CHECK-NEXT:  .LBB1_2: # %cond_true
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retl
 entry:

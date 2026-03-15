@@ -628,12 +628,12 @@ define i64 @load_fold_sdiv2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB35_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB35_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB35_1:
+; CHECK-O3-NEXT:  .LBB35_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -659,12 +659,12 @@ define i64 @load_fold_sdiv3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB36_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB36_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rcx
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB36_1:
+; CHECK-O3-NEXT:  .LBB36_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -714,12 +714,12 @@ define i64 @load_fold_udiv2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB38_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB38_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB38_1:
+; CHECK-O3-NEXT:  .LBB38_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -746,12 +746,12 @@ define i64 @load_fold_udiv3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB39_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB39_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rcx
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB39_1:
+; CHECK-O3-NEXT:  .LBB39_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -811,13 +811,13 @@ define i64 @load_fold_srem2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB41_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB41_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB41_1:
+; CHECK-O3-NEXT:  .LBB41_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -844,13 +844,13 @@ define i64 @load_fold_srem3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB42_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB42_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rcx
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB42_1:
+; CHECK-O3-NEXT:  .LBB42_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -907,13 +907,13 @@ define i64 @load_fold_urem2(ptr %p, i64 %v2) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB44_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB44_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB44_1:
+; CHECK-O3-NEXT:  .LBB44_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -941,13 +941,13 @@ define i64 @load_fold_urem3(ptr %p1, ptr %p2) {
 ; CHECK-O3-NEXT:    movq %rax, %rdx
 ; CHECK-O3-NEXT:    orq %rcx, %rdx
 ; CHECK-O3-NEXT:    shrq $32, %rdx
-; CHECK-O3-NEXT:    je .LBB45_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB45_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rcx
 ; CHECK-O3-NEXT:    movq %rdx, %rax
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB45_1:
+; CHECK-O3-NEXT:  .LBB45_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %ecx
@@ -1464,13 +1464,13 @@ define void @rmw_fold_sdiv2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB74_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB74_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB74_1:
+; CHECK-O3-NEXT:  .LBB74_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1516,13 +1516,13 @@ define void @rmw_fold_udiv2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB76_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB76_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    movq %rax, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB76_1:
+; CHECK-O3-NEXT:  .LBB76_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1594,13 +1594,13 @@ define void @rmw_fold_srem2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB78_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB78_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    cqto
 ; CHECK-O3-NEXT:    idivq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB78_1:
+; CHECK-O3-NEXT:  .LBB78_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi
@@ -1662,13 +1662,13 @@ define void @rmw_fold_urem2(ptr %p, i64 %v) {
 ; CHECK-O3-NEXT:    movq %rax, %rcx
 ; CHECK-O3-NEXT:    orq %rsi, %rcx
 ; CHECK-O3-NEXT:    shrq $32, %rcx
-; CHECK-O3-NEXT:    je .LBB80_1
-; CHECK-O3-NEXT:  # %bb.2:
+; CHECK-O3-NEXT:    je .LBB80_2
+; CHECK-O3-NEXT:  # %bb.1:
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divq %rsi
 ; CHECK-O3-NEXT:    movq %rdx, (%rdi)
 ; CHECK-O3-NEXT:    retq
-; CHECK-O3-NEXT:  .LBB80_1:
+; CHECK-O3-NEXT:  .LBB80_2:
 ; CHECK-O3-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-O3-NEXT:    xorl %edx, %edx
 ; CHECK-O3-NEXT:    divl %esi

@@ -70,11 +70,11 @@ define i1 @test4(i64 %a, i32 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB3_1
-; CHECK-NEXT:  # %bb.2: # %lor.end
+; CHECK-NEXT:    je .LBB3_2
+; CHECK-NEXT:  # %bb.1: # %lor.end
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_1: # %lor.rhs
+; CHECK-NEXT:  .LBB3_2: # %lor.rhs
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq

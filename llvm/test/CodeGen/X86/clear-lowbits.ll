@@ -1665,11 +1665,11 @@ define i64 @oneuse64(i64 %val, i64 %numlowbits, ptr %escape) nounwind {
 ; X86-NOBMI2-NEXT:    shll %cl, %edi
 ; X86-NOBMI2-NEXT:    xorl %eax, %eax
 ; X86-NOBMI2-NEXT:    testb $32, %cl
-; X86-NOBMI2-NEXT:    jne .LBB37_1
-; X86-NOBMI2-NEXT:  # %bb.2:
+; X86-NOBMI2-NEXT:    jne .LBB37_2
+; X86-NOBMI2-NEXT:  # %bb.1:
 ; X86-NOBMI2-NEXT:    movl %edi, %eax
 ; X86-NOBMI2-NEXT:    jmp .LBB37_3
-; X86-NOBMI2-NEXT:  .LBB37_1:
+; X86-NOBMI2-NEXT:  .LBB37_2:
 ; X86-NOBMI2-NEXT:    movl %edi, %edx
 ; X86-NOBMI2-NEXT:  .LBB37_3:
 ; X86-NOBMI2-NEXT:    movl %edx, 4(%esi)
@@ -1690,11 +1690,11 @@ define i64 @oneuse64(i64 %val, i64 %numlowbits, ptr %escape) nounwind {
 ; X86-BMI2-NEXT:    shlxl %ebx, %edx, %esi
 ; X86-BMI2-NEXT:    xorl %eax, %eax
 ; X86-BMI2-NEXT:    testb $32, %bl
-; X86-BMI2-NEXT:    jne .LBB37_1
-; X86-BMI2-NEXT:  # %bb.2:
+; X86-BMI2-NEXT:    jne .LBB37_2
+; X86-BMI2-NEXT:  # %bb.1:
 ; X86-BMI2-NEXT:    movl %esi, %eax
 ; X86-BMI2-NEXT:    jmp .LBB37_3
-; X86-BMI2-NEXT:  .LBB37_1:
+; X86-BMI2-NEXT:  .LBB37_2:
 ; X86-BMI2-NEXT:    movl %esi, %edx
 ; X86-BMI2-NEXT:  .LBB37_3:
 ; X86-BMI2-NEXT:    movl %edx, 4(%ecx)

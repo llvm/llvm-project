@@ -31,12 +31,12 @@ b3:
 ; CHECK:      bar:
 ; CHECK:      # %bb.0:        # %b0
 ; CHECK:        je .LBB0_2
-; CHECK-NEXT: # %bb.4:        # %b1
+; CHECK-NEXT: # %bb.1:        # %b1
 ; CHECK:        jmpq *%rax
 ; CHECK-NEXT: .Ltmp0:         # Block address taken
 ; CHECK-NEXT: .LBB0_2:        # %b2
 ; CHECK:        retq
-; CHECK-NEXT: # %bb.1:        # %b1
+; CHECK-NEXT: # %bb.3:        # %b1
 ; CHECK:        jmpq *%rax
 ; CHECK:        .section    .text.split.bar,"ax",@progbits
 ; CHECK:      bar.cold:       # %b3

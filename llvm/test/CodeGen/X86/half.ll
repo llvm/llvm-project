@@ -362,11 +362,11 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; CHECK-LIBCALL-NEXT:    pushq %rbx
 ; CHECK-LIBCALL-NEXT:    movq %rsi, %rbx
 ; CHECK-LIBCALL-NEXT:    testq %rdi, %rdi
-; CHECK-LIBCALL-NEXT:    js .LBB10_1
-; CHECK-LIBCALL-NEXT:  # %bb.2:
+; CHECK-LIBCALL-NEXT:    js .LBB10_2
+; CHECK-LIBCALL-NEXT:  # %bb.1:
 ; CHECK-LIBCALL-NEXT:    cvtsi2ss %rdi, %xmm0
 ; CHECK-LIBCALL-NEXT:    jmp .LBB10_3
-; CHECK-LIBCALL-NEXT:  .LBB10_1:
+; CHECK-LIBCALL-NEXT:  .LBB10_2:
 ; CHECK-LIBCALL-NEXT:    movq %rdi, %rax
 ; CHECK-LIBCALL-NEXT:    shrq %rax
 ; CHECK-LIBCALL-NEXT:    andl $1, %edi
@@ -383,11 +383,11 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; BWON-F16C-LABEL: test_uitofp_i64:
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    testq %rdi, %rdi
-; BWON-F16C-NEXT:    js .LBB10_1
-; BWON-F16C-NEXT:  # %bb.2:
+; BWON-F16C-NEXT:    js .LBB10_2
+; BWON-F16C-NEXT:  # %bb.1:
 ; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; BWON-F16C-NEXT:    jmp .LBB10_3
-; BWON-F16C-NEXT:  .LBB10_1:
+; BWON-F16C-NEXT:  .LBB10_2:
 ; BWON-F16C-NEXT:    movq %rdi, %rax
 ; BWON-F16C-NEXT:    shrq %rax
 ; BWON-F16C-NEXT:    andl $1, %edi
@@ -1692,11 +1692,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_1
-; CHECK-I686-NEXT:  # %bb.2:
+; CHECK-I686-NEXT:    ja .LBB26_2
+; CHECK-I686-NEXT:  # %bb.1:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_3
-; CHECK-I686-NEXT:  .LBB26_1:
+; CHECK-I686-NEXT:  .LBB26_2:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_3:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1713,11 +1713,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_4
-; CHECK-I686-NEXT:  # %bb.5:
+; CHECK-I686-NEXT:    ja .LBB26_5
+; CHECK-I686-NEXT:  # %bb.4:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_6
-; CHECK-I686-NEXT:  .LBB26_4:
+; CHECK-I686-NEXT:  .LBB26_5:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_6:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1770,11 +1770,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_7
-; CHECK-I686-NEXT:  # %bb.8:
+; CHECK-I686-NEXT:    ja .LBB26_8
+; CHECK-I686-NEXT:  # %bb.7:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_9
-; CHECK-I686-NEXT:  .LBB26_7:
+; CHECK-I686-NEXT:  .LBB26_8:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_9:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1791,11 +1791,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_10
-; CHECK-I686-NEXT:  # %bb.11:
+; CHECK-I686-NEXT:    ja .LBB26_11
+; CHECK-I686-NEXT:  # %bb.10:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_12
-; CHECK-I686-NEXT:  .LBB26_10:
+; CHECK-I686-NEXT:  .LBB26_11:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_12:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1848,11 +1848,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_13
-; CHECK-I686-NEXT:  # %bb.14:
+; CHECK-I686-NEXT:    ja .LBB26_14
+; CHECK-I686-NEXT:  # %bb.13:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_15
-; CHECK-I686-NEXT:  .LBB26_13:
+; CHECK-I686-NEXT:  .LBB26_14:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_15:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1869,11 +1869,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_16
-; CHECK-I686-NEXT:  # %bb.17:
+; CHECK-I686-NEXT:    ja .LBB26_17
+; CHECK-I686-NEXT:  # %bb.16:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_18
-; CHECK-I686-NEXT:  .LBB26_16:
+; CHECK-I686-NEXT:  .LBB26_17:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_18:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1926,11 +1926,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_19
-; CHECK-I686-NEXT:  # %bb.20:
+; CHECK-I686-NEXT:    ja .LBB26_20
+; CHECK-I686-NEXT:  # %bb.19:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_21
-; CHECK-I686-NEXT:  .LBB26_19:
+; CHECK-I686-NEXT:  .LBB26_20:
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_21:
 ; CHECK-I686-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -1947,11 +1947,11 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    ucomiss {{[0-9]+}}(%esp), %xmm0
-; CHECK-I686-NEXT:    ja .LBB26_22
-; CHECK-I686-NEXT:  # %bb.23:
+; CHECK-I686-NEXT:    ja .LBB26_23
+; CHECK-I686-NEXT:  # %bb.22:
 ; CHECK-I686-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:    jmp .LBB26_24
-; CHECK-I686-NEXT:  .LBB26_22:
+; CHECK-I686-NEXT:  .LBB26_23:
 ; CHECK-I686-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-I686-NEXT:  .LBB26_24:
 ; CHECK-I686-NEXT:    movd %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill

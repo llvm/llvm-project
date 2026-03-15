@@ -23,29 +23,29 @@ define noundef i32 @test(i1 %tobool1.not, i32 %sh.012, i1 %cmp, i64 %sh_prom, i6
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_4: # %if.end
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_1: # %if.end
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    orl %ecx, %ebx
 ; CHECK-NEXT:    orl %eax, %ebp
 ; CHECK-NEXT:    movl %ebx, %esi
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:  .LBB0_1: # %for.body
+; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %dh
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %if.end
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.3: # %if.end
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    movl $0, %ebp
-; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:  # %bb.3: # %if.end
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.4: # %if.end
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
-; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_1
 entry:
   br label %for.body
 

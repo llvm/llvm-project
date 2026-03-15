@@ -5,11 +5,11 @@ define <3 x i1> @repro(i1 %cond) {
 ; CHECK-LABEL: repro:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    kxorw %k0, %k0, %k0
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k0
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    kshiftrb $1, %k0, %k1

@@ -15,13 +15,13 @@ define i32 @div32(i32 %a, i32 %b) {
 ; ATOM-NEXT:    movl %edi, %eax
 ; ATOM-NEXT:    orl %esi, %eax
 ; ATOM-NEXT:    testl $-256, %eax
-; ATOM-NEXT:    je .LBB0_1
-; ATOM-NEXT:  # %bb.2:
+; ATOM-NEXT:    je .LBB0_2
+; ATOM-NEXT:  # %bb.1:
 ; ATOM-NEXT:    movl %edi, %eax
 ; ATOM-NEXT:    cltd
 ; ATOM-NEXT:    idivl %esi
 ; ATOM-NEXT:    retq
-; ATOM-NEXT:  .LBB0_1:
+; ATOM-NEXT:  .LBB0_2:
 ; ATOM-NEXT:    movzbl %dil, %eax
 ; ATOM-NEXT:    divb %sil
 ; ATOM-NEXT:    movzbl %al, %eax
@@ -53,12 +53,12 @@ define i64 @div64(i64 %a, i64 %b) {
 ; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    orq %rsi, %rcx
 ; ATOM-NEXT:    shrq $32, %rcx
-; ATOM-NEXT:    je .LBB1_1
-; ATOM-NEXT:  # %bb.2:
+; ATOM-NEXT:    je .LBB1_2
+; ATOM-NEXT:  # %bb.1:
 ; ATOM-NEXT:    cqto
 ; ATOM-NEXT:    idivq %rsi
 ; ATOM-NEXT:    retq
-; ATOM-NEXT:  .LBB1_1:
+; ATOM-NEXT:  .LBB1_2:
 ; ATOM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ATOM-NEXT:    xorl %edx, %edx
 ; ATOM-NEXT:    divl %esi
@@ -71,12 +71,12 @@ define i64 @div64(i64 %a, i64 %b) {
 ; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    orq %rsi, %rcx
 ; X64-NEXT:    shrq $32, %rcx
-; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    je .LBB1_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB1_1:
+; X64-NEXT:  .LBB1_2:
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %esi
@@ -89,12 +89,12 @@ define i64 @div64(i64 %a, i64 %b) {
 ; SLM-NEXT:    movq %rdi, %rax
 ; SLM-NEXT:    orq %rsi, %rcx
 ; SLM-NEXT:    shrq $32, %rcx
-; SLM-NEXT:    je .LBB1_1
-; SLM-NEXT:  # %bb.2:
+; SLM-NEXT:    je .LBB1_2
+; SLM-NEXT:  # %bb.1:
 ; SLM-NEXT:    cqto
 ; SLM-NEXT:    idivq %rsi
 ; SLM-NEXT:    retq
-; SLM-NEXT:  .LBB1_1:
+; SLM-NEXT:  .LBB1_2:
 ; SLM-NEXT:    xorl %edx, %edx
 ; SLM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SLM-NEXT:    divl %esi
@@ -107,12 +107,12 @@ define i64 @div64(i64 %a, i64 %b) {
 ; SKL-NEXT:    movq %rdi, %rcx
 ; SKL-NEXT:    orq %rsi, %rcx
 ; SKL-NEXT:    shrq $32, %rcx
-; SKL-NEXT:    je .LBB1_1
-; SKL-NEXT:  # %bb.2:
+; SKL-NEXT:    je .LBB1_2
+; SKL-NEXT:  # %bb.1:
 ; SKL-NEXT:    cqto
 ; SKL-NEXT:    idivq %rsi
 ; SKL-NEXT:    retq
-; SKL-NEXT:  .LBB1_1:
+; SKL-NEXT:  .LBB1_2:
 ; SKL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SKL-NEXT:    xorl %edx, %edx
 ; SKL-NEXT:    divl %esi
@@ -183,12 +183,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; ATOM-NEXT:    movq %rdi, %rax
 ; ATOM-NEXT:    orq %rsi, %rcx
 ; ATOM-NEXT:    shrq $32, %rcx
-; ATOM-NEXT:    je .LBB4_1
-; ATOM-NEXT:  # %bb.2:
+; ATOM-NEXT:    je .LBB4_2
+; ATOM-NEXT:  # %bb.1:
 ; ATOM-NEXT:    cqto
 ; ATOM-NEXT:    idivq %rsi
 ; ATOM-NEXT:    retq
-; ATOM-NEXT:  .LBB4_1:
+; ATOM-NEXT:  .LBB4_2:
 ; ATOM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; ATOM-NEXT:    xorl %edx, %edx
 ; ATOM-NEXT:    divl %esi
@@ -201,12 +201,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; X64-NEXT:    movq %rdi, %rcx
 ; X64-NEXT:    orq %rsi, %rcx
 ; X64-NEXT:    shrq $32, %rcx
-; X64-NEXT:    je .LBB4_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    je .LBB4_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB4_1:
+; X64-NEXT:  .LBB4_2:
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %esi
@@ -219,12 +219,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; SLM-NEXT:    movq %rdi, %rax
 ; SLM-NEXT:    orq %rsi, %rcx
 ; SLM-NEXT:    shrq $32, %rcx
-; SLM-NEXT:    je .LBB4_1
-; SLM-NEXT:  # %bb.2:
+; SLM-NEXT:    je .LBB4_2
+; SLM-NEXT:  # %bb.1:
 ; SLM-NEXT:    cqto
 ; SLM-NEXT:    idivq %rsi
 ; SLM-NEXT:    retq
-; SLM-NEXT:  .LBB4_1:
+; SLM-NEXT:  .LBB4_2:
 ; SLM-NEXT:    xorl %edx, %edx
 ; SLM-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SLM-NEXT:    divl %esi
@@ -237,12 +237,12 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 ; SKL-NEXT:    movq %rdi, %rcx
 ; SKL-NEXT:    orq %rsi, %rcx
 ; SKL-NEXT:    shrq $32, %rcx
-; SKL-NEXT:    je .LBB4_1
-; SKL-NEXT:  # %bb.2:
+; SKL-NEXT:    je .LBB4_2
+; SKL-NEXT:  # %bb.1:
 ; SKL-NEXT:    cqto
 ; SKL-NEXT:    idivq %rsi
 ; SKL-NEXT:    retq
-; SKL-NEXT:  .LBB4_1:
+; SKL-NEXT:  .LBB4_2:
 ; SKL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SKL-NEXT:    xorl %edx, %edx
 ; SKL-NEXT:    divl %esi

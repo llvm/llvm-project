@@ -63,20 +63,20 @@ define void @test2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB1_1
-; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    jae .LBB1_2
+; X86-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB1_1: # %bb
+; X86-NEXT:  .LBB1_2: # %bb
 ; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2b:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB1_1
-; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    jae .LBB1_2
+; X64-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB1_1: # %bb
+; X64-NEXT:  .LBB1_2: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
@@ -137,20 +137,20 @@ define void @atest2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB3_1
-; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    jae .LBB3_2
+; X86-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB3_1: # %bb
+; X86-NEXT:  .LBB3_2: # %bb
 ; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: atest2b:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB3_1
-; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    jae .LBB3_2
+; X64-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB3_1: # %bb
+; X64-NEXT:  .LBB3_2: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
@@ -175,20 +175,20 @@ define void @test3(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB4_1
-; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    jae .LBB4_2
+; X86-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB4_1: # %bb
+; X86-NEXT:  .LBB4_2: # %bb
 ; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB4_1
-; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    jae .LBB4_2
+; X64-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB4_1: # %bb
+; X64-NEXT:  .LBB4_2: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
@@ -213,20 +213,20 @@ define void @test3b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB5_1
-; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    jae .LBB5_2
+; X86-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB5_1: # %bb
+; X86-NEXT:  .LBB5_2: # %bb
 ; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3b:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB5_1
-; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    jae .LBB5_2
+; X64-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB5_1: # %bb
+; X64-NEXT:  .LBB5_2: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax

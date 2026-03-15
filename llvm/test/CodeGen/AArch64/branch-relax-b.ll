@@ -4,15 +4,15 @@ define void @relax_b_nospill(i1 zeroext %0) {
 ; CHECK-LABEL: relax_b_nospill:
 ; CHECK:       // %bb.0:                               // %entry
 ; CHECK-NEXT:    tbnz w0,
-; CHECK-SAME:                 LBB0_1
-; CHECK-NEXT:  // %bb.3:                               // %entry
-; CHECK-NEXT:          b      .LBB0_2
-; CHECK-NEXT:  .LBB0_1:                                // %iftrue
+; CHECK-SAME:                 LBB0_2
+; CHECK-NEXT:  // %bb.1:                               // %entry
+; CHECK-NEXT:          b      .LBB0_3
+; CHECK-NEXT:  .LBB0_2:                                // %iftrue
 ; CHECK-NEXT:          //APP
 ; CHECK-NEXT:          .zero   2048
 ; CHECK-NEXT:          //NO_APP
 ; CHECK-NEXT:          ret
-; CHECK-NEXT:  .LBB0_2:                                // %iffalse
+; CHECK-NEXT:  .LBB0_3:                                // %iffalse
 ; CHECK-NEXT:          //APP
 ; CHECK-NEXT:          .zero   8
 ; CHECK-NEXT:          //NO_APP
@@ -38,25 +38,25 @@ define void @relax_b_spill() {
 ; CHECK-COUNT-29:         mov     {{x[0-9]+}},
 ; CHECK-NOT:              mov     {{x[0-9]+}},
 ; CHECK-NEXT:             //NO_APP
-; CHECK-NEXT:             b.eq    .LBB1_1
-; CHECK-NEXT:     // %bb.4:                               // %entry
+; CHECK-NEXT:             b.eq    .LBB1_2
+; CHECK-NEXT:     // %bb.1:                               // %entry
 ; CHECK-NEXT:             str     [[SPILL_REGISTER:x[0-9]+]], [sp,
 ; CHECK-SAME:                                                       -16]!
-; CHECK-NEXT:             b       .LBB1_5
-; CHECK-NEXT:     .LBB1_1:                                // %iftrue
+; CHECK-NEXT:             b       .LBB1_3
+; CHECK-NEXT:     .LBB1_2:                                // %iftrue
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             .zero   2048
 ; CHECK-NEXT:             //NO_APP
-; CHECK-NEXT:             b       .LBB1_3
-; CHECK-NEXT:     .LBB1_5:                                // %iffalse
+; CHECK-NEXT:             b       .LBB1_5
+; CHECK-NEXT:     .LBB1_3:                                // %iffalse
 ; CHECK-NEXT:             ldr     [[SPILL_REGISTER]], [sp], 
 ; CHECK-SAME:                                                        16
-; CHECK-NEXT:     // %bb.2:                               // %iffalse
+; CHECK-NEXT:     // %bb.4:                               // %iffalse
 ; CHECK-NEXT:             //APP
 ; CHECK-COUNT-29:         // reg use {{x[0-9]+}}
 ; CHECK-NOT:              // reg use {{x[0-9]+}}
 ; CHECK-NEXT:             //NO_APP
-; CHECK-NEXT:     .LBB1_3:                                // %common.ret
+; CHECK-NEXT:     .LBB1_5:                                // %common.ret
 ; CHECK-COUNT-5:          // 16-byte Folded Reload
 ; CHECK-NOT:              // 16-byte Folded Reload
 ; CHECK-NEXT:             ret
@@ -141,20 +141,20 @@ define void @relax_b_x16_taken() {
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             mov     x16, #1
 ; CHECK-NEXT:             //NO_APP
-; CHECK-NEXT:             cbnz    x16, .LBB2_1
-; CHECK-NEXT:     // %bb.3:                               // %entry
+; CHECK-NEXT:             cbnz    x16, .LBB2_2
+; CHECK-NEXT:     // %bb.1:                               // %entry
 ; CHECK-NEXT:             str     [[SPILL_REGISTER]], [sp,
 ; CHECK-SAME:                                                       -16]!
-; CHECK-NEXT:             b       .LBB2_4
-; CHECK-NEXT:     .LBB2_1:                                // %iftrue
+; CHECK-NEXT:             b       .LBB2_3
+; CHECK-NEXT:     .LBB2_2:                                // %iftrue
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             .zero   2048
 ; CHECK-NEXT:             //NO_APP
 ; CHECK-NEXT:             ret
-; CHECK-NEXT:     .LBB2_4:                                // %iffalse
+; CHECK-NEXT:     .LBB2_3:                                // %iffalse
 ; CHECK-NEXT:             ldr     [[SPILL_REGISTER]], [sp], 
 ; CHECK-SAME:                                                        16
-; CHECK-NEXT:     // %bb.2:                               // %iffalse
+; CHECK-NEXT:     // %bb.4:                               // %iffalse
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             // reg use x16
 ; CHECK-NEXT:             //NO_APP

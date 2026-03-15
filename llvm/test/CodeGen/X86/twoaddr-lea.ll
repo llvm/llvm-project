@@ -70,51 +70,51 @@ define void @ham() {
 ; CHECK-NEXT:    movq _global@GOTPCREL(%rip), %rdx
 ; CHECK-NEXT:    movq _global2@GOTPCREL(%rip), %rsi
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    je LBB3_2
+; CHECK-NEXT:    je LBB3_4
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB3_6: ## %bb2
+; CHECK-NEXT:  LBB3_1: ## %bb2
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
-; CHECK-NEXT:    ## Child Loop BB3_7 Depth 2
+; CHECK-NEXT:    ## Child Loop BB3_2 Depth 2
 ; CHECK-NEXT:    movl (%rdx), %edi
 ; CHECK-NEXT:    leal (%rdi,%rax), %r8d
 ; CHECK-NEXT:    movslq %r8d, %r8
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB3_7: ## %bb6
-; CHECK-NEXT:    ## Parent Loop BB3_6 Depth=1
+; CHECK-NEXT:  LBB3_2: ## %bb6
+; CHECK-NEXT:    ## Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    movq %rax, (%rsi)
 ; CHECK-NEXT:    movq %r8, (%rsi)
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB3_7
-; CHECK-NEXT:  ## %bb.8: ## %bb9
-; CHECK-NEXT:    ## in Loop: Header=BB3_6 Depth=1
+; CHECK-NEXT:    jne LBB3_2
+; CHECK-NEXT:  ## %bb.3: ## %bb9
+; CHECK-NEXT:    ## in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    addq $4, %rax
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB3_6
-; CHECK-NEXT:  LBB3_2: ## %bb3.preheader
+; CHECK-NEXT:    jne LBB3_1
+; CHECK-NEXT:  LBB3_4: ## %bb3.preheader
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB3_3: ## %bb3
+; CHECK-NEXT:  LBB3_5: ## %bb3
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
-; CHECK-NEXT:    ## Child Loop BB3_4 Depth 2
+; CHECK-NEXT:    ## Child Loop BB3_6 Depth 2
 ; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    addq $4, %rcx
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    subl %edx, %esi
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB3_4: ## %bb4
-; CHECK-NEXT:    ## Parent Loop BB3_3 Depth=1
+; CHECK-NEXT:  LBB3_6: ## %bb4
+; CHECK-NEXT:    ## Parent Loop BB3_5 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    jne LBB3_9
-; CHECK-NEXT:  ## %bb.5: ## %bb5
-; CHECK-NEXT:    ## in Loop: Header=BB3_4 Depth=2
+; CHECK-NEXT:    jne LBB3_8
+; CHECK-NEXT:  ## %bb.7: ## %bb5
+; CHECK-NEXT:    ## in Loop: Header=BB3_6 Depth=2
 ; CHECK-NEXT:    incq %rdx
 ; CHECK-NEXT:    cmpq %rcx, %rdx
-; CHECK-NEXT:    jl LBB3_4
-; CHECK-NEXT:    jmp LBB3_3
-; CHECK-NEXT:  LBB3_9: ## %bb8
+; CHECK-NEXT:    jl LBB3_6
+; CHECK-NEXT:    jmp LBB3_5
+; CHECK-NEXT:  LBB3_8: ## %bb8
 ; CHECK-NEXT:    ud2
 bb:
   br label %bb1

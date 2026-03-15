@@ -145,13 +145,13 @@ define i32 @test6() {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB5_3
+; CHECK-NEXT:    jne .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    jmp .LBB5_2
-; CHECK-NEXT:  .LBB5_3: # %if.end
+; CHECK-NEXT:    jmp .LBB5_3
+; CHECK-NEXT:  .LBB5_2: # %if.end
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  .LBB5_2: # %if.then
+; CHECK-NEXT:  .LBB5_3: # %if.then
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4

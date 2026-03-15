@@ -14,10 +14,10 @@ define void @fn1(i32 %k, ptr %p) {
 ; CHECK-NEXT:    setne %dl
 ; CHECK-NEXT:    addl $c, %eax
 ; CHECK-NEXT:    movl %edx, (%eax)
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %r
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %r
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %u
+; CHECK-NEXT:  .LBB0_2: # %u
   %g = getelementptr inbounds [1 x i32], ptr @c, i32 0, i32 %k
   %cmp = icmp ne ptr %p, %g
   %z = zext i1 %cmp to i32

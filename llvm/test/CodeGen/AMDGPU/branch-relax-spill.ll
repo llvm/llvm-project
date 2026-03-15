@@ -323,8 +323,8 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 vcc_hi, 0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
-; CHECK-NEXT:  ; %bb.3: ; %entry
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    s_not_b64 exec, exec
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[96:99], 0
 ; CHECK-NEXT:    v_writelane_b32 v0, s0, 0
@@ -334,7 +334,7 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    s_add_u32 s0, s0, (.LBB0_4-.Lpost_getpc0)&4294967295
 ; CHECK-NEXT:    s_addc_u32 s1, s1, (.LBB0_4-.Lpost_getpc0)>>32
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
-; CHECK-NEXT:  .LBB0_1: ; %bb2
+; CHECK-NEXT:  .LBB0_2: ; %bb2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    v_nop_e64
@@ -345,13 +345,13 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_branch .LBB0_2
+; CHECK-NEXT:    s_branch .LBB0_40
 ; CHECK-NEXT:  .LBB0_4: ; %bb3
 ; CHECK-NEXT:    v_readlane_b32 s0, v0, 0
 ; CHECK-NEXT:    v_readlane_b32 s1, v0, 1
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[96:99], 0
 ; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:  .LBB0_2: ; %bb3
+; CHECK-NEXT:  .LBB0_40: ; %bb3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1255,8 +1255,8 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 vcc_hi, 0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_cbranch_scc0 .LBB1_1
-; CHECK-NEXT:  ; %bb.3: ; %entry
+; CHECK-NEXT:    s_cbranch_scc0 .LBB1_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    s_not_b64 exec, exec
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-NEXT:    v_writelane_b32 v1, s0, 0
@@ -1266,7 +1266,7 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    s_add_u32 s0, s0, (.LBB1_4-.Lpost_getpc1)&4294967295
 ; CHECK-NEXT:    s_addc_u32 s1, s1, (.LBB1_4-.Lpost_getpc1)>>32
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
-; CHECK-NEXT:  .LBB1_1: ; %bb2
+; CHECK-NEXT:  .LBB1_2: ; %bb2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    v_nop_e64
@@ -1277,13 +1277,13 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_branch .LBB1_2
+; CHECK-NEXT:    s_branch .LBB1_40
 ; CHECK-NEXT:  .LBB1_4: ; %bb3
 ; CHECK-NEXT:    v_readlane_b32 s0, v1, 0
 ; CHECK-NEXT:    v_readlane_b32 s1, v1, 1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:  .LBB1_2: ; %bb3
+; CHECK-NEXT:  .LBB1_40: ; %bb3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; reg use s0
 ; CHECK-NEXT:    ;;#ASMEND

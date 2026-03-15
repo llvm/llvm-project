@@ -14,12 +14,12 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    je .LBB0_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    pushl $-10
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_1:
+; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    pushl $42
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl

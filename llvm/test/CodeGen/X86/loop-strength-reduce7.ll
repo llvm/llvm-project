@@ -14,24 +14,24 @@ define fastcc void @outer_loop(ptr nocapture %gfp, ptr nocapture %xr, i32 %targ_
 ; CHECK-NEXT:    movl $88, %eax
 ; CHECK-NEXT:    movl $168, %ecx
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_2: ## %bb28.i37
+; CHECK-NEXT:  LBB0_1: ## %bb28.i37
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
-; CHECK-NEXT:    ## Child Loop BB0_3 Depth 2
+; CHECK-NEXT:    ## Child Loop BB0_2 Depth 2
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_3: ## %bb29.i38
-; CHECK-NEXT:    ## Parent Loop BB0_2 Depth=1
+; CHECK-NEXT:  LBB0_2: ## %bb29.i38
+; CHECK-NEXT:    ## Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    ## => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    incl %edx
 ; CHECK-NEXT:    addl $12, %esi
 ; CHECK-NEXT:    cmpl $11, %edx
-; CHECK-NEXT:    jbe LBB0_3
-; CHECK-NEXT:  ## %bb.1: ## %bb28.i37.loopexit
-; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jbe LBB0_2
+; CHECK-NEXT:  ## %bb.3: ## %bb28.i37.loopexit
+; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    addl $168, %ecx
-; CHECK-NEXT:    jmp LBB0_2
+; CHECK-NEXT:    jmp LBB0_1
 entry:
 	br label %bb4
 

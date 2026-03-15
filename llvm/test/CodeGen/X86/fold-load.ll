@@ -9,13 +9,13 @@ define void @test1() nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $1, stmt_obstack+40
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %cond_false30.i
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %cond_false30.i
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    calll 0
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %cond_true23.i
+; CHECK-NEXT:  .LBB0_2: # %cond_true23.i
 ; CHECK-NEXT:    retl
 entry:
 	br i1 true, label %cond_true, label %cond_next

@@ -1551,11 +1551,11 @@ define <4 x float> @floor_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k)
 ; SSE41-LABEL: floor_maskz_ss_trunc:
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    testb $1, %dil
-; SSE41-NEXT:    jne LBB57_1
-; SSE41-NEXT:  ## %bb.2:
+; SSE41-NEXT:    jne LBB57_2
+; SSE41-NEXT:  ## %bb.1:
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
 ; SSE41-NEXT:    jmp LBB57_3
-; SSE41-NEXT:  LBB57_1:
+; SSE41-NEXT:  LBB57_2:
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB57_3:
 ; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
@@ -1565,12 +1565,12 @@ define <4 x float> @floor_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k)
 ; AVX-LABEL: floor_maskz_ss_trunc:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    jne LBB57_1
-; AVX-NEXT:  ## %bb.2:
+; AVX-NEXT:    jne LBB57_2
+; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
-; AVX-NEXT:  LBB57_1:
+; AVX-NEXT:  LBB57_2:
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
@@ -1632,11 +1632,11 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; SSE41-LABEL: floor_maskz_sd_trunc:
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    testb $1, %dil
-; SSE41-NEXT:    jne LBB59_1
-; SSE41-NEXT:  ## %bb.2:
+; SSE41-NEXT:    jne LBB59_2
+; SSE41-NEXT:  ## %bb.1:
 ; SSE41-NEXT:    xorpd %xmm0, %xmm0
 ; SSE41-NEXT:    jmp LBB59_3
-; SSE41-NEXT:  LBB59_1:
+; SSE41-NEXT:  LBB59_2:
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB59_3:
 ; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
@@ -1646,12 +1646,12 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; AVX-LABEL: floor_maskz_sd_trunc:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    jne LBB59_1
-; AVX-NEXT:  ## %bb.2:
+; AVX-NEXT:    jne LBB59_2
+; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
-; AVX-NEXT:  LBB59_1:
+; AVX-NEXT:  LBB59_2:
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
@@ -1841,7 +1841,7 @@ define <2 x double> @ceil_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ;
 ; AVX512-LABEL: ceil_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.ceil.f64(double %s)
@@ -2537,11 +2537,11 @@ define <4 x float> @ceil_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k) 
 ; SSE41-LABEL: ceil_maskz_ss_trunc:
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    testb $1, %dil
-; SSE41-NEXT:    jne LBB83_1
-; SSE41-NEXT:  ## %bb.2:
+; SSE41-NEXT:    jne LBB83_2
+; SSE41-NEXT:  ## %bb.1:
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
 ; SSE41-NEXT:    jmp LBB83_3
-; SSE41-NEXT:  LBB83_1:
+; SSE41-NEXT:  LBB83_2:
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB83_3:
 ; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
@@ -2551,12 +2551,12 @@ define <4 x float> @ceil_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k) 
 ; AVX-LABEL: ceil_maskz_ss_trunc:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    jne LBB83_1
-; AVX-NEXT:  ## %bb.2:
+; AVX-NEXT:    jne LBB83_2
+; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
-; AVX-NEXT:  LBB83_1:
+; AVX-NEXT:  LBB83_2:
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
@@ -2618,11 +2618,11 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; SSE41-LABEL: ceil_maskz_sd_trunc:
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    testb $1, %dil
-; SSE41-NEXT:    jne LBB85_1
-; SSE41-NEXT:  ## %bb.2:
+; SSE41-NEXT:    jne LBB85_2
+; SSE41-NEXT:  ## %bb.1:
 ; SSE41-NEXT:    xorpd %xmm0, %xmm0
 ; SSE41-NEXT:    jmp LBB85_3
-; SSE41-NEXT:  LBB85_1:
+; SSE41-NEXT:  LBB85_2:
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB85_3:
 ; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
@@ -2632,12 +2632,12 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; AVX-LABEL: ceil_maskz_sd_trunc:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    testb $1, %dil
-; AVX-NEXT:    jne LBB85_1
-; AVX-NEXT:  ## %bb.2:
+; AVX-NEXT:    jne LBB85_2
+; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
-; AVX-NEXT:  LBB85_1:
+; AVX-NEXT:  LBB85_2:
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq

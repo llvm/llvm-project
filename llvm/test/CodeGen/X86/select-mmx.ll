@@ -87,11 +87,11 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    orl 12(%ebp), %eax
-; X86-NEXT:    je .LBB1_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    je .LBB1_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal 24(%ebp), %eax
 ; X86-NEXT:    jmp .LBB1_3
-; X86-NEXT:  .LBB1_1:
+; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    leal 16(%ebp), %eax
 ; X86-NEXT:  .LBB1_3:
 ; X86-NEXT:    movq (%eax), %mm0

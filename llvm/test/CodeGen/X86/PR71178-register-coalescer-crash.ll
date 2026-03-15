@@ -7,45 +7,45 @@ define i32 @h(i1 %arg, i32 %arg1) {
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    movabsq $9166129423, %rcx # imm = 0x22258090F
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_9: # %bb18
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_1: # %bb18
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB0_10
-; CHECK-NEXT:  .LBB0_1: # %bb4
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.7: # %bb16
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB0_9
-; CHECK-NEXT:  # %bb.8: # %bb17
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_2: # %bb4
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:  # %bb.3: # %bb16
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.4: # %bb17
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    jmp .LBB0_9
-; CHECK-NEXT:  .LBB0_2: # %bb9
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:  .LBB0_5: # %bb9
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.3: # %bb13
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    je .LBB0_7
+; CHECK-NEXT:  # %bb.6: # %bb13
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  .LBB0_4: # %bb14
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_7: # %bb14
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    cmpl $1, %esi
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.5: # %bb14
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.8: # %bb14
 ; CHECK-NEXT:    movl %eax, %r8d
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    jne .LBB0_6
-; CHECK-NEXT:  .LBB0_10: # %bb22
+; CHECK-NEXT:    jne .LBB0_10
+; CHECK-NEXT:  .LBB0_9: # %bb22
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_6: # %bb22.loopexit1
+; CHECK-NEXT:  .LBB0_10: # %bb22.loopexit1
 ; CHECK-NEXT:    movl %r8d, %eax
 ; CHECK-NEXT:    retq
 bb:

@@ -17,7 +17,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    .seh_pushreg %rbx
 ; ENABLE-NEXT:    .seh_endprologue
 ; ENABLE-NEXT:    testl %ecx, %ecx
-; ENABLE-NEXT:    je .LBB0_5
+; ENABLE-NEXT:    je .LBB0_4
 ; ENABLE-NEXT:  # %bb.1: # %for.preheader
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
@@ -42,7 +42,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    popq %rbx
 ; ENABLE-NEXT:    .seh_endepilogue
 ; ENABLE-NEXT:    retq
-; ENABLE-NEXT:  .LBB0_5: # %if.else
+; ENABLE-NEXT:  .LBB0_4: # %if.else
 ; ENABLE-NEXT:    movl %edx, %eax
 ; ENABLE-NEXT:    addl %edx, %eax
 ; ENABLE-NEXT:    .seh_startepilogue
@@ -57,7 +57,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    .seh_pushreg %rbx
 ; DISABLE-NEXT:    .seh_endprologue
 ; DISABLE-NEXT:    testl %ecx, %ecx
-; DISABLE-NEXT:    je .LBB0_5
+; DISABLE-NEXT:    je .LBB0_4
 ; DISABLE-NEXT:  # %bb.1: # %for.preheader
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
@@ -82,7 +82,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
-; DISABLE-NEXT:  .LBB0_5: # %if.else
+; DISABLE-NEXT:  .LBB0_4: # %if.else
 ; DISABLE-NEXT:    movl %edx, %eax
 ; DISABLE-NEXT:    addl %edx, %eax
 ; DISABLE-NEXT:    .seh_startepilogue
@@ -167,7 +167,7 @@ define i32 @loopInfoSaveOutsideLoop2(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    .seh_pushreg %rbx
 ; DISABLE-NEXT:    .seh_endprologue
 ; DISABLE-NEXT:    testl %ecx, %ecx
-; DISABLE-NEXT:    je .LBB1_5
+; DISABLE-NEXT:    je .LBB1_4
 ; DISABLE-NEXT:  # %bb.1: # %for.preheader
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
@@ -192,7 +192,7 @@ define i32 @loopInfoSaveOutsideLoop2(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    popq %rbx
 ; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
-; DISABLE-NEXT:  .LBB1_5: # %if.else
+; DISABLE-NEXT:  .LBB1_4: # %if.else
 ; DISABLE-NEXT:    addl %edx, %edx
 ; DISABLE-NEXT:    movl %edx, %eax
 ; DISABLE-NEXT:    .seh_startepilogue

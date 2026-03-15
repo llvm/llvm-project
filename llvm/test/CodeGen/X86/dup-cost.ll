@@ -6,20 +6,20 @@ define i32 @cold(i32 %a, ptr %p, ptr %q) !prof !21 {
 ; CHECK-LABEL: cold:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $2, %edi
-; CHECK-NEXT:    jl .LBB0_2
+; CHECK-NEXT:    jl .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %true1
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    addl $2, %eax
-; CHECK-NEXT:  .LBB0_3: # %dup
+; CHECK-NEXT:  .LBB0_2: # %dup
 ; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    jl .LBB0_5
-; CHECK-NEXT:  # %bb.4: # %true2
+; CHECK-NEXT:  # %bb.3: # %true2
 ; CHECK-NEXT:    xorl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %false1
+; CHECK-NEXT:  .LBB0_4: # %false1
 ; CHECK-NEXT:    movl (%rdx), %eax
 ; CHECK-NEXT:    addl $-3, %eax
-; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_5: # %false2
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
@@ -61,20 +61,20 @@ define i32 @hot(i32 %a, ptr %p, ptr %q) !prof !22 {
 ; CHECK-LABEL: hot:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $2, %edi
-; CHECK-NEXT:    jl .LBB1_2
+; CHECK-NEXT:    jl .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %true1
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    addl $2, %eax
 ; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    jge .LBB1_4
-; CHECK-NEXT:  .LBB1_5: # %false2
+; CHECK-NEXT:  .LBB1_2: # %false2
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_2: # %false1
+; CHECK-NEXT:  .LBB1_3: # %false1
 ; CHECK-NEXT:    movl (%rdx), %eax
 ; CHECK-NEXT:    addl $-3, %eax
 ; CHECK-NEXT:    cmpl $5, %eax
-; CHECK-NEXT:    jl .LBB1_5
+; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_4: # %true2
 ; CHECK-NEXT:    xorl %edi, %eax
 ; CHECK-NEXT:    retq

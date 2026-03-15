@@ -78,16 +78,16 @@ declare i32 @baz() #1
 ; CHECK-NOT:               .section
 ; CHECK-NOT:               .LBB_END0_{{0-9}}+
 ; LINUX-SECTIONS1-LABEL:   # %bb.1:
-; LINUX-SECTIONS2-LABEL:   # %bb.2:
+; LINUX-SECTIONS2-LABEL:   # %bb.1:
 ; CHECK-NOT:               .section
 ; CHECK-NOT:               .LBB_END0_{{0-9}}+
-; CHECK-LABEL:             .LBB0_3:
-; CHECK-LABEL:             .LBB_END0_3:
+; CHECK-LABEL:             .LBB0_2:
+; CHECK-LABEL:             .LBB_END0_2:
 ; CHECK-NEXT:              .section        .text.split.foo,"ax",@progbits
 ; CHECK-LABEL:             foo.cold:
-; LINUX-SECTIONS1-LABEL:   .LBB_END0_2:
-; LINUX-SECTIONS2-LABEL:   .LBB_END0_1:
-; LINUX-SECTIONS1-LABEL:   .size   foo.cold, .LBB_END0_2-foo.cold
-; LINUX-SECTIONS2-LABEL:   .size   foo.cold, .LBB_END0_1-foo.cold
+; LINUX-SECTIONS1-LABEL:   .LBB_END0_3:
+; LINUX-SECTIONS2-LABEL:   .LBB_END0_3:
+; LINUX-SECTIONS1-LABEL:   .size   foo.cold, .LBB_END0_3-foo.cold
+; LINUX-SECTIONS2-LABEL:   .size   foo.cold, .LBB_END0_3-foo.cold
 ; CHECK-LABEL:             .Lfunc_end0:
 ; CHECK-NEXT:              .size foo, .Lfunc_end0-foo

@@ -15,8 +15,8 @@ define i32 @f(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %bb16.i
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb16.i
 ; CHECK-NEXT:    sets %bl
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    sets %bpl
@@ -29,7 +29,7 @@ define i32 @f(i32 %a, i32 %b) #0 {
 ; CHECK-NEXT:    xorb $1, %bl
 ; CHECK-NEXT:    movzbl %bl, %eax
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_3: # %exit2
 ; CHECK-NEXT:    addq $8, %rsp

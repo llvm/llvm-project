@@ -14,11 +14,11 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shlq %cl, %rax
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %lor.end
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %lor.end
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %lor.rhs
+; CHECK-NEXT:  .LBB0_2: # %lor.rhs
 ; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

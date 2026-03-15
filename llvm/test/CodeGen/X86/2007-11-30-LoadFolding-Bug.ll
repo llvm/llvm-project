@@ -25,10 +25,10 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %mp_unexp_mp2d.exit.i
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # %bb.5: # %cond_next.i
-; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # %bb.6: # %cond_next36.i
+; CHECK-NEXT:    je .LBB0_8
+; CHECK-NEXT:  # %bb.3: # %cond_next.i
+; CHECK-NEXT:    jne .LBB0_8
+; CHECK-NEXT:  # %bb.4: # %cond_next36.i
 ; CHECK-NEXT:    movl $0, 0
 ; CHECK-NEXT:    movzbl %cl, %ebp
 ; CHECK-NEXT:    andl $1, %ebp
@@ -37,7 +37,7 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_7: # %bb.i28.i
+; CHECK-NEXT:  .LBB0_5: # %bb.i28.i
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cvttsd2si %xmm1, %edi
 ; CHECK-NEXT:    cmpl %edx, %edi
@@ -49,11 +49,11 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    subsd %xmm2, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
 ; CHECK-NEXT:    addl $-2, %ebp
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.8: # %mp_unexp_d2mp.exit29.i
+; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:  # %bb.6: # %mp_unexp_d2mp.exit29.i
 ; CHECK-NEXT:    movl $0, 0
-; CHECK-NEXT:    je .LBB0_9
-; CHECK-NEXT:  # %bb.10: # %mp_sqrt_init.exit
+; CHECK-NEXT:    je .LBB0_10
+; CHECK-NEXT:  # %bb.7: # %mp_sqrt_init.exit
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    movl %esi, %edx
@@ -76,18 +76,18 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB0_11
-; CHECK-NEXT:  .LBB0_3: # %cond_true.i
+; CHECK-NEXT:  .LBB0_8: # %cond_true.i
 ; CHECK-NEXT:    addl $4, %esp
-; CHECK-NEXT:  .LBB0_4: # %cond_true.i
+; CHECK-NEXT:  .LBB0_9: # %cond_true.i
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_9: # %bb.i.i
+; CHECK-NEXT:  .LBB0_10: # %bb.i.i
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB0_9
+; CHECK-NEXT:    jmp .LBB0_10
 ; CHECK-NEXT:  .LBB0_11: # %cond_false.i
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movl (%esp), %esi # 4-byte Reload
@@ -124,7 +124,7 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    calll mp_mul_d2i@PLT
 ; CHECK-NEXT:    addl $16, %esp
-; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_9
 entry:
 	br label %bb.i5
 

@@ -16,7 +16,7 @@ define void @_Z6throwsv() personality ptr @__gxx_personality_v0 {
 ; CHECK:         popq	%rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .LBB0_1:
+; CHECK-NEXT:    .LBB0_2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 
 entry:

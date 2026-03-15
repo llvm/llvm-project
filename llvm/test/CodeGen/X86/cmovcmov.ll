@@ -231,13 +231,13 @@ define dso_local float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; NOCMOV-NEXT:    sahf
 ; NOCMOV-NEXT:    fld1
 ; NOCMOV-NEXT:    fldz
-; NOCMOV-NEXT:    jne .LBB5_1
-; NOCMOV-NEXT:  # %bb.2: # %entry
+; NOCMOV-NEXT:    jne .LBB5_3
+; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB5_5
-; NOCMOV-NEXT:  # %bb.3: # %entry
+; NOCMOV-NEXT:  # %bb.2: # %entry
 ; NOCMOV-NEXT:    fstp %st(1)
 ; NOCMOV-NEXT:    jmp .LBB5_4
-; NOCMOV-NEXT:  .LBB5_1:
+; NOCMOV-NEXT:  .LBB5_3:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:  .LBB5_4: # %entry
 ; NOCMOV-NEXT:    fldz
@@ -269,13 +269,13 @@ define dso_local float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; NOCMOV-NEXT:    sahf
 ; NOCMOV-NEXT:    fldz
 ; NOCMOV-NEXT:    fld1
-; NOCMOV-NEXT:    jne .LBB6_1
-; NOCMOV-NEXT:  # %bb.2: # %entry
+; NOCMOV-NEXT:    jne .LBB6_3
+; NOCMOV-NEXT:  # %bb.1: # %entry
 ; NOCMOV-NEXT:    jp .LBB6_5
-; NOCMOV-NEXT:  # %bb.3: # %entry
+; NOCMOV-NEXT:  # %bb.2: # %entry
 ; NOCMOV-NEXT:    fstp %st(1)
 ; NOCMOV-NEXT:    jmp .LBB6_4
-; NOCMOV-NEXT:  .LBB6_1:
+; NOCMOV-NEXT:  .LBB6_3:
 ; NOCMOV-NEXT:    fstp %st(0)
 ; NOCMOV-NEXT:  .LBB6_4: # %entry
 ; NOCMOV-NEXT:    fldz
@@ -329,23 +329,23 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; NOCMOV-NEXT:    movb $20, %al
 ; NOCMOV-NEXT:    movb $20, %cl
-; NOCMOV-NEXT:    jge .LBB7_1
-; NOCMOV-NEXT:  # %bb.2: # %entry
-; NOCMOV-NEXT:    jle .LBB7_3
-; NOCMOV-NEXT:  .LBB7_4: # %entry
+; NOCMOV-NEXT:    jge .LBB7_4
+; NOCMOV-NEXT:  # %bb.1: # %entry
+; NOCMOV-NEXT:    jle .LBB7_5
+; NOCMOV-NEXT:  .LBB7_2: # %entry
 ; NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; NOCMOV-NEXT:    jne .LBB7_5
-; NOCMOV-NEXT:  .LBB7_6: # %entry
+; NOCMOV-NEXT:    jne .LBB7_6
+; NOCMOV-NEXT:  .LBB7_3: # %entry
 ; NOCMOV-NEXT:    movb %al, g8
 ; NOCMOV-NEXT:    retl
-; NOCMOV-NEXT:  .LBB7_1: # %entry
+; NOCMOV-NEXT:  .LBB7_4: # %entry
 ; NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; NOCMOV-NEXT:    jg .LBB7_4
-; NOCMOV-NEXT:  .LBB7_3: # %entry
+; NOCMOV-NEXT:    jg .LBB7_2
+; NOCMOV-NEXT:  .LBB7_5: # %entry
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; NOCMOV-NEXT:    je .LBB7_6
-; NOCMOV-NEXT:  .LBB7_5: # %entry
+; NOCMOV-NEXT:    je .LBB7_3
+; NOCMOV-NEXT:  .LBB7_6: # %entry
 ; NOCMOV-NEXT:    movl %ecx, %eax
 ; NOCMOV-NEXT:    movb %al, g8
 ; NOCMOV-NEXT:    retl

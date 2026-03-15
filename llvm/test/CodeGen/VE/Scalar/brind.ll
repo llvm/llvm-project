@@ -19,7 +19,7 @@ define signext i32 @brind(i32 signext %0) {
 ; CHECK-NEXT:    cmov.w.eq %s1, %s2, %s0
 ; CHECK-NEXT:    b.l.t (, %s1)
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    or %s0, -1, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -29,7 +29,7 @@ define signext i32 @brind(i32 signext %0) {
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    or %s0, 1, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)

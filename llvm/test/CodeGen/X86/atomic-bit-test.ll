@@ -541,20 +541,20 @@ define void @no_and_cmp0_fold() nounwind {
 ; X86-NEXT:    lock btsl $3, v32
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    testb %al, %al
-; X86-NEXT:    je .LBB18_1
-; X86-NEXT:  # %bb.2: # %if.end
+; X86-NEXT:    je .LBB18_2
+; X86-NEXT:  # %bb.1: # %if.end
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB18_1: # %if.then
+; X86-NEXT:  .LBB18_2: # %if.then
 ;
 ; X64-LABEL: no_and_cmp0_fold:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    lock btsl $3, v32(%rip)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %al, %al
-; X64-NEXT:    je .LBB18_1
-; X64-NEXT:  # %bb.2: # %if.end
+; X64-NEXT:    je .LBB18_2
+; X64-NEXT:  # %bb.1: # %if.end
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB18_1: # %if.then
+; X64-NEXT:  .LBB18_2: # %if.then
 entry:
   %0 = atomicrmw or ptr @v32, i32 8 monotonic, align 4
   %and = and i32 %0, 8

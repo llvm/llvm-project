@@ -8,21 +8,21 @@ define i8 @atomicrmw_usub_cond_i8(ptr %ptr, i8 %val) {
 ; CHECK-32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzbl (%edx), %eax
-; CHECK-32-NEXT:    jmp .LBB0_1
+; CHECK-32-NEXT:    jmp .LBB0_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB0_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-32-NEXT:  .LBB0_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgb %ah, (%edx)
 ; CHECK-32-NEXT:    je .LBB0_4
-; CHECK-32-NEXT:  .LBB0_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB0_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    movb %al, %ah
 ; CHECK-32-NEXT:    subb %cl, %ah
-; CHECK-32-NEXT:    jae .LBB0_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-32-NEXT:    jae .LBB0_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-32-NEXT:    movb %al, %ah
-; CHECK-32-NEXT:    jmp .LBB0_3
+; CHECK-32-NEXT:    jmp .LBB0_1
 ; CHECK-32-NEXT:  .LBB0_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    retl
 ;
@@ -54,23 +54,23 @@ define i16 @atomicrmw_usub_cond_i16(ptr %ptr, i16 %val) {
 ; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzwl (%edx), %eax
-; CHECK-32-NEXT:    jmp .LBB1_1
+; CHECK-32-NEXT:    jmp .LBB1_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB1_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; CHECK-32-NEXT:  .LBB1_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-32-NEXT:    lock cmpxchgw %si, (%edx)
 ; CHECK-32-NEXT:    # kill: def $ax killed $ax def $eax
 ; CHECK-32-NEXT:    je .LBB1_4
-; CHECK-32-NEXT:  .LBB1_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB1_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    movl %eax, %esi
 ; CHECK-32-NEXT:    subw %cx, %si
-; CHECK-32-NEXT:    jae .LBB1_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; CHECK-32-NEXT:    jae .LBB1_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-32-NEXT:    movl %eax, %esi
-; CHECK-32-NEXT:    jmp .LBB1_3
+; CHECK-32-NEXT:    jmp .LBB1_1
 ; CHECK-32-NEXT:  .LBB1_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-32-NEXT:    popl %esi
@@ -106,21 +106,21 @@ define i32 @atomicrmw_usub_cond_i32(ptr %ptr, i32 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movl (%edx), %eax
-; CHECK-32-NEXT:    jmp .LBB2_1
+; CHECK-32-NEXT:    jmp .LBB2_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB2_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; CHECK-32-NEXT:  .LBB2_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgl %esi, (%edx)
 ; CHECK-32-NEXT:    je .LBB2_4
-; CHECK-32-NEXT:  .LBB2_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB2_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    movl %eax, %esi
 ; CHECK-32-NEXT:    subl %ecx, %esi
-; CHECK-32-NEXT:    jae .LBB2_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB2_1 Depth=1
+; CHECK-32-NEXT:    jae .LBB2_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-32-NEXT:    movl %eax, %esi
-; CHECK-32-NEXT:    jmp .LBB2_3
+; CHECK-32-NEXT:    jmp .LBB2_1
 ; CHECK-32-NEXT:  .LBB2_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 4
@@ -163,24 +163,24 @@ define i64 @atomicrmw_usub_cond_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-32-NEXT:    movl (%ebp), %eax
 ; CHECK-32-NEXT:    movl 4(%ebp), %edx
-; CHECK-32-NEXT:    jmp .LBB3_1
+; CHECK-32-NEXT:    jmp .LBB3_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB3_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK-32-NEXT:  .LBB3_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchg8b (%ebp)
 ; CHECK-32-NEXT:    je .LBB3_4
-; CHECK-32-NEXT:  .LBB3_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB3_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    movl %eax, %ebx
 ; CHECK-32-NEXT:    subl %edi, %ebx
 ; CHECK-32-NEXT:    movl %edx, %ecx
 ; CHECK-32-NEXT:    sbbl %esi, %ecx
-; CHECK-32-NEXT:    jae .LBB3_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK-32-NEXT:    jae .LBB3_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-32-NEXT:    movl %edx, %ecx
 ; CHECK-32-NEXT:    movl %eax, %ebx
-; CHECK-32-NEXT:    jmp .LBB3_3
+; CHECK-32-NEXT:    jmp .LBB3_1
 ; CHECK-32-NEXT:  .LBB3_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16
@@ -218,20 +218,20 @@ define i8 @atomicrmw_usub_sat_i8(ptr %ptr, i8 %val) {
 ; CHECK-32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzbl (%edx), %eax
-; CHECK-32-NEXT:    jmp .LBB4_1
+; CHECK-32-NEXT:    jmp .LBB4_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB4_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB4_1 Depth=1
+; CHECK-32-NEXT:  .LBB4_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgb %bl, (%edx)
 ; CHECK-32-NEXT:    je .LBB4_4
-; CHECK-32-NEXT:  .LBB4_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB4_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    movl %eax, %ebx
 ; CHECK-32-NEXT:    subb %cl, %bl
-; CHECK-32-NEXT:    jae .LBB4_3
-; CHECK-32-NEXT:  # %bb.2: # in Loop: Header=BB4_1 Depth=1
+; CHECK-32-NEXT:    jae .LBB4_1
+; CHECK-32-NEXT:  # %bb.3: # in Loop: Header=BB4_2 Depth=1
 ; CHECK-32-NEXT:    xorl %ebx, %ebx
-; CHECK-32-NEXT:    jmp .LBB4_3
+; CHECK-32-NEXT:    jmp .LBB4_1
 ; CHECK-32-NEXT:  .LBB4_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    popl %ebx
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 4
@@ -268,22 +268,22 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-32-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movzwl (%edx), %eax
-; CHECK-32-NEXT:    jmp .LBB5_1
+; CHECK-32-NEXT:    jmp .LBB5_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB5_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB5_1 Depth=1
+; CHECK-32-NEXT:  .LBB5_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgw %si, (%edx)
 ; CHECK-32-NEXT:    je .LBB5_4
-; CHECK-32-NEXT:  .LBB5_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB5_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    xorl %esi, %esi
 ; CHECK-32-NEXT:    movl %eax, %edi
 ; CHECK-32-NEXT:    subw %cx, %di
-; CHECK-32-NEXT:    jb .LBB5_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB5_1 Depth=1
+; CHECK-32-NEXT:    jb .LBB5_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; CHECK-32-NEXT:    movl %edi, %esi
-; CHECK-32-NEXT:    jmp .LBB5_3
+; CHECK-32-NEXT:    jmp .LBB5_1
 ; CHECK-32-NEXT:  .LBB5_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 8
@@ -321,22 +321,22 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movl (%edx), %eax
-; CHECK-32-NEXT:    jmp .LBB6_1
+; CHECK-32-NEXT:    jmp .LBB6_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB6_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB6_1 Depth=1
+; CHECK-32-NEXT:  .LBB6_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB6_2 Depth=1
 ; CHECK-32-NEXT:    lock cmpxchgl %esi, (%edx)
 ; CHECK-32-NEXT:    je .LBB6_4
-; CHECK-32-NEXT:  .LBB6_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB6_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    xorl %esi, %esi
 ; CHECK-32-NEXT:    movl %eax, %edi
 ; CHECK-32-NEXT:    subl %ecx, %edi
-; CHECK-32-NEXT:    jb .LBB6_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB6_1 Depth=1
+; CHECK-32-NEXT:    jb .LBB6_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB6_2 Depth=1
 ; CHECK-32-NEXT:    movl %edi, %esi
-; CHECK-32-NEXT:    jmp .LBB6_3
+; CHECK-32-NEXT:    jmp .LBB6_1
 ; CHECK-32-NEXT:  .LBB6_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 8
@@ -380,17 +380,17 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-32-NEXT:    movl (%ebp), %esi
 ; CHECK-32-NEXT:    movl 4(%ebp), %edi
-; CHECK-32-NEXT:    jmp .LBB7_1
+; CHECK-32-NEXT:    jmp .LBB7_2
 ; CHECK-32-NEXT:    .p2align 4
-; CHECK-32-NEXT:  .LBB7_3: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB7_1 Depth=1
+; CHECK-32-NEXT:  .LBB7_1: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-32-NEXT:    movl %esi, %eax
 ; CHECK-32-NEXT:    movl %edi, %edx
 ; CHECK-32-NEXT:    lock cmpxchg8b (%ebp)
 ; CHECK-32-NEXT:    movl %eax, %esi
 ; CHECK-32-NEXT:    movl %edx, %edi
 ; CHECK-32-NEXT:    je .LBB7_4
-; CHECK-32-NEXT:  .LBB7_1: # %atomicrmw.start
+; CHECK-32-NEXT:  .LBB7_2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    xorl %ecx, %ecx
 ; CHECK-32-NEXT:    movl %esi, %eax
@@ -398,12 +398,12 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    movl %edi, %edx
 ; CHECK-32-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
 ; CHECK-32-NEXT:    movl $0, %ebx
-; CHECK-32-NEXT:    jb .LBB7_3
-; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
-; CHECK-32-NEXT:    # in Loop: Header=BB7_1 Depth=1
+; CHECK-32-NEXT:    jb .LBB7_1
+; CHECK-32-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-32-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; CHECK-32-NEXT:    movl %edx, %ecx
 ; CHECK-32-NEXT:    movl %eax, %ebx
-; CHECK-32-NEXT:    jmp .LBB7_3
+; CHECK-32-NEXT:    jmp .LBB7_1
 ; CHECK-32-NEXT:  .LBB7_4: # %atomicrmw.end
 ; CHECK-32-NEXT:    movl %esi, %eax
 ; CHECK-32-NEXT:    movl %edi, %edx

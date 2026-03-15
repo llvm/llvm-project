@@ -731,11 +731,11 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    imulb %sil
-; SDAG-NEXT:    jo .LBB15_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB15_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB15_1: # %overflow
+; SDAG-NEXT:  .LBB15_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
@@ -746,12 +746,12 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; FAST-NEXT:    imulb %sil
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    testb $1, %al
-; FAST-NEXT:    jne .LBB15_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jne .LBB15_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB15_1: # %overflow
+; FAST-NEXT:  .LBB15_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -761,11 +761,11 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    imulb %dl
-; WIN64-NEXT:    jo .LBB15_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB15_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB15_1: # %overflow
+; WIN64-NEXT:  .LBB15_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -773,11 +773,11 @@ define zeroext i1 @smulobri8(i8 %v1, i8 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB15_1
-; WIN32-NEXT:  # %bb.2: # %continue
+; WIN32-NEXT:    jo LBB15_2
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB15_1: # %overflow
+; WIN32-NEXT:  LBB15_2: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    retl
   %t = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %v1, i8 %v2)
@@ -796,11 +796,11 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; SDAG-LABEL: smulobri16:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw %si, %di
-; SDAG-NEXT:    jo .LBB16_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB16_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB16_1: # %overflow
+; SDAG-NEXT:  .LBB16_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
@@ -809,12 +809,12 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; FAST-NEXT:    imulw %si, %di
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    testb $1, %al
-; FAST-NEXT:    jne .LBB16_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jne .LBB16_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB16_1: # %overflow
+; FAST-NEXT:  .LBB16_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -823,11 +823,11 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; WIN64-LABEL: smulobri16:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulw %dx, %cx
-; WIN64-NEXT:    jo .LBB16_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB16_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB16_1: # %overflow
+; WIN64-NEXT:  .LBB16_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -835,11 +835,11 @@ define zeroext i1 @smulobri16(i16 %v1, i16 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imulw {{[0-9]+}}(%esp), %ax
-; WIN32-NEXT:    jo LBB16_1
-; WIN32-NEXT:  # %bb.2: # %continue
+; WIN32-NEXT:    jo LBB16_2
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB16_1: # %overflow
+; WIN32-NEXT:  LBB16_2: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    retl
   %t = call {i16, i1} @llvm.smul.with.overflow.i16(i16 %v1, i16 %v2)
@@ -858,23 +858,23 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: smulobri32:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull %esi, %edi
-; SDAG-NEXT:    jo .LBB17_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB17_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB17_1: # %overflow
+; SDAG-NEXT:  .LBB17_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smulobri32:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imull %esi, %edi
-; FAST-NEXT:    jo .LBB17_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jo .LBB17_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB17_1: # %overflow
+; FAST-NEXT:  .LBB17_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -883,11 +883,11 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; WIN64-LABEL: smulobri32:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imull %edx, %ecx
-; WIN64-NEXT:    jo .LBB17_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB17_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB17_1: # %overflow
+; WIN64-NEXT:  .LBB17_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -895,11 +895,11 @@ define zeroext i1 @smulobri32(i32 %v1, i32 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    imull {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    jo LBB17_1
-; WIN32-NEXT:  # %bb.2: # %continue
+; WIN32-NEXT:    jo LBB17_2
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB17_1: # %overflow
+; WIN32-NEXT:  LBB17_2: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    retl
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -918,23 +918,23 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: smulobri64:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq %rsi, %rdi
-; SDAG-NEXT:    jo .LBB18_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB18_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB18_1: # %overflow
+; SDAG-NEXT:  .LBB18_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: smulobri64:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    imulq %rsi, %rdi
-; FAST-NEXT:    jo .LBB18_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jo .LBB18_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB18_1: # %overflow
+; FAST-NEXT:  .LBB18_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -943,11 +943,11 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; WIN64-LABEL: smulobri64:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    imulq %rdx, %rcx
-; WIN64-NEXT:    jo .LBB18_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB18_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB18_1: # %overflow
+; WIN64-NEXT:  .LBB18_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -998,8 +998,8 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    xorl %esi, %edx
 ; WIN32-NEXT:    xorl %eax, %esi
 ; WIN32-NEXT:    orl %edx, %esi
-; WIN32-NEXT:    jne LBB18_1
-; WIN32-NEXT:  # %bb.3: # %continue
+; WIN32-NEXT:    jne LBB18_3
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:  LBB18_2: # %overflow
 ; WIN32-NEXT:    addl $4, %esp
@@ -1008,7 +1008,7 @@ define zeroext i1 @smulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB18_1: # %overflow
+; WIN32-NEXT:  LBB18_3: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    jmp LBB18_2
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
@@ -1029,11 +1029,11 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $al killed $al killed $eax
 ; SDAG-NEXT:    mulb %sil
-; SDAG-NEXT:    jo .LBB19_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB19_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB19_1: # %overflow
+; SDAG-NEXT:  .LBB19_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
@@ -1044,12 +1044,12 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; FAST-NEXT:    mulb %sil
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    testb $1, %al
-; FAST-NEXT:    jne .LBB19_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jne .LBB19_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB19_1: # %overflow
+; FAST-NEXT:  .LBB19_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -1059,11 +1059,11 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulb %dl
-; WIN64-NEXT:    jo .LBB19_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB19_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB19_1: # %overflow
+; WIN64-NEXT:  .LBB19_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -1071,11 +1071,11 @@ define zeroext i1 @umulobri8(i8 %v1, i8 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mulb {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB19_1
-; WIN32-NEXT:  # %bb.2: # %continue
+; WIN32-NEXT:    jo LBB19_2
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB19_1: # %overflow
+; WIN32-NEXT:  LBB19_2: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    retl
   %t = call {i8, i1} @llvm.umul.with.overflow.i8(i8 %v1, i8 %v2)
@@ -1096,11 +1096,11 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SDAG-NEXT:    mulw %si
-; SDAG-NEXT:    jo .LBB20_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB20_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB20_1: # %overflow
+; SDAG-NEXT:  .LBB20_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
@@ -1111,12 +1111,12 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; FAST-NEXT:    mulw %si
 ; FAST-NEXT:    seto %al
 ; FAST-NEXT:    testb $1, %al
-; FAST-NEXT:    jne .LBB20_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jne .LBB20_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB20_1: # %overflow
+; FAST-NEXT:  .LBB20_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -1126,11 +1126,11 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mulw %dx
-; WIN64-NEXT:    jo .LBB20_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB20_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB20_1: # %overflow
+; WIN64-NEXT:  .LBB20_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -1138,11 +1138,11 @@ define zeroext i1 @umulobri16(i16 %v1, i16 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mulw {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB20_1
-; WIN32-NEXT:  # %bb.2: # %continue
+; WIN32-NEXT:    jo LBB20_2
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB20_1: # %overflow
+; WIN32-NEXT:  LBB20_2: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    retl
   %t = call {i16, i1} @llvm.umul.with.overflow.i16(i16 %v1, i16 %v2)
@@ -1162,11 +1162,11 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
 ; SDAG-NEXT:    mull %esi
-; SDAG-NEXT:    jo .LBB21_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB21_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB21_1: # %overflow
+; SDAG-NEXT:  .LBB21_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
@@ -1174,12 +1174,12 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movl %edi, %eax
 ; FAST-NEXT:    mull %esi
-; FAST-NEXT:    jo .LBB21_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jo .LBB21_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB21_1: # %overflow
+; FAST-NEXT:  .LBB21_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -1189,11 +1189,11 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movl %ecx, %eax
 ; WIN64-NEXT:    mull %edx
-; WIN64-NEXT:    jo .LBB21_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB21_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB21_1: # %overflow
+; WIN64-NEXT:  .LBB21_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -1201,11 +1201,11 @@ define zeroext i1 @umulobri32(i32 %v1, i32 %v2) {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    mull {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jo LBB21_1
-; WIN32-NEXT:  # %bb.2: # %continue
+; WIN32-NEXT:    jo LBB21_2
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB21_1: # %overflow
+; WIN32-NEXT:  LBB21_2: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    retl
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -1225,11 +1225,11 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdi, %rax
 ; SDAG-NEXT:    mulq %rsi
-; SDAG-NEXT:    jo .LBB22_1
-; SDAG-NEXT:  # %bb.2: # %continue
+; SDAG-NEXT:    jo .LBB22_2
+; SDAG-NEXT:  # %bb.1: # %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  .LBB22_1: # %overflow
+; SDAG-NEXT:  .LBB22_2: # %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
@@ -1237,12 +1237,12 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movq %rdi, %rax
 ; FAST-NEXT:    mulq %rsi
-; FAST-NEXT:    jo .LBB22_1
-; FAST-NEXT:  # %bb.2: # %continue
+; FAST-NEXT:    jo .LBB22_2
+; FAST-NEXT:  # %bb.1: # %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  .LBB22_1: # %overflow
+; FAST-NEXT:  .LBB22_2: # %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    # kill: def $al killed $al killed $eax
@@ -1252,11 +1252,11 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %rdx
-; WIN64-NEXT:    jo .LBB22_1
-; WIN64-NEXT:  # %bb.2: # %continue
+; WIN64-NEXT:    jo .LBB22_2
+; WIN64-NEXT:  # %bb.1: # %continue
 ; WIN64-NEXT:    movb $1, %al
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:  .LBB22_1: # %overflow
+; WIN64-NEXT:  .LBB22_2: # %overflow
 ; WIN64-NEXT:    xorl %eax, %eax
 ; WIN64-NEXT:    retq
 ;
@@ -1289,8 +1289,8 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    setb %al
 ; WIN32-NEXT:    orb %ch, %al
 ; WIN32-NEXT:    subb $1, %al
-; WIN32-NEXT:    je LBB22_1
-; WIN32-NEXT:  # %bb.3: # %continue
+; WIN32-NEXT:    je LBB22_3
+; WIN32-NEXT:  # %bb.1: # %continue
 ; WIN32-NEXT:    movb $1, %al
 ; WIN32-NEXT:  LBB22_2: # %overflow
 ; WIN32-NEXT:    popl %esi
@@ -1298,7 +1298,7 @@ define zeroext i1 @umulobri64(i64 %v1, i64 %v2) {
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
-; WIN32-NEXT:  LBB22_1: # %overflow
+; WIN32-NEXT:  LBB22_3: # %overflow
 ; WIN32-NEXT:    xorl %eax, %eax
 ; WIN32-NEXT:    jmp LBB22_2
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)

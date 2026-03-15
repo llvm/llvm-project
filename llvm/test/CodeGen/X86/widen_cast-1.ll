@@ -13,9 +13,9 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    cmpl $3, (%esp)
-; CHECK-NEXT:    jg .LBB0_3
+; CHECK-NEXT:    jg .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # %forbody
+; CHECK-NEXT:  .LBB0_1: # %forbody
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -25,8 +25,8 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    movq %xmm1, (%ecx,%eax,8)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    cmpl $3, (%esp)
-; CHECK-NEXT:    jle .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %afterfor
+; CHECK-NEXT:    jle .LBB0_1
+; CHECK-NEXT:  .LBB0_2: # %afterfor
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
 ;
@@ -36,9 +36,9 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; ATOM-NEXT:    pcmpeqd %xmm0, %xmm0
 ; ATOM-NEXT:    movl $0, (%esp)
 ; ATOM-NEXT:    cmpl $3, (%esp)
-; ATOM-NEXT:    jg .LBB0_3
+; ATOM-NEXT:    jg .LBB0_2
 ; ATOM-NEXT:    .p2align 4
-; ATOM-NEXT:  .LBB0_2: # %forbody
+; ATOM-NEXT:  .LBB0_1: # %forbody
 ; ATOM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ATOM-NEXT:    movl (%esp), %eax
 ; ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -48,8 +48,8 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; ATOM-NEXT:    movq %xmm1, (%ecx,%eax,8)
 ; ATOM-NEXT:    incl (%esp)
 ; ATOM-NEXT:    cmpl $3, (%esp)
-; ATOM-NEXT:    jle .LBB0_2
-; ATOM-NEXT:  .LBB0_3: # %afterfor
+; ATOM-NEXT:    jle .LBB0_1
+; ATOM-NEXT:  .LBB0_2: # %afterfor
 ; ATOM-NEXT:    popl %eax
 ; ATOM-NEXT:    retl
 entry:

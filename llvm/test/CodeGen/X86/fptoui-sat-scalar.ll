@@ -37,11 +37,11 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB0_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB0_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB0_3
-; X86-X87-NEXT:  .LBB0_1:
+; X86-X87-NEXT:  .LBB0_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB0_3:
 ; X86-X87-NEXT:    fld1
@@ -100,11 +100,11 @@ define i8 @test_unsigned_i8_f32(float %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB1_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB1_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB1_3
-; X86-X87-NEXT:  .LBB1_1:
+; X86-X87-NEXT:  .LBB1_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB1_3:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
@@ -972,11 +972,11 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB10_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB10_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB10_3
-; X86-X87-NEXT:  .LBB10_1:
+; X86-X87-NEXT:  .LBB10_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB10_3:
 ; X86-X87-NEXT:    fld1
@@ -1035,11 +1035,11 @@ define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB11_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB11_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB11_3
-; X86-X87-NEXT:  .LBB11_1:
+; X86-X87-NEXT:  .LBB11_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB11_3:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
@@ -1886,11 +1886,11 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB20_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB20_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB20_3
-; X86-X87-NEXT:  .LBB20_1:
+; X86-X87-NEXT:  .LBB20_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB20_3:
 ; X86-X87-NEXT:    fld1
@@ -1960,11 +1960,11 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB21_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB21_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB21_3
-; X86-X87-NEXT:  .LBB21_1:
+; X86-X87-NEXT:  .LBB21_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB21_3:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
@@ -2941,11 +2941,11 @@ define i1 @test_unsigned_i1_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB30_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB30_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB30_3
-; X86-X87-NEXT:  .LBB30_1:
+; X86-X87-NEXT:  .LBB30_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB30_3:
 ; X86-X87-NEXT:    fld1
@@ -3038,11 +3038,11 @@ define i8 @test_unsigned_i8_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    fnstsw %ax
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
-; X86-X87-NEXT:    jb .LBB31_1
-; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    jb .LBB31_2
+; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-X87-NEXT:    jmp .LBB31_3
-; X86-X87-NEXT:  .LBB31_1:
+; X86-X87-NEXT:  .LBB31_2:
 ; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:  .LBB31_3:
 ; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}

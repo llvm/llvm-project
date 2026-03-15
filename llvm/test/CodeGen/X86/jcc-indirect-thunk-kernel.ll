@@ -11,10 +11,10 @@ define dso_local void @foo(ptr %something) #0 {
 ; CHECK-NEXT:    testq %r11, %r11
 ; Make sure that a JNE was not generated instead of a JE + JMP sequence
 ; CHECK-NOT:     jne
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:    bb.2: # %if.then
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:    bb.1: # %if.then
 ; CHECK-NEXT:    jmp __x86_indirect_thunk_r11
-; CHECK-NEXT:    LBB0_1:
+; CHECK-NEXT:    LBB0_2:
 ; CHECK-NEXT:    retq
 entry:
   %0 = load ptr, ptr %something, align 8

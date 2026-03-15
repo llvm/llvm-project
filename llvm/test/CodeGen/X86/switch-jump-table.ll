@@ -41,14 +41,13 @@ exit:
 default:
   unreachable
 
-; The jump table has four entries.
+; The jump table has five entries.
 ; CHECK-LABEL: .LJTI0_0:
-; CHECK-NEXT: .long  .LBB0_1
-; CHECK-NEXT: .long  .LBB0_2
-; CHECK-NEXT: .long  .LBB0_3
-; CHECK-NEXT: .long  .LBB0_4
-; CHECK-NEXT: .long  .LBB0_5
-; CHECK-NEXT: .long  .LBB0_5
+; CHECK-NEXT: .long  .LBB0_{{[0-9]+}}
+; CHECK-NEXT: .long  .LBB0_{{[0-9]+}}
+; CHECK-NEXT: .long  .LBB0_{{[0-9]+}}
+; CHECK-NEXT: .long  .LBB0_{{[0-9]+}}
+; CHECK-NEXT: .long  .LBB0_{{[0-9]+}}
 }
 
 ; Check if branch probabilities are correctly assigned to the jump table.

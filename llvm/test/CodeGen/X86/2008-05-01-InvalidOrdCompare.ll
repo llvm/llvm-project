@@ -12,11 +12,11 @@ define i32 @test(double %p) nounwind {
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jp .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; CHECK-NEXT:    jp .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %UnifiedReturnBlock
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %bb
+; CHECK-NEXT:  .LBB0_2: # %bb
 ; CHECK-NEXT:    calll test2@PLT
 ; CHECK-NEXT:    movl $17, %eax
 ; CHECK-NEXT:    retl

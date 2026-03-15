@@ -17,10 +17,10 @@ define void @foo32(ptr %ptr) nounwind {
 ; CHECK-NEXT:    movl $bit_mask32, %eax
 ; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    btl %ecx, %eax
-; CHECK-NEXT:    jae .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %f
+; CHECK-NEXT:    jae .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %f
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %t
+; CHECK-NEXT:  .LBB0_2: # %t
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:    popq %rax
@@ -46,10 +46,10 @@ define void @foo64(ptr %ptr) nounwind {
 ; CHECK-NEXT:    movabsq $bit_mask64, %rax
 ; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    btq %rcx, %rax
-; CHECK-NEXT:    jae .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %f
+; CHECK-NEXT:    jae .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %f
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_1: # %t
+; CHECK-NEXT:  .LBB1_2: # %t
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:    popq %rax

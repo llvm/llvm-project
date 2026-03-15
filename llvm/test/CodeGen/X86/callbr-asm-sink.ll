@@ -12,11 +12,11 @@ define void @klist_dec_and_del(ptr) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leaq 8(%rdi), %rax
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    # 8(%rdi) .LBB0_1
+; CHECK-NEXT:    # 8(%rdi) .LBB0_2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # Inline asm indirect target
+; CHECK-NEXT:  .LBB0_2: # Inline asm indirect target
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movq $0, -8(%rax)
 ; CHECK-NEXT:    retq

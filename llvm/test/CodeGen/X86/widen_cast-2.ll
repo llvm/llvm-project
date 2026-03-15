@@ -9,9 +9,9 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    cmpl $3, (%esp)
-; CHECK-NEXT:    jg .LBB0_3
+; CHECK-NEXT:    jg .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # %forbody
+; CHECK-NEXT:  .LBB0_1: # %forbody
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -27,8 +27,8 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    pextrd $2, %xmm2, 24(%ecx,%eax)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    cmpl $3, (%esp)
-; CHECK-NEXT:    jle .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %afterfor
+; CHECK-NEXT:    jle .LBB0_1
+; CHECK-NEXT:  .LBB0_2: # %afterfor
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
 entry:

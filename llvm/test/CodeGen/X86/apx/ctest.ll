@@ -8,22 +8,22 @@ define void @ctest8rr_zf(i8 noundef %a, i8 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    ctestneb {dfv=zf} %sil, %sil
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB0_1: # %if.end
+; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest8rr_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testb %dil, %dil
 ; NDD-NEXT:    ctestneb {dfv=zf} %sil, %sil
-; NDD-NEXT:    jne .LBB0_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB0_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB0_1: # %if.end
+; NDD-NEXT:  .LBB0_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest8rr_zf:
@@ -233,22 +233,22 @@ define void @ctest8rr_sf(i8 noundef %a, i8 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    ctesteb {dfv=sf} %sil, %sil
-; CHECK-NEXT:    js .LBB4_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    js .LBB4_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB4_1: # %if.end
+; CHECK-NEXT:  .LBB4_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest8rr_sf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testb %dil, %dil
 ; NDD-NEXT:    ctesteb {dfv=sf} %sil, %sil
-; NDD-NEXT:    js .LBB4_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    js .LBB4_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB4_1: # %if.end
+; NDD-NEXT:  .LBB4_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest8rr_sf:
@@ -258,14 +258,14 @@ define void @ctest8rr_sf(i8 noundef %a, i8 noundef %b) {
 ; SETZUCC-NEXT:    testb %sil, %sil # encoding: [0x40,0x84,0xf6]
 ; SETZUCC-NEXT:    setzus %cl # encoding: [0x62,0xf4,0x7f,0x18,0x48,0xc1]
 ; SETZUCC-NEXT:    orb %al, %cl # encoding: [0x08,0xc1]
-; SETZUCC-NEXT:    jne .LBB4_1 # encoding: [0x75,A]
-; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB4_1, kind: FK_PCRel_1
-; SETZUCC-NEXT:  # %bb.2: # %if.then
+; SETZUCC-NEXT:    jne .LBB4_2 # encoding: [0x75,A]
+; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB4_2, kind: FK_PCRel_1
+; SETZUCC-NEXT:  # %bb.1: # %if.then
 ; SETZUCC-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; SETZUCC-NEXT:    jmp foo # TAILCALL
 ; SETZUCC-NEXT:    # encoding: [0xeb,A]
 ; SETZUCC-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
-; SETZUCC-NEXT:  .LBB4_1: # %if.end
+; SETZUCC-NEXT:  .LBB4_2: # %if.end
 ; SETZUCC-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp ule i8 %a, 0
@@ -390,22 +390,22 @@ define void @ctest16rr_sf(i16 noundef %a, i16 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    ctestlew {dfv=sf} %si, %si
-; CHECK-NEXT:    jns .LBB7_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jns .LBB7_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB7_1: # %if.end
+; CHECK-NEXT:  .LBB7_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest16rr_sf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testw %di, %di
 ; NDD-NEXT:    ctestlew {dfv=sf} %si, %si
-; NDD-NEXT:    jns .LBB7_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jns .LBB7_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB7_1: # %if.end
+; NDD-NEXT:  .LBB7_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest16rr_sf:
@@ -415,14 +415,14 @@ define void @ctest16rr_sf(i16 noundef %a, i16 noundef %b) {
 ; SETZUCC-NEXT:    testw %si, %si # encoding: [0x66,0x85,0xf6]
 ; SETZUCC-NEXT:    setzuns %cl # encoding: [0x62,0xf4,0x7f,0x18,0x49,0xc1]
 ; SETZUCC-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
-; SETZUCC-NEXT:    jne .LBB7_1 # encoding: [0x75,A]
-; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB7_1, kind: FK_PCRel_1
-; SETZUCC-NEXT:  # %bb.2: # %if.then
+; SETZUCC-NEXT:    jne .LBB7_2 # encoding: [0x75,A]
+; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB7_2, kind: FK_PCRel_1
+; SETZUCC-NEXT:  # %bb.1: # %if.then
 ; SETZUCC-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; SETZUCC-NEXT:    jmp foo # TAILCALL
 ; SETZUCC-NEXT:    # encoding: [0xeb,A]
 ; SETZUCC-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
-; SETZUCC-NEXT:  .LBB7_1: # %if.end
+; SETZUCC-NEXT:  .LBB7_2: # %if.end
 ; SETZUCC-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp sgt i16 %a, 0
@@ -443,22 +443,22 @@ define void @ctest32rr_zf(i32 noundef %a, i32 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    ctestsl {dfv=zf} %esi, %esi
-; CHECK-NEXT:    jne .LBB8_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB8_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB8_1: # %if.end
+; CHECK-NEXT:  .LBB8_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest32rr_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestsl {dfv=zf} %esi, %esi
-; NDD-NEXT:    jne .LBB8_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB8_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB8_1: # %if.end
+; NDD-NEXT:  .LBB8_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest32rr_zf:
@@ -468,14 +468,14 @@ define void @ctest32rr_zf(i32 noundef %a, i32 noundef %b) {
 ; SETZUCC-NEXT:    testl %esi, %esi # encoding: [0x85,0xf6]
 ; SETZUCC-NEXT:    setzune %cl # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc1]
 ; SETZUCC-NEXT:    testb %cl, %al # encoding: [0x84,0xc8]
-; SETZUCC-NEXT:    jne .LBB8_1 # encoding: [0x75,A]
-; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB8_1, kind: FK_PCRel_1
-; SETZUCC-NEXT:  # %bb.2: # %if.then
+; SETZUCC-NEXT:    jne .LBB8_2 # encoding: [0x75,A]
+; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB8_2, kind: FK_PCRel_1
+; SETZUCC-NEXT:  # %bb.1: # %if.then
 ; SETZUCC-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; SETZUCC-NEXT:    jmp foo # TAILCALL
 ; SETZUCC-NEXT:    # encoding: [0xeb,A]
 ; SETZUCC-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
-; SETZUCC-NEXT:  .LBB8_1: # %if.end
+; SETZUCC-NEXT:  .LBB8_2: # %if.end
 ; SETZUCC-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp sge i32 %a, 0
@@ -496,22 +496,22 @@ define void @ctest8ri_zf(i8 noundef %a, i8 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    ctestneb {dfv=zf} $123, %sil
-; CHECK-NEXT:    jne .LBB9_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB9_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB9_1: # %if.end
+; CHECK-NEXT:  .LBB9_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest8ri_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testb %dil, %dil
 ; NDD-NEXT:    ctestneb {dfv=zf} $123, %sil
-; NDD-NEXT:    jne .LBB9_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB9_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB9_1: # %if.end
+; NDD-NEXT:  .LBB9_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest8ri_zf:
@@ -551,22 +551,22 @@ define void @ctest16ri_zf(i16 noundef %a, i16 noundef %b) {
 ; CHECK-NEXT:    andl $1234, %esi # imm = 0x4D2
 ; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    ctestnew {dfv=zf} %si, %si
-; CHECK-NEXT:    jne .LBB10_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB10_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB10_1: # %if.end
+; CHECK-NEXT:  .LBB10_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest16ri_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testw %di, %di
 ; NDD-NEXT:    ctestnew {dfv=zf} $1234, %si # imm = 0x4D2
-; NDD-NEXT:    jne .LBB10_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB10_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB10_1: # %if.end
+; NDD-NEXT:  .LBB10_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest16ri_zf:
@@ -606,22 +606,22 @@ define void @ctest32ri_zf(i32 noundef %a, i32 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    ctestnel {dfv=zf} $12345, %esi # imm = 0x3039
-; CHECK-NEXT:    jne .LBB11_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB11_1: # %if.end
+; CHECK-NEXT:  .LBB11_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest32ri_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestnel {dfv=zf} $12345, %esi # imm = 0x3039
-; NDD-NEXT:    jne .LBB11_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB11_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB11_1: # %if.end
+; NDD-NEXT:  .LBB11_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest32ri_zf:
@@ -661,22 +661,22 @@ define void @ctest64ri32_zf(i64 noundef %a, i64 noundef %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    ctestneq {dfv=zf} $123456, %rsi # imm = 0x1E240
-; CHECK-NEXT:    jne .LBB12_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB12_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB12_1: # %if.end
+; CHECK-NEXT:  .LBB12_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest64ri32_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testq %rdi, %rdi
 ; NDD-NEXT:    ctestneq {dfv=zf} $123456, %rsi # imm = 0x1E240
-; NDD-NEXT:    jne .LBB12_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB12_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB12_1: # %if.end
+; NDD-NEXT:  .LBB12_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest64ri32_zf:
@@ -717,11 +717,11 @@ define void @ctest8mr_zf(i8 noundef %a, ptr %ptr) {
 ; CHECK-NEXT:    movzbl (%rsi), %eax
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    ctestneb {dfv=zf} %al, %al
-; CHECK-NEXT:    jne .LBB13_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB13_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB13_1: # %if.end
+; CHECK-NEXT:  .LBB13_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest8mr_zf:
@@ -729,11 +729,11 @@ define void @ctest8mr_zf(i8 noundef %a, ptr %ptr) {
 ; NDD-NEXT:    movzbl (%rsi), %eax
 ; NDD-NEXT:    testb %dil, %dil
 ; NDD-NEXT:    ctestneb {dfv=zf} %al, %al
-; NDD-NEXT:    jne .LBB13_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB13_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB13_1: # %if.end
+; NDD-NEXT:  .LBB13_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest8mr_zf:
@@ -773,11 +773,11 @@ define void @ctest16mr_zf(i16 noundef %a, ptr %ptr) {
 ; CHECK-NEXT:    movzwl (%rsi), %eax
 ; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    ctestnew {dfv=zf} %ax, %ax
-; CHECK-NEXT:    jne .LBB14_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB14_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB14_1: # %if.end
+; CHECK-NEXT:  .LBB14_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest16mr_zf:
@@ -785,11 +785,11 @@ define void @ctest16mr_zf(i16 noundef %a, ptr %ptr) {
 ; NDD-NEXT:    movzwl (%rsi), %eax
 ; NDD-NEXT:    testw %di, %di
 ; NDD-NEXT:    ctestnew {dfv=zf} %ax, %ax
-; NDD-NEXT:    jne .LBB14_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB14_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB14_1: # %if.end
+; NDD-NEXT:  .LBB14_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest16mr_zf:
@@ -829,11 +829,11 @@ define void @ctest32mr_cf(i32 noundef %a, ptr %ptr) {
 ; CHECK-NEXT:    movl (%rsi), %eax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    ctestnel {dfv=zf} %eax, %eax
-; CHECK-NEXT:    jne .LBB15_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB15_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB15_1: # %if.end
+; CHECK-NEXT:  .LBB15_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest32mr_cf:
@@ -841,11 +841,11 @@ define void @ctest32mr_cf(i32 noundef %a, ptr %ptr) {
 ; NDD-NEXT:    movl (%rsi), %eax
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestnel {dfv=zf} %eax, %eax
-; NDD-NEXT:    jne .LBB15_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB15_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB15_1: # %if.end
+; NDD-NEXT:  .LBB15_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest32mr_cf:
@@ -885,11 +885,11 @@ define void @ctest64mr_zf(i64 noundef %a, ptr %ptr) {
 ; CHECK-NEXT:    movq (%rsi), %rax
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    ctestneq {dfv=zf} %rax, %rax
-; CHECK-NEXT:    jne .LBB16_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB16_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB16_1: # %if.end
+; CHECK-NEXT:  .LBB16_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest64mr_zf:
@@ -897,11 +897,11 @@ define void @ctest64mr_zf(i64 noundef %a, ptr %ptr) {
 ; NDD-NEXT:    movq (%rsi), %rax
 ; NDD-NEXT:    testq %rdi, %rdi
 ; NDD-NEXT:    ctestneq {dfv=zf} %rax, %rax
-; NDD-NEXT:    jne .LBB16_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB16_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB16_1: # %if.end
+; NDD-NEXT:  .LBB16_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest64mr_zf:
@@ -940,22 +940,22 @@ define void @ctest8mi_zf(i8 noundef %a, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    ctestneb {dfv=zf} $123, (%rsi)
-; CHECK-NEXT:    jne .LBB17_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB17_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB17_1: # %if.end
+; CHECK-NEXT:  .LBB17_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest8mi_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testb %dil, %dil
 ; NDD-NEXT:    ctestneb {dfv=zf} $123, (%rsi)
-; NDD-NEXT:    jne .LBB17_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB17_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB17_1: # %if.end
+; NDD-NEXT:  .LBB17_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest8mi_zf:
@@ -998,22 +998,22 @@ define void @ctest16mi_zf(i16 noundef %a, ptr %ptr) {
 ; CHECK-NEXT:    andl $1234, %eax # imm = 0x4D2
 ; CHECK-NEXT:    testw %di, %di
 ; CHECK-NEXT:    ctestnew {dfv=zf} %ax, %ax
-; CHECK-NEXT:    jne .LBB18_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB18_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB18_1: # %if.end
+; CHECK-NEXT:  .LBB18_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest16mi_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testw %di, %di
 ; NDD-NEXT:    ctestnew {dfv=zf} $1234, (%rsi) # imm = 0x4D2
-; NDD-NEXT:    jne .LBB18_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB18_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB18_1: # %if.end
+; NDD-NEXT:  .LBB18_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest16mi_zf:
@@ -1057,22 +1057,22 @@ define void @ctest32mi_zf(i32 noundef %a, ptr %ptr) {
 ; CHECK-NEXT:    andl $12345, %eax # imm = 0x3039
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    ctestnew {dfv=zf} %ax, %ax
-; CHECK-NEXT:    jne .LBB19_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB19_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB19_1: # %if.end
+; CHECK-NEXT:  .LBB19_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest32mi_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi
 ; NDD-NEXT:    ctestnew {dfv=zf} $12345, (%rsi) # imm = 0x3039
-; NDD-NEXT:    jne .LBB19_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB19_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB19_1: # %if.end
+; NDD-NEXT:  .LBB19_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest32mi_zf:
@@ -1114,22 +1114,22 @@ define void @ctest64mi32_zf(i64 noundef %a, ptr %ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    ctestnel {dfv=zf} $123456, (%rsi) # imm = 0x1E240
-; CHECK-NEXT:    jne .LBB20_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB20_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB20_1: # %if.end
+; CHECK-NEXT:  .LBB20_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest64mi32_zf:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testq %rdi, %rdi
 ; NDD-NEXT:    ctestnel {dfv=zf} $123456, (%rsi) # imm = 0x1E240
-; NDD-NEXT:    jne .LBB20_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB20_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB20_1: # %if.end
+; NDD-NEXT:  .LBB20_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest64mi32_zf:
@@ -1172,11 +1172,11 @@ define void @ctest_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    ctestll {dfv=} %esi, %esi
 ; CHECK-NEXT:    ctestnsl {dfv=sf} %edx, %edx
-; CHECK-NEXT:    jns .LBB21_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jns .LBB21_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB21_1: # %if.end
+; CHECK-NEXT:  .LBB21_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest_continous:
@@ -1184,11 +1184,11 @@ define void @ctest_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; NDD-NEXT:    cmpl %esi, %edi
 ; NDD-NEXT:    ctestll {dfv=} %esi, %esi
 ; NDD-NEXT:    ctestnsl {dfv=sf} %edx, %edx
-; NDD-NEXT:    jns .LBB21_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jns .LBB21_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB21_1: # %if.end
+; NDD-NEXT:  .LBB21_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest_continous:
@@ -1201,14 +1201,14 @@ define void @ctest_continous(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; SETZUCC-NEXT:    testl %edx, %edx # encoding: [0x85,0xd2]
 ; SETZUCC-NEXT:    setzuns %al # encoding: [0x62,0xf4,0x7f,0x18,0x49,0xc0]
 ; SETZUCC-NEXT:    testb %al, %cl # encoding: [0x84,0xc1]
-; SETZUCC-NEXT:    jne .LBB21_1 # encoding: [0x75,A]
-; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB21_1, kind: FK_PCRel_1
-; SETZUCC-NEXT:  # %bb.2: # %if.then
+; SETZUCC-NEXT:    jne .LBB21_2 # encoding: [0x75,A]
+; SETZUCC-NEXT:    # fixup A - offset: 1, value: .LBB21_2, kind: FK_PCRel_1
+; SETZUCC-NEXT:  # %bb.1: # %if.then
 ; SETZUCC-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; SETZUCC-NEXT:    jmp foo # TAILCALL
 ; SETZUCC-NEXT:    # encoding: [0xeb,A]
 ; SETZUCC-NEXT:    # fixup A - offset: 1, value: foo, kind: FK_PCRel_1
-; SETZUCC-NEXT:  .LBB21_1: # %if.end
+; SETZUCC-NEXT:  .LBB21_2: # %if.end
 ; SETZUCC-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp slt i32 %a, %b
@@ -1307,11 +1307,11 @@ define void @ctest64ri64(i64 noundef %a, i64 noundef %b) {
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
 ; CHECK-NEXT:    ctestneq {dfv=zf} %rax, %rsi
-; CHECK-NEXT:    jne .LBB24_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jne .LBB24_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp foo # TAILCALL
-; CHECK-NEXT:  .LBB24_1: # %if.end
+; CHECK-NEXT:  .LBB24_2: # %if.end
 ; CHECK-NEXT:    retq
 ;
 ; NDD-LABEL: ctest64ri64:
@@ -1319,11 +1319,11 @@ define void @ctest64ri64(i64 noundef %a, i64 noundef %b) {
 ; NDD-NEXT:    testq %rdi, %rdi
 ; NDD-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
 ; NDD-NEXT:    ctestneq {dfv=zf} %rax, %rsi
-; NDD-NEXT:    jne .LBB24_1
-; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    jne .LBB24_2
+; NDD-NEXT:  # %bb.1: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
 ; NDD-NEXT:    jmp foo # TAILCALL
-; NDD-NEXT:  .LBB24_1: # %if.end
+; NDD-NEXT:  .LBB24_2: # %if.end
 ; NDD-NEXT:    retq
 ;
 ; SETZUCC-LABEL: ctest64ri64:

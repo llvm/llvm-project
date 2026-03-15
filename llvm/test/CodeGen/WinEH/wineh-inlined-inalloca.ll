@@ -29,13 +29,13 @@ define dso_local noundef i32 @foo() local_unnamed_addr #0 personality ptr @__Cxx
 ; CHECK-NEXT:    calll _bar
 ; CHECK-NEXT:    movl $0, -16(%ebp)
 ; CHECK-NEXT:    calll _alwaysthrows
-; CHECK-NEXT:  # %bb.3: # %unreachable.i
+; CHECK-NEXT:  # %bb.1: # %unreachable.i
 ; CHECK-NEXT:  LBB0_2: # Block address taken
 ; CHECK-NEXT:    # %catch.i
 ; CHECK-NEXT:    addl $12, %ebp
-; CHECK-NEXT:    jmp LBB0_4
-; CHECK-NEXT:  LBB0_4: # %exit
-; CHECK-NEXT:  $ehgcr_0_4:
+; CHECK-NEXT:    jmp LBB0_3
+; CHECK-NEXT:  LBB0_3: # %exit
+; CHECK-NEXT:  $ehgcr_0_3:
 ; CHECK-NEXT:    movl -24(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, %fs:0
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -45,13 +45,13 @@ define dso_local noundef i32 @foo() local_unnamed_addr #0 personality ptr @__Cxx
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:    .def "?catch$1@?0?foo@4HA";
+; CHECK-NEXT:    .def "?catch$4@?0?foo@4HA";
 ; CHECK-NEXT:    .scl 3;
 ; CHECK-NEXT:    .type 32;
 ; CHECK-NEXT:    .endef
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  "?catch$1@?0?foo@4HA":
-; CHECK-NEXT:  LBB0_1: # %catch.i
+; CHECK-NEXT:  "?catch$4@?0?foo@4HA":
+; CHECK-NEXT:  LBB0_4: # %catch.i
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    addl $12, %ebp
 ; CHECK-NEXT:    movl %esp, -28(%ebp)

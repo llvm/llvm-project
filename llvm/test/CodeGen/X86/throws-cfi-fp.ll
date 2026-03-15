@@ -17,7 +17,7 @@ define void @_Z6throwsv() #0 personality ptr @__gxx_personality_v0 {
 ; CHECK:         popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:    .LBB0_1:
+; CHECK-NEXT:    .L{{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:    .cfi_def_cfa %rbp, 16
 
 ; PEI-LABEL: name: _Z6throwsv
@@ -29,7 +29,7 @@ define void @_Z6throwsv() #0 personality ptr @__gxx_personality_v0 {
 ; PEI-NEXT:    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
 ; PEI-NEXT:    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
 ; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION offset $rbx, -24
-; PEI:         bb.4.try.cont:
+; PEI:         bb.{{[0-9]+}}.try.cont:
 ; PEI-NEXT:      $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
 ; PEI-NEXT:      $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
 ; PEI-NEXT:      $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp

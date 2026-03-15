@@ -52,9 +52,9 @@
 ; SJLJ-NEXT:          leal
 ; SJLJ-NEXT:          movl
 ; SJLJ-NEXT:          cmpl
-; SJLJ-NEXT:          jb      LBB0_4
+; SJLJ-NEXT:          jb      LBB0_5
 
-; SJLJ:       LBB0_4:
+; SJLJ:       LBB0_5:
 ; SJLJ-NEXT:          jmpl    *LJTI0_0(,%eax,4)
 
 ; SJLJ:       LBB0_6:                                 # %lpad

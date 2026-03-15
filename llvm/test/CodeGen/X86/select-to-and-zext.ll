@@ -29,11 +29,11 @@ define i32 @from_cmpeq_fail_bad_andmask(i32 %xx, i32 %y) {
 ; X86-LABEL: from_cmpeq_fail_bad_andmask:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $9, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB1_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    je .LBB1_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB1_1:
+; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $3, %eax
 ; X86-NEXT:    retl
@@ -115,11 +115,11 @@ define i32 @from_i1_fail_bad_select0(i1 %x, i32 %y) {
 ; X86-LABEL: from_i1_fail_bad_select0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB5_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB5_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB5_1:
+; X86-NEXT:  .LBB5_2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    retl

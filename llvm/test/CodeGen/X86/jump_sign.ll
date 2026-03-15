@@ -216,32 +216,32 @@ define void @func_o() nounwind uwtable {
 ; CHECK-LABEL: func_o:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB12_1
-; CHECK-NEXT:  # %bb.2: # %if.end.i
+; CHECK-NEXT:    je .LBB12_8
+; CHECK-NEXT:  # %bb.1: # %if.end.i
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB12_5
-; CHECK-NEXT:  # %bb.3: # %sw.bb
+; CHECK-NEXT:    jne .LBB12_6
+; CHECK-NEXT:  # %bb.2: # %sw.bb
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB12_8
-; CHECK-NEXT:  # %bb.4: # %if.end29
+; CHECK-NEXT:    jne .LBB12_4
+; CHECK-NEXT:  # %bb.3: # %if.end29
 ; CHECK-NEXT:    movzwl (%eax), %eax
 ; CHECK-NEXT:    imull $-13107, %eax, %eax # imm = 0xCCCD
 ; CHECK-NEXT:    rorw %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    cmpl $6554, %eax # imm = 0x199A
-; CHECK-NEXT:    jae .LBB12_5
-; CHECK-NEXT:  .LBB12_8: # %if.then44
+; CHECK-NEXT:    jae .LBB12_6
+; CHECK-NEXT:  .LBB12_4: # %if.then44
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB12_9
-; CHECK-NEXT:  # %bb.10: # %if.else.i104
+; CHECK-NEXT:  # %bb.5: # %if.else.i104
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB12_5: # %sw.default
+; CHECK-NEXT:  .LBB12_6: # %sw.default
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB12_7
-; CHECK-NEXT:  # %bb.6: # %if.then.i96
-; CHECK-NEXT:  .LBB12_1: # %if.then.i
+; CHECK-NEXT:    jne .LBB12_10
+; CHECK-NEXT:  # %bb.7: # %if.then.i96
+; CHECK-NEXT:  .LBB12_8: # %if.then.i
 ; CHECK-NEXT:  .LBB12_9: # %if.then.i103
-; CHECK-NEXT:  .LBB12_7: # %if.else.i97
+; CHECK-NEXT:  .LBB12_10: # %if.else.i97
 entry:
   %0 = load i16, ptr undef, align 2
   br i1 poison, label %if.then.i, label %if.end.i

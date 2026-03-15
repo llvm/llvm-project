@@ -11,29 +11,29 @@ define float @float_fadd_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB0_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB0_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB0_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB0_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB0_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB0_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB0_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB0_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB0_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB0_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB0_3
-; LA64F-NEXT:    b .LBB0_6
-; LA64F-NEXT:  .LBB0_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB0_2
+; LA64F-NEXT:    b .LBB0_5
+; LA64F-NEXT:  .LBB0_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB0_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB0_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB0_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fadd_acquire:
@@ -43,29 +43,29 @@ define float @float_fadd_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB0_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB0_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB0_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB0_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB0_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB0_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB0_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB0_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB0_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB0_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB0_3
-; LA64D-NEXT:    b .LBB0_6
-; LA64D-NEXT:  .LBB0_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB0_2
+; LA64D-NEXT:    b .LBB0_5
+; LA64D-NEXT:  .LBB0_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB0_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB0_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB0_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fadd ptr %p, float 1.0 acquire, align 4
   ret float %v
@@ -80,29 +80,29 @@ define float @float_fsub_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB1_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB1_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB1_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB1_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB1_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB1_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB1_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB1_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB1_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB1_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB1_3
-; LA64F-NEXT:    b .LBB1_6
-; LA64F-NEXT:  .LBB1_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB1_2
+; LA64F-NEXT:    b .LBB1_5
+; LA64F-NEXT:  .LBB1_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB1_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB1_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB1_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fsub_acquire:
@@ -112,29 +112,29 @@ define float @float_fsub_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB1_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB1_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB1_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB1_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB1_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB1_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB1_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB1_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB1_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB1_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB1_3
-; LA64D-NEXT:    b .LBB1_6
-; LA64D-NEXT:  .LBB1_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB1_2
+; LA64D-NEXT:    b .LBB1_5
+; LA64D-NEXT:  .LBB1_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB1_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB1_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB1_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fsub ptr %p, float 1.0 acquire, align 4
   ret float %v
@@ -149,29 +149,29 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB2_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB2_2 Depth 2
 ; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB2_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB2_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB2_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB2_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB2_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB2_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB2_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB2_3
-; LA64F-NEXT:    b .LBB2_6
-; LA64F-NEXT:  .LBB2_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB2_2
+; LA64F-NEXT:    b .LBB2_5
+; LA64F-NEXT:  .LBB2_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB2_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB2_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB2_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmin_acquire:
@@ -181,29 +181,29 @@ define float @float_fmin_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB2_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB2_2 Depth 2
 ; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB2_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB2_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB2_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB2_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB2_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB2_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB2_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB2_3
-; LA64D-NEXT:    b .LBB2_6
-; LA64D-NEXT:  .LBB2_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB2_2
+; LA64D-NEXT:    b .LBB2_5
+; LA64D-NEXT:  .LBB2_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB2_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB2_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB2_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmin ptr %p, float 1.0 acquire, align 4
   ret float %v
@@ -218,29 +218,29 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB3_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB3_2 Depth 2
 ; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB3_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB3_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB3_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB3_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB3_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB3_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB3_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB3_3
-; LA64F-NEXT:    b .LBB3_6
-; LA64F-NEXT:  .LBB3_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB3_2
+; LA64F-NEXT:    b .LBB3_5
+; LA64F-NEXT:  .LBB3_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB3_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB3_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB3_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmax_acquire:
@@ -250,29 +250,29 @@ define float @float_fmax_acquire(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB3_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB3_2 Depth 2
 ; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB3_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB3_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB3_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB3_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB3_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB3_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB3_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB3_3
-; LA64D-NEXT:    b .LBB3_6
-; LA64D-NEXT:  .LBB3_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB3_2
+; LA64D-NEXT:    b .LBB3_5
+; LA64D-NEXT:  .LBB3_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB3_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB3_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB3_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmax ptr %p, float 1.0 acquire, align 4
   ret float %v
@@ -575,29 +575,29 @@ define float @float_fadd_release(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB8_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB8_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB8_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB8_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB8_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB8_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB8_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB8_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB8_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB8_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB8_3
-; LA64F-NEXT:    b .LBB8_6
-; LA64F-NEXT:  .LBB8_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB8_2
+; LA64F-NEXT:    b .LBB8_5
+; LA64F-NEXT:  .LBB8_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB8_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB8_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB8_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB8_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB8_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fadd_release:
@@ -607,29 +607,29 @@ define float @float_fadd_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB8_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB8_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB8_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB8_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB8_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB8_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB8_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB8_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB8_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB8_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB8_3
-; LA64D-NEXT:    b .LBB8_6
-; LA64D-NEXT:  .LBB8_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB8_2
+; LA64D-NEXT:    b .LBB8_5
+; LA64D-NEXT:  .LBB8_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB8_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB8_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB8_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB8_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB8_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fadd ptr %p, float 1.0 release, align 4
   ret float %v
@@ -644,29 +644,29 @@ define float @float_fsub_release(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB9_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB9_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB9_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB9_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB9_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB9_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB9_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB9_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB9_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB9_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB9_3
-; LA64F-NEXT:    b .LBB9_6
-; LA64F-NEXT:  .LBB9_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB9_2
+; LA64F-NEXT:    b .LBB9_5
+; LA64F-NEXT:  .LBB9_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB9_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB9_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB9_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB9_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB9_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fsub_release:
@@ -676,29 +676,29 @@ define float @float_fsub_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB9_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB9_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB9_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB9_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB9_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB9_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB9_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB9_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB9_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB9_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB9_3
-; LA64D-NEXT:    b .LBB9_6
-; LA64D-NEXT:  .LBB9_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB9_2
+; LA64D-NEXT:    b .LBB9_5
+; LA64D-NEXT:  .LBB9_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB9_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB9_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB9_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB9_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB9_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fsub ptr %p, float 1.0 release, align 4
   ret float %v
@@ -713,29 +713,29 @@ define float @float_fmin_release(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB10_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB10_2 Depth 2
 ; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB10_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB10_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB10_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB10_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB10_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB10_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB10_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB10_3
-; LA64F-NEXT:    b .LBB10_6
-; LA64F-NEXT:  .LBB10_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB10_2
+; LA64F-NEXT:    b .LBB10_5
+; LA64F-NEXT:  .LBB10_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB10_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB10_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB10_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB10_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB10_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmin_release:
@@ -745,29 +745,29 @@ define float @float_fmin_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB10_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB10_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB10_2 Depth 2
 ; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB10_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB10_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB10_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB10_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB10_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB10_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB10_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB10_3
-; LA64D-NEXT:    b .LBB10_6
-; LA64D-NEXT:  .LBB10_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB10_2
+; LA64D-NEXT:    b .LBB10_5
+; LA64D-NEXT:  .LBB10_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB10_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB10_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB10_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB10_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB10_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmin ptr %p, float 1.0 release, align 4
   ret float %v
@@ -782,29 +782,29 @@ define float @float_fmax_release(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB11_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB11_2 Depth 2
 ; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB11_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB11_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB11_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB11_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB11_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB11_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB11_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB11_3
-; LA64F-NEXT:    b .LBB11_6
-; LA64F-NEXT:  .LBB11_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB11_2
+; LA64F-NEXT:    b .LBB11_5
+; LA64F-NEXT:  .LBB11_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB11_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB11_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB11_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB11_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB11_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmax_release:
@@ -814,29 +814,29 @@ define float @float_fmax_release(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB11_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB11_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB11_2 Depth 2
 ; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB11_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB11_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB11_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB11_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB11_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB11_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB11_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB11_3
-; LA64D-NEXT:    b .LBB11_6
-; LA64D-NEXT:  .LBB11_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB11_2
+; LA64D-NEXT:    b .LBB11_5
+; LA64D-NEXT:  .LBB11_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB11_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB11_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB11_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB11_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB11_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmax ptr %p, float 1.0 release, align 4
   ret float %v
@@ -1139,29 +1139,29 @@ define float @float_fadd_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB16_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB16_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB16_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB16_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB16_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB16_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB16_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB16_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB16_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB16_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB16_3
-; LA64F-NEXT:    b .LBB16_6
-; LA64F-NEXT:  .LBB16_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB16_2
+; LA64F-NEXT:    b .LBB16_5
+; LA64F-NEXT:  .LBB16_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB16_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB16_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB16_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB16_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB16_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fadd_acq_rel:
@@ -1171,29 +1171,29 @@ define float @float_fadd_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB16_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB16_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB16_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB16_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB16_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB16_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB16_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB16_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB16_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB16_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB16_3
-; LA64D-NEXT:    b .LBB16_6
-; LA64D-NEXT:  .LBB16_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB16_2
+; LA64D-NEXT:    b .LBB16_5
+; LA64D-NEXT:  .LBB16_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB16_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB16_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB16_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB16_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB16_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fadd ptr %p, float 1.0 acq_rel, align 4
   ret float %v
@@ -1208,29 +1208,29 @@ define float @float_fsub_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB17_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB17_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB17_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB17_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB17_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB17_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB17_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB17_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB17_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB17_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB17_3
-; LA64F-NEXT:    b .LBB17_6
-; LA64F-NEXT:  .LBB17_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB17_2
+; LA64F-NEXT:    b .LBB17_5
+; LA64F-NEXT:  .LBB17_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB17_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB17_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB17_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB17_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB17_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fsub_acq_rel:
@@ -1240,29 +1240,29 @@ define float @float_fsub_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB17_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB17_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB17_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB17_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB17_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB17_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB17_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB17_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB17_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB17_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB17_3
-; LA64D-NEXT:    b .LBB17_6
-; LA64D-NEXT:  .LBB17_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB17_2
+; LA64D-NEXT:    b .LBB17_5
+; LA64D-NEXT:  .LBB17_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB17_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB17_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB17_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB17_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB17_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fsub ptr %p, float 1.0 acq_rel, align 4
   ret float %v
@@ -1277,29 +1277,29 @@ define float @float_fmin_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB18_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB18_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB18_2 Depth 2
 ; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB18_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB18_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB18_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB18_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB18_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB18_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB18_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB18_3
-; LA64F-NEXT:    b .LBB18_6
-; LA64F-NEXT:  .LBB18_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB18_2
+; LA64F-NEXT:    b .LBB18_5
+; LA64F-NEXT:  .LBB18_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB18_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB18_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB18_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB18_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB18_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmin_acq_rel:
@@ -1309,29 +1309,29 @@ define float @float_fmin_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB18_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB18_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB18_2 Depth 2
 ; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB18_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB18_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB18_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB18_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB18_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB18_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB18_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB18_3
-; LA64D-NEXT:    b .LBB18_6
-; LA64D-NEXT:  .LBB18_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB18_2
+; LA64D-NEXT:    b .LBB18_5
+; LA64D-NEXT:  .LBB18_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB18_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB18_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB18_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB18_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB18_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmin ptr %p, float 1.0 acq_rel, align 4
   ret float %v
@@ -1346,29 +1346,29 @@ define float @float_fmax_acq_rel(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB19_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB19_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB19_2 Depth 2
 ; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB19_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB19_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB19_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB19_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB19_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB19_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB19_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB19_3
-; LA64F-NEXT:    b .LBB19_6
-; LA64F-NEXT:  .LBB19_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB19_2
+; LA64F-NEXT:    b .LBB19_5
+; LA64F-NEXT:  .LBB19_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB19_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB19_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB19_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB19_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB19_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmax_acq_rel:
@@ -1378,29 +1378,29 @@ define float @float_fmax_acq_rel(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB19_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB19_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB19_2 Depth 2
 ; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB19_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB19_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB19_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB19_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB19_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB19_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB19_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB19_3
-; LA64D-NEXT:    b .LBB19_6
-; LA64D-NEXT:  .LBB19_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB19_2
+; LA64D-NEXT:    b .LBB19_5
+; LA64D-NEXT:  .LBB19_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB19_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB19_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB19_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB19_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB19_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmax ptr %p, float 1.0 acq_rel, align 4
   ret float %v
@@ -1703,29 +1703,29 @@ define float @float_fadd_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB24_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB24_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB24_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB24_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB24_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB24_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB24_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB24_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB24_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB24_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB24_3
-; LA64F-NEXT:    b .LBB24_6
-; LA64F-NEXT:  .LBB24_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB24_2
+; LA64F-NEXT:    b .LBB24_5
+; LA64F-NEXT:  .LBB24_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB24_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB24_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB24_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB24_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB24_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fadd_seq_cst:
@@ -1735,29 +1735,29 @@ define float @float_fadd_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB24_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB24_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB24_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB24_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB24_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB24_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB24_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB24_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB24_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB24_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB24_3
-; LA64D-NEXT:    b .LBB24_6
-; LA64D-NEXT:  .LBB24_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB24_2
+; LA64D-NEXT:    b .LBB24_5
+; LA64D-NEXT:  .LBB24_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB24_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB24_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB24_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB24_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB24_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fadd ptr %p, float 1.0 seq_cst, align 4
   ret float %v
@@ -1772,29 +1772,29 @@ define float @float_fsub_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB25_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB25_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB25_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB25_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB25_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB25_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB25_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB25_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB25_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB25_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB25_3
-; LA64F-NEXT:    b .LBB25_6
-; LA64F-NEXT:  .LBB25_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB25_2
+; LA64F-NEXT:    b .LBB25_5
+; LA64F-NEXT:  .LBB25_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB25_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB25_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB25_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB25_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB25_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fsub_seq_cst:
@@ -1804,29 +1804,29 @@ define float @float_fsub_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB25_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB25_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB25_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB25_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB25_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB25_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB25_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB25_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB25_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB25_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB25_3
-; LA64D-NEXT:    b .LBB25_6
-; LA64D-NEXT:  .LBB25_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB25_2
+; LA64D-NEXT:    b .LBB25_5
+; LA64D-NEXT:  .LBB25_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB25_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB25_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB25_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB25_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB25_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fsub ptr %p, float 1.0 seq_cst, align 4
   ret float %v
@@ -1841,29 +1841,29 @@ define float @float_fmin_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB26_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB26_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB26_2 Depth 2
 ; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB26_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB26_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB26_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB26_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB26_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB26_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB26_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB26_3
-; LA64F-NEXT:    b .LBB26_6
-; LA64F-NEXT:  .LBB26_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB26_2
+; LA64F-NEXT:    b .LBB26_5
+; LA64F-NEXT:  .LBB26_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB26_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB26_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB26_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB26_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB26_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmin_seq_cst:
@@ -1873,29 +1873,29 @@ define float @float_fmin_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB26_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB26_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB26_2 Depth 2
 ; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB26_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB26_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB26_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB26_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB26_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB26_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB26_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB26_3
-; LA64D-NEXT:    b .LBB26_6
-; LA64D-NEXT:  .LBB26_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB26_2
+; LA64D-NEXT:    b .LBB26_5
+; LA64D-NEXT:  .LBB26_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB26_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB26_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB26_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB26_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB26_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmin ptr %p, float 1.0 seq_cst, align 4
   ret float %v
@@ -1910,29 +1910,29 @@ define float @float_fmax_seq_cst(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB27_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB27_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB27_2 Depth 2
 ; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB27_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB27_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB27_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB27_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB27_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB27_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB27_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB27_3
-; LA64F-NEXT:    b .LBB27_6
-; LA64F-NEXT:  .LBB27_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB27_2
+; LA64F-NEXT:    b .LBB27_5
+; LA64F-NEXT:  .LBB27_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB27_1 Depth=1
 ; LA64F-NEXT:    dbar 20
-; LA64F-NEXT:  .LBB27_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB27_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB27_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB27_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmax_seq_cst:
@@ -1942,29 +1942,29 @@ define float @float_fmax_seq_cst(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB27_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB27_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB27_2 Depth 2
 ; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB27_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB27_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB27_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB27_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB27_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB27_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB27_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB27_3
-; LA64D-NEXT:    b .LBB27_6
-; LA64D-NEXT:  .LBB27_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB27_2
+; LA64D-NEXT:    b .LBB27_5
+; LA64D-NEXT:  .LBB27_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB27_1 Depth=1
 ; LA64D-NEXT:    dbar 20
-; LA64D-NEXT:  .LBB27_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB27_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB27_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB27_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmax ptr %p, float 1.0 seq_cst, align 4
   ret float %v
@@ -2267,29 +2267,29 @@ define float @float_fadd_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB32_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB32_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB32_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB32_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB32_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB32_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB32_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB32_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB32_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB32_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB32_3
-; LA64F-NEXT:    b .LBB32_6
-; LA64F-NEXT:  .LBB32_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB32_2
+; LA64F-NEXT:    b .LBB32_5
+; LA64F-NEXT:  .LBB32_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB32_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB32_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB32_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB32_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB32_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fadd_monotonic:
@@ -2299,29 +2299,29 @@ define float @float_fadd_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB32_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB32_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB32_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB32_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB32_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB32_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB32_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB32_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB32_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB32_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB32_3
-; LA64D-NEXT:    b .LBB32_6
-; LA64D-NEXT:  .LBB32_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB32_2
+; LA64D-NEXT:    b .LBB32_5
+; LA64D-NEXT:  .LBB32_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB32_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB32_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB32_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB32_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB32_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fadd ptr %p, float 1.0 monotonic, align 4
   ret float %v
@@ -2336,29 +2336,29 @@ define float @float_fsub_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB33_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB33_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB33_2 Depth 2
 ; LA64F-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB33_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB33_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB33_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB33_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB33_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB33_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB33_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB33_3
-; LA64F-NEXT:    b .LBB33_6
-; LA64F-NEXT:  .LBB33_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB33_2
+; LA64F-NEXT:    b .LBB33_5
+; LA64F-NEXT:  .LBB33_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB33_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB33_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB33_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB33_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB33_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fsub_monotonic:
@@ -2368,29 +2368,29 @@ define float @float_fsub_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB33_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB33_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB33_2 Depth 2
 ; LA64D-NEXT:    fadd.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB33_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB33_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB33_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB33_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB33_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB33_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB33_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB33_3
-; LA64D-NEXT:    b .LBB33_6
-; LA64D-NEXT:  .LBB33_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB33_2
+; LA64D-NEXT:    b .LBB33_5
+; LA64D-NEXT:  .LBB33_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB33_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB33_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB33_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB33_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB33_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fsub ptr %p, float 1.0 monotonic, align 4
   ret float %v
@@ -2405,29 +2405,29 @@ define float @float_fmin_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB34_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB34_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB34_2 Depth 2
 ; LA64F-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB34_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB34_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB34_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB34_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB34_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB34_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB34_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB34_3
-; LA64F-NEXT:    b .LBB34_6
-; LA64F-NEXT:  .LBB34_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB34_2
+; LA64F-NEXT:    b .LBB34_5
+; LA64F-NEXT:  .LBB34_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB34_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB34_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB34_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB34_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB34_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmin_monotonic:
@@ -2437,29 +2437,29 @@ define float @float_fmin_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB34_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB34_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB34_2 Depth 2
 ; LA64D-NEXT:    fmin.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB34_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB34_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB34_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB34_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB34_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB34_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB34_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB34_3
-; LA64D-NEXT:    b .LBB34_6
-; LA64D-NEXT:  .LBB34_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB34_2
+; LA64D-NEXT:    b .LBB34_5
+; LA64D-NEXT:  .LBB34_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB34_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB34_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB34_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB34_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB34_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmin ptr %p, float 1.0 monotonic, align 4
   ret float %v
@@ -2474,29 +2474,29 @@ define float @float_fmax_monotonic(ptr %p) nounwind {
 ; LA64F-NEXT:    .p2align 4, , 16
 ; LA64F-NEXT:  .LBB35_1: # %atomicrmw.start
 ; LA64F-NEXT:    # =>This Loop Header: Depth=1
-; LA64F-NEXT:    # Child Loop BB35_3 Depth 2
+; LA64F-NEXT:    # Child Loop BB35_2 Depth 2
 ; LA64F-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64F-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64F-NEXT:    movfr2gr.s $a2, $fa0
-; LA64F-NEXT:  .LBB35_3: # %atomicrmw.start
+; LA64F-NEXT:  .LBB35_2: # %atomicrmw.start
 ; LA64F-NEXT:    # Parent Loop BB35_1 Depth=1
 ; LA64F-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64F-NEXT:    ll.w $a3, $a0, 0
-; LA64F-NEXT:    bne $a3, $a2, .LBB35_5
-; LA64F-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64F-NEXT:    # in Loop: Header=BB35_3 Depth=2
+; LA64F-NEXT:    bne $a3, $a2, .LBB35_4
+; LA64F-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64F-NEXT:    # in Loop: Header=BB35_2 Depth=2
 ; LA64F-NEXT:    move $a4, $a1
 ; LA64F-NEXT:    sc.w $a4, $a0, 0
-; LA64F-NEXT:    beq $a4, $zero, .LBB35_3
-; LA64F-NEXT:    b .LBB35_6
-; LA64F-NEXT:  .LBB35_5: # %atomicrmw.start
+; LA64F-NEXT:    beq $a4, $zero, .LBB35_2
+; LA64F-NEXT:    b .LBB35_5
+; LA64F-NEXT:  .LBB35_4: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB35_1 Depth=1
 ; LA64F-NEXT:    dbar 1792
-; LA64F-NEXT:  .LBB35_6: # %atomicrmw.start
+; LA64F-NEXT:  .LBB35_5: # %atomicrmw.start
 ; LA64F-NEXT:    # in Loop: Header=BB35_1 Depth=1
 ; LA64F-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64F-NEXT:    bne $a3, $a2, .LBB35_1
-; LA64F-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64F-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: float_fmax_monotonic:
@@ -2506,29 +2506,29 @@ define float @float_fmax_monotonic(ptr %p) nounwind {
 ; LA64D-NEXT:    .p2align 4, , 16
 ; LA64D-NEXT:  .LBB35_1: # %atomicrmw.start
 ; LA64D-NEXT:    # =>This Loop Header: Depth=1
-; LA64D-NEXT:    # Child Loop BB35_3 Depth 2
+; LA64D-NEXT:    # Child Loop BB35_2 Depth 2
 ; LA64D-NEXT:    fmax.s $fa2, $fa0, $fa1
 ; LA64D-NEXT:    movfr2gr.s $a1, $fa2
 ; LA64D-NEXT:    movfr2gr.s $a2, $fa0
-; LA64D-NEXT:  .LBB35_3: # %atomicrmw.start
+; LA64D-NEXT:  .LBB35_2: # %atomicrmw.start
 ; LA64D-NEXT:    # Parent Loop BB35_1 Depth=1
 ; LA64D-NEXT:    # => This Inner Loop Header: Depth=2
 ; LA64D-NEXT:    ll.w $a3, $a0, 0
-; LA64D-NEXT:    bne $a3, $a2, .LBB35_5
-; LA64D-NEXT:  # %bb.4: # %atomicrmw.start
-; LA64D-NEXT:    # in Loop: Header=BB35_3 Depth=2
+; LA64D-NEXT:    bne $a3, $a2, .LBB35_4
+; LA64D-NEXT:  # %bb.3: # %atomicrmw.start
+; LA64D-NEXT:    # in Loop: Header=BB35_2 Depth=2
 ; LA64D-NEXT:    move $a4, $a1
 ; LA64D-NEXT:    sc.w $a4, $a0, 0
-; LA64D-NEXT:    beq $a4, $zero, .LBB35_3
-; LA64D-NEXT:    b .LBB35_6
-; LA64D-NEXT:  .LBB35_5: # %atomicrmw.start
+; LA64D-NEXT:    beq $a4, $zero, .LBB35_2
+; LA64D-NEXT:    b .LBB35_5
+; LA64D-NEXT:  .LBB35_4: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB35_1 Depth=1
 ; LA64D-NEXT:    dbar 1792
-; LA64D-NEXT:  .LBB35_6: # %atomicrmw.start
+; LA64D-NEXT:  .LBB35_5: # %atomicrmw.start
 ; LA64D-NEXT:    # in Loop: Header=BB35_1 Depth=1
 ; LA64D-NEXT:    movgr2fr.w $fa0, $a3
 ; LA64D-NEXT:    bne $a3, $a2, .LBB35_1
-; LA64D-NEXT:  # %bb.2: # %atomicrmw.end
+; LA64D-NEXT:  # %bb.6: # %atomicrmw.end
 ; LA64D-NEXT:    ret
   %v = atomicrmw fmax ptr %p, float 1.0 monotonic, align 4
   ret float %v

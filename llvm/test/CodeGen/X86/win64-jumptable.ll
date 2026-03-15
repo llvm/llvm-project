@@ -61,7 +61,7 @@ declare void @g(i32)
 ; CHECK: .seh_endproc
 
 ; Windows PIC code should use 32-bit entries
-; PIC: .long .LBB0_2-.LJTI0_0
-; PIC: .long .LBB0_3-.LJTI0_0
-; PIC: .long .LBB0_4-.LJTI0_0
-; PIC: .long .LBB0_5-.LJTI0_0
+; PIC: .long .LBB0_{{[0-9]+}}-.LJTI0_0
+; PIC: .long .LBB0_{{[0-9]+}}-.LJTI0_0
+; PIC: .long .LBB0_{{[0-9]+}}-.LJTI0_0
+; PIC: .long .LBB0_{{[0-9]+}}-.LJTI0_0

@@ -34,7 +34,7 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    orq %rax, %r9
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    orq %r9, %r8
-; CHECK-NEXT:    je .LBB0_10
+; CHECK-NEXT:    je .LBB0_11
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: # %itofp-if-end
 ; CHECK-NEXT:    movslq %ecx, %rax
@@ -79,19 +79,19 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    movl $223, %r10d
 ; CHECK-NEXT:    subl %eax, %r10d
 ; CHECK-NEXT:    cmpl $53, %r11d
-; CHECK-NEXT:    jle .LBB0_8
+; CHECK-NEXT:    jle .LBB0_9
 ; CHECK-NEXT:  # %bb.2: # %itofp-if-then4
 ; CHECK-NEXT:    movl %r11d, %r8d
 ; CHECK-NEXT:    subl $54, %r8d
-; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_3: # %itofp-if-then4
 ; CHECK-NEXT:    movl %r11d, %r8d
 ; CHECK-NEXT:    subl $55, %r8d
-; CHECK-NEXT:    jne .LBB0_5
-; CHECK-NEXT:  # %bb.11:
-; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:  .LBB0_4: # %itofp-sw-bb
+; CHECK-NEXT:    jne .LBB0_6
+; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    jmp .LBB0_7
+; CHECK-NEXT:  .LBB0_5: # %itofp-sw-bb
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    shldq $1, %rdi, %rax
 ; CHECK-NEXT:    movq %rdx, %r8
@@ -100,8 +100,8 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    addq %rdi, %rdi
 ; CHECK-NEXT:    movq %rax, %rsi
 ; CHECK-NEXT:    movq %r8, %rdx
-; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:  .LBB0_5: # %itofp-sw-default
+; CHECK-NEXT:    jmp .LBB0_7
+; CHECK-NEXT:  .LBB0_6: # %itofp-sw-default
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
@@ -171,8 +171,8 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    movq %r14, %rsi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
 ; CHECK-NEXT:    movq %rbx, %rcx
-; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:  .LBB0_6: # %itofp-sw-epilog
+; CHECK-NEXT:    jmp .LBB0_7
+; CHECK-NEXT:  .LBB0_7: # %itofp-sw-epilog
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    shrl $2, %eax
 ; CHECK-NEXT:    andl $1, %eax
@@ -186,16 +186,16 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    btq $55, %rdi
-; CHECK-NEXT:    jae .LBB0_9
-; CHECK-NEXT:    jmp .LBB0_7
-; CHECK-NEXT:  .LBB0_7: # %itofp-if-then20
+; CHECK-NEXT:    jae .LBB0_10
+; CHECK-NEXT:    jmp .LBB0_8
+; CHECK-NEXT:  .LBB0_8: # %itofp-if-then20
 ; CHECK-NEXT:    shrdq $3, %rsi, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    movl %r11d, %r10d
-; CHECK-NEXT:    jmp .LBB0_9
-; CHECK-NEXT:  .LBB0_8: # %itofp-if-else
+; CHECK-NEXT:    jmp .LBB0_10
+; CHECK-NEXT:  .LBB0_9: # %itofp-if-else
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
@@ -215,7 +215,7 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    shlq %cl, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:  .LBB0_9: # %itofp-if-end26
+; CHECK-NEXT:  .LBB0_10: # %itofp-if-end26
 ; CHECK-NEXT:    andl $-2147483648, %r9d # imm = 0x80000000
 ; CHECK-NEXT:    shll $20, %r10d
 ; CHECK-NEXT:    addl $1072693248, %r10d # imm = 0x3FF00000
@@ -228,7 +228,7 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    andq %rcx, %rdx
 ; CHECK-NEXT:    orq %rdx, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:  .LBB0_10: # %itofp-return
+; CHECK-NEXT:  .LBB0_11: # %itofp-return
 ; CHECK-NEXT:    addq $88, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    popq %rbx

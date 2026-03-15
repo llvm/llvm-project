@@ -166,12 +166,12 @@ define <4 x i32> @and_select_neg_v4xi32(i1 %a0, <4 x i32> %a1) nounwind {
 ; X86-LABEL: and_select_neg_v4xi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB6_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB6_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    pand %xmm1, %xmm0
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB6_1:
+; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    pxor %xmm1, %xmm1
 ; X86-NEXT:    psubd %xmm0, %xmm1
 ; X86-NEXT:    pand %xmm1, %xmm0
@@ -180,12 +180,12 @@ define <4 x i32> @and_select_neg_v4xi32(i1 %a0, <4 x i32> %a1) nounwind {
 ; X64-LABEL: and_select_neg_v4xi32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB6_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jne .LBB6_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    pand %xmm1, %xmm0
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB6_1:
+; X64-NEXT:  .LBB6_2:
 ; X64-NEXT:    pxor %xmm1, %xmm1
 ; X64-NEXT:    psubd %xmm0, %xmm1
 ; X64-NEXT:    pand %xmm1, %xmm0
@@ -749,12 +749,12 @@ define <4 x i32> @xor_select_sub_1_v4xi32(i1 %a0, <4 x i32> %a1) nounwind {
 ; X86-LABEL: xor_select_sub_1_v4xi32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB28_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB28_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorps %xmm1, %xmm1
 ; X86-NEXT:    xorps %xmm1, %xmm0
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB28_1:
+; X86-NEXT:  .LBB28_2:
 ; X86-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X86-NEXT:    paddd %xmm0, %xmm1
 ; X86-NEXT:    pxor %xmm1, %xmm0
@@ -763,12 +763,12 @@ define <4 x i32> @xor_select_sub_1_v4xi32(i1 %a0, <4 x i32> %a1) nounwind {
 ; X64-LABEL: xor_select_sub_1_v4xi32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB28_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jne .LBB28_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    xorps %xmm1, %xmm0
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB28_1:
+; X64-NEXT:  .LBB28_2:
 ; X64-NEXT:    pcmpeqd %xmm1, %xmm1
 ; X64-NEXT:    paddd %xmm0, %xmm1
 ; X64-NEXT:    pxor %xmm1, %xmm0

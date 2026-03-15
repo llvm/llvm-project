@@ -17,14 +17,14 @@ define i8 @ctlo_i8(i8 %x) {
 ; X86-NOCMOV:       # %bb.0:
 ; X86-NOCMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    xorb $-1, %al
-; X86-NOCMOV-NEXT:    je .LBB0_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
+; X86-NOCMOV-NEXT:    je .LBB0_2
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
 ; X86-NOCMOV-NEXT:    movzbl %al, %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $7, %eax
 ; X86-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB0_1:
+; X86-NOCMOV-NEXT:  .LBB0_2:
 ; X86-NOCMOV-NEXT:    movb $8, %al
 ; X86-NOCMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NOCMOV-NEXT:    retl
@@ -120,13 +120,13 @@ define i16 @ctlo_i16(i16 %x) {
 ; X86-NOCMOV:       # %bb.0:
 ; X86-NOCMOV-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    xorw $-1, %ax
-; X86-NOCMOV-NEXT:    je .LBB2_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
+; X86-NOCMOV-NEXT:    je .LBB2_2
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
 ; X86-NOCMOV-NEXT:    bsrw %ax, %ax
 ; X86-NOCMOV-NEXT:    xorl $15, %eax
 ; X86-NOCMOV-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB2_1:
+; X86-NOCMOV-NEXT:  .LBB2_2:
 ; X86-NOCMOV-NEXT:    movw $16, %ax
 ; X86-NOCMOV-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NOCMOV-NEXT:    retl
@@ -208,12 +208,12 @@ define i32 @ctlo_i32(i32 %x) {
 ; X86-NOCMOV:       # %bb.0:
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    xorl $-1, %eax
-; X86-NOCMOV-NEXT:    je .LBB4_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
+; X86-NOCMOV-NEXT:    je .LBB4_2
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB4_1:
+; X86-NOCMOV-NEXT:  .LBB4_2:
 ; X86-NOCMOV-NEXT:    movl $32, %eax
 ; X86-NOCMOV-NEXT:    retl
 ;
@@ -294,21 +294,21 @@ define i64 @ctlo_i64(i64 %x) nounwind {
 ; X86-NOCMOV-NEXT:    notl %eax
 ; X86-NOCMOV-NEXT:    movl %eax, %edx
 ; X86-NOCMOV-NEXT:    orl %ecx, %edx
-; X86-NOCMOV-NEXT:    je .LBB6_1
-; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
+; X86-NOCMOV-NEXT:    je .LBB6_3
+; X86-NOCMOV-NEXT:  # %bb.1: # %cond.false
 ; X86-NOCMOV-NEXT:    testl %ecx, %ecx
-; X86-NOCMOV-NEXT:    jne .LBB6_3
-; X86-NOCMOV-NEXT:  # %bb.4: # %cond.false
+; X86-NOCMOV-NEXT:    jne .LBB6_4
+; X86-NOCMOV-NEXT:  # %bb.2: # %cond.false
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    orl $32, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB6_1:
+; X86-NOCMOV-NEXT:  .LBB6_3:
 ; X86-NOCMOV-NEXT:    movl $64, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB6_3:
+; X86-NOCMOV-NEXT:  .LBB6_4:
 ; X86-NOCMOV-NEXT:    bsrl %ecx, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
@@ -345,15 +345,15 @@ define i64 @ctlo_i64(i64 %x) nounwind {
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB6_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    jne .LBB6_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB6_1:
+; X86-CLZ-NEXT:  .LBB6_2:
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
@@ -374,8 +374,8 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    notl %eax
 ; X86-NOCMOV-NEXT:    testl %eax, %eax
-; X86-NOCMOV-NEXT:    jne .LBB7_1
-; X86-NOCMOV-NEXT:  # %bb.2:
+; X86-NOCMOV-NEXT:    jne .LBB7_2
+; X86-NOCMOV-NEXT:  # %bb.1:
 ; X86-NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOCMOV-NEXT:    notl %eax
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
@@ -383,7 +383,7 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-NOCMOV-NEXT:    orl $32, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
 ; X86-NOCMOV-NEXT:    retl
-; X86-NOCMOV-NEXT:  .LBB7_1:
+; X86-NOCMOV-NEXT:  .LBB7_2:
 ; X86-NOCMOV-NEXT:    bsrl %eax, %eax
 ; X86-NOCMOV-NEXT:    xorl $31, %eax
 ; X86-NOCMOV-NEXT:    xorl %edx, %edx
@@ -417,15 +417,15 @@ define i64 @ctlo_i64_undef(i64 %x) {
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB7_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    jne .LBB7_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB7_1:
+; X86-CLZ-NEXT:  .LBB7_2:
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl

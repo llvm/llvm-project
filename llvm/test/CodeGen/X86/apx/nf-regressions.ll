@@ -8,36 +8,36 @@ define void @convertToThreeAddress(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:    movslq (%rsi), %rcx
 ; CHECK-NEXT:    subq %rax, %rcx
 ; CHECK-NEXT:    leaq 1(%rcx), %rax
-; CHECK-NEXT:    js .LBB0_1
+; CHECK-NEXT:    js .LBB0_3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_6: # %bb
+; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpq $1, %rax
-; CHECK-NEXT:    jg .LBB0_6
-; CHECK-NEXT:  .LBB0_5: # %bb16
+; CHECK-NEXT:    jg .LBB0_1
+; CHECK-NEXT:  .LBB0_2: # %bb16
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # %bb10
+; CHECK-NEXT:  .LBB0_4: # %bb10
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %dl, %dl
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # %bb.7: # %bb11
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    je .LBB0_6
+; CHECK-NEXT:  # %bb.5: # %bb11
+; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    testq %rcx, %rcx
-; CHECK-NEXT:    jns .LBB0_2
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_3: # %bb10
+; CHECK-NEXT:    jns .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_2
+; CHECK-NEXT:  .LBB0_6: # %bb10
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_4: # %bb12
+; CHECK-NEXT:  .LBB0_7: # %bb12
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpq $1, %rax
-; CHECK-NEXT:    jg .LBB0_4
-; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:    jg .LBB0_7
+; CHECK-NEXT:    jmp .LBB0_2
 entry:
   %i = load i32, ptr %arg, align 4
   %i2 = sext i32 %i to i64

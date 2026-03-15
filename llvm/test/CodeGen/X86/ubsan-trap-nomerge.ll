@@ -16,11 +16,11 @@ define dso_local range(i32 -2147483523, -2147483648) i32 @f(i32 noundef %x) loca
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addl $125, %edi
-; CHECK-NEXT:    jo .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %cont
+; CHECK-NEXT:    jo .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %cont
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %trap
+; CHECK-NEXT:  .LBB0_2: # %trap
 ; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 125), !nosanitize !5
@@ -47,11 +47,11 @@ define dso_local range(i32 -2147483521, -2147483648) i32 @g(i32 noundef %x) loca
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addl $127, %edi
-; CHECK-NEXT:    jo .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %cont
+; CHECK-NEXT:    jo .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %cont
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_1: # %trap
+; CHECK-NEXT:  .LBB1_2: # %trap
 ; CHECK-NEXT:    ud1l (%eax), %eax
 entry:
   %0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 127), !nosanitize !5

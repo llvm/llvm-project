@@ -10,12 +10,12 @@ define i32 @Test_get_quotient(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    testl $-256, %edx
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %al, %eax
@@ -32,13 +32,13 @@ define i32 @Test_get_remainder(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    testl $-256, %edx
-; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_1:
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %ah, %eax
@@ -55,13 +55,13 @@ define i32 @Test_get_quotient_and_remainder(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    testl $-256, %edx
-; CHECK-NEXT:    je .LBB2_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB2_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB2_1:
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    movzbl %ah, %edx
@@ -85,30 +85,30 @@ define i32 @Test_use_div_and_idiv(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl %ecx, %edi
 ; CHECK-NEXT:    orl %ebx, %edi
 ; CHECK-NEXT:    testl $-256, %edi
-; CHECK-NEXT:    je .LBB3_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB3_3
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %ebx
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    testl $-256, %edi
 ; CHECK-NEXT:    je .LBB3_4
-; CHECK-NEXT:  .LBB3_5:
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx
-; CHECK-NEXT:    jmp .LBB3_6
-; CHECK-NEXT:  .LBB3_1:
+; CHECK-NEXT:    jmp .LBB3_5
+; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    divb %bl
 ; CHECK-NEXT:    movzbl %al, %esi
 ; CHECK-NEXT:    testl $-256, %edi
-; CHECK-NEXT:    jne .LBB3_5
+; CHECK-NEXT:    jne .LBB3_2
 ; CHECK-NEXT:  .LBB3_4:
 ; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    divb %bl
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:  .LBB3_6:
+; CHECK-NEXT:  .LBB3_5:
 ; CHECK-NEXT:    addl %eax, %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    popl %esi
@@ -194,13 +194,13 @@ define i32 @Test_use_div_imm_reg(i32 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    testl $-256, %ecx
-; CHECK-NEXT:    je .LBB8_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB8_1:
+; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    divb %cl
@@ -215,13 +215,13 @@ define i32 @Test_use_rem_imm_reg(i32 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    testl $-256, %ecx
-; CHECK-NEXT:    je .LBB9_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    idivl %ecx
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB9_1:
+; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    divb %cl

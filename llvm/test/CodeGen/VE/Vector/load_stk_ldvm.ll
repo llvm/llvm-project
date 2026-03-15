@@ -146,8 +146,8 @@ define fastcc <256 x i1> @load__vm256_stk_big_fit() {
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -2147483648(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -156,7 +156,7 @@ define fastcc <256 x i1> @load__vm256_stk_big_fit() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ld %s16, 2147483616(, %s11)
 ; CHECK-NEXT:    lvm %vm1, 0, %s16
 ; CHECK-NEXT:    ld %s16, 2147483624(, %s11)
@@ -167,11 +167,11 @@ define fastcc <256 x i1> @load__vm256_stk_big_fit() {
 ; CHECK-NEXT:    lvm %vm1, 3, %s16
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    lea %s1, 2147483424
-; CHECK-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB1_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld %s2, 192(%s0, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s0)
-; CHECK-NEXT:    brne.l %s0, %s1, .LBB1_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s0, %s1, .LBB1_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -208,8 +208,8 @@ define fastcc <256 x i1> @load__vm256_stk_big() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -218,7 +218,7 @@ define fastcc <256 x i1> @load__vm256_stk_big() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -232,11 +232,11 @@ define fastcc <256 x i1> @load__vm256_stk_big() {
 ; CHECK-NEXT:    lvm %vm1, 3, %s16
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    lea %s1, 2147483432
-; CHECK-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB2_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld %s2, 216(%s0, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s0)
-; CHECK-NEXT:    brne.l %s0, %s1, .LBB2_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s0, %s1, .LBB2_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -273,8 +273,8 @@ define fastcc <256 x i1> @load__vm256_stk_big2() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB3_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -283,7 +283,7 @@ define fastcc <256 x i1> @load__vm256_stk_big2() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -298,11 +298,11 @@ define fastcc <256 x i1> @load__vm256_stk_big2() {
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    lea %s1, -2147483648
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB3_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld %s2, 192(%s0, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s0)
-; CHECK-NEXT:    brne.l %s0, %s1, .LBB3_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s0, %s1, .LBB3_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -644,8 +644,8 @@ define fastcc <512 x i1> @load__vm512_stk_big_fit() {
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -2147483648(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB9_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB9_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -654,7 +654,7 @@ define fastcc <512 x i1> @load__vm512_stk_big_fit() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    # implicit-def: $vmp1
 ; CHECK-NEXT:    ld %s16, 2147483584(, %s11)
 ; CHECK-NEXT:    lvm %vm3, 0, %s16
@@ -674,11 +674,11 @@ define fastcc <512 x i1> @load__vm512_stk_big_fit() {
 ; CHECK-NEXT:    lvm %vm2, 3, %s16
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    lea %s1, 2147483392
-; CHECK-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB9_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld %s2, 192(%s0, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s0)
-; CHECK-NEXT:    brne.l %s0, %s1, .LBB9_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s0, %s1, .LBB9_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -715,8 +715,8 @@ define fastcc <512 x i1> @load__vm512_stk_big() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB10_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB10_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -725,7 +725,7 @@ define fastcc <512 x i1> @load__vm512_stk_big() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB10_4:
+; CHECK-NEXT:  .LBB10_2:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -748,11 +748,11 @@ define fastcc <512 x i1> @load__vm512_stk_big() {
 ; CHECK-NEXT:    lvm %vm2, 3, %s16
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    lea %s1, 2147483400
-; CHECK-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB10_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld %s2, 248(%s0, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s0)
-; CHECK-NEXT:    brne.l %s0, %s1, .LBB10_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s0, %s1, .LBB10_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -789,8 +789,8 @@ define fastcc <512 x i1> @load__vm512_stk_big2() {
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB11_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB11_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -799,7 +799,7 @@ define fastcc <512 x i1> @load__vm512_stk_big2() {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB11_4:
+; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -823,11 +823,11 @@ define fastcc <512 x i1> @load__vm512_stk_big2() {
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    lea %s1, -2147483648
 ; CHECK-NEXT:    and %s1, %s1, (32)0
-; CHECK-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld %s2, 192(%s0, %s11)
 ; CHECK-NEXT:    lea %s0, 8(, %s0)
-; CHECK-NEXT:    brne.l %s0, %s1, .LBB11_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s0, %s1, .LBB11_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)

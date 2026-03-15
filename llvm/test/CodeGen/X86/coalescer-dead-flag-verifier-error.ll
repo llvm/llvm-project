@@ -10,31 +10,31 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0_(ptr %r) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_4: # %_ZNK4llvm5APInt13getActiveBitsEv.exit.i.i
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_1: # %_ZNK4llvm5APInt13getActiveBitsEv.exit.i.i
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    movl %edx, %edx
 ; CHECK-NEXT:    shlq $4, %rdx
 ; CHECK-NEXT:    movl $0, (%rdi,%rdx)
 ; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:  .LBB0_1: # %bb
+; CHECK-NEXT:  .LBB0_2: # %bb
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_3 Depth 2
 ; CHECK-NEXT:    xorl $1, %ecx
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    movq %rcx, %r8
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_4
+; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %for.body.i.i.i.i.i.3
-; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    orq $1, %r8
 ; CHECK-NEXT:    orq $1, %rsi
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_1
 entry:
   br label %bb
 
@@ -71,15 +71,15 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0__assert(ptr %r) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    jmp .LBB1_1
+; CHECK-NEXT:    jmp .LBB1_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_4: # %_ZNK4llvm5APInt13getActiveBitsEv.exit.i.i
-; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:  .LBB1_1: # %_ZNK4llvm5APInt13getActiveBitsEv.exit.i.i
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    movl %edx, %edx
 ; CHECK-NEXT:    shlq $4, %rdx
 ; CHECK-NEXT:    movl $0, (%rdi,%rdx)
 ; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:  .LBB1_1: # %bb
+; CHECK-NEXT:  .LBB1_2: # %bb
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB1_3 Depth 2
 ; CHECK-NEXT:    xorl $1, %ecx
@@ -88,16 +88,16 @@ define void @_ZNK4llvm5APInt21multiplicativeInverseERKS0__assert(ptr %r) {
 ; CHECK-NEXT:    movq (%rsi), %rsi
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_3: # %for.body.i.i.i.i.i.3
-; CHECK-NEXT:    # Parent Loop BB1_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    orq $1, %rsi
 ; CHECK-NEXT:    orq $1, %r8
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB1_3
-; CHECK-NEXT:    jmp .LBB1_4
+; CHECK-NEXT:    jmp .LBB1_1
 entry:
   br label %bb
 

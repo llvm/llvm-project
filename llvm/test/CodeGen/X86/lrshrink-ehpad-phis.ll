@@ -36,7 +36,7 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq external_bool@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    cmpb $1, (%rax)
-; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %branchA
 ; CHECK-NEXT:    movq externalA@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %eax
@@ -46,11 +46,11 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: # EH_LABEL
 ; CHECK-NEXT:    callq maythrow@PLT
-; CHECK-NEXT:  .Ltmp3:
-; CHECK-NEXT:    jmp .LBB0_4
-; CHECK-NEXT:  .LBB0_3: # %branchB
+; CHECK-NEXT:  .Ltmp3: # EH_LABEL
+; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:  .LBB0_2: # %branchB
 ; CHECK-NEXT:    movq externalB@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -59,10 +59,10 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    movl %eax, (%rsp) # 4-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    callq maythrow@PLT
-; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:  .LBB0_4: # %end
+; CHECK-NEXT:  .Ltmp1: # EH_LABEL
+; CHECK-NEXT:  .LBB0_3: # %end
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    popq %rbx
@@ -78,9 +78,9 @@ define void @test() personality ptr @__gxx_personality_v0  {
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %lpad
+; CHECK-NEXT:  .LBB0_4: # %lpad
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:  .Ltmp4: # EH_LABEL
 ; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
 ; CHECK-NEXT:    addl (%rsp), %edi # 4-byte Folded Reload

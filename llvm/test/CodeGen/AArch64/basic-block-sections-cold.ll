@@ -41,11 +41,11 @@ declare i32 @_Z3foov() #1
 ; SECTIONS: .section	.text.split._Z3bazb,"ax",@progbits
 ; SECTIONS: _Z3bazb.cold:
 ; SECTIONS-NOT: .section        .text.hot._Z3bazb._Z3bazb.2,"ax",@progbits,unique
-; SECTIONS: .LBB0_2:
+; SECTIONS: .LBB0_5:
 ; SECTIONS: .size   _Z3bazb, .Lfunc_end{{[0-9]}}-_Z3bazb
 
 ; SPLIT:      .section	.text.unlikely._Z3bazb,"ax",@progbits
 ; SPLIT-NEXT: _Z3bazb.cold:
 ; SPLIT-NEXT:   bl _Z3barv
-; SPLIT:      .LBB0_2:
-; SPLIT:      .LBB_END0_2:
+; SPLIT:      .LBB0_5:
+; SPLIT:      .LBB_END0_5:

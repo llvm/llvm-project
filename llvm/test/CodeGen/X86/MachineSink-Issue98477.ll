@@ -9,39 +9,39 @@ define i32 @main(i1 %tobool.not, i32 %0) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $1, %r8d
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB0_8
+; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  .LBB0_1: # %j.preheader
 ; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    jmp .LBB0_2
+; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_5: # %if.then4
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  .LBB0_2: # %if.then4
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %r8d
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB0_6
-; CHECK-NEXT:  .LBB0_2: # %j
+; CHECK-NEXT:  .LBB0_3: # %j
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    idivl %esi
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    testb %r9b, %r9b
-; CHECK-NEXT:    jne .LBB0_5
-; CHECK-NEXT:  # %bb.3: # %j
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.4: # %j
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    testl %r9d, %r9d
-; CHECK-NEXT:    js .LBB0_5
-; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    js .LBB0_2
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    movl %r9d, %edx
 ; CHECK-NEXT:  .LBB0_6: # %if.end9
 ; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  .LBB0_8: # %if.end13
+; CHECK-NEXT:    jne .LBB0_8
+; CHECK-NEXT:  .LBB0_7: # %if.end13
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:  .LBB0_7: # %while.body.lr.ph
+; CHECK-NEXT:  .LBB0_8: # %while.body.lr.ph
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:

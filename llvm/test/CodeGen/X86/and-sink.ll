@@ -103,17 +103,17 @@ define i32 @and_sink3(i1 %c, ptr %p) {
 ; CHECK-LABEL: and_sink3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB2_3
+; CHECK-NEXT:    je .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl (%eax), %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    movl $0, A
-; CHECK-NEXT:    je .LBB2_2
-; CHECK-NEXT:  .LBB2_3: # %bb2
+; CHECK-NEXT:    je .LBB2_3
+; CHECK-NEXT:  .LBB2_2: # %bb2
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB2_2: # %bb1
+; CHECK-NEXT:  .LBB2_3: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 
@@ -141,22 +141,22 @@ define i32 @and_sink4(i32 %a, i32 %b, i1 %c) {
 ; CHECK-LABEL: and_sink4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB3_4
+; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    testl %eax, %ecx
 ; CHECK-NEXT:    movl $0, A
-; CHECK-NEXT:    jne .LBB3_4
+; CHECK-NEXT:    jne .LBB3_3
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    leal (%ecx,%eax), %edx
 ; CHECK-NEXT:    testl %eax, %ecx
 ; CHECK-NEXT:    movl %edx, B
-; CHECK-NEXT:    je .LBB3_3
-; CHECK-NEXT:  .LBB3_4: # %bb3
+; CHECK-NEXT:    je .LBB3_4
+; CHECK-NEXT:  .LBB3_3: # %bb3
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB3_3: # %bb2
+; CHECK-NEXT:  .LBB3_4: # %bb2
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 
@@ -192,22 +192,22 @@ define i32 @and_sink5(i32 %a, i32 %b, i32 %a2, i32 %b2, i1 %c) {
 ; CHECK-LABEL: and_sink5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    je .LBB4_4
+; CHECK-NEXT:    je .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %bb0
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $0, A
-; CHECK-NEXT:    jne .LBB4_4
+; CHECK-NEXT:    jne .LBB4_3
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    movl %ecx, B
-; CHECK-NEXT:    je .LBB4_3
-; CHECK-NEXT:  .LBB4_4: # %bb3
+; CHECK-NEXT:    je .LBB4_4
+; CHECK-NEXT:  .LBB4_3: # %bb3
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB4_3: # %bb2
+; CHECK-NEXT:  .LBB4_4: # %bb2
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
 

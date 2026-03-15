@@ -145,12 +145,12 @@ define i32 @test6() nounwind align 2 {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
-; CHECK-NEXT:    je .LBB6_1 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.2: # %F
+; CHECK-NEXT:    je .LBB6_2 # encoding: [0x74,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_2, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %F
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-; CHECK-NEXT:  .LBB6_1: # %T
+; CHECK-NEXT:  .LBB6_2: # %T
 ; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:

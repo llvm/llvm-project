@@ -87,7 +87,7 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:  LBB0_8: ## %bb17
 ; CHECK-NEXT:    callq _PyErr_Occurred
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    jne LBB0_27
+; CHECK-NEXT:    jne LBB0_26
 ; CHECK-NEXT:  ## %bb.9: ## %cond_next
 ; CHECK-NEXT:    movq _PyArray_API@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
@@ -97,7 +97,7 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    callq *40(%rax)
-; CHECK-NEXT:    jmp LBB0_28
+; CHECK-NEXT:    jmp LBB0_27
 ; CHECK-NEXT:  LBB0_11: ## %cond_true.i
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    callq _feraiseexcept
@@ -113,21 +113,21 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movzbl %sil, %eax
 ; CHECK-NEXT:    divb %dl
 ; CHECK-NEXT:    movzbl %ah, %ebx
-; CHECK-NEXT:    jmp LBB0_18
+; CHECK-NEXT:    jmp LBB0_17
 ; CHECK-NEXT:  LBB0_14: ## %cond_true.i200
 ; CHECK-NEXT:    testb %dl, %dl
-; CHECK-NEXT:    jne LBB0_17
-; CHECK-NEXT:  ## %bb.16: ## %cond_true14.i
+; CHECK-NEXT:    jne LBB0_16
+; CHECK-NEXT:  ## %bb.15: ## %cond_true14.i
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    callq _feraiseexcept
-; CHECK-NEXT:  LBB0_17: ## %ubyte_ctype_remainder.exit
+; CHECK-NEXT:  LBB0_16: ## %ubyte_ctype_remainder.exit
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:  LBB0_18: ## %ubyte_ctype_remainder.exit
+; CHECK-NEXT:  LBB0_17: ## %ubyte_ctype_remainder.exit
 ; CHECK-NEXT:    movq (%r14), %rax
 ; CHECK-NEXT:    callq *224(%rax)
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je LBB0_21
-; CHECK-NEXT:  ## %bb.19: ## %cond_true61
+; CHECK-NEXT:    je LBB0_20
+; CHECK-NEXT:  ## %bb.18: ## %cond_true61
 ; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    movq (%r14), %rax
 ; CHECK-NEXT:    movq _.str5@GOTPCREL(%rip), %rdi
@@ -136,8 +136,8 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    callq *200(%rax)
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    js LBB0_27
-; CHECK-NEXT:  ## %bb.20: ## %cond_next73
+; CHECK-NEXT:    js LBB0_26
+; CHECK-NEXT:  ## %bb.19: ## %cond_next73
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq (%r14), %rax
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
@@ -146,13 +146,13 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    movl %ebp, %edx
 ; CHECK-NEXT:    callq *232(%rax)
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    jne LBB0_27
-; CHECK-NEXT:  LBB0_21: ## %cond_next89
+; CHECK-NEXT:    jne LBB0_26
+; CHECK-NEXT:  LBB0_20: ## %cond_next89
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq _PyTuple_New
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    je LBB0_27
-; CHECK-NEXT:  ## %bb.22: ## %cond_next97
+; CHECK-NEXT:    je LBB0_26
+; CHECK-NEXT:  ## %bb.21: ## %cond_next97
 ; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    movq _PyArray_API@GOTPCREL(%rip), %r12
 ; CHECK-NEXT:    movq (%r12), %rax
@@ -160,8 +160,8 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    callq *304(%rdi)
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    je LBB0_25
-; CHECK-NEXT:  ## %bb.23: ## %cond_next135
+; CHECK-NEXT:    je LBB0_24
+; CHECK-NEXT:  ## %bb.22: ## %cond_next135
 ; CHECK-NEXT:    movb %r15b, 16(%rax)
 ; CHECK-NEXT:    movq %rax, 24(%r14)
 ; CHECK-NEXT:    movq (%r12), %rax
@@ -169,22 +169,22 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    callq *304(%rdi)
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    je LBB0_25
-; CHECK-NEXT:  ## %bb.24: ## %cond_next182
+; CHECK-NEXT:    je LBB0_24
+; CHECK-NEXT:  ## %bb.23: ## %cond_next182
 ; CHECK-NEXT:    movb %bl, 16(%rax)
 ; CHECK-NEXT:    movq %rax, 32(%r14)
 ; CHECK-NEXT:    movq %r14, %rax
-; CHECK-NEXT:    jmp LBB0_28
-; CHECK-NEXT:  LBB0_25: ## %cond_true113
+; CHECK-NEXT:    jmp LBB0_27
+; CHECK-NEXT:  LBB0_24: ## %cond_true113
 ; CHECK-NEXT:    decq (%r14)
-; CHECK-NEXT:    jne LBB0_27
-; CHECK-NEXT:  ## %bb.26: ## %cond_true126
+; CHECK-NEXT:    jne LBB0_26
+; CHECK-NEXT:  ## %bb.25: ## %cond_true126
 ; CHECK-NEXT:    movq 8(%r14), %rax
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    callq *48(%rax)
-; CHECK-NEXT:  LBB0_27: ## %UnifiedReturnBlock
+; CHECK-NEXT:  LBB0_26: ## %UnifiedReturnBlock
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  LBB0_28: ## %UnifiedReturnBlock
+; CHECK-NEXT:  LBB0_27: ## %UnifiedReturnBlock
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12

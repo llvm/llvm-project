@@ -58,14 +58,14 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
-; GCN-NEXT:  ; %bb.3: ; %bb0
+; GCN-NEXT:    s_cbranch_scc0 .LBB1_20
+; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_getpc_b64 s[2:3]
 ; GCN-NEXT:  .Lpost_getpc0:
 ; GCN-NEXT:    s_add_u32 s2, s2, (.LBB1_2-.Lpost_getpc0)&4294967295
 ; GCN-NEXT:    s_addc_u32 s3, s3, (.LBB1_2-.Lpost_getpc0)>>32
 ; GCN-NEXT:    s_setpc_b64 s[2:3]
-; GCN-NEXT:  .LBB1_1: ; %bb2
+; GCN-NEXT:  .LBB1_20: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
@@ -106,14 +106,14 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_f32_e64 s[2:3], s0, 0
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[2:3]
-; GCN-NEXT:    s_cbranch_vccz .LBB2_1
-; GCN-NEXT:  ; %bb.3: ; %bb0
+; GCN-NEXT:    s_cbranch_vccz .LBB2_20
+; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_getpc_b64 s[8:9]
 ; GCN-NEXT:  .Lpost_getpc1:
 ; GCN-NEXT:    s_add_u32 s8, s8, (.LBB2_2-.Lpost_getpc1)&4294967295
 ; GCN-NEXT:    s_addc_u32 s9, s9, (.LBB2_2-.Lpost_getpc1)>>32
 ; GCN-NEXT:    s_setpc_b64 s[8:9]
-; GCN-NEXT:  .LBB2_1: ; %bb2
+; GCN-NEXT:  .LBB2_20: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:     ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
@@ -163,14 +163,14 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
-; GCN-NEXT:    s_cbranch_execnz .LBB3_1
-; GCN-NEXT:  ; %bb.3: ; %bb
+; GCN-NEXT:    s_cbranch_execnz .LBB3_20
+; GCN-NEXT:  ; %bb.1: ; %bb
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:  .Lpost_getpc2:
 ; GCN-NEXT:    s_add_u32 s6, s6, (.LBB3_2-.Lpost_getpc2)&4294967295
 ; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB3_2-.Lpost_getpc2)>>32
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
-; GCN-NEXT:  .LBB3_1: ; %bb2
+; GCN-NEXT:  .LBB3_20: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:     ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
@@ -219,15 +219,15 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
-; GCN-NEXT:  ; %bb.3: ; %bb2
+; GCN-NEXT:    s_cbranch_scc0 .LBB4_3
+; GCN-NEXT:  ; %bb.2: ; %bb2
 ; GCN-NEXT:    ; in Loop: Header=BB4_1 Depth=1
 ; GCN-NEXT:    s_getpc_b64 s[2:3]
 ; GCN-NEXT:  .Lpost_getpc3:
 ; GCN-NEXT:    s_add_u32 s2, s2, (.LBB4_1-.Lpost_getpc3)&4294967295
 ; GCN-NEXT:    s_addc_u32 s3, s3, (.LBB4_1-.Lpost_getpc3)>>32
 ; GCN-NEXT:    s_setpc_b64 s[2:3]
-; GCN-NEXT:  .LBB4_2: ; %bb3
+; GCN-NEXT:  .LBB4_3: ; %bb3
 ; GCN-NEXT:    s_endpgm
 
 bb:
@@ -258,14 +258,14 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    s_cbranch_scc0 .LBB5_1
-; GCN-NEXT:  ; %bb.7: ; %bb0
+; GCN-NEXT:    s_cbranch_scc0 .LBB5_20
+; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:  .Lpost_getpc5:
 ; GCN-NEXT:    s_add_u32 s6, s6, (.LBB5_4-.Lpost_getpc5)&4294967295
 ; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB5_4-.Lpost_getpc5)>>32
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
-; GCN-NEXT:  .LBB5_1: ; %Flow
+; GCN-NEXT:  .LBB5_20: ; %Flow
 ; GCN-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GCN-NEXT:  .LBB5_2: ; %bb2
@@ -292,14 +292,14 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_mov_b64 vcc, exec
-; GCN-NEXT:    s_cbranch_execnz .LBB5_5
-; GCN-NEXT:  ; %bb.9: ; %bb3
+; GCN-NEXT:    s_cbranch_execnz .LBB5_7
+; GCN-NEXT:  ; %bb.6: ; %bb3
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:  .Lpost_getpc6:
 ; GCN-NEXT:    s_add_u32 s6, s6, (.LBB5_2-.Lpost_getpc6)&4294967295
 ; GCN-NEXT:    s_addc_u32 s7, s7, (.LBB5_2-.Lpost_getpc6)>>32
 ; GCN-NEXT:    s_setpc_b64 s[6:7]
-; GCN-NEXT:  .LBB5_5: ; %bb3
+; GCN-NEXT:  .LBB5_7: ; %bb3
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:  .Lpost_getpc4:
 ; GCN-NEXT:    s_add_u32 s6, s6, (.LBB5_3-.Lpost_getpc4)&4294967295

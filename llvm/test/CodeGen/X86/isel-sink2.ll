@@ -6,11 +6,11 @@ define i8 @test(ptr%P) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    cmpb $0, 4(%eax)
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %F
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %F
 ; CHECK-NEXT:    movzbl 7(%eax), %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %TB
+; CHECK-NEXT:  .LBB0_2: # %TB
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    retl
   %Q = getelementptr i32, ptr %P, i32 1

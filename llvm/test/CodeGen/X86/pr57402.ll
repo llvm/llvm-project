@@ -13,20 +13,20 @@ define void @PR57402() {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq %rsi
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    jne .LBB0_4
+; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_4
+; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    andl %ecx, %edx
 ; CHECK-NEXT:    movswl %dx, %eax
 ; CHECK-NEXT:    imull %eax, %eax
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  .LBB0_4: # %if.end
+; CHECK-NEXT:    jne .LBB0_4
+; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_3: # %if.then
+; CHECK-NEXT:  .LBB0_4: # %if.then
 entry:
   %.fr = freeze i64 undef
   %0 = trunc i64 %.fr to i16

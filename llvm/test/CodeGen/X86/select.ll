@@ -61,12 +61,12 @@ define i32 @test2() nounwind {
 ; GENERIC-NEXT:    movl $-3840, %eax ## imm = 0xF100
 ; GENERIC-NEXT:    cmovnel %ecx, %eax
 ; GENERIC-NEXT:    cmpl $32768, %eax ## imm = 0x8000
-; GENERIC-NEXT:    jge LBB1_1
-; GENERIC-NEXT:  ## %bb.2: ## %bb91
+; GENERIC-NEXT:    jge LBB1_2
+; GENERIC-NEXT:  ## %bb.1: ## %bb91
 ; GENERIC-NEXT:    xorl %eax, %eax
 ; GENERIC-NEXT:    popq %rcx
 ; GENERIC-NEXT:    retq
-; GENERIC-NEXT:  LBB1_1: ## %bb90
+; GENERIC-NEXT:  LBB1_2: ## %bb90
 ; GENERIC-NEXT:    ud2
 ;
 ; ATOM-LABEL: test2:
@@ -78,12 +78,12 @@ define i32 @test2() nounwind {
 ; ATOM-NEXT:    testb $1, %al
 ; ATOM-NEXT:    cmovnel %ecx, %edx
 ; ATOM-NEXT:    cmpl $32768, %edx ## imm = 0x8000
-; ATOM-NEXT:    jge LBB1_1
-; ATOM-NEXT:  ## %bb.2: ## %bb91
+; ATOM-NEXT:    jge LBB1_2
+; ATOM-NEXT:  ## %bb.1: ## %bb91
 ; ATOM-NEXT:    xorl %eax, %eax
 ; ATOM-NEXT:    popq %rcx
 ; ATOM-NEXT:    retq
-; ATOM-NEXT:  LBB1_1: ## %bb90
+; ATOM-NEXT:  LBB1_2: ## %bb90
 ; ATOM-NEXT:    ud2
 ;
 ; ATHLON-LABEL: test2:
@@ -95,12 +95,12 @@ define i32 @test2() nounwind {
 ; ATHLON-NEXT:    movl $-3840, %eax ## imm = 0xF100
 ; ATHLON-NEXT:    cmovnel %ecx, %eax
 ; ATHLON-NEXT:    cmpl $32768, %eax ## imm = 0x8000
-; ATHLON-NEXT:    jge LBB1_1
-; ATHLON-NEXT:  ## %bb.2: ## %bb91
+; ATHLON-NEXT:    jge LBB1_2
+; ATHLON-NEXT:  ## %bb.1: ## %bb91
 ; ATHLON-NEXT:    xorl %eax, %eax
 ; ATHLON-NEXT:    addl $12, %esp
 ; ATHLON-NEXT:    retl
-; ATHLON-NEXT:  LBB1_1: ## %bb90
+; ATHLON-NEXT:  LBB1_2: ## %bb90
 ; ATHLON-NEXT:    ud2
 ;
 ; MCU-LABEL: test2:
@@ -111,11 +111,11 @@ define i32 @test2() nounwind {
 ; MCU-NEXT:    decl %eax
 ; MCU-NEXT:    andl $-3840, %eax # imm = 0xF100
 ; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
-; MCU-NEXT:    jge .LBB1_1
-; MCU-NEXT:  # %bb.2: # %bb91
+; MCU-NEXT:    jge .LBB1_2
+; MCU-NEXT:  # %bb.1: # %bb91
 ; MCU-NEXT:    xorl %eax, %eax
 ; MCU-NEXT:    retl
-; MCU-NEXT:  .LBB1_1: # %bb90
+; MCU-NEXT:  .LBB1_2: # %bb90
 entry:
   %tmp73 = tail call i1 @return_false()
   %g.0 = select i1 %tmp73, i16 0, i16 -480
@@ -280,12 +280,12 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: test6:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je LBB5_1
-; CHECK-NEXT:  ## %bb.2:
+; CHECK-NEXT:    je LBB5_2
+; CHECK-NEXT:  ## %bb.1:
 ; CHECK-NEXT:    movaps (%rsi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB5_1:
+; CHECK-NEXT:  LBB5_2:
 ; CHECK-NEXT:    movaps (%rdx), %xmm0
 ; CHECK-NEXT:    mulps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsi)
@@ -435,8 +435,8 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; GENERIC-LABEL: test8:
 ; GENERIC:       ## %bb.0:
 ; GENERIC-NEXT:    testb $1, %dil
-; GENERIC-NEXT:    jne LBB7_1
-; GENERIC-NEXT:  ## %bb.2:
+; GENERIC-NEXT:    jne LBB7_2
+; GENERIC-NEXT:  ## %bb.1:
 ; GENERIC-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -447,7 +447,7 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; GENERIC-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    jmp LBB7_3
-; GENERIC-NEXT:  LBB7_1:
+; GENERIC-NEXT:  LBB7_2:
 ; GENERIC-NEXT:    movd %r9d, %xmm0
 ; GENERIC-NEXT:    movd %r8d, %xmm1
 ; GENERIC-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -469,8 +469,8 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; ATOM-LABEL: test8:
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    testb $1, %dil
-; ATOM-NEXT:    jne LBB7_1
-; ATOM-NEXT:  ## %bb.2:
+; ATOM-NEXT:    jne LBB7_2
+; ATOM-NEXT:  ## %bb.1:
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
@@ -480,7 +480,7 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; ATOM-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ATOM-NEXT:    jmp LBB7_3
-; ATOM-NEXT:  LBB7_1:
+; ATOM-NEXT:  LBB7_2:
 ; ATOM-NEXT:    movd %r9d, %xmm1
 ; ATOM-NEXT:    movd %r8d, %xmm2
 ; ATOM-NEXT:    movd %ecx, %xmm3
@@ -556,49 +556,49 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; MCU-NEXT:    pushl %edi
 ; MCU-NEXT:    pushl %esi
 ; MCU-NEXT:    testb $1, %al
-; MCU-NEXT:    jne .LBB7_1
-; MCU-NEXT:  # %bb.2:
+; MCU-NEXT:    jne .LBB7_6
+; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; MCU-NEXT:    je .LBB7_5
-; MCU-NEXT:  .LBB7_4:
+; MCU-NEXT:    je .LBB7_7
+; MCU-NEXT:  .LBB7_2:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; MCU-NEXT:    je .LBB7_8
-; MCU-NEXT:  .LBB7_7:
+; MCU-NEXT:  .LBB7_3:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; MCU-NEXT:    je .LBB7_11
-; MCU-NEXT:  .LBB7_10:
+; MCU-NEXT:    je .LBB7_9
+; MCU-NEXT:  .LBB7_4:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; MCU-NEXT:    je .LBB7_14
-; MCU-NEXT:  .LBB7_13:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; MCU-NEXT:    jmp .LBB7_15
-; MCU-NEXT:  .LBB7_1:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; MCU-NEXT:    jne .LBB7_4
+; MCU-NEXT:    je .LBB7_10
 ; MCU-NEXT:  .LBB7_5:
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; MCU-NEXT:    jmp .LBB7_11
+; MCU-NEXT:  .LBB7_6:
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
+; MCU-NEXT:    jne .LBB7_2
+; MCU-NEXT:  .LBB7_7:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; MCU-NEXT:    jne .LBB7_7
+; MCU-NEXT:    jne .LBB7_3
 ; MCU-NEXT:  .LBB7_8:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; MCU-NEXT:    jne .LBB7_10
-; MCU-NEXT:  .LBB7_11:
+; MCU-NEXT:    jne .LBB7_4
+; MCU-NEXT:  .LBB7_9:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; MCU-NEXT:    jne .LBB7_13
-; MCU-NEXT:  .LBB7_14:
+; MCU-NEXT:    jne .LBB7_5
+; MCU-NEXT:  .LBB7_10:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; MCU-NEXT:  .LBB7_15:
+; MCU-NEXT:  .LBB7_11:
 ; MCU-NEXT:    movl (%edi), %ebx
 ; MCU-NEXT:    movl (%ecx), %edi
 ; MCU-NEXT:    movl (%esi), %esi
 ; MCU-NEXT:    movl (%ebp), %ecx
 ; MCU-NEXT:    movl (%eax), %eax
-; MCU-NEXT:    jne .LBB7_16
-; MCU-NEXT:  # %bb.17:
+; MCU-NEXT:    jne .LBB7_13
+; MCU-NEXT:  # %bb.12:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; MCU-NEXT:    jmp .LBB7_18
-; MCU-NEXT:  .LBB7_16:
+; MCU-NEXT:    jmp .LBB7_14
+; MCU-NEXT:  .LBB7_13:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; MCU-NEXT:  .LBB7_18:
+; MCU-NEXT:  .LBB7_14:
 ; MCU-NEXT:    movl (%ebp), %ebp
 ; MCU-NEXT:    decl %ebp
 ; MCU-NEXT:    decl %eax
@@ -651,12 +651,12 @@ define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; MCU-LABEL: test9:
 ; MCU:       # %bb.0:
 ; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:    jne .LBB8_1
-; MCU-NEXT:  # %bb.2:
+; MCU-NEXT:    jne .LBB8_2
+; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    movl $-1, %eax
 ; MCU-NEXT:    movl $-1, %edx
 ; MCU-NEXT:    retl
-; MCU-NEXT:  .LBB8_1:
+; MCU-NEXT:  .LBB8_2:
 ; MCU-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MCU-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; MCU-NEXT:    retl
@@ -803,12 +803,12 @@ define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; MCU-LABEL: test11:
 ; MCU:       # %bb.0:
 ; MCU-NEXT:    orl %edx, %eax
-; MCU-NEXT:    je .LBB12_1
-; MCU-NEXT:  # %bb.2:
+; MCU-NEXT:    je .LBB12_2
+; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    movl $-1, %eax
 ; MCU-NEXT:    movl $-1, %edx
 ; MCU-NEXT:    retl
-; MCU-NEXT:  .LBB12_1:
+; MCU-NEXT:  .LBB12_2:
 ; MCU-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; MCU-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; MCU-NEXT:    retl

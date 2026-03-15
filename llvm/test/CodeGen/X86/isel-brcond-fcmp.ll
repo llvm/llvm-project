@@ -7,12 +7,12 @@ define i32 @fcmp_oeq(float %x, float %y) {
 ; X64-LABEL: fcmp_oeq:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jne LBB0_1
-; X64-NEXT:    jp LBB0_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jne LBB0_2
+; X64-NEXT:    jp LBB0_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB0_1: ## %bb2
+; X64-NEXT:  LBB0_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -23,11 +23,11 @@ define i32 @fcmp_oeq(float %x, float %y) {
 ; GISEL-X64-NEXT:    setnp %cl
 ; GISEL-X64-NEXT:    andb %al, %cl
 ; GISEL-X64-NEXT:    testb $1, %cl
-; GISEL-X64-NEXT:    je LBB0_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB0_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB0_1: ## %bb2
+; GISEL-X64-NEXT:  LBB0_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp oeq float %x, %y
@@ -42,11 +42,11 @@ define i32 @fcmp_ogt(float %x, float %y) {
 ; X64-LABEL: fcmp_ogt:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jbe LBB1_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jbe LBB1_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB1_1: ## %bb2
+; X64-NEXT:  LBB1_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -55,11 +55,11 @@ define i32 @fcmp_ogt(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB1_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB1_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB1_1: ## %bb2
+; GISEL-X64-NEXT:  LBB1_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ogt float %x, %y
@@ -74,11 +74,11 @@ define i32 @fcmp_oge(float %x, float %y) {
 ; X64-LABEL: fcmp_oge:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jb LBB2_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jb LBB2_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB2_1: ## %bb2
+; X64-NEXT:  LBB2_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -87,11 +87,11 @@ define i32 @fcmp_oge(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB2_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB2_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB2_1: ## %bb2
+; GISEL-X64-NEXT:  LBB2_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp oge float %x, %y
@@ -106,11 +106,11 @@ define i32 @fcmp_olt(float %x, float %y) {
 ; X64-LABEL: fcmp_olt:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    jbe LBB3_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jbe LBB3_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB3_1: ## %bb2
+; X64-NEXT:  LBB3_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -119,11 +119,11 @@ define i32 @fcmp_olt(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB3_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB3_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB3_1: ## %bb2
+; GISEL-X64-NEXT:  LBB3_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp olt float %x, %y
@@ -138,11 +138,11 @@ define i32 @fcmp_ole(float %x, float %y) {
 ; X64-LABEL: fcmp_ole:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    jb LBB4_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jb LBB4_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB4_1: ## %bb2
+; X64-NEXT:  LBB4_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -151,11 +151,11 @@ define i32 @fcmp_ole(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB4_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB4_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB4_1: ## %bb2
+; GISEL-X64-NEXT:  LBB4_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ole float %x, %y
@@ -170,11 +170,11 @@ define i32 @fcmp_one(float %x, float %y) {
 ; X64-LABEL: fcmp_one:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    je LBB5_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    je LBB5_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB5_1: ## %bb2
+; X64-NEXT:  LBB5_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -183,11 +183,11 @@ define i32 @fcmp_one(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setne %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB5_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB5_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB5_1: ## %bb2
+; GISEL-X64-NEXT:  LBB5_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp one float %x, %y
@@ -202,11 +202,11 @@ define i32 @fcmp_ord(float %x, float %y) {
 ; X64-LABEL: fcmp_ord:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jp LBB6_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jp LBB6_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB6_1: ## %bb2
+; X64-NEXT:  LBB6_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -215,11 +215,11 @@ define i32 @fcmp_ord(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB6_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB6_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB6_1: ## %bb2
+; GISEL-X64-NEXT:  LBB6_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ord float %x, %y
@@ -298,11 +298,11 @@ define i32 @fcmp_ugt(float %x, float %y) {
 ; X64-LABEL: fcmp_ugt:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    jae LBB9_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jae LBB9_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB9_1: ## %bb2
+; X64-NEXT:  LBB9_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -311,11 +311,11 @@ define i32 @fcmp_ugt(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB9_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB9_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB9_1: ## %bb2
+; GISEL-X64-NEXT:  LBB9_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ugt float %x, %y
@@ -330,11 +330,11 @@ define i32 @fcmp_uge(float %x, float %y) {
 ; X64-LABEL: fcmp_uge:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    ja LBB10_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    ja LBB10_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB10_1: ## %bb2
+; X64-NEXT:  LBB10_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -343,11 +343,11 @@ define i32 @fcmp_uge(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB10_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB10_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB10_1: ## %bb2
+; GISEL-X64-NEXT:  LBB10_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp uge float %x, %y
@@ -362,11 +362,11 @@ define i32 @fcmp_ult(float %x, float %y) {
 ; X64-LABEL: fcmp_ult:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jae LBB11_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jae LBB11_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB11_1: ## %bb2
+; X64-NEXT:  LBB11_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -375,11 +375,11 @@ define i32 @fcmp_ult(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB11_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB11_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB11_1: ## %bb2
+; GISEL-X64-NEXT:  LBB11_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ult float %x, %y
@@ -394,11 +394,11 @@ define i32 @fcmp_ule(float %x, float %y) {
 ; X64-LABEL: fcmp_ule:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    ja LBB12_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    ja LBB12_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB12_1: ## %bb2
+; X64-NEXT:  LBB12_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -407,11 +407,11 @@ define i32 @fcmp_ule(float %x, float %y) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB12_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB12_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB12_1: ## %bb2
+; GISEL-X64-NEXT:  LBB12_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ule float %x, %y
@@ -426,12 +426,12 @@ define i32 @fcmp_une(float %x, float %y) {
 ; X64-LABEL: fcmp_une:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jne LBB13_2
-; X64-NEXT:    jnp LBB13_1
-; X64-NEXT:  LBB13_2: ## %bb1
+; X64-NEXT:    jne LBB13_1
+; X64-NEXT:    jnp LBB13_2
+; X64-NEXT:  LBB13_1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB13_1: ## %bb2
+; X64-NEXT:  LBB13_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -442,11 +442,11 @@ define i32 @fcmp_une(float %x, float %y) {
 ; GISEL-X64-NEXT:    setp %cl
 ; GISEL-X64-NEXT:    orb %al, %cl
 ; GISEL-X64-NEXT:    testb $1, %cl
-; GISEL-X64-NEXT:    je LBB13_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB13_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB13_1: ## %bb2
+; GISEL-X64-NEXT:  LBB13_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp une float %x, %y
@@ -461,11 +461,11 @@ define i32 @fcmp_oeq1(float %x) {
 ; X64-LABEL: fcmp_oeq1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jp LBB14_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jp LBB14_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB14_1: ## %bb2
+; X64-NEXT:  LBB14_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -476,11 +476,11 @@ define i32 @fcmp_oeq1(float %x) {
 ; GISEL-X64-NEXT:    setnp %cl
 ; GISEL-X64-NEXT:    andb %al, %cl
 ; GISEL-X64-NEXT:    testb $1, %cl
-; GISEL-X64-NEXT:    je LBB14_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB14_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB14_1: ## %bb2
+; GISEL-X64-NEXT:  LBB14_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp oeq float %x, %x
@@ -496,12 +496,12 @@ define i32 @fcmp_oeq2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jne LBB15_1
-; X64-NEXT:    jp LBB15_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jne LBB15_2
+; X64-NEXT:    jp LBB15_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB15_1: ## %bb2
+; X64-NEXT:  LBB15_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -513,11 +513,11 @@ define i32 @fcmp_oeq2(float %x) {
 ; GISEL-X64-NEXT:    setnp %cl
 ; GISEL-X64-NEXT:    andb %al, %cl
 ; GISEL-X64-NEXT:    testb $1, %cl
-; GISEL-X64-NEXT:    je LBB15_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB15_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB15_1: ## %bb2
+; GISEL-X64-NEXT:  LBB15_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp oeq float %x, 0.000000e+00
@@ -533,11 +533,11 @@ define i32 @fcmp_ogt1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB16_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    je LBB16_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb1
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB16_1: ## %bb2
+; SDAG-X64-NEXT:  LBB16_2: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -551,11 +551,11 @@ define i32 @fcmp_ogt1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB16_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB16_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB16_1: ## %bb2
+; GISEL-X64-NEXT:  LBB16_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ogt float %x, %x
@@ -571,11 +571,11 @@ define i32 @fcmp_ogt2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jbe LBB17_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jbe LBB17_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB17_1: ## %bb2
+; X64-NEXT:  LBB17_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -585,11 +585,11 @@ define i32 @fcmp_ogt2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB17_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB17_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB17_1: ## %bb2
+; GISEL-X64-NEXT:  LBB17_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ogt float %x, 0.000000e+00
@@ -604,11 +604,11 @@ define i32 @fcmp_oge1(float %x) {
 ; X64-LABEL: fcmp_oge1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jp LBB18_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jp LBB18_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB18_1: ## %bb2
+; X64-NEXT:  LBB18_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -617,11 +617,11 @@ define i32 @fcmp_oge1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB18_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB18_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB18_1: ## %bb2
+; GISEL-X64-NEXT:  LBB18_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp oge float %x, %x
@@ -637,11 +637,11 @@ define i32 @fcmp_oge2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jb LBB19_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jb LBB19_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB19_1: ## %bb2
+; X64-NEXT:  LBB19_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -651,11 +651,11 @@ define i32 @fcmp_oge2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB19_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB19_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB19_1: ## %bb2
+; GISEL-X64-NEXT:  LBB19_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp oge float %x, 0.000000e+00
@@ -671,11 +671,11 @@ define i32 @fcmp_olt1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB20_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    je LBB20_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb1
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB20_1: ## %bb2
+; SDAG-X64-NEXT:  LBB20_2: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -689,11 +689,11 @@ define i32 @fcmp_olt1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB20_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB20_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB20_1: ## %bb2
+; GISEL-X64-NEXT:  LBB20_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp olt float %x, %x
@@ -709,11 +709,11 @@ define i32 @fcmp_olt2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    jbe LBB21_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jbe LBB21_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB21_1: ## %bb2
+; X64-NEXT:  LBB21_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -723,11 +723,11 @@ define i32 @fcmp_olt2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB21_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB21_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB21_1: ## %bb2
+; GISEL-X64-NEXT:  LBB21_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp olt float %x, 0.000000e+00
@@ -742,11 +742,11 @@ define i32 @fcmp_ole1(float %x) {
 ; X64-LABEL: fcmp_ole1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jp LBB22_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jp LBB22_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB22_1: ## %bb2
+; X64-NEXT:  LBB22_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -755,11 +755,11 @@ define i32 @fcmp_ole1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB22_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB22_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB22_1: ## %bb2
+; GISEL-X64-NEXT:  LBB22_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ole float %x, %x
@@ -775,11 +775,11 @@ define i32 @fcmp_ole2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    jb LBB23_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jb LBB23_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB23_1: ## %bb2
+; X64-NEXT:  LBB23_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -789,11 +789,11 @@ define i32 @fcmp_ole2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB23_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB23_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB23_1: ## %bb2
+; GISEL-X64-NEXT:  LBB23_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ole float %x, 0.000000e+00
@@ -809,11 +809,11 @@ define i32 @fcmp_one1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB24_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    je LBB24_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb1
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB24_1: ## %bb2
+; SDAG-X64-NEXT:  LBB24_2: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -827,11 +827,11 @@ define i32 @fcmp_one1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setne %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB24_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB24_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB24_1: ## %bb2
+; GISEL-X64-NEXT:  LBB24_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp one float %x, %x
@@ -847,11 +847,11 @@ define i32 @fcmp_one2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    je LBB25_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    je LBB25_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB25_1: ## %bb2
+; X64-NEXT:  LBB25_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -861,11 +861,11 @@ define i32 @fcmp_one2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setne %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB25_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB25_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB25_1: ## %bb2
+; GISEL-X64-NEXT:  LBB25_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp one float %x, 0.000000e+00
@@ -880,11 +880,11 @@ define i32 @fcmp_ord1(float %x) {
 ; X64-LABEL: fcmp_ord1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jp LBB26_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jp LBB26_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB26_1: ## %bb2
+; X64-NEXT:  LBB26_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -893,11 +893,11 @@ define i32 @fcmp_ord1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB26_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB26_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB26_1: ## %bb2
+; GISEL-X64-NEXT:  LBB26_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ord float %x, %x
@@ -912,11 +912,11 @@ define i32 @fcmp_ord2(float %x) {
 ; X64-LABEL: fcmp_ord2:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jp LBB27_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jp LBB27_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB27_1: ## %bb2
+; X64-NEXT:  LBB27_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -926,11 +926,11 @@ define i32 @fcmp_ord2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB27_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB27_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB27_1: ## %bb2
+; GISEL-X64-NEXT:  LBB27_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ord float %x, 0.000000e+00
@@ -1082,11 +1082,11 @@ define i32 @fcmp_ugt1(float %x) {
 ; X64-LABEL: fcmp_ugt1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jnp LBB32_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jnp LBB32_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB32_1: ## %bb2
+; X64-NEXT:  LBB32_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1095,11 +1095,11 @@ define i32 @fcmp_ugt1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB32_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB32_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB32_1: ## %bb2
+; GISEL-X64-NEXT:  LBB32_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ugt float %x, %x
@@ -1115,11 +1115,11 @@ define i32 @fcmp_ugt2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    jae LBB33_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jae LBB33_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB33_1: ## %bb2
+; X64-NEXT:  LBB33_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1129,11 +1129,11 @@ define i32 @fcmp_ugt2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB33_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB33_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB33_1: ## %bb2
+; GISEL-X64-NEXT:  LBB33_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ugt float %x, 0.000000e+00
@@ -1149,11 +1149,11 @@ define i32 @fcmp_uge1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    movb $1, %al
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB34_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    je LBB34_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb1
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB34_1: ## %bb2
+; SDAG-X64-NEXT:  LBB34_2: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -1167,11 +1167,11 @@ define i32 @fcmp_uge1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB34_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB34_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB34_1: ## %bb2
+; GISEL-X64-NEXT:  LBB34_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp uge float %x, %x
@@ -1187,11 +1187,11 @@ define i32 @fcmp_uge2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm0, %xmm1
-; X64-NEXT:    ja LBB35_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    ja LBB35_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB35_1: ## %bb2
+; X64-NEXT:  LBB35_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1201,11 +1201,11 @@ define i32 @fcmp_uge2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB35_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB35_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB35_1: ## %bb2
+; GISEL-X64-NEXT:  LBB35_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp uge float %x, 0.000000e+00
@@ -1220,11 +1220,11 @@ define i32 @fcmp_ult1(float %x) {
 ; X64-LABEL: fcmp_ult1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jnp LBB36_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jnp LBB36_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB36_1: ## %bb2
+; X64-NEXT:  LBB36_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1233,11 +1233,11 @@ define i32 @fcmp_ult1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB36_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB36_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB36_1: ## %bb2
+; GISEL-X64-NEXT:  LBB36_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ult float %x, %x
@@ -1253,11 +1253,11 @@ define i32 @fcmp_ult2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jae LBB37_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jae LBB37_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB37_1: ## %bb2
+; X64-NEXT:  LBB37_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1267,11 +1267,11 @@ define i32 @fcmp_ult2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB37_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB37_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB37_1: ## %bb2
+; GISEL-X64-NEXT:  LBB37_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ult float %x, 0.000000e+00
@@ -1287,11 +1287,11 @@ define i32 @fcmp_ule1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    movb $1, %al
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB38_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
+; SDAG-X64-NEXT:    je LBB38_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb1
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB38_1: ## %bb2
+; SDAG-X64-NEXT:  LBB38_2: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
 ; SDAG-X64-NEXT:    retq
 ;
@@ -1305,11 +1305,11 @@ define i32 @fcmp_ule1(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm0
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB38_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB38_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB38_1: ## %bb2
+; GISEL-X64-NEXT:  LBB38_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ule float %x, %x
@@ -1325,11 +1325,11 @@ define i32 @fcmp_ule2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    ja LBB39_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    ja LBB39_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB39_1: ## %bb2
+; X64-NEXT:  LBB39_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1339,11 +1339,11 @@ define i32 @fcmp_ule2(float %x) {
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    testb $1, %al
-; GISEL-X64-NEXT:    je LBB39_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB39_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB39_1: ## %bb2
+; GISEL-X64-NEXT:  LBB39_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp ule float %x, 0.000000e+00
@@ -1358,11 +1358,11 @@ define i32 @fcmp_une1(float %x) {
 ; X64-LABEL: fcmp_une1:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
-; X64-NEXT:    jnp LBB40_1
-; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    jnp LBB40_2
+; X64-NEXT:  ## %bb.1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB40_1: ## %bb2
+; X64-NEXT:  LBB40_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1373,11 +1373,11 @@ define i32 @fcmp_une1(float %x) {
 ; GISEL-X64-NEXT:    setp %cl
 ; GISEL-X64-NEXT:    orb %al, %cl
 ; GISEL-X64-NEXT:    testb $1, %cl
-; GISEL-X64-NEXT:    je LBB40_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB40_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB40_1: ## %bb2
+; GISEL-X64-NEXT:  LBB40_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp une float %x, %x
@@ -1393,12 +1393,12 @@ define i32 @fcmp_une2(float %x) {
 ; X64:       ## %bb.0:
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    ucomiss %xmm1, %xmm0
-; X64-NEXT:    jne LBB41_2
-; X64-NEXT:    jnp LBB41_1
-; X64-NEXT:  LBB41_2: ## %bb1
+; X64-NEXT:    jne LBB41_1
+; X64-NEXT:    jnp LBB41_2
+; X64-NEXT:  LBB41_1: ## %bb1
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-; X64-NEXT:  LBB41_1: ## %bb2
+; X64-NEXT:  LBB41_2: ## %bb2
 ; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
 ;
@@ -1410,11 +1410,11 @@ define i32 @fcmp_une2(float %x) {
 ; GISEL-X64-NEXT:    setp %cl
 ; GISEL-X64-NEXT:    orb %al, %cl
 ; GISEL-X64-NEXT:    testb $1, %cl
-; GISEL-X64-NEXT:    je LBB41_1
-; GISEL-X64-NEXT:  ## %bb.2: ## %bb1
+; GISEL-X64-NEXT:    je LBB41_2
+; GISEL-X64-NEXT:  ## %bb.1: ## %bb1
 ; GISEL-X64-NEXT:    xorl %eax, %eax
 ; GISEL-X64-NEXT:    retq
-; GISEL-X64-NEXT:  LBB41_1: ## %bb2
+; GISEL-X64-NEXT:  LBB41_2: ## %bb2
 ; GISEL-X64-NEXT:    movl $1, %eax
 ; GISEL-X64-NEXT:    retq
   %1 = fcmp une float %x, 0.000000e+00

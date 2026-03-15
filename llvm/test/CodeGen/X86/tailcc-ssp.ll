@@ -17,8 +17,8 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    xorq %rsp, %rax
 ; WINDOWS-NEXT:    movq __security_cookie(%rip), %rcx
 ; WINDOWS-NEXT:    cmpq %rax, %rcx
-; WINDOWS-NEXT:    jne .LBB0_1
-; WINDOWS-NEXT:  # %bb.2:
+; WINDOWS-NEXT:    jne .LBB0_2
+; WINDOWS-NEXT:  # %bb.1:
 ; WINDOWS-NEXT:    xorl %ecx, %ecx
 ; WINDOWS-NEXT:    xorl %edx, %edx
 ; WINDOWS-NEXT:    xorl %r8d, %r8d
@@ -26,7 +26,7 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    addq $56, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp h # TAILCALL
-; WINDOWS-NEXT:  .LBB0_1:
+; WINDOWS-NEXT:  .LBB0_2:
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
 ; WINDOWS-NEXT:    callq __security_check_cookie
@@ -71,13 +71,13 @@ define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-NEXT:    xorq %rsp, %rax
 ; WINDOWS-NEXT:    movq __security_cookie(%rip), %rcx
 ; WINDOWS-NEXT:    cmpq %rax, %rcx
-; WINDOWS-NEXT:    jne .LBB1_1
-; WINDOWS-NEXT:  # %bb.2:
+; WINDOWS-NEXT:    jne .LBB1_2
+; WINDOWS-NEXT:  # %bb.1:
 ; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $40, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp bar # TAILCALL
-; WINDOWS-NEXT:  .LBB1_1:
+; WINDOWS-NEXT:  .LBB1_2:
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
 ; WINDOWS-NEXT:    callq __security_check_cookie

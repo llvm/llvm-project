@@ -25,11 +25,11 @@ define void @foo(ptr nocapture %_stubArgs) nounwind {
 ; CHECK-NEXT:    addq %rsi, %rcx
 ; CHECK-NEXT:    shlq $4, %rcx
 ; CHECK-NEXT:    cmpl $0, (%rdi)
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movaps (%rax,%rdx), %xmm0
 ; CHECK-NEXT:  .LBB0_3: # %entry
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rsp

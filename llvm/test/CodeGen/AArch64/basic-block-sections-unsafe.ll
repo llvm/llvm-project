@@ -20,9 +20,9 @@ define void @_Z3asm_goto(i1 zeroext %0, i1 zeroext %1) nounwind {
   ; CHECK:        .section	.text.unlikely._Z3asm_goto,"ax",@progbits
   ; CHECK-NEXT:     _Z3asm_goto.cold:
   ; CHECK-NEXT:       bl bam
-  ; CHECK:          .LBB0_4:
+  ; CHECK:          .LBB0_7:
   ; CHECK:            ret
-  ; CHECK:          .LBB_END0_4:
+  ; CHECK:          .LBB_END0_7:
 
   br i1 %0, label %3, label %5
 

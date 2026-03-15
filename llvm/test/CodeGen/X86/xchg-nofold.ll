@@ -14,18 +14,18 @@ define zeroext i1 @_Z3fooRSt6atomicIbEb(ptr nocapture dereferenceable(1) %a, i1 
 ; CHECK-NEXT:    shrq $3, %rcx
 ; CHECK-NEXT:    movzbl 2147450880(%rcx), %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %edi, %edx
 ; CHECK-NEXT:    andb $7, %dl
 ; CHECK-NEXT:    cmpb %cl, %dl
-; CHECK-NEXT:    jge .LBB0_2
-; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:    jge .LBB0_3
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    xchgb %cl, (%rdi)
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __asan_report_store1@PLT
 ; CHECK-NEXT:    #APP

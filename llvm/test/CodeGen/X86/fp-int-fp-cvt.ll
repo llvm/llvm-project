@@ -277,12 +277,12 @@ define float @ucvtf32_i64(float %a0) {
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
 ; SSE-NEXT:    andq %rdx, %rax
 ; SSE-NEXT:    orq %rcx, %rax
-; SSE-NEXT:    js .LBB7_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    js .LBB7_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB7_1:
+; SSE-NEXT:  .LBB7_2:
 ; SSE-NEXT:    movq %rax, %rcx
 ; SSE-NEXT:    shrq %rcx
 ; SSE-NEXT:    andl $1, %eax
@@ -301,11 +301,11 @@ define float @ucvtf32_i64(float %a0) {
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rax
 ; AVX2-NEXT:    andq %rdx, %rax
 ; AVX2-NEXT:    orq %rcx, %rax
-; AVX2-NEXT:    js .LBB7_1
-; AVX2-NEXT:  # %bb.2:
+; AVX2-NEXT:    js .LBB7_2
+; AVX2-NEXT:  # %bb.1:
 ; AVX2-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB7_1:
+; AVX2-NEXT:  .LBB7_2:
 ; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    shrq %rcx
 ; AVX2-NEXT:    andl $1, %eax

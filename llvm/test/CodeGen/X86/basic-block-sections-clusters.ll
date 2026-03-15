@@ -57,12 +57,12 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS1-LABEL:	foo:
 ; LINUX-SECTIONS1-NOT:  	.section
 ; LINUX-SECTIONS1-NOT:  	.LBB_END0_{{0-9}}+
-; LINUX-SECTIONS1-LABEL:	# %bb.2:
+; LINUX-SECTIONS1-LABEL:	# %bb.1:
 ; LINUX-SECTIONS1-NOT:  	.LBB_END0_{{0-9}}+
 ; LINUX-SECTIONS1:		.section        .text.foo,"ax",@progbits,unique,1
 ; LINUX-SECTIONS1-LABEL:	foo.__part.1:
-; LINUX-SECTIONS1-LABEL:	.LBB_END0_1:
-; LINUX-SECTIONS1-NEXT:        .size   foo.__part.1, .LBB_END0_1-foo.__part.1
+; LINUX-SECTIONS1-LABEL:	.LBB_END0_2:
+; LINUX-SECTIONS1-NEXT:        .size   foo.__part.1, .LBB_END0_2-foo.__part.1
 ; LINUX-SECTIONS1-NOT:  	.section
 ; LINUX-SECTIONS1:		.section        .text.split.foo,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL:	foo.cold:
@@ -77,7 +77,7 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS2-LABEL:	foo:
 ; LINUX-SECTIONS2-NOT:  	.LBB_END0_{{0-9}}+
 ; LINUX-SECTIONS2-NOT:   	.section
-; LINUX-SECTIONS2-LABEL:	# %bb.2:
+; LINUX-SECTIONS2-LABEL:	# %bb.1:
 ; LINUX-SECTIONS2-NOT:  	.LBB_END0_{{0-9}}+
 ; LINUX-SECTIONS2:		.section        .text.foo,"ax",@progbits,unique,1
 ; LINUX-SECTIONS2-NEXT:		foo.__part.0:

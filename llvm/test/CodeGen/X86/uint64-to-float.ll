@@ -32,11 +32,11 @@ define float @test(i64 %a) nounwind {
 ; X64-LABEL: test:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    js .LBB0_1
-; X64-NEXT:  # %bb.2: # %entry
+; X64-NEXT:    js .LBB0_2
+; X64-NEXT:  # %bb.1: # %entry
 ; X64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB0_1:
+; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    shrq %rax
 ; X64-NEXT:    andl $1, %edi
@@ -74,11 +74,11 @@ define float @test(i64 %a) nounwind {
 ; X64-WIN-LABEL: test:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    testq %rcx, %rcx
-; X64-WIN-NEXT:    js .LBB0_1
-; X64-WIN-NEXT:  # %bb.2: # %entry
+; X64-WIN-NEXT:    js .LBB0_2
+; X64-WIN-NEXT:  # %bb.1: # %entry
 ; X64-WIN-NEXT:    cvtsi2ss %rcx, %xmm0
 ; X64-WIN-NEXT:    retq
-; X64-WIN-NEXT:  .LBB0_1:
+; X64-WIN-NEXT:  .LBB0_2:
 ; X64-WIN-NEXT:    movq %rcx, %rax
 ; X64-WIN-NEXT:    shrq %rax
 ; X64-WIN-NEXT:    andl $1, %ecx

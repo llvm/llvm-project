@@ -5,28 +5,28 @@
 define void @tail_dup_merge_loops(i32 %a, ptr %b, ptr %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: tail_dup_merge_loops:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    jmp .LBB0_1
+; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_3: # %inner_loop_exit
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  .LBB0_1: # %inner_loop_exit
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    incq %rsi
-; CHECK-NEXT:  .LBB0_1: # %outer_loop_top
+; CHECK-NEXT:  .LBB0_2: # %outer_loop_top
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_4 Depth 2
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  # %bb.2: # %inner_loop_top
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:  # %bb.3: # %inner_loop_top
+; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    cmpb $0, (%rsi)
-; CHECK-NEXT:    js .LBB0_3
+; CHECK-NEXT:    js .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: # %inner_loop_latch
-; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
+; CHECK-NEXT:    # Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    addq $2, %rsi
 ; CHECK-NEXT:    cmpb $0, (%rsi)
 ; CHECK-NEXT:    jns .LBB0_4
-; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_5: # %exit
 ; CHECK-NEXT:    retq
 entry:
@@ -96,7 +96,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_12
+; CHECK-NEXT:    jne .LBB1_17
 ; CHECK-NEXT:  # %bb.1: # %if.end19
 ; CHECK-NEXT:    movl (%rax), %r12d
 ; CHECK-NEXT:    leal (,%r12,4), %ebp
@@ -107,7 +107,7 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_12
+; CHECK-NEXT:    jne .LBB1_17
 ; CHECK-NEXT:  # %bb.2: # %if.end50
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    movq %r15, %rdx
@@ -117,62 +117,62 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:  # %bb.3: # %shared_preheader
 ; CHECK-NEXT:    movb $32, %cl
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .LBB1_4
+; CHECK-NEXT:    jmp .LBB1_5
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_15: # %merge_predecessor_split
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:  .LBB1_4: # %merge_predecessor_split
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
 ; CHECK-NEXT:    movb $32, %cl
-; CHECK-NEXT:  .LBB1_4: # %outer_loop_header
+; CHECK-NEXT:  .LBB1_5: # %outer_loop_header
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_8 Depth 2
+; CHECK-NEXT:    # Child Loop BB1_6 Depth 2
 ; CHECK-NEXT:    testl %r12d, %r12d
-; CHECK-NEXT:    je .LBB1_5
+; CHECK-NEXT:    je .LBB1_13
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_8: # %shared_loop_header
-; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
+; CHECK-NEXT:  .LBB1_6: # %shared_loop_header
+; CHECK-NEXT:    # Parent Loop BB1_5 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    jne .LBB1_18
-; CHECK-NEXT:  # %bb.9: # %inner_loop_body
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=2
+; CHECK-NEXT:  # %bb.7: # %inner_loop_body
+; CHECK-NEXT:    # in Loop: Header=BB1_6 Depth=2
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_8
-; CHECK-NEXT:  # %bb.10: # %if.end96.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    je .LBB1_6
+; CHECK-NEXT:  # %bb.8: # %if.end96.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
 ; CHECK-NEXT:    cmpl $3, %r12d
-; CHECK-NEXT:    jae .LBB1_11
-; CHECK-NEXT:  # %bb.13: # %if.end287.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    jae .LBB1_16
+; CHECK-NEXT:  # %bb.9: # %if.end287.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    # implicit-def: $cl
-; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:  # %bb.14: # %if.end308.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    jne .LBB1_5
+; CHECK-NEXT:  # %bb.10: # %if.end308.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_15
-; CHECK-NEXT:  # %bb.16: # %if.end335.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    je .LBB1_4
+; CHECK-NEXT:  # %bb.11: # %if.end335.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:  # %bb.17: # %merge_other
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    jne .LBB1_5
+; CHECK-NEXT:  # %bb.12: # %merge_other
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
 ; CHECK-NEXT:    # implicit-def: $cl
-; CHECK-NEXT:    jmp .LBB1_4
-; CHECK-NEXT:  .LBB1_5: # %while.cond.us1412.i
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:  .LBB1_13: # %while.cond.us1412.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_7
-; CHECK-NEXT:  # %bb.6: # %while.cond.us1412.i
+; CHECK-NEXT:    jne .LBB1_15
+; CHECK-NEXT:  # %bb.14: # %while.cond.us1412.i
 ; CHECK-NEXT:    decb %cl
-; CHECK-NEXT:    jne .LBB1_12
-; CHECK-NEXT:  .LBB1_7: # %if.end41.us1436.i
-; CHECK-NEXT:  .LBB1_11: # %if.then99.i
+; CHECK-NEXT:    jne .LBB1_17
+; CHECK-NEXT:  .LBB1_15: # %if.end41.us1436.i
+; CHECK-NEXT:  .LBB1_16: # %if.then99.i
 ; CHECK-NEXT:    movq .str.6@GOTPCREL(%rip), %rdi
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq cli_dbgmsg@PLT
-; CHECK-NEXT:  .LBB1_12: # %cleanup
+; CHECK-NEXT:  .LBB1_17: # %cleanup
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12

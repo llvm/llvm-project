@@ -11,14 +11,14 @@ define i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jno .LBB0_1
-; X86-NEXT:  # %bb.2: # %overflow
+; X86-NEXT:    jno .LBB0_2
+; X86-NEXT:  # %bb.1: # %overflow
 ; X86-NEXT:    movl $no, (%esp)
 ; X86-NEXT:    calll printf@PLT
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_1: # %normal
+; X86-NEXT:  .LBB0_2: # %normal
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $ok, (%esp)
 ; X86-NEXT:    calll printf@PLT
@@ -31,15 +31,15 @@ define i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    imull %esi, %eax
-; X64-NEXT:    jno .LBB0_1
-; X64-NEXT:  # %bb.2: # %overflow
+; X64-NEXT:    jno .LBB0_2
+; X64-NEXT:  # %bb.1: # %overflow
 ; X64-NEXT:    movl $no, %edi
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    callq printf@PLT
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB0_1: # %normal
+; X64-NEXT:  .LBB0_2: # %normal
 ; X64-NEXT:    movl $ok, %edi
 ; X64-NEXT:    movl %eax, %esi
 ; X64-NEXT:    xorl %eax, %eax

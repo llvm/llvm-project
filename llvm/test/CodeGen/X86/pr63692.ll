@@ -5,7 +5,7 @@ define void @prefault(ptr noundef %range_start, ptr noundef readnone %range_end)
 ; CHECK-LABEL: prefault:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    jae .LBB0_3
+; CHECK-NEXT:    jae .LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -13,7 +13,7 @@ define void @prefault(ptr noundef %range_start, ptr noundef readnone %range_end)
 ; CHECK-NEXT:    addq $4096, %rdi # imm = 0x1000
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    jb .LBB0_1
-; CHECK-NEXT:  .LBB0_3: # %while.end
+; CHECK-NEXT:  .LBB0_2: # %while.end
 ; CHECK-NEXT:    retq
 entry:
   %cmp3 = icmp ult ptr %range_start, %range_end

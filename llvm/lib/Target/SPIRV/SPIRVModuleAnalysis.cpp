@@ -2686,6 +2686,8 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
             .isValid())
       continue;
     MachineRegisterInfo &MRI = MF->getRegInfo();
+    // Ensure that blocks are numbered in a consistent order.
+    MF->RenumberBlocks();
     for (auto &MBB : *MF) {
       if (!MBB.hasName() || MBB.empty())
         continue;

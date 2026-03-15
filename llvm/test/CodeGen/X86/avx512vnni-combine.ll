@@ -40,22 +40,22 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-LABEL: foo_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jle .LBB1_6
+; CHECK-NEXT:    jle .LBB1_8
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %edi, %edx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    andl $3, %eax
 ; CHECK-NEXT:    cmpl $4, %edi
-; CHECK-NEXT:    jae .LBB1_7
+; CHECK-NEXT:    jae .LBB1_3
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    jmp .LBB1_3
-; CHECK-NEXT:  .LBB1_7:
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    andl $-4, %edx
 ; CHECK-NEXT:    leaq 192(%rsi), %rdi
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB1_4: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd -192(%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    vpmaddwd -128(%rdi), %zmm1, %zmm2
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
@@ -66,22 +66,22 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    addq $4, %rcx
 ; CHECK-NEXT:    addq $256, %rdi # imm = 0x100
 ; CHECK-NEXT:    cmpq %rcx, %rdx
-; CHECK-NEXT:    jne .LBB1_8
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:  .LBB1_5:
 ; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    je .LBB1_6
-; CHECK-NEXT:  # %bb.4: # %.preheader
+; CHECK-NEXT:    je .LBB1_8
+; CHECK-NEXT:  # %bb.6: # %.preheader
 ; CHECK-NEXT:    shlq $6, %rcx
 ; CHECK-NEXT:    addq %rcx, %rsi
 ; CHECK-NEXT:    shll $6, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB1_7: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpdpwssd (%rsi,%rcx), %zmm1, %zmm0
 ; CHECK-NEXT:    addq $64, %rcx
 ; CHECK-NEXT:    cmpq %rcx, %rax
-; CHECK-NEXT:    jne .LBB1_5
-; CHECK-NEXT:  .LBB1_6:
+; CHECK-NEXT:    jne .LBB1_7
+; CHECK-NEXT:  .LBB1_8:
 ; CHECK-NEXT:    retq
   %5 = icmp sgt i32 %0, 0
   br i1 %5, label %6, label %33
@@ -166,21 +166,21 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 ; CHECK-LABEL: bar_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jle .LBB2_5
+; CHECK-NEXT:    jle .LBB2_7
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmpl $1, %edi
-; CHECK-NEXT:    jne .LBB2_6
+; CHECK-NEXT:    jne .LBB2_3
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    jmp .LBB2_3
-; CHECK-NEXT:  .LBB2_6:
+; CHECK-NEXT:    jmp .LBB2_5
+; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    movl %eax, %edi
 ; CHECK-NEXT:    andl $-2, %edi
 ; CHECK-NEXT:    movl $64, %r8d
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB2_4: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqa64 (%rsi,%r8), %zmm1
 ; CHECK-NEXT:    vpmaddwd -64(%rdx,%r8), %zmm0, %zmm2
 ; CHECK-NEXT:    vpaddd -64(%rsi,%r8), %zmm2, %zmm2
@@ -191,16 +191,16 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    addq $2, %rcx
 ; CHECK-NEXT:    subq $-128, %r8
 ; CHECK-NEXT:    cmpq %rcx, %rdi
-; CHECK-NEXT:    jne .LBB2_7
-; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:    jne .LBB2_4
+; CHECK-NEXT:  .LBB2_5:
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB2_5
-; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    je .LBB2_7
+; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    shlq $6, %rcx
 ; CHECK-NEXT:    vpmaddwd (%rdx,%rcx), %zmm0, %zmm0
 ; CHECK-NEXT:    vpaddd (%rsi,%rcx), %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqa64 %zmm0, (%rsi,%rcx)
-; CHECK-NEXT:  .LBB2_5:
+; CHECK-NEXT:  .LBB2_7:
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %5 = icmp sgt i32 %0, 0

@@ -33,8 +33,8 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ; SSE-NEXT:    movq %r8, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    movq %r9, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    testb %al, %al
-; SSE-NEXT:    je .LBB0_5
-; SSE-NEXT:  # %bb.4: # %entry
+; SSE-NEXT:    je .LBB0_2
+; SSE-NEXT:  # %bb.1: # %entry
 ; SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    movaps %xmm2, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    movaps %xmm3, -{{[0-9]+}}(%esp)
@@ -42,7 +42,7 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ; SSE-NEXT:    movaps %xmm5, {{[0-9]+}}(%esp)
 ; SSE-NEXT:    movaps %xmm6, {{[0-9]+}}(%esp)
 ; SSE-NEXT:    movaps %xmm7, {{[0-9]+}}(%esp)
-; SSE-NEXT:  .LBB0_5: # %entry
+; SSE-NEXT:  .LBB0_2: # %entry
 ; SSE-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
 ; SSE-NEXT:    movl %eax, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    leal {{[0-9]+}}(%rsp), %eax
@@ -51,18 +51,18 @@ define i32 @foo(float %a, ptr nocapture readnone %fmt, ...) nounwind {
 ; SSE-NEXT:    movq %rax, -{{[0-9]+}}(%esp)
 ; SSE-NEXT:    movl $8, %ecx
 ; SSE-NEXT:    cmpl $40, %ecx
-; SSE-NEXT:    ja .LBB0_2
-; SSE-NEXT:  # %bb.1: # %vaarg.in_reg
+; SSE-NEXT:    ja .LBB0_4
+; SSE-NEXT:  # %bb.3: # %vaarg.in_reg
 ; SSE-NEXT:    movl -{{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    addl %ecx, %eax
 ; SSE-NEXT:    addl $8, %ecx
 ; SSE-NEXT:    movl %ecx, -{{[0-9]+}}(%esp)
-; SSE-NEXT:    jmp .LBB0_3
-; SSE-NEXT:  .LBB0_2: # %vaarg.in_mem
+; SSE-NEXT:    jmp .LBB0_5
+; SSE-NEXT:  .LBB0_4: # %vaarg.in_mem
 ; SSE-NEXT:    movl -{{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    leal 8(%rax), %ecx
 ; SSE-NEXT:    movl %ecx, -{{[0-9]+}}(%esp)
-; SSE-NEXT:  .LBB0_3: # %vaarg.end
+; SSE-NEXT:  .LBB0_5: # %vaarg.end
 ; SSE-NEXT:    movl (%eax), %eax
 ; SSE-NEXT:    addl $72, %esp
 ; SSE-NEXT:    retq

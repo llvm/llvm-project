@@ -171,13 +171,13 @@ define void @test4() {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .LBB4_3
+; CHECK-NEXT:    ja .LBB4_2
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %asm.fallthrough
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    ja .LBB4_3
+; CHECK-NEXT:    ja .LBB4_2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB4_3: # Inline asm indirect target
+; CHECK-NEXT:  .LBB4_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %quux
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl

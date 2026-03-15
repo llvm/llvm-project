@@ -169,13 +169,13 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    addl $16, %esp
 ; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
-; X86-SSE2-NEXT:    jne .LBB3_1
-; X86-SSE2-NEXT:  # %bb.2:
+; X86-SSE2-NEXT:    jne .LBB3_2
+; X86-SSE2-NEXT:  # %bb.1:
 ; X86-SSE2-NEXT:    movl %edi, %ebx
 ; X86-SSE2-NEXT:    movl %esi, %edi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE2-NEXT:    jmp .LBB3_3
-; X86-SSE2-NEXT:  .LBB3_1:
+; X86-SSE2-NEXT:  .LBB3_2:
 ; X86-SSE2-NEXT:    shll $27, %ebx
 ; X86-SSE2-NEXT:  .LBB3_3:
 ; X86-SSE2-NEXT:    movl %edi, %eax
@@ -336,12 +336,12 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X86-SSE2-NEXT:    movl %eax, %ecx
 ; X86-SSE2-NEXT:    addl $27, %ecx
 ; X86-SSE2-NEXT:    testb $32, %cl
-; X86-SSE2-NEXT:    je .LBB10_1
-; X86-SSE2-NEXT:  # %bb.2:
+; X86-SSE2-NEXT:    je .LBB10_2
+; X86-SSE2-NEXT:  # %bb.1:
 ; X86-SSE2-NEXT:    movl %edi, %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE2-NEXT:    jmp .LBB10_3
-; X86-SSE2-NEXT:  .LBB10_1:
+; X86-SSE2-NEXT:  .LBB10_2:
 ; X86-SSE2-NEXT:    shll $27, %ebx
 ; X86-SSE2-NEXT:    movl %esi, %edx
 ; X86-SSE2-NEXT:    movl %ebx, %esi
@@ -1105,12 +1105,12 @@ define void @PR45265(i32 %0, ptr nocapture readonly %1) nounwind {
 ; X86-SSE2-NEXT:    shldl $24, %edx, %ecx
 ; X86-SSE2-NEXT:    xorl %eax, %ecx
 ; X86-SSE2-NEXT:    orl %ecx, %edi
-; X86-SSE2-NEXT:    jne .LBB50_1
-; X86-SSE2-NEXT:  # %bb.2:
+; X86-SSE2-NEXT:    jne .LBB50_2
+; X86-SSE2-NEXT:  # %bb.1:
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    jmp _Z3foov # TAILCALL
-; X86-SSE2-NEXT:  .LBB50_1:
+; X86-SSE2-NEXT:  .LBB50_2:
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    retl

@@ -804,17 +804,17 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; RV64SFBSIFIVEU74-NEXT:    andi a0, a0, 1
 ; RV64SFBSIFIVEU74-NEXT:    mv s1, a2
 ; RV64SFBSIFIVEU74-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64SFBSIFIVEU74-NEXT:    beqz a0, .LBB15_4
-; RV64SFBSIFIVEU74-NEXT:  # %bb.3: # %bb
+; RV64SFBSIFIVEU74-NEXT:    beqz a0, .LBB15_2
+; RV64SFBSIFIVEU74-NEXT:  # %bb.1: # %bb
 ; RV64SFBSIFIVEU74-NEXT:    or s0, a3, a1
-; RV64SFBSIFIVEU74-NEXT:  .LBB15_4: # %bb
-; RV64SFBSIFIVEU74-NEXT:  .LBB15_1: # %bb2
+; RV64SFBSIFIVEU74-NEXT:  .LBB15_2: # %bb
+; RV64SFBSIFIVEU74-NEXT:  .LBB15_3: # %bb2
 ; RV64SFBSIFIVEU74-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64SFBSIFIVEU74-NEXT:    mv a0, s0
 ; RV64SFBSIFIVEU74-NEXT:    call bar
 ; RV64SFBSIFIVEU74-NEXT:    sllw s0, s0, s1
-; RV64SFBSIFIVEU74-NEXT:    bnez a0, .LBB15_1
-; RV64SFBSIFIVEU74-NEXT:  # %bb.2: # %bb7
+; RV64SFBSIFIVEU74-NEXT:    bnez a0, .LBB15_3
+; RV64SFBSIFIVEU74-NEXT:  # %bb.4: # %bb7
 ; RV64SFBSIFIVEU74-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64SFBSIFIVEU74-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64SFBSIFIVEU74-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -854,17 +854,17 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; ZICOND-NEXT:    andi a0, a0, 1
 ; ZICOND-NEXT:    mv s1, a2
 ; ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; ZICOND-NEXT:    beqz a0, .LBB15_4
-; ZICOND-NEXT:  # %bb.3: # %bb
+; ZICOND-NEXT:    beqz a0, .LBB15_2
+; ZICOND-NEXT:  # %bb.1: # %bb
 ; ZICOND-NEXT:    or s0, a3, a1
-; ZICOND-NEXT:  .LBB15_4: # %bb
-; ZICOND-NEXT:  .LBB15_1: # %bb2
+; ZICOND-NEXT:  .LBB15_2: # %bb
+; ZICOND-NEXT:  .LBB15_3: # %bb2
 ; ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZICOND-NEXT:    mv a0, s0
 ; ZICOND-NEXT:    call bar
 ; ZICOND-NEXT:    sllw s0, s0, s1
-; ZICOND-NEXT:    bnez a0, .LBB15_1
-; ZICOND-NEXT:  # %bb.2: # %bb7
+; ZICOND-NEXT:    bnez a0, .LBB15_3
+; ZICOND-NEXT:  # %bb.4: # %bb7
 ; ZICOND-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; ZICOND-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; ZICOND-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -880,17 +880,17 @@ define void @sextw_removal_ccor(i1 %c, i32 signext %arg, i32 signext %arg1, i32 
 ; RV32SFB-NEXT:    andi a0, a0, 1
 ; RV32SFB-NEXT:    mv s1, a2
 ; RV32SFB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32SFB-NEXT:    beqz a0, .LBB15_4
-; RV32SFB-NEXT:  # %bb.3: # %bb
+; RV32SFB-NEXT:    beqz a0, .LBB15_2
+; RV32SFB-NEXT:  # %bb.1: # %bb
 ; RV32SFB-NEXT:    or s0, a3, a1
-; RV32SFB-NEXT:  .LBB15_4: # %bb
-; RV32SFB-NEXT:  .LBB15_1: # %bb2
+; RV32SFB-NEXT:  .LBB15_2: # %bb
+; RV32SFB-NEXT:  .LBB15_3: # %bb2
 ; RV32SFB-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32SFB-NEXT:    mv a0, s0
 ; RV32SFB-NEXT:    call bar
 ; RV32SFB-NEXT:    sll s0, s0, s1
-; RV32SFB-NEXT:    bnez a0, .LBB15_1
-; RV32SFB-NEXT:  # %bb.2: # %bb7
+; RV32SFB-NEXT:    bnez a0, .LBB15_3
+; RV32SFB-NEXT:  # %bb.4: # %bb7
 ; RV32SFB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32SFB-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32SFB-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -947,17 +947,17 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; RV64SFBSIFIVEU74-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64SFBSIFIVEU74-NEXT:    mv s0, a2
-; RV64SFBSIFIVEU74-NEXT:    beqz a0, .LBB16_4
-; RV64SFBSIFIVEU74-NEXT:  # %bb.3: # %bb
+; RV64SFBSIFIVEU74-NEXT:    beqz a0, .LBB16_2
+; RV64SFBSIFIVEU74-NEXT:  # %bb.1: # %bb
 ; RV64SFBSIFIVEU74-NEXT:    addw s1, a1, a3
-; RV64SFBSIFIVEU74-NEXT:  .LBB16_4: # %bb
-; RV64SFBSIFIVEU74-NEXT:  .LBB16_1: # %bb2
+; RV64SFBSIFIVEU74-NEXT:  .LBB16_2: # %bb
+; RV64SFBSIFIVEU74-NEXT:  .LBB16_3: # %bb2
 ; RV64SFBSIFIVEU74-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64SFBSIFIVEU74-NEXT:    mv a0, s1
 ; RV64SFBSIFIVEU74-NEXT:    call bar
 ; RV64SFBSIFIVEU74-NEXT:    sllw s1, s1, s0
-; RV64SFBSIFIVEU74-NEXT:    bnez a0, .LBB16_1
-; RV64SFBSIFIVEU74-NEXT:  # %bb.2: # %bb7
+; RV64SFBSIFIVEU74-NEXT:    bnez a0, .LBB16_3
+; RV64SFBSIFIVEU74-NEXT:  # %bb.4: # %bb7
 ; RV64SFBSIFIVEU74-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64SFBSIFIVEU74-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64SFBSIFIVEU74-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -997,17 +997,17 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; ZICOND-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZICOND-NEXT:    mv s0, a2
-; ZICOND-NEXT:    beqz a0, .LBB16_4
-; ZICOND-NEXT:  # %bb.3: # %bb
+; ZICOND-NEXT:    beqz a0, .LBB16_2
+; ZICOND-NEXT:  # %bb.1: # %bb
 ; ZICOND-NEXT:    addw s1, a1, a3
-; ZICOND-NEXT:  .LBB16_4: # %bb
-; ZICOND-NEXT:  .LBB16_1: # %bb2
+; ZICOND-NEXT:  .LBB16_2: # %bb
+; ZICOND-NEXT:  .LBB16_3: # %bb2
 ; ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ZICOND-NEXT:    mv a0, s1
 ; ZICOND-NEXT:    call bar
 ; ZICOND-NEXT:    sllw s1, s1, s0
-; ZICOND-NEXT:    bnez a0, .LBB16_1
-; ZICOND-NEXT:  # %bb.2: # %bb7
+; ZICOND-NEXT:    bnez a0, .LBB16_3
+; ZICOND-NEXT:  # %bb.4: # %bb7
 ; ZICOND-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; ZICOND-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; ZICOND-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1023,17 +1023,17 @@ define void @sextw_removal_ccaddw(i1 %c, i32 signext %arg, i32 signext %arg1, i3
 ; RV32SFB-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32SFB-NEXT:    mv s0, a2
-; RV32SFB-NEXT:    beqz a0, .LBB16_4
-; RV32SFB-NEXT:  # %bb.3: # %bb
+; RV32SFB-NEXT:    beqz a0, .LBB16_2
+; RV32SFB-NEXT:  # %bb.1: # %bb
 ; RV32SFB-NEXT:    add s1, a1, a3
-; RV32SFB-NEXT:  .LBB16_4: # %bb
-; RV32SFB-NEXT:  .LBB16_1: # %bb2
+; RV32SFB-NEXT:  .LBB16_2: # %bb
+; RV32SFB-NEXT:  .LBB16_3: # %bb2
 ; RV32SFB-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32SFB-NEXT:    mv a0, s1
 ; RV32SFB-NEXT:    call bar
 ; RV32SFB-NEXT:    sll s1, s1, s0
-; RV32SFB-NEXT:    bnez a0, .LBB16_1
-; RV32SFB-NEXT:  # %bb.2: # %bb7
+; RV32SFB-NEXT:    bnez a0, .LBB16_3
+; RV32SFB-NEXT:  # %bb.4: # %bb7
 ; RV32SFB-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32SFB-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32SFB-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload

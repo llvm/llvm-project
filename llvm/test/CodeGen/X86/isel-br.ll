@@ -16,12 +16,12 @@ define void @uncondbr() {
 ; DAG-NEXT:    jmp .LBB0_1
 ;
 ; GISEL-LABEL: uncondbr:
-; GISEL:       # %bb.1: # %entry
-; GISEL-NEXT:    jmp .LBB0_3
-; GISEL-NEXT:  .LBB0_2: # %end
-; GISEL-NEXT:    ret{{[l|q]}}
-; GISEL-NEXT:  .LBB0_3: # %bb2
+; GISEL:       # %bb.0: # %entry
 ; GISEL-NEXT:    jmp .LBB0_2
+; GISEL-NEXT:  .LBB0_1: # %end
+; GISEL-NEXT:    ret{{[l|q]}}
+; GISEL-NEXT:  .LBB0_2: # %bb2
+; GISEL-NEXT:    jmp .LBB0_1
 entry:
   br label %bb2
 end:

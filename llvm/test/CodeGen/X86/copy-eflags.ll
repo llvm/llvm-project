@@ -210,14 +210,14 @@ define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, ptr %pt
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X32-NEXT:    jmp .LBB3_1
+; X32-NEXT:    jmp .LBB3_2
 ; X32-NEXT:    .p2align 4
-; X32-NEXT:  .LBB3_5: # %bb1
-; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:  .LBB3_1: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; X32-NEXT:    movl %esi, %eax
 ; X32-NEXT:    cltd
 ; X32-NEXT:    idivl %edi
-; X32-NEXT:  .LBB3_1: # %bb1
+; X32-NEXT:  .LBB3_2: # %bb1
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    movsbl %cl, %eax
 ; X32-NEXT:    movl %eax, %edx
@@ -230,20 +230,20 @@ define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, ptr %pt
 ; X32-NEXT:    movzbl %dl, %edi
 ; X32-NEXT:    negl %edi
 ; X32-NEXT:    testb %al, %al
-; X32-NEXT:    jne .LBB3_3
-; X32-NEXT:  # %bb.2: # %bb1
-; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:    jne .LBB3_4
+; X32-NEXT:  # %bb.3: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; X32-NEXT:    movb %ch, %cl
-; X32-NEXT:  .LBB3_3: # %bb1
-; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:  .LBB3_4: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; X32-NEXT:    movb %cl, (%ebp)
 ; X32-NEXT:    movl (%ebx), %edx
 ; X32-NEXT:    testb %al, %al
-; X32-NEXT:    jne .LBB3_5
-; X32-NEXT:  # %bb.4: # %bb1
-; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; X32-NEXT:    jne .LBB3_1
+; X32-NEXT:  # %bb.5: # %bb1
+; X32-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; X32-NEXT:    movl %edx, %edi
-; X32-NEXT:    jmp .LBB3_5
+; X32-NEXT:    jmp .LBB3_1
 ;
 ; X64-LABEL: PR37100:
 ; X64:       # %bb.0: # %bb

@@ -14,12 +14,12 @@ define float @cmp(float %A, float %B, float %C, float %D) nounwind {
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
 ; CHECK-NEXT:    sahf
-; CHECK-NEXT:    jbe .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    jbe .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    flds (%eax)
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    flds (%eax)
 ; CHECK-NEXT:    retl

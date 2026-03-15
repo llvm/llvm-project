@@ -16,21 +16,21 @@ define void @test(ptr %l) nounwind {
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movabsq $2305843009482129440, %rcx # imm = 0x2000000010000020
 ; CHECK-NEXT:    btq %rax, %rcx
-; CHECK-NEXT:    jb .LBB0_6
+; CHECK-NEXT:    jb .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    movl $671088640, %ecx # imm = 0x28000000
 ; CHECK-NEXT:    btq %rax, %rcx
-; CHECK-NEXT:    jae .LBB0_3
-; CHECK-NEXT:  # %bb.5: # %sw.bb
+; CHECK-NEXT:    jae .LBB0_5
+; CHECK-NEXT:  # %bb.3: # %sw.bb
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    jmp .LBB0_8
-; CHECK-NEXT:  .LBB0_6: # %sw.bb2
+; CHECK-NEXT:  .LBB0_4: # %sw.bb2
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp .LBB0_8
-; CHECK-NEXT:  .LBB0_3: # %entry
+; CHECK-NEXT:  .LBB0_5: # %entry
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    jne .LBB0_7
-; CHECK-NEXT:  # %bb.4: # %sw.bb4
+; CHECK-NEXT:  # %bb.6: # %sw.bb4
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: # %sw.default
@@ -145,38 +145,38 @@ define void @test4(i32 %x, ptr %y) {
 ; CHECK-NEXT:    je .LBB3_9
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    cmpl $20, %edi
-; CHECK-NEXT:    je .LBB3_10
+; CHECK-NEXT:    je .LBB3_12
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    cmpl $30, %edi
-; CHECK-NEXT:    jne .LBB3_13
+; CHECK-NEXT:    jne .LBB3_11
 ; CHECK-NEXT:  # %bb.4: # %sw.bb2
 ; CHECK-NEXT:    movl $3, (%rsi)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_5: # %entry
 ; CHECK-NEXT:    cmpl $40, %edi
-; CHECK-NEXT:    je .LBB3_11
+; CHECK-NEXT:    je .LBB3_10
 ; CHECK-NEXT:  # %bb.6: # %entry
 ; CHECK-NEXT:    cmpl $50, %edi
-; CHECK-NEXT:    je .LBB3_12
+; CHECK-NEXT:    je .LBB3_13
 ; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    cmpl $60, %edi
-; CHECK-NEXT:    jne .LBB3_13
+; CHECK-NEXT:    jne .LBB3_11
 ; CHECK-NEXT:  # %bb.8: # %sw.bb5
 ; CHECK-NEXT:    movl $6, (%rsi)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_9: # %sw.bb
 ; CHECK-NEXT:    movl $1, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_11: # %sw.bb3
+; CHECK-NEXT:  .LBB3_10: # %sw.bb3
 ; CHECK-NEXT:    movl $4, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_13: # %sw.default
+; CHECK-NEXT:  .LBB3_11: # %sw.default
 ; CHECK-NEXT:    movl $7, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_10: # %sw.bb1
+; CHECK-NEXT:  .LBB3_12: # %sw.bb1
 ; CHECK-NEXT:    movl $2, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_12: # %sw.bb4
+; CHECK-NEXT:  .LBB3_13: # %sw.bb4
 ; CHECK-NEXT:    movl $5, (%rsi)
 ; CHECK-NEXT:    retq
 
@@ -231,14 +231,14 @@ define void @test5(i32 %x) {
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movl $146, %eax
 ; CHECK-NEXT:    btl %edi, %eax
-; CHECK-NEXT:    jae .LBB4_2
-; CHECK-NEXT:  # %bb.4: # %bb1
+; CHECK-NEXT:    jae .LBB4_4
+; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq g@PLT
 ; CHECK-NEXT:  .LBB4_3: # %bb0
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq g@PLT
-; CHECK-NEXT:  .LBB4_2: # %bb2
+; CHECK-NEXT:  .LBB4_4: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq g@PLT
 

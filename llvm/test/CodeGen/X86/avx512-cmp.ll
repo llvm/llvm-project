@@ -64,11 +64,11 @@ define float @test5(float %p) #0 {
 ; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vucomiss %xmm1, %xmm0
-; ALL-NEXT:    jne LBB3_1
-; ALL-NEXT:    jp LBB3_1
-; ALL-NEXT:  ## %bb.2: ## %return
+; ALL-NEXT:    jne LBB3_2
+; ALL-NEXT:    jp LBB3_2
+; ALL-NEXT:  ## %bb.1: ## %return
 ; ALL-NEXT:    retq
-; ALL-NEXT:  LBB3_1: ## %if.end
+; ALL-NEXT:  LBB3_2: ## %if.end
 ; ALL-NEXT:    vcmpltss %xmm0, %xmm1, %k1
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 {%k1} = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
@@ -159,11 +159,11 @@ define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-NEXT:    cmpq %rsi, %rdi
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    testb %dl, %al
-; ALL-NEXT:    je LBB8_1
-; ALL-NEXT:  ## %bb.2: ## %if.end.i
+; ALL-NEXT:    je LBB8_2
+; ALL-NEXT:  ## %bb.1: ## %if.end.i
 ; ALL-NEXT:    movl $6, %eax
 ; ALL-NEXT:    retq
-; ALL-NEXT:  LBB8_1: ## %if.then.i
+; ALL-NEXT:  LBB8_2: ## %if.then.i
 ; ALL-NEXT:    movl $5, %eax
 ; ALL-NEXT:    retq
 

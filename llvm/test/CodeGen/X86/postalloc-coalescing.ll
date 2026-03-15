@@ -6,14 +6,14 @@ define fastcc i32 @_Z18yy_get_next_bufferv() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    cmpl $-1, %eax
-; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb116
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movb %al, 0
 ; CHECK-NEXT:    cmpl $-1, %eax
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  .LBB0_3: # %bb158
+; CHECK-NEXT:  .LBB0_2: # %bb158
 ; CHECK-NEXT:    movb %al, 0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl

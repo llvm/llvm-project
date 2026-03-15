@@ -26,13 +26,13 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:  LBB0_4: ## %bb13088
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne LBB0_5
-; CHECK-NEXT:  ## %bb.6: ## %bb13101
+; CHECK-NEXT:    jne LBB0_6
+; CHECK-NEXT:  ## %bb.5: ## %bb13101
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp LBB0_7
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_5: ## in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:  LBB0_6: ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    movl $65535, %ecx ## imm = 0xFFFF
 ; CHECK-NEXT:  LBB0_7: ## %bb13107
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1

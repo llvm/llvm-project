@@ -349,17 +349,17 @@ define i64 @select_lea_3(i1 zeroext %cond) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-2, %eax
-; X86-NEXT:    je .LBB19_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl $-1, %edx
 ; X86-NEXT:    je .LBB19_3
-; X86-NEXT:  .LBB19_4:
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    je .LBB19_4
+; X86-NEXT:  .LBB19_2:
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB19_1:
+; X86-NEXT:  .LBB19_3:
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    movl $-1, %edx
-; X86-NEXT:    jne .LBB19_4
-; X86-NEXT:  .LBB19_3:
+; X86-NEXT:    jne .LBB19_2
+; X86-NEXT:  .LBB19_4:
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
@@ -397,17 +397,17 @@ define i64 @select_lea_9(i1 zeroext %cond) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-7, %eax
-; X86-NEXT:    je .LBB21_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl $-1, %edx
 ; X86-NEXT:    je .LBB21_3
-; X86-NEXT:  .LBB21_4:
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    je .LBB21_4
+; X86-NEXT:  .LBB21_2:
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB21_1:
+; X86-NEXT:  .LBB21_3:
 ; X86-NEXT:    movl $2, %eax
 ; X86-NEXT:    movl $-1, %edx
-; X86-NEXT:    jne .LBB21_4
-; X86-NEXT:  .LBB21_3:
+; X86-NEXT:    jne .LBB21_2
+; X86-NEXT:  .LBB21_4:
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
@@ -610,17 +610,17 @@ define i64 @select_pow2_diff_neg_invert(i1 zeroext %cond) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-99, %eax
-; X86-NEXT:    je .LBB30_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl $-1, %edx
 ; X86-NEXT:    je .LBB30_3
-; X86-NEXT:  .LBB30_4:
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    je .LBB30_4
+; X86-NEXT:  .LBB30_2:
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB30_1:
+; X86-NEXT:  .LBB30_3:
 ; X86-NEXT:    movl $29, %eax
 ; X86-NEXT:    movl $-1, %edx
-; X86-NEXT:    jne .LBB30_4
-; X86-NEXT:  .LBB30_3:
+; X86-NEXT:    jne .LBB30_2
+; X86-NEXT:  .LBB30_4:
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
@@ -832,11 +832,11 @@ define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 ; X64-LABEL: sel_constants_add_constant_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB37_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jne .LBB37_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = [12,13,14,15]
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB37_1:
+; X64-NEXT:  .LBB37_2:
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = [4294967293,14,4,4]
 ; X64-NEXT:    retq
   %sel = select i1 %cond, <4 x i32> <i32 -4, i32 12, i32 1, i32 0>, <4 x i32> <i32 11, i32 11, i32 11, i32 11>
@@ -869,11 +869,11 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; X64-LABEL: sel_constants_fmul_constant_vec:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    jne .LBB38_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    jne .LBB38_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = [1.1883E+2,3.4539999999999999E+1]
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB38_1:
+; X64-NEXT:  .LBB38_2:
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = [-2.0399999999999999E+1,3.768E+1]
 ; X64-NEXT:    retq
   %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>

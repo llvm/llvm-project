@@ -64,7 +64,7 @@ define dso_local void @test2(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_3
+; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.true
 ; CHECK-NEXT:    movw $8, %ax
 ; CHECK-NEXT:    tilezero %tmm0
@@ -75,8 +75,8 @@ define dso_local void @test2(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tileloadd (%rdx,%rcx), %tmm2
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rdx,%rcx)
-; CHECK-NEXT:    jmp .LBB1_2
-; CHECK-NEXT:  .LBB1_3: # %if.false
+; CHECK-NEXT:    jmp .LBB1_3
+; CHECK-NEXT:  .LBB1_2: # %if.false
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
 ; CHECK-NEXT:    movw $8, %dx
@@ -87,7 +87,7 @@ define dso_local void @test2(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tileloadd (%rax,%rcx), %tmm2
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm4, %tmm3
 ; CHECK-NEXT:    tilestored %tmm3, (%rax,%rcx)
-; CHECK-NEXT:  .LBB1_2: # %if.true
+; CHECK-NEXT:  .LBB1_3: # %if.true
 ; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
@@ -240,26 +240,26 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movl $32, %edx
 ; CHECK-NEXT:    movl %esi, %r8d
 ; CHECK-NEXT:    decl %r8d
-; CHECK-NEXT:    jmp .LBB4_1
+; CHECK-NEXT:    jmp .LBB4_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB4_3: # %if.false
-; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
+; CHECK-NEXT:  .LBB4_1: # %if.false
+; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    movl %r8d, %esi
 ; CHECK-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpw $7, %si
-; CHECK-NEXT:    jne .LBB4_5
-; CHECK-NEXT:  .LBB4_1: # %loop.bb1
+; CHECK-NEXT:    jne .LBB4_4
+; CHECK-NEXT:  .LBB4_2: # %loop.bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB4_3
-; CHECK-NEXT:  # %bb.2: # %if.true
-; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
+; CHECK-NEXT:    jne .LBB4_1
+; CHECK-NEXT:  # %bb.3: # %if.true
+; CHECK-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rcx,%rdx)
 ; CHECK-NEXT:    cmpw $7, %si
-; CHECK-NEXT:    je .LBB4_1
-; CHECK-NEXT:  .LBB4_5: # %exit
+; CHECK-NEXT:    je .LBB4_2
+; CHECK-NEXT:  .LBB4_4: # %exit
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -300,13 +300,13 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movl $buf, %edx
 ; CHECK-NEXT:    movl $32, %esi
-; CHECK-NEXT:    jmp .LBB5_1
+; CHECK-NEXT:    jmp .LBB5_3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB5_3: # %if.false
-; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
+; CHECK-NEXT:  .LBB5_1: # %if.false
+; CHECK-NEXT:    # in Loop: Header=BB5_3 Depth=1
 ; CHECK-NEXT:    decl %eax
-; CHECK-NEXT:  .LBB5_4: # %loop.bb2
-; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
+; CHECK-NEXT:  .LBB5_2: # %loop.bb2
+; CHECK-NEXT:    # in Loop: Header=BB5_3 Depth=1
 ; CHECK-NEXT:    leal (%rdi,%rax), %r8d
 ; CHECK-NEXT:    movw %r8w, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    cmpw $7, %ax
@@ -314,14 +314,14 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; CHECK-NEXT:    jne .LBB5_5
-; CHECK-NEXT:  .LBB5_1: # %loop.bb1
+; CHECK-NEXT:  .LBB5_3: # %loop.bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne .LBB5_3
-; CHECK-NEXT:  # %bb.2: # %if.true
-; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
+; CHECK-NEXT:    jne .LBB5_1
+; CHECK-NEXT:  # %bb.4: # %if.true
+; CHECK-NEXT:    # in Loop: Header=BB5_3 Depth=1
 ; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    jmp .LBB5_4
+; CHECK-NEXT:    jmp .LBB5_2
 ; CHECK-NEXT:  .LBB5_5: # %exit
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper

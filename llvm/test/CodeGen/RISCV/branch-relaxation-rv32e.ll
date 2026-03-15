@@ -35,20 +35,20 @@ define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -4
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    bnez a0, .LBB1_1
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    jump .LBB1_2, a0
-; CHECK-NEXT:  .LBB1_1: # %iftrue
+; CHECK-NEXT:    bnez a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    jump .LBB1_3, a0
+; CHECK-NEXT:  .LBB1_2: # %iftrue
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB1_3
-; CHECK-NEXT:  .LBB1_2: # %jmp
+; CHECK-NEXT:    j .LBB1_4
+; CHECK-NEXT:  .LBB1_3: # %jmp
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB1_3: # %tail
+; CHECK-NEXT:  .LBB1_4: # %tail
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    addi sp, sp, 4
 ; CHECK-NEXT:    ret
@@ -117,18 +117,18 @@ define void @relax_jal_spill_32() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li a5, 15
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    beq a4, a5, .LBB2_1
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    beq a4, a5, .LBB2_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    jump .LBB2_4, s1
-; CHECK-NEXT:  .LBB2_1: # %branch_1
+; CHECK-NEXT:    jump .LBB2_3, s1
+; CHECK-NEXT:  .LBB2_2: # %branch_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB2_2
-; CHECK-NEXT:  .LBB2_4: # %branch_2
+; CHECK-NEXT:    j .LBB2_4
+; CHECK-NEXT:  .LBB2_3: # %branch_2
 ; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
-; CHECK-NEXT:  .LBB2_2: # %branch_2
+; CHECK-NEXT:  .LBB2_4: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
 ; CHECK-NEXT:    #NO_APP
@@ -268,18 +268,18 @@ define void @relax_jal_spill_32_adjust_spill_slot() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li a5, 15
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    beq a4, a5, .LBB3_1
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    beq a4, a5, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    jump .LBB3_4, s1
-; CHECK-NEXT:  .LBB3_1: # %branch_1
+; CHECK-NEXT:    jump .LBB3_3, s1
+; CHECK-NEXT:  .LBB3_2: # %branch_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB3_2
-; CHECK-NEXT:  .LBB3_4: # %branch_2
+; CHECK-NEXT:    j .LBB3_4
+; CHECK-NEXT:  .LBB3_3: # %branch_2
 ; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
-; CHECK-NEXT:  .LBB3_2: # %branch_2
+; CHECK-NEXT:  .LBB3_4: # %branch_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use ra
 ; CHECK-NEXT:    #NO_APP
@@ -414,22 +414,22 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    li a5, 15
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    bne a4, a5, .LBB4_2
-; CHECK-NEXT:    j .LBB4_1
-; CHECK-NEXT:  .LBB4_8: # %dest_1
-; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    bne a4, a5, .LBB4_3
+; CHECK-NEXT:    j .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: # %dest_1
+; CHECK-NEXT:    lw s1, 0(sp) # 4-byte Folded Reload
+; CHECK-NEXT:  .LBB4_2: # %dest_1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 1
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    j .LBB4_3
-; CHECK-NEXT:  .LBB4_2: # %cond_2
-; CHECK-NEXT:    bne a2, a3, .LBB4_5
-; CHECK-NEXT:  .LBB4_3: # %dest_2
+; CHECK-NEXT:    j .LBB4_4
+; CHECK-NEXT:  .LBB4_3: # %cond_2
+; CHECK-NEXT:    bne a2, a3, .LBB4_6
+; CHECK-NEXT:  .LBB4_4: # %dest_2
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB4_4: # %dest_3
+; CHECK-NEXT:  .LBB4_5: # %dest_3
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # dest 3
 ; CHECK-NEXT:    #NO_APP
@@ -478,16 +478,16 @@ define void @relax_jal_spill_32_restore_block_correspondence() {
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_5: # %cond_3
+; CHECK-NEXT:  .LBB4_6: # %cond_3
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:    beq t1, t2, .LBB4_4
-; CHECK-NEXT:  # %bb.6: # %space
+; CHECK-NEXT:    beq t1, t2, .LBB4_5
+; CHECK-NEXT:  # %bb.7: # %space
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .zero 1048576
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  # %bb.7: # %space
+; CHECK-NEXT:  # %bb.8: # %space
 ; CHECK-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    jump .LBB4_8, s1
+; CHECK-NEXT:    jump .LBB4_1, s1
 entry:
   %ra = call i32 asm sideeffect "addi ra, x0, 1", "={ra}"()
   %t0 = call i32 asm sideeffect "addi t0, x0, 5", "={t0}"()

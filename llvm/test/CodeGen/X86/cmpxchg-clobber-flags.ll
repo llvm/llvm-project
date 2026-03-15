@@ -42,13 +42,13 @@ define i64 @test_intervening_call(ptr %foo, i64 %bar, i64 %baz) nounwind {
 ; X86-GOOD-RA-NEXT:    calll bar@PLT
 ; X86-GOOD-RA-NEXT:    addl $16, %esp
 ; X86-GOOD-RA-NEXT:    testb %bl, %bl
-; X86-GOOD-RA-NEXT:    jne .LBB0_3
+; X86-GOOD-RA-NEXT:    jne .LBB0_2
 ; X86-GOOD-RA-NEXT:  # %bb.1: # %t
 ; X86-GOOD-RA-NEXT:    movl $42, %eax
-; X86-GOOD-RA-NEXT:    jmp .LBB0_2
-; X86-GOOD-RA-NEXT:  .LBB0_3: # %f
+; X86-GOOD-RA-NEXT:    jmp .LBB0_3
+; X86-GOOD-RA-NEXT:  .LBB0_2: # %f
 ; X86-GOOD-RA-NEXT:    xorl %eax, %eax
-; X86-GOOD-RA-NEXT:  .LBB0_2: # %t
+; X86-GOOD-RA-NEXT:  .LBB0_3: # %t
 ; X86-GOOD-RA-NEXT:    xorl %edx, %edx
 ; X86-GOOD-RA-NEXT:    addl $4, %esp
 ; X86-GOOD-RA-NEXT:    popl %esi
@@ -73,13 +73,13 @@ define i64 @test_intervening_call(ptr %foo, i64 %bar, i64 %baz) nounwind {
 ; X86-FAST-RA-NEXT:    calll bar@PLT
 ; X86-FAST-RA-NEXT:    addl $16, %esp
 ; X86-FAST-RA-NEXT:    testb %bl, %bl
-; X86-FAST-RA-NEXT:    jne .LBB0_3
+; X86-FAST-RA-NEXT:    jne .LBB0_2
 ; X86-FAST-RA-NEXT:  # %bb.1: # %t
 ; X86-FAST-RA-NEXT:    movl $42, %eax
-; X86-FAST-RA-NEXT:    jmp .LBB0_2
-; X86-FAST-RA-NEXT:  .LBB0_3: # %f
+; X86-FAST-RA-NEXT:    jmp .LBB0_3
+; X86-FAST-RA-NEXT:  .LBB0_2: # %f
 ; X86-FAST-RA-NEXT:    xorl %eax, %eax
-; X86-FAST-RA-NEXT:  .LBB0_2: # %t
+; X86-FAST-RA-NEXT:  .LBB0_3: # %t
 ; X86-FAST-RA-NEXT:    xorl %edx, %edx
 ; X86-FAST-RA-NEXT:    addl $4, %esp
 ; X86-FAST-RA-NEXT:    popl %esi

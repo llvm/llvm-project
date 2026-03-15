@@ -57,7 +57,7 @@ declare i32 @_except_handler3(...)
 ; CHECK: calll _useit
 ;
 ; Epilogue
-; CHECK: LBB0_2:       # %__try.cont
+; CHECK: LBB0_1:       # %__try.cont
 ; CHECK: leal    -12(%ebp), %esp
 ; CHECK: popl    %esi
 ; CHECK: popl    %edi
@@ -65,7 +65,7 @@ declare i32 @_except_handler3(...)
 ; CHECK: popl    %ebp
 ; CHECK: retl
 ;
-; CHECK: LBB0_1:                                 # %__except.ret
+; CHECK: LBB0_2:                                 # %__except.ret
 ; Restore ESP
 ; CHECK: movl    -24(%ebp), %esp
 ; Recompute ESI by subtracting 60 from the end of the registration node.
@@ -73,4 +73,4 @@ declare i32 @_except_handler3(...)
 ; Restore EBP
 ; CHECK: movl    12(%esi), %ebp
 ; Rejoin normal control flow
-; CHECK: jmp     LBB0_2
+; CHECK: jmp     LBB0_1

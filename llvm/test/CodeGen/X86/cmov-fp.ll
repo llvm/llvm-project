@@ -14,11 +14,11 @@ define double @test1(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    ja .LBB0_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    ja .LBB0_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB0_3
-; SSE-NEXT:  .LBB0_1:
+; SSE-NEXT:  .LBB0_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB0_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -66,11 +66,11 @@ define double @test2(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jae .LBB1_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jae .LBB1_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB1_3
-; SSE-NEXT:  .LBB1_1:
+; SSE-NEXT:  .LBB1_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB1_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -118,11 +118,11 @@ define double @test3(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jb .LBB2_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jb .LBB2_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB2_3
-; SSE-NEXT:  .LBB2_1:
+; SSE-NEXT:  .LBB2_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB2_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -170,11 +170,11 @@ define double @test4(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jbe .LBB3_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jbe .LBB3_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB3_3
-; SSE-NEXT:  .LBB3_1:
+; SSE-NEXT:  .LBB3_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB3_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -222,11 +222,11 @@ define double @test5(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jg .LBB4_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jg .LBB4_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB4_3
-; SSE-NEXT:  .LBB4_1:
+; SSE-NEXT:  .LBB4_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB4_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -276,11 +276,11 @@ define double @test6(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jge .LBB5_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jge .LBB5_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB5_3
-; SSE-NEXT:  .LBB5_1:
+; SSE-NEXT:  .LBB5_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB5_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -330,11 +330,11 @@ define double @test7(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jl .LBB6_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jl .LBB6_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB6_3
-; SSE-NEXT:  .LBB6_1:
+; SSE-NEXT:  .LBB6_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB6_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -384,11 +384,11 @@ define double @test8(i32 %a, i32 %b, double %x) nounwind {
 ; SSE-NEXT:    subl $8, %esp
 ; SSE-NEXT:    movl 8(%ebp), %eax
 ; SSE-NEXT:    cmpl 12(%ebp), %eax
-; SSE-NEXT:    jle .LBB7_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jle .LBB7_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    jmp .LBB7_3
-; SSE-NEXT:  .LBB7_1:
+; SSE-NEXT:  .LBB7_2:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = [9.9E+1,0.0E+0]
 ; SSE-NEXT:  .LBB7_3:
 ; SSE-NEXT:    movsd %xmm0, (%esp)
@@ -435,11 +435,11 @@ define float @test9(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    ja .LBB8_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    ja .LBB8_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB8_3
-; SSE-NEXT:  .LBB8_1:
+; SSE-NEXT:  .LBB8_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB8_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -452,11 +452,11 @@ define float @test9(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    ja .LBB8_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    ja .LBB8_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB8_3
-; NOSSE2-NEXT:  .LBB8_1:
+; NOSSE2-NEXT:  .LBB8_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB8_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -500,11 +500,11 @@ define float @test10(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jae .LBB9_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jae .LBB9_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB9_3
-; SSE-NEXT:  .LBB9_1:
+; SSE-NEXT:  .LBB9_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB9_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -517,11 +517,11 @@ define float @test10(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jae .LBB9_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jae .LBB9_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB9_3
-; NOSSE2-NEXT:  .LBB9_1:
+; NOSSE2-NEXT:  .LBB9_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB9_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -565,11 +565,11 @@ define float @test11(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jb .LBB10_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jb .LBB10_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB10_3
-; SSE-NEXT:  .LBB10_1:
+; SSE-NEXT:  .LBB10_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB10_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -582,11 +582,11 @@ define float @test11(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jb .LBB10_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jb .LBB10_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB10_3
-; NOSSE2-NEXT:  .LBB10_1:
+; NOSSE2-NEXT:  .LBB10_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB10_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -630,11 +630,11 @@ define float @test12(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jbe .LBB11_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jbe .LBB11_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB11_3
-; SSE-NEXT:  .LBB11_1:
+; SSE-NEXT:  .LBB11_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB11_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -647,11 +647,11 @@ define float @test12(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jbe .LBB11_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jbe .LBB11_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB11_3
-; NOSSE2-NEXT:  .LBB11_1:
+; NOSSE2-NEXT:  .LBB11_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB11_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -695,11 +695,11 @@ define float @test13(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jg .LBB12_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jg .LBB12_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB12_3
-; SSE-NEXT:  .LBB12_1:
+; SSE-NEXT:  .LBB12_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB12_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -712,11 +712,11 @@ define float @test13(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jg .LBB12_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jg .LBB12_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB12_3
-; NOSSE2-NEXT:  .LBB12_1:
+; NOSSE2-NEXT:  .LBB12_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB12_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -762,11 +762,11 @@ define float @test14(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jge .LBB13_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jge .LBB13_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB13_3
-; SSE-NEXT:  .LBB13_1:
+; SSE-NEXT:  .LBB13_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB13_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -779,11 +779,11 @@ define float @test14(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jge .LBB13_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jge .LBB13_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB13_3
-; NOSSE2-NEXT:  .LBB13_1:
+; NOSSE2-NEXT:  .LBB13_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB13_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -829,11 +829,11 @@ define float @test15(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jl .LBB14_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jl .LBB14_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB14_3
-; SSE-NEXT:  .LBB14_1:
+; SSE-NEXT:  .LBB14_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB14_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -846,11 +846,11 @@ define float @test15(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jl .LBB14_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jl .LBB14_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB14_3
-; NOSSE2-NEXT:  .LBB14_1:
+; NOSSE2-NEXT:  .LBB14_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB14_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)
@@ -896,11 +896,11 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 ; SSE-NEXT:    pushl %eax
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    jle .LBB15_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jle .LBB15_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    jmp .LBB15_3
-; SSE-NEXT:  .LBB15_1:
+; SSE-NEXT:  .LBB15_2:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; SSE-NEXT:  .LBB15_3:
 ; SSE-NEXT:    movss %xmm0, (%esp)
@@ -913,11 +913,11 @@ define float @test16(i32 %a, i32 %b, float %x) nounwind {
 ; NOSSE2-NEXT:    pushl %eax
 ; NOSSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; NOSSE2-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; NOSSE2-NEXT:    jle .LBB15_1
-; NOSSE2-NEXT:  # %bb.2:
+; NOSSE2-NEXT:    jle .LBB15_2
+; NOSSE2-NEXT:  # %bb.1:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOSSE2-NEXT:    jmp .LBB15_3
-; NOSSE2-NEXT:  .LBB15_1:
+; NOSSE2-NEXT:  .LBB15_2:
 ; NOSSE2-NEXT:    movss {{.*#+}} xmm0 = [9.9E+1,0.0E+0,0.0E+0,0.0E+0]
 ; NOSSE2-NEXT:  .LBB15_3:
 ; NOSSE2-NEXT:    movss %xmm0, (%esp)

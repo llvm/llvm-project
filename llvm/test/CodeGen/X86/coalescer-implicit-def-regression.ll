@@ -11,26 +11,26 @@ define i1 @_ZN4llvm8LLParser17parseDIEnumeratorERPNS_6MDNodeEb(i32 %arg) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $1, %edi
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    je .LBB0_5
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:  # %bb.3: # %if.end.i.i.preheader
+; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %if.end.i.i.preheader
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:  .LBB0_4: # %if.then.i.i
+; CHECK-NEXT:  .LBB0_3: # %if.then.i.i
 ; CHECK-NEXT:    movb $1, %dl
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    je .LBB0_6
-; CHECK-NEXT:  .LBB0_7: # %do.end
+; CHECK-NEXT:  .LBB0_4: # %do.end
 ; CHECK-NEXT:    movq %rcx, 0
 ; CHECK-NEXT:    movb %al, 0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testb %dl, %dl
-; CHECK-NEXT:    jne .LBB0_7
+; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  .LBB0_6: # %if.then8
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

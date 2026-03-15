@@ -517,11 +517,11 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    testb $1, %dil
-; SSE2-SSSE3-NEXT:    jne .LBB7_1
-; SSE2-SSSE3-NEXT:  # %bb.2:
+; SSE2-SSSE3-NEXT:    jne .LBB7_2
+; SSE2-SSSE3-NEXT:  # %bb.1:
 ; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    jmp .LBB7_3
-; SSE2-SSSE3-NEXT:  .LBB7_1:
+; SSE2-SSSE3-NEXT:  .LBB7_2:
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm5, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
@@ -539,11 +539,11 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    testb $1, %dil
-; AVX1-NEXT:    jne .LBB7_1
-; AVX1-NEXT:  # %bb.2:
+; AVX1-NEXT:    jne .LBB7_2
+; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    jmp .LBB7_3
-; AVX1-NEXT:  .LBB7_1:
+; AVX1-NEXT:  .LBB7_2:
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm5
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
@@ -563,11 +563,11 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; AVX2-LABEL: v8i32_or_select:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    testb $1, %dil
-; AVX2-NEXT:    jne .LBB7_1
-; AVX2-NEXT:  # %bb.2:
+; AVX2-NEXT:    jne .LBB7_2
+; AVX2-NEXT:  # %bb.1:
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    jmp .LBB7_3
-; AVX2-NEXT:  .LBB7_1:
+; AVX2-NEXT:  .LBB7_2:
 ; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:  .LBB7_3:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
@@ -584,11 +584,11 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpcmpgtd %ymm3, %ymm1, %k1
 ; AVX512F-NEXT:    testb $1, %dil
-; AVX512F-NEXT:    jne .LBB7_1
-; AVX512F-NEXT:  # %bb.2:
+; AVX512F-NEXT:    jne .LBB7_2
+; AVX512F-NEXT:  # %bb.1:
 ; AVX512F-NEXT:    kxorw %k0, %k0, %k2
 ; AVX512F-NEXT:    jmp .LBB7_3
-; AVX512F-NEXT:  .LBB7_1:
+; AVX512F-NEXT:  .LBB7_2:
 ; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm0, %k2
 ; AVX512F-NEXT:  .LBB7_3:
 ; AVX512F-NEXT:    korw %k0, %k1, %k0
@@ -604,11 +604,11 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpcmpgtd %ymm3, %ymm1, %k1
 ; AVX512BW-NEXT:    testb $1, %dil
-; AVX512BW-NEXT:    jne .LBB7_1
-; AVX512BW-NEXT:  # %bb.2:
+; AVX512BW-NEXT:    jne .LBB7_2
+; AVX512BW-NEXT:  # %bb.1:
 ; AVX512BW-NEXT:    kxorw %k0, %k0, %k2
 ; AVX512BW-NEXT:    jmp .LBB7_3
-; AVX512BW-NEXT:  .LBB7_1:
+; AVX512BW-NEXT:  .LBB7_2:
 ; AVX512BW-NEXT:    vpcmpeqd %ymm2, %ymm0, %k2
 ; AVX512BW-NEXT:  .LBB7_3:
 ; AVX512BW-NEXT:    korw %k0, %k1, %k0

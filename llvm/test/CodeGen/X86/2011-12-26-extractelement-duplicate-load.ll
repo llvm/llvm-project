@@ -11,11 +11,11 @@ define <4 x i32> @test(ptr %p) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $3, 8(%rdi)
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    retq
   %v = load <4 x i32>, ptr %p

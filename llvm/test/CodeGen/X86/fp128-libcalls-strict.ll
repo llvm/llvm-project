@@ -3633,11 +3633,11 @@ define i64 @cmp(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    calll ___eqtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    testl %eax, %eax
-; WIN-X86-NEXT:    je LBB37_1
-; WIN-X86-NEXT:  # %bb.2:
+; WIN-X86-NEXT:    je LBB37_2
+; WIN-X86-NEXT:  # %bb.1:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
 ; WIN-X86-NEXT:    jmp LBB37_3
-; WIN-X86-NEXT:  LBB37_1:
+; WIN-X86-NEXT:  LBB37_2:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
 ; WIN-X86-NEXT:  LBB37_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
@@ -3763,11 +3763,11 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    calll ___eqtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    testl %eax, %eax
-; WIN-X86-NEXT:    je LBB38_1
-; WIN-X86-NEXT:  # %bb.2:
+; WIN-X86-NEXT:    je LBB38_2
+; WIN-X86-NEXT:  # %bb.1:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
 ; WIN-X86-NEXT:    jmp LBB38_3
-; WIN-X86-NEXT:  LBB38_1:
+; WIN-X86-NEXT:  LBB38_2:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
 ; WIN-X86-NEXT:  LBB38_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
@@ -3981,11 +3981,11 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    calll ___unordtf2
 ; WIN-X86-NEXT:    addl $32, %esp
 ; WIN-X86-NEXT:    orb %bl, %al
-; WIN-X86-NEXT:    jne LBB39_1
-; WIN-X86-NEXT:  # %bb.2:
+; WIN-X86-NEXT:    jne LBB39_2
+; WIN-X86-NEXT:  # %bb.1:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
 ; WIN-X86-NEXT:    jmp LBB39_3
-; WIN-X86-NEXT:  LBB39_1:
+; WIN-X86-NEXT:  LBB39_2:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
 ; WIN-X86-NEXT:  LBB39_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax
@@ -4206,11 +4206,11 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; WIN-X86-NEXT:    testl %eax, %eax
 ; WIN-X86-NEXT:    sete %al
 ; WIN-X86-NEXT:    testb %bl, %al
-; WIN-X86-NEXT:    jne LBB40_1
-; WIN-X86-NEXT:  # %bb.2:
+; WIN-X86-NEXT:    jne LBB40_2
+; WIN-X86-NEXT:  # %bb.1:
 ; WIN-X86-NEXT:    leal 16(%ebp), %ecx
 ; WIN-X86-NEXT:    jmp LBB40_3
-; WIN-X86-NEXT:  LBB40_1:
+; WIN-X86-NEXT:  LBB40_2:
 ; WIN-X86-NEXT:    leal 8(%ebp), %ecx
 ; WIN-X86-NEXT:  LBB40_3:
 ; WIN-X86-NEXT:    movl (%ecx), %eax

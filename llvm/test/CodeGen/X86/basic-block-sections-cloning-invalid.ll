@@ -72,9 +72,9 @@ cold:
 ; CHECK: # %bb.0:        # %b0
 
 ; CHECK:   je .LBB0_3
-; PATH:  # %bb.7:      # %b1
-; PATH:  # %bb.8:      # %b2
-; PATH:    jne .LBB0_4
+; PATH:  # %bb.1:      # %b1
+; PATH:  # %bb.2:      # %b2
+; PATH:    jne .LBB0_7
 ; CHECK: # %bb.1:      # %b1
 ; CHECK:   jne foo.cold
 

@@ -413,13 +413,13 @@ define ptr @gep_disjoint_or(ptr %base) {
 ; taken from preload-implicit-kernargs.ll
 define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) {
 ; GFX942-LABEL: random_incorrect_offset:
-; GFX942:       ; %bb.1:
+; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_branch .LBB21_0
+; GFX942-NEXT:    s_branch .LBB21_2
 ; GFX942-NEXT:    .p2align 8
-; GFX942-NEXT:  ; %bb.2:
-; GFX942-NEXT:  .LBB21_0:
+; GFX942-NEXT:  ; %bb.1:
+; GFX942-NEXT:  .LBB21_2:
 ; GFX942-NEXT:    s_load_dword s0, s[4:5], 0xa
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)

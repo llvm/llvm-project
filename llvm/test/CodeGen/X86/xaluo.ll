@@ -641,23 +641,23 @@ define zeroext i1 @saddobri32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: saddobri32:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    addl %esi, %edi
-; SDAG-NEXT:    jo LBB31_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jo LBB31_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB31_1: ## %overflow
+; SDAG-NEXT:  LBB31_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: saddobri32:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    addl %esi, %edi
-; FAST-NEXT:    jo LBB31_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jo LBB31_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB31_1: ## %overflow
+; FAST-NEXT:  LBB31_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -678,23 +678,23 @@ define zeroext i1 @saddobri64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: saddobri64:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    addq %rsi, %rdi
-; SDAG-NEXT:    jo LBB32_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jo LBB32_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB32_1: ## %overflow
+; SDAG-NEXT:  LBB32_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: saddobri64:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    addq %rsi, %rdi
-; FAST-NEXT:    jo LBB32_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jo LBB32_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB32_1: ## %overflow
+; FAST-NEXT:  LBB32_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -715,23 +715,23 @@ define zeroext i1 @uaddobri32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: uaddobri32:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    addl %esi, %edi
-; SDAG-NEXT:    jb LBB33_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jb LBB33_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB33_1: ## %overflow
+; SDAG-NEXT:  LBB33_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: uaddobri32:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    addl %esi, %edi
-; FAST-NEXT:    jb LBB33_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jb LBB33_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB33_1: ## %overflow
+; FAST-NEXT:  LBB33_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -752,23 +752,23 @@ define zeroext i1 @uaddobri64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: uaddobri64:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    addq %rsi, %rdi
-; SDAG-NEXT:    jb LBB34_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jb LBB34_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB34_1: ## %overflow
+; SDAG-NEXT:  LBB34_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: uaddobri64:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    addq %rsi, %rdi
-; FAST-NEXT:    jb LBB34_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jb LBB34_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB34_1: ## %overflow
+; FAST-NEXT:  LBB34_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -789,23 +789,23 @@ define zeroext i1 @ssubobri32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: ssubobri32:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    cmpl %esi, %edi
-; SDAG-NEXT:    jo LBB35_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jo LBB35_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB35_1: ## %overflow
+; SDAG-NEXT:  LBB35_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: ssubobri32:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    cmpl %esi, %edi
-; FAST-NEXT:    jo LBB35_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jo LBB35_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB35_1: ## %overflow
+; FAST-NEXT:  LBB35_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -826,23 +826,23 @@ define zeroext i1 @ssubobri64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: ssubobri64:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    cmpq %rsi, %rdi
-; SDAG-NEXT:    jo LBB36_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jo LBB36_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB36_1: ## %overflow
+; SDAG-NEXT:  LBB36_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: ssubobri64:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    cmpq %rsi, %rdi
-; FAST-NEXT:    jo LBB36_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jo LBB36_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB36_1: ## %overflow
+; FAST-NEXT:  LBB36_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -863,23 +863,23 @@ define zeroext i1 @usubobri32(i32 %v1, i32 %v2) {
 ; SDAG-LABEL: usubobri32:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    cmpl %esi, %edi
-; SDAG-NEXT:    jb LBB37_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jb LBB37_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB37_1: ## %overflow
+; SDAG-NEXT:  LBB37_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: usubobri32:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    cmpl %esi, %edi
-; FAST-NEXT:    jb LBB37_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jb LBB37_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB37_1: ## %overflow
+; FAST-NEXT:  LBB37_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax
@@ -900,23 +900,23 @@ define zeroext i1 @usubobri64(i64 %v1, i64 %v2) {
 ; SDAG-LABEL: usubobri64:
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    cmpq %rsi, %rdi
-; SDAG-NEXT:    jb LBB38_1
-; SDAG-NEXT:  ## %bb.2: ## %continue
+; SDAG-NEXT:    jb LBB38_2
+; SDAG-NEXT:  ## %bb.1: ## %continue
 ; SDAG-NEXT:    movb $1, %al
 ; SDAG-NEXT:    retq
-; SDAG-NEXT:  LBB38_1: ## %overflow
+; SDAG-NEXT:  LBB38_2: ## %overflow
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: usubobri64:
 ; FAST:       ## %bb.0:
 ; FAST-NEXT:    cmpq %rsi, %rdi
-; FAST-NEXT:    jb LBB38_1
-; FAST-NEXT:  ## %bb.2: ## %continue
+; FAST-NEXT:    jb LBB38_2
+; FAST-NEXT:  ## %bb.1: ## %continue
 ; FAST-NEXT:    movb $1, %al
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    retq
-; FAST-NEXT:  LBB38_1: ## %overflow
+; FAST-NEXT:  LBB38_2: ## %overflow
 ; FAST-NEXT:    xorl %eax, %eax
 ; FAST-NEXT:    andb $1, %al
 ; FAST-NEXT:    ## kill: def $al killed $al killed $eax

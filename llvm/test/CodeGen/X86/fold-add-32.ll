@@ -17,11 +17,11 @@ define i32 @foo(i1 %b) #0 {
 ; CHECK-NEXT:    movl __stack_chk_guard, %eax
 ; CHECK-NEXT:    movl %eax, -4(%ebp)
 ; CHECK-NEXT:    testb $1, 8(%ebp)
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movl $-2147483647, %eax # imm = 0x80000001
 ; CHECK-NEXT:    leal -5(%ebp,%eax), %eax
 ; CHECK-NEXT:  .LBB0_3: # %entry

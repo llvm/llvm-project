@@ -20,34 +20,34 @@ define dso_local void @tail_merge_me() nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.6: # %A
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %A
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq bar
-; CHECK-NEXT:    jmp .LBB0_4
-; CHECK-NEXT:  .LBB0_1: # %next
+; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:  .LBB0_2: # %next
 ; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # %bb.2: # %B
+; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %B
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq car
-; CHECK-NEXT:    jmp .LBB0_4
-; CHECK-NEXT:  .LBB0_3: # %C
+; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:  .LBB0_4: # %C
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq dar
-; CHECK-NEXT:  .LBB0_4: # %M
+; CHECK-NEXT:  .LBB0_5: # %M
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
 ; CHECK-NEXT:    movl $1, HABC(%rip)
 ; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB0_5
-; CHECK-NEXT:  # %bb.7: # %return
+; CHECK-NEXT:    je .LBB0_7
+; CHECK-NEXT:  # %bb.6: # %return
 ; CHECK-NEXT:    movl $1000, %edi # imm = 0x3E8
 ; CHECK-NEXT:    callq ear
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_5: # %altret
+; CHECK-NEXT:  .LBB0_7: # %altret
 ; CHECK-NEXT:    movl $1001, %edi # imm = 0x3E9
 ; CHECK-NEXT:    callq far
 ; CHECK-NEXT:    popq %rax
@@ -105,36 +105,36 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:    callq choose@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    testb $1, %bpl
-; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # %bb.7: # %A
+; CHECK-NEXT:    je .LBB1_3
+; CHECK-NEXT:  # %bb.1: # %A
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
 ; CHECK-NEXT:    jmpq *%rbx
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB1_4: # %return
+; CHECK-NEXT:  .LBB1_2: # %return
 ; CHECK-NEXT:    movl $1000, %edi # imm = 0x3E8
 ; CHECK-NEXT:    callq ear
-; CHECK-NEXT:    jmp .LBB1_5
-; CHECK-NEXT:  .LBB1_1: # %next
+; CHECK-NEXT:    jmp .LBB1_6
+; CHECK-NEXT:  .LBB1_3: # %next
 ; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB1_3
-; CHECK-NEXT:  # %bb.2: # %B
+; CHECK-NEXT:    je .LBB1_7
+; CHECK-NEXT:  # %bb.4: # %B
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq car
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
 ; CHECK-NEXT:    jmpq *%rbx
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
-; CHECK-NEXT:  .LBB1_6: # %altret
+; CHECK-NEXT:  .LBB1_5: # %altret
 ; CHECK-NEXT:    movl $1001, %edi # imm = 0x3E9
 ; CHECK-NEXT:    callq far
-; CHECK-NEXT:  .LBB1_5: # %return
+; CHECK-NEXT:  .LBB1_6: # %return
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_3: # %C
+; CHECK-NEXT:  .LBB1_7: # %C
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq dar
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
@@ -256,10 +256,10 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:    movq 0, %rax
 ; CHECK-NEXT:    movzbl (%rax), %ecx
 ; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    je .LBB3_10
+; CHECK-NEXT:    je .LBB3_11
 ; CHECK-NEXT:  # %bb.4: # %lvalue_p.exit
 ; CHECK-NEXT:    cmpl $2, %ecx
-; CHECK-NEXT:    jne .LBB3_15
+; CHECK-NEXT:    jne .LBB3_10
 ; CHECK-NEXT:  # %bb.5: # %bb.i1
 ; CHECK-NEXT:    movq 32(%rax), %rax
 ; CHECK-NEXT:    movzbl 16(%rax), %ecx
@@ -267,39 +267,39 @@ define fastcc void @c_expand_expr_stmt(ptr %expr) nounwind {
 ; CHECK-NEXT:    je .LBB3_13
 ; CHECK-NEXT:  # %bb.6: # %bb.i1
 ; CHECK-NEXT:    cmpl $2, %ecx
-; CHECK-NEXT:    jne .LBB3_15
+; CHECK-NEXT:    jne .LBB3_10
 ; CHECK-NEXT:  # %bb.7: # %bb.i.i
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq lvalue_p@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    jmp .LBB3_16
+; CHECK-NEXT:    jmp .LBB3_15
 ; CHECK-NEXT:  .LBB3_8: # %bb1
 ; CHECK-NEXT:    cmpb $23, %bl
 ; CHECK-NEXT:  .LBB3_9: # %bb3
-; CHECK-NEXT:  .LBB3_15:
+; CHECK-NEXT:  .LBB3_10:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .LBB3_16
-; CHECK-NEXT:  .LBB3_10: # %bb2.i3
+; CHECK-NEXT:    jmp .LBB3_15
+; CHECK-NEXT:  .LBB3_11: # %bb2.i3
 ; CHECK-NEXT:    movq 8(%rax), %rax
 ; CHECK-NEXT:    movzbl 16(%rax), %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $23, %ecx
-; CHECK-NEXT:    je .LBB3_16
-; CHECK-NEXT:  # %bb.11: # %bb2.i3
+; CHECK-NEXT:    je .LBB3_15
+; CHECK-NEXT:  # %bb.12: # %bb2.i3
 ; CHECK-NEXT:    cmpl $16, %ecx
-; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:    je .LBB3_15
 ; CHECK-NEXT:    jmp .LBB3_9
 ; CHECK-NEXT:  .LBB3_13: # %bb2.i.i2
 ; CHECK-NEXT:    movq 8(%rax), %rax
 ; CHECK-NEXT:    movzbl 16(%rax), %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $16, %ecx
-; CHECK-NEXT:    je .LBB3_16
+; CHECK-NEXT:    je .LBB3_15
 ; CHECK-NEXT:  # %bb.14: # %bb2.i.i2
 ; CHECK-NEXT:    cmpl $23, %ecx
 ; CHECK-NEXT:    jne .LBB3_9
-; CHECK-NEXT:  .LBB3_16: # %lvalue_p.exit4
+; CHECK-NEXT:  .LBB3_15: # %lvalue_p.exit4
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    orb %al, %cl
@@ -521,10 +521,10 @@ define dso_local void @two() nounwind optsize {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB7_1
-; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    je .LBB7_2
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB7_1: # %bb7
+; CHECK-NEXT:  .LBB7_2: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    movl $1, XYZ(%rip)
 entry:
@@ -562,10 +562,10 @@ define dso_local void @two_pgso() nounwind !prof !14 {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB8_1
-; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB8_1: # %bb7
+; CHECK-NEXT:  .LBB8_2: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    movl $1, XYZ(%rip)
 entry:
@@ -605,10 +605,10 @@ define dso_local void @two_minsize() nounwind minsize {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB9_1
-; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB9_1: # %bb7
+; CHECK-NEXT:  .LBB9_2: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    movl $1, XYZ(%rip)
 entry:
@@ -649,17 +649,17 @@ define dso_local void @two_nosize(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    je .LBB10_3
 ; CHECK-NEXT:  # %bb.1: # %bby
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB10_4
+; CHECK-NEXT:    je .LBB10_5
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
 ; CHECK-NEXT:  .LBB10_3: # %bbx
 ; CHECK-NEXT:    cmpl $-1, %edx
-; CHECK-NEXT:    je .LBB10_4
-; CHECK-NEXT:  # %bb.5: # %bb12
+; CHECK-NEXT:    je .LBB10_5
+; CHECK-NEXT:  # %bb.4: # %bb12
 ; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
-; CHECK-NEXT:  .LBB10_4: # %return
+; CHECK-NEXT:  .LBB10_5: # %return
 ; CHECK-NEXT:    retq
 entry:
   %0 = icmp eq i32 %x, 0
@@ -849,25 +849,25 @@ define dso_local void @bfi_new_block_pgso(i32 %c) nounwind {
 ; CHECK-LABEL: bfi_new_block_pgso:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB14_6
+; CHECK-NEXT:    je .LBB14_4
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    cmpl $16, %edi
-; CHECK-NEXT:    je .LBB14_3
+; CHECK-NEXT:    je .LBB14_6
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    cmpl $17, %edi
-; CHECK-NEXT:    je .LBB14_4
-; CHECK-NEXT:  # %bb.5: # %bb4
+; CHECK-NEXT:    je .LBB14_7
+; CHECK-NEXT:  # %bb.3: # %bb4
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
-; CHECK-NEXT:  .LBB14_6: # %bb5
+; CHECK-NEXT:  .LBB14_4: # %bb5
 ; CHECK-NEXT:    cmpl $128, %edi
 ; CHECK-NEXT:    jne tail_call_me # TAILCALL
-; CHECK-NEXT:  # %bb.7: # %return
+; CHECK-NEXT:  # %bb.5: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB14_3: # %bb3
+; CHECK-NEXT:  .LBB14_6: # %bb3
 ; CHECK-NEXT:    movl $0, GV(%rip)
-; CHECK-NEXT:  .LBB14_4: # %bb4
+; CHECK-NEXT:  .LBB14_7: # %bb4
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL

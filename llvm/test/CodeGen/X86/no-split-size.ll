@@ -28,12 +28,12 @@ define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) optsize {
 ; CHECK-NEXT:    movq %rdx, %r15
 ; CHECK-NEXT:    movq %rsi, %r13
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %if.else
+; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    testq %r13, %r13
 ; CHECK-NEXT:    movq %r15, %rax
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  .LBB0_4: # %if.end
+; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    addq %r13, %rax
 ; CHECK-NEXT:    addq %r12, %r15
 ; CHECK-NEXT:    addq %rax, %r15
@@ -51,13 +51,13 @@ define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) optsize {
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %if.then
+; CHECK-NEXT:  .LBB0_3: # %if.then
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    callq bar1@PLT
-; CHECK-NEXT:    jmp .LBB0_4
-; CHECK-NEXT:  .LBB0_3: # %if.then2
+; CHECK-NEXT:    jmp .LBB0_2
+; CHECK-NEXT:  .LBB0_4: # %if.then2
 ; CHECK-NEXT:    callq bar2@PLT
-; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_2
 entry:
   %tobool.not = icmp eq ptr %ptr, null
   br i1 %tobool.not, label %if.then, label %if.else, !prof !5

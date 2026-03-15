@@ -19,26 +19,26 @@ define void @_ZSt17__gslice_to_indexjRKSt8valarrayIjES2_RS0_(i32 %__o, ptr nocap
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.5: # %return
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %bb4.preheader
+; CHECK-NEXT:  .LBB0_2: # %bb4.preheader
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    jmp .LBB0_2
+; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_4: # %bb7.backedge
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:  .LBB0_3: # %bb7.backedge
+; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    addl $-4, %edx
-; CHECK-NEXT:  .LBB0_2: # %bb4
+; CHECK-NEXT:  .LBB0_4: # %bb4
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne .LBB0_4
-; CHECK-NEXT:  # %bb.3: # %bb5
-; CHECK-NEXT:    # in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:  # %bb.5: # %bb5
+; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    movl $0, (%eax,%edx)
-; CHECK-NEXT:    jmp .LBB0_4
+; CHECK-NEXT:    jmp .LBB0_3
 entry:
 	%0 = alloca i32, i32 undef, align 4		; <ptr> [#uses=1]
 	br i1 undef, label %return, label %bb4

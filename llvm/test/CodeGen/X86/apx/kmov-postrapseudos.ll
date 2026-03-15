@@ -53,24 +53,24 @@ define i32 @kmovrk_1(<4 x ptr> %arg) {
 ; AVX512-LABEL: kmovrk_1:
 ; AVX512:       # %bb.0: # %bb
 ; AVX512-NEXT:    vptest %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x17,0xc0]
-; AVX512-NEXT:    jne .LBB2_1 # encoding: [0x75,A]
-; AVX512-NEXT:    # fixup A - offset: 1, value: .LBB2_1, kind: FK_PCRel_1
-; AVX512-NEXT:  # %bb.2: # %bb3
+; AVX512-NEXT:    jne .LBB2_2 # encoding: [0x75,A]
+; AVX512-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
+; AVX512-NEXT:  # %bb.1: # %bb3
 ; AVX512-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; AVX512-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; AVX512-NEXT:    retq # encoding: [0xc3]
-; AVX512-NEXT:  .LBB2_1: # %bb2
+; AVX512-NEXT:  .LBB2_2: # %bb2
 ;
 ; AVX512BW-LABEL: kmovrk_1:
 ; AVX512BW:       # %bb.0: # %bb
 ; AVX512BW-NEXT:    vptest %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x17,0xc0]
-; AVX512BW-NEXT:    jne .LBB2_1 # encoding: [0x75,A]
-; AVX512BW-NEXT:    # fixup A - offset: 1, value: .LBB2_1, kind: FK_PCRel_1
-; AVX512BW-NEXT:  # %bb.2: # %bb3
+; AVX512BW-NEXT:    jne .LBB2_2 # encoding: [0x75,A]
+; AVX512BW-NEXT:    # fixup A - offset: 1, value: .LBB2_2, kind: FK_PCRel_1
+; AVX512BW-NEXT:  # %bb.1: # %bb3
 ; AVX512BW-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; AVX512BW-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; AVX512BW-NEXT:    retq # encoding: [0xc3]
-; AVX512BW-NEXT:  .LBB2_1: # %bb2
+; AVX512BW-NEXT:  .LBB2_2: # %bb2
 bb:
   %icmp = icmp ne <4 x ptr> %arg, zeroinitializer
   %freeze = freeze <4 x i1> %icmp

@@ -8,8 +8,8 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    vpmovb2m %xmm1, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    andl $65534, %eax # imm = 0xFFFE
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %for_loop.lr.ph
+; CHECK-NEXT:    je .LBB0_8
+; CHECK-NEXT:  # %bb.1: # %for_loop.lr.ph
 ; CHECK-NEXT:    vpternlogd {{.*#+}} zmm2 = -1
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm3
 ; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm4
@@ -26,14 +26,14 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    vpxor %xmm12, %xmm12, %xmm12
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_4: # %switch_done
+; CHECK-NEXT:  .LBB0_2: # %switch_done
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    vpsubd %zmm2, %zmm12, %zmm12
 ; CHECK-NEXT:    vpcmpltud %zmm10, %zmm12, %k1 {%k1}
 ; CHECK-NEXT:    kandw %k1, %k0, %k2
 ; CHECK-NEXT:    kmovd %k2, %eax
 ; CHECK-NEXT:    ktestw %k1, %k0
-; CHECK-NEXT:    je .LBB0_5
+; CHECK-NEXT:    je .LBB0_7
 ; CHECK-NEXT:  .LBB0_3: # %for_loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vpcmpltud %zmm9, %zmm3, %k2 {%k1}
@@ -41,8 +41,8 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    kandw %k2, %k0, %k3
 ; CHECK-NEXT:    kmovd %k3, %ecx
 ; CHECK-NEXT:    cmpw %cx, %ax
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.6: # %not_all_continued_or_breaked
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.4: # %not_all_continued_or_breaked
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    vpcmpltud %zmm11, %zmm4, %k3 {%k1}
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm1 {%k3}
@@ -50,8 +50,8 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    kandw %k2, %k0, %k3
 ; CHECK-NEXT:    kmovd %k3, %ecx
 ; CHECK-NEXT:    cmpw %cx, %ax
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.7: # %not_all_continued_or_breaked95
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.5: # %not_all_continued_or_breaked95
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    vpcmpltud %zmm9, %zmm5, %k3 {%k1}
 ; CHECK-NEXT:    vpaddd %zmm6, %zmm1, %zmm1 {%k3}
@@ -59,16 +59,16 @@ define <16 x i32> @pr174871(<16 x i32> %a, <16 x i1> %__mask) local_unnamed_addr
 ; CHECK-NEXT:    kandw %k2, %k0, %k2
 ; CHECK-NEXT:    kmovd %k2, %ecx
 ; CHECK-NEXT:    cmpw %cx, %ax
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.8: # %not_all_continued_or_breaked135
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.6: # %not_all_continued_or_breaked135
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    vpcmpltud %zmm9, %zmm7, %k2 {%k1}
 ; CHECK-NEXT:    vpaddd %zmm8, %zmm1, %zmm1 {%k2}
-; CHECK-NEXT:    jmp .LBB0_4
-; CHECK-NEXT:  .LBB0_5: # %for_exit
+; CHECK-NEXT:    jmp .LBB0_2
+; CHECK-NEXT:  .LBB0_7: # %for_exit
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_8:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 allocas:

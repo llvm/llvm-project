@@ -17,18 +17,18 @@ define void @test11(ptr %base, <2 x i64> %V, <2 x i1> %mask) {
 ; CHECK-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; CHECK-NEXT:    vmovmskpd %xmm1, %eax
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %else
-; CHECK-NEXT:    testb $2, %al
 ; CHECK-NEXT:    jne .LBB1_3
-; CHECK-NEXT:  .LBB1_4: # %else2
+; CHECK-NEXT:  # %bb.1: # %else
+; CHECK-NEXT:    testb $2, %al
+; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:  .LBB1_2: # %else2
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_1: # %cond.store
+; CHECK-NEXT:  .LBB1_3: # %cond.store
 ; CHECK-NEXT:    vmovq %xmm0, (%rdi)
 ; CHECK-NEXT:    addq $8, %rdi
 ; CHECK-NEXT:    testb $2, %al
-; CHECK-NEXT:    je .LBB1_4
-; CHECK-NEXT:  .LBB1_3: # %cond.store1
+; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:  .LBB1_4: # %cond.store1
 ; CHECK-NEXT:    vpextrq $1, %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
  call void @llvm.masked.compressstore.v2i64(<2 x i64> %V, ptr %base, <2 x i1> %mask)

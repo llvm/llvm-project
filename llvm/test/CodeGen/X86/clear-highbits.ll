@@ -530,11 +530,11 @@ define i64 @clear_highbits64_c0(i64 %val, i64 %numhighbits) nounwind {
 ; X86-BASELINE-NEXT:    shrl %cl, %esi
 ; X86-BASELINE-NEXT:    xorl %edx, %edx
 ; X86-BASELINE-NEXT:    testb $32, %cl
-; X86-BASELINE-NEXT:    jne .LBB13_1
-; X86-BASELINE-NEXT:  # %bb.2:
+; X86-BASELINE-NEXT:    jne .LBB13_2
+; X86-BASELINE-NEXT:  # %bb.1:
 ; X86-BASELINE-NEXT:    movl %esi, %edx
 ; X86-BASELINE-NEXT:    jmp .LBB13_3
-; X86-BASELINE-NEXT:  .LBB13_1:
+; X86-BASELINE-NEXT:  .LBB13_2:
 ; X86-BASELINE-NEXT:    movl %esi, %eax
 ; X86-BASELINE-NEXT:  .LBB13_3:
 ; X86-BASELINE-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -603,11 +603,11 @@ define i64 @clear_highbits64_c1_indexzext(i64 %val, i8 %numhighbits) nounwind {
 ; X86-BASELINE-NEXT:    shrl %cl, %esi
 ; X86-BASELINE-NEXT:    xorl %edx, %edx
 ; X86-BASELINE-NEXT:    testb $32, %cl
-; X86-BASELINE-NEXT:    jne .LBB14_1
-; X86-BASELINE-NEXT:  # %bb.2:
+; X86-BASELINE-NEXT:    jne .LBB14_2
+; X86-BASELINE-NEXT:  # %bb.1:
 ; X86-BASELINE-NEXT:    movl %esi, %edx
 ; X86-BASELINE-NEXT:    jmp .LBB14_3
-; X86-BASELINE-NEXT:  .LBB14_1:
+; X86-BASELINE-NEXT:  .LBB14_2:
 ; X86-BASELINE-NEXT:    movl %esi, %eax
 ; X86-BASELINE-NEXT:  .LBB14_3:
 ; X86-BASELINE-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -679,11 +679,11 @@ define i64 @clear_highbits64_c2_load(ptr %w, i64 %numhighbits) nounwind {
 ; X86-BASELINE-NEXT:    shrl %cl, %edi
 ; X86-BASELINE-NEXT:    xorl %edx, %edx
 ; X86-BASELINE-NEXT:    testb $32, %cl
-; X86-BASELINE-NEXT:    jne .LBB15_1
-; X86-BASELINE-NEXT:  # %bb.2:
+; X86-BASELINE-NEXT:    jne .LBB15_2
+; X86-BASELINE-NEXT:  # %bb.1:
 ; X86-BASELINE-NEXT:    movl %edi, %edx
 ; X86-BASELINE-NEXT:    jmp .LBB15_3
-; X86-BASELINE-NEXT:  .LBB15_1:
+; X86-BASELINE-NEXT:  .LBB15_2:
 ; X86-BASELINE-NEXT:    movl %edi, %eax
 ; X86-BASELINE-NEXT:  .LBB15_3:
 ; X86-BASELINE-NEXT:    andl (%esi), %eax
@@ -762,11 +762,11 @@ define i64 @clear_highbits64_c3_load_indexzext(ptr %w, i8 %numhighbits) nounwind
 ; X86-BASELINE-NEXT:    shrl %cl, %edi
 ; X86-BASELINE-NEXT:    xorl %edx, %edx
 ; X86-BASELINE-NEXT:    testb $32, %cl
-; X86-BASELINE-NEXT:    jne .LBB16_1
-; X86-BASELINE-NEXT:  # %bb.2:
+; X86-BASELINE-NEXT:    jne .LBB16_2
+; X86-BASELINE-NEXT:  # %bb.1:
 ; X86-BASELINE-NEXT:    movl %edi, %edx
 ; X86-BASELINE-NEXT:    jmp .LBB16_3
-; X86-BASELINE-NEXT:  .LBB16_1:
+; X86-BASELINE-NEXT:  .LBB16_2:
 ; X86-BASELINE-NEXT:    movl %edi, %eax
 ; X86-BASELINE-NEXT:  .LBB16_3:
 ; X86-BASELINE-NEXT:    andl (%esi), %eax
@@ -844,11 +844,11 @@ define i64 @clear_highbits64_c4_commutative(i64 %val, i64 %numhighbits) nounwind
 ; X86-BASELINE-NEXT:    shrl %cl, %esi
 ; X86-BASELINE-NEXT:    xorl %edx, %edx
 ; X86-BASELINE-NEXT:    testb $32, %cl
-; X86-BASELINE-NEXT:    jne .LBB17_1
-; X86-BASELINE-NEXT:  # %bb.2:
+; X86-BASELINE-NEXT:    jne .LBB17_2
+; X86-BASELINE-NEXT:  # %bb.1:
 ; X86-BASELINE-NEXT:    movl %esi, %edx
 ; X86-BASELINE-NEXT:    jmp .LBB17_3
-; X86-BASELINE-NEXT:  .LBB17_1:
+; X86-BASELINE-NEXT:  .LBB17_2:
 ; X86-BASELINE-NEXT:    movl %esi, %eax
 ; X86-BASELINE-NEXT:  .LBB17_3:
 ; X86-BASELINE-NEXT:    andl {{[0-9]+}}(%esp), %eax

@@ -735,8 +735,8 @@ define i256 @PR25498(i256 %a) nounwind {
 ; ILP-NEXT:    orq %r8, %rdx
 ; ILP-NEXT:    orq %rcx, %rsi
 ; ILP-NEXT:    orq %rdx, %rsi
-; ILP-NEXT:    je .LBB4_1
-; ILP-NEXT:  # %bb.2: # %cond.false
+; ILP-NEXT:    je .LBB4_2
+; ILP-NEXT:  # %bb.1: # %cond.false
 ; ILP-NEXT:    bsrq %r10, %rdx
 ; ILP-NEXT:    bsrq %rdi, %rcx
 ; ILP-NEXT:    xorq $63, %rcx
@@ -755,7 +755,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; ILP-NEXT:    orq %rdi, %r9
 ; ILP-NEXT:    cmovneq %rsi, %rcx
 ; ILP-NEXT:    jmp .LBB4_3
-; ILP-NEXT:  .LBB4_1:
+; ILP-NEXT:  .LBB4_2:
 ; ILP-NEXT:    movl $256, %ecx # imm = 0x100
 ; ILP-NEXT:  .LBB4_3: # %cond.end
 ; ILP-NEXT:    xorps %xmm0, %xmm0
@@ -778,8 +778,8 @@ define i256 @PR25498(i256 %a) nounwind {
 ; HYBRID-NEXT:    orq %r8, %rdx
 ; HYBRID-NEXT:    orq %rcx, %rsi
 ; HYBRID-NEXT:    orq %rdx, %rsi
-; HYBRID-NEXT:    je .LBB4_1
-; HYBRID-NEXT:  # %bb.2: # %cond.false
+; HYBRID-NEXT:    je .LBB4_2
+; HYBRID-NEXT:  # %bb.1: # %cond.false
 ; HYBRID-NEXT:    bsrq %rdi, %rcx
 ; HYBRID-NEXT:    xorq $63, %rcx
 ; HYBRID-NEXT:    bsrq %r9, %rdx
@@ -798,7 +798,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; HYBRID-NEXT:    orq %rdi, %r9
 ; HYBRID-NEXT:    cmovneq %rdx, %rcx
 ; HYBRID-NEXT:    jmp .LBB4_3
-; HYBRID-NEXT:  .LBB4_1:
+; HYBRID-NEXT:  .LBB4_2:
 ; HYBRID-NEXT:    movl $256, %ecx # imm = 0x100
 ; HYBRID-NEXT:  .LBB4_3: # %cond.end
 ; HYBRID-NEXT:    xorps %xmm0, %xmm0
@@ -821,8 +821,8 @@ define i256 @PR25498(i256 %a) nounwind {
 ; BURR-NEXT:    orq %r8, %rdx
 ; BURR-NEXT:    orq %rcx, %rsi
 ; BURR-NEXT:    orq %rdx, %rsi
-; BURR-NEXT:    je .LBB4_1
-; BURR-NEXT:  # %bb.2: # %cond.false
+; BURR-NEXT:    je .LBB4_2
+; BURR-NEXT:  # %bb.1: # %cond.false
 ; BURR-NEXT:    bsrq %rdi, %rcx
 ; BURR-NEXT:    xorq $63, %rcx
 ; BURR-NEXT:    bsrq %r9, %rdx
@@ -841,7 +841,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; BURR-NEXT:    orq %rdi, %r9
 ; BURR-NEXT:    cmovneq %rdx, %rcx
 ; BURR-NEXT:    jmp .LBB4_3
-; BURR-NEXT:  .LBB4_1:
+; BURR-NEXT:  .LBB4_2:
 ; BURR-NEXT:    movl $256, %ecx # imm = 0x100
 ; BURR-NEXT:  .LBB4_3: # %cond.end
 ; BURR-NEXT:    movq %rcx, (%rax)
@@ -864,8 +864,8 @@ define i256 @PR25498(i256 %a) nounwind {
 ; SRC-NEXT:    orq %r8, %rdx
 ; SRC-NEXT:    orq %rcx, %rsi
 ; SRC-NEXT:    orq %rdx, %rsi
-; SRC-NEXT:    je .LBB4_1
-; SRC-NEXT:  # %bb.2: # %cond.false
+; SRC-NEXT:    je .LBB4_2
+; SRC-NEXT:  # %bb.1: # %cond.false
 ; SRC-NEXT:    bsrq %rdi, %rcx
 ; SRC-NEXT:    xorq $63, %rcx
 ; SRC-NEXT:    bsrq %r9, %rdx
@@ -884,7 +884,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; SRC-NEXT:    orq %rdi, %r9
 ; SRC-NEXT:    cmovneq %rdx, %rcx
 ; SRC-NEXT:    jmp .LBB4_3
-; SRC-NEXT:  .LBB4_1:
+; SRC-NEXT:  .LBB4_2:
 ; SRC-NEXT:    movl $256, %ecx # imm = 0x100
 ; SRC-NEXT:  .LBB4_3: # %cond.end
 ; SRC-NEXT:    movq %rcx, (%rax)
@@ -907,8 +907,8 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-NEXT:    orq %rcx, %rsi
 ; LIN-NEXT:    orq %r8, %rdx
 ; LIN-NEXT:    orq %rsi, %rdx
-; LIN-NEXT:    je .LBB4_1
-; LIN-NEXT:  # %bb.2: # %cond.false
+; LIN-NEXT:    je .LBB4_2
+; LIN-NEXT:  # %bb.1: # %cond.false
 ; LIN-NEXT:    bsrq %r11, %rcx
 ; LIN-NEXT:    xorq $63, %rcx
 ; LIN-NEXT:    orq $64, %rcx
@@ -927,7 +927,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-NEXT:    orq %rdi, %r9
 ; LIN-NEXT:    cmoveq %rdx, %rcx
 ; LIN-NEXT:    jmp .LBB4_3
-; LIN-NEXT:  .LBB4_1:
+; LIN-NEXT:  .LBB4_2:
 ; LIN-NEXT:    movl $256, %ecx # imm = 0x100
 ; LIN-NEXT:  .LBB4_3: # %cond.end
 ; LIN-NEXT:    xorps %xmm0, %xmm0

@@ -5,15 +5,15 @@ define i64 @test(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    jg .LBB0_2
+; CHECK-NEXT:    jg .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    leaq -1(%rdi), %rcx
 ; CHECK-NEXT:    andq %rdi, %rcx
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %if.end
+; CHECK-NEXT:    jne .LBB0_3
+; CHECK-NEXT:  # %bb.2: # %if.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %if.then
+; CHECK-NEXT:  .LBB0_3: # %if.then
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:

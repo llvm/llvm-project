@@ -54,11 +54,11 @@ define double @profile_metadata(double %x, double %y) {
 ; CHECK-NEXT:    mulsd %xmm1, %xmm0
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
-; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:    jp .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %bb2
+; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:    jp .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %bb2
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_1: # %bb1
+; CHECK-NEXT:  .LBB1_2: # %bb1
 ; CHECK-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
 
@@ -84,11 +84,11 @@ define void @foo(float %f) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    jne .LBB2_2
-; CHECK-NEXT:    jnp .LBB2_1
-; CHECK-NEXT:  .LBB2_2: # %if.then
+; CHECK-NEXT:    jne .LBB2_1
+; CHECK-NEXT:    jnp .LBB2_2
+; CHECK-NEXT:  .LBB2_1: # %if.then
 ; CHECK-NEXT:    jmp a # TAILCALL
-; CHECK-NEXT:  .LBB2_1: # %if.end
+; CHECK-NEXT:  .LBB2_2: # %if.end
 ; CHECK-NEXT:    retq
 entry:
   %cmp = fcmp une float %f, 0.000000e+00
@@ -108,21 +108,21 @@ define void @pr27750(ptr %b, float %x, i1 %y) {
 ; CHECK-LABEL: pr27750:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    jmp .LBB3_1
+; CHECK-NEXT:    jmp .LBB3_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB3_3: # %for.end
-; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK-NEXT:  .LBB3_1: # %for.end
+; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-NEXT:    jne .LBB3_1
-; CHECK-NEXT:    jp .LBB3_1
-; CHECK-NEXT:  .LBB3_1: # %for.cond1
+; CHECK-NEXT:    jne .LBB3_2
+; CHECK-NEXT:    jp .LBB3_2
+; CHECK-NEXT:  .LBB3_2: # %for.cond1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    je .LBB3_3
-; CHECK-NEXT:  # %bb.2: # %for.body3.lr.ph
-; CHECK-NEXT:    # in Loop: Header=BB3_1 Depth=1
+; CHECK-NEXT:    je .LBB3_1
+; CHECK-NEXT:  # %bb.3: # %for.body3.lr.ph
+; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
 ; CHECK-NEXT:    movl $0, (%rdi)
-; CHECK-NEXT:    jmp .LBB3_3
+; CHECK-NEXT:    jmp .LBB3_1
 entry:
   br label %for.cond
 

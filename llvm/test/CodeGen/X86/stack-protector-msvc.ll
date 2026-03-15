@@ -90,13 +90,13 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X86-O0-NEXT:    xorl %esp, %ecx
 ; MSVC-X86-O0-NEXT:    movl ___security_cookie, %eax
 ; MSVC-X86-O0-NEXT:    subl %ecx, %eax
-; MSVC-X86-O0-NEXT:    jne LBB0_3
-; MSVC-X86-O0-NEXT:    jmp LBB0_2
-; MSVC-X86-O0-NEXT:  LBB0_3: # %return
+; MSVC-X86-O0-NEXT:    jne LBB0_2
+; MSVC-X86-O0-NEXT:    jmp LBB0_3
+; MSVC-X86-O0-NEXT:  LBB0_2: # %return
 ; MSVC-X86-O0-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; MSVC-X86-O0-NEXT:    xorl %esp, %ecx
 ; MSVC-X86-O0-NEXT:    calll @__security_check_cookie@4
-; MSVC-X86-O0-NEXT:  LBB0_2: # %return
+; MSVC-X86-O0-NEXT:  LBB0_3: # %return
 ; MSVC-X86-O0-NEXT:    addl $20, %esp
 ; MSVC-X86-O0-NEXT:    retl
 ;
@@ -118,13 +118,13 @@ define void @test(ptr %a) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    xorq %rsp, %rcx
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-O0-NEXT:    subq %rcx, %rax
-; MSVC-X64-O0-NEXT:    jne .LBB0_3
-; MSVC-X64-O0-NEXT:    jmp .LBB0_2
-; MSVC-X64-O0-NEXT:  .LBB0_3: # %return
+; MSVC-X64-O0-NEXT:    jne .LBB0_2
+; MSVC-X64-O0-NEXT:    jmp .LBB0_3
+; MSVC-X64-O0-NEXT:  .LBB0_2: # %return
 ; MSVC-X64-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rsp, %rcx
 ; MSVC-X64-O0-NEXT:    callq __security_check_cookie
-; MSVC-X64-O0-NEXT:  .LBB0_2: # %return
+; MSVC-X64-O0-NEXT:  .LBB0_3: # %return
 ; MSVC-X64-O0-NEXT:    addq $56, %rsp
 ; MSVC-X64-O0-NEXT:    retq
 
@@ -225,13 +225,13 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X86-O0-NEXT:    xorl %ebp, %ecx
 ; MSVC-X86-O0-NEXT:    movl ___security_cookie, %eax
 ; MSVC-X86-O0-NEXT:    subl %ecx, %eax
-; MSVC-X86-O0-NEXT:    jne LBB1_2
-; MSVC-X86-O0-NEXT:    jmp LBB1_1
-; MSVC-X86-O0-NEXT:  LBB1_2:
+; MSVC-X86-O0-NEXT:    jne LBB1_1
+; MSVC-X86-O0-NEXT:    jmp LBB1_2
+; MSVC-X86-O0-NEXT:  LBB1_1:
 ; MSVC-X86-O0-NEXT:    movl -4(%ebp), %ecx
 ; MSVC-X86-O0-NEXT:    xorl %ebp, %ecx
 ; MSVC-X86-O0-NEXT:    calll @__security_check_cookie@4
-; MSVC-X86-O0-NEXT:  LBB1_1:
+; MSVC-X86-O0-NEXT:  LBB1_2:
 ; MSVC-X86-O0-NEXT:    movl %ebp, %esp
 ; MSVC-X86-O0-NEXT:    popl %ebp
 ; MSVC-X86-O0-NEXT:    retl
@@ -258,14 +258,14 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-O0-NEXT:    subq %rcx, %rax
-; MSVC-X64-O0-NEXT:    jne .LBB1_2
-; MSVC-X64-O0-NEXT:    jmp .LBB1_1
-; MSVC-X64-O0-NEXT:  .LBB1_2:
+; MSVC-X64-O0-NEXT:    jne .LBB1_1
+; MSVC-X64-O0-NEXT:    jmp .LBB1_2
+; MSVC-X64-O0-NEXT:  .LBB1_1:
 ; MSVC-X64-O0-NEXT:    movq -8(%rbp), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
 ; MSVC-X64-O0-NEXT:    subq $32, %rsp
 ; MSVC-X64-O0-NEXT:    callq __security_check_cookie
-; MSVC-X64-O0-NEXT:  .LBB1_1:
+; MSVC-X64-O0-NEXT:  .LBB1_2:
 ; MSVC-X64-O0-NEXT:    movq %rbp, %rsp
 ; MSVC-X64-O0-NEXT:    popq %rbp
 ; MSVC-X64-O0-NEXT:    retq
@@ -387,13 +387,13 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X86-O0-NEXT:    xorl %ebp, %ecx
 ; MSVC-X86-O0-NEXT:    movl ___security_cookie, %eax
 ; MSVC-X86-O0-NEXT:    subl %ecx, %eax
-; MSVC-X86-O0-NEXT:    jne LBB2_2
-; MSVC-X86-O0-NEXT:    jmp LBB2_1
-; MSVC-X86-O0-NEXT:  LBB2_2:
+; MSVC-X86-O0-NEXT:    jne LBB2_1
+; MSVC-X86-O0-NEXT:    jmp LBB2_2
+; MSVC-X86-O0-NEXT:  LBB2_1:
 ; MSVC-X86-O0-NEXT:    movl 48(%esi), %ecx
 ; MSVC-X86-O0-NEXT:    xorl %ebp, %ecx
 ; MSVC-X86-O0-NEXT:    calll @__security_check_cookie@4
-; MSVC-X86-O0-NEXT:  LBB2_1:
+; MSVC-X86-O0-NEXT:  LBB2_2:
 ; MSVC-X86-O0-NEXT:    leal -4(%ebp), %esp
 ; MSVC-X86-O0-NEXT:    popl %esi
 ; MSVC-X86-O0-NEXT:    popl %ebp
@@ -428,14 +428,14 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
 ; MSVC-X64-O0-NEXT:    movq __security_cookie(%rip), %rax
 ; MSVC-X64-O0-NEXT:    subq %rcx, %rax
-; MSVC-X64-O0-NEXT:    jne .LBB2_2
-; MSVC-X64-O0-NEXT:    jmp .LBB2_1
-; MSVC-X64-O0-NEXT:  .LBB2_2:
+; MSVC-X64-O0-NEXT:    jne .LBB2_1
+; MSVC-X64-O0-NEXT:    jmp .LBB2_2
+; MSVC-X64-O0-NEXT:  .LBB2_1:
 ; MSVC-X64-O0-NEXT:    movq 64(%rbx), %rcx
 ; MSVC-X64-O0-NEXT:    xorq %rbp, %rcx
 ; MSVC-X64-O0-NEXT:    subq $32, %rsp
 ; MSVC-X64-O0-NEXT:    callq __security_check_cookie
-; MSVC-X64-O0-NEXT:  .LBB2_1:
+; MSVC-X64-O0-NEXT:  .LBB2_2:
 ; MSVC-X64-O0-NEXT:    leaq 8(%rbp), %rsp
 ; MSVC-X64-O0-NEXT:    popq %rbx
 ; MSVC-X64-O0-NEXT:    popq %rbp

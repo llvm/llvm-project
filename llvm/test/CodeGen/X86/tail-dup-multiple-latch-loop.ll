@@ -132,42 +132,42 @@ define i32 @interp_switch(ptr nocapture readonly %0, i32 %1) {
 ; CHECK-LABEL: interp_switch:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:  .LBB1_7: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:  .LBB1_1: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    addl $7, %eax
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB1_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movzbl (%rdi), %ecx
 ; CHECK-NEXT:    decl %ecx
 ; CHECK-NEXT:    cmpl $5, %ecx
 ; CHECK-NEXT:    ja .LBB1_9
-; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    jmpq *.LJTI1_0(,%rcx,8)
-; CHECK-NEXT:  .LBB1_3: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    addl %eax, %eax
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:  .LBB1_6: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:  .LBB1_6: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrl $31, %ecx
 ; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    sarl %ecx
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:  .LBB1_7: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    jmp .LBB1_1
-; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    jmp .LBB1_1
+; CHECK-NEXT:    jmp .LBB1_2
 ; CHECK-NEXT:  .LBB1_9:
 ; CHECK-NEXT:    retq
   br label %3

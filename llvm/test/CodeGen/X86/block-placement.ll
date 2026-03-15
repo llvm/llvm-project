@@ -475,12 +475,12 @@ define void @fpcmp_unanalyzable_branch(i1 %cond, double %a0, i1 %arg) {
 ; CHECK-LABEL: fpcmp_unanalyzable_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK:       # %bb.1: # %entry.if.then_crit_edge
-; CHECK:       .LBB10_5: # %if.then
-; CHECK:       .LBB10_6: # %if.end
-; CHECK:       # %bb.3: # %exit
-; CHECK:       jne .LBB10_4
-; CHECK-NEXT:  jnp .LBB10_6
-; CHECK:       jmp .LBB10_5
+; CHECK:       .LBB10_2: # %if.then
+; CHECK:       .LBB10_3: # %if.end
+; CHECK:       # %bb.5: # %exit
+; CHECK:       jne .LBB10_6
+; CHECK-NEXT:  jnp .LBB10_3
+; CHECK:       jmp .LBB10_2
 
 entry:
 ; Note that this branch must be strongly biased toward

@@ -9,25 +9,24 @@ define void @foo(i1 zeroext %0) nounwind {
 ; CHECK:        .text
 ; CHECK-LABEL: foo:
 ; CHECK:         jne .LBB0_1
-; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:    jmp .LBB0_2
 
 2:                                               ; preds = %1
   %3 = call i32 @baz()
   br label %4
 
 ; CHECK-LABEL: .LBB0_1:
-; CHECK:	 jmp .LBB0_3
+; CHECK:	 jmp .LBB0_2
 
 empty_block:                                     ; preds = %1
   unreachable
 
 ; CHECK-NOT:     %empty_block
-; CHECK-NOT:   .LBB0_2
 
 4:                                               ; preds = %2, %empty_block
   ret void
 
-; CHECK-LABEL: .LBB0_3:
+; CHECK-LABEL: .LBB0_2:
 ; CHECK:         retq
 
 }

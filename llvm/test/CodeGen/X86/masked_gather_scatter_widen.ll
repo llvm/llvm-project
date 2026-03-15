@@ -14,19 +14,19 @@ define <2 x double> @test_gather_v2i32_index(ptr %base, <2 x i32> %ind, <2 x i1>
 ; WIDEN_SKX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; WIDEN_SKX-NEXT:    kmovw %k0, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
-; WIDEN_SKX-NEXT:    jne .LBB0_1
-; WIDEN_SKX-NEXT:  # %bb.2: # %else
-; WIDEN_SKX-NEXT:    testb $2, %al
 ; WIDEN_SKX-NEXT:    jne .LBB0_3
-; WIDEN_SKX-NEXT:  .LBB0_4: # %else2
+; WIDEN_SKX-NEXT:  # %bb.1: # %else
+; WIDEN_SKX-NEXT:    testb $2, %al
+; WIDEN_SKX-NEXT:    jne .LBB0_4
+; WIDEN_SKX-NEXT:  .LBB0_2: # %else2
 ; WIDEN_SKX-NEXT:    vmovaps %xmm2, %xmm0
 ; WIDEN_SKX-NEXT:    retq
-; WIDEN_SKX-NEXT:  .LBB0_1: # %cond.load
+; WIDEN_SKX-NEXT:  .LBB0_3: # %cond.load
 ; WIDEN_SKX-NEXT:    vmovq %xmm0, %rcx
 ; WIDEN_SKX-NEXT:    vmovlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; WIDEN_SKX-NEXT:    testb $2, %al
-; WIDEN_SKX-NEXT:    je .LBB0_4
-; WIDEN_SKX-NEXT:  .LBB0_3: # %cond.load1
+; WIDEN_SKX-NEXT:    je .LBB0_2
+; WIDEN_SKX-NEXT:  .LBB0_4: # %cond.load1
 ; WIDEN_SKX-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_SKX-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; WIDEN_SKX-NEXT:    vmovaps %xmm2, %xmm0
@@ -43,20 +43,20 @@ define <2 x double> @test_gather_v2i32_index(ptr %base, <2 x i32> %ind, <2 x i1>
 ; WIDEN_KNL-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; WIDEN_KNL-NEXT:    kmovw %k0, %eax
 ; WIDEN_KNL-NEXT:    testb $1, %al
-; WIDEN_KNL-NEXT:    jne .LBB0_1
-; WIDEN_KNL-NEXT:  # %bb.2: # %else
-; WIDEN_KNL-NEXT:    testb $2, %al
 ; WIDEN_KNL-NEXT:    jne .LBB0_3
-; WIDEN_KNL-NEXT:  .LBB0_4: # %else2
+; WIDEN_KNL-NEXT:  # %bb.1: # %else
+; WIDEN_KNL-NEXT:    testb $2, %al
+; WIDEN_KNL-NEXT:    jne .LBB0_4
+; WIDEN_KNL-NEXT:  .LBB0_2: # %else2
 ; WIDEN_KNL-NEXT:    vmovaps %xmm2, %xmm0
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
-; WIDEN_KNL-NEXT:  .LBB0_1: # %cond.load
+; WIDEN_KNL-NEXT:  .LBB0_3: # %cond.load
 ; WIDEN_KNL-NEXT:    vmovq %xmm0, %rcx
 ; WIDEN_KNL-NEXT:    vmovlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; WIDEN_KNL-NEXT:    testb $2, %al
-; WIDEN_KNL-NEXT:    je .LBB0_4
-; WIDEN_KNL-NEXT:  .LBB0_3: # %cond.load1
+; WIDEN_KNL-NEXT:    je .LBB0_2
+; WIDEN_KNL-NEXT:  .LBB0_4: # %cond.load1
 ; WIDEN_KNL-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_KNL-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; WIDEN_KNL-NEXT:    vmovaps %xmm2, %xmm0
@@ -85,18 +85,18 @@ define void @test_scatter_v2i32_index(<2 x double> %a1, ptr %base, <2 x i32> %in
 ; WIDEN_SKX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; WIDEN_SKX-NEXT:    kmovw %k0, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
-; WIDEN_SKX-NEXT:    jne .LBB1_1
-; WIDEN_SKX-NEXT:  # %bb.2: # %else
-; WIDEN_SKX-NEXT:    testb $2, %al
 ; WIDEN_SKX-NEXT:    jne .LBB1_3
-; WIDEN_SKX-NEXT:  .LBB1_4: # %else2
+; WIDEN_SKX-NEXT:  # %bb.1: # %else
+; WIDEN_SKX-NEXT:    testb $2, %al
+; WIDEN_SKX-NEXT:    jne .LBB1_4
+; WIDEN_SKX-NEXT:  .LBB1_2: # %else2
 ; WIDEN_SKX-NEXT:    retq
-; WIDEN_SKX-NEXT:  .LBB1_1: # %cond.store
+; WIDEN_SKX-NEXT:  .LBB1_3: # %cond.store
 ; WIDEN_SKX-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_SKX-NEXT:    vmovlps %xmm0, (%rcx)
 ; WIDEN_SKX-NEXT:    testb $2, %al
-; WIDEN_SKX-NEXT:    je .LBB1_4
-; WIDEN_SKX-NEXT:  .LBB1_3: # %cond.store1
+; WIDEN_SKX-NEXT:    je .LBB1_2
+; WIDEN_SKX-NEXT:  .LBB1_4: # %cond.store1
 ; WIDEN_SKX-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_SKX-NEXT:    vmovhps %xmm0, (%rax)
 ; WIDEN_SKX-NEXT:    retq
@@ -112,19 +112,19 @@ define void @test_scatter_v2i32_index(<2 x double> %a1, ptr %base, <2 x i32> %in
 ; WIDEN_KNL-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; WIDEN_KNL-NEXT:    kmovw %k0, %eax
 ; WIDEN_KNL-NEXT:    testb $1, %al
-; WIDEN_KNL-NEXT:    jne .LBB1_1
-; WIDEN_KNL-NEXT:  # %bb.2: # %else
-; WIDEN_KNL-NEXT:    testb $2, %al
 ; WIDEN_KNL-NEXT:    jne .LBB1_3
-; WIDEN_KNL-NEXT:  .LBB1_4: # %else2
+; WIDEN_KNL-NEXT:  # %bb.1: # %else
+; WIDEN_KNL-NEXT:    testb $2, %al
+; WIDEN_KNL-NEXT:    jne .LBB1_4
+; WIDEN_KNL-NEXT:  .LBB1_2: # %else2
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
-; WIDEN_KNL-NEXT:  .LBB1_1: # %cond.store
+; WIDEN_KNL-NEXT:  .LBB1_3: # %cond.store
 ; WIDEN_KNL-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_KNL-NEXT:    vmovlps %xmm0, (%rcx)
 ; WIDEN_KNL-NEXT:    testb $2, %al
-; WIDEN_KNL-NEXT:    je .LBB1_4
-; WIDEN_KNL-NEXT:  .LBB1_3: # %cond.store1
+; WIDEN_KNL-NEXT:    je .LBB1_2
+; WIDEN_KNL-NEXT:  .LBB1_4: # %cond.store1
 ; WIDEN_KNL-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_KNL-NEXT:    vmovhps %xmm0, (%rax)
 ; WIDEN_KNL-NEXT:    vzeroupper
@@ -140,18 +140,18 @@ define void @test_scatter_v2i32_index(<2 x double> %a1, ptr %base, <2 x i32> %in
 ; WIDEN_AVX2-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; WIDEN_AVX2-NEXT:    vmovmskpd %xmm2, %eax
 ; WIDEN_AVX2-NEXT:    testb $1, %al
-; WIDEN_AVX2-NEXT:    jne .LBB1_1
-; WIDEN_AVX2-NEXT:  # %bb.2: # %else
-; WIDEN_AVX2-NEXT:    testb $2, %al
 ; WIDEN_AVX2-NEXT:    jne .LBB1_3
-; WIDEN_AVX2-NEXT:  .LBB1_4: # %else2
+; WIDEN_AVX2-NEXT:  # %bb.1: # %else
+; WIDEN_AVX2-NEXT:    testb $2, %al
+; WIDEN_AVX2-NEXT:    jne .LBB1_4
+; WIDEN_AVX2-NEXT:  .LBB1_2: # %else2
 ; WIDEN_AVX2-NEXT:    retq
-; WIDEN_AVX2-NEXT:  .LBB1_1: # %cond.store
+; WIDEN_AVX2-NEXT:  .LBB1_3: # %cond.store
 ; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_AVX2-NEXT:    vmovlps %xmm0, (%rcx)
 ; WIDEN_AVX2-NEXT:    testb $2, %al
-; WIDEN_AVX2-NEXT:    je .LBB1_4
-; WIDEN_AVX2-NEXT:  .LBB1_3: # %cond.store1
+; WIDEN_AVX2-NEXT:    je .LBB1_2
+; WIDEN_AVX2-NEXT:  .LBB1_4: # %cond.store1
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_AVX2-NEXT:    vmovhps %xmm0, (%rax)
 ; WIDEN_AVX2-NEXT:    retq
@@ -166,19 +166,19 @@ define <2 x i32> @test_gather_v2i32_data(<2 x ptr> %ptr, <2 x i1> %mask, <2 x i3
 ; WIDEN_SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
 ; WIDEN_SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
-; WIDEN_SKX-NEXT:    jne .LBB2_1
-; WIDEN_SKX-NEXT:  # %bb.2: # %else
-; WIDEN_SKX-NEXT:    testb $2, %al
 ; WIDEN_SKX-NEXT:    jne .LBB2_3
-; WIDEN_SKX-NEXT:  .LBB2_4: # %else2
+; WIDEN_SKX-NEXT:  # %bb.1: # %else
+; WIDEN_SKX-NEXT:    testb $2, %al
+; WIDEN_SKX-NEXT:    jne .LBB2_4
+; WIDEN_SKX-NEXT:  .LBB2_2: # %else2
 ; WIDEN_SKX-NEXT:    vmovdqa %xmm2, %xmm0
 ; WIDEN_SKX-NEXT:    retq
-; WIDEN_SKX-NEXT:  .LBB2_1: # %cond.load
+; WIDEN_SKX-NEXT:  .LBB2_3: # %cond.load
 ; WIDEN_SKX-NEXT:    vmovq %xmm0, %rcx
 ; WIDEN_SKX-NEXT:    vpinsrd $0, (%rcx), %xmm2, %xmm2
 ; WIDEN_SKX-NEXT:    testb $2, %al
-; WIDEN_SKX-NEXT:    je .LBB2_4
-; WIDEN_SKX-NEXT:  .LBB2_3: # %cond.load1
+; WIDEN_SKX-NEXT:    je .LBB2_2
+; WIDEN_SKX-NEXT:  .LBB2_4: # %cond.load1
 ; WIDEN_SKX-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_SKX-NEXT:    vpinsrd $1, (%rax), %xmm2, %xmm2
 ; WIDEN_SKX-NEXT:    vmovdqa %xmm2, %xmm0
@@ -190,20 +190,20 @@ define <2 x i32> @test_gather_v2i32_data(<2 x ptr> %ptr, <2 x i1> %mask, <2 x i3
 ; WIDEN_KNL-NEXT:    vptestmq %zmm1, %zmm1, %k0
 ; WIDEN_KNL-NEXT:    kmovw %k0, %eax
 ; WIDEN_KNL-NEXT:    testb $1, %al
-; WIDEN_KNL-NEXT:    jne .LBB2_1
-; WIDEN_KNL-NEXT:  # %bb.2: # %else
-; WIDEN_KNL-NEXT:    testb $2, %al
 ; WIDEN_KNL-NEXT:    jne .LBB2_3
-; WIDEN_KNL-NEXT:  .LBB2_4: # %else2
+; WIDEN_KNL-NEXT:  # %bb.1: # %else
+; WIDEN_KNL-NEXT:    testb $2, %al
+; WIDEN_KNL-NEXT:    jne .LBB2_4
+; WIDEN_KNL-NEXT:  .LBB2_2: # %else2
 ; WIDEN_KNL-NEXT:    vmovdqa %xmm2, %xmm0
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
-; WIDEN_KNL-NEXT:  .LBB2_1: # %cond.load
+; WIDEN_KNL-NEXT:  .LBB2_3: # %cond.load
 ; WIDEN_KNL-NEXT:    vmovq %xmm0, %rcx
 ; WIDEN_KNL-NEXT:    vpinsrd $0, (%rcx), %xmm2, %xmm2
 ; WIDEN_KNL-NEXT:    testb $2, %al
-; WIDEN_KNL-NEXT:    je .LBB2_4
-; WIDEN_KNL-NEXT:  .LBB2_3: # %cond.load1
+; WIDEN_KNL-NEXT:    je .LBB2_2
+; WIDEN_KNL-NEXT:  .LBB2_4: # %cond.load1
 ; WIDEN_KNL-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_KNL-NEXT:    vpinsrd $1, (%rax), %xmm2, %xmm2
 ; WIDEN_KNL-NEXT:    vmovdqa %xmm2, %xmm0
@@ -227,18 +227,18 @@ define void @test_scatter_v2i32_data(<2 x i32>%a1, <2 x ptr> %ptr, <2 x i1>%mask
 ; WIDEN_SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; WIDEN_SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
-; WIDEN_SKX-NEXT:    jne .LBB3_1
-; WIDEN_SKX-NEXT:  # %bb.2: # %else
-; WIDEN_SKX-NEXT:    testb $2, %al
 ; WIDEN_SKX-NEXT:    jne .LBB3_3
-; WIDEN_SKX-NEXT:  .LBB3_4: # %else2
+; WIDEN_SKX-NEXT:  # %bb.1: # %else
+; WIDEN_SKX-NEXT:    testb $2, %al
+; WIDEN_SKX-NEXT:    jne .LBB3_4
+; WIDEN_SKX-NEXT:  .LBB3_2: # %else2
 ; WIDEN_SKX-NEXT:    retq
-; WIDEN_SKX-NEXT:  .LBB3_1: # %cond.store
+; WIDEN_SKX-NEXT:  .LBB3_3: # %cond.store
 ; WIDEN_SKX-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_SKX-NEXT:    vmovss %xmm0, (%rcx)
 ; WIDEN_SKX-NEXT:    testb $2, %al
-; WIDEN_SKX-NEXT:    je .LBB3_4
-; WIDEN_SKX-NEXT:  .LBB3_3: # %cond.store1
+; WIDEN_SKX-NEXT:    je .LBB3_2
+; WIDEN_SKX-NEXT:  .LBB3_4: # %cond.store1
 ; WIDEN_SKX-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_SKX-NEXT:    vextractps $1, %xmm0, (%rax)
 ; WIDEN_SKX-NEXT:    retq
@@ -249,19 +249,19 @@ define void @test_scatter_v2i32_data(<2 x i32>%a1, <2 x ptr> %ptr, <2 x i1>%mask
 ; WIDEN_KNL-NEXT:    vptestmq %zmm2, %zmm2, %k0
 ; WIDEN_KNL-NEXT:    kmovw %k0, %eax
 ; WIDEN_KNL-NEXT:    testb $1, %al
-; WIDEN_KNL-NEXT:    jne .LBB3_1
-; WIDEN_KNL-NEXT:  # %bb.2: # %else
-; WIDEN_KNL-NEXT:    testb $2, %al
 ; WIDEN_KNL-NEXT:    jne .LBB3_3
-; WIDEN_KNL-NEXT:  .LBB3_4: # %else2
+; WIDEN_KNL-NEXT:  # %bb.1: # %else
+; WIDEN_KNL-NEXT:    testb $2, %al
+; WIDEN_KNL-NEXT:    jne .LBB3_4
+; WIDEN_KNL-NEXT:  .LBB3_2: # %else2
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
-; WIDEN_KNL-NEXT:  .LBB3_1: # %cond.store
+; WIDEN_KNL-NEXT:  .LBB3_3: # %cond.store
 ; WIDEN_KNL-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_KNL-NEXT:    vmovss %xmm0, (%rcx)
 ; WIDEN_KNL-NEXT:    testb $2, %al
-; WIDEN_KNL-NEXT:    je .LBB3_4
-; WIDEN_KNL-NEXT:  .LBB3_3: # %cond.store1
+; WIDEN_KNL-NEXT:    je .LBB3_2
+; WIDEN_KNL-NEXT:  .LBB3_4: # %cond.store1
 ; WIDEN_KNL-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_KNL-NEXT:    vextractps $1, %xmm0, (%rax)
 ; WIDEN_KNL-NEXT:    vzeroupper
@@ -272,18 +272,18 @@ define void @test_scatter_v2i32_data(<2 x i32>%a1, <2 x ptr> %ptr, <2 x i1>%mask
 ; WIDEN_AVX2-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; WIDEN_AVX2-NEXT:    vmovmskpd %xmm2, %eax
 ; WIDEN_AVX2-NEXT:    testb $1, %al
-; WIDEN_AVX2-NEXT:    jne .LBB3_1
-; WIDEN_AVX2-NEXT:  # %bb.2: # %else
-; WIDEN_AVX2-NEXT:    testb $2, %al
 ; WIDEN_AVX2-NEXT:    jne .LBB3_3
-; WIDEN_AVX2-NEXT:  .LBB3_4: # %else2
+; WIDEN_AVX2-NEXT:  # %bb.1: # %else
+; WIDEN_AVX2-NEXT:    testb $2, %al
+; WIDEN_AVX2-NEXT:    jne .LBB3_4
+; WIDEN_AVX2-NEXT:  .LBB3_2: # %else2
 ; WIDEN_AVX2-NEXT:    retq
-; WIDEN_AVX2-NEXT:  .LBB3_1: # %cond.store
+; WIDEN_AVX2-NEXT:  .LBB3_3: # %cond.store
 ; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rcx)
 ; WIDEN_AVX2-NEXT:    testb $2, %al
-; WIDEN_AVX2-NEXT:    je .LBB3_4
-; WIDEN_AVX2-NEXT:  .LBB3_3: # %cond.store1
+; WIDEN_AVX2-NEXT:    je .LBB3_2
+; WIDEN_AVX2-NEXT:  .LBB3_4: # %cond.store1
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_AVX2-NEXT:    vextractps $1, %xmm0, (%rax)
 ; WIDEN_AVX2-NEXT:    retq
@@ -302,19 +302,19 @@ define <2 x i32> @test_gather_v2i32_data_index(ptr %base, <2 x i32> %ind, <2 x i
 ; WIDEN_SKX-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; WIDEN_SKX-NEXT:    kmovw %k0, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
-; WIDEN_SKX-NEXT:    jne .LBB4_1
-; WIDEN_SKX-NEXT:  # %bb.2: # %else
-; WIDEN_SKX-NEXT:    testb $2, %al
 ; WIDEN_SKX-NEXT:    jne .LBB4_3
-; WIDEN_SKX-NEXT:  .LBB4_4: # %else2
+; WIDEN_SKX-NEXT:  # %bb.1: # %else
+; WIDEN_SKX-NEXT:    testb $2, %al
+; WIDEN_SKX-NEXT:    jne .LBB4_4
+; WIDEN_SKX-NEXT:  .LBB4_2: # %else2
 ; WIDEN_SKX-NEXT:    vmovdqa %xmm2, %xmm0
 ; WIDEN_SKX-NEXT:    retq
-; WIDEN_SKX-NEXT:  .LBB4_1: # %cond.load
+; WIDEN_SKX-NEXT:  .LBB4_3: # %cond.load
 ; WIDEN_SKX-NEXT:    vmovq %xmm0, %rcx
 ; WIDEN_SKX-NEXT:    vpinsrd $0, (%rcx), %xmm2, %xmm2
 ; WIDEN_SKX-NEXT:    testb $2, %al
-; WIDEN_SKX-NEXT:    je .LBB4_4
-; WIDEN_SKX-NEXT:  .LBB4_3: # %cond.load1
+; WIDEN_SKX-NEXT:    je .LBB4_2
+; WIDEN_SKX-NEXT:  .LBB4_4: # %cond.load1
 ; WIDEN_SKX-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_SKX-NEXT:    vpinsrd $1, (%rax), %xmm2, %xmm2
 ; WIDEN_SKX-NEXT:    vmovdqa %xmm2, %xmm0
@@ -331,20 +331,20 @@ define <2 x i32> @test_gather_v2i32_data_index(ptr %base, <2 x i32> %ind, <2 x i
 ; WIDEN_KNL-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; WIDEN_KNL-NEXT:    kmovw %k0, %eax
 ; WIDEN_KNL-NEXT:    testb $1, %al
-; WIDEN_KNL-NEXT:    jne .LBB4_1
-; WIDEN_KNL-NEXT:  # %bb.2: # %else
-; WIDEN_KNL-NEXT:    testb $2, %al
 ; WIDEN_KNL-NEXT:    jne .LBB4_3
-; WIDEN_KNL-NEXT:  .LBB4_4: # %else2
+; WIDEN_KNL-NEXT:  # %bb.1: # %else
+; WIDEN_KNL-NEXT:    testb $2, %al
+; WIDEN_KNL-NEXT:    jne .LBB4_4
+; WIDEN_KNL-NEXT:  .LBB4_2: # %else2
 ; WIDEN_KNL-NEXT:    vmovdqa %xmm2, %xmm0
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
-; WIDEN_KNL-NEXT:  .LBB4_1: # %cond.load
+; WIDEN_KNL-NEXT:  .LBB4_3: # %cond.load
 ; WIDEN_KNL-NEXT:    vmovq %xmm0, %rcx
 ; WIDEN_KNL-NEXT:    vpinsrd $0, (%rcx), %xmm2, %xmm2
 ; WIDEN_KNL-NEXT:    testb $2, %al
-; WIDEN_KNL-NEXT:    je .LBB4_4
-; WIDEN_KNL-NEXT:  .LBB4_3: # %cond.load1
+; WIDEN_KNL-NEXT:    je .LBB4_2
+; WIDEN_KNL-NEXT:  .LBB4_4: # %cond.load1
 ; WIDEN_KNL-NEXT:    vpextrq $1, %xmm0, %rax
 ; WIDEN_KNL-NEXT:    vpinsrd $1, (%rax), %xmm2, %xmm2
 ; WIDEN_KNL-NEXT:    vmovdqa %xmm2, %xmm0
@@ -374,18 +374,18 @@ define void @test_scatter_v2i32_data_index(<2 x i32> %a1, ptr %base, <2 x i32> %
 ; WIDEN_SKX-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; WIDEN_SKX-NEXT:    kmovw %k0, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
-; WIDEN_SKX-NEXT:    jne .LBB5_1
-; WIDEN_SKX-NEXT:  # %bb.2: # %else
-; WIDEN_SKX-NEXT:    testb $2, %al
 ; WIDEN_SKX-NEXT:    jne .LBB5_3
-; WIDEN_SKX-NEXT:  .LBB5_4: # %else2
+; WIDEN_SKX-NEXT:  # %bb.1: # %else
+; WIDEN_SKX-NEXT:    testb $2, %al
+; WIDEN_SKX-NEXT:    jne .LBB5_4
+; WIDEN_SKX-NEXT:  .LBB5_2: # %else2
 ; WIDEN_SKX-NEXT:    retq
-; WIDEN_SKX-NEXT:  .LBB5_1: # %cond.store
+; WIDEN_SKX-NEXT:  .LBB5_3: # %cond.store
 ; WIDEN_SKX-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_SKX-NEXT:    vmovss %xmm0, (%rcx)
 ; WIDEN_SKX-NEXT:    testb $2, %al
-; WIDEN_SKX-NEXT:    je .LBB5_4
-; WIDEN_SKX-NEXT:  .LBB5_3: # %cond.store1
+; WIDEN_SKX-NEXT:    je .LBB5_2
+; WIDEN_SKX-NEXT:  .LBB5_4: # %cond.store1
 ; WIDEN_SKX-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_SKX-NEXT:    vextractps $1, %xmm0, (%rax)
 ; WIDEN_SKX-NEXT:    retq
@@ -401,19 +401,19 @@ define void @test_scatter_v2i32_data_index(<2 x i32> %a1, ptr %base, <2 x i32> %
 ; WIDEN_KNL-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
 ; WIDEN_KNL-NEXT:    kmovw %k0, %eax
 ; WIDEN_KNL-NEXT:    testb $1, %al
-; WIDEN_KNL-NEXT:    jne .LBB5_1
-; WIDEN_KNL-NEXT:  # %bb.2: # %else
-; WIDEN_KNL-NEXT:    testb $2, %al
 ; WIDEN_KNL-NEXT:    jne .LBB5_3
-; WIDEN_KNL-NEXT:  .LBB5_4: # %else2
+; WIDEN_KNL-NEXT:  # %bb.1: # %else
+; WIDEN_KNL-NEXT:    testb $2, %al
+; WIDEN_KNL-NEXT:    jne .LBB5_4
+; WIDEN_KNL-NEXT:  .LBB5_2: # %else2
 ; WIDEN_KNL-NEXT:    vzeroupper
 ; WIDEN_KNL-NEXT:    retq
-; WIDEN_KNL-NEXT:  .LBB5_1: # %cond.store
+; WIDEN_KNL-NEXT:  .LBB5_3: # %cond.store
 ; WIDEN_KNL-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_KNL-NEXT:    vmovss %xmm0, (%rcx)
 ; WIDEN_KNL-NEXT:    testb $2, %al
-; WIDEN_KNL-NEXT:    je .LBB5_4
-; WIDEN_KNL-NEXT:  .LBB5_3: # %cond.store1
+; WIDEN_KNL-NEXT:    je .LBB5_2
+; WIDEN_KNL-NEXT:  .LBB5_4: # %cond.store1
 ; WIDEN_KNL-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_KNL-NEXT:    vextractps $1, %xmm0, (%rax)
 ; WIDEN_KNL-NEXT:    vzeroupper
@@ -429,18 +429,18 @@ define void @test_scatter_v2i32_data_index(<2 x i32> %a1, ptr %base, <2 x i32> %
 ; WIDEN_AVX2-NEXT:    vpsllq $63, %xmm2, %xmm2
 ; WIDEN_AVX2-NEXT:    vmovmskpd %xmm2, %eax
 ; WIDEN_AVX2-NEXT:    testb $1, %al
-; WIDEN_AVX2-NEXT:    jne .LBB5_1
-; WIDEN_AVX2-NEXT:  # %bb.2: # %else
-; WIDEN_AVX2-NEXT:    testb $2, %al
 ; WIDEN_AVX2-NEXT:    jne .LBB5_3
-; WIDEN_AVX2-NEXT:  .LBB5_4: # %else2
+; WIDEN_AVX2-NEXT:  # %bb.1: # %else
+; WIDEN_AVX2-NEXT:    testb $2, %al
+; WIDEN_AVX2-NEXT:    jne .LBB5_4
+; WIDEN_AVX2-NEXT:  .LBB5_2: # %else2
 ; WIDEN_AVX2-NEXT:    retq
-; WIDEN_AVX2-NEXT:  .LBB5_1: # %cond.store
+; WIDEN_AVX2-NEXT:  .LBB5_3: # %cond.store
 ; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rcx
 ; WIDEN_AVX2-NEXT:    vmovss %xmm0, (%rcx)
 ; WIDEN_AVX2-NEXT:    testb $2, %al
-; WIDEN_AVX2-NEXT:    je .LBB5_4
-; WIDEN_AVX2-NEXT:  .LBB5_3: # %cond.store1
+; WIDEN_AVX2-NEXT:    je .LBB5_2
+; WIDEN_AVX2-NEXT:  .LBB5_4: # %cond.store1
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
 ; WIDEN_AVX2-NEXT:    vextractps $1, %xmm0, (%rax)
 ; WIDEN_AVX2-NEXT:    retq

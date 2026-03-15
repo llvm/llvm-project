@@ -308,17 +308,17 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne LBB4_1
-; CHECK-NEXT:  ## %bb.4: ## %return
+; CHECK-NEXT:    jne LBB4_2
+; CHECK-NEXT:  ## %bb.1: ## %return
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB4_1: ## %throw
+; CHECK-NEXT:  LBB4_2: ## %throw
 ; CHECK-NEXT:  Ltmp0: ## EH_LABEL
 ; CHECK-NEXT:    callq _throw_exception
 ; CHECK-NEXT:  Ltmp1: ## EH_LABEL
-; CHECK-NEXT:  ## %bb.2: ## %unreachable
+; CHECK-NEXT:  ## %bb.3: ## %unreachable
 ; CHECK-NEXT:    ud2
-; CHECK-NEXT:  LBB4_3: ## %landing
+; CHECK-NEXT:  LBB4_4: ## %landing
 ; CHECK-NEXT:  Ltmp2: ## EH_LABEL
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
@@ -329,18 +329,18 @@ define void @with_nounwind(i1 %cond) nounwind personality ptr @my_personality {
 ; NOCOMPACTUNWIND-NEXT:    pushq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
 ; NOCOMPACTUNWIND-NEXT:    testb $1, %dil
-; NOCOMPACTUNWIND-NEXT:    jne .LBB4_1
-; NOCOMPACTUNWIND-NEXT:  # %bb.4: # %return
+; NOCOMPACTUNWIND-NEXT:    jne .LBB4_2
+; NOCOMPACTUNWIND-NEXT:  # %bb.1: # %return
 ; NOCOMPACTUNWIND-NEXT:    popq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
 ; NOCOMPACTUNWIND-NEXT:    retq
-; NOCOMPACTUNWIND-NEXT:  .LBB4_1: # %throw
+; NOCOMPACTUNWIND-NEXT:  .LBB4_2: # %throw
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp0: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp1: # EH_LABEL
-; NOCOMPACTUNWIND-NEXT:  # %bb.2: # %unreachable
-; NOCOMPACTUNWIND-NEXT:  .LBB4_3: # %landing
+; NOCOMPACTUNWIND-NEXT:  # %bb.3: # %unreachable
+; NOCOMPACTUNWIND-NEXT:  .LBB4_4: # %landing
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp2: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    popq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
@@ -371,47 +371,47 @@ define void @with_nounwind_same_succ(i1 %cond) nounwind personality ptr @my_pers
 ; CHECK-LABEL: with_nounwind_same_succ:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    je LBB5_4
+; CHECK-NEXT:    je LBB5_3
 ; CHECK-NEXT:  ## %bb.1: ## %throw
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:  Ltmp3: ## EH_LABEL
 ; CHECK-NEXT:    callq _throw_exception
 ; CHECK-NEXT:  Ltmp4: ## EH_LABEL
-; CHECK-NEXT:  LBB5_3: ## %fallthrough
+; CHECK-NEXT:  LBB5_2: ## %fallthrough
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:  LBB5_4: ## %return
+; CHECK-NEXT:  LBB5_3: ## %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB5_2: ## %landing
+; CHECK-NEXT:  LBB5_4: ## %landing
 ; CHECK-NEXT:  Ltmp5: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB5_3
+; CHECK-NEXT:    jmp LBB5_2
 ; CHECK-NEXT:  Lfunc_end1:
 ;
 ; NOCOMPACTUNWIND-LABEL: with_nounwind_same_succ:
 ; NOCOMPACTUNWIND:       # %bb.0: # %entry
 ; NOCOMPACTUNWIND-NEXT:    testb $1, %dil
-; NOCOMPACTUNWIND-NEXT:    je .LBB5_4
+; NOCOMPACTUNWIND-NEXT:    je .LBB5_3
 ; NOCOMPACTUNWIND-NEXT:  # %bb.1: # %throw
 ; NOCOMPACTUNWIND-NEXT:    pushq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp3: # EH_LABEL
 ; NOCOMPACTUNWIND-NEXT:    callq throw_exception@PLT
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp4: # EH_LABEL
-; NOCOMPACTUNWIND-NEXT:  .LBB5_3: # %fallthrough
+; NOCOMPACTUNWIND-NEXT:  .LBB5_2: # %fallthrough
 ; NOCOMPACTUNWIND-NEXT:    #APP
 ; NOCOMPACTUNWIND-NEXT:    nop
 ; NOCOMPACTUNWIND-NEXT:    #NO_APP
 ; NOCOMPACTUNWIND-NEXT:    popq %rax
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 8
-; NOCOMPACTUNWIND-NEXT:  .LBB5_4: # %return
+; NOCOMPACTUNWIND-NEXT:  .LBB5_3: # %return
 ; NOCOMPACTUNWIND-NEXT:    retq
-; NOCOMPACTUNWIND-NEXT:  .LBB5_2: # %landing
+; NOCOMPACTUNWIND-NEXT:  .LBB5_4: # %landing
 ; NOCOMPACTUNWIND-NEXT:    .cfi_def_cfa_offset 16
 ; NOCOMPACTUNWIND-NEXT:  .Ltmp5: # EH_LABEL
-; NOCOMPACTUNWIND-NEXT:    jmp .LBB5_3
+; NOCOMPACTUNWIND-NEXT:    jmp .LBB5_2
 entry:
   br i1 %cond, label %throw, label %return
 

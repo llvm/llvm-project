@@ -640,10 +640,10 @@ define void @useLEA(ptr readonly %x) {
 ; ENABLE-LABEL: useLEA:
 ; ENABLE:       ## %bb.0: ## %entry
 ; ENABLE-NEXT:    testq %rdi, %rdi
-; ENABLE-NEXT:    je LBB8_9
+; ENABLE-NEXT:    je LBB8_5
 ; ENABLE-NEXT:  ## %bb.1: ## %if.end
 ; ENABLE-NEXT:    cmpw $66, (%rdi)
-; ENABLE-NEXT:    jne LBB8_9
+; ENABLE-NEXT:    jne LBB8_5
 ; ENABLE-NEXT:  ## %bb.2: ## %lor.lhs.false
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_def_cfa_offset 16
@@ -651,62 +651,62 @@ define void @useLEA(ptr readonly %x) {
 ; ENABLE-NEXT:    movzwl (%rdi), %eax
 ; ENABLE-NEXT:    leal -54(%rax), %ecx
 ; ENABLE-NEXT:    cmpl $14, %ecx
-; ENABLE-NEXT:    ja LBB8_3
-; ENABLE-NEXT:  ## %bb.7: ## %lor.lhs.false
+; ENABLE-NEXT:    ja LBB8_6
+; ENABLE-NEXT:  ## %bb.3: ## %lor.lhs.false
 ; ENABLE-NEXT:    movl $24599, %edx ## imm = 0x6017
 ; ENABLE-NEXT:    btl %ecx, %edx
-; ENABLE-NEXT:    jae LBB8_3
-; ENABLE-NEXT:  LBB8_8:
+; ENABLE-NEXT:    jae LBB8_6
+; ENABLE-NEXT:  LBB8_4:
 ; ENABLE-NEXT:    addq $8, %rsp
-; ENABLE-NEXT:  LBB8_9: ## %cleanup
+; ENABLE-NEXT:  LBB8_5: ## %cleanup
 ; ENABLE-NEXT:    retq
-; ENABLE-NEXT:  LBB8_3: ## %lor.lhs.false
+; ENABLE-NEXT:  LBB8_6: ## %lor.lhs.false
 ; ENABLE-NEXT:    cmpl $134, %eax
-; ENABLE-NEXT:    je LBB8_8
-; ENABLE-NEXT:  ## %bb.4: ## %lor.lhs.false
+; ENABLE-NEXT:    je LBB8_4
+; ENABLE-NEXT:  ## %bb.7: ## %lor.lhs.false
 ; ENABLE-NEXT:    cmpl $140, %eax
-; ENABLE-NEXT:    je LBB8_8
-; ENABLE-NEXT:  ## %bb.5: ## %if.end.55
+; ENABLE-NEXT:    je LBB8_4
+; ENABLE-NEXT:  ## %bb.8: ## %if.end.55
 ; ENABLE-NEXT:    callq _find_temp_slot_from_address
 ; ENABLE-NEXT:    testq %rax, %rax
-; ENABLE-NEXT:    je LBB8_8
-; ENABLE-NEXT:  ## %bb.6: ## %if.then.60
+; ENABLE-NEXT:    je LBB8_4
+; ENABLE-NEXT:  ## %bb.9: ## %if.then.60
 ; ENABLE-NEXT:    movb $1, 57(%rax)
-; ENABLE-NEXT:    jmp LBB8_8
+; ENABLE-NEXT:    jmp LBB8_4
 ;
 ; DISABLE-LABEL: useLEA:
 ; DISABLE:       ## %bb.0: ## %entry
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    .cfi_def_cfa_offset 16
 ; DISABLE-NEXT:    testq %rdi, %rdi
-; DISABLE-NEXT:    je LBB8_7
+; DISABLE-NEXT:    je LBB8_4
 ; DISABLE-NEXT:  ## %bb.1: ## %if.end
 ; DISABLE-NEXT:    cmpw $66, (%rdi)
-; DISABLE-NEXT:    jne LBB8_7
+; DISABLE-NEXT:    jne LBB8_4
 ; DISABLE-NEXT:  ## %bb.2: ## %lor.lhs.false
 ; DISABLE-NEXT:    movq 8(%rdi), %rdi
 ; DISABLE-NEXT:    movzwl (%rdi), %eax
 ; DISABLE-NEXT:    leal -54(%rax), %ecx
 ; DISABLE-NEXT:    cmpl $14, %ecx
-; DISABLE-NEXT:    ja LBB8_3
-; DISABLE-NEXT:  ## %bb.8: ## %lor.lhs.false
+; DISABLE-NEXT:    ja LBB8_5
+; DISABLE-NEXT:  ## %bb.3: ## %lor.lhs.false
 ; DISABLE-NEXT:    movl $24599, %edx ## imm = 0x6017
 ; DISABLE-NEXT:    btl %ecx, %edx
-; DISABLE-NEXT:    jae LBB8_3
-; DISABLE-NEXT:  LBB8_7: ## %cleanup
+; DISABLE-NEXT:    jae LBB8_5
+; DISABLE-NEXT:  LBB8_4: ## %cleanup
 ; DISABLE-NEXT:    popq %rax
 ; DISABLE-NEXT:    retq
-; DISABLE-NEXT:  LBB8_3: ## %lor.lhs.false
+; DISABLE-NEXT:  LBB8_5: ## %lor.lhs.false
 ; DISABLE-NEXT:    cmpl $134, %eax
-; DISABLE-NEXT:    je LBB8_7
-; DISABLE-NEXT:  ## %bb.4: ## %lor.lhs.false
+; DISABLE-NEXT:    je LBB8_4
+; DISABLE-NEXT:  ## %bb.6: ## %lor.lhs.false
 ; DISABLE-NEXT:    cmpl $140, %eax
-; DISABLE-NEXT:    je LBB8_7
-; DISABLE-NEXT:  ## %bb.5: ## %if.end.55
+; DISABLE-NEXT:    je LBB8_4
+; DISABLE-NEXT:  ## %bb.7: ## %if.end.55
 ; DISABLE-NEXT:    callq _find_temp_slot_from_address
 ; DISABLE-NEXT:    testq %rax, %rax
-; DISABLE-NEXT:    je LBB8_7
-; DISABLE-NEXT:  ## %bb.6: ## %if.then.60
+; DISABLE-NEXT:    je LBB8_4
+; DISABLE-NEXT:  ## %bb.8: ## %if.then.60
 ; DISABLE-NEXT:    movb $1, 57(%rax)
 ; DISABLE-NEXT:    popq %rax
 ; DISABLE-NEXT:    retq
@@ -904,15 +904,15 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    addq $-16, %rax
 ; ENABLE-NEXT:    movq %rax, %rsp
 ; ENABLE-NEXT:    xorl %ecx, %ecx
-; ENABLE-NEXT:    jmp LBB11_2
+; ENABLE-NEXT:    jmp LBB11_3
 ; ENABLE-NEXT:    .p2align 4
-; ENABLE-NEXT:  LBB11_4: ## %body2
-; ENABLE-NEXT:    ## in Loop: Header=BB11_2 Depth=1
+; ENABLE-NEXT:  LBB11_2: ## %body2
+; ENABLE-NEXT:    ## in Loop: Header=BB11_3 Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    movl $1, %ecx
-; ENABLE-NEXT:  LBB11_2: ## %for.body
+; ENABLE-NEXT:  LBB11_3: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    movl %ecx, %edx
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -921,13 +921,13 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    addl %edx, %ecx
 ; ENABLE-NEXT:    movl %ecx, (%rax)
 ; ENABLE-NEXT:    testb %al, %al
-; ENABLE-NEXT:    jne LBB11_4
-; ENABLE-NEXT:  ## %bb.3: ## %body1
-; ENABLE-NEXT:    ## in Loop: Header=BB11_2 Depth=1
+; ENABLE-NEXT:    jne LBB11_2
+; ENABLE-NEXT:  ## %bb.4: ## %body1
+; ENABLE-NEXT:    ## in Loop: Header=BB11_3 Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ## InlineAsm End
-; ENABLE-NEXT:    jmp LBB11_2
+; ENABLE-NEXT:    jmp LBB11_3
 ; ENABLE-NEXT:  LBB11_5: ## %if.end
 ; ENABLE-NEXT:    leaq -8(%rbp), %rsp
 ; ENABLE-NEXT:    popq %rbx
@@ -951,15 +951,15 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    addq $-16, %rax
 ; DISABLE-NEXT:    movq %rax, %rsp
 ; DISABLE-NEXT:    xorl %ecx, %ecx
-; DISABLE-NEXT:    jmp LBB11_2
+; DISABLE-NEXT:    jmp LBB11_3
 ; DISABLE-NEXT:    .p2align 4
-; DISABLE-NEXT:  LBB11_4: ## %body2
-; DISABLE-NEXT:    ## in Loop: Header=BB11_2 Depth=1
+; DISABLE-NEXT:  LBB11_2: ## %body2
+; DISABLE-NEXT:    ## in Loop: Header=BB11_3 Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    movl $1, %ecx
-; DISABLE-NEXT:  LBB11_2: ## %for.body
+; DISABLE-NEXT:  LBB11_3: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    movl %ecx, %edx
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -968,13 +968,13 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    addl %edx, %ecx
 ; DISABLE-NEXT:    movl %ecx, (%rax)
 ; DISABLE-NEXT:    testb %al, %al
-; DISABLE-NEXT:    jne LBB11_4
-; DISABLE-NEXT:  ## %bb.3: ## %body1
-; DISABLE-NEXT:    ## in Loop: Header=BB11_2 Depth=1
+; DISABLE-NEXT:    jne LBB11_2
+; DISABLE-NEXT:  ## %bb.4: ## %body1
+; DISABLE-NEXT:    ## in Loop: Header=BB11_3 Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ## InlineAsm End
-; DISABLE-NEXT:    jmp LBB11_2
+; DISABLE-NEXT:    jmp LBB11_3
 ; DISABLE-NEXT:  LBB11_5: ## %if.end
 ; DISABLE-NEXT:    leaq -8(%rbp), %rsp
 ; DISABLE-NEXT:    popq %rbx
@@ -1014,7 +1014,7 @@ define void @infiniteloop3() {
 ; ENABLE-NEXT:    jne LBB12_2
 ; ENABLE-NEXT:  ## %bb.1: ## %body
 ; ENABLE-NEXT:    testb %al, %al
-; ENABLE-NEXT:    jne LBB12_7
+; ENABLE-NEXT:    jne LBB12_6
 ; ENABLE-NEXT:  LBB12_2: ## %loop2a.preheader
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    xorl %ecx, %ecx
@@ -1035,7 +1035,7 @@ define void @infiniteloop3() {
 ; ENABLE-NEXT:    movq %rdx, %rax
 ; ENABLE-NEXT:    movq %rdx, %rsi
 ; ENABLE-NEXT:    jmp LBB12_4
-; ENABLE-NEXT:  LBB12_7: ## %end
+; ENABLE-NEXT:  LBB12_6: ## %end
 ; ENABLE-NEXT:    retq
 ;
 ; DISABLE-LABEL: infiniteloop3:
@@ -1044,7 +1044,7 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:    jne LBB12_2
 ; DISABLE-NEXT:  ## %bb.1: ## %body
 ; DISABLE-NEXT:    testb %al, %al
-; DISABLE-NEXT:    jne LBB12_7
+; DISABLE-NEXT:    jne LBB12_6
 ; DISABLE-NEXT:  LBB12_2: ## %loop2a.preheader
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    xorl %ecx, %ecx
@@ -1065,7 +1065,7 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:    movq %rdx, %rax
 ; DISABLE-NEXT:    movq %rdx, %rsi
 ; DISABLE-NEXT:    jmp LBB12_4
-; DISABLE-NEXT:  LBB12_7: ## %end
+; DISABLE-NEXT:  LBB12_6: ## %end
 ; DISABLE-NEXT:    retq
 entry:
   br i1 poison, label %loop2a, label %body
@@ -1376,15 +1376,15 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:  LBB16_2: ## %split
 ; ENABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpl $0, (%rax)
-; ENABLE-NEXT:    je LBB16_3
-; ENABLE-NEXT:  ## %bb.4: ## %for.body4.i
+; ENABLE-NEXT:    je LBB16_4
+; ENABLE-NEXT:  ## %bb.3: ## %for.body4.i
 ; ENABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    movl (%rax), %edi
 ; ENABLE-NEXT:    xorl %ebx, %ebx
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _something
 ; ENABLE-NEXT:    jmp LBB16_5
-; ENABLE-NEXT:  LBB16_3:
+; ENABLE-NEXT:  LBB16_4:
 ; ENABLE-NEXT:    xorl %ebx, %ebx
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB16_5: ## %for.inc
@@ -1419,15 +1419,15 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:  LBB16_2: ## %split
 ; DISABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpl $0, (%rax)
-; DISABLE-NEXT:    je LBB16_3
-; DISABLE-NEXT:  ## %bb.4: ## %for.body4.i
+; DISABLE-NEXT:    je LBB16_4
+; DISABLE-NEXT:  ## %bb.3: ## %for.body4.i
 ; DISABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    movl (%rax), %edi
 ; DISABLE-NEXT:    xorl %ebx, %ebx
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _something
 ; DISABLE-NEXT:    jmp LBB16_5
-; DISABLE-NEXT:  LBB16_3:
+; DISABLE-NEXT:  LBB16_4:
 ; DISABLE-NEXT:    xorl %ebx, %ebx
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB16_5: ## %for.inc
@@ -1502,18 +1502,18 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; ENABLE-NEXT:    callq _somethingElse
 ; ENABLE-NEXT:    movq _y@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpl $0, (%rax)
-; ENABLE-NEXT:    je LBB17_3
-; ENABLE-NEXT:  ## %bb.5:
+; ENABLE-NEXT:    je LBB17_4
+; ENABLE-NEXT:  ## %bb.3:
 ; ENABLE-NEXT:    popq %rbp
 ; ENABLE-NEXT:    retq
-; ENABLE-NEXT:  LBB17_3:
+; ENABLE-NEXT:  LBB17_4:
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _something
 ; ENABLE-NEXT:    .p2align 4
-; ENABLE-NEXT:  LBB17_4: ## =>This Inner Loop Header: Depth=1
+; ENABLE-NEXT:  LBB17_5: ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _somethingElse
-; ENABLE-NEXT:    jmp LBB17_4
+; ENABLE-NEXT:    jmp LBB17_5
 ;
 ; DISABLE-LABEL: infiniteLoopNoSuccessor:
 ; DISABLE:       ## %bb.0:
@@ -1529,18 +1529,18 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; DISABLE-NEXT:    callq _somethingElse
 ; DISABLE-NEXT:    movq _y@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpl $0, (%rax)
-; DISABLE-NEXT:    je LBB17_3
-; DISABLE-NEXT:  ## %bb.5:
+; DISABLE-NEXT:    je LBB17_4
+; DISABLE-NEXT:  ## %bb.3:
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
-; DISABLE-NEXT:  LBB17_3:
+; DISABLE-NEXT:  LBB17_4:
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _something
 ; DISABLE-NEXT:    .p2align 4
-; DISABLE-NEXT:  LBB17_4: ## =>This Inner Loop Header: Depth=1
+; DISABLE-NEXT:  LBB17_5: ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _somethingElse
-; DISABLE-NEXT:    jmp LBB17_4
+; DISABLE-NEXT:    jmp LBB17_5
   %1 = load i32, ptr @x, align 4
   %2 = icmp ne i32 %1, 0
   br i1 %2, label %3, label %4

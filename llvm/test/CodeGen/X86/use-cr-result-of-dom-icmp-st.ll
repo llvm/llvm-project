@@ -22,11 +22,11 @@ define i64 @ll_a_op_b__2(i64 %a, i64 %b) {
 ; DEFAULT-NEXT:    movq %rdi, %rax
 ; DEFAULT-NEXT:    shlq %cl, %rax
 ; DEFAULT-NEXT:    cmpq $-2, %rax
-; DEFAULT-NEXT:    jle .LBB0_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB0_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rcx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB0_1: # %if.end
+; DEFAULT-NEXT:  .LBB0_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rcx, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -68,11 +68,11 @@ define i64 @ll_a_op_b__1(i64 %a, i64 %b) {
 ; DEFAULT-NEXT:    movq %rdi, %rax
 ; DEFAULT-NEXT:    shlq %cl, %rax
 ; DEFAULT-NEXT:    testq %rax, %rax
-; DEFAULT-NEXT:    js .LBB1_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    js .LBB1_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rcx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB1_1: # %if.end
+; DEFAULT-NEXT:  .LBB1_2: # %if.end
 ; DEFAULT-NEXT:    cmpq $-1, %rax
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rcx, %rax
@@ -86,10 +86,10 @@ define i64 @ll_a_op_b__1(i64 %a, i64 %b) {
 ; EQ2ICMP-NEXT:    movl %eax, %ecx
 ; EQ2ICMP-NEXT:    shlq %cl, %rdx
 ; EQ2ICMP-NEXT:    testq %rdx, %rdx
-; EQ2ICMP-NEXT:    js .LBB1_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    js .LBB1_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB1_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB1_2: # %if.end
 ; EQ2ICMP-NEXT:    cmpq $-1, %rdx
 ; EQ2ICMP-NEXT:    movl $1, %ecx
 ; EQ2ICMP-NEXT:    cmovlq %rcx, %rax
@@ -117,11 +117,11 @@ define i64 @ll_a_op_b_0(i64 %a, i64 %b) {
 ; DEFAULT-NEXT:    movq %rdi, %rax
 ; DEFAULT-NEXT:    shlq %cl, %rax
 ; DEFAULT-NEXT:    testq %rax, %rax
-; DEFAULT-NEXT:    jle .LBB2_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB2_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rcx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB2_1: # %if.end
+; DEFAULT-NEXT:  .LBB2_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rcx, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -134,10 +134,10 @@ define i64 @ll_a_op_b_0(i64 %a, i64 %b) {
 ; EQ2ICMP-NEXT:    movl %eax, %ecx
 ; EQ2ICMP-NEXT:    shlq %cl, %rdx
 ; EQ2ICMP-NEXT:    testq %rdx, %rdx
-; EQ2ICMP-NEXT:    jle .LBB2_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    jle .LBB2_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB2_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB2_2: # %if.end
 ; EQ2ICMP-NEXT:    movl $1, %ecx
 ; EQ2ICMP-NEXT:    cmovsq %rcx, %rax
 ; EQ2ICMP-NEXT:    imulq %rdi, %rax
@@ -164,11 +164,11 @@ define i64 @ll_a_op_b_1(i64 %a, i64 %b) {
 ; DEFAULT-NEXT:    movq %rdi, %rax
 ; DEFAULT-NEXT:    shlq %cl, %rax
 ; DEFAULT-NEXT:    cmpq $1, %rax
-; DEFAULT-NEXT:    jle .LBB3_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB3_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rcx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB3_1: # %if.end
+; DEFAULT-NEXT:  .LBB3_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rcx, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -210,11 +210,11 @@ define i64 @ll_a_op_b_2(i64 %a, i64 %b) {
 ; DEFAULT-NEXT:    movq %rdi, %rax
 ; DEFAULT-NEXT:    shlq %cl, %rax
 ; DEFAULT-NEXT:    cmpq $2, %rax
-; DEFAULT-NEXT:    jle .LBB4_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB4_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rcx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB4_1: # %if.end
+; DEFAULT-NEXT:  .LBB4_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rcx, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -253,11 +253,11 @@ define i64 @ll_a__2(i64 %a, i64 %b) {
 ; DEFAULT-LABEL: ll_a__2:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    cmpq $-2, %rdi
-; DEFAULT-NEXT:    jle .LBB5_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB5_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rsi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB5_1: # %if.end
+; DEFAULT-NEXT:  .LBB5_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rsi, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -292,11 +292,11 @@ define i64 @ll_a__1(i64 %a, i64 %b) {
 ; DEFAULT-LABEL: ll_a__1:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    testq %rdi, %rdi
-; DEFAULT-NEXT:    js .LBB6_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    js .LBB6_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rsi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB6_1: # %if.end
+; DEFAULT-NEXT:  .LBB6_2: # %if.end
 ; DEFAULT-NEXT:    cmpq $-1, %rdi
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rsi, %rax
@@ -307,10 +307,10 @@ define i64 @ll_a__1(i64 %a, i64 %b) {
 ; EQ2ICMP:       # %bb.0: # %entry
 ; EQ2ICMP-NEXT:    movq %rsi, %rax
 ; EQ2ICMP-NEXT:    testq %rdi, %rdi
-; EQ2ICMP-NEXT:    js .LBB6_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    js .LBB6_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB6_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB6_2: # %if.end
 ; EQ2ICMP-NEXT:    cmpq $-1, %rdi
 ; EQ2ICMP-NEXT:    movl $1, %ecx
 ; EQ2ICMP-NEXT:    cmovlq %rcx, %rax
@@ -334,11 +334,11 @@ define i64 @ll_a_0(i64 %a, i64 %b) {
 ; DEFAULT-LABEL: ll_a_0:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    testq %rdi, %rdi
-; DEFAULT-NEXT:    jle .LBB7_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB7_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rsi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB7_1: # %if.end
+; DEFAULT-NEXT:  .LBB7_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rsi, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -348,10 +348,10 @@ define i64 @ll_a_0(i64 %a, i64 %b) {
 ; EQ2ICMP:       # %bb.0: # %entry
 ; EQ2ICMP-NEXT:    movq %rsi, %rax
 ; EQ2ICMP-NEXT:    testq %rdi, %rdi
-; EQ2ICMP-NEXT:    jle .LBB7_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    jle .LBB7_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB7_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB7_2: # %if.end
 ; EQ2ICMP-NEXT:    movl $1, %ecx
 ; EQ2ICMP-NEXT:    cmovsq %rcx, %rax
 ; EQ2ICMP-NEXT:    imulq %rdi, %rax
@@ -374,11 +374,11 @@ define i64 @ll_a_1(i64 %a, i64 %b) {
 ; DEFAULT-LABEL: ll_a_1:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    cmpq $1, %rdi
-; DEFAULT-NEXT:    jle .LBB8_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB8_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rsi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB8_1: # %if.end
+; DEFAULT-NEXT:  .LBB8_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rsi, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -413,11 +413,11 @@ define i64 @ll_a_2(i64 %a, i64 %b) {
 ; DEFAULT-LABEL: ll_a_2:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    cmpq $2, %rdi
-; DEFAULT-NEXT:    jle .LBB9_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB9_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movq %rsi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB9_1: # %if.end
+; DEFAULT-NEXT:  .LBB9_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmoveq %rsi, %rax
 ; DEFAULT-NEXT:    imulq %rdi, %rax
@@ -503,11 +503,11 @@ define i64 @i_a_op_b__1(i32 signext %a, i32 signext %b) {
 ; DEFAULT-NEXT:    movl %edi, %eax
 ; DEFAULT-NEXT:    shll %cl, %eax
 ; DEFAULT-NEXT:    testl %eax, %eax
-; DEFAULT-NEXT:    js .LBB11_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    js .LBB11_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movslq %ecx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB11_1: # %if.end
+; DEFAULT-NEXT:  .LBB11_2: # %if.end
 ; DEFAULT-NEXT:    cmpl $-1, %eax
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmovel %ecx, %eax
@@ -522,11 +522,11 @@ define i64 @i_a_op_b__1(i32 signext %a, i32 signext %b) {
 ; EQ2ICMP-NEXT:    movl %edi, %eax
 ; EQ2ICMP-NEXT:    shll %cl, %eax
 ; EQ2ICMP-NEXT:    testl %eax, %eax
-; EQ2ICMP-NEXT:    js .LBB11_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    js .LBB11_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    movslq %ecx, %rax
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB11_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB11_2: # %if.end
 ; EQ2ICMP-NEXT:    cmpl $-1, %eax
 ; EQ2ICMP-NEXT:    movl $1, %eax
 ; EQ2ICMP-NEXT:    cmovll %eax, %ecx
@@ -557,11 +557,11 @@ define i64 @i_a_op_b_0(i32 signext %a, i32 signext %b) {
 ; DEFAULT-NEXT:    movl %edi, %eax
 ; DEFAULT-NEXT:    shll %cl, %eax
 ; DEFAULT-NEXT:    testl %eax, %eax
-; DEFAULT-NEXT:    jle .LBB12_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB12_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movslq %ecx, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB12_1: # %if.end
+; DEFAULT-NEXT:  .LBB12_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmovel %ecx, %eax
 ; DEFAULT-NEXT:    imull %edi, %eax
@@ -575,11 +575,11 @@ define i64 @i_a_op_b_0(i32 signext %a, i32 signext %b) {
 ; EQ2ICMP-NEXT:    movl %edi, %eax
 ; EQ2ICMP-NEXT:    shll %cl, %eax
 ; EQ2ICMP-NEXT:    testl %eax, %eax
-; EQ2ICMP-NEXT:    jle .LBB12_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    jle .LBB12_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    movslq %ecx, %rax
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB12_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB12_2: # %if.end
 ; EQ2ICMP-NEXT:    movl $1, %eax
 ; EQ2ICMP-NEXT:    cmovsl %eax, %ecx
 ; EQ2ICMP-NEXT:    imull %edi, %ecx
@@ -743,11 +743,11 @@ define i64 @i_a__1(i32 signext %a, i32 signext %b) {
 ; DEFAULT-LABEL: i_a__1:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    testl %edi, %edi
-; DEFAULT-NEXT:    js .LBB16_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    js .LBB16_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movslq %esi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB16_1: # %if.end
+; DEFAULT-NEXT:  .LBB16_2: # %if.end
 ; DEFAULT-NEXT:    cmpl $-1, %edi
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmovel %esi, %eax
@@ -759,11 +759,11 @@ define i64 @i_a__1(i32 signext %a, i32 signext %b) {
 ; EQ2ICMP-LABEL: i_a__1:
 ; EQ2ICMP:       # %bb.0: # %entry
 ; EQ2ICMP-NEXT:    testl %edi, %edi
-; EQ2ICMP-NEXT:    js .LBB16_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    js .LBB16_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    movslq %esi, %rax
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB16_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB16_2: # %if.end
 ; EQ2ICMP-NEXT:    cmpl $-1, %edi
 ; EQ2ICMP-NEXT:    movl $1, %eax
 ; EQ2ICMP-NEXT:    cmovll %eax, %esi
@@ -790,11 +790,11 @@ define i64 @i_a_0(i32 signext %a, i32 signext %b) {
 ; DEFAULT-LABEL: i_a_0:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    testl %edi, %edi
-; DEFAULT-NEXT:    jle .LBB17_1
-; DEFAULT-NEXT:  # %bb.2: # %return
+; DEFAULT-NEXT:    jle .LBB17_2
+; DEFAULT-NEXT:  # %bb.1: # %return
 ; DEFAULT-NEXT:    movslq %esi, %rax
 ; DEFAULT-NEXT:    retq
-; DEFAULT-NEXT:  .LBB17_1: # %if.end
+; DEFAULT-NEXT:  .LBB17_2: # %if.end
 ; DEFAULT-NEXT:    movl $1, %eax
 ; DEFAULT-NEXT:    cmovel %esi, %eax
 ; DEFAULT-NEXT:    imull %edi, %eax
@@ -805,11 +805,11 @@ define i64 @i_a_0(i32 signext %a, i32 signext %b) {
 ; EQ2ICMP-LABEL: i_a_0:
 ; EQ2ICMP:       # %bb.0: # %entry
 ; EQ2ICMP-NEXT:    testl %edi, %edi
-; EQ2ICMP-NEXT:    jle .LBB17_1
-; EQ2ICMP-NEXT:  # %bb.2: # %return
+; EQ2ICMP-NEXT:    jle .LBB17_2
+; EQ2ICMP-NEXT:  # %bb.1: # %return
 ; EQ2ICMP-NEXT:    movslq %esi, %rax
 ; EQ2ICMP-NEXT:    retq
-; EQ2ICMP-NEXT:  .LBB17_1: # %if.end
+; EQ2ICMP-NEXT:  .LBB17_2: # %if.end
 ; EQ2ICMP-NEXT:    movl $1, %eax
 ; EQ2ICMP-NEXT:    cmovsl %eax, %esi
 ; EQ2ICMP-NEXT:    imull %edi, %esi

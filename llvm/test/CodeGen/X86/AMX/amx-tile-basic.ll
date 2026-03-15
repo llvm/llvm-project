@@ -76,39 +76,39 @@ define void @PR90954(ptr %0, ptr %1, i32 %2) nounwind {
 ; CHECK-NEXT:    movb $1, %r8b
 ; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    xorl %r10d, %r10d
-; CHECK-NEXT:    jmp .LBB1_1
+; CHECK-NEXT:    jmp .LBB1_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_5: # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:  .LBB1_1: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    incq %r10
 ; CHECK-NEXT:    addl %edx, %r9d
-; CHECK-NEXT:  .LBB1_1: # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_2 Depth 2
+; CHECK-NEXT:  .LBB1_2: # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB1_4 Depth 2
 ; CHECK-NEXT:    movslq %r9d, %r11
 ; CHECK-NEXT:    leaq (%rsi,%r11,4), %r11
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:    jmp .LBB1_4
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_2 Depth=2
+; CHECK-NEXT:  .LBB1_3: # in Loop: Header=BB1_4 Depth=2
 ; CHECK-NEXT:    tilestored %tmm1, (%r11,%rax)
 ; CHECK-NEXT:    incq %r14
 ; CHECK-NEXT:    addq $64, %r11
 ; CHECK-NEXT:    decq %rbx
-; CHECK-NEXT:    je .LBB1_5
-; CHECK-NEXT:  .LBB1_2: # Parent Loop BB1_1 Depth=1
+; CHECK-NEXT:    je .LBB1_1
+; CHECK-NEXT:  .LBB1_4: # Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    tilezero %tmm1
 ; CHECK-NEXT:    testb %r8b, %r8b
-; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB1_2 Depth=2
+; CHECK-NEXT:    jne .LBB1_3
+; CHECK-NEXT:  # %bb.5: # in Loop: Header=BB1_4 Depth=2
 ; CHECK-NEXT:    tilezero %tmm1
 ; CHECK-NEXT:    tilezero %tmm2
 ; CHECK-NEXT:    tdpbf16ps %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    movabsq $64, %rbp
 ; CHECK-NEXT:    tilestored %tmm0, 896(%rsp,%rbp) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tileloadd 896(%rsp,%rbp), %tmm1 # 1024-byte Folded Reload
-; CHECK-NEXT:    jmp .LBB1_4
+; CHECK-NEXT:    jmp .LBB1_3
   %4 = shl i32 %2, 4
   %5 = icmp eq i64 0, 0
   br label %6

@@ -737,12 +737,12 @@ define i8 @test_minsigned_i8(i8 %a0, i8 %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpb $-128, %al
-; X86-NEXT:    jne .LBB17_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB17_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB17_1:
+; X86-NEXT:  .LBB17_2:
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    sarb $7, %cl
 ; X86-NEXT:    xorb %cl, %al
@@ -824,12 +824,12 @@ define i64 @test_minsigned_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal -2147483648(%edx), %ecx
 ; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    jne .LBB20_1
-; X86-NEXT:  # %bb.2: # %select.end
+; X86-NEXT:    jne .LBB20_2
+; X86-NEXT:  # %bb.1: # %select.end
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB20_1: # %select.false.sink
+; X86-NEXT:  .LBB20_2: # %select.false.sink
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    xorl %ecx, %edx

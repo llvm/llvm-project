@@ -4,8 +4,8 @@
 ; we would print the jump, but not the label because it was considered
 ; a fall through.
 
-; CHECK:        jmp     LBB0_9
-; CHECK: LBB0_9:                                 ## %cleanup
+; CHECK:        jmp     LBB0_5
+; CHECK: LBB0_5:                                 ## %cleanup
 
 ; RUN: llc -filetype=obj -mtriple=x86_64 -O0 -save-temp-labels < %s | llvm-objdump -d - | FileCheck %s --check-prefix=SAVETEMP
 

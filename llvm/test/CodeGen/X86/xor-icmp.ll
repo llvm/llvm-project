@@ -61,11 +61,11 @@ define i32 @t2(i32 %x, i32 %y) nounwind ssp {
 ; X64-NEXT:    testl %esi, %esi
 ; X64-NEXT:    sete %cl
 ; X64-NEXT:    cmpb %al, %cl
-; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # %bb.2: # %bb
+; X64-NEXT:    je .LBB1_2
+; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    jmp foo # TAILCALL
-; X64-NEXT:  .LBB1_1: # %return
+; X64-NEXT:  .LBB1_2: # %return
 ; X64-NEXT:    retq
 
 entry:

@@ -92,71 +92,71 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; SSE-NEXT:    packsswb %xmm2, %xmm2
 ; SSE-NEXT:    pmovmskb %xmm2, %eax
 ; SSE-NEXT:    testb $1, %al
-; SSE-NEXT:    jne .LBB3_1
-; SSE-NEXT:  # %bb.2: # %else
+; SSE-NEXT:    jne .LBB3_10
+; SSE-NEXT:  # %bb.1: # %else
 ; SSE-NEXT:    testb $2, %al
-; SSE-NEXT:    jne .LBB3_3
-; SSE-NEXT:  .LBB3_4: # %else2
-; SSE-NEXT:    testb $4, %al
-; SSE-NEXT:    jne .LBB3_5
-; SSE-NEXT:  .LBB3_6: # %else4
-; SSE-NEXT:    testb $8, %al
-; SSE-NEXT:    jne .LBB3_7
-; SSE-NEXT:  .LBB3_8: # %else6
-; SSE-NEXT:    testb $16, %al
-; SSE-NEXT:    jne .LBB3_9
-; SSE-NEXT:  .LBB3_10: # %else8
-; SSE-NEXT:    testb $32, %al
 ; SSE-NEXT:    jne .LBB3_11
-; SSE-NEXT:  .LBB3_12: # %else10
-; SSE-NEXT:    testb $64, %al
+; SSE-NEXT:  .LBB3_2: # %else2
+; SSE-NEXT:    testb $4, %al
+; SSE-NEXT:    jne .LBB3_12
+; SSE-NEXT:  .LBB3_3: # %else4
+; SSE-NEXT:    testb $8, %al
 ; SSE-NEXT:    jne .LBB3_13
-; SSE-NEXT:  .LBB3_14: # %else12
+; SSE-NEXT:  .LBB3_4: # %else6
+; SSE-NEXT:    testb $16, %al
+; SSE-NEXT:    jne .LBB3_14
+; SSE-NEXT:  .LBB3_5: # %else8
+; SSE-NEXT:    testb $32, %al
+; SSE-NEXT:    jne .LBB3_15
+; SSE-NEXT:  .LBB3_6: # %else10
+; SSE-NEXT:    testb $64, %al
+; SSE-NEXT:    jne .LBB3_16
+; SSE-NEXT:  .LBB3_7: # %else12
 ; SSE-NEXT:    testb $-128, %al
-; SSE-NEXT:    je .LBB3_16
-; SSE-NEXT:  .LBB3_15: # %cond.store13
+; SSE-NEXT:    je .LBB3_9
+; SSE-NEXT:  .LBB3_8: # %cond.store13
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE-NEXT:    movd %xmm0, 28
-; SSE-NEXT:  .LBB3_16: # %else14
+; SSE-NEXT:  .LBB3_9: # %else14
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB3_1: # %cond.store
+; SSE-NEXT:  .LBB3_10: # %cond.store
 ; SSE-NEXT:    movd %xmm0, 0
 ; SSE-NEXT:    testb $2, %al
-; SSE-NEXT:    je .LBB3_4
-; SSE-NEXT:  .LBB3_3: # %cond.store1
+; SSE-NEXT:    je .LBB3_2
+; SSE-NEXT:  .LBB3_11: # %cond.store1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
 ; SSE-NEXT:    movd %xmm2, 4
 ; SSE-NEXT:    testb $4, %al
-; SSE-NEXT:    je .LBB3_6
-; SSE-NEXT:  .LBB3_5: # %cond.store3
+; SSE-NEXT:    je .LBB3_3
+; SSE-NEXT:  .LBB3_12: # %cond.store3
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
 ; SSE-NEXT:    movd %xmm2, 8
 ; SSE-NEXT:    testb $8, %al
-; SSE-NEXT:    je .LBB3_8
-; SSE-NEXT:  .LBB3_7: # %cond.store5
+; SSE-NEXT:    je .LBB3_4
+; SSE-NEXT:  .LBB3_13: # %cond.store5
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE-NEXT:    movd %xmm0, 12
 ; SSE-NEXT:    testb $16, %al
-; SSE-NEXT:    je .LBB3_10
-; SSE-NEXT:  .LBB3_9: # %cond.store7
+; SSE-NEXT:    je .LBB3_5
+; SSE-NEXT:  .LBB3_14: # %cond.store7
 ; SSE-NEXT:    movd %xmm1, 16
 ; SSE-NEXT:    testb $32, %al
-; SSE-NEXT:    je .LBB3_12
-; SSE-NEXT:  .LBB3_11: # %cond.store9
+; SSE-NEXT:    je .LBB3_6
+; SSE-NEXT:  .LBB3_15: # %cond.store9
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE-NEXT:    movd %xmm0, 20
 ; SSE-NEXT:    testb $64, %al
-; SSE-NEXT:    je .LBB3_14
-; SSE-NEXT:  .LBB3_13: # %cond.store11
+; SSE-NEXT:    je .LBB3_7
+; SSE-NEXT:  .LBB3_16: # %cond.store11
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE-NEXT:    movd %xmm0, 24
 ; SSE-NEXT:    testb $-128, %al
-; SSE-NEXT:    jne .LBB3_15
-; SSE-NEXT:    jmp .LBB3_16
+; SSE-NEXT:    jne .LBB3_8
+; SSE-NEXT:    jmp .LBB3_9
 ;
 ; AVX1-LABEL: zero_k:
 ; AVX1:       # %bb.0:

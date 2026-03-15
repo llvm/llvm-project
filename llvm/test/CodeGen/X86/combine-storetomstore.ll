@@ -142,11 +142,11 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; AVX-NEXT:    cmovnel %ecx, %eax
 ; AVX-NEXT:    vpextrb $8, %xmm1, %ecx
 ; AVX-NEXT:    testb $1, %cl
-; AVX-NEXT:    jne .LBB4_1
-; AVX-NEXT:  # %bb.2:
+; AVX-NEXT:    jne .LBB4_2
+; AVX-NEXT:  # %bb.1:
 ; AVX-NEXT:    movl 4(%rdi), %ecx
 ; AVX-NEXT:    jmp .LBB4_3
-; AVX-NEXT:  .LBB4_1:
+; AVX-NEXT:  .LBB4_2:
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vpextrw $0, %xmm2, %ecx
 ; AVX-NEXT:  .LBB4_3:
@@ -156,11 +156,11 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; AVX-NEXT:    cmovnel %edx, %esi
 ; AVX-NEXT:    vmovd %xmm1, %edx
 ; AVX-NEXT:    testb $1, %dl
-; AVX-NEXT:    jne .LBB4_4
-; AVX-NEXT:  # %bb.5:
+; AVX-NEXT:    jne .LBB4_5
+; AVX-NEXT:  # %bb.4:
 ; AVX-NEXT:    movl (%rdi), %edx
 ; AVX-NEXT:    jmp .LBB4_6
-; AVX-NEXT:  .LBB4_4:
+; AVX-NEXT:  .LBB4_5:
 ; AVX-NEXT:    vpextrw $0, %xmm0, %edx
 ; AVX-NEXT:  .LBB4_6:
 ; AVX-NEXT:    movw %dx, (%rdi)
@@ -181,11 +181,11 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; AVX2-NEXT:    cmovnel %ecx, %eax
 ; AVX2-NEXT:    vpextrb $8, %xmm1, %ecx
 ; AVX2-NEXT:    testb $1, %cl
-; AVX2-NEXT:    jne .LBB4_1
-; AVX2-NEXT:  # %bb.2:
+; AVX2-NEXT:    jne .LBB4_2
+; AVX2-NEXT:  # %bb.1:
 ; AVX2-NEXT:    movl 4(%rdi), %ecx
 ; AVX2-NEXT:    jmp .LBB4_3
-; AVX2-NEXT:  .LBB4_1:
+; AVX2-NEXT:  .LBB4_2:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vpextrw $0, %xmm2, %ecx
 ; AVX2-NEXT:  .LBB4_3:
@@ -195,11 +195,11 @@ define void @test_masked_store_success_v4f16(<4 x half> %x, ptr %ptr, <4 x i1> %
 ; AVX2-NEXT:    cmovnel %edx, %esi
 ; AVX2-NEXT:    vmovd %xmm1, %edx
 ; AVX2-NEXT:    testb $1, %dl
-; AVX2-NEXT:    jne .LBB4_4
-; AVX2-NEXT:  # %bb.5:
+; AVX2-NEXT:    jne .LBB4_5
+; AVX2-NEXT:  # %bb.4:
 ; AVX2-NEXT:    movl (%rdi), %edx
 ; AVX2-NEXT:    jmp .LBB4_6
-; AVX2-NEXT:  .LBB4_4:
+; AVX2-NEXT:  .LBB4_5:
 ; AVX2-NEXT:    vpextrw $0, %xmm0, %edx
 ; AVX2-NEXT:  .LBB4_6:
 ; AVX2-NEXT:    movw %dx, (%rdi)

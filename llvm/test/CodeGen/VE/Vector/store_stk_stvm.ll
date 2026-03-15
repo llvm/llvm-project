@@ -146,8 +146,8 @@ define fastcc void @store__vm256_stk_big_fit(<256 x i1> noundef %0, i64 noundef 
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -2147483648(, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB1_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -156,7 +156,7 @@ define fastcc void @store__vm256_stk_big_fit(<256 x i1> noundef %0, i64 noundef 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    svm %s16, %vm1, 0
 ; CHECK-NEXT:    st %s16, 2147483616(, %s11)
 ; CHECK-NEXT:    svm %s16, %vm1, 1
@@ -167,11 +167,11 @@ define fastcc void @store__vm256_stk_big_fit(<256 x i1> noundef %0, i64 noundef 
 ; CHECK-NEXT:    st %s16, 2147483640(, %s11)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, 2147483424
-; CHECK-NEXT:  .LBB1_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB1_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st %s0, 192(%s1, %s11)
 ; CHECK-NEXT:    lea %s1, 8(, %s1)
-; CHECK-NEXT:    brne.l %s1, %s2, .LBB1_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s1, %s2, .LBB1_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -208,8 +208,8 @@ define fastcc void @store__vm256_stk_big(<256 x i1> noundef %0, i64 noundef %1) 
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB2_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -218,7 +218,7 @@ define fastcc void @store__vm256_stk_big(<256 x i1> noundef %0, i64 noundef %1) 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_4:
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    lea %s13, -2147483648
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -232,11 +232,11 @@ define fastcc void @store__vm256_stk_big(<256 x i1> noundef %0, i64 noundef %1) 
 ; CHECK-NEXT:    st %s16, 24(, %s13)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, 2147483432
-; CHECK-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB2_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st %s0, 216(%s1, %s11)
 ; CHECK-NEXT:    lea %s1, 8(, %s1)
-; CHECK-NEXT:    brne.l %s1, %s2, .LBB2_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s1, %s2, .LBB2_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -273,8 +273,8 @@ define fastcc void @store__vm256_stk_big2(<256 x i1> noundef %0, i64 noundef %1)
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (59)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB3_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB3_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -283,7 +283,7 @@ define fastcc void @store__vm256_stk_big2(<256 x i1> noundef %0, i64 noundef %1)
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -298,11 +298,11 @@ define fastcc void @store__vm256_stk_big2(<256 x i1> noundef %0, i64 noundef %1)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, -2147483648
 ; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB3_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st %s0, 192(%s1, %s11)
 ; CHECK-NEXT:    lea %s1, 8(, %s1)
-; CHECK-NEXT:    brne.l %s1, %s2, .LBB3_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s1, %s2, .LBB3_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -726,8 +726,8 @@ define fastcc void @store__vm512_stk_big(<512 x i1> noundef %0, i64 noundef %1) 
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB10_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB10_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -736,7 +736,7 @@ define fastcc void @store__vm512_stk_big(<512 x i1> noundef %0, i64 noundef %1) 
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB10_4:
+; CHECK-NEXT:  .LBB10_2:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -758,11 +758,11 @@ define fastcc void @store__vm512_stk_big(<512 x i1> noundef %0, i64 noundef %1) 
 ; CHECK-NEXT:    st %s16, 56(, %s13)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, 2147483640
-; CHECK-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB10_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st %s0, 200(%s1, %s11)
 ; CHECK-NEXT:    lea %s1, 8(, %s1)
-; CHECK-NEXT:    brne.l %s1, %s2, .LBB10_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s1, %s2, .LBB10_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)
@@ -799,8 +799,8 @@ define fastcc void @store__vm512_stk_big2(<512 x i1> noundef %0, i64 noundef %1)
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s11, -1(%s13, %s11)
 ; CHECK-NEXT:    and %s11, %s11, (58)1
-; CHECK-NEXT:    brge.l %s11, %s8, .LBB11_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    brge.l %s11, %s8, .LBB11_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -809,7 +809,7 @@ define fastcc void @store__vm512_stk_big2(<512 x i1> noundef %0, i64 noundef %1)
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB11_4:
+; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    lea %s13, -2147483456
 ; CHECK-NEXT:    and %s13, %s13, (32)0
 ; CHECK-NEXT:    lea.sl %s13, (%s11, %s13)
@@ -832,11 +832,11 @@ define fastcc void @store__vm512_stk_big2(<512 x i1> noundef %0, i64 noundef %1)
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    lea %s2, -2147483648
 ; CHECK-NEXT:    and %s2, %s2, (32)0
-; CHECK-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st %s0, 192(%s1, %s11)
 ; CHECK-NEXT:    lea %s1, 8(, %s1)
-; CHECK-NEXT:    brne.l %s1, %s2, .LBB11_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    brne.l %s1, %s2, .LBB11_3
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    or %s11, 0, %s9
 ; CHECK-NEXT:    ld %s10, 8(, %s11)
 ; CHECK-NEXT:    ld %s9, (, %s11)

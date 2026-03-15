@@ -938,13 +938,13 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2-LABEL: pr63017_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB16_1
-; SSE2-NEXT:  # %bb.2: # %cond.load
+; SSE2-NEXT:    jne .LBB16_2
+; SSE2-NEXT:  # %bb.1: # %cond.load
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    jmp .LBB16_3
-; SSE2-NEXT:  .LBB16_1:
+; SSE2-NEXT:  .LBB16_2:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:  .LBB16_3:
 ; SSE2-NEXT:    pushq %r14

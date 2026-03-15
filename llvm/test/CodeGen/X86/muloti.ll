@@ -52,14 +52,14 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    xorq %rcx, %rdx
 ; CHECK-NEXT:    xorq %rax, %rcx
 ; CHECK-NEXT:    orq %rdx, %rcx
-; CHECK-NEXT:    jne LBB0_1
-; CHECK-NEXT:  ## %bb.2: ## %nooverflow
+; CHECK-NEXT:    jne LBB0_2
+; CHECK-NEXT:  ## %bb.1: ## %nooverflow
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %rdi, %rdx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  LBB0_1: ## %overflow
+; CHECK-NEXT:  LBB0_2: ## %overflow
 ; CHECK-NEXT:    ud2
 entry:
   %tmp16 = zext i64 %a.coerce0 to i128

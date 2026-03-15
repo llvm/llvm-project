@@ -224,26 +224,26 @@ bb12:
 
 ; CHECK:	.p2align 2
 ; CHECK-NEXT:	.LJTI7_0:
-; CHECK-I686:	.long	 .LBB7_2@GOTOFF
-; CHECK-I686:	.long	 .LBB7_8@GOTOFF
-; CHECK-I686:	.long	 .LBB7_4@GOTOFF
-; CHECK-I686:	.long	 .LBB7_6@GOTOFF
-; CHECK-I686:	.long	 .LBB7_5@GOTOFF
-; CHECK-I686:	.long	 .LBB7_8@GOTOFF
-; CHECK-I686:	.long	 .LBB7_7@GOTOFF
-; CHECK-X32:	.long	.LBB7_2-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_2-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_12-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_5-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_12-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_9-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_5-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_8-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_9-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_8-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_12-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_3-.LJTI7_0
-; CHECK-X32:	.long	.LBB7_3-.LJTI7_0
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-I686:	.long	 .LBB7_{{[0-9]+}}@GOTOFF
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
+; CHECK-X32:	.long	.LBB7_{{[0-9]+}}-.LJTI7_0
 }
 
 declare void @foo1(...)

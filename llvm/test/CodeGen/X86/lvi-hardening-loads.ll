@@ -23,7 +23,7 @@ entry:
 ; X64-NEXT:      movl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:      lfence
 ; X64-NEXT:      movl $0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:      jmp .LBB0_1
+; X64-NEXT:      jmp .LBB0_2
 
 ; X64-NOOPT: # %bb.0: # %entry
 ; X64-NOOPT-NEXT:      lfence
@@ -41,7 +41,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   %cmp = icmp slt i32 %0, %1
   br i1 %cmp, label %for.body, label %for.end
 
-; X64: .LBB0_1: # %for.cond
+; X64: .LBB0_2: # %for.cond
 ; X64-NEXT:      # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-ALL-NEXT:  lfence
@@ -64,8 +64,8 @@ for.body:                                         ; preds = %for.cond
   %cmp1 = icmp eq i32 %rem, 0
   br i1 %cmp1, label %if.then, label %if.end
 
-; X64: # %bb.2: # %for.body
-; X64-NEXT: # in Loop: Header=BB0_1 Depth=1
+; X64: # %bb.3: # %for.body
+; X64-NEXT: # in Loop: Header=BB0_2 Depth=1
 ; X64-NEXT:      movl -{{[0-9]+}}(%rsp), %eax
 ; X64-ALL-NEXT:  lfence
 ; X64-NEXT:      movl %eax, %ecx
@@ -73,7 +73,7 @@ for.body:                                         ; preds = %for.cond
 ; X64-NEXT:      addl %eax, %ecx
 ; X64-NEXT:      andl $-2, %ecx
 ; X64-NEXT:      cmpl %ecx, %eax
-; X64-NEXT:      jne .LBB0_4
+; X64-NEXT:      jne .LBB0_1
 
 ; X64-NOOPT: # %bb.2: # %for.body
 ; X64-NOOPT-NEXT: # in Loop: Header=BB0_1 Depth=1
@@ -96,8 +96,8 @@ if.then:                                          ; preds = %for.body
   store i32 %6, ptr %ret_val, align 4
   br label %if.end
 
-; X64: # %bb.3: # %if.then
-; X64-NEXT: # in Loop: Header=BB0_1 Depth=1
+; X64: # %bb.4: # %if.then
+; X64-NEXT: # in Loop: Header=BB0_2 Depth=1
 ; X64-NEXT:      movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:      lfence
 ; X64-NEXT:      movslq -{{[0-9]+}}(%rsp), %rcx
@@ -106,7 +106,7 @@ if.then:                                          ; preds = %for.body
 ; X64-NEXT:      lfence
 ; X64-NEXT:      movl (%rax), %eax
 ; X64-NEXT:      movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:      jmp .LBB0_4
+; X64-NEXT:      jmp .LBB0_1
 
 ; X64-NOOPT: # %bb.3: # %if.then
 ; X64-NOOPT-NEXT: # in Loop: Header=BB0_1 Depth=1

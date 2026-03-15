@@ -16,11 +16,11 @@ define i32 @implicit_null_check(ptr %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #noautopadding
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    movl (%rdi), %eax # on-fault: .LBB0_1
+; CHECK-NEXT:    movl (%rdi), %eax # on-fault: .LBB0_2
 ; CHECK-NEXT:    #autopadding
-; CHECK-NEXT:  # %bb.2: # %not_null
+; CHECK-NEXT:  # %bb.1: # %not_null
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %is_null
+; CHECK-NEXT:  .LBB0_2: # %is_null
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retq
 

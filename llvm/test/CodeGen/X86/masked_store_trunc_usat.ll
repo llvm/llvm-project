@@ -90,33 +90,33 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:  .LBB0_8: # %else6
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
 ; SSE2-NEXT:    testb $16, %al
-; SSE2-NEXT:    jne .LBB0_9
-; SSE2-NEXT:  # %bb.10: # %else8
-; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    jne .LBB0_11
-; SSE2-NEXT:  .LBB0_12: # %else10
-; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    jne .LBB0_13
-; SSE2-NEXT:  .LBB0_14: # %else12
-; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:  # %bb.9: # %else8
+; SSE2-NEXT:    testb $32, %al
+; SSE2-NEXT:    jne .LBB0_14
+; SSE2-NEXT:  .LBB0_10: # %else10
+; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    jne .LBB0_15
-; SSE2-NEXT:  .LBB0_16: # %else14
+; SSE2-NEXT:  .LBB0_11: # %else12
+; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:    jne .LBB0_16
+; SSE2-NEXT:  .LBB0_12: # %else14
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB0_9: # %cond.store7
+; SSE2-NEXT:  .LBB0_13: # %cond.store7
 ; SSE2-NEXT:    movss %xmm2, 16(%rdi)
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB0_12
-; SSE2-NEXT:  .LBB0_11: # %cond.store9
+; SSE2-NEXT:    je .LBB0_10
+; SSE2-NEXT:  .LBB0_14: # %cond.store9
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, 20(%rdi)
 ; SSE2-NEXT:    testb $64, %al
-; SSE2-NEXT:    je .LBB0_14
-; SSE2-NEXT:  .LBB0_13: # %cond.store11
+; SSE2-NEXT:    je .LBB0_11
+; SSE2-NEXT:  .LBB0_15: # %cond.store11
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 24(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB0_16
-; SSE2-NEXT:  .LBB0_15: # %cond.store13
+; SSE2-NEXT:    je .LBB0_12
+; SSE2-NEXT:  .LBB0_16: # %cond.store13
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, 28(%rdi)
 ; SSE2-NEXT:    retq
@@ -158,59 +158,59 @@ define void @truncstore_v8i64_v8i32(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm4, %eax
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB0_1
-; SSE4-NEXT:  # %bb.2: # %else
+; SSE4-NEXT:    jne .LBB0_10
+; SSE4-NEXT:  # %bb.1: # %else
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB0_3
-; SSE4-NEXT:  .LBB0_4: # %else2
+; SSE4-NEXT:    jne .LBB0_11
+; SSE4-NEXT:  .LBB0_2: # %else2
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB0_5
-; SSE4-NEXT:  .LBB0_6: # %else4
+; SSE4-NEXT:    jne .LBB0_12
+; SSE4-NEXT:  .LBB0_3: # %else4
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB0_8
-; SSE4-NEXT:  .LBB0_7: # %cond.store5
+; SSE4-NEXT:    je .LBB0_5
+; SSE4-NEXT:  .LBB0_4: # %cond.store5
 ; SSE4-NEXT:    extractps $3, %xmm1, 12(%rdi)
-; SSE4-NEXT:  .LBB0_8: # %else6
+; SSE4-NEXT:  .LBB0_5: # %else6
 ; SSE4-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm6[0,2]
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    jne .LBB0_9
-; SSE4-NEXT:  # %bb.10: # %else8
-; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    jne .LBB0_11
-; SSE4-NEXT:  .LBB0_12: # %else10
-; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB0_13
-; SSE4-NEXT:  .LBB0_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:  # %bb.6: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB0_14
+; SSE4-NEXT:  .LBB0_7: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB0_15
-; SSE4-NEXT:  .LBB0_16: # %else14
+; SSE4-NEXT:  .LBB0_8: # %else12
+; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:    jne .LBB0_16
+; SSE4-NEXT:  .LBB0_9: # %else14
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB0_1: # %cond.store
+; SSE4-NEXT:  .LBB0_10: # %cond.store
 ; SSE4-NEXT:    movss %xmm1, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB0_4
-; SSE4-NEXT:  .LBB0_3: # %cond.store1
+; SSE4-NEXT:    je .LBB0_2
+; SSE4-NEXT:  .LBB0_11: # %cond.store1
 ; SSE4-NEXT:    extractps $1, %xmm1, 4(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB0_6
-; SSE4-NEXT:  .LBB0_5: # %cond.store3
+; SSE4-NEXT:    je .LBB0_3
+; SSE4-NEXT:  .LBB0_12: # %cond.store3
 ; SSE4-NEXT:    extractps $2, %xmm1, 8(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB0_7
-; SSE4-NEXT:    jmp .LBB0_8
-; SSE4-NEXT:  .LBB0_9: # %cond.store7
+; SSE4-NEXT:    jne .LBB0_4
+; SSE4-NEXT:    jmp .LBB0_5
+; SSE4-NEXT:  .LBB0_13: # %cond.store7
 ; SSE4-NEXT:    movss %xmm8, 16(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB0_12
-; SSE4-NEXT:  .LBB0_11: # %cond.store9
+; SSE4-NEXT:    je .LBB0_7
+; SSE4-NEXT:  .LBB0_14: # %cond.store9
 ; SSE4-NEXT:    extractps $1, %xmm8, 20(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB0_14
-; SSE4-NEXT:  .LBB0_13: # %cond.store11
+; SSE4-NEXT:    je .LBB0_8
+; SSE4-NEXT:  .LBB0_15: # %cond.store11
 ; SSE4-NEXT:    extractps $2, %xmm8, 24(%rdi)
 ; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB0_16
-; SSE4-NEXT:  .LBB0_15: # %cond.store13
+; SSE4-NEXT:    je .LBB0_9
+; SSE4-NEXT:  .LBB0_16: # %cond.store13
 ; SSE4-NEXT:    extractps $3, %xmm8, 28(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -375,66 +375,66 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB1_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB1_3
-; SSE2-NEXT:  .LBB1_4: # %else2
-; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB1_5
-; SSE2-NEXT:  .LBB1_6: # %else4
-; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB1_7
-; SSE2-NEXT:  .LBB1_8: # %else6
-; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    jne .LBB1_9
-; SSE2-NEXT:  .LBB1_10: # %else8
-; SSE2-NEXT:    testb $32, %al
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB1_10
+; SSE2-NEXT:  .LBB1_2: # %else2
+; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB1_11
-; SSE2-NEXT:  .LBB1_12: # %else10
-; SSE2-NEXT:    testb $64, %al
+; SSE2-NEXT:  .LBB1_3: # %else4
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    jne .LBB1_12
+; SSE2-NEXT:  .LBB1_4: # %else6
+; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    jne .LBB1_13
-; SSE2-NEXT:  .LBB1_14: # %else12
-; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:  .LBB1_5: # %else8
+; SSE2-NEXT:    testb $32, %al
+; SSE2-NEXT:    jne .LBB1_14
+; SSE2-NEXT:  .LBB1_6: # %else10
+; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    jne .LBB1_15
-; SSE2-NEXT:  .LBB1_16: # %else14
+; SSE2-NEXT:  .LBB1_7: # %else12
+; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:    jne .LBB1_16
+; SSE2-NEXT:  .LBB1_8: # %else14
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB1_1: # %cond.store
+; SSE2-NEXT:  .LBB1_9: # %cond.store
 ; SSE2-NEXT:    movd %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB1_4
-; SSE2-NEXT:  .LBB1_3: # %cond.store1
+; SSE2-NEXT:    je .LBB1_2
+; SSE2-NEXT:  .LBB1_10: # %cond.store1
 ; SSE2-NEXT:    pextrw $1, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 2(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB1_6
-; SSE2-NEXT:  .LBB1_5: # %cond.store3
+; SSE2-NEXT:    je .LBB1_3
+; SSE2-NEXT:  .LBB1_11: # %cond.store3
 ; SSE2-NEXT:    pextrw $2, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 4(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB1_8
-; SSE2-NEXT:  .LBB1_7: # %cond.store5
+; SSE2-NEXT:    je .LBB1_4
+; SSE2-NEXT:  .LBB1_12: # %cond.store5
 ; SSE2-NEXT:    pextrw $3, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 6(%rdi)
 ; SSE2-NEXT:    testb $16, %al
-; SSE2-NEXT:    je .LBB1_10
-; SSE2-NEXT:  .LBB1_9: # %cond.store7
+; SSE2-NEXT:    je .LBB1_5
+; SSE2-NEXT:  .LBB1_13: # %cond.store7
 ; SSE2-NEXT:    pextrw $4, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 8(%rdi)
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB1_12
-; SSE2-NEXT:  .LBB1_11: # %cond.store9
+; SSE2-NEXT:    je .LBB1_6
+; SSE2-NEXT:  .LBB1_14: # %cond.store9
 ; SSE2-NEXT:    pextrw $5, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 10(%rdi)
 ; SSE2-NEXT:    testb $64, %al
-; SSE2-NEXT:    je .LBB1_14
-; SSE2-NEXT:  .LBB1_13: # %cond.store11
+; SSE2-NEXT:    je .LBB1_7
+; SSE2-NEXT:  .LBB1_15: # %cond.store11
 ; SSE2-NEXT:    pextrw $6, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 12(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB1_16
-; SSE2-NEXT:  .LBB1_15: # %cond.store13
+; SSE2-NEXT:    je .LBB1_8
+; SSE2-NEXT:  .LBB1_16: # %cond.store13
 ; SSE2-NEXT:    pextrw $7, %xmm1, %eax
 ; SSE2-NEXT:    movw %ax, 14(%rdi)
 ; SSE2-NEXT:    retq
@@ -478,59 +478,59 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm4, %eax
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB1_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB1_3
-; SSE4-NEXT:  .LBB1_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB1_5
-; SSE4-NEXT:  .LBB1_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB1_7
-; SSE4-NEXT:  .LBB1_8: # %else6
-; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB1_9
-; SSE4-NEXT:  .LBB1_10: # %else8
-; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB1_10
+; SSE4-NEXT:  .LBB1_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB1_11
-; SSE4-NEXT:  .LBB1_12: # %else10
-; SSE4-NEXT:    testb $64, %al
+; SSE4-NEXT:  .LBB1_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB1_12
+; SSE4-NEXT:  .LBB1_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB1_13
-; SSE4-NEXT:  .LBB1_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:  .LBB1_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB1_14
+; SSE4-NEXT:  .LBB1_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB1_15
-; SSE4-NEXT:  .LBB1_16: # %else14
+; SSE4-NEXT:  .LBB1_7: # %else12
+; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:    jne .LBB1_16
+; SSE4-NEXT:  .LBB1_8: # %else14
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB1_1: # %cond.store
+; SSE4-NEXT:  .LBB1_9: # %cond.store
 ; SSE4-NEXT:    pextrw $0, %xmm1, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB1_4
-; SSE4-NEXT:  .LBB1_3: # %cond.store1
+; SSE4-NEXT:    je .LBB1_2
+; SSE4-NEXT:  .LBB1_10: # %cond.store1
 ; SSE4-NEXT:    pextrw $1, %xmm1, 2(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB1_6
-; SSE4-NEXT:  .LBB1_5: # %cond.store3
+; SSE4-NEXT:    je .LBB1_3
+; SSE4-NEXT:  .LBB1_11: # %cond.store3
 ; SSE4-NEXT:    pextrw $2, %xmm1, 4(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB1_8
-; SSE4-NEXT:  .LBB1_7: # %cond.store5
+; SSE4-NEXT:    je .LBB1_4
+; SSE4-NEXT:  .LBB1_12: # %cond.store5
 ; SSE4-NEXT:    pextrw $3, %xmm1, 6(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB1_10
-; SSE4-NEXT:  .LBB1_9: # %cond.store7
+; SSE4-NEXT:    je .LBB1_5
+; SSE4-NEXT:  .LBB1_13: # %cond.store7
 ; SSE4-NEXT:    pextrw $4, %xmm1, 8(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB1_12
-; SSE4-NEXT:  .LBB1_11: # %cond.store9
+; SSE4-NEXT:    je .LBB1_6
+; SSE4-NEXT:  .LBB1_14: # %cond.store9
 ; SSE4-NEXT:    pextrw $5, %xmm1, 10(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB1_14
-; SSE4-NEXT:  .LBB1_13: # %cond.store11
+; SSE4-NEXT:    je .LBB1_7
+; SSE4-NEXT:  .LBB1_15: # %cond.store11
 ; SSE4-NEXT:    pextrw $6, %xmm1, 12(%rdi)
 ; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB1_16
-; SSE4-NEXT:  .LBB1_15: # %cond.store13
+; SSE4-NEXT:    je .LBB1_8
+; SSE4-NEXT:  .LBB1_16: # %cond.store13
 ; SSE4-NEXT:    pextrw $7, %xmm1, 14(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -567,60 +567,60 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %ymm1, %eax
 ; AVX1-NEXT:    notl %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB1_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB1_3
-; AVX1-NEXT:  .LBB1_4: # %else2
-; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB1_5
-; AVX1-NEXT:  .LBB1_6: # %else4
-; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB1_7
-; AVX1-NEXT:  .LBB1_8: # %else6
-; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB1_9
-; AVX1-NEXT:  .LBB1_10: # %else8
-; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB1_10
+; AVX1-NEXT:  .LBB1_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB1_11
-; AVX1-NEXT:  .LBB1_12: # %else10
-; AVX1-NEXT:    testb $64, %al
+; AVX1-NEXT:  .LBB1_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB1_12
+; AVX1-NEXT:  .LBB1_4: # %else6
+; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB1_13
-; AVX1-NEXT:  .LBB1_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:  .LBB1_5: # %else8
+; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:    jne .LBB1_14
+; AVX1-NEXT:  .LBB1_6: # %else10
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB1_15
-; AVX1-NEXT:  .LBB1_16: # %else14
+; AVX1-NEXT:  .LBB1_7: # %else12
+; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:    jne .LBB1_16
+; AVX1-NEXT:  .LBB1_8: # %else14
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB1_1: # %cond.store
+; AVX1-NEXT:  .LBB1_9: # %cond.store
 ; AVX1-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB1_4
-; AVX1-NEXT:  .LBB1_3: # %cond.store1
+; AVX1-NEXT:    je .LBB1_2
+; AVX1-NEXT:  .LBB1_10: # %cond.store1
 ; AVX1-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB1_6
-; AVX1-NEXT:  .LBB1_5: # %cond.store3
+; AVX1-NEXT:    je .LBB1_3
+; AVX1-NEXT:  .LBB1_11: # %cond.store3
 ; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB1_8
-; AVX1-NEXT:  .LBB1_7: # %cond.store5
+; AVX1-NEXT:    je .LBB1_4
+; AVX1-NEXT:  .LBB1_12: # %cond.store5
 ; AVX1-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB1_10
-; AVX1-NEXT:  .LBB1_9: # %cond.store7
+; AVX1-NEXT:    je .LBB1_5
+; AVX1-NEXT:  .LBB1_13: # %cond.store7
 ; AVX1-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB1_12
-; AVX1-NEXT:  .LBB1_11: # %cond.store9
+; AVX1-NEXT:    je .LBB1_6
+; AVX1-NEXT:  .LBB1_14: # %cond.store9
 ; AVX1-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB1_14
-; AVX1-NEXT:  .LBB1_13: # %cond.store11
+; AVX1-NEXT:    je .LBB1_7
+; AVX1-NEXT:  .LBB1_15: # %cond.store11
 ; AVX1-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB1_16
-; AVX1-NEXT:  .LBB1_15: # %cond.store13
+; AVX1-NEXT:    je .LBB1_8
+; AVX1-NEXT:  .LBB1_16: # %cond.store13
 ; AVX1-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -645,60 +645,60 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
 ; AVX2-NEXT:    notl %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB1_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB1_3
-; AVX2-NEXT:  .LBB1_4: # %else2
-; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB1_5
-; AVX2-NEXT:  .LBB1_6: # %else4
-; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB1_7
-; AVX2-NEXT:  .LBB1_8: # %else6
-; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB1_9
-; AVX2-NEXT:  .LBB1_10: # %else8
-; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB1_10
+; AVX2-NEXT:  .LBB1_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB1_11
-; AVX2-NEXT:  .LBB1_12: # %else10
-; AVX2-NEXT:    testb $64, %al
+; AVX2-NEXT:  .LBB1_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB1_12
+; AVX2-NEXT:  .LBB1_4: # %else6
+; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB1_13
-; AVX2-NEXT:  .LBB1_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:  .LBB1_5: # %else8
+; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:    jne .LBB1_14
+; AVX2-NEXT:  .LBB1_6: # %else10
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB1_15
-; AVX2-NEXT:  .LBB1_16: # %else14
+; AVX2-NEXT:  .LBB1_7: # %else12
+; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:    jne .LBB1_16
+; AVX2-NEXT:  .LBB1_8: # %else14
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB1_1: # %cond.store
+; AVX2-NEXT:  .LBB1_9: # %cond.store
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB1_4
-; AVX2-NEXT:  .LBB1_3: # %cond.store1
+; AVX2-NEXT:    je .LBB1_2
+; AVX2-NEXT:  .LBB1_10: # %cond.store1
 ; AVX2-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB1_6
-; AVX2-NEXT:  .LBB1_5: # %cond.store3
+; AVX2-NEXT:    je .LBB1_3
+; AVX2-NEXT:  .LBB1_11: # %cond.store3
 ; AVX2-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB1_8
-; AVX2-NEXT:  .LBB1_7: # %cond.store5
+; AVX2-NEXT:    je .LBB1_4
+; AVX2-NEXT:  .LBB1_12: # %cond.store5
 ; AVX2-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB1_10
-; AVX2-NEXT:  .LBB1_9: # %cond.store7
+; AVX2-NEXT:    je .LBB1_5
+; AVX2-NEXT:  .LBB1_13: # %cond.store7
 ; AVX2-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB1_12
-; AVX2-NEXT:  .LBB1_11: # %cond.store9
+; AVX2-NEXT:    je .LBB1_6
+; AVX2-NEXT:  .LBB1_14: # %cond.store9
 ; AVX2-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB1_14
-; AVX2-NEXT:  .LBB1_13: # %cond.store11
+; AVX2-NEXT:    je .LBB1_7
+; AVX2-NEXT:  .LBB1_15: # %cond.store11
 ; AVX2-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB1_16
-; AVX2-NEXT:  .LBB1_15: # %cond.store13
+; AVX2-NEXT:    je .LBB1_8
+; AVX2-NEXT:  .LBB1_16: # %cond.store13
 ; AVX2-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -710,60 +710,60 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusqw %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB1_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB1_3
-; AVX512F-NEXT:  .LBB1_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB1_5
-; AVX512F-NEXT:  .LBB1_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB1_7
-; AVX512F-NEXT:  .LBB1_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB1_9
-; AVX512F-NEXT:  .LBB1_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB1_10
+; AVX512F-NEXT:  .LBB1_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB1_11
-; AVX512F-NEXT:  .LBB1_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
+; AVX512F-NEXT:  .LBB1_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB1_12
+; AVX512F-NEXT:  .LBB1_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB1_13
-; AVX512F-NEXT:  .LBB1_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:  .LBB1_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB1_14
+; AVX512F-NEXT:  .LBB1_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB1_15
-; AVX512F-NEXT:  .LBB1_16: # %else14
+; AVX512F-NEXT:  .LBB1_7: # %else12
+; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:    jne .LBB1_16
+; AVX512F-NEXT:  .LBB1_8: # %else14
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB1_1: # %cond.store
+; AVX512F-NEXT:  .LBB1_9: # %cond.store
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB1_4
-; AVX512F-NEXT:  .LBB1_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB1_2
+; AVX512F-NEXT:  .LBB1_10: # %cond.store1
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB1_6
-; AVX512F-NEXT:  .LBB1_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB1_3
+; AVX512F-NEXT:  .LBB1_11: # %cond.store3
 ; AVX512F-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB1_8
-; AVX512F-NEXT:  .LBB1_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB1_4
+; AVX512F-NEXT:  .LBB1_12: # %cond.store5
 ; AVX512F-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB1_10
-; AVX512F-NEXT:  .LBB1_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB1_5
+; AVX512F-NEXT:  .LBB1_13: # %cond.store7
 ; AVX512F-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB1_12
-; AVX512F-NEXT:  .LBB1_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB1_6
+; AVX512F-NEXT:  .LBB1_14: # %cond.store9
 ; AVX512F-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB1_14
-; AVX512F-NEXT:  .LBB1_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB1_7
+; AVX512F-NEXT:  .LBB1_15: # %cond.store11
 ; AVX512F-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB1_16
-; AVX512F-NEXT:  .LBB1_15: # %cond.store13
+; AVX512F-NEXT:    je .LBB1_8
+; AVX512F-NEXT:  .LBB1_16: # %cond.store13
 ; AVX512F-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -774,60 +774,60 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusqw %zmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB1_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB1_3
-; AVX512FVL-NEXT:  .LBB1_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB1_5
-; AVX512FVL-NEXT:  .LBB1_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB1_7
-; AVX512FVL-NEXT:  .LBB1_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB1_9
-; AVX512FVL-NEXT:  .LBB1_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB1_10
+; AVX512FVL-NEXT:  .LBB1_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB1_11
-; AVX512FVL-NEXT:  .LBB1_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
+; AVX512FVL-NEXT:  .LBB1_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB1_12
+; AVX512FVL-NEXT:  .LBB1_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB1_13
-; AVX512FVL-NEXT:  .LBB1_14: # %else12
-; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:  .LBB1_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB1_14
+; AVX512FVL-NEXT:  .LBB1_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB1_15
-; AVX512FVL-NEXT:  .LBB1_16: # %else14
+; AVX512FVL-NEXT:  .LBB1_7: # %else12
+; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:    jne .LBB1_16
+; AVX512FVL-NEXT:  .LBB1_8: # %else14
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB1_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB1_9: # %cond.store
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB1_4
-; AVX512FVL-NEXT:  .LBB1_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB1_2
+; AVX512FVL-NEXT:  .LBB1_10: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB1_6
-; AVX512FVL-NEXT:  .LBB1_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB1_3
+; AVX512FVL-NEXT:  .LBB1_11: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB1_8
-; AVX512FVL-NEXT:  .LBB1_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB1_4
+; AVX512FVL-NEXT:  .LBB1_12: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB1_10
-; AVX512FVL-NEXT:  .LBB1_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB1_5
+; AVX512FVL-NEXT:  .LBB1_13: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB1_12
-; AVX512FVL-NEXT:  .LBB1_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB1_6
+; AVX512FVL-NEXT:  .LBB1_14: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB1_14
-; AVX512FVL-NEXT:  .LBB1_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB1_7
+; AVX512FVL-NEXT:  .LBB1_15: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX512FVL-NEXT:    testb $-128, %al
-; AVX512FVL-NEXT:    je .LBB1_16
-; AVX512FVL-NEXT:  .LBB1_15: # %cond.store13
+; AVX512FVL-NEXT:    je .LBB1_8
+; AVX512FVL-NEXT:  .LBB1_16: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -916,59 +916,59 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    jne .LBB2_1
-; SSE2-NEXT:  # %bb.2: # %else
+; SSE2-NEXT:    jne .LBB2_12
+; SSE2-NEXT:  # %bb.1: # %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB2_3
-; SSE2-NEXT:  .LBB2_4: # %else2
+; SSE2-NEXT:    jne .LBB2_13
+; SSE2-NEXT:  .LBB2_2: # %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB2_5
-; SSE2-NEXT:  .LBB2_6: # %else4
+; SSE2-NEXT:    jne .LBB2_14
+; SSE2-NEXT:  .LBB2_3: # %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB2_8
-; SSE2-NEXT:  .LBB2_7: # %cond.store5
+; SSE2-NEXT:    je .LBB2_5
+; SSE2-NEXT:  .LBB2_4: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 3(%rdi)
-; SSE2-NEXT:  .LBB2_8: # %else6
+; SSE2-NEXT:  .LBB2_5: # %else6
 ; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    pextrw $2, %xmm1, %ecx
-; SSE2-NEXT:    je .LBB2_10
-; SSE2-NEXT:  # %bb.9: # %cond.store7
+; SSE2-NEXT:    je .LBB2_7
+; SSE2-NEXT:  # %bb.6: # %cond.store7
 ; SSE2-NEXT:    movb %cl, 4(%rdi)
-; SSE2-NEXT:  .LBB2_10: # %else8
+; SSE2-NEXT:  .LBB2_7: # %else8
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB2_12
-; SSE2-NEXT:  # %bb.11: # %cond.store9
+; SSE2-NEXT:    je .LBB2_9
+; SSE2-NEXT:  # %bb.8: # %cond.store9
 ; SSE2-NEXT:    movb %ch, 5(%rdi)
-; SSE2-NEXT:  .LBB2_12: # %else10
+; SSE2-NEXT:  .LBB2_9: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm1, %ecx
-; SSE2-NEXT:    jne .LBB2_13
-; SSE2-NEXT:  # %bb.14: # %else12
-; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    jne .LBB2_15
-; SSE2-NEXT:  .LBB2_16: # %else14
+; SSE2-NEXT:  # %bb.10: # %else12
+; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:    jne .LBB2_16
+; SSE2-NEXT:  .LBB2_11: # %else14
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB2_1: # %cond.store
+; SSE2-NEXT:  .LBB2_12: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB2_4
-; SSE2-NEXT:  .LBB2_3: # %cond.store1
+; SSE2-NEXT:    je .LBB2_2
+; SSE2-NEXT:  .LBB2_13: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB2_6
-; SSE2-NEXT:  .LBB2_5: # %cond.store3
+; SSE2-NEXT:    je .LBB2_3
+; SSE2-NEXT:  .LBB2_14: # %cond.store3
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB2_7
-; SSE2-NEXT:    jmp .LBB2_8
-; SSE2-NEXT:  .LBB2_13: # %cond.store11
+; SSE2-NEXT:    jne .LBB2_4
+; SSE2-NEXT:    jmp .LBB2_5
+; SSE2-NEXT:  .LBB2_15: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB2_16
-; SSE2-NEXT:  .LBB2_15: # %cond.store13
+; SSE2-NEXT:    je .LBB2_11
+; SSE2-NEXT:  .LBB2_16: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -1012,59 +1012,59 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm4, %eax
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB2_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB2_3
-; SSE4-NEXT:  .LBB2_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB2_5
-; SSE4-NEXT:  .LBB2_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB2_7
-; SSE4-NEXT:  .LBB2_8: # %else6
-; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB2_9
-; SSE4-NEXT:  .LBB2_10: # %else8
-; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB2_10
+; SSE4-NEXT:  .LBB2_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB2_11
-; SSE4-NEXT:  .LBB2_12: # %else10
-; SSE4-NEXT:    testb $64, %al
+; SSE4-NEXT:  .LBB2_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB2_12
+; SSE4-NEXT:  .LBB2_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB2_13
-; SSE4-NEXT:  .LBB2_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:  .LBB2_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB2_14
+; SSE4-NEXT:  .LBB2_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB2_15
-; SSE4-NEXT:  .LBB2_16: # %else14
+; SSE4-NEXT:  .LBB2_7: # %else12
+; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:    jne .LBB2_16
+; SSE4-NEXT:  .LBB2_8: # %else14
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB2_1: # %cond.store
+; SSE4-NEXT:  .LBB2_9: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm1, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB2_4
-; SSE4-NEXT:  .LBB2_3: # %cond.store1
+; SSE4-NEXT:    je .LBB2_2
+; SSE4-NEXT:  .LBB2_10: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm1, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB2_6
-; SSE4-NEXT:  .LBB2_5: # %cond.store3
+; SSE4-NEXT:    je .LBB2_3
+; SSE4-NEXT:  .LBB2_11: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm1, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB2_8
-; SSE4-NEXT:  .LBB2_7: # %cond.store5
+; SSE4-NEXT:    je .LBB2_4
+; SSE4-NEXT:  .LBB2_12: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm1, 3(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB2_10
-; SSE4-NEXT:  .LBB2_9: # %cond.store7
+; SSE4-NEXT:    je .LBB2_5
+; SSE4-NEXT:  .LBB2_13: # %cond.store7
 ; SSE4-NEXT:    pextrb $4, %xmm1, 4(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB2_12
-; SSE4-NEXT:  .LBB2_11: # %cond.store9
+; SSE4-NEXT:    je .LBB2_6
+; SSE4-NEXT:  .LBB2_14: # %cond.store9
 ; SSE4-NEXT:    pextrb $5, %xmm1, 5(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB2_14
-; SSE4-NEXT:  .LBB2_13: # %cond.store11
+; SSE4-NEXT:    je .LBB2_7
+; SSE4-NEXT:  .LBB2_15: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm1, 6(%rdi)
 ; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB2_16
-; SSE4-NEXT:  .LBB2_15: # %cond.store13
+; SSE4-NEXT:    je .LBB2_8
+; SSE4-NEXT:  .LBB2_16: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm1, 7(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -1102,60 +1102,60 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %ymm1, %eax
 ; AVX1-NEXT:    notl %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB2_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB2_3
-; AVX1-NEXT:  .LBB2_4: # %else2
-; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB2_5
-; AVX1-NEXT:  .LBB2_6: # %else4
-; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB2_7
-; AVX1-NEXT:  .LBB2_8: # %else6
-; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB2_9
-; AVX1-NEXT:  .LBB2_10: # %else8
-; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB2_10
+; AVX1-NEXT:  .LBB2_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB2_11
-; AVX1-NEXT:  .LBB2_12: # %else10
-; AVX1-NEXT:    testb $64, %al
+; AVX1-NEXT:  .LBB2_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB2_12
+; AVX1-NEXT:  .LBB2_4: # %else6
+; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB2_13
-; AVX1-NEXT:  .LBB2_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:  .LBB2_5: # %else8
+; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:    jne .LBB2_14
+; AVX1-NEXT:  .LBB2_6: # %else10
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB2_15
-; AVX1-NEXT:  .LBB2_16: # %else14
+; AVX1-NEXT:  .LBB2_7: # %else12
+; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:    jne .LBB2_16
+; AVX1-NEXT:  .LBB2_8: # %else14
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB2_1: # %cond.store
+; AVX1-NEXT:  .LBB2_9: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB2_4
-; AVX1-NEXT:  .LBB2_3: # %cond.store1
+; AVX1-NEXT:    je .LBB2_2
+; AVX1-NEXT:  .LBB2_10: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB2_6
-; AVX1-NEXT:  .LBB2_5: # %cond.store3
+; AVX1-NEXT:    je .LBB2_3
+; AVX1-NEXT:  .LBB2_11: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB2_8
-; AVX1-NEXT:  .LBB2_7: # %cond.store5
+; AVX1-NEXT:    je .LBB2_4
+; AVX1-NEXT:  .LBB2_12: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB2_10
-; AVX1-NEXT:  .LBB2_9: # %cond.store7
+; AVX1-NEXT:    je .LBB2_5
+; AVX1-NEXT:  .LBB2_13: # %cond.store7
 ; AVX1-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB2_12
-; AVX1-NEXT:  .LBB2_11: # %cond.store9
+; AVX1-NEXT:    je .LBB2_6
+; AVX1-NEXT:  .LBB2_14: # %cond.store9
 ; AVX1-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB2_14
-; AVX1-NEXT:  .LBB2_13: # %cond.store11
+; AVX1-NEXT:    je .LBB2_7
+; AVX1-NEXT:  .LBB2_15: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB2_16
-; AVX1-NEXT:  .LBB2_15: # %cond.store13
+; AVX1-NEXT:    je .LBB2_8
+; AVX1-NEXT:  .LBB2_16: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1181,60 +1181,60 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
 ; AVX2-NEXT:    notl %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB2_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB2_3
-; AVX2-NEXT:  .LBB2_4: # %else2
-; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB2_5
-; AVX2-NEXT:  .LBB2_6: # %else4
-; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB2_7
-; AVX2-NEXT:  .LBB2_8: # %else6
-; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB2_9
-; AVX2-NEXT:  .LBB2_10: # %else8
-; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB2_10
+; AVX2-NEXT:  .LBB2_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB2_11
-; AVX2-NEXT:  .LBB2_12: # %else10
-; AVX2-NEXT:    testb $64, %al
+; AVX2-NEXT:  .LBB2_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB2_12
+; AVX2-NEXT:  .LBB2_4: # %else6
+; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB2_13
-; AVX2-NEXT:  .LBB2_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:  .LBB2_5: # %else8
+; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:    jne .LBB2_14
+; AVX2-NEXT:  .LBB2_6: # %else10
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB2_15
-; AVX2-NEXT:  .LBB2_16: # %else14
+; AVX2-NEXT:  .LBB2_7: # %else12
+; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:    jne .LBB2_16
+; AVX2-NEXT:  .LBB2_8: # %else14
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB2_1: # %cond.store
+; AVX2-NEXT:  .LBB2_9: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB2_4
-; AVX2-NEXT:  .LBB2_3: # %cond.store1
+; AVX2-NEXT:    je .LBB2_2
+; AVX2-NEXT:  .LBB2_10: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB2_6
-; AVX2-NEXT:  .LBB2_5: # %cond.store3
+; AVX2-NEXT:    je .LBB2_3
+; AVX2-NEXT:  .LBB2_11: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB2_8
-; AVX2-NEXT:  .LBB2_7: # %cond.store5
+; AVX2-NEXT:    je .LBB2_4
+; AVX2-NEXT:  .LBB2_12: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB2_10
-; AVX2-NEXT:  .LBB2_9: # %cond.store7
+; AVX2-NEXT:    je .LBB2_5
+; AVX2-NEXT:  .LBB2_13: # %cond.store7
 ; AVX2-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB2_12
-; AVX2-NEXT:  .LBB2_11: # %cond.store9
+; AVX2-NEXT:    je .LBB2_6
+; AVX2-NEXT:  .LBB2_14: # %cond.store9
 ; AVX2-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB2_14
-; AVX2-NEXT:  .LBB2_13: # %cond.store11
+; AVX2-NEXT:    je .LBB2_7
+; AVX2-NEXT:  .LBB2_15: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB2_16
-; AVX2-NEXT:  .LBB2_15: # %cond.store13
+; AVX2-NEXT:    je .LBB2_8
+; AVX2-NEXT:  .LBB2_16: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1246,60 +1246,60 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusqb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB2_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB2_3
-; AVX512F-NEXT:  .LBB2_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB2_5
-; AVX512F-NEXT:  .LBB2_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB2_7
-; AVX512F-NEXT:  .LBB2_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB2_9
-; AVX512F-NEXT:  .LBB2_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB2_10
+; AVX512F-NEXT:  .LBB2_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB2_11
-; AVX512F-NEXT:  .LBB2_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
+; AVX512F-NEXT:  .LBB2_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB2_12
+; AVX512F-NEXT:  .LBB2_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB2_13
-; AVX512F-NEXT:  .LBB2_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:  .LBB2_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB2_14
+; AVX512F-NEXT:  .LBB2_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB2_15
-; AVX512F-NEXT:  .LBB2_16: # %else14
+; AVX512F-NEXT:  .LBB2_7: # %else12
+; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:    jne .LBB2_16
+; AVX512F-NEXT:  .LBB2_8: # %else14
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB2_1: # %cond.store
+; AVX512F-NEXT:  .LBB2_9: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB2_4
-; AVX512F-NEXT:  .LBB2_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB2_2
+; AVX512F-NEXT:  .LBB2_10: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB2_6
-; AVX512F-NEXT:  .LBB2_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB2_3
+; AVX512F-NEXT:  .LBB2_11: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB2_8
-; AVX512F-NEXT:  .LBB2_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB2_4
+; AVX512F-NEXT:  .LBB2_12: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB2_10
-; AVX512F-NEXT:  .LBB2_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB2_5
+; AVX512F-NEXT:  .LBB2_13: # %cond.store7
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB2_12
-; AVX512F-NEXT:  .LBB2_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB2_6
+; AVX512F-NEXT:  .LBB2_14: # %cond.store9
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB2_14
-; AVX512F-NEXT:  .LBB2_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB2_7
+; AVX512F-NEXT:  .LBB2_15: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB2_16
-; AVX512F-NEXT:  .LBB2_15: # %cond.store13
+; AVX512F-NEXT:    je .LBB2_8
+; AVX512F-NEXT:  .LBB2_16: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1310,60 +1310,60 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusqb %zmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB2_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB2_3
-; AVX512FVL-NEXT:  .LBB2_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB2_5
-; AVX512FVL-NEXT:  .LBB2_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB2_7
-; AVX512FVL-NEXT:  .LBB2_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB2_9
-; AVX512FVL-NEXT:  .LBB2_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB2_10
+; AVX512FVL-NEXT:  .LBB2_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB2_11
-; AVX512FVL-NEXT:  .LBB2_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
+; AVX512FVL-NEXT:  .LBB2_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB2_12
+; AVX512FVL-NEXT:  .LBB2_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB2_13
-; AVX512FVL-NEXT:  .LBB2_14: # %else12
-; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:  .LBB2_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB2_14
+; AVX512FVL-NEXT:  .LBB2_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB2_15
-; AVX512FVL-NEXT:  .LBB2_16: # %else14
+; AVX512FVL-NEXT:  .LBB2_7: # %else12
+; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:    jne .LBB2_16
+; AVX512FVL-NEXT:  .LBB2_8: # %else14
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB2_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB2_9: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB2_4
-; AVX512FVL-NEXT:  .LBB2_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB2_2
+; AVX512FVL-NEXT:  .LBB2_10: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB2_6
-; AVX512FVL-NEXT:  .LBB2_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB2_3
+; AVX512FVL-NEXT:  .LBB2_11: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB2_8
-; AVX512FVL-NEXT:  .LBB2_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB2_4
+; AVX512FVL-NEXT:  .LBB2_12: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB2_10
-; AVX512FVL-NEXT:  .LBB2_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB2_5
+; AVX512FVL-NEXT:  .LBB2_13: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB2_12
-; AVX512FVL-NEXT:  .LBB2_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB2_6
+; AVX512FVL-NEXT:  .LBB2_14: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB2_14
-; AVX512FVL-NEXT:  .LBB2_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB2_7
+; AVX512FVL-NEXT:  .LBB2_15: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb $-128, %al
-; AVX512FVL-NEXT:    je .LBB2_16
-; AVX512FVL-NEXT:  .LBB2_15: # %cond.store13
+; AVX512FVL-NEXT:    je .LBB2_8
+; AVX512FVL-NEXT:  .LBB2_16: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -1423,33 +1423,33 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    movmskps %xmm3, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB3_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB3_3
-; SSE2-NEXT:  .LBB3_4: # %else2
-; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB3_5
-; SSE2-NEXT:  .LBB3_6: # %else4
-; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB3_6
+; SSE2-NEXT:  .LBB3_2: # %else2
+; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB3_7
-; SSE2-NEXT:  .LBB3_8: # %else6
+; SSE2-NEXT:  .LBB3_3: # %else4
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    jne .LBB3_8
+; SSE2-NEXT:  .LBB3_4: # %else6
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB3_1: # %cond.store
+; SSE2-NEXT:  .LBB3_5: # %cond.store
 ; SSE2-NEXT:    movss %xmm1, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB3_4
-; SSE2-NEXT:  .LBB3_3: # %cond.store1
+; SSE2-NEXT:    je .LBB3_2
+; SSE2-NEXT:  .LBB3_6: # %cond.store1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, 4(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB3_6
-; SSE2-NEXT:  .LBB3_5: # %cond.store3
+; SSE2-NEXT:    je .LBB3_3
+; SSE2-NEXT:  .LBB3_7: # %cond.store3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm0, 8(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB3_8
-; SSE2-NEXT:  .LBB3_7: # %cond.store5
+; SSE2-NEXT:    je .LBB3_4
+; SSE2-NEXT:  .LBB3_8: # %cond.store5
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, 12(%rdi)
 ; SSE2-NEXT:    retq
@@ -1476,31 +1476,31 @@ define void @truncstore_v4i64_v4i32(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE4-NEXT:    movmskps %xmm6, %eax
 ; SSE4-NEXT:    xorl $15, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB3_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB3_3
-; SSE4-NEXT:  .LBB3_4: # %else2
-; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB3_5
-; SSE4-NEXT:  .LBB3_6: # %else4
-; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB3_6
+; SSE4-NEXT:  .LBB3_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB3_7
-; SSE4-NEXT:  .LBB3_8: # %else6
+; SSE4-NEXT:  .LBB3_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB3_8
+; SSE4-NEXT:  .LBB3_4: # %else6
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB3_1: # %cond.store
+; SSE4-NEXT:  .LBB3_5: # %cond.store
 ; SSE4-NEXT:    movss %xmm5, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB3_4
-; SSE4-NEXT:  .LBB3_3: # %cond.store1
+; SSE4-NEXT:    je .LBB3_2
+; SSE4-NEXT:  .LBB3_6: # %cond.store1
 ; SSE4-NEXT:    extractps $1, %xmm5, 4(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB3_6
-; SSE4-NEXT:  .LBB3_5: # %cond.store3
+; SSE4-NEXT:    je .LBB3_3
+; SSE4-NEXT:  .LBB3_7: # %cond.store3
 ; SSE4-NEXT:    extractps $2, %xmm5, 8(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB3_8
-; SSE4-NEXT:  .LBB3_7: # %cond.store5
+; SSE4-NEXT:    je .LBB3_4
+; SSE4-NEXT:  .LBB3_8: # %cond.store5
 ; SSE4-NEXT:    extractps $3, %xmm5, 12(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -1616,34 +1616,34 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    movmskps %xmm2, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB4_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB4_3
-; SSE2-NEXT:  .LBB4_4: # %else2
-; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB4_5
-; SSE2-NEXT:  .LBB4_6: # %else4
-; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB4_6
+; SSE2-NEXT:  .LBB4_2: # %else2
+; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB4_7
-; SSE2-NEXT:  .LBB4_8: # %else6
+; SSE2-NEXT:  .LBB4_3: # %else4
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    jne .LBB4_8
+; SSE2-NEXT:  .LBB4_4: # %else6
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB4_1: # %cond.store
+; SSE2-NEXT:  .LBB4_5: # %cond.store
 ; SSE2-NEXT:    movd %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB4_4
-; SSE2-NEXT:  .LBB4_3: # %cond.store1
+; SSE2-NEXT:    je .LBB4_2
+; SSE2-NEXT:  .LBB4_6: # %cond.store1
 ; SSE2-NEXT:    pextrw $1, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 2(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB4_6
-; SSE2-NEXT:  .LBB4_5: # %cond.store3
+; SSE2-NEXT:    je .LBB4_3
+; SSE2-NEXT:  .LBB4_7: # %cond.store3
 ; SSE2-NEXT:    pextrw $2, %xmm1, %ecx
 ; SSE2-NEXT:    movw %cx, 4(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB4_8
-; SSE2-NEXT:  .LBB4_7: # %cond.store5
+; SSE2-NEXT:    je .LBB4_4
+; SSE2-NEXT:  .LBB4_8: # %cond.store5
 ; SSE2-NEXT:    pextrw $3, %xmm1, %eax
 ; SSE2-NEXT:    movw %ax, 6(%rdi)
 ; SSE2-NEXT:    retq
@@ -1671,31 +1671,31 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE4-NEXT:    movmskps %xmm6, %eax
 ; SSE4-NEXT:    xorl $15, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB4_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB4_3
-; SSE4-NEXT:  .LBB4_4: # %else2
-; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB4_5
-; SSE4-NEXT:  .LBB4_6: # %else4
-; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB4_6
+; SSE4-NEXT:  .LBB4_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB4_7
-; SSE4-NEXT:  .LBB4_8: # %else6
+; SSE4-NEXT:  .LBB4_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB4_8
+; SSE4-NEXT:  .LBB4_4: # %else6
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB4_1: # %cond.store
+; SSE4-NEXT:  .LBB4_5: # %cond.store
 ; SSE4-NEXT:    pextrw $0, %xmm5, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB4_4
-; SSE4-NEXT:  .LBB4_3: # %cond.store1
+; SSE4-NEXT:    je .LBB4_2
+; SSE4-NEXT:  .LBB4_6: # %cond.store1
 ; SSE4-NEXT:    pextrw $1, %xmm5, 2(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB4_6
-; SSE4-NEXT:  .LBB4_5: # %cond.store3
+; SSE4-NEXT:    je .LBB4_3
+; SSE4-NEXT:  .LBB4_7: # %cond.store3
 ; SSE4-NEXT:    pextrw $2, %xmm5, 4(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB4_8
-; SSE4-NEXT:  .LBB4_7: # %cond.store5
+; SSE4-NEXT:    je .LBB4_4
+; SSE4-NEXT:  .LBB4_8: # %cond.store5
 ; SSE4-NEXT:    pextrw $3, %xmm5, 6(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -1721,32 +1721,32 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %xmm1, %eax
 ; AVX1-NEXT:    xorl $15, %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB4_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB4_3
-; AVX1-NEXT:  .LBB4_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB4_5
-; AVX1-NEXT:  .LBB4_6: # %else4
-; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB4_6
+; AVX1-NEXT:  .LBB4_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB4_7
-; AVX1-NEXT:  .LBB4_8: # %else6
+; AVX1-NEXT:  .LBB4_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB4_8
+; AVX1-NEXT:  .LBB4_4: # %else6
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB4_1: # %cond.store
+; AVX1-NEXT:  .LBB4_5: # %cond.store
 ; AVX1-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB4_4
-; AVX1-NEXT:  .LBB4_3: # %cond.store1
+; AVX1-NEXT:    je .LBB4_2
+; AVX1-NEXT:  .LBB4_6: # %cond.store1
 ; AVX1-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB4_6
-; AVX1-NEXT:  .LBB4_5: # %cond.store3
+; AVX1-NEXT:    je .LBB4_3
+; AVX1-NEXT:  .LBB4_7: # %cond.store3
 ; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB4_8
-; AVX1-NEXT:  .LBB4_7: # %cond.store5
+; AVX1-NEXT:    je .LBB4_4
+; AVX1-NEXT:  .LBB4_8: # %cond.store5
 ; AVX1-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1767,32 +1767,32 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %xmm1, %eax
 ; AVX2-NEXT:    xorl $15, %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB4_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB4_3
-; AVX2-NEXT:  .LBB4_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB4_5
-; AVX2-NEXT:  .LBB4_6: # %else4
-; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB4_6
+; AVX2-NEXT:  .LBB4_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB4_7
-; AVX2-NEXT:  .LBB4_8: # %else6
+; AVX2-NEXT:  .LBB4_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB4_8
+; AVX2-NEXT:  .LBB4_4: # %else6
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB4_1: # %cond.store
+; AVX2-NEXT:  .LBB4_5: # %cond.store
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB4_4
-; AVX2-NEXT:  .LBB4_3: # %cond.store1
+; AVX2-NEXT:    je .LBB4_2
+; AVX2-NEXT:  .LBB4_6: # %cond.store1
 ; AVX2-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB4_6
-; AVX2-NEXT:  .LBB4_5: # %cond.store3
+; AVX2-NEXT:    je .LBB4_3
+; AVX2-NEXT:  .LBB4_7: # %cond.store3
 ; AVX2-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB4_8
-; AVX2-NEXT:  .LBB4_7: # %cond.store5
+; AVX2-NEXT:    je .LBB4_4
+; AVX2-NEXT:  .LBB4_8: # %cond.store5
 ; AVX2-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1805,32 +1805,32 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusqw %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB4_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB4_3
-; AVX512F-NEXT:  .LBB4_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB4_5
-; AVX512F-NEXT:  .LBB4_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB4_6
+; AVX512F-NEXT:  .LBB4_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB4_7
-; AVX512F-NEXT:  .LBB4_8: # %else6
+; AVX512F-NEXT:  .LBB4_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB4_8
+; AVX512F-NEXT:  .LBB4_4: # %else6
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB4_1: # %cond.store
+; AVX512F-NEXT:  .LBB4_5: # %cond.store
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB4_4
-; AVX512F-NEXT:  .LBB4_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB4_2
+; AVX512F-NEXT:  .LBB4_6: # %cond.store1
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB4_6
-; AVX512F-NEXT:  .LBB4_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB4_3
+; AVX512F-NEXT:  .LBB4_7: # %cond.store3
 ; AVX512F-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB4_8
-; AVX512F-NEXT:  .LBB4_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB4_4
+; AVX512F-NEXT:  .LBB4_8: # %cond.store5
 ; AVX512F-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1841,32 +1841,32 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusqw %ymm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB4_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB4_3
-; AVX512FVL-NEXT:  .LBB4_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB4_5
-; AVX512FVL-NEXT:  .LBB4_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB4_6
+; AVX512FVL-NEXT:  .LBB4_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB4_7
-; AVX512FVL-NEXT:  .LBB4_8: # %else6
+; AVX512FVL-NEXT:  .LBB4_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB4_8
+; AVX512FVL-NEXT:  .LBB4_4: # %else6
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB4_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB4_5: # %cond.store
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB4_4
-; AVX512FVL-NEXT:  .LBB4_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB4_2
+; AVX512FVL-NEXT:  .LBB4_6: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB4_6
-; AVX512FVL-NEXT:  .LBB4_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB4_3
+; AVX512FVL-NEXT:  .LBB4_7: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB4_8
-; AVX512FVL-NEXT:  .LBB4_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB4_4
+; AVX512FVL-NEXT:  .LBB4_8: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -1933,33 +1933,33 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    jne .LBB5_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    jne .LBB5_3
-; SSE2-NEXT:  .LBB5_4: # %else2
-; SSE2-NEXT:    testb $4, %cl
 ; SSE2-NEXT:    jne .LBB5_5
-; SSE2-NEXT:  .LBB5_6: # %else4
-; SSE2-NEXT:    testb $8, %cl
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %cl
+; SSE2-NEXT:    jne .LBB5_6
+; SSE2-NEXT:  .LBB5_2: # %else2
+; SSE2-NEXT:    testb $4, %cl
 ; SSE2-NEXT:    jne .LBB5_7
-; SSE2-NEXT:  .LBB5_8: # %else6
+; SSE2-NEXT:  .LBB5_3: # %else4
+; SSE2-NEXT:    testb $8, %cl
+; SSE2-NEXT:    jne .LBB5_8
+; SSE2-NEXT:  .LBB5_4: # %else6
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB5_1: # %cond.store
+; SSE2-NEXT:  .LBB5_5: # %cond.store
 ; SSE2-NEXT:    movb %al, (%rdi)
 ; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    je .LBB5_4
-; SSE2-NEXT:  .LBB5_3: # %cond.store1
+; SSE2-NEXT:    je .LBB5_2
+; SSE2-NEXT:  .LBB5_6: # %cond.store1
 ; SSE2-NEXT:    movb %ah, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %cl
-; SSE2-NEXT:    je .LBB5_6
-; SSE2-NEXT:  .LBB5_5: # %cond.store3
+; SSE2-NEXT:    je .LBB5_3
+; SSE2-NEXT:  .LBB5_7: # %cond.store3
 ; SSE2-NEXT:    movl %eax, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %cl
-; SSE2-NEXT:    je .LBB5_8
-; SSE2-NEXT:  .LBB5_7: # %cond.store5
+; SSE2-NEXT:    je .LBB5_4
+; SSE2-NEXT:  .LBB5_8: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %eax
 ; SSE2-NEXT:    movb %al, 3(%rdi)
 ; SSE2-NEXT:    retq
@@ -1988,31 +1988,31 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE4-NEXT:    movmskps %xmm6, %eax
 ; SSE4-NEXT:    xorl $15, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB5_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB5_3
-; SSE4-NEXT:  .LBB5_4: # %else2
-; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB5_5
-; SSE4-NEXT:  .LBB5_6: # %else4
-; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB5_6
+; SSE4-NEXT:  .LBB5_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB5_7
-; SSE4-NEXT:  .LBB5_8: # %else6
+; SSE4-NEXT:  .LBB5_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB5_8
+; SSE4-NEXT:  .LBB5_4: # %else6
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB5_1: # %cond.store
+; SSE4-NEXT:  .LBB5_5: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm5, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB5_4
-; SSE4-NEXT:  .LBB5_3: # %cond.store1
+; SSE4-NEXT:    je .LBB5_2
+; SSE4-NEXT:  .LBB5_6: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm5, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB5_6
-; SSE4-NEXT:  .LBB5_5: # %cond.store3
+; SSE4-NEXT:    je .LBB5_3
+; SSE4-NEXT:  .LBB5_7: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm5, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB5_8
-; SSE4-NEXT:  .LBB5_7: # %cond.store5
+; SSE4-NEXT:    je .LBB5_4
+; SSE4-NEXT:  .LBB5_8: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm5, 3(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -2039,32 +2039,32 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %xmm1, %eax
 ; AVX1-NEXT:    xorl $15, %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB5_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB5_3
-; AVX1-NEXT:  .LBB5_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB5_5
-; AVX1-NEXT:  .LBB5_6: # %else4
-; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB5_6
+; AVX1-NEXT:  .LBB5_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB5_7
-; AVX1-NEXT:  .LBB5_8: # %else6
+; AVX1-NEXT:  .LBB5_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB5_8
+; AVX1-NEXT:  .LBB5_4: # %else6
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB5_1: # %cond.store
+; AVX1-NEXT:  .LBB5_5: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB5_4
-; AVX1-NEXT:  .LBB5_3: # %cond.store1
+; AVX1-NEXT:    je .LBB5_2
+; AVX1-NEXT:  .LBB5_6: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB5_6
-; AVX1-NEXT:  .LBB5_5: # %cond.store3
+; AVX1-NEXT:    je .LBB5_3
+; AVX1-NEXT:  .LBB5_7: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB5_8
-; AVX1-NEXT:  .LBB5_7: # %cond.store5
+; AVX1-NEXT:    je .LBB5_4
+; AVX1-NEXT:  .LBB5_8: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -2086,32 +2086,32 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %xmm1, %eax
 ; AVX2-NEXT:    xorl $15, %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB5_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB5_3
-; AVX2-NEXT:  .LBB5_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB5_5
-; AVX2-NEXT:  .LBB5_6: # %else4
-; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB5_6
+; AVX2-NEXT:  .LBB5_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB5_7
-; AVX2-NEXT:  .LBB5_8: # %else6
+; AVX2-NEXT:  .LBB5_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB5_8
+; AVX2-NEXT:  .LBB5_4: # %else6
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB5_1: # %cond.store
+; AVX2-NEXT:  .LBB5_5: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB5_4
-; AVX2-NEXT:  .LBB5_3: # %cond.store1
+; AVX2-NEXT:    je .LBB5_2
+; AVX2-NEXT:  .LBB5_6: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB5_6
-; AVX2-NEXT:  .LBB5_5: # %cond.store3
+; AVX2-NEXT:    je .LBB5_3
+; AVX2-NEXT:  .LBB5_7: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB5_8
-; AVX2-NEXT:  .LBB5_7: # %cond.store5
+; AVX2-NEXT:    je .LBB5_4
+; AVX2-NEXT:  .LBB5_8: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -2124,32 +2124,32 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusqb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB5_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB5_3
-; AVX512F-NEXT:  .LBB5_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB5_5
-; AVX512F-NEXT:  .LBB5_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB5_6
+; AVX512F-NEXT:  .LBB5_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB5_7
-; AVX512F-NEXT:  .LBB5_8: # %else6
+; AVX512F-NEXT:  .LBB5_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB5_8
+; AVX512F-NEXT:  .LBB5_4: # %else6
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB5_1: # %cond.store
+; AVX512F-NEXT:  .LBB5_5: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB5_4
-; AVX512F-NEXT:  .LBB5_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB5_2
+; AVX512F-NEXT:  .LBB5_6: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB5_6
-; AVX512F-NEXT:  .LBB5_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB5_3
+; AVX512F-NEXT:  .LBB5_7: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB5_8
-; AVX512F-NEXT:  .LBB5_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB5_4
+; AVX512F-NEXT:  .LBB5_8: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2160,32 +2160,32 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusqb %ymm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB5_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB5_3
-; AVX512FVL-NEXT:  .LBB5_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB5_5
-; AVX512FVL-NEXT:  .LBB5_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB5_6
+; AVX512FVL-NEXT:  .LBB5_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB5_7
-; AVX512FVL-NEXT:  .LBB5_8: # %else6
+; AVX512FVL-NEXT:  .LBB5_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB5_8
+; AVX512FVL-NEXT:  .LBB5_4: # %else6
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB5_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB5_5: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB5_4
-; AVX512FVL-NEXT:  .LBB5_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB5_2
+; AVX512FVL-NEXT:  .LBB5_6: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB5_6
-; AVX512FVL-NEXT:  .LBB5_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB5_3
+; AVX512FVL-NEXT:  .LBB5_7: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB5_8
-; AVX512FVL-NEXT:  .LBB5_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB5_4
+; AVX512FVL-NEXT:  .LBB5_8: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -2238,17 +2238,17 @@ define void @truncstore_v2i64_v2i32(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-NEXT:    movmskpd %xmm1, %eax
 ; SSE2-NEXT:    xorl $3, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB6_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    jne .LBB6_3
-; SSE2-NEXT:  .LBB6_4: # %else2
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB6_4
+; SSE2-NEXT:  .LBB6_2: # %else2
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB6_1: # %cond.store
+; SSE2-NEXT:  .LBB6_3: # %cond.store
 ; SSE2-NEXT:    movd %xmm0, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB6_4
-; SSE2-NEXT:  .LBB6_3: # %cond.store1
+; SSE2-NEXT:    je .LBB6_2
+; SSE2-NEXT:  .LBB6_4: # %cond.store1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, 4(%rdi)
 ; SSE2-NEXT:    retq
@@ -2266,17 +2266,17 @@ define void @truncstore_v2i64_v2i32(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE4-NEXT:    movmskpd %xmm3, %eax
 ; SSE4-NEXT:    xorl $3, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB6_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
 ; SSE4-NEXT:    jne .LBB6_3
-; SSE4-NEXT:  .LBB6_4: # %else2
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB6_4
+; SSE4-NEXT:  .LBB6_2: # %else2
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB6_1: # %cond.store
+; SSE4-NEXT:  .LBB6_3: # %cond.store
 ; SSE4-NEXT:    movd %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB6_4
-; SSE4-NEXT:  .LBB6_3: # %cond.store1
+; SSE4-NEXT:    je .LBB6_2
+; SSE4-NEXT:  .LBB6_4: # %cond.store1
 ; SSE4-NEXT:    pextrd $1, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -2363,18 +2363,18 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-NEXT:    movmskpd %xmm1, %eax
 ; SSE2-NEXT:    xorl $3, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB7_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    jne .LBB7_3
-; SSE2-NEXT:  .LBB7_4: # %else2
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB7_4
+; SSE2-NEXT:  .LBB7_2: # %else2
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB7_1: # %cond.store
+; SSE2-NEXT:  .LBB7_3: # %cond.store
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    movw %cx, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB7_4
-; SSE2-NEXT:  .LBB7_3: # %cond.store1
+; SSE2-NEXT:    je .LBB7_2
+; SSE2-NEXT:  .LBB7_4: # %cond.store1
 ; SSE2-NEXT:    pextrw $1, %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, 2(%rdi)
 ; SSE2-NEXT:    retq
@@ -2393,17 +2393,17 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE4-NEXT:    movmskpd %xmm3, %eax
 ; SSE4-NEXT:    xorl $3, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB7_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
 ; SSE4-NEXT:    jne .LBB7_3
-; SSE4-NEXT:  .LBB7_4: # %else2
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB7_4
+; SSE4-NEXT:  .LBB7_2: # %else2
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB7_1: # %cond.store
+; SSE4-NEXT:  .LBB7_3: # %cond.store
 ; SSE4-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB7_4
-; SSE4-NEXT:  .LBB7_3: # %cond.store1
+; SSE4-NEXT:    je .LBB7_2
+; SSE4-NEXT:  .LBB7_4: # %cond.store1
 ; SSE4-NEXT:    pextrw $1, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -2419,17 +2419,17 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX-NEXT:    vmovmskpd %xmm1, %eax
 ; AVX-NEXT:    xorl $3, %eax
 ; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne .LBB7_1
-; AVX-NEXT:  # %bb.2: # %else
-; AVX-NEXT:    testb $2, %al
 ; AVX-NEXT:    jne .LBB7_3
-; AVX-NEXT:  .LBB7_4: # %else2
+; AVX-NEXT:  # %bb.1: # %else
+; AVX-NEXT:    testb $2, %al
+; AVX-NEXT:    jne .LBB7_4
+; AVX-NEXT:  .LBB7_2: # %else2
 ; AVX-NEXT:    retq
-; AVX-NEXT:  .LBB7_1: # %cond.store
+; AVX-NEXT:  .LBB7_3: # %cond.store
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    testb $2, %al
-; AVX-NEXT:    je .LBB7_4
-; AVX-NEXT:  .LBB7_3: # %cond.store1
+; AVX-NEXT:    je .LBB7_2
+; AVX-NEXT:  .LBB7_4: # %cond.store1
 ; AVX-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX-NEXT:    retq
 ;
@@ -2441,18 +2441,18 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX512F-NEXT:    vpmovusqw %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB7_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
 ; AVX512F-NEXT:    jne .LBB7_3
-; AVX512F-NEXT:  .LBB7_4: # %else2
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB7_4
+; AVX512F-NEXT:  .LBB7_2: # %else2
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB7_1: # %cond.store
+; AVX512F-NEXT:  .LBB7_3: # %cond.store
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB7_4
-; AVX512F-NEXT:  .LBB7_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB7_2
+; AVX512F-NEXT:  .LBB7_4: # %cond.store1
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2463,17 +2463,17 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX512FVL-NEXT:    vpmovusqw %xmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB7_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
 ; AVX512FVL-NEXT:    jne .LBB7_3
-; AVX512FVL-NEXT:  .LBB7_4: # %else2
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB7_4
+; AVX512FVL-NEXT:  .LBB7_2: # %else2
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB7_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB7_3: # %cond.store
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB7_4
-; AVX512FVL-NEXT:  .LBB7_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB7_2
+; AVX512FVL-NEXT:  .LBB7_4: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    retq
 ;
@@ -2526,17 +2526,17 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE2-NEXT:    xorl $3, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm3, %ecx
-; SSE2-NEXT:    jne .LBB8_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
 ; SSE2-NEXT:    jne .LBB8_3
-; SSE2-NEXT:  .LBB8_4: # %else2
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB8_4
+; SSE2-NEXT:  .LBB8_2: # %else2
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB8_1: # %cond.store
+; SSE2-NEXT:  .LBB8_3: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB8_4
-; SSE2-NEXT:  .LBB8_3: # %cond.store1
+; SSE2-NEXT:    je .LBB8_2
+; SSE2-NEXT:  .LBB8_4: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -2553,17 +2553,17 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; SSE4-NEXT:    movmskpd %xmm3, %eax
 ; SSE4-NEXT:    xorl $3, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB8_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
 ; SSE4-NEXT:    jne .LBB8_3
-; SSE4-NEXT:  .LBB8_4: # %else2
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB8_4
+; SSE4-NEXT:  .LBB8_2: # %else2
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB8_1: # %cond.store
+; SSE4-NEXT:  .LBB8_3: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm2, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB8_4
-; SSE4-NEXT:  .LBB8_3: # %cond.store1
+; SSE4-NEXT:    je .LBB8_2
+; SSE4-NEXT:  .LBB8_4: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm2, 1(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -2578,17 +2578,17 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX-NEXT:    vmovmskpd %xmm1, %eax
 ; AVX-NEXT:    xorl $3, %eax
 ; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne .LBB8_1
-; AVX-NEXT:  # %bb.2: # %else
-; AVX-NEXT:    testb $2, %al
 ; AVX-NEXT:    jne .LBB8_3
-; AVX-NEXT:  .LBB8_4: # %else2
+; AVX-NEXT:  # %bb.1: # %else
+; AVX-NEXT:    testb $2, %al
+; AVX-NEXT:    jne .LBB8_4
+; AVX-NEXT:  .LBB8_2: # %else2
 ; AVX-NEXT:    retq
-; AVX-NEXT:  .LBB8_1: # %cond.store
+; AVX-NEXT:  .LBB8_3: # %cond.store
 ; AVX-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX-NEXT:    testb $2, %al
-; AVX-NEXT:    je .LBB8_4
-; AVX-NEXT:  .LBB8_3: # %cond.store1
+; AVX-NEXT:    je .LBB8_2
+; AVX-NEXT:  .LBB8_4: # %cond.store1
 ; AVX-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX-NEXT:    retq
 ;
@@ -2600,18 +2600,18 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX512F-NEXT:    vpmovusqb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB8_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
 ; AVX512F-NEXT:    jne .LBB8_3
-; AVX512F-NEXT:  .LBB8_4: # %else2
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB8_4
+; AVX512F-NEXT:  .LBB8_2: # %else2
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB8_1: # %cond.store
+; AVX512F-NEXT:  .LBB8_3: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB8_4
-; AVX512F-NEXT:  .LBB8_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB8_2
+; AVX512F-NEXT:  .LBB8_4: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -2622,17 +2622,17 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX512FVL-NEXT:    vpmovusqb %xmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB8_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
 ; AVX512FVL-NEXT:    jne .LBB8_3
-; AVX512FVL-NEXT:  .LBB8_4: # %else2
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB8_4
+; AVX512FVL-NEXT:  .LBB8_2: # %else2
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB8_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB8_3: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB8_4
-; AVX512FVL-NEXT:  .LBB8_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB8_2
+; AVX512FVL-NEXT:  .LBB8_4: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    retq
 ;
@@ -2762,66 +2762,66 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:  .LBB9_16: # %else14
 ; SSE2-NEXT:    packssdw %xmm3, %xmm2
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
-; SSE2-NEXT:    jne .LBB9_17
-; SSE2-NEXT:  # %bb.18: # %else16
-; SSE2-NEXT:    testl $512, %eax # imm = 0x200
-; SSE2-NEXT:    jne .LBB9_19
-; SSE2-NEXT:  .LBB9_20: # %else18
-; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE2-NEXT:    jne .LBB9_21
-; SSE2-NEXT:  .LBB9_22: # %else20
-; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE2-NEXT:    jne .LBB9_23
-; SSE2-NEXT:  .LBB9_24: # %else22
-; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    jne .LBB9_25
-; SSE2-NEXT:  .LBB9_26: # %else24
-; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE2-NEXT:  # %bb.17: # %else16
+; SSE2-NEXT:    testl $512, %eax # imm = 0x200
+; SSE2-NEXT:    jne .LBB9_26
+; SSE2-NEXT:  .LBB9_18: # %else18
+; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    jne .LBB9_27
-; SSE2-NEXT:  .LBB9_28: # %else26
-; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
+; SSE2-NEXT:  .LBB9_19: # %else20
+; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
+; SSE2-NEXT:    jne .LBB9_28
+; SSE2-NEXT:  .LBB9_20: # %else22
+; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    jne .LBB9_29
-; SSE2-NEXT:  .LBB9_30: # %else28
-; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:  .LBB9_21: # %else24
+; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE2-NEXT:    jne .LBB9_30
+; SSE2-NEXT:  .LBB9_22: # %else26
+; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    jne .LBB9_31
-; SSE2-NEXT:  .LBB9_32: # %else30
+; SSE2-NEXT:  .LBB9_23: # %else28
+; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:    jne .LBB9_32
+; SSE2-NEXT:  .LBB9_24: # %else30
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB9_17: # %cond.store15
+; SSE2-NEXT:  .LBB9_25: # %cond.store15
 ; SSE2-NEXT:    movd %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 16(%rdi)
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
-; SSE2-NEXT:    je .LBB9_20
-; SSE2-NEXT:  .LBB9_19: # %cond.store17
+; SSE2-NEXT:    je .LBB9_18
+; SSE2-NEXT:  .LBB9_26: # %cond.store17
 ; SSE2-NEXT:    pextrw $1, %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 18(%rdi)
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE2-NEXT:    je .LBB9_22
-; SSE2-NEXT:  .LBB9_21: # %cond.store19
+; SSE2-NEXT:    je .LBB9_19
+; SSE2-NEXT:  .LBB9_27: # %cond.store19
 ; SSE2-NEXT:    pextrw $2, %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 20(%rdi)
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE2-NEXT:    je .LBB9_24
-; SSE2-NEXT:  .LBB9_23: # %cond.store21
+; SSE2-NEXT:    je .LBB9_20
+; SSE2-NEXT:  .LBB9_28: # %cond.store21
 ; SSE2-NEXT:    pextrw $3, %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 22(%rdi)
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
-; SSE2-NEXT:    je .LBB9_26
-; SSE2-NEXT:  .LBB9_25: # %cond.store23
+; SSE2-NEXT:    je .LBB9_21
+; SSE2-NEXT:  .LBB9_29: # %cond.store23
 ; SSE2-NEXT:    pextrw $4, %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 24(%rdi)
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE2-NEXT:    je .LBB9_28
-; SSE2-NEXT:  .LBB9_27: # %cond.store25
+; SSE2-NEXT:    je .LBB9_22
+; SSE2-NEXT:  .LBB9_30: # %cond.store25
 ; SSE2-NEXT:    pextrw $5, %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 26(%rdi)
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
-; SSE2-NEXT:    je .LBB9_30
-; SSE2-NEXT:  .LBB9_29: # %cond.store27
+; SSE2-NEXT:    je .LBB9_23
+; SSE2-NEXT:  .LBB9_31: # %cond.store27
 ; SSE2-NEXT:    pextrw $6, %xmm2, %ecx
 ; SSE2-NEXT:    movw %cx, 28(%rdi)
 ; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE2-NEXT:    je .LBB9_32
-; SSE2-NEXT:  .LBB9_31: # %cond.store29
+; SSE2-NEXT:    je .LBB9_24
+; SSE2-NEXT:  .LBB9_32: # %cond.store29
 ; SSE2-NEXT:    pextrw $7, %xmm2, %eax
 ; SSE2-NEXT:    movw %ax, 30(%rdi)
 ; SSE2-NEXT:    retq
@@ -2843,115 +2843,115 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm4, %eax
 ; SSE4-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB9_1
-; SSE4-NEXT:  # %bb.2: # %else
+; SSE4-NEXT:    jne .LBB9_19
+; SSE4-NEXT:  # %bb.1: # %else
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB9_3
-; SSE4-NEXT:  .LBB9_4: # %else2
+; SSE4-NEXT:    jne .LBB9_20
+; SSE4-NEXT:  .LBB9_2: # %else2
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB9_5
-; SSE4-NEXT:  .LBB9_6: # %else4
+; SSE4-NEXT:    jne .LBB9_21
+; SSE4-NEXT:  .LBB9_3: # %else4
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB9_7
-; SSE4-NEXT:  .LBB9_8: # %else6
+; SSE4-NEXT:    jne .LBB9_22
+; SSE4-NEXT:  .LBB9_4: # %else6
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    jne .LBB9_9
-; SSE4-NEXT:  .LBB9_10: # %else8
+; SSE4-NEXT:    jne .LBB9_23
+; SSE4-NEXT:  .LBB9_5: # %else8
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    jne .LBB9_11
-; SSE4-NEXT:  .LBB9_12: # %else10
+; SSE4-NEXT:    jne .LBB9_24
+; SSE4-NEXT:  .LBB9_6: # %else10
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB9_14
-; SSE4-NEXT:  .LBB9_13: # %cond.store11
+; SSE4-NEXT:    je .LBB9_8
+; SSE4-NEXT:  .LBB9_7: # %cond.store11
 ; SSE4-NEXT:    pextrw $6, %xmm0, 12(%rdi)
-; SSE4-NEXT:  .LBB9_14: # %else12
+; SSE4-NEXT:  .LBB9_8: # %else12
 ; SSE4-NEXT:    pminud %xmm8, %xmm3
 ; SSE4-NEXT:    pminud %xmm8, %xmm2
 ; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    jns .LBB9_16
-; SSE4-NEXT:  # %bb.15: # %cond.store13
+; SSE4-NEXT:    jns .LBB9_10
+; SSE4-NEXT:  # %bb.9: # %cond.store13
 ; SSE4-NEXT:    pextrw $7, %xmm0, 14(%rdi)
-; SSE4-NEXT:  .LBB9_16: # %else14
+; SSE4-NEXT:  .LBB9_10: # %else14
 ; SSE4-NEXT:    packusdw %xmm3, %xmm2
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
-; SSE4-NEXT:    jne .LBB9_17
-; SSE4-NEXT:  # %bb.18: # %else16
-; SSE4-NEXT:    testl $512, %eax # imm = 0x200
-; SSE4-NEXT:    jne .LBB9_19
-; SSE4-NEXT:  .LBB9_20: # %else18
-; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE4-NEXT:    jne .LBB9_21
-; SSE4-NEXT:  .LBB9_22: # %else20
-; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE4-NEXT:    jne .LBB9_23
-; SSE4-NEXT:  .LBB9_24: # %else22
-; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE4-NEXT:    jne .LBB9_25
-; SSE4-NEXT:  .LBB9_26: # %else24
-; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE4-NEXT:  # %bb.11: # %else16
+; SSE4-NEXT:    testl $512, %eax # imm = 0x200
+; SSE4-NEXT:    jne .LBB9_26
+; SSE4-NEXT:  .LBB9_12: # %else18
+; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE4-NEXT:    jne .LBB9_27
-; SSE4-NEXT:  .LBB9_28: # %else26
-; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
+; SSE4-NEXT:  .LBB9_13: # %else20
+; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
+; SSE4-NEXT:    jne .LBB9_28
+; SSE4-NEXT:  .LBB9_14: # %else22
+; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE4-NEXT:    jne .LBB9_29
-; SSE4-NEXT:  .LBB9_30: # %else28
-; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:  .LBB9_15: # %else24
+; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE4-NEXT:    jne .LBB9_30
+; SSE4-NEXT:  .LBB9_16: # %else26
+; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE4-NEXT:    jne .LBB9_31
-; SSE4-NEXT:  .LBB9_32: # %else30
+; SSE4-NEXT:  .LBB9_17: # %else28
+; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    jne .LBB9_32
+; SSE4-NEXT:  .LBB9_18: # %else30
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB9_1: # %cond.store
+; SSE4-NEXT:  .LBB9_19: # %cond.store
 ; SSE4-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB9_4
-; SSE4-NEXT:  .LBB9_3: # %cond.store1
+; SSE4-NEXT:    je .LBB9_2
+; SSE4-NEXT:  .LBB9_20: # %cond.store1
 ; SSE4-NEXT:    pextrw $1, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB9_6
-; SSE4-NEXT:  .LBB9_5: # %cond.store3
+; SSE4-NEXT:    je .LBB9_3
+; SSE4-NEXT:  .LBB9_21: # %cond.store3
 ; SSE4-NEXT:    pextrw $2, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB9_8
-; SSE4-NEXT:  .LBB9_7: # %cond.store5
+; SSE4-NEXT:    je .LBB9_4
+; SSE4-NEXT:  .LBB9_22: # %cond.store5
 ; SSE4-NEXT:    pextrw $3, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB9_10
-; SSE4-NEXT:  .LBB9_9: # %cond.store7
+; SSE4-NEXT:    je .LBB9_5
+; SSE4-NEXT:  .LBB9_23: # %cond.store7
 ; SSE4-NEXT:    pextrw $4, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB9_12
-; SSE4-NEXT:  .LBB9_11: # %cond.store9
+; SSE4-NEXT:    je .LBB9_6
+; SSE4-NEXT:  .LBB9_24: # %cond.store9
 ; SSE4-NEXT:    pextrw $5, %xmm0, 10(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    jne .LBB9_13
-; SSE4-NEXT:    jmp .LBB9_14
-; SSE4-NEXT:  .LBB9_17: # %cond.store15
+; SSE4-NEXT:    jne .LBB9_7
+; SSE4-NEXT:    jmp .LBB9_8
+; SSE4-NEXT:  .LBB9_25: # %cond.store15
 ; SSE4-NEXT:    pextrw $0, %xmm2, 16(%rdi)
 ; SSE4-NEXT:    testl $512, %eax # imm = 0x200
-; SSE4-NEXT:    je .LBB9_20
-; SSE4-NEXT:  .LBB9_19: # %cond.store17
+; SSE4-NEXT:    je .LBB9_12
+; SSE4-NEXT:  .LBB9_26: # %cond.store17
 ; SSE4-NEXT:    pextrw $1, %xmm2, 18(%rdi)
 ; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE4-NEXT:    je .LBB9_22
-; SSE4-NEXT:  .LBB9_21: # %cond.store19
+; SSE4-NEXT:    je .LBB9_13
+; SSE4-NEXT:  .LBB9_27: # %cond.store19
 ; SSE4-NEXT:    pextrw $2, %xmm2, 20(%rdi)
 ; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE4-NEXT:    je .LBB9_24
-; SSE4-NEXT:  .LBB9_23: # %cond.store21
+; SSE4-NEXT:    je .LBB9_14
+; SSE4-NEXT:  .LBB9_28: # %cond.store21
 ; SSE4-NEXT:    pextrw $3, %xmm2, 22(%rdi)
 ; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
-; SSE4-NEXT:    je .LBB9_26
-; SSE4-NEXT:  .LBB9_25: # %cond.store23
+; SSE4-NEXT:    je .LBB9_15
+; SSE4-NEXT:  .LBB9_29: # %cond.store23
 ; SSE4-NEXT:    pextrw $4, %xmm2, 24(%rdi)
 ; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE4-NEXT:    je .LBB9_28
-; SSE4-NEXT:  .LBB9_27: # %cond.store25
+; SSE4-NEXT:    je .LBB9_16
+; SSE4-NEXT:  .LBB9_30: # %cond.store25
 ; SSE4-NEXT:    pextrw $5, %xmm2, 26(%rdi)
 ; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
-; SSE4-NEXT:    je .LBB9_30
-; SSE4-NEXT:  .LBB9_29: # %cond.store27
+; SSE4-NEXT:    je .LBB9_17
+; SSE4-NEXT:  .LBB9_31: # %cond.store27
 ; SSE4-NEXT:    pextrw $6, %xmm2, 28(%rdi)
 ; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE4-NEXT:    je .LBB9_32
-; SSE4-NEXT:  .LBB9_31: # %cond.store29
+; SSE4-NEXT:    je .LBB9_18
+; SSE4-NEXT:  .LBB9_32: # %cond.store29
 ; SSE4-NEXT:    pextrw $7, %xmm2, 30(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -2980,116 +2980,116 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX1-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB9_1
-; AVX1-NEXT:  # %bb.2: # %else
+; AVX1-NEXT:    jne .LBB9_18
+; AVX1-NEXT:  # %bb.1: # %else
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB9_3
-; AVX1-NEXT:  .LBB9_4: # %else2
+; AVX1-NEXT:    jne .LBB9_19
+; AVX1-NEXT:  .LBB9_2: # %else2
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB9_5
-; AVX1-NEXT:  .LBB9_6: # %else4
+; AVX1-NEXT:    jne .LBB9_20
+; AVX1-NEXT:  .LBB9_3: # %else4
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB9_7
-; AVX1-NEXT:  .LBB9_8: # %else6
+; AVX1-NEXT:    jne .LBB9_21
+; AVX1-NEXT:  .LBB9_4: # %else6
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    jne .LBB9_9
-; AVX1-NEXT:  .LBB9_10: # %else8
+; AVX1-NEXT:    jne .LBB9_22
+; AVX1-NEXT:  .LBB9_5: # %else8
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    jne .LBB9_11
-; AVX1-NEXT:  .LBB9_12: # %else10
+; AVX1-NEXT:    jne .LBB9_23
+; AVX1-NEXT:  .LBB9_6: # %else10
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    jne .LBB9_13
-; AVX1-NEXT:  .LBB9_14: # %else12
+; AVX1-NEXT:    jne .LBB9_24
+; AVX1-NEXT:  .LBB9_7: # %else12
 ; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    jns .LBB9_16
-; AVX1-NEXT:  .LBB9_15: # %cond.store13
+; AVX1-NEXT:    jns .LBB9_9
+; AVX1-NEXT:  .LBB9_8: # %cond.store13
 ; AVX1-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
-; AVX1-NEXT:  .LBB9_16: # %else14
+; AVX1-NEXT:  .LBB9_9: # %else14
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    jne .LBB9_17
-; AVX1-NEXT:  # %bb.18: # %else16
-; AVX1-NEXT:    testl $512, %eax # imm = 0x200
-; AVX1-NEXT:    jne .LBB9_19
-; AVX1-NEXT:  .LBB9_20: # %else18
-; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX1-NEXT:    jne .LBB9_21
-; AVX1-NEXT:  .LBB9_22: # %else20
-; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX1-NEXT:    jne .LBB9_23
-; AVX1-NEXT:  .LBB9_24: # %else22
-; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX1-NEXT:    jne .LBB9_25
-; AVX1-NEXT:  .LBB9_26: # %else24
-; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX1-NEXT:  # %bb.10: # %else16
+; AVX1-NEXT:    testl $512, %eax # imm = 0x200
+; AVX1-NEXT:    jne .LBB9_26
+; AVX1-NEXT:  .LBB9_11: # %else18
+; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX1-NEXT:    jne .LBB9_27
-; AVX1-NEXT:  .LBB9_28: # %else26
-; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX1-NEXT:  .LBB9_12: # %else20
+; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX1-NEXT:    jne .LBB9_28
+; AVX1-NEXT:  .LBB9_13: # %else22
+; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX1-NEXT:    jne .LBB9_29
-; AVX1-NEXT:  .LBB9_30: # %else28
-; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:  .LBB9_14: # %else24
+; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX1-NEXT:    jne .LBB9_30
+; AVX1-NEXT:  .LBB9_15: # %else26
+; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX1-NEXT:    jne .LBB9_31
-; AVX1-NEXT:  .LBB9_32: # %else30
+; AVX1-NEXT:  .LBB9_16: # %else28
+; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:    jne .LBB9_32
+; AVX1-NEXT:  .LBB9_17: # %else30
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB9_1: # %cond.store
+; AVX1-NEXT:  .LBB9_18: # %cond.store
 ; AVX1-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB9_4
-; AVX1-NEXT:  .LBB9_3: # %cond.store1
+; AVX1-NEXT:    je .LBB9_2
+; AVX1-NEXT:  .LBB9_19: # %cond.store1
 ; AVX1-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB9_6
-; AVX1-NEXT:  .LBB9_5: # %cond.store3
+; AVX1-NEXT:    je .LBB9_3
+; AVX1-NEXT:  .LBB9_20: # %cond.store3
 ; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB9_8
-; AVX1-NEXT:  .LBB9_7: # %cond.store5
+; AVX1-NEXT:    je .LBB9_4
+; AVX1-NEXT:  .LBB9_21: # %cond.store5
 ; AVX1-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB9_10
-; AVX1-NEXT:  .LBB9_9: # %cond.store7
+; AVX1-NEXT:    je .LBB9_5
+; AVX1-NEXT:  .LBB9_22: # %cond.store7
 ; AVX1-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB9_12
-; AVX1-NEXT:  .LBB9_11: # %cond.store9
+; AVX1-NEXT:    je .LBB9_6
+; AVX1-NEXT:  .LBB9_23: # %cond.store9
 ; AVX1-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB9_14
-; AVX1-NEXT:  .LBB9_13: # %cond.store11
+; AVX1-NEXT:    je .LBB9_7
+; AVX1-NEXT:  .LBB9_24: # %cond.store11
 ; AVX1-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    js .LBB9_15
-; AVX1-NEXT:    jmp .LBB9_16
-; AVX1-NEXT:  .LBB9_17: # %cond.store15
+; AVX1-NEXT:    js .LBB9_8
+; AVX1-NEXT:    jmp .LBB9_9
+; AVX1-NEXT:  .LBB9_25: # %cond.store15
 ; AVX1-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
 ; AVX1-NEXT:    testl $512, %eax # imm = 0x200
-; AVX1-NEXT:    je .LBB9_20
-; AVX1-NEXT:  .LBB9_19: # %cond.store17
+; AVX1-NEXT:    je .LBB9_11
+; AVX1-NEXT:  .LBB9_26: # %cond.store17
 ; AVX1-NEXT:    vpextrw $1, %xmm0, 18(%rdi)
 ; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX1-NEXT:    je .LBB9_22
-; AVX1-NEXT:  .LBB9_21: # %cond.store19
+; AVX1-NEXT:    je .LBB9_12
+; AVX1-NEXT:  .LBB9_27: # %cond.store19
 ; AVX1-NEXT:    vpextrw $2, %xmm0, 20(%rdi)
 ; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX1-NEXT:    je .LBB9_24
-; AVX1-NEXT:  .LBB9_23: # %cond.store21
+; AVX1-NEXT:    je .LBB9_13
+; AVX1-NEXT:  .LBB9_28: # %cond.store21
 ; AVX1-NEXT:    vpextrw $3, %xmm0, 22(%rdi)
 ; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX1-NEXT:    je .LBB9_26
-; AVX1-NEXT:  .LBB9_25: # %cond.store23
+; AVX1-NEXT:    je .LBB9_14
+; AVX1-NEXT:  .LBB9_29: # %cond.store23
 ; AVX1-NEXT:    vpextrw $4, %xmm0, 24(%rdi)
 ; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX1-NEXT:    je .LBB9_28
-; AVX1-NEXT:  .LBB9_27: # %cond.store25
+; AVX1-NEXT:    je .LBB9_15
+; AVX1-NEXT:  .LBB9_30: # %cond.store25
 ; AVX1-NEXT:    vpextrw $5, %xmm0, 26(%rdi)
 ; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX1-NEXT:    je .LBB9_30
-; AVX1-NEXT:  .LBB9_29: # %cond.store27
+; AVX1-NEXT:    je .LBB9_16
+; AVX1-NEXT:  .LBB9_31: # %cond.store27
 ; AVX1-NEXT:    vpextrw $6, %xmm0, 28(%rdi)
 ; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX1-NEXT:    je .LBB9_32
-; AVX1-NEXT:  .LBB9_31: # %cond.store29
+; AVX1-NEXT:    je .LBB9_17
+; AVX1-NEXT:  .LBB9_32: # %cond.store29
 ; AVX1-NEXT:    vpextrw $7, %xmm0, 30(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -3112,116 +3112,116 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB9_1
-; AVX2-NEXT:  # %bb.2: # %else
+; AVX2-NEXT:    jne .LBB9_18
+; AVX2-NEXT:  # %bb.1: # %else
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB9_3
-; AVX2-NEXT:  .LBB9_4: # %else2
+; AVX2-NEXT:    jne .LBB9_19
+; AVX2-NEXT:  .LBB9_2: # %else2
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB9_5
-; AVX2-NEXT:  .LBB9_6: # %else4
+; AVX2-NEXT:    jne .LBB9_20
+; AVX2-NEXT:  .LBB9_3: # %else4
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB9_7
-; AVX2-NEXT:  .LBB9_8: # %else6
+; AVX2-NEXT:    jne .LBB9_21
+; AVX2-NEXT:  .LBB9_4: # %else6
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    jne .LBB9_9
-; AVX2-NEXT:  .LBB9_10: # %else8
+; AVX2-NEXT:    jne .LBB9_22
+; AVX2-NEXT:  .LBB9_5: # %else8
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    jne .LBB9_11
-; AVX2-NEXT:  .LBB9_12: # %else10
+; AVX2-NEXT:    jne .LBB9_23
+; AVX2-NEXT:  .LBB9_6: # %else10
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    jne .LBB9_13
-; AVX2-NEXT:  .LBB9_14: # %else12
+; AVX2-NEXT:    jne .LBB9_24
+; AVX2-NEXT:  .LBB9_7: # %else12
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    jns .LBB9_16
-; AVX2-NEXT:  .LBB9_15: # %cond.store13
+; AVX2-NEXT:    jns .LBB9_9
+; AVX2-NEXT:  .LBB9_8: # %cond.store13
 ; AVX2-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
-; AVX2-NEXT:  .LBB9_16: # %else14
+; AVX2-NEXT:  .LBB9_9: # %else14
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    jne .LBB9_17
-; AVX2-NEXT:  # %bb.18: # %else16
-; AVX2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX2-NEXT:    jne .LBB9_19
-; AVX2-NEXT:  .LBB9_20: # %else18
-; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX2-NEXT:    jne .LBB9_21
-; AVX2-NEXT:  .LBB9_22: # %else20
-; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX2-NEXT:    jne .LBB9_23
-; AVX2-NEXT:  .LBB9_24: # %else22
-; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX2-NEXT:    jne .LBB9_25
-; AVX2-NEXT:  .LBB9_26: # %else24
-; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX2-NEXT:  # %bb.10: # %else16
+; AVX2-NEXT:    testl $512, %eax # imm = 0x200
+; AVX2-NEXT:    jne .LBB9_26
+; AVX2-NEXT:  .LBB9_11: # %else18
+; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX2-NEXT:    jne .LBB9_27
-; AVX2-NEXT:  .LBB9_28: # %else26
-; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX2-NEXT:  .LBB9_12: # %else20
+; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX2-NEXT:    jne .LBB9_28
+; AVX2-NEXT:  .LBB9_13: # %else22
+; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX2-NEXT:    jne .LBB9_29
-; AVX2-NEXT:  .LBB9_30: # %else28
-; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:  .LBB9_14: # %else24
+; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX2-NEXT:    jne .LBB9_30
+; AVX2-NEXT:  .LBB9_15: # %else26
+; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX2-NEXT:    jne .LBB9_31
-; AVX2-NEXT:  .LBB9_32: # %else30
+; AVX2-NEXT:  .LBB9_16: # %else28
+; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:    jne .LBB9_32
+; AVX2-NEXT:  .LBB9_17: # %else30
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB9_1: # %cond.store
+; AVX2-NEXT:  .LBB9_18: # %cond.store
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB9_4
-; AVX2-NEXT:  .LBB9_3: # %cond.store1
+; AVX2-NEXT:    je .LBB9_2
+; AVX2-NEXT:  .LBB9_19: # %cond.store1
 ; AVX2-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB9_6
-; AVX2-NEXT:  .LBB9_5: # %cond.store3
+; AVX2-NEXT:    je .LBB9_3
+; AVX2-NEXT:  .LBB9_20: # %cond.store3
 ; AVX2-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB9_8
-; AVX2-NEXT:  .LBB9_7: # %cond.store5
+; AVX2-NEXT:    je .LBB9_4
+; AVX2-NEXT:  .LBB9_21: # %cond.store5
 ; AVX2-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB9_10
-; AVX2-NEXT:  .LBB9_9: # %cond.store7
+; AVX2-NEXT:    je .LBB9_5
+; AVX2-NEXT:  .LBB9_22: # %cond.store7
 ; AVX2-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB9_12
-; AVX2-NEXT:  .LBB9_11: # %cond.store9
+; AVX2-NEXT:    je .LBB9_6
+; AVX2-NEXT:  .LBB9_23: # %cond.store9
 ; AVX2-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB9_14
-; AVX2-NEXT:  .LBB9_13: # %cond.store11
+; AVX2-NEXT:    je .LBB9_7
+; AVX2-NEXT:  .LBB9_24: # %cond.store11
 ; AVX2-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    js .LBB9_15
-; AVX2-NEXT:    jmp .LBB9_16
-; AVX2-NEXT:  .LBB9_17: # %cond.store15
+; AVX2-NEXT:    js .LBB9_8
+; AVX2-NEXT:    jmp .LBB9_9
+; AVX2-NEXT:  .LBB9_25: # %cond.store15
 ; AVX2-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
 ; AVX2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX2-NEXT:    je .LBB9_20
-; AVX2-NEXT:  .LBB9_19: # %cond.store17
+; AVX2-NEXT:    je .LBB9_11
+; AVX2-NEXT:  .LBB9_26: # %cond.store17
 ; AVX2-NEXT:    vpextrw $1, %xmm0, 18(%rdi)
 ; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX2-NEXT:    je .LBB9_22
-; AVX2-NEXT:  .LBB9_21: # %cond.store19
+; AVX2-NEXT:    je .LBB9_12
+; AVX2-NEXT:  .LBB9_27: # %cond.store19
 ; AVX2-NEXT:    vpextrw $2, %xmm0, 20(%rdi)
 ; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX2-NEXT:    je .LBB9_24
-; AVX2-NEXT:  .LBB9_23: # %cond.store21
+; AVX2-NEXT:    je .LBB9_13
+; AVX2-NEXT:  .LBB9_28: # %cond.store21
 ; AVX2-NEXT:    vpextrw $3, %xmm0, 22(%rdi)
 ; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX2-NEXT:    je .LBB9_26
-; AVX2-NEXT:  .LBB9_25: # %cond.store23
+; AVX2-NEXT:    je .LBB9_14
+; AVX2-NEXT:  .LBB9_29: # %cond.store23
 ; AVX2-NEXT:    vpextrw $4, %xmm0, 24(%rdi)
 ; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX2-NEXT:    je .LBB9_28
-; AVX2-NEXT:  .LBB9_27: # %cond.store25
+; AVX2-NEXT:    je .LBB9_15
+; AVX2-NEXT:  .LBB9_30: # %cond.store25
 ; AVX2-NEXT:    vpextrw $5, %xmm0, 26(%rdi)
 ; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX2-NEXT:    je .LBB9_30
-; AVX2-NEXT:  .LBB9_29: # %cond.store27
+; AVX2-NEXT:    je .LBB9_16
+; AVX2-NEXT:  .LBB9_31: # %cond.store27
 ; AVX2-NEXT:    vpextrw $6, %xmm0, 28(%rdi)
 ; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX2-NEXT:    je .LBB9_32
-; AVX2-NEXT:  .LBB9_31: # %cond.store29
+; AVX2-NEXT:    je .LBB9_17
+; AVX2-NEXT:  .LBB9_32: # %cond.store29
 ; AVX2-NEXT:    vpextrw $7, %xmm0, 30(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -3232,116 +3232,116 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusdw %zmm0, %ymm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB9_1
-; AVX512F-NEXT:  # %bb.2: # %else
+; AVX512F-NEXT:    jne .LBB9_18
+; AVX512F-NEXT:  # %bb.1: # %else
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB9_3
-; AVX512F-NEXT:  .LBB9_4: # %else2
+; AVX512F-NEXT:    jne .LBB9_19
+; AVX512F-NEXT:  .LBB9_2: # %else2
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB9_5
-; AVX512F-NEXT:  .LBB9_6: # %else4
+; AVX512F-NEXT:    jne .LBB9_20
+; AVX512F-NEXT:  .LBB9_3: # %else4
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB9_7
-; AVX512F-NEXT:  .LBB9_8: # %else6
+; AVX512F-NEXT:    jne .LBB9_21
+; AVX512F-NEXT:  .LBB9_4: # %else6
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    jne .LBB9_9
-; AVX512F-NEXT:  .LBB9_10: # %else8
+; AVX512F-NEXT:    jne .LBB9_22
+; AVX512F-NEXT:  .LBB9_5: # %else8
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    jne .LBB9_11
-; AVX512F-NEXT:  .LBB9_12: # %else10
+; AVX512F-NEXT:    jne .LBB9_23
+; AVX512F-NEXT:  .LBB9_6: # %else10
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    jne .LBB9_13
-; AVX512F-NEXT:  .LBB9_14: # %else12
+; AVX512F-NEXT:    jne .LBB9_24
+; AVX512F-NEXT:  .LBB9_7: # %else12
 ; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    jns .LBB9_16
-; AVX512F-NEXT:  .LBB9_15: # %cond.store13
+; AVX512F-NEXT:    jns .LBB9_9
+; AVX512F-NEXT:  .LBB9_8: # %cond.store13
 ; AVX512F-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
-; AVX512F-NEXT:  .LBB9_16: # %else14
+; AVX512F-NEXT:  .LBB9_9: # %else14
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    jne .LBB9_17
-; AVX512F-NEXT:  # %bb.18: # %else16
-; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512F-NEXT:    jne .LBB9_19
-; AVX512F-NEXT:  .LBB9_20: # %else18
-; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512F-NEXT:    jne .LBB9_21
-; AVX512F-NEXT:  .LBB9_22: # %else20
-; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512F-NEXT:    jne .LBB9_23
-; AVX512F-NEXT:  .LBB9_24: # %else22
-; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512F-NEXT:    jne .LBB9_25
-; AVX512F-NEXT:  .LBB9_26: # %else24
-; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512F-NEXT:  # %bb.10: # %else16
+; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512F-NEXT:    jne .LBB9_26
+; AVX512F-NEXT:  .LBB9_11: # %else18
+; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512F-NEXT:    jne .LBB9_27
-; AVX512F-NEXT:  .LBB9_28: # %else26
-; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX512F-NEXT:  .LBB9_12: # %else20
+; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512F-NEXT:    jne .LBB9_28
+; AVX512F-NEXT:  .LBB9_13: # %else22
+; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512F-NEXT:    jne .LBB9_29
-; AVX512F-NEXT:  .LBB9_30: # %else28
-; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512F-NEXT:  .LBB9_14: # %else24
+; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512F-NEXT:    jne .LBB9_30
+; AVX512F-NEXT:  .LBB9_15: # %else26
+; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512F-NEXT:    jne .LBB9_31
-; AVX512F-NEXT:  .LBB9_32: # %else30
+; AVX512F-NEXT:  .LBB9_16: # %else28
+; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512F-NEXT:    jne .LBB9_32
+; AVX512F-NEXT:  .LBB9_17: # %else30
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB9_1: # %cond.store
+; AVX512F-NEXT:  .LBB9_18: # %cond.store
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB9_4
-; AVX512F-NEXT:  .LBB9_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB9_2
+; AVX512F-NEXT:  .LBB9_19: # %cond.store1
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB9_6
-; AVX512F-NEXT:  .LBB9_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB9_3
+; AVX512F-NEXT:  .LBB9_20: # %cond.store3
 ; AVX512F-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB9_8
-; AVX512F-NEXT:  .LBB9_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB9_4
+; AVX512F-NEXT:  .LBB9_21: # %cond.store5
 ; AVX512F-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB9_10
-; AVX512F-NEXT:  .LBB9_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB9_5
+; AVX512F-NEXT:  .LBB9_22: # %cond.store7
 ; AVX512F-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB9_12
-; AVX512F-NEXT:  .LBB9_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB9_6
+; AVX512F-NEXT:  .LBB9_23: # %cond.store9
 ; AVX512F-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB9_14
-; AVX512F-NEXT:  .LBB9_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB9_7
+; AVX512F-NEXT:  .LBB9_24: # %cond.store11
 ; AVX512F-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    js .LBB9_15
-; AVX512F-NEXT:    jmp .LBB9_16
-; AVX512F-NEXT:  .LBB9_17: # %cond.store15
+; AVX512F-NEXT:    js .LBB9_8
+; AVX512F-NEXT:    jmp .LBB9_9
+; AVX512F-NEXT:  .LBB9_25: # %cond.store15
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512F-NEXT:    je .LBB9_20
-; AVX512F-NEXT:  .LBB9_19: # %cond.store17
+; AVX512F-NEXT:    je .LBB9_11
+; AVX512F-NEXT:  .LBB9_26: # %cond.store17
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 18(%rdi)
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512F-NEXT:    je .LBB9_22
-; AVX512F-NEXT:  .LBB9_21: # %cond.store19
+; AVX512F-NEXT:    je .LBB9_12
+; AVX512F-NEXT:  .LBB9_27: # %cond.store19
 ; AVX512F-NEXT:    vpextrw $2, %xmm0, 20(%rdi)
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512F-NEXT:    je .LBB9_24
-; AVX512F-NEXT:  .LBB9_23: # %cond.store21
+; AVX512F-NEXT:    je .LBB9_13
+; AVX512F-NEXT:  .LBB9_28: # %cond.store21
 ; AVX512F-NEXT:    vpextrw $3, %xmm0, 22(%rdi)
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512F-NEXT:    je .LBB9_26
-; AVX512F-NEXT:  .LBB9_25: # %cond.store23
+; AVX512F-NEXT:    je .LBB9_14
+; AVX512F-NEXT:  .LBB9_29: # %cond.store23
 ; AVX512F-NEXT:    vpextrw $4, %xmm0, 24(%rdi)
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512F-NEXT:    je .LBB9_28
-; AVX512F-NEXT:  .LBB9_27: # %cond.store25
+; AVX512F-NEXT:    je .LBB9_15
+; AVX512F-NEXT:  .LBB9_30: # %cond.store25
 ; AVX512F-NEXT:    vpextrw $5, %xmm0, 26(%rdi)
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512F-NEXT:    je .LBB9_30
-; AVX512F-NEXT:  .LBB9_29: # %cond.store27
+; AVX512F-NEXT:    je .LBB9_16
+; AVX512F-NEXT:  .LBB9_31: # %cond.store27
 ; AVX512F-NEXT:    vpextrw $6, %xmm0, 28(%rdi)
 ; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512F-NEXT:    je .LBB9_32
-; AVX512F-NEXT:  .LBB9_31: # %cond.store29
+; AVX512F-NEXT:    je .LBB9_17
+; AVX512F-NEXT:  .LBB9_32: # %cond.store29
 ; AVX512F-NEXT:    vpextrw $7, %xmm0, 30(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -3352,116 +3352,116 @@ define void @truncstore_v16i32_v16i16(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusdw %zmm0, %ymm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB9_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
+; AVX512FVL-NEXT:    jne .LBB9_18
+; AVX512FVL-NEXT:  # %bb.1: # %else
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB9_3
-; AVX512FVL-NEXT:  .LBB9_4: # %else2
+; AVX512FVL-NEXT:    jne .LBB9_19
+; AVX512FVL-NEXT:  .LBB9_2: # %else2
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB9_5
-; AVX512FVL-NEXT:  .LBB9_6: # %else4
+; AVX512FVL-NEXT:    jne .LBB9_20
+; AVX512FVL-NEXT:  .LBB9_3: # %else4
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB9_7
-; AVX512FVL-NEXT:  .LBB9_8: # %else6
+; AVX512FVL-NEXT:    jne .LBB9_21
+; AVX512FVL-NEXT:  .LBB9_4: # %else6
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    jne .LBB9_9
-; AVX512FVL-NEXT:  .LBB9_10: # %else8
+; AVX512FVL-NEXT:    jne .LBB9_22
+; AVX512FVL-NEXT:  .LBB9_5: # %else8
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    jne .LBB9_11
-; AVX512FVL-NEXT:  .LBB9_12: # %else10
+; AVX512FVL-NEXT:    jne .LBB9_23
+; AVX512FVL-NEXT:  .LBB9_6: # %else10
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    jne .LBB9_13
-; AVX512FVL-NEXT:  .LBB9_14: # %else12
+; AVX512FVL-NEXT:    jne .LBB9_24
+; AVX512FVL-NEXT:  .LBB9_7: # %else12
 ; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    jns .LBB9_16
-; AVX512FVL-NEXT:  .LBB9_15: # %cond.store13
+; AVX512FVL-NEXT:    jns .LBB9_9
+; AVX512FVL-NEXT:  .LBB9_8: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
-; AVX512FVL-NEXT:  .LBB9_16: # %else14
+; AVX512FVL-NEXT:  .LBB9_9: # %else14
 ; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512FVL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512FVL-NEXT:    jne .LBB9_17
-; AVX512FVL-NEXT:  # %bb.18: # %else16
-; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512FVL-NEXT:    jne .LBB9_19
-; AVX512FVL-NEXT:  .LBB9_20: # %else18
-; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512FVL-NEXT:    jne .LBB9_21
-; AVX512FVL-NEXT:  .LBB9_22: # %else20
-; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512FVL-NEXT:    jne .LBB9_23
-; AVX512FVL-NEXT:  .LBB9_24: # %else22
-; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512FVL-NEXT:    jne .LBB9_25
-; AVX512FVL-NEXT:  .LBB9_26: # %else24
-; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512FVL-NEXT:  # %bb.10: # %else16
+; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512FVL-NEXT:    jne .LBB9_26
+; AVX512FVL-NEXT:  .LBB9_11: # %else18
+; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512FVL-NEXT:    jne .LBB9_27
-; AVX512FVL-NEXT:  .LBB9_28: # %else26
-; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX512FVL-NEXT:  .LBB9_12: # %else20
+; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512FVL-NEXT:    jne .LBB9_28
+; AVX512FVL-NEXT:  .LBB9_13: # %else22
+; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512FVL-NEXT:    jne .LBB9_29
-; AVX512FVL-NEXT:  .LBB9_30: # %else28
-; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512FVL-NEXT:  .LBB9_14: # %else24
+; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512FVL-NEXT:    jne .LBB9_30
+; AVX512FVL-NEXT:  .LBB9_15: # %else26
+; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512FVL-NEXT:    jne .LBB9_31
-; AVX512FVL-NEXT:  .LBB9_32: # %else30
+; AVX512FVL-NEXT:  .LBB9_16: # %else28
+; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512FVL-NEXT:    jne .LBB9_32
+; AVX512FVL-NEXT:  .LBB9_17: # %else30
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB9_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB9_18: # %cond.store
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB9_4
-; AVX512FVL-NEXT:  .LBB9_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB9_2
+; AVX512FVL-NEXT:  .LBB9_19: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB9_6
-; AVX512FVL-NEXT:  .LBB9_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB9_3
+; AVX512FVL-NEXT:  .LBB9_20: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB9_8
-; AVX512FVL-NEXT:  .LBB9_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB9_4
+; AVX512FVL-NEXT:  .LBB9_21: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB9_10
-; AVX512FVL-NEXT:  .LBB9_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB9_5
+; AVX512FVL-NEXT:  .LBB9_22: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB9_12
-; AVX512FVL-NEXT:  .LBB9_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB9_6
+; AVX512FVL-NEXT:  .LBB9_23: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB9_14
-; AVX512FVL-NEXT:  .LBB9_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB9_7
+; AVX512FVL-NEXT:  .LBB9_24: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    js .LBB9_15
-; AVX512FVL-NEXT:    jmp .LBB9_16
-; AVX512FVL-NEXT:  .LBB9_17: # %cond.store15
+; AVX512FVL-NEXT:    js .LBB9_8
+; AVX512FVL-NEXT:    jmp .LBB9_9
+; AVX512FVL-NEXT:  .LBB9_25: # %cond.store15
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
 ; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512FVL-NEXT:    je .LBB9_20
-; AVX512FVL-NEXT:  .LBB9_19: # %cond.store17
+; AVX512FVL-NEXT:    je .LBB9_11
+; AVX512FVL-NEXT:  .LBB9_26: # %cond.store17
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 18(%rdi)
 ; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512FVL-NEXT:    je .LBB9_22
-; AVX512FVL-NEXT:  .LBB9_21: # %cond.store19
+; AVX512FVL-NEXT:    je .LBB9_12
+; AVX512FVL-NEXT:  .LBB9_27: # %cond.store19
 ; AVX512FVL-NEXT:    vpextrw $2, %xmm0, 20(%rdi)
 ; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512FVL-NEXT:    je .LBB9_24
-; AVX512FVL-NEXT:  .LBB9_23: # %cond.store21
+; AVX512FVL-NEXT:    je .LBB9_13
+; AVX512FVL-NEXT:  .LBB9_28: # %cond.store21
 ; AVX512FVL-NEXT:    vpextrw $3, %xmm0, 22(%rdi)
 ; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512FVL-NEXT:    je .LBB9_26
-; AVX512FVL-NEXT:  .LBB9_25: # %cond.store23
+; AVX512FVL-NEXT:    je .LBB9_14
+; AVX512FVL-NEXT:  .LBB9_29: # %cond.store23
 ; AVX512FVL-NEXT:    vpextrw $4, %xmm0, 24(%rdi)
 ; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512FVL-NEXT:    je .LBB9_28
-; AVX512FVL-NEXT:  .LBB9_27: # %cond.store25
+; AVX512FVL-NEXT:    je .LBB9_15
+; AVX512FVL-NEXT:  .LBB9_30: # %cond.store25
 ; AVX512FVL-NEXT:    vpextrw $5, %xmm0, 26(%rdi)
 ; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512FVL-NEXT:    je .LBB9_30
-; AVX512FVL-NEXT:  .LBB9_29: # %cond.store27
+; AVX512FVL-NEXT:    je .LBB9_16
+; AVX512FVL-NEXT:  .LBB9_31: # %cond.store27
 ; AVX512FVL-NEXT:    vpextrw $6, %xmm0, 28(%rdi)
 ; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512FVL-NEXT:    je .LBB9_32
-; AVX512FVL-NEXT:  .LBB9_31: # %cond.store29
+; AVX512FVL-NEXT:    je .LBB9_17
+; AVX512FVL-NEXT:  .LBB9_32: # %cond.store29
 ; AVX512FVL-NEXT:    vpextrw $7, %xmm0, 30(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -3534,103 +3534,103 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm1, %ecx
-; SSE2-NEXT:    jne .LBB10_1
-; SSE2-NEXT:  # %bb.2: # %else
+; SSE2-NEXT:    jne .LBB10_28
+; SSE2-NEXT:  # %bb.1: # %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB10_3
-; SSE2-NEXT:  .LBB10_4: # %else2
+; SSE2-NEXT:    jne .LBB10_29
+; SSE2-NEXT:  .LBB10_2: # %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB10_5
-; SSE2-NEXT:  .LBB10_6: # %else4
+; SSE2-NEXT:    jne .LBB10_30
+; SSE2-NEXT:  .LBB10_3: # %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB10_8
-; SSE2-NEXT:  .LBB10_7: # %cond.store5
+; SSE2-NEXT:    je .LBB10_5
+; SSE2-NEXT:  .LBB10_4: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 3(%rdi)
-; SSE2-NEXT:  .LBB10_8: # %else6
+; SSE2-NEXT:  .LBB10_5: # %else6
 ; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    pextrw $2, %xmm1, %ecx
-; SSE2-NEXT:    je .LBB10_10
-; SSE2-NEXT:  # %bb.9: # %cond.store7
+; SSE2-NEXT:    je .LBB10_7
+; SSE2-NEXT:  # %bb.6: # %cond.store7
 ; SSE2-NEXT:    movb %cl, 4(%rdi)
-; SSE2-NEXT:  .LBB10_10: # %else8
+; SSE2-NEXT:  .LBB10_7: # %else8
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB10_12
-; SSE2-NEXT:  # %bb.11: # %cond.store9
+; SSE2-NEXT:    je .LBB10_9
+; SSE2-NEXT:  # %bb.8: # %cond.store9
 ; SSE2-NEXT:    movb %ch, 5(%rdi)
-; SSE2-NEXT:  .LBB10_12: # %else10
+; SSE2-NEXT:  .LBB10_9: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm1, %ecx
-; SSE2-NEXT:    je .LBB10_14
-; SSE2-NEXT:  # %bb.13: # %cond.store11
+; SSE2-NEXT:    je .LBB10_11
+; SSE2-NEXT:  # %bb.10: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
-; SSE2-NEXT:  .LBB10_14: # %else12
+; SSE2-NEXT:  .LBB10_11: # %else12
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jns .LBB10_16
-; SSE2-NEXT:  # %bb.15: # %cond.store13
+; SSE2-NEXT:    jns .LBB10_13
+; SSE2-NEXT:  # %bb.12: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
-; SSE2-NEXT:  .LBB10_16: # %else14
+; SSE2-NEXT:  .LBB10_13: # %else14
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE2-NEXT:    pextrw $4, %xmm1, %ecx
-; SSE2-NEXT:    je .LBB10_18
-; SSE2-NEXT:  # %bb.17: # %cond.store15
+; SSE2-NEXT:    je .LBB10_15
+; SSE2-NEXT:  # %bb.14: # %cond.store15
 ; SSE2-NEXT:    movb %cl, 8(%rdi)
-; SSE2-NEXT:  .LBB10_18: # %else16
+; SSE2-NEXT:  .LBB10_15: # %else16
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
-; SSE2-NEXT:    je .LBB10_20
-; SSE2-NEXT:  # %bb.19: # %cond.store17
+; SSE2-NEXT:    je .LBB10_17
+; SSE2-NEXT:  # %bb.16: # %cond.store17
 ; SSE2-NEXT:    movb %ch, 9(%rdi)
-; SSE2-NEXT:  .LBB10_20: # %else18
+; SSE2-NEXT:  .LBB10_17: # %else18
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    pextrw $5, %xmm1, %ecx
-; SSE2-NEXT:    je .LBB10_22
-; SSE2-NEXT:  # %bb.21: # %cond.store19
+; SSE2-NEXT:    je .LBB10_19
+; SSE2-NEXT:  # %bb.18: # %cond.store19
 ; SSE2-NEXT:    movb %cl, 10(%rdi)
-; SSE2-NEXT:  .LBB10_22: # %else20
+; SSE2-NEXT:  .LBB10_19: # %else20
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE2-NEXT:    je .LBB10_24
-; SSE2-NEXT:  # %bb.23: # %cond.store21
+; SSE2-NEXT:    je .LBB10_21
+; SSE2-NEXT:  # %bb.20: # %cond.store21
 ; SSE2-NEXT:    movb %ch, 11(%rdi)
-; SSE2-NEXT:  .LBB10_24: # %else22
+; SSE2-NEXT:  .LBB10_21: # %else22
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm1, %ecx
-; SSE2-NEXT:    je .LBB10_26
-; SSE2-NEXT:  # %bb.25: # %cond.store23
+; SSE2-NEXT:    je .LBB10_23
+; SSE2-NEXT:  # %bb.22: # %cond.store23
 ; SSE2-NEXT:    movb %cl, 12(%rdi)
-; SSE2-NEXT:  .LBB10_26: # %else24
+; SSE2-NEXT:  .LBB10_23: # %else24
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE2-NEXT:    je .LBB10_28
-; SSE2-NEXT:  # %bb.27: # %cond.store25
+; SSE2-NEXT:    je .LBB10_25
+; SSE2-NEXT:  # %bb.24: # %cond.store25
 ; SSE2-NEXT:    movb %ch, 13(%rdi)
-; SSE2-NEXT:  .LBB10_28: # %else26
+; SSE2-NEXT:  .LBB10_25: # %else26
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    pextrw $7, %xmm1, %ecx
-; SSE2-NEXT:    jne .LBB10_29
-; SSE2-NEXT:  # %bb.30: # %else28
-; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    jne .LBB10_31
-; SSE2-NEXT:  .LBB10_32: # %else30
+; SSE2-NEXT:  # %bb.26: # %else28
+; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:    jne .LBB10_32
+; SSE2-NEXT:  .LBB10_27: # %else30
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB10_1: # %cond.store
+; SSE2-NEXT:  .LBB10_28: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB10_4
-; SSE2-NEXT:  .LBB10_3: # %cond.store1
+; SSE2-NEXT:    je .LBB10_2
+; SSE2-NEXT:  .LBB10_29: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB10_6
-; SSE2-NEXT:  .LBB10_5: # %cond.store3
+; SSE2-NEXT:    je .LBB10_3
+; SSE2-NEXT:  .LBB10_30: # %cond.store3
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB10_7
-; SSE2-NEXT:    jmp .LBB10_8
-; SSE2-NEXT:  .LBB10_29: # %cond.store27
+; SSE2-NEXT:    jne .LBB10_4
+; SSE2-NEXT:    jmp .LBB10_5
+; SSE2-NEXT:  .LBB10_31: # %cond.store27
 ; SSE2-NEXT:    movb %cl, 14(%rdi)
 ; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE2-NEXT:    je .LBB10_32
-; SSE2-NEXT:  .LBB10_31: # %cond.store29
+; SSE2-NEXT:    je .LBB10_27
+; SSE2-NEXT:  .LBB10_32: # %cond.store29
 ; SSE2-NEXT:    movb %ch, 15(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -3655,115 +3655,115 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm4, %eax
 ; SSE4-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB10_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB10_3
-; SSE4-NEXT:  .LBB10_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB10_5
-; SSE4-NEXT:  .LBB10_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB10_7
-; SSE4-NEXT:  .LBB10_8: # %else6
-; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    jne .LBB10_9
-; SSE4-NEXT:  .LBB10_10: # %else8
-; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    jne .LBB10_11
-; SSE4-NEXT:  .LBB10_12: # %else10
-; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    jne .LBB10_13
-; SSE4-NEXT:  .LBB10_14: # %else12
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    js .LBB10_15
-; SSE4-NEXT:  .LBB10_16: # %else14
-; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB10_17
-; SSE4-NEXT:  .LBB10_18: # %else16
-; SSE4-NEXT:    testl $512, %eax # imm = 0x200
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB10_18
+; SSE4-NEXT:  .LBB10_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB10_19
-; SSE4-NEXT:  .LBB10_20: # %else18
-; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
+; SSE4-NEXT:  .LBB10_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB10_20
+; SSE4-NEXT:  .LBB10_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB10_21
-; SSE4-NEXT:  .LBB10_22: # %else20
-; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
+; SSE4-NEXT:  .LBB10_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB10_22
+; SSE4-NEXT:  .LBB10_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB10_23
-; SSE4-NEXT:  .LBB10_24: # %else22
-; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
+; SSE4-NEXT:  .LBB10_7: # %else12
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    js .LBB10_24
+; SSE4-NEXT:  .LBB10_8: # %else14
+; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB10_25
-; SSE4-NEXT:  .LBB10_26: # %else24
-; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE4-NEXT:  .LBB10_9: # %else16
+; SSE4-NEXT:    testl $512, %eax # imm = 0x200
+; SSE4-NEXT:    jne .LBB10_26
+; SSE4-NEXT:  .LBB10_10: # %else18
+; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE4-NEXT:    jne .LBB10_27
-; SSE4-NEXT:  .LBB10_28: # %else26
-; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
+; SSE4-NEXT:  .LBB10_11: # %else20
+; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
+; SSE4-NEXT:    jne .LBB10_28
+; SSE4-NEXT:  .LBB10_12: # %else22
+; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE4-NEXT:    jne .LBB10_29
-; SSE4-NEXT:  .LBB10_30: # %else28
-; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:  .LBB10_13: # %else24
+; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE4-NEXT:    jne .LBB10_30
+; SSE4-NEXT:  .LBB10_14: # %else26
+; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE4-NEXT:    jne .LBB10_31
-; SSE4-NEXT:  .LBB10_32: # %else30
+; SSE4-NEXT:  .LBB10_15: # %else28
+; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    jne .LBB10_32
+; SSE4-NEXT:  .LBB10_16: # %else30
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB10_1: # %cond.store
+; SSE4-NEXT:  .LBB10_17: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB10_4
-; SSE4-NEXT:  .LBB10_3: # %cond.store1
+; SSE4-NEXT:    je .LBB10_2
+; SSE4-NEXT:  .LBB10_18: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm0, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB10_6
-; SSE4-NEXT:  .LBB10_5: # %cond.store3
+; SSE4-NEXT:    je .LBB10_3
+; SSE4-NEXT:  .LBB10_19: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB10_8
-; SSE4-NEXT:  .LBB10_7: # %cond.store5
+; SSE4-NEXT:    je .LBB10_4
+; SSE4-NEXT:  .LBB10_20: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm0, 3(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB10_10
-; SSE4-NEXT:  .LBB10_9: # %cond.store7
+; SSE4-NEXT:    je .LBB10_5
+; SSE4-NEXT:  .LBB10_21: # %cond.store7
 ; SSE4-NEXT:    pextrb $4, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB10_12
-; SSE4-NEXT:  .LBB10_11: # %cond.store9
+; SSE4-NEXT:    je .LBB10_6
+; SSE4-NEXT:  .LBB10_22: # %cond.store9
 ; SSE4-NEXT:    pextrb $5, %xmm0, 5(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB10_14
-; SSE4-NEXT:  .LBB10_13: # %cond.store11
+; SSE4-NEXT:    je .LBB10_7
+; SSE4-NEXT:  .LBB10_23: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    jns .LBB10_16
-; SSE4-NEXT:  .LBB10_15: # %cond.store13
+; SSE4-NEXT:    jns .LBB10_8
+; SSE4-NEXT:  .LBB10_24: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
-; SSE4-NEXT:    je .LBB10_18
-; SSE4-NEXT:  .LBB10_17: # %cond.store15
+; SSE4-NEXT:    je .LBB10_9
+; SSE4-NEXT:  .LBB10_25: # %cond.store15
 ; SSE4-NEXT:    pextrb $8, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testl $512, %eax # imm = 0x200
-; SSE4-NEXT:    je .LBB10_20
-; SSE4-NEXT:  .LBB10_19: # %cond.store17
+; SSE4-NEXT:    je .LBB10_10
+; SSE4-NEXT:  .LBB10_26: # %cond.store17
 ; SSE4-NEXT:    pextrb $9, %xmm0, 9(%rdi)
 ; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE4-NEXT:    je .LBB10_22
-; SSE4-NEXT:  .LBB10_21: # %cond.store19
+; SSE4-NEXT:    je .LBB10_11
+; SSE4-NEXT:  .LBB10_27: # %cond.store19
 ; SSE4-NEXT:    pextrb $10, %xmm0, 10(%rdi)
 ; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE4-NEXT:    je .LBB10_24
-; SSE4-NEXT:  .LBB10_23: # %cond.store21
+; SSE4-NEXT:    je .LBB10_12
+; SSE4-NEXT:  .LBB10_28: # %cond.store21
 ; SSE4-NEXT:    pextrb $11, %xmm0, 11(%rdi)
 ; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
-; SSE4-NEXT:    je .LBB10_26
-; SSE4-NEXT:  .LBB10_25: # %cond.store23
+; SSE4-NEXT:    je .LBB10_13
+; SSE4-NEXT:  .LBB10_29: # %cond.store23
 ; SSE4-NEXT:    pextrb $12, %xmm0, 12(%rdi)
 ; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE4-NEXT:    je .LBB10_28
-; SSE4-NEXT:  .LBB10_27: # %cond.store25
+; SSE4-NEXT:    je .LBB10_14
+; SSE4-NEXT:  .LBB10_30: # %cond.store25
 ; SSE4-NEXT:    pextrb $13, %xmm0, 13(%rdi)
 ; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
-; SSE4-NEXT:    je .LBB10_30
-; SSE4-NEXT:  .LBB10_29: # %cond.store27
+; SSE4-NEXT:    je .LBB10_15
+; SSE4-NEXT:  .LBB10_31: # %cond.store27
 ; SSE4-NEXT:    pextrb $14, %xmm0, 14(%rdi)
 ; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE4-NEXT:    je .LBB10_32
-; SSE4-NEXT:  .LBB10_31: # %cond.store29
+; SSE4-NEXT:    je .LBB10_16
+; SSE4-NEXT:  .LBB10_32: # %cond.store29
 ; SSE4-NEXT:    pextrb $15, %xmm0, 15(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -3792,116 +3792,116 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX1-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB10_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB10_3
-; AVX1-NEXT:  .LBB10_4: # %else2
-; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB10_5
-; AVX1-NEXT:  .LBB10_6: # %else4
-; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB10_7
-; AVX1-NEXT:  .LBB10_8: # %else6
-; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    jne .LBB10_9
-; AVX1-NEXT:  .LBB10_10: # %else8
-; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    jne .LBB10_11
-; AVX1-NEXT:  .LBB10_12: # %else10
-; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    jne .LBB10_13
-; AVX1-NEXT:  .LBB10_14: # %else12
-; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    js .LBB10_15
-; AVX1-NEXT:  .LBB10_16: # %else14
-; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB10_17
-; AVX1-NEXT:  .LBB10_18: # %else16
-; AVX1-NEXT:    testl $512, %eax # imm = 0x200
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB10_18
+; AVX1-NEXT:  .LBB10_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB10_19
-; AVX1-NEXT:  .LBB10_20: # %else18
-; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX1-NEXT:  .LBB10_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB10_20
+; AVX1-NEXT:  .LBB10_4: # %else6
+; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB10_21
-; AVX1-NEXT:  .LBB10_22: # %else20
-; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX1-NEXT:  .LBB10_5: # %else8
+; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:    jne .LBB10_22
+; AVX1-NEXT:  .LBB10_6: # %else10
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB10_23
-; AVX1-NEXT:  .LBB10_24: # %else22
-; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX1-NEXT:  .LBB10_7: # %else12
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js .LBB10_24
+; AVX1-NEXT:  .LBB10_8: # %else14
+; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB10_25
-; AVX1-NEXT:  .LBB10_26: # %else24
-; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX1-NEXT:  .LBB10_9: # %else16
+; AVX1-NEXT:    testl $512, %eax # imm = 0x200
+; AVX1-NEXT:    jne .LBB10_26
+; AVX1-NEXT:  .LBB10_10: # %else18
+; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX1-NEXT:    jne .LBB10_27
-; AVX1-NEXT:  .LBB10_28: # %else26
-; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX1-NEXT:  .LBB10_11: # %else20
+; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX1-NEXT:    jne .LBB10_28
+; AVX1-NEXT:  .LBB10_12: # %else22
+; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX1-NEXT:    jne .LBB10_29
-; AVX1-NEXT:  .LBB10_30: # %else28
-; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:  .LBB10_13: # %else24
+; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX1-NEXT:    jne .LBB10_30
+; AVX1-NEXT:  .LBB10_14: # %else26
+; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX1-NEXT:    jne .LBB10_31
-; AVX1-NEXT:  .LBB10_32: # %else30
+; AVX1-NEXT:  .LBB10_15: # %else28
+; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:    jne .LBB10_32
+; AVX1-NEXT:  .LBB10_16: # %else30
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB10_1: # %cond.store
+; AVX1-NEXT:  .LBB10_17: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB10_4
-; AVX1-NEXT:  .LBB10_3: # %cond.store1
+; AVX1-NEXT:    je .LBB10_2
+; AVX1-NEXT:  .LBB10_18: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB10_6
-; AVX1-NEXT:  .LBB10_5: # %cond.store3
+; AVX1-NEXT:    je .LBB10_3
+; AVX1-NEXT:  .LBB10_19: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB10_8
-; AVX1-NEXT:  .LBB10_7: # %cond.store5
+; AVX1-NEXT:    je .LBB10_4
+; AVX1-NEXT:  .LBB10_20: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB10_10
-; AVX1-NEXT:  .LBB10_9: # %cond.store7
+; AVX1-NEXT:    je .LBB10_5
+; AVX1-NEXT:  .LBB10_21: # %cond.store7
 ; AVX1-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB10_12
-; AVX1-NEXT:  .LBB10_11: # %cond.store9
+; AVX1-NEXT:    je .LBB10_6
+; AVX1-NEXT:  .LBB10_22: # %cond.store9
 ; AVX1-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB10_14
-; AVX1-NEXT:  .LBB10_13: # %cond.store11
+; AVX1-NEXT:    je .LBB10_7
+; AVX1-NEXT:  .LBB10_23: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    jns .LBB10_16
-; AVX1-NEXT:  .LBB10_15: # %cond.store13
+; AVX1-NEXT:    jns .LBB10_8
+; AVX1-NEXT:  .LBB10_24: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
-; AVX1-NEXT:    je .LBB10_18
-; AVX1-NEXT:  .LBB10_17: # %cond.store15
+; AVX1-NEXT:    je .LBB10_9
+; AVX1-NEXT:  .LBB10_25: # %cond.store15
 ; AVX1-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    testl $512, %eax # imm = 0x200
-; AVX1-NEXT:    je .LBB10_20
-; AVX1-NEXT:  .LBB10_19: # %cond.store17
+; AVX1-NEXT:    je .LBB10_10
+; AVX1-NEXT:  .LBB10_26: # %cond.store17
 ; AVX1-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX1-NEXT:    je .LBB10_22
-; AVX1-NEXT:  .LBB10_21: # %cond.store19
+; AVX1-NEXT:    je .LBB10_11
+; AVX1-NEXT:  .LBB10_27: # %cond.store19
 ; AVX1-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX1-NEXT:    je .LBB10_24
-; AVX1-NEXT:  .LBB10_23: # %cond.store21
+; AVX1-NEXT:    je .LBB10_12
+; AVX1-NEXT:  .LBB10_28: # %cond.store21
 ; AVX1-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX1-NEXT:    je .LBB10_26
-; AVX1-NEXT:  .LBB10_25: # %cond.store23
+; AVX1-NEXT:    je .LBB10_13
+; AVX1-NEXT:  .LBB10_29: # %cond.store23
 ; AVX1-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX1-NEXT:    je .LBB10_28
-; AVX1-NEXT:  .LBB10_27: # %cond.store25
+; AVX1-NEXT:    je .LBB10_14
+; AVX1-NEXT:  .LBB10_30: # %cond.store25
 ; AVX1-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX1-NEXT:    je .LBB10_30
-; AVX1-NEXT:  .LBB10_29: # %cond.store27
+; AVX1-NEXT:    je .LBB10_15
+; AVX1-NEXT:  .LBB10_31: # %cond.store27
 ; AVX1-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX1-NEXT:    je .LBB10_32
-; AVX1-NEXT:  .LBB10_31: # %cond.store29
+; AVX1-NEXT:    je .LBB10_16
+; AVX1-NEXT:  .LBB10_32: # %cond.store29
 ; AVX1-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -3926,116 +3926,116 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB10_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB10_3
-; AVX2-NEXT:  .LBB10_4: # %else2
-; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB10_5
-; AVX2-NEXT:  .LBB10_6: # %else4
-; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB10_7
-; AVX2-NEXT:  .LBB10_8: # %else6
-; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    jne .LBB10_9
-; AVX2-NEXT:  .LBB10_10: # %else8
-; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    jne .LBB10_11
-; AVX2-NEXT:  .LBB10_12: # %else10
-; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    jne .LBB10_13
-; AVX2-NEXT:  .LBB10_14: # %else12
-; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    js .LBB10_15
-; AVX2-NEXT:  .LBB10_16: # %else14
-; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB10_17
-; AVX2-NEXT:  .LBB10_18: # %else16
-; AVX2-NEXT:    testl $512, %eax # imm = 0x200
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB10_18
+; AVX2-NEXT:  .LBB10_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB10_19
-; AVX2-NEXT:  .LBB10_20: # %else18
-; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX2-NEXT:  .LBB10_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB10_20
+; AVX2-NEXT:  .LBB10_4: # %else6
+; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB10_21
-; AVX2-NEXT:  .LBB10_22: # %else20
-; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX2-NEXT:  .LBB10_5: # %else8
+; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:    jne .LBB10_22
+; AVX2-NEXT:  .LBB10_6: # %else10
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB10_23
-; AVX2-NEXT:  .LBB10_24: # %else22
-; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX2-NEXT:  .LBB10_7: # %else12
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js .LBB10_24
+; AVX2-NEXT:  .LBB10_8: # %else14
+; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB10_25
-; AVX2-NEXT:  .LBB10_26: # %else24
-; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX2-NEXT:  .LBB10_9: # %else16
+; AVX2-NEXT:    testl $512, %eax # imm = 0x200
+; AVX2-NEXT:    jne .LBB10_26
+; AVX2-NEXT:  .LBB10_10: # %else18
+; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX2-NEXT:    jne .LBB10_27
-; AVX2-NEXT:  .LBB10_28: # %else26
-; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX2-NEXT:  .LBB10_11: # %else20
+; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX2-NEXT:    jne .LBB10_28
+; AVX2-NEXT:  .LBB10_12: # %else22
+; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX2-NEXT:    jne .LBB10_29
-; AVX2-NEXT:  .LBB10_30: # %else28
-; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:  .LBB10_13: # %else24
+; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX2-NEXT:    jne .LBB10_30
+; AVX2-NEXT:  .LBB10_14: # %else26
+; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX2-NEXT:    jne .LBB10_31
-; AVX2-NEXT:  .LBB10_32: # %else30
+; AVX2-NEXT:  .LBB10_15: # %else28
+; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:    jne .LBB10_32
+; AVX2-NEXT:  .LBB10_16: # %else30
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB10_1: # %cond.store
+; AVX2-NEXT:  .LBB10_17: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB10_4
-; AVX2-NEXT:  .LBB10_3: # %cond.store1
+; AVX2-NEXT:    je .LBB10_2
+; AVX2-NEXT:  .LBB10_18: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB10_6
-; AVX2-NEXT:  .LBB10_5: # %cond.store3
+; AVX2-NEXT:    je .LBB10_3
+; AVX2-NEXT:  .LBB10_19: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB10_8
-; AVX2-NEXT:  .LBB10_7: # %cond.store5
+; AVX2-NEXT:    je .LBB10_4
+; AVX2-NEXT:  .LBB10_20: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB10_10
-; AVX2-NEXT:  .LBB10_9: # %cond.store7
+; AVX2-NEXT:    je .LBB10_5
+; AVX2-NEXT:  .LBB10_21: # %cond.store7
 ; AVX2-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB10_12
-; AVX2-NEXT:  .LBB10_11: # %cond.store9
+; AVX2-NEXT:    je .LBB10_6
+; AVX2-NEXT:  .LBB10_22: # %cond.store9
 ; AVX2-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB10_14
-; AVX2-NEXT:  .LBB10_13: # %cond.store11
+; AVX2-NEXT:    je .LBB10_7
+; AVX2-NEXT:  .LBB10_23: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    jns .LBB10_16
-; AVX2-NEXT:  .LBB10_15: # %cond.store13
+; AVX2-NEXT:    jns .LBB10_8
+; AVX2-NEXT:  .LBB10_24: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX2-NEXT:    je .LBB10_18
-; AVX2-NEXT:  .LBB10_17: # %cond.store15
+; AVX2-NEXT:    je .LBB10_9
+; AVX2-NEXT:  .LBB10_25: # %cond.store15
 ; AVX2-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX2-NEXT:    je .LBB10_20
-; AVX2-NEXT:  .LBB10_19: # %cond.store17
+; AVX2-NEXT:    je .LBB10_10
+; AVX2-NEXT:  .LBB10_26: # %cond.store17
 ; AVX2-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX2-NEXT:    je .LBB10_22
-; AVX2-NEXT:  .LBB10_21: # %cond.store19
+; AVX2-NEXT:    je .LBB10_11
+; AVX2-NEXT:  .LBB10_27: # %cond.store19
 ; AVX2-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX2-NEXT:    je .LBB10_24
-; AVX2-NEXT:  .LBB10_23: # %cond.store21
+; AVX2-NEXT:    je .LBB10_12
+; AVX2-NEXT:  .LBB10_28: # %cond.store21
 ; AVX2-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX2-NEXT:    je .LBB10_26
-; AVX2-NEXT:  .LBB10_25: # %cond.store23
+; AVX2-NEXT:    je .LBB10_13
+; AVX2-NEXT:  .LBB10_29: # %cond.store23
 ; AVX2-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX2-NEXT:    je .LBB10_28
-; AVX2-NEXT:  .LBB10_27: # %cond.store25
+; AVX2-NEXT:    je .LBB10_14
+; AVX2-NEXT:  .LBB10_30: # %cond.store25
 ; AVX2-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX2-NEXT:    je .LBB10_30
-; AVX2-NEXT:  .LBB10_29: # %cond.store27
+; AVX2-NEXT:    je .LBB10_15
+; AVX2-NEXT:  .LBB10_31: # %cond.store27
 ; AVX2-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX2-NEXT:    je .LBB10_32
-; AVX2-NEXT:  .LBB10_31: # %cond.store29
+; AVX2-NEXT:    je .LBB10_16
+; AVX2-NEXT:  .LBB10_32: # %cond.store29
 ; AVX2-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -4046,116 +4046,116 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusdb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB10_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB10_3
-; AVX512F-NEXT:  .LBB10_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB10_5
-; AVX512F-NEXT:  .LBB10_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB10_7
-; AVX512F-NEXT:  .LBB10_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    jne .LBB10_9
-; AVX512F-NEXT:  .LBB10_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    jne .LBB10_11
-; AVX512F-NEXT:  .LBB10_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    jne .LBB10_13
-; AVX512F-NEXT:  .LBB10_14: # %else12
-; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    js .LBB10_15
-; AVX512F-NEXT:  .LBB10_16: # %else14
-; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB10_17
-; AVX512F-NEXT:  .LBB10_18: # %else16
-; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB10_18
+; AVX512F-NEXT:  .LBB10_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB10_19
-; AVX512F-NEXT:  .LBB10_20: # %else18
-; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX512F-NEXT:  .LBB10_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB10_20
+; AVX512F-NEXT:  .LBB10_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB10_21
-; AVX512F-NEXT:  .LBB10_22: # %else20
-; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512F-NEXT:  .LBB10_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB10_22
+; AVX512F-NEXT:  .LBB10_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB10_23
-; AVX512F-NEXT:  .LBB10_24: # %else22
-; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX512F-NEXT:  .LBB10_7: # %else12
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js .LBB10_24
+; AVX512F-NEXT:  .LBB10_8: # %else14
+; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB10_25
-; AVX512F-NEXT:  .LBB10_26: # %else24
-; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512F-NEXT:  .LBB10_9: # %else16
+; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512F-NEXT:    jne .LBB10_26
+; AVX512F-NEXT:  .LBB10_10: # %else18
+; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512F-NEXT:    jne .LBB10_27
-; AVX512F-NEXT:  .LBB10_28: # %else26
-; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX512F-NEXT:  .LBB10_11: # %else20
+; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512F-NEXT:    jne .LBB10_28
+; AVX512F-NEXT:  .LBB10_12: # %else22
+; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512F-NEXT:    jne .LBB10_29
-; AVX512F-NEXT:  .LBB10_30: # %else28
-; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512F-NEXT:  .LBB10_13: # %else24
+; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512F-NEXT:    jne .LBB10_30
+; AVX512F-NEXT:  .LBB10_14: # %else26
+; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512F-NEXT:    jne .LBB10_31
-; AVX512F-NEXT:  .LBB10_32: # %else30
+; AVX512F-NEXT:  .LBB10_15: # %else28
+; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512F-NEXT:    jne .LBB10_32
+; AVX512F-NEXT:  .LBB10_16: # %else30
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB10_1: # %cond.store
+; AVX512F-NEXT:  .LBB10_17: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB10_4
-; AVX512F-NEXT:  .LBB10_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB10_2
+; AVX512F-NEXT:  .LBB10_18: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB10_6
-; AVX512F-NEXT:  .LBB10_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB10_3
+; AVX512F-NEXT:  .LBB10_19: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB10_8
-; AVX512F-NEXT:  .LBB10_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB10_4
+; AVX512F-NEXT:  .LBB10_20: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB10_10
-; AVX512F-NEXT:  .LBB10_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB10_5
+; AVX512F-NEXT:  .LBB10_21: # %cond.store7
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB10_12
-; AVX512F-NEXT:  .LBB10_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB10_6
+; AVX512F-NEXT:  .LBB10_22: # %cond.store9
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB10_14
-; AVX512F-NEXT:  .LBB10_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB10_7
+; AVX512F-NEXT:  .LBB10_23: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    jns .LBB10_16
-; AVX512F-NEXT:  .LBB10_15: # %cond.store13
+; AVX512F-NEXT:    jns .LBB10_8
+; AVX512F-NEXT:  .LBB10_24: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512F-NEXT:    je .LBB10_18
-; AVX512F-NEXT:  .LBB10_17: # %cond.store15
+; AVX512F-NEXT:    je .LBB10_9
+; AVX512F-NEXT:  .LBB10_25: # %cond.store15
 ; AVX512F-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512F-NEXT:    je .LBB10_20
-; AVX512F-NEXT:  .LBB10_19: # %cond.store17
+; AVX512F-NEXT:    je .LBB10_10
+; AVX512F-NEXT:  .LBB10_26: # %cond.store17
 ; AVX512F-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512F-NEXT:    je .LBB10_22
-; AVX512F-NEXT:  .LBB10_21: # %cond.store19
+; AVX512F-NEXT:    je .LBB10_11
+; AVX512F-NEXT:  .LBB10_27: # %cond.store19
 ; AVX512F-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512F-NEXT:    je .LBB10_24
-; AVX512F-NEXT:  .LBB10_23: # %cond.store21
+; AVX512F-NEXT:    je .LBB10_12
+; AVX512F-NEXT:  .LBB10_28: # %cond.store21
 ; AVX512F-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512F-NEXT:    je .LBB10_26
-; AVX512F-NEXT:  .LBB10_25: # %cond.store23
+; AVX512F-NEXT:    je .LBB10_13
+; AVX512F-NEXT:  .LBB10_29: # %cond.store23
 ; AVX512F-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512F-NEXT:    je .LBB10_28
-; AVX512F-NEXT:  .LBB10_27: # %cond.store25
+; AVX512F-NEXT:    je .LBB10_14
+; AVX512F-NEXT:  .LBB10_30: # %cond.store25
 ; AVX512F-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512F-NEXT:    je .LBB10_30
-; AVX512F-NEXT:  .LBB10_29: # %cond.store27
+; AVX512F-NEXT:    je .LBB10_15
+; AVX512F-NEXT:  .LBB10_31: # %cond.store27
 ; AVX512F-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512F-NEXT:    je .LBB10_32
-; AVX512F-NEXT:  .LBB10_31: # %cond.store29
+; AVX512F-NEXT:    je .LBB10_16
+; AVX512F-NEXT:  .LBB10_32: # %cond.store29
 ; AVX512F-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -4166,116 +4166,116 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %p, <16 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusdb %zmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB10_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB10_3
-; AVX512FVL-NEXT:  .LBB10_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB10_5
-; AVX512FVL-NEXT:  .LBB10_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB10_7
-; AVX512FVL-NEXT:  .LBB10_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    jne .LBB10_9
-; AVX512FVL-NEXT:  .LBB10_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    jne .LBB10_11
-; AVX512FVL-NEXT:  .LBB10_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    jne .LBB10_13
-; AVX512FVL-NEXT:  .LBB10_14: # %else12
-; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    js .LBB10_15
-; AVX512FVL-NEXT:  .LBB10_16: # %else14
-; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512FVL-NEXT:    jne .LBB10_17
-; AVX512FVL-NEXT:  .LBB10_18: # %else16
-; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB10_18
+; AVX512FVL-NEXT:  .LBB10_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB10_19
-; AVX512FVL-NEXT:  .LBB10_20: # %else18
-; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX512FVL-NEXT:  .LBB10_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB10_20
+; AVX512FVL-NEXT:  .LBB10_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB10_21
-; AVX512FVL-NEXT:  .LBB10_22: # %else20
-; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512FVL-NEXT:  .LBB10_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB10_22
+; AVX512FVL-NEXT:  .LBB10_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB10_23
-; AVX512FVL-NEXT:  .LBB10_24: # %else22
-; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX512FVL-NEXT:  .LBB10_7: # %else12
+; AVX512FVL-NEXT:    testb %al, %al
+; AVX512FVL-NEXT:    js .LBB10_24
+; AVX512FVL-NEXT:  .LBB10_8: # %else14
+; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512FVL-NEXT:    jne .LBB10_25
-; AVX512FVL-NEXT:  .LBB10_26: # %else24
-; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512FVL-NEXT:  .LBB10_9: # %else16
+; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512FVL-NEXT:    jne .LBB10_26
+; AVX512FVL-NEXT:  .LBB10_10: # %else18
+; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512FVL-NEXT:    jne .LBB10_27
-; AVX512FVL-NEXT:  .LBB10_28: # %else26
-; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX512FVL-NEXT:  .LBB10_11: # %else20
+; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512FVL-NEXT:    jne .LBB10_28
+; AVX512FVL-NEXT:  .LBB10_12: # %else22
+; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512FVL-NEXT:    jne .LBB10_29
-; AVX512FVL-NEXT:  .LBB10_30: # %else28
-; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512FVL-NEXT:  .LBB10_13: # %else24
+; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512FVL-NEXT:    jne .LBB10_30
+; AVX512FVL-NEXT:  .LBB10_14: # %else26
+; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512FVL-NEXT:    jne .LBB10_31
-; AVX512FVL-NEXT:  .LBB10_32: # %else30
+; AVX512FVL-NEXT:  .LBB10_15: # %else28
+; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512FVL-NEXT:    jne .LBB10_32
+; AVX512FVL-NEXT:  .LBB10_16: # %else30
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB10_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB10_17: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB10_4
-; AVX512FVL-NEXT:  .LBB10_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB10_2
+; AVX512FVL-NEXT:  .LBB10_18: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB10_6
-; AVX512FVL-NEXT:  .LBB10_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB10_3
+; AVX512FVL-NEXT:  .LBB10_19: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB10_8
-; AVX512FVL-NEXT:  .LBB10_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB10_4
+; AVX512FVL-NEXT:  .LBB10_20: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB10_10
-; AVX512FVL-NEXT:  .LBB10_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB10_5
+; AVX512FVL-NEXT:  .LBB10_21: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB10_12
-; AVX512FVL-NEXT:  .LBB10_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB10_6
+; AVX512FVL-NEXT:  .LBB10_22: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB10_14
-; AVX512FVL-NEXT:  .LBB10_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB10_7
+; AVX512FVL-NEXT:  .LBB10_23: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    jns .LBB10_16
-; AVX512FVL-NEXT:  .LBB10_15: # %cond.store13
+; AVX512FVL-NEXT:    jns .LBB10_8
+; AVX512FVL-NEXT:  .LBB10_24: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512FVL-NEXT:    je .LBB10_18
-; AVX512FVL-NEXT:  .LBB10_17: # %cond.store15
+; AVX512FVL-NEXT:    je .LBB10_9
+; AVX512FVL-NEXT:  .LBB10_25: # %cond.store15
 ; AVX512FVL-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512FVL-NEXT:    je .LBB10_20
-; AVX512FVL-NEXT:  .LBB10_19: # %cond.store17
+; AVX512FVL-NEXT:    je .LBB10_10
+; AVX512FVL-NEXT:  .LBB10_26: # %cond.store17
 ; AVX512FVL-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512FVL-NEXT:    je .LBB10_22
-; AVX512FVL-NEXT:  .LBB10_21: # %cond.store19
+; AVX512FVL-NEXT:    je .LBB10_11
+; AVX512FVL-NEXT:  .LBB10_27: # %cond.store19
 ; AVX512FVL-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512FVL-NEXT:    je .LBB10_24
-; AVX512FVL-NEXT:  .LBB10_23: # %cond.store21
+; AVX512FVL-NEXT:    je .LBB10_12
+; AVX512FVL-NEXT:  .LBB10_28: # %cond.store21
 ; AVX512FVL-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512FVL-NEXT:    je .LBB10_26
-; AVX512FVL-NEXT:  .LBB10_25: # %cond.store23
+; AVX512FVL-NEXT:    je .LBB10_13
+; AVX512FVL-NEXT:  .LBB10_29: # %cond.store23
 ; AVX512FVL-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512FVL-NEXT:    je .LBB10_28
-; AVX512FVL-NEXT:  .LBB10_27: # %cond.store25
+; AVX512FVL-NEXT:    je .LBB10_14
+; AVX512FVL-NEXT:  .LBB10_30: # %cond.store25
 ; AVX512FVL-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512FVL-NEXT:    je .LBB10_30
-; AVX512FVL-NEXT:  .LBB10_29: # %cond.store27
+; AVX512FVL-NEXT:    je .LBB10_15
+; AVX512FVL-NEXT:  .LBB10_31: # %cond.store27
 ; AVX512FVL-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512FVL-NEXT:    je .LBB10_32
-; AVX512FVL-NEXT:  .LBB10_31: # %cond.store29
+; AVX512FVL-NEXT:    je .LBB10_16
+; AVX512FVL-NEXT:  .LBB10_32: # %cond.store29
 ; AVX512FVL-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -4332,66 +4332,66 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB11_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB11_3
-; SSE2-NEXT:  .LBB11_4: # %else2
-; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB11_5
-; SSE2-NEXT:  .LBB11_6: # %else4
-; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB11_7
-; SSE2-NEXT:  .LBB11_8: # %else6
-; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    jne .LBB11_9
-; SSE2-NEXT:  .LBB11_10: # %else8
-; SSE2-NEXT:    testb $32, %al
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB11_10
+; SSE2-NEXT:  .LBB11_2: # %else2
+; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB11_11
-; SSE2-NEXT:  .LBB11_12: # %else10
-; SSE2-NEXT:    testb $64, %al
+; SSE2-NEXT:  .LBB11_3: # %else4
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    jne .LBB11_12
+; SSE2-NEXT:  .LBB11_4: # %else6
+; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    jne .LBB11_13
-; SSE2-NEXT:  .LBB11_14: # %else12
-; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:  .LBB11_5: # %else8
+; SSE2-NEXT:    testb $32, %al
+; SSE2-NEXT:    jne .LBB11_14
+; SSE2-NEXT:  .LBB11_6: # %else10
+; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    jne .LBB11_15
-; SSE2-NEXT:  .LBB11_16: # %else14
+; SSE2-NEXT:  .LBB11_7: # %else12
+; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:    jne .LBB11_16
+; SSE2-NEXT:  .LBB11_8: # %else14
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB11_1: # %cond.store
+; SSE2-NEXT:  .LBB11_9: # %cond.store
 ; SSE2-NEXT:    movd %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB11_4
-; SSE2-NEXT:  .LBB11_3: # %cond.store1
+; SSE2-NEXT:    je .LBB11_2
+; SSE2-NEXT:  .LBB11_10: # %cond.store1
 ; SSE2-NEXT:    pextrw $1, %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, 2(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB11_6
-; SSE2-NEXT:  .LBB11_5: # %cond.store3
+; SSE2-NEXT:    je .LBB11_3
+; SSE2-NEXT:  .LBB11_11: # %cond.store3
 ; SSE2-NEXT:    pextrw $2, %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, 4(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB11_8
-; SSE2-NEXT:  .LBB11_7: # %cond.store5
+; SSE2-NEXT:    je .LBB11_4
+; SSE2-NEXT:  .LBB11_12: # %cond.store5
 ; SSE2-NEXT:    pextrw $3, %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, 6(%rdi)
 ; SSE2-NEXT:    testb $16, %al
-; SSE2-NEXT:    je .LBB11_10
-; SSE2-NEXT:  .LBB11_9: # %cond.store7
+; SSE2-NEXT:    je .LBB11_5
+; SSE2-NEXT:  .LBB11_13: # %cond.store7
 ; SSE2-NEXT:    pextrw $4, %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, 8(%rdi)
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB11_12
-; SSE2-NEXT:  .LBB11_11: # %cond.store9
+; SSE2-NEXT:    je .LBB11_6
+; SSE2-NEXT:  .LBB11_14: # %cond.store9
 ; SSE2-NEXT:    pextrw $5, %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, 10(%rdi)
 ; SSE2-NEXT:    testb $64, %al
-; SSE2-NEXT:    je .LBB11_14
-; SSE2-NEXT:  .LBB11_13: # %cond.store11
+; SSE2-NEXT:    je .LBB11_7
+; SSE2-NEXT:  .LBB11_15: # %cond.store11
 ; SSE2-NEXT:    pextrw $6, %xmm4, %ecx
 ; SSE2-NEXT:    movw %cx, 12(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB11_16
-; SSE2-NEXT:  .LBB11_15: # %cond.store13
+; SSE2-NEXT:    je .LBB11_8
+; SSE2-NEXT:  .LBB11_16: # %cond.store13
 ; SSE2-NEXT:    pextrw $7, %xmm4, %eax
 ; SSE2-NEXT:    movw %ax, 14(%rdi)
 ; SSE2-NEXT:    retq
@@ -4410,59 +4410,59 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm2, %eax
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB11_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB11_3
-; SSE4-NEXT:  .LBB11_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB11_5
-; SSE4-NEXT:  .LBB11_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB11_7
-; SSE4-NEXT:  .LBB11_8: # %else6
-; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB11_9
-; SSE4-NEXT:  .LBB11_10: # %else8
-; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB11_10
+; SSE4-NEXT:  .LBB11_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB11_11
-; SSE4-NEXT:  .LBB11_12: # %else10
-; SSE4-NEXT:    testb $64, %al
+; SSE4-NEXT:  .LBB11_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB11_12
+; SSE4-NEXT:  .LBB11_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB11_13
-; SSE4-NEXT:  .LBB11_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:  .LBB11_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB11_14
+; SSE4-NEXT:  .LBB11_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB11_15
-; SSE4-NEXT:  .LBB11_16: # %else14
+; SSE4-NEXT:  .LBB11_7: # %else12
+; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:    jne .LBB11_16
+; SSE4-NEXT:  .LBB11_8: # %else14
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB11_1: # %cond.store
+; SSE4-NEXT:  .LBB11_9: # %cond.store
 ; SSE4-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB11_4
-; SSE4-NEXT:  .LBB11_3: # %cond.store1
+; SSE4-NEXT:    je .LBB11_2
+; SSE4-NEXT:  .LBB11_10: # %cond.store1
 ; SSE4-NEXT:    pextrw $1, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB11_6
-; SSE4-NEXT:  .LBB11_5: # %cond.store3
+; SSE4-NEXT:    je .LBB11_3
+; SSE4-NEXT:  .LBB11_11: # %cond.store3
 ; SSE4-NEXT:    pextrw $2, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB11_8
-; SSE4-NEXT:  .LBB11_7: # %cond.store5
+; SSE4-NEXT:    je .LBB11_4
+; SSE4-NEXT:  .LBB11_12: # %cond.store5
 ; SSE4-NEXT:    pextrw $3, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB11_10
-; SSE4-NEXT:  .LBB11_9: # %cond.store7
+; SSE4-NEXT:    je .LBB11_5
+; SSE4-NEXT:  .LBB11_13: # %cond.store7
 ; SSE4-NEXT:    pextrw $4, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB11_12
-; SSE4-NEXT:  .LBB11_11: # %cond.store9
+; SSE4-NEXT:    je .LBB11_6
+; SSE4-NEXT:  .LBB11_14: # %cond.store9
 ; SSE4-NEXT:    pextrw $5, %xmm0, 10(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB11_14
-; SSE4-NEXT:  .LBB11_13: # %cond.store11
+; SSE4-NEXT:    je .LBB11_7
+; SSE4-NEXT:  .LBB11_15: # %cond.store11
 ; SSE4-NEXT:    pextrw $6, %xmm0, 12(%rdi)
 ; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB11_16
-; SSE4-NEXT:  .LBB11_15: # %cond.store13
+; SSE4-NEXT:    je .LBB11_8
+; SSE4-NEXT:  .LBB11_16: # %cond.store13
 ; SSE4-NEXT:    pextrw $7, %xmm0, 14(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -4481,60 +4481,60 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %ymm1, %eax
 ; AVX1-NEXT:    notl %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB11_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB11_3
-; AVX1-NEXT:  .LBB11_4: # %else2
-; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB11_5
-; AVX1-NEXT:  .LBB11_6: # %else4
-; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB11_7
-; AVX1-NEXT:  .LBB11_8: # %else6
-; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB11_9
-; AVX1-NEXT:  .LBB11_10: # %else8
-; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB11_10
+; AVX1-NEXT:  .LBB11_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB11_11
-; AVX1-NEXT:  .LBB11_12: # %else10
-; AVX1-NEXT:    testb $64, %al
+; AVX1-NEXT:  .LBB11_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB11_12
+; AVX1-NEXT:  .LBB11_4: # %else6
+; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB11_13
-; AVX1-NEXT:  .LBB11_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:  .LBB11_5: # %else8
+; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:    jne .LBB11_14
+; AVX1-NEXT:  .LBB11_6: # %else10
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB11_15
-; AVX1-NEXT:  .LBB11_16: # %else14
+; AVX1-NEXT:  .LBB11_7: # %else12
+; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:    jne .LBB11_16
+; AVX1-NEXT:  .LBB11_8: # %else14
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB11_1: # %cond.store
+; AVX1-NEXT:  .LBB11_9: # %cond.store
 ; AVX1-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB11_4
-; AVX1-NEXT:  .LBB11_3: # %cond.store1
+; AVX1-NEXT:    je .LBB11_2
+; AVX1-NEXT:  .LBB11_10: # %cond.store1
 ; AVX1-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB11_6
-; AVX1-NEXT:  .LBB11_5: # %cond.store3
+; AVX1-NEXT:    je .LBB11_3
+; AVX1-NEXT:  .LBB11_11: # %cond.store3
 ; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB11_8
-; AVX1-NEXT:  .LBB11_7: # %cond.store5
+; AVX1-NEXT:    je .LBB11_4
+; AVX1-NEXT:  .LBB11_12: # %cond.store5
 ; AVX1-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB11_10
-; AVX1-NEXT:  .LBB11_9: # %cond.store7
+; AVX1-NEXT:    je .LBB11_5
+; AVX1-NEXT:  .LBB11_13: # %cond.store7
 ; AVX1-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB11_12
-; AVX1-NEXT:  .LBB11_11: # %cond.store9
+; AVX1-NEXT:    je .LBB11_6
+; AVX1-NEXT:  .LBB11_14: # %cond.store9
 ; AVX1-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB11_14
-; AVX1-NEXT:  .LBB11_13: # %cond.store11
+; AVX1-NEXT:    je .LBB11_7
+; AVX1-NEXT:  .LBB11_15: # %cond.store11
 ; AVX1-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB11_16
-; AVX1-NEXT:  .LBB11_15: # %cond.store13
+; AVX1-NEXT:    je .LBB11_8
+; AVX1-NEXT:  .LBB11_16: # %cond.store13
 ; AVX1-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -4550,60 +4550,60 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
 ; AVX2-NEXT:    notl %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB11_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB11_3
-; AVX2-NEXT:  .LBB11_4: # %else2
-; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB11_5
-; AVX2-NEXT:  .LBB11_6: # %else4
-; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB11_7
-; AVX2-NEXT:  .LBB11_8: # %else6
-; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB11_9
-; AVX2-NEXT:  .LBB11_10: # %else8
-; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB11_10
+; AVX2-NEXT:  .LBB11_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB11_11
-; AVX2-NEXT:  .LBB11_12: # %else10
-; AVX2-NEXT:    testb $64, %al
+; AVX2-NEXT:  .LBB11_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB11_12
+; AVX2-NEXT:  .LBB11_4: # %else6
+; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB11_13
-; AVX2-NEXT:  .LBB11_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:  .LBB11_5: # %else8
+; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:    jne .LBB11_14
+; AVX2-NEXT:  .LBB11_6: # %else10
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB11_15
-; AVX2-NEXT:  .LBB11_16: # %else14
+; AVX2-NEXT:  .LBB11_7: # %else12
+; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:    jne .LBB11_16
+; AVX2-NEXT:  .LBB11_8: # %else14
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB11_1: # %cond.store
+; AVX2-NEXT:  .LBB11_9: # %cond.store
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB11_4
-; AVX2-NEXT:  .LBB11_3: # %cond.store1
+; AVX2-NEXT:    je .LBB11_2
+; AVX2-NEXT:  .LBB11_10: # %cond.store1
 ; AVX2-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB11_6
-; AVX2-NEXT:  .LBB11_5: # %cond.store3
+; AVX2-NEXT:    je .LBB11_3
+; AVX2-NEXT:  .LBB11_11: # %cond.store3
 ; AVX2-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB11_8
-; AVX2-NEXT:  .LBB11_7: # %cond.store5
+; AVX2-NEXT:    je .LBB11_4
+; AVX2-NEXT:  .LBB11_12: # %cond.store5
 ; AVX2-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB11_10
-; AVX2-NEXT:  .LBB11_9: # %cond.store7
+; AVX2-NEXT:    je .LBB11_5
+; AVX2-NEXT:  .LBB11_13: # %cond.store7
 ; AVX2-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB11_12
-; AVX2-NEXT:  .LBB11_11: # %cond.store9
+; AVX2-NEXT:    je .LBB11_6
+; AVX2-NEXT:  .LBB11_14: # %cond.store9
 ; AVX2-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB11_14
-; AVX2-NEXT:  .LBB11_13: # %cond.store11
+; AVX2-NEXT:    je .LBB11_7
+; AVX2-NEXT:  .LBB11_15: # %cond.store11
 ; AVX2-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB11_16
-; AVX2-NEXT:  .LBB11_15: # %cond.store13
+; AVX2-NEXT:    je .LBB11_8
+; AVX2-NEXT:  .LBB11_16: # %cond.store13
 ; AVX2-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -4616,60 +4616,60 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusdw %zmm0, %ymm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB11_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB11_3
-; AVX512F-NEXT:  .LBB11_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB11_5
-; AVX512F-NEXT:  .LBB11_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB11_7
-; AVX512F-NEXT:  .LBB11_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB11_9
-; AVX512F-NEXT:  .LBB11_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB11_10
+; AVX512F-NEXT:  .LBB11_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB11_11
-; AVX512F-NEXT:  .LBB11_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
+; AVX512F-NEXT:  .LBB11_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB11_12
+; AVX512F-NEXT:  .LBB11_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB11_13
-; AVX512F-NEXT:  .LBB11_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:  .LBB11_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB11_14
+; AVX512F-NEXT:  .LBB11_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB11_15
-; AVX512F-NEXT:  .LBB11_16: # %else14
+; AVX512F-NEXT:  .LBB11_7: # %else12
+; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:    jne .LBB11_16
+; AVX512F-NEXT:  .LBB11_8: # %else14
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB11_1: # %cond.store
+; AVX512F-NEXT:  .LBB11_9: # %cond.store
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB11_4
-; AVX512F-NEXT:  .LBB11_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB11_2
+; AVX512F-NEXT:  .LBB11_10: # %cond.store1
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB11_6
-; AVX512F-NEXT:  .LBB11_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB11_3
+; AVX512F-NEXT:  .LBB11_11: # %cond.store3
 ; AVX512F-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB11_8
-; AVX512F-NEXT:  .LBB11_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB11_4
+; AVX512F-NEXT:  .LBB11_12: # %cond.store5
 ; AVX512F-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB11_10
-; AVX512F-NEXT:  .LBB11_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB11_5
+; AVX512F-NEXT:  .LBB11_13: # %cond.store7
 ; AVX512F-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB11_12
-; AVX512F-NEXT:  .LBB11_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB11_6
+; AVX512F-NEXT:  .LBB11_14: # %cond.store9
 ; AVX512F-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB11_14
-; AVX512F-NEXT:  .LBB11_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB11_7
+; AVX512F-NEXT:  .LBB11_15: # %cond.store11
 ; AVX512F-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB11_16
-; AVX512F-NEXT:  .LBB11_15: # %cond.store13
+; AVX512F-NEXT:    je .LBB11_8
+; AVX512F-NEXT:  .LBB11_16: # %cond.store13
 ; AVX512F-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -4680,60 +4680,60 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusdw %ymm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB11_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB11_3
-; AVX512FVL-NEXT:  .LBB11_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB11_5
-; AVX512FVL-NEXT:  .LBB11_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB11_7
-; AVX512FVL-NEXT:  .LBB11_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB11_9
-; AVX512FVL-NEXT:  .LBB11_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB11_10
+; AVX512FVL-NEXT:  .LBB11_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB11_11
-; AVX512FVL-NEXT:  .LBB11_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
+; AVX512FVL-NEXT:  .LBB11_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB11_12
+; AVX512FVL-NEXT:  .LBB11_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB11_13
-; AVX512FVL-NEXT:  .LBB11_14: # %else12
-; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:  .LBB11_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB11_14
+; AVX512FVL-NEXT:  .LBB11_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB11_15
-; AVX512FVL-NEXT:  .LBB11_16: # %else14
+; AVX512FVL-NEXT:  .LBB11_7: # %else12
+; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:    jne .LBB11_16
+; AVX512FVL-NEXT:  .LBB11_8: # %else14
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB11_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB11_9: # %cond.store
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB11_4
-; AVX512FVL-NEXT:  .LBB11_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB11_2
+; AVX512FVL-NEXT:  .LBB11_10: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB11_6
-; AVX512FVL-NEXT:  .LBB11_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB11_3
+; AVX512FVL-NEXT:  .LBB11_11: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB11_8
-; AVX512FVL-NEXT:  .LBB11_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB11_4
+; AVX512FVL-NEXT:  .LBB11_12: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB11_10
-; AVX512FVL-NEXT:  .LBB11_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB11_5
+; AVX512FVL-NEXT:  .LBB11_13: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrw $4, %xmm0, 8(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB11_12
-; AVX512FVL-NEXT:  .LBB11_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB11_6
+; AVX512FVL-NEXT:  .LBB11_14: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrw $5, %xmm0, 10(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB11_14
-; AVX512FVL-NEXT:  .LBB11_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB11_7
+; AVX512FVL-NEXT:  .LBB11_15: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrw $6, %xmm0, 12(%rdi)
 ; AVX512FVL-NEXT:    testb $-128, %al
-; AVX512FVL-NEXT:    je .LBB11_16
-; AVX512FVL-NEXT:  .LBB11_15: # %cond.store13
+; AVX512FVL-NEXT:    je .LBB11_8
+; AVX512FVL-NEXT:  .LBB11_16: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrw $7, %xmm0, 14(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -4793,59 +4793,59 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm4, %ecx
-; SSE2-NEXT:    jne .LBB12_1
-; SSE2-NEXT:  # %bb.2: # %else
+; SSE2-NEXT:    jne .LBB12_12
+; SSE2-NEXT:  # %bb.1: # %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB12_3
-; SSE2-NEXT:  .LBB12_4: # %else2
+; SSE2-NEXT:    jne .LBB12_13
+; SSE2-NEXT:  .LBB12_2: # %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB12_5
-; SSE2-NEXT:  .LBB12_6: # %else4
+; SSE2-NEXT:    jne .LBB12_14
+; SSE2-NEXT:  .LBB12_3: # %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB12_8
-; SSE2-NEXT:  .LBB12_7: # %cond.store5
+; SSE2-NEXT:    je .LBB12_5
+; SSE2-NEXT:  .LBB12_4: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 3(%rdi)
-; SSE2-NEXT:  .LBB12_8: # %else6
+; SSE2-NEXT:  .LBB12_5: # %else6
 ; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    pextrw $2, %xmm4, %ecx
-; SSE2-NEXT:    je .LBB12_10
-; SSE2-NEXT:  # %bb.9: # %cond.store7
+; SSE2-NEXT:    je .LBB12_7
+; SSE2-NEXT:  # %bb.6: # %cond.store7
 ; SSE2-NEXT:    movb %cl, 4(%rdi)
-; SSE2-NEXT:  .LBB12_10: # %else8
+; SSE2-NEXT:  .LBB12_7: # %else8
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB12_12
-; SSE2-NEXT:  # %bb.11: # %cond.store9
+; SSE2-NEXT:    je .LBB12_9
+; SSE2-NEXT:  # %bb.8: # %cond.store9
 ; SSE2-NEXT:    movb %ch, 5(%rdi)
-; SSE2-NEXT:  .LBB12_12: # %else10
+; SSE2-NEXT:  .LBB12_9: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm4, %ecx
-; SSE2-NEXT:    jne .LBB12_13
-; SSE2-NEXT:  # %bb.14: # %else12
-; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    jne .LBB12_15
-; SSE2-NEXT:  .LBB12_16: # %else14
+; SSE2-NEXT:  # %bb.10: # %else12
+; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:    jne .LBB12_16
+; SSE2-NEXT:  .LBB12_11: # %else14
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB12_1: # %cond.store
+; SSE2-NEXT:  .LBB12_12: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB12_4
-; SSE2-NEXT:  .LBB12_3: # %cond.store1
+; SSE2-NEXT:    je .LBB12_2
+; SSE2-NEXT:  .LBB12_13: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB12_6
-; SSE2-NEXT:  .LBB12_5: # %cond.store3
+; SSE2-NEXT:    je .LBB12_3
+; SSE2-NEXT:  .LBB12_14: # %cond.store3
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB12_7
-; SSE2-NEXT:    jmp .LBB12_8
-; SSE2-NEXT:  .LBB12_13: # %cond.store11
+; SSE2-NEXT:    jne .LBB12_4
+; SSE2-NEXT:    jmp .LBB12_5
+; SSE2-NEXT:  .LBB12_15: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB12_16
-; SSE2-NEXT:  .LBB12_15: # %cond.store13
+; SSE2-NEXT:    je .LBB12_11
+; SSE2-NEXT:  .LBB12_16: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -4864,59 +4864,59 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm2, %eax
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB12_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB12_3
-; SSE4-NEXT:  .LBB12_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB12_5
-; SSE4-NEXT:  .LBB12_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB12_7
-; SSE4-NEXT:  .LBB12_8: # %else6
-; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB12_9
-; SSE4-NEXT:  .LBB12_10: # %else8
-; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB12_10
+; SSE4-NEXT:  .LBB12_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB12_11
-; SSE4-NEXT:  .LBB12_12: # %else10
-; SSE4-NEXT:    testb $64, %al
+; SSE4-NEXT:  .LBB12_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB12_12
+; SSE4-NEXT:  .LBB12_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB12_13
-; SSE4-NEXT:  .LBB12_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:  .LBB12_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB12_14
+; SSE4-NEXT:  .LBB12_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB12_15
-; SSE4-NEXT:  .LBB12_16: # %else14
+; SSE4-NEXT:  .LBB12_7: # %else12
+; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:    jne .LBB12_16
+; SSE4-NEXT:  .LBB12_8: # %else14
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB12_1: # %cond.store
+; SSE4-NEXT:  .LBB12_9: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB12_4
-; SSE4-NEXT:  .LBB12_3: # %cond.store1
+; SSE4-NEXT:    je .LBB12_2
+; SSE4-NEXT:  .LBB12_10: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm0, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB12_6
-; SSE4-NEXT:  .LBB12_5: # %cond.store3
+; SSE4-NEXT:    je .LBB12_3
+; SSE4-NEXT:  .LBB12_11: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB12_8
-; SSE4-NEXT:  .LBB12_7: # %cond.store5
+; SSE4-NEXT:    je .LBB12_4
+; SSE4-NEXT:  .LBB12_12: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm0, 3(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB12_10
-; SSE4-NEXT:  .LBB12_9: # %cond.store7
+; SSE4-NEXT:    je .LBB12_5
+; SSE4-NEXT:  .LBB12_13: # %cond.store7
 ; SSE4-NEXT:    pextrb $4, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB12_12
-; SSE4-NEXT:  .LBB12_11: # %cond.store9
+; SSE4-NEXT:    je .LBB12_6
+; SSE4-NEXT:  .LBB12_14: # %cond.store9
 ; SSE4-NEXT:    pextrb $5, %xmm0, 5(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB12_14
-; SSE4-NEXT:  .LBB12_13: # %cond.store11
+; SSE4-NEXT:    je .LBB12_7
+; SSE4-NEXT:  .LBB12_15: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB12_16
-; SSE4-NEXT:  .LBB12_15: # %cond.store13
+; SSE4-NEXT:    je .LBB12_8
+; SSE4-NEXT:  .LBB12_16: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -4936,60 +4936,60 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %ymm1, %eax
 ; AVX1-NEXT:    notl %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB12_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB12_3
-; AVX1-NEXT:  .LBB12_4: # %else2
-; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB12_5
-; AVX1-NEXT:  .LBB12_6: # %else4
-; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB12_7
-; AVX1-NEXT:  .LBB12_8: # %else6
-; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB12_9
-; AVX1-NEXT:  .LBB12_10: # %else8
-; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB12_10
+; AVX1-NEXT:  .LBB12_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB12_11
-; AVX1-NEXT:  .LBB12_12: # %else10
-; AVX1-NEXT:    testb $64, %al
+; AVX1-NEXT:  .LBB12_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB12_12
+; AVX1-NEXT:  .LBB12_4: # %else6
+; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB12_13
-; AVX1-NEXT:  .LBB12_14: # %else12
-; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:  .LBB12_5: # %else8
+; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:    jne .LBB12_14
+; AVX1-NEXT:  .LBB12_6: # %else10
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB12_15
-; AVX1-NEXT:  .LBB12_16: # %else14
+; AVX1-NEXT:  .LBB12_7: # %else12
+; AVX1-NEXT:    testb $-128, %al
+; AVX1-NEXT:    jne .LBB12_16
+; AVX1-NEXT:  .LBB12_8: # %else14
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB12_1: # %cond.store
+; AVX1-NEXT:  .LBB12_9: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB12_4
-; AVX1-NEXT:  .LBB12_3: # %cond.store1
+; AVX1-NEXT:    je .LBB12_2
+; AVX1-NEXT:  .LBB12_10: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB12_6
-; AVX1-NEXT:  .LBB12_5: # %cond.store3
+; AVX1-NEXT:    je .LBB12_3
+; AVX1-NEXT:  .LBB12_11: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB12_8
-; AVX1-NEXT:  .LBB12_7: # %cond.store5
+; AVX1-NEXT:    je .LBB12_4
+; AVX1-NEXT:  .LBB12_12: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB12_10
-; AVX1-NEXT:  .LBB12_9: # %cond.store7
+; AVX1-NEXT:    je .LBB12_5
+; AVX1-NEXT:  .LBB12_13: # %cond.store7
 ; AVX1-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB12_12
-; AVX1-NEXT:  .LBB12_11: # %cond.store9
+; AVX1-NEXT:    je .LBB12_6
+; AVX1-NEXT:  .LBB12_14: # %cond.store9
 ; AVX1-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB12_14
-; AVX1-NEXT:  .LBB12_13: # %cond.store11
+; AVX1-NEXT:    je .LBB12_7
+; AVX1-NEXT:  .LBB12_15: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je .LBB12_16
-; AVX1-NEXT:  .LBB12_15: # %cond.store13
+; AVX1-NEXT:    je .LBB12_8
+; AVX1-NEXT:  .LBB12_16: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -5006,60 +5006,60 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %ymm1, %eax
 ; AVX2-NEXT:    notl %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB12_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB12_3
-; AVX2-NEXT:  .LBB12_4: # %else2
-; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB12_5
-; AVX2-NEXT:  .LBB12_6: # %else4
-; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB12_7
-; AVX2-NEXT:  .LBB12_8: # %else6
-; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB12_9
-; AVX2-NEXT:  .LBB12_10: # %else8
-; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB12_10
+; AVX2-NEXT:  .LBB12_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB12_11
-; AVX2-NEXT:  .LBB12_12: # %else10
-; AVX2-NEXT:    testb $64, %al
+; AVX2-NEXT:  .LBB12_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB12_12
+; AVX2-NEXT:  .LBB12_4: # %else6
+; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB12_13
-; AVX2-NEXT:  .LBB12_14: # %else12
-; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:  .LBB12_5: # %else8
+; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:    jne .LBB12_14
+; AVX2-NEXT:  .LBB12_6: # %else10
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB12_15
-; AVX2-NEXT:  .LBB12_16: # %else14
+; AVX2-NEXT:  .LBB12_7: # %else12
+; AVX2-NEXT:    testb $-128, %al
+; AVX2-NEXT:    jne .LBB12_16
+; AVX2-NEXT:  .LBB12_8: # %else14
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB12_1: # %cond.store
+; AVX2-NEXT:  .LBB12_9: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB12_4
-; AVX2-NEXT:  .LBB12_3: # %cond.store1
+; AVX2-NEXT:    je .LBB12_2
+; AVX2-NEXT:  .LBB12_10: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB12_6
-; AVX2-NEXT:  .LBB12_5: # %cond.store3
+; AVX2-NEXT:    je .LBB12_3
+; AVX2-NEXT:  .LBB12_11: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB12_8
-; AVX2-NEXT:  .LBB12_7: # %cond.store5
+; AVX2-NEXT:    je .LBB12_4
+; AVX2-NEXT:  .LBB12_12: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB12_10
-; AVX2-NEXT:  .LBB12_9: # %cond.store7
+; AVX2-NEXT:    je .LBB12_5
+; AVX2-NEXT:  .LBB12_13: # %cond.store7
 ; AVX2-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB12_12
-; AVX2-NEXT:  .LBB12_11: # %cond.store9
+; AVX2-NEXT:    je .LBB12_6
+; AVX2-NEXT:  .LBB12_14: # %cond.store9
 ; AVX2-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB12_14
-; AVX2-NEXT:  .LBB12_13: # %cond.store11
+; AVX2-NEXT:    je .LBB12_7
+; AVX2-NEXT:  .LBB12_15: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je .LBB12_16
-; AVX2-NEXT:  .LBB12_15: # %cond.store13
+; AVX2-NEXT:    je .LBB12_8
+; AVX2-NEXT:  .LBB12_16: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -5072,60 +5072,60 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusdb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB12_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB12_3
-; AVX512F-NEXT:  .LBB12_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB12_5
-; AVX512F-NEXT:  .LBB12_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB12_7
-; AVX512F-NEXT:  .LBB12_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB12_9
-; AVX512F-NEXT:  .LBB12_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB12_10
+; AVX512F-NEXT:  .LBB12_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB12_11
-; AVX512F-NEXT:  .LBB12_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
+; AVX512F-NEXT:  .LBB12_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB12_12
+; AVX512F-NEXT:  .LBB12_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB12_13
-; AVX512F-NEXT:  .LBB12_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:  .LBB12_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB12_14
+; AVX512F-NEXT:  .LBB12_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB12_15
-; AVX512F-NEXT:  .LBB12_16: # %else14
+; AVX512F-NEXT:  .LBB12_7: # %else12
+; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:    jne .LBB12_16
+; AVX512F-NEXT:  .LBB12_8: # %else14
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB12_1: # %cond.store
+; AVX512F-NEXT:  .LBB12_9: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB12_4
-; AVX512F-NEXT:  .LBB12_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB12_2
+; AVX512F-NEXT:  .LBB12_10: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB12_6
-; AVX512F-NEXT:  .LBB12_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB12_3
+; AVX512F-NEXT:  .LBB12_11: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB12_8
-; AVX512F-NEXT:  .LBB12_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB12_4
+; AVX512F-NEXT:  .LBB12_12: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB12_10
-; AVX512F-NEXT:  .LBB12_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB12_5
+; AVX512F-NEXT:  .LBB12_13: # %cond.store7
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB12_12
-; AVX512F-NEXT:  .LBB12_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB12_6
+; AVX512F-NEXT:  .LBB12_14: # %cond.store9
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB12_14
-; AVX512F-NEXT:  .LBB12_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB12_7
+; AVX512F-NEXT:  .LBB12_15: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB12_16
-; AVX512F-NEXT:  .LBB12_15: # %cond.store13
+; AVX512F-NEXT:    je .LBB12_8
+; AVX512F-NEXT:  .LBB12_16: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -5136,60 +5136,60 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusdb %ymm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB12_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB12_3
-; AVX512FVL-NEXT:  .LBB12_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB12_5
-; AVX512FVL-NEXT:  .LBB12_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB12_7
-; AVX512FVL-NEXT:  .LBB12_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB12_9
-; AVX512FVL-NEXT:  .LBB12_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB12_10
+; AVX512FVL-NEXT:  .LBB12_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB12_11
-; AVX512FVL-NEXT:  .LBB12_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
+; AVX512FVL-NEXT:  .LBB12_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB12_12
+; AVX512FVL-NEXT:  .LBB12_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB12_13
-; AVX512FVL-NEXT:  .LBB12_14: # %else12
-; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:  .LBB12_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB12_14
+; AVX512FVL-NEXT:  .LBB12_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB12_15
-; AVX512FVL-NEXT:  .LBB12_16: # %else14
+; AVX512FVL-NEXT:  .LBB12_7: # %else12
+; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:    jne .LBB12_16
+; AVX512FVL-NEXT:  .LBB12_8: # %else14
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB12_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB12_9: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB12_4
-; AVX512FVL-NEXT:  .LBB12_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB12_2
+; AVX512FVL-NEXT:  .LBB12_10: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB12_6
-; AVX512FVL-NEXT:  .LBB12_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB12_3
+; AVX512FVL-NEXT:  .LBB12_11: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB12_8
-; AVX512FVL-NEXT:  .LBB12_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB12_4
+; AVX512FVL-NEXT:  .LBB12_12: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB12_10
-; AVX512FVL-NEXT:  .LBB12_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB12_5
+; AVX512FVL-NEXT:  .LBB12_13: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB12_12
-; AVX512FVL-NEXT:  .LBB12_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB12_6
+; AVX512FVL-NEXT:  .LBB12_14: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB12_14
-; AVX512FVL-NEXT:  .LBB12_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB12_7
+; AVX512FVL-NEXT:  .LBB12_15: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb $-128, %al
-; AVX512FVL-NEXT:    je .LBB12_16
-; AVX512FVL-NEXT:  .LBB12_15: # %cond.store13
+; AVX512FVL-NEXT:    je .LBB12_8
+; AVX512FVL-NEXT:  .LBB12_16: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -5238,34 +5238,34 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    movmskps %xmm2, %eax
 ; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    jne .LBB13_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB13_3
-; SSE2-NEXT:  .LBB13_4: # %else2
-; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB13_5
-; SSE2-NEXT:  .LBB13_6: # %else4
-; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %al
+; SSE2-NEXT:    jne .LBB13_6
+; SSE2-NEXT:  .LBB13_2: # %else2
+; SSE2-NEXT:    testb $4, %al
 ; SSE2-NEXT:    jne .LBB13_7
-; SSE2-NEXT:  .LBB13_8: # %else6
+; SSE2-NEXT:  .LBB13_3: # %else4
+; SSE2-NEXT:    testb $8, %al
+; SSE2-NEXT:    jne .LBB13_8
+; SSE2-NEXT:  .LBB13_4: # %else6
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB13_1: # %cond.store
+; SSE2-NEXT:  .LBB13_5: # %cond.store
 ; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    movw %cx, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB13_4
-; SSE2-NEXT:  .LBB13_3: # %cond.store1
+; SSE2-NEXT:    je .LBB13_2
+; SSE2-NEXT:  .LBB13_6: # %cond.store1
 ; SSE2-NEXT:    pextrw $1, %xmm0, %ecx
 ; SSE2-NEXT:    movw %cx, 2(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB13_6
-; SSE2-NEXT:  .LBB13_5: # %cond.store3
+; SSE2-NEXT:    je .LBB13_3
+; SSE2-NEXT:  .LBB13_7: # %cond.store3
 ; SSE2-NEXT:    pextrw $2, %xmm0, %ecx
 ; SSE2-NEXT:    movw %cx, 4(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB13_8
-; SSE2-NEXT:  .LBB13_7: # %cond.store5
+; SSE2-NEXT:    je .LBB13_4
+; SSE2-NEXT:  .LBB13_8: # %cond.store5
 ; SSE2-NEXT:    pextrw $3, %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, 6(%rdi)
 ; SSE2-NEXT:    retq
@@ -5279,31 +5279,31 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE4-NEXT:    movmskps %xmm2, %eax
 ; SSE4-NEXT:    xorl $15, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB13_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB13_3
-; SSE4-NEXT:  .LBB13_4: # %else2
-; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB13_5
-; SSE4-NEXT:  .LBB13_6: # %else4
-; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB13_6
+; SSE4-NEXT:  .LBB13_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB13_7
-; SSE4-NEXT:  .LBB13_8: # %else6
+; SSE4-NEXT:  .LBB13_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB13_8
+; SSE4-NEXT:  .LBB13_4: # %else6
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB13_1: # %cond.store
+; SSE4-NEXT:  .LBB13_5: # %cond.store
 ; SSE4-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB13_4
-; SSE4-NEXT:  .LBB13_3: # %cond.store1
+; SSE4-NEXT:    je .LBB13_2
+; SSE4-NEXT:  .LBB13_6: # %cond.store1
 ; SSE4-NEXT:    pextrw $1, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB13_6
-; SSE4-NEXT:  .LBB13_5: # %cond.store3
+; SSE4-NEXT:    je .LBB13_3
+; SSE4-NEXT:  .LBB13_7: # %cond.store3
 ; SSE4-NEXT:    pextrw $2, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB13_8
-; SSE4-NEXT:  .LBB13_7: # %cond.store5
+; SSE4-NEXT:    je .LBB13_4
+; SSE4-NEXT:  .LBB13_8: # %cond.store5
 ; SSE4-NEXT:    pextrw $3, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -5316,31 +5316,31 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %xmm1, %eax
 ; AVX1-NEXT:    xorl $15, %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB13_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB13_3
-; AVX1-NEXT:  .LBB13_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB13_5
-; AVX1-NEXT:  .LBB13_6: # %else4
-; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB13_6
+; AVX1-NEXT:  .LBB13_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB13_7
-; AVX1-NEXT:  .LBB13_8: # %else6
+; AVX1-NEXT:  .LBB13_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB13_8
+; AVX1-NEXT:  .LBB13_4: # %else6
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB13_1: # %cond.store
+; AVX1-NEXT:  .LBB13_5: # %cond.store
 ; AVX1-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB13_4
-; AVX1-NEXT:  .LBB13_3: # %cond.store1
+; AVX1-NEXT:    je .LBB13_2
+; AVX1-NEXT:  .LBB13_6: # %cond.store1
 ; AVX1-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB13_6
-; AVX1-NEXT:  .LBB13_5: # %cond.store3
+; AVX1-NEXT:    je .LBB13_3
+; AVX1-NEXT:  .LBB13_7: # %cond.store3
 ; AVX1-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB13_8
-; AVX1-NEXT:  .LBB13_7: # %cond.store5
+; AVX1-NEXT:    je .LBB13_4
+; AVX1-NEXT:  .LBB13_8: # %cond.store5
 ; AVX1-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    retq
 ;
@@ -5354,31 +5354,31 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %xmm1, %eax
 ; AVX2-NEXT:    xorl $15, %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB13_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB13_3
-; AVX2-NEXT:  .LBB13_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB13_5
-; AVX2-NEXT:  .LBB13_6: # %else4
-; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB13_6
+; AVX2-NEXT:  .LBB13_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB13_7
-; AVX2-NEXT:  .LBB13_8: # %else6
+; AVX2-NEXT:  .LBB13_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB13_8
+; AVX2-NEXT:  .LBB13_4: # %else6
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB13_1: # %cond.store
+; AVX2-NEXT:  .LBB13_5: # %cond.store
 ; AVX2-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB13_4
-; AVX2-NEXT:  .LBB13_3: # %cond.store1
+; AVX2-NEXT:    je .LBB13_2
+; AVX2-NEXT:  .LBB13_6: # %cond.store1
 ; AVX2-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB13_6
-; AVX2-NEXT:  .LBB13_5: # %cond.store3
+; AVX2-NEXT:    je .LBB13_3
+; AVX2-NEXT:  .LBB13_7: # %cond.store3
 ; AVX2-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB13_8
-; AVX2-NEXT:  .LBB13_7: # %cond.store5
+; AVX2-NEXT:    je .LBB13_4
+; AVX2-NEXT:  .LBB13_8: # %cond.store5
 ; AVX2-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    retq
 ;
@@ -5390,32 +5390,32 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusdw %zmm0, %ymm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB13_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB13_3
-; AVX512F-NEXT:  .LBB13_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB13_5
-; AVX512F-NEXT:  .LBB13_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB13_6
+; AVX512F-NEXT:  .LBB13_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB13_7
-; AVX512F-NEXT:  .LBB13_8: # %else6
+; AVX512F-NEXT:  .LBB13_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB13_8
+; AVX512F-NEXT:  .LBB13_4: # %else6
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB13_1: # %cond.store
+; AVX512F-NEXT:  .LBB13_5: # %cond.store
 ; AVX512F-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB13_4
-; AVX512F-NEXT:  .LBB13_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB13_2
+; AVX512F-NEXT:  .LBB13_6: # %cond.store1
 ; AVX512F-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB13_6
-; AVX512F-NEXT:  .LBB13_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB13_3
+; AVX512F-NEXT:  .LBB13_7: # %cond.store3
 ; AVX512F-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB13_8
-; AVX512F-NEXT:  .LBB13_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB13_4
+; AVX512F-NEXT:  .LBB13_8: # %cond.store5
 ; AVX512F-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -5426,31 +5426,31 @@ define void @truncstore_v4i32_v4i16(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusdw %xmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB13_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB13_3
-; AVX512FVL-NEXT:  .LBB13_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB13_5
-; AVX512FVL-NEXT:  .LBB13_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB13_6
+; AVX512FVL-NEXT:  .LBB13_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB13_7
-; AVX512FVL-NEXT:  .LBB13_8: # %else6
+; AVX512FVL-NEXT:  .LBB13_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB13_8
+; AVX512FVL-NEXT:  .LBB13_4: # %else6
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB13_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB13_5: # %cond.store
 ; AVX512FVL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB13_4
-; AVX512FVL-NEXT:  .LBB13_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB13_2
+; AVX512FVL-NEXT:  .LBB13_6: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrw $1, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB13_6
-; AVX512FVL-NEXT:  .LBB13_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB13_3
+; AVX512FVL-NEXT:  .LBB13_7: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrw $2, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB13_8
-; AVX512FVL-NEXT:  .LBB13_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB13_4
+; AVX512FVL-NEXT:  .LBB13_8: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrw $3, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    retq
 ;
@@ -5497,33 +5497,33 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    xorl $15, %ecx
 ; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    movd %xmm3, %eax
-; SSE2-NEXT:    jne .LBB14_1
-; SSE2-NEXT:  # %bb.2: # %else
-; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    jne .LBB14_3
-; SSE2-NEXT:  .LBB14_4: # %else2
-; SSE2-NEXT:    testb $4, %cl
 ; SSE2-NEXT:    jne .LBB14_5
-; SSE2-NEXT:  .LBB14_6: # %else4
-; SSE2-NEXT:    testb $8, %cl
+; SSE2-NEXT:  # %bb.1: # %else
+; SSE2-NEXT:    testb $2, %cl
+; SSE2-NEXT:    jne .LBB14_6
+; SSE2-NEXT:  .LBB14_2: # %else2
+; SSE2-NEXT:    testb $4, %cl
 ; SSE2-NEXT:    jne .LBB14_7
-; SSE2-NEXT:  .LBB14_8: # %else6
+; SSE2-NEXT:  .LBB14_3: # %else4
+; SSE2-NEXT:    testb $8, %cl
+; SSE2-NEXT:    jne .LBB14_8
+; SSE2-NEXT:  .LBB14_4: # %else6
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB14_1: # %cond.store
+; SSE2-NEXT:  .LBB14_5: # %cond.store
 ; SSE2-NEXT:    movb %al, (%rdi)
 ; SSE2-NEXT:    testb $2, %cl
-; SSE2-NEXT:    je .LBB14_4
-; SSE2-NEXT:  .LBB14_3: # %cond.store1
+; SSE2-NEXT:    je .LBB14_2
+; SSE2-NEXT:  .LBB14_6: # %cond.store1
 ; SSE2-NEXT:    movb %ah, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %cl
-; SSE2-NEXT:    je .LBB14_6
-; SSE2-NEXT:  .LBB14_5: # %cond.store3
+; SSE2-NEXT:    je .LBB14_3
+; SSE2-NEXT:  .LBB14_7: # %cond.store3
 ; SSE2-NEXT:    movl %eax, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %cl
-; SSE2-NEXT:    je .LBB14_8
-; SSE2-NEXT:  .LBB14_7: # %cond.store5
+; SSE2-NEXT:    je .LBB14_4
+; SSE2-NEXT:  .LBB14_8: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %eax
 ; SSE2-NEXT:    movb %al, 3(%rdi)
 ; SSE2-NEXT:    retq
@@ -5538,31 +5538,31 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE4-NEXT:    movmskps %xmm2, %eax
 ; SSE4-NEXT:    xorl $15, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB14_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB14_3
-; SSE4-NEXT:  .LBB14_4: # %else2
-; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB14_5
-; SSE4-NEXT:  .LBB14_6: # %else4
-; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB14_6
+; SSE4-NEXT:  .LBB14_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB14_7
-; SSE4-NEXT:  .LBB14_8: # %else6
+; SSE4-NEXT:  .LBB14_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB14_8
+; SSE4-NEXT:  .LBB14_4: # %else6
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB14_1: # %cond.store
+; SSE4-NEXT:  .LBB14_5: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB14_4
-; SSE4-NEXT:  .LBB14_3: # %cond.store1
+; SSE4-NEXT:    je .LBB14_2
+; SSE4-NEXT:  .LBB14_6: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm0, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB14_6
-; SSE4-NEXT:  .LBB14_5: # %cond.store3
+; SSE4-NEXT:    je .LBB14_3
+; SSE4-NEXT:  .LBB14_7: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB14_8
-; SSE4-NEXT:  .LBB14_7: # %cond.store5
+; SSE4-NEXT:    je .LBB14_4
+; SSE4-NEXT:  .LBB14_8: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm0, 3(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -5576,31 +5576,31 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX1-NEXT:    vmovmskps %xmm1, %eax
 ; AVX1-NEXT:    xorl $15, %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB14_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB14_3
-; AVX1-NEXT:  .LBB14_4: # %else2
-; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB14_5
-; AVX1-NEXT:  .LBB14_6: # %else4
-; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB14_6
+; AVX1-NEXT:  .LBB14_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB14_7
-; AVX1-NEXT:  .LBB14_8: # %else6
+; AVX1-NEXT:  .LBB14_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB14_8
+; AVX1-NEXT:  .LBB14_4: # %else6
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB14_1: # %cond.store
+; AVX1-NEXT:  .LBB14_5: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB14_4
-; AVX1-NEXT:  .LBB14_3: # %cond.store1
+; AVX1-NEXT:    je .LBB14_2
+; AVX1-NEXT:  .LBB14_6: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB14_6
-; AVX1-NEXT:  .LBB14_5: # %cond.store3
+; AVX1-NEXT:    je .LBB14_3
+; AVX1-NEXT:  .LBB14_7: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB14_8
-; AVX1-NEXT:  .LBB14_7: # %cond.store5
+; AVX1-NEXT:    je .LBB14_4
+; AVX1-NEXT:  .LBB14_8: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    retq
 ;
@@ -5615,31 +5615,31 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX2-NEXT:    vmovmskps %xmm1, %eax
 ; AVX2-NEXT:    xorl $15, %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB14_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB14_3
-; AVX2-NEXT:  .LBB14_4: # %else2
-; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB14_5
-; AVX2-NEXT:  .LBB14_6: # %else4
-; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB14_6
+; AVX2-NEXT:  .LBB14_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB14_7
-; AVX2-NEXT:  .LBB14_8: # %else6
+; AVX2-NEXT:  .LBB14_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB14_8
+; AVX2-NEXT:  .LBB14_4: # %else6
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB14_1: # %cond.store
+; AVX2-NEXT:  .LBB14_5: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB14_4
-; AVX2-NEXT:  .LBB14_3: # %cond.store1
+; AVX2-NEXT:    je .LBB14_2
+; AVX2-NEXT:  .LBB14_6: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB14_6
-; AVX2-NEXT:  .LBB14_5: # %cond.store3
+; AVX2-NEXT:    je .LBB14_3
+; AVX2-NEXT:  .LBB14_7: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB14_8
-; AVX2-NEXT:  .LBB14_7: # %cond.store5
+; AVX2-NEXT:    je .LBB14_4
+; AVX2-NEXT:  .LBB14_8: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    retq
 ;
@@ -5651,32 +5651,32 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512F-NEXT:    vpmovusdb %zmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB14_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB14_3
-; AVX512F-NEXT:  .LBB14_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB14_5
-; AVX512F-NEXT:  .LBB14_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB14_6
+; AVX512F-NEXT:  .LBB14_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB14_7
-; AVX512F-NEXT:  .LBB14_8: # %else6
+; AVX512F-NEXT:  .LBB14_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB14_8
+; AVX512F-NEXT:  .LBB14_4: # %else6
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB14_1: # %cond.store
+; AVX512F-NEXT:  .LBB14_5: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB14_4
-; AVX512F-NEXT:  .LBB14_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB14_2
+; AVX512F-NEXT:  .LBB14_6: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB14_6
-; AVX512F-NEXT:  .LBB14_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB14_3
+; AVX512F-NEXT:  .LBB14_7: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB14_8
-; AVX512F-NEXT:  .LBB14_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB14_4
+; AVX512F-NEXT:  .LBB14_8: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -5687,31 +5687,31 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; AVX512FVL-NEXT:    vpmovusdb %xmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB14_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB14_3
-; AVX512FVL-NEXT:  .LBB14_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB14_5
-; AVX512FVL-NEXT:  .LBB14_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB14_6
+; AVX512FVL-NEXT:  .LBB14_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB14_7
-; AVX512FVL-NEXT:  .LBB14_8: # %else6
+; AVX512FVL-NEXT:  .LBB14_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB14_8
+; AVX512FVL-NEXT:  .LBB14_4: # %else6
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB14_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB14_5: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB14_4
-; AVX512FVL-NEXT:  .LBB14_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB14_2
+; AVX512FVL-NEXT:  .LBB14_6: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB14_6
-; AVX512FVL-NEXT:  .LBB14_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB14_3
+; AVX512FVL-NEXT:  .LBB14_7: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB14_8
-; AVX512FVL-NEXT:  .LBB14_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB14_4
+; AVX512FVL-NEXT:  .LBB14_8: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    retq
 ;
@@ -5762,207 +5762,207 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE2-NEXT:    orl %ecx, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    jne .LBB15_1
-; SSE2-NEXT:  # %bb.2: # %else
+; SSE2-NEXT:    jne .LBB15_57
+; SSE2-NEXT:  # %bb.1: # %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB15_3
-; SSE2-NEXT:  .LBB15_4: # %else2
+; SSE2-NEXT:    jne .LBB15_58
+; SSE2-NEXT:  .LBB15_2: # %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB15_5
-; SSE2-NEXT:  .LBB15_6: # %else4
+; SSE2-NEXT:    jne .LBB15_59
+; SSE2-NEXT:  .LBB15_3: # %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB15_8
-; SSE2-NEXT:  .LBB15_7: # %cond.store5
+; SSE2-NEXT:    je .LBB15_5
+; SSE2-NEXT:  .LBB15_4: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 3(%rdi)
-; SSE2-NEXT:  .LBB15_8: # %else6
+; SSE2-NEXT:  .LBB15_5: # %else6
 ; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    pextrw $2, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB15_10
-; SSE2-NEXT:  # %bb.9: # %cond.store7
+; SSE2-NEXT:    je .LBB15_7
+; SSE2-NEXT:  # %bb.6: # %cond.store7
 ; SSE2-NEXT:    movb %cl, 4(%rdi)
-; SSE2-NEXT:  .LBB15_10: # %else8
+; SSE2-NEXT:  .LBB15_7: # %else8
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB15_12
-; SSE2-NEXT:  # %bb.11: # %cond.store9
+; SSE2-NEXT:    je .LBB15_9
+; SSE2-NEXT:  # %bb.8: # %cond.store9
 ; SSE2-NEXT:    movb %ch, 5(%rdi)
-; SSE2-NEXT:  .LBB15_12: # %else10
+; SSE2-NEXT:  .LBB15_9: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB15_14
-; SSE2-NEXT:  # %bb.13: # %cond.store11
+; SSE2-NEXT:    je .LBB15_11
+; SSE2-NEXT:  # %bb.10: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
-; SSE2-NEXT:  .LBB15_14: # %else12
+; SSE2-NEXT:  .LBB15_11: # %else12
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jns .LBB15_16
-; SSE2-NEXT:  # %bb.15: # %cond.store13
+; SSE2-NEXT:    jns .LBB15_13
+; SSE2-NEXT:  # %bb.12: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
-; SSE2-NEXT:  .LBB15_16: # %else14
+; SSE2-NEXT:  .LBB15_13: # %else14
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE2-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB15_18
-; SSE2-NEXT:  # %bb.17: # %cond.store15
+; SSE2-NEXT:    je .LBB15_15
+; SSE2-NEXT:  # %bb.14: # %cond.store15
 ; SSE2-NEXT:    movb %cl, 8(%rdi)
-; SSE2-NEXT:  .LBB15_18: # %else16
+; SSE2-NEXT:  .LBB15_15: # %else16
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
-; SSE2-NEXT:    je .LBB15_20
-; SSE2-NEXT:  # %bb.19: # %cond.store17
+; SSE2-NEXT:    je .LBB15_17
+; SSE2-NEXT:  # %bb.16: # %cond.store17
 ; SSE2-NEXT:    movb %ch, 9(%rdi)
-; SSE2-NEXT:  .LBB15_20: # %else18
+; SSE2-NEXT:  .LBB15_17: # %else18
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    pextrw $5, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB15_22
-; SSE2-NEXT:  # %bb.21: # %cond.store19
+; SSE2-NEXT:    je .LBB15_19
+; SSE2-NEXT:  # %bb.18: # %cond.store19
 ; SSE2-NEXT:    movb %cl, 10(%rdi)
-; SSE2-NEXT:  .LBB15_22: # %else20
+; SSE2-NEXT:  .LBB15_19: # %else20
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE2-NEXT:    je .LBB15_24
-; SSE2-NEXT:  # %bb.23: # %cond.store21
+; SSE2-NEXT:    je .LBB15_21
+; SSE2-NEXT:  # %bb.20: # %cond.store21
 ; SSE2-NEXT:    movb %ch, 11(%rdi)
-; SSE2-NEXT:  .LBB15_24: # %else22
+; SSE2-NEXT:  .LBB15_21: # %else22
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB15_26
-; SSE2-NEXT:  # %bb.25: # %cond.store23
+; SSE2-NEXT:    je .LBB15_23
+; SSE2-NEXT:  # %bb.22: # %cond.store23
 ; SSE2-NEXT:    movb %cl, 12(%rdi)
-; SSE2-NEXT:  .LBB15_26: # %else24
+; SSE2-NEXT:  .LBB15_23: # %else24
 ; SSE2-NEXT:    movdqa %xmm3, %xmm1
 ; SSE2-NEXT:    psubusw %xmm6, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-NEXT:    psubusw %xmm6, %xmm4
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE2-NEXT:    je .LBB15_28
-; SSE2-NEXT:  # %bb.27: # %cond.store25
+; SSE2-NEXT:    je .LBB15_25
+; SSE2-NEXT:  # %bb.24: # %cond.store25
 ; SSE2-NEXT:    movb %ch, 13(%rdi)
-; SSE2-NEXT:  .LBB15_28: # %else26
+; SSE2-NEXT:  .LBB15_25: # %else26
 ; SSE2-NEXT:    psubw %xmm1, %xmm3
 ; SSE2-NEXT:    psubw %xmm4, %xmm2
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    pextrw $7, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB15_30
-; SSE2-NEXT:  # %bb.29: # %cond.store27
+; SSE2-NEXT:    je .LBB15_27
+; SSE2-NEXT:  # %bb.26: # %cond.store27
 ; SSE2-NEXT:    movb %cl, 14(%rdi)
-; SSE2-NEXT:  .LBB15_30: # %else28
+; SSE2-NEXT:  .LBB15_27: # %else28
 ; SSE2-NEXT:    packuswb %xmm3, %xmm2
 ; SSE2-NEXT:    testw %ax, %ax
-; SSE2-NEXT:    jns .LBB15_32
-; SSE2-NEXT:  # %bb.31: # %cond.store29
+; SSE2-NEXT:    jns .LBB15_29
+; SSE2-NEXT:  # %bb.28: # %cond.store29
 ; SSE2-NEXT:    movb %ch, 15(%rdi)
-; SSE2-NEXT:  .LBB15_32: # %else30
+; SSE2-NEXT:  .LBB15_29: # %else30
 ; SSE2-NEXT:    testl $65536, %eax # imm = 0x10000
 ; SSE2-NEXT:    movd %xmm2, %ecx
-; SSE2-NEXT:    jne .LBB15_33
-; SSE2-NEXT:  # %bb.34: # %else32
+; SSE2-NEXT:    jne .LBB15_60
+; SSE2-NEXT:  # %bb.30: # %else32
 ; SSE2-NEXT:    testl $131072, %eax # imm = 0x20000
-; SSE2-NEXT:    jne .LBB15_35
-; SSE2-NEXT:  .LBB15_36: # %else34
+; SSE2-NEXT:    jne .LBB15_61
+; SSE2-NEXT:  .LBB15_31: # %else34
 ; SSE2-NEXT:    testl $262144, %eax # imm = 0x40000
-; SSE2-NEXT:    jne .LBB15_37
-; SSE2-NEXT:  .LBB15_38: # %else36
+; SSE2-NEXT:    jne .LBB15_62
+; SSE2-NEXT:  .LBB15_32: # %else36
 ; SSE2-NEXT:    testl $524288, %eax # imm = 0x80000
-; SSE2-NEXT:    je .LBB15_40
-; SSE2-NEXT:  .LBB15_39: # %cond.store37
+; SSE2-NEXT:    je .LBB15_34
+; SSE2-NEXT:  .LBB15_33: # %cond.store37
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 19(%rdi)
-; SSE2-NEXT:  .LBB15_40: # %else38
+; SSE2-NEXT:  .LBB15_34: # %else38
 ; SSE2-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; SSE2-NEXT:    pextrw $2, %xmm2, %ecx
-; SSE2-NEXT:    je .LBB15_42
-; SSE2-NEXT:  # %bb.41: # %cond.store39
+; SSE2-NEXT:    je .LBB15_36
+; SSE2-NEXT:  # %bb.35: # %cond.store39
 ; SSE2-NEXT:    movb %cl, 20(%rdi)
-; SSE2-NEXT:  .LBB15_42: # %else40
+; SSE2-NEXT:  .LBB15_36: # %else40
 ; SSE2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; SSE2-NEXT:    je .LBB15_44
-; SSE2-NEXT:  # %bb.43: # %cond.store41
+; SSE2-NEXT:    je .LBB15_38
+; SSE2-NEXT:  # %bb.37: # %cond.store41
 ; SSE2-NEXT:    movb %ch, 21(%rdi)
-; SSE2-NEXT:  .LBB15_44: # %else42
+; SSE2-NEXT:  .LBB15_38: # %else42
 ; SSE2-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; SSE2-NEXT:    pextrw $3, %xmm2, %ecx
-; SSE2-NEXT:    je .LBB15_46
-; SSE2-NEXT:  # %bb.45: # %cond.store43
+; SSE2-NEXT:    je .LBB15_40
+; SSE2-NEXT:  # %bb.39: # %cond.store43
 ; SSE2-NEXT:    movb %cl, 22(%rdi)
-; SSE2-NEXT:  .LBB15_46: # %else44
+; SSE2-NEXT:  .LBB15_40: # %else44
 ; SSE2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; SSE2-NEXT:    je .LBB15_48
-; SSE2-NEXT:  # %bb.47: # %cond.store45
+; SSE2-NEXT:    je .LBB15_42
+; SSE2-NEXT:  # %bb.41: # %cond.store45
 ; SSE2-NEXT:    movb %ch, 23(%rdi)
-; SSE2-NEXT:  .LBB15_48: # %else46
+; SSE2-NEXT:  .LBB15_42: # %else46
 ; SSE2-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; SSE2-NEXT:    pextrw $4, %xmm2, %ecx
-; SSE2-NEXT:    je .LBB15_50
-; SSE2-NEXT:  # %bb.49: # %cond.store47
+; SSE2-NEXT:    je .LBB15_44
+; SSE2-NEXT:  # %bb.43: # %cond.store47
 ; SSE2-NEXT:    movb %cl, 24(%rdi)
-; SSE2-NEXT:  .LBB15_50: # %else48
+; SSE2-NEXT:  .LBB15_44: # %else48
 ; SSE2-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; SSE2-NEXT:    je .LBB15_52
-; SSE2-NEXT:  # %bb.51: # %cond.store49
+; SSE2-NEXT:    je .LBB15_46
+; SSE2-NEXT:  # %bb.45: # %cond.store49
 ; SSE2-NEXT:    movb %ch, 25(%rdi)
-; SSE2-NEXT:  .LBB15_52: # %else50
+; SSE2-NEXT:  .LBB15_46: # %else50
 ; SSE2-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; SSE2-NEXT:    pextrw $5, %xmm2, %ecx
-; SSE2-NEXT:    je .LBB15_54
-; SSE2-NEXT:  # %bb.53: # %cond.store51
+; SSE2-NEXT:    je .LBB15_48
+; SSE2-NEXT:  # %bb.47: # %cond.store51
 ; SSE2-NEXT:    movb %cl, 26(%rdi)
-; SSE2-NEXT:  .LBB15_54: # %else52
+; SSE2-NEXT:  .LBB15_48: # %else52
 ; SSE2-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; SSE2-NEXT:    je .LBB15_56
-; SSE2-NEXT:  # %bb.55: # %cond.store53
+; SSE2-NEXT:    je .LBB15_50
+; SSE2-NEXT:  # %bb.49: # %cond.store53
 ; SSE2-NEXT:    movb %ch, 27(%rdi)
-; SSE2-NEXT:  .LBB15_56: # %else54
+; SSE2-NEXT:  .LBB15_50: # %else54
 ; SSE2-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; SSE2-NEXT:    pextrw $6, %xmm2, %ecx
-; SSE2-NEXT:    je .LBB15_58
-; SSE2-NEXT:  # %bb.57: # %cond.store55
+; SSE2-NEXT:    je .LBB15_52
+; SSE2-NEXT:  # %bb.51: # %cond.store55
 ; SSE2-NEXT:    movb %cl, 28(%rdi)
-; SSE2-NEXT:  .LBB15_58: # %else56
+; SSE2-NEXT:  .LBB15_52: # %else56
 ; SSE2-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; SSE2-NEXT:    je .LBB15_60
-; SSE2-NEXT:  # %bb.59: # %cond.store57
+; SSE2-NEXT:    je .LBB15_54
+; SSE2-NEXT:  # %bb.53: # %cond.store57
 ; SSE2-NEXT:    movb %ch, 29(%rdi)
-; SSE2-NEXT:  .LBB15_60: # %else58
+; SSE2-NEXT:  .LBB15_54: # %else58
 ; SSE2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; SSE2-NEXT:    pextrw $7, %xmm2, %ecx
-; SSE2-NEXT:    jne .LBB15_61
-; SSE2-NEXT:  # %bb.62: # %else60
-; SSE2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
 ; SSE2-NEXT:    jne .LBB15_63
-; SSE2-NEXT:  .LBB15_64: # %else62
+; SSE2-NEXT:  # %bb.55: # %else60
+; SSE2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; SSE2-NEXT:    jne .LBB15_64
+; SSE2-NEXT:  .LBB15_56: # %else62
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB15_1: # %cond.store
+; SSE2-NEXT:  .LBB15_57: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB15_4
-; SSE2-NEXT:  .LBB15_3: # %cond.store1
+; SSE2-NEXT:    je .LBB15_2
+; SSE2-NEXT:  .LBB15_58: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB15_6
-; SSE2-NEXT:  .LBB15_5: # %cond.store3
+; SSE2-NEXT:    je .LBB15_3
+; SSE2-NEXT:  .LBB15_59: # %cond.store3
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB15_7
-; SSE2-NEXT:    jmp .LBB15_8
-; SSE2-NEXT:  .LBB15_33: # %cond.store31
+; SSE2-NEXT:    jne .LBB15_4
+; SSE2-NEXT:    jmp .LBB15_5
+; SSE2-NEXT:  .LBB15_60: # %cond.store31
 ; SSE2-NEXT:    movb %cl, 16(%rdi)
 ; SSE2-NEXT:    testl $131072, %eax # imm = 0x20000
-; SSE2-NEXT:    je .LBB15_36
-; SSE2-NEXT:  .LBB15_35: # %cond.store33
+; SSE2-NEXT:    je .LBB15_31
+; SSE2-NEXT:  .LBB15_61: # %cond.store33
 ; SSE2-NEXT:    movb %ch, 17(%rdi)
 ; SSE2-NEXT:    testl $262144, %eax # imm = 0x40000
-; SSE2-NEXT:    je .LBB15_38
-; SSE2-NEXT:  .LBB15_37: # %cond.store35
+; SSE2-NEXT:    je .LBB15_32
+; SSE2-NEXT:  .LBB15_62: # %cond.store35
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 18(%rdi)
 ; SSE2-NEXT:    testl $524288, %eax # imm = 0x80000
-; SSE2-NEXT:    jne .LBB15_39
-; SSE2-NEXT:    jmp .LBB15_40
-; SSE2-NEXT:  .LBB15_61: # %cond.store59
+; SSE2-NEXT:    jne .LBB15_33
+; SSE2-NEXT:    jmp .LBB15_34
+; SSE2-NEXT:  .LBB15_63: # %cond.store59
 ; SSE2-NEXT:    movb %cl, 30(%rdi)
 ; SSE2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; SSE2-NEXT:    je .LBB15_64
-; SSE2-NEXT:  .LBB15_63: # %cond.store61
+; SSE2-NEXT:    je .LBB15_56
+; SSE2-NEXT:  .LBB15_64: # %cond.store61
 ; SSE2-NEXT:    movb %ch, 31(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -5982,227 +5982,227 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; SSE4-NEXT:    shll $16, %eax
 ; SSE4-NEXT:    orl %ecx, %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB15_1
-; SSE4-NEXT:  # %bb.2: # %else
+; SSE4-NEXT:    jne .LBB15_35
+; SSE4-NEXT:  # %bb.1: # %else
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB15_3
-; SSE4-NEXT:  .LBB15_4: # %else2
+; SSE4-NEXT:    jne .LBB15_36
+; SSE4-NEXT:  .LBB15_2: # %else2
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB15_5
-; SSE4-NEXT:  .LBB15_6: # %else4
+; SSE4-NEXT:    jne .LBB15_37
+; SSE4-NEXT:  .LBB15_3: # %else4
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB15_7
-; SSE4-NEXT:  .LBB15_8: # %else6
+; SSE4-NEXT:    jne .LBB15_38
+; SSE4-NEXT:  .LBB15_4: # %else6
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    jne .LBB15_9
-; SSE4-NEXT:  .LBB15_10: # %else8
+; SSE4-NEXT:    jne .LBB15_39
+; SSE4-NEXT:  .LBB15_5: # %else8
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    jne .LBB15_11
-; SSE4-NEXT:  .LBB15_12: # %else10
+; SSE4-NEXT:    jne .LBB15_40
+; SSE4-NEXT:  .LBB15_6: # %else10
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    jne .LBB15_13
-; SSE4-NEXT:  .LBB15_14: # %else12
+; SSE4-NEXT:    jne .LBB15_41
+; SSE4-NEXT:  .LBB15_7: # %else12
 ; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    js .LBB15_15
-; SSE4-NEXT:  .LBB15_16: # %else14
+; SSE4-NEXT:    js .LBB15_42
+; SSE4-NEXT:  .LBB15_8: # %else14
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
-; SSE4-NEXT:    jne .LBB15_17
-; SSE4-NEXT:  .LBB15_18: # %else16
+; SSE4-NEXT:    jne .LBB15_43
+; SSE4-NEXT:  .LBB15_9: # %else16
 ; SSE4-NEXT:    testl $512, %eax # imm = 0x200
-; SSE4-NEXT:    jne .LBB15_19
-; SSE4-NEXT:  .LBB15_20: # %else18
+; SSE4-NEXT:    jne .LBB15_44
+; SSE4-NEXT:  .LBB15_10: # %else18
 ; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE4-NEXT:    jne .LBB15_21
-; SSE4-NEXT:  .LBB15_22: # %else20
+; SSE4-NEXT:    jne .LBB15_45
+; SSE4-NEXT:  .LBB15_11: # %else20
 ; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE4-NEXT:    jne .LBB15_23
-; SSE4-NEXT:  .LBB15_24: # %else22
+; SSE4-NEXT:    jne .LBB15_46
+; SSE4-NEXT:  .LBB15_12: # %else22
 ; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
-; SSE4-NEXT:    jne .LBB15_25
-; SSE4-NEXT:  .LBB15_26: # %else24
+; SSE4-NEXT:    jne .LBB15_47
+; SSE4-NEXT:  .LBB15_13: # %else24
 ; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE4-NEXT:    jne .LBB15_27
-; SSE4-NEXT:  .LBB15_28: # %else26
+; SSE4-NEXT:    jne .LBB15_48
+; SSE4-NEXT:  .LBB15_14: # %else26
 ; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
-; SSE4-NEXT:    je .LBB15_30
-; SSE4-NEXT:  .LBB15_29: # %cond.store27
+; SSE4-NEXT:    je .LBB15_16
+; SSE4-NEXT:  .LBB15_15: # %cond.store27
 ; SSE4-NEXT:    pextrb $14, %xmm0, 14(%rdi)
-; SSE4-NEXT:  .LBB15_30: # %else28
+; SSE4-NEXT:  .LBB15_16: # %else28
 ; SSE4-NEXT:    pminuw %xmm6, %xmm3
 ; SSE4-NEXT:    pminuw %xmm6, %xmm2
 ; SSE4-NEXT:    testw %ax, %ax
-; SSE4-NEXT:    jns .LBB15_32
-; SSE4-NEXT:  # %bb.31: # %cond.store29
+; SSE4-NEXT:    jns .LBB15_18
+; SSE4-NEXT:  # %bb.17: # %cond.store29
 ; SSE4-NEXT:    pextrb $15, %xmm0, 15(%rdi)
-; SSE4-NEXT:  .LBB15_32: # %else30
+; SSE4-NEXT:  .LBB15_18: # %else30
 ; SSE4-NEXT:    packuswb %xmm3, %xmm2
 ; SSE4-NEXT:    testl $65536, %eax # imm = 0x10000
-; SSE4-NEXT:    jne .LBB15_33
-; SSE4-NEXT:  # %bb.34: # %else32
-; SSE4-NEXT:    testl $131072, %eax # imm = 0x20000
-; SSE4-NEXT:    jne .LBB15_35
-; SSE4-NEXT:  .LBB15_36: # %else34
-; SSE4-NEXT:    testl $262144, %eax # imm = 0x40000
-; SSE4-NEXT:    jne .LBB15_37
-; SSE4-NEXT:  .LBB15_38: # %else36
-; SSE4-NEXT:    testl $524288, %eax # imm = 0x80000
-; SSE4-NEXT:    jne .LBB15_39
-; SSE4-NEXT:  .LBB15_40: # %else38
-; SSE4-NEXT:    testl $1048576, %eax # imm = 0x100000
-; SSE4-NEXT:    jne .LBB15_41
-; SSE4-NEXT:  .LBB15_42: # %else40
-; SSE4-NEXT:    testl $2097152, %eax # imm = 0x200000
-; SSE4-NEXT:    jne .LBB15_43
-; SSE4-NEXT:  .LBB15_44: # %else42
-; SSE4-NEXT:    testl $4194304, %eax # imm = 0x400000
-; SSE4-NEXT:    jne .LBB15_45
-; SSE4-NEXT:  .LBB15_46: # %else44
-; SSE4-NEXT:    testl $8388608, %eax # imm = 0x800000
-; SSE4-NEXT:    jne .LBB15_47
-; SSE4-NEXT:  .LBB15_48: # %else46
-; SSE4-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; SSE4-NEXT:    jne .LBB15_49
-; SSE4-NEXT:  .LBB15_50: # %else48
-; SSE4-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; SSE4-NEXT:  # %bb.19: # %else32
+; SSE4-NEXT:    testl $131072, %eax # imm = 0x20000
+; SSE4-NEXT:    jne .LBB15_50
+; SSE4-NEXT:  .LBB15_20: # %else34
+; SSE4-NEXT:    testl $262144, %eax # imm = 0x40000
 ; SSE4-NEXT:    jne .LBB15_51
-; SSE4-NEXT:  .LBB15_52: # %else50
-; SSE4-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; SSE4-NEXT:  .LBB15_21: # %else36
+; SSE4-NEXT:    testl $524288, %eax # imm = 0x80000
+; SSE4-NEXT:    jne .LBB15_52
+; SSE4-NEXT:  .LBB15_22: # %else38
+; SSE4-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; SSE4-NEXT:    jne .LBB15_53
-; SSE4-NEXT:  .LBB15_54: # %else52
-; SSE4-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; SSE4-NEXT:  .LBB15_23: # %else40
+; SSE4-NEXT:    testl $2097152, %eax # imm = 0x200000
+; SSE4-NEXT:    jne .LBB15_54
+; SSE4-NEXT:  .LBB15_24: # %else42
+; SSE4-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; SSE4-NEXT:    jne .LBB15_55
-; SSE4-NEXT:  .LBB15_56: # %else54
-; SSE4-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; SSE4-NEXT:  .LBB15_25: # %else44
+; SSE4-NEXT:    testl $8388608, %eax # imm = 0x800000
+; SSE4-NEXT:    jne .LBB15_56
+; SSE4-NEXT:  .LBB15_26: # %else46
+; SSE4-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; SSE4-NEXT:    jne .LBB15_57
-; SSE4-NEXT:  .LBB15_58: # %else56
-; SSE4-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; SSE4-NEXT:  .LBB15_27: # %else48
+; SSE4-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; SSE4-NEXT:    jne .LBB15_58
+; SSE4-NEXT:  .LBB15_28: # %else50
+; SSE4-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; SSE4-NEXT:    jne .LBB15_59
-; SSE4-NEXT:  .LBB15_60: # %else58
-; SSE4-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; SSE4-NEXT:  .LBB15_29: # %else52
+; SSE4-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; SSE4-NEXT:    jne .LBB15_60
+; SSE4-NEXT:  .LBB15_30: # %else54
+; SSE4-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; SSE4-NEXT:    jne .LBB15_61
-; SSE4-NEXT:  .LBB15_62: # %else60
-; SSE4-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; SSE4-NEXT:  .LBB15_31: # %else56
+; SSE4-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; SSE4-NEXT:    jne .LBB15_62
+; SSE4-NEXT:  .LBB15_32: # %else58
+; SSE4-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; SSE4-NEXT:    jne .LBB15_63
-; SSE4-NEXT:  .LBB15_64: # %else62
+; SSE4-NEXT:  .LBB15_33: # %else60
+; SSE4-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; SSE4-NEXT:    jne .LBB15_64
+; SSE4-NEXT:  .LBB15_34: # %else62
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB15_1: # %cond.store
+; SSE4-NEXT:  .LBB15_35: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB15_4
-; SSE4-NEXT:  .LBB15_3: # %cond.store1
+; SSE4-NEXT:    je .LBB15_2
+; SSE4-NEXT:  .LBB15_36: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm0, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB15_6
-; SSE4-NEXT:  .LBB15_5: # %cond.store3
+; SSE4-NEXT:    je .LBB15_3
+; SSE4-NEXT:  .LBB15_37: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB15_8
-; SSE4-NEXT:  .LBB15_7: # %cond.store5
+; SSE4-NEXT:    je .LBB15_4
+; SSE4-NEXT:  .LBB15_38: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm0, 3(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB15_10
-; SSE4-NEXT:  .LBB15_9: # %cond.store7
+; SSE4-NEXT:    je .LBB15_5
+; SSE4-NEXT:  .LBB15_39: # %cond.store7
 ; SSE4-NEXT:    pextrb $4, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB15_12
-; SSE4-NEXT:  .LBB15_11: # %cond.store9
+; SSE4-NEXT:    je .LBB15_6
+; SSE4-NEXT:  .LBB15_40: # %cond.store9
 ; SSE4-NEXT:    pextrb $5, %xmm0, 5(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB15_14
-; SSE4-NEXT:  .LBB15_13: # %cond.store11
+; SSE4-NEXT:    je .LBB15_7
+; SSE4-NEXT:  .LBB15_41: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    jns .LBB15_16
-; SSE4-NEXT:  .LBB15_15: # %cond.store13
+; SSE4-NEXT:    jns .LBB15_8
+; SSE4-NEXT:  .LBB15_42: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
-; SSE4-NEXT:    je .LBB15_18
-; SSE4-NEXT:  .LBB15_17: # %cond.store15
+; SSE4-NEXT:    je .LBB15_9
+; SSE4-NEXT:  .LBB15_43: # %cond.store15
 ; SSE4-NEXT:    pextrb $8, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testl $512, %eax # imm = 0x200
-; SSE4-NEXT:    je .LBB15_20
-; SSE4-NEXT:  .LBB15_19: # %cond.store17
+; SSE4-NEXT:    je .LBB15_10
+; SSE4-NEXT:  .LBB15_44: # %cond.store17
 ; SSE4-NEXT:    pextrb $9, %xmm0, 9(%rdi)
 ; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE4-NEXT:    je .LBB15_22
-; SSE4-NEXT:  .LBB15_21: # %cond.store19
+; SSE4-NEXT:    je .LBB15_11
+; SSE4-NEXT:  .LBB15_45: # %cond.store19
 ; SSE4-NEXT:    pextrb $10, %xmm0, 10(%rdi)
 ; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE4-NEXT:    je .LBB15_24
-; SSE4-NEXT:  .LBB15_23: # %cond.store21
+; SSE4-NEXT:    je .LBB15_12
+; SSE4-NEXT:  .LBB15_46: # %cond.store21
 ; SSE4-NEXT:    pextrb $11, %xmm0, 11(%rdi)
 ; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
-; SSE4-NEXT:    je .LBB15_26
-; SSE4-NEXT:  .LBB15_25: # %cond.store23
+; SSE4-NEXT:    je .LBB15_13
+; SSE4-NEXT:  .LBB15_47: # %cond.store23
 ; SSE4-NEXT:    pextrb $12, %xmm0, 12(%rdi)
 ; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE4-NEXT:    je .LBB15_28
-; SSE4-NEXT:  .LBB15_27: # %cond.store25
+; SSE4-NEXT:    je .LBB15_14
+; SSE4-NEXT:  .LBB15_48: # %cond.store25
 ; SSE4-NEXT:    pextrb $13, %xmm0, 13(%rdi)
 ; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
-; SSE4-NEXT:    jne .LBB15_29
-; SSE4-NEXT:    jmp .LBB15_30
-; SSE4-NEXT:  .LBB15_33: # %cond.store31
+; SSE4-NEXT:    jne .LBB15_15
+; SSE4-NEXT:    jmp .LBB15_16
+; SSE4-NEXT:  .LBB15_49: # %cond.store31
 ; SSE4-NEXT:    pextrb $0, %xmm2, 16(%rdi)
 ; SSE4-NEXT:    testl $131072, %eax # imm = 0x20000
-; SSE4-NEXT:    je .LBB15_36
-; SSE4-NEXT:  .LBB15_35: # %cond.store33
+; SSE4-NEXT:    je .LBB15_20
+; SSE4-NEXT:  .LBB15_50: # %cond.store33
 ; SSE4-NEXT:    pextrb $1, %xmm2, 17(%rdi)
 ; SSE4-NEXT:    testl $262144, %eax # imm = 0x40000
-; SSE4-NEXT:    je .LBB15_38
-; SSE4-NEXT:  .LBB15_37: # %cond.store35
+; SSE4-NEXT:    je .LBB15_21
+; SSE4-NEXT:  .LBB15_51: # %cond.store35
 ; SSE4-NEXT:    pextrb $2, %xmm2, 18(%rdi)
 ; SSE4-NEXT:    testl $524288, %eax # imm = 0x80000
-; SSE4-NEXT:    je .LBB15_40
-; SSE4-NEXT:  .LBB15_39: # %cond.store37
+; SSE4-NEXT:    je .LBB15_22
+; SSE4-NEXT:  .LBB15_52: # %cond.store37
 ; SSE4-NEXT:    pextrb $3, %xmm2, 19(%rdi)
 ; SSE4-NEXT:    testl $1048576, %eax # imm = 0x100000
-; SSE4-NEXT:    je .LBB15_42
-; SSE4-NEXT:  .LBB15_41: # %cond.store39
+; SSE4-NEXT:    je .LBB15_23
+; SSE4-NEXT:  .LBB15_53: # %cond.store39
 ; SSE4-NEXT:    pextrb $4, %xmm2, 20(%rdi)
 ; SSE4-NEXT:    testl $2097152, %eax # imm = 0x200000
-; SSE4-NEXT:    je .LBB15_44
-; SSE4-NEXT:  .LBB15_43: # %cond.store41
+; SSE4-NEXT:    je .LBB15_24
+; SSE4-NEXT:  .LBB15_54: # %cond.store41
 ; SSE4-NEXT:    pextrb $5, %xmm2, 21(%rdi)
 ; SSE4-NEXT:    testl $4194304, %eax # imm = 0x400000
-; SSE4-NEXT:    je .LBB15_46
-; SSE4-NEXT:  .LBB15_45: # %cond.store43
+; SSE4-NEXT:    je .LBB15_25
+; SSE4-NEXT:  .LBB15_55: # %cond.store43
 ; SSE4-NEXT:    pextrb $6, %xmm2, 22(%rdi)
 ; SSE4-NEXT:    testl $8388608, %eax # imm = 0x800000
-; SSE4-NEXT:    je .LBB15_48
-; SSE4-NEXT:  .LBB15_47: # %cond.store45
+; SSE4-NEXT:    je .LBB15_26
+; SSE4-NEXT:  .LBB15_56: # %cond.store45
 ; SSE4-NEXT:    pextrb $7, %xmm2, 23(%rdi)
 ; SSE4-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; SSE4-NEXT:    je .LBB15_50
-; SSE4-NEXT:  .LBB15_49: # %cond.store47
+; SSE4-NEXT:    je .LBB15_27
+; SSE4-NEXT:  .LBB15_57: # %cond.store47
 ; SSE4-NEXT:    pextrb $8, %xmm2, 24(%rdi)
 ; SSE4-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; SSE4-NEXT:    je .LBB15_52
-; SSE4-NEXT:  .LBB15_51: # %cond.store49
+; SSE4-NEXT:    je .LBB15_28
+; SSE4-NEXT:  .LBB15_58: # %cond.store49
 ; SSE4-NEXT:    pextrb $9, %xmm2, 25(%rdi)
 ; SSE4-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; SSE4-NEXT:    je .LBB15_54
-; SSE4-NEXT:  .LBB15_53: # %cond.store51
+; SSE4-NEXT:    je .LBB15_29
+; SSE4-NEXT:  .LBB15_59: # %cond.store51
 ; SSE4-NEXT:    pextrb $10, %xmm2, 26(%rdi)
 ; SSE4-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; SSE4-NEXT:    je .LBB15_56
-; SSE4-NEXT:  .LBB15_55: # %cond.store53
+; SSE4-NEXT:    je .LBB15_30
+; SSE4-NEXT:  .LBB15_60: # %cond.store53
 ; SSE4-NEXT:    pextrb $11, %xmm2, 27(%rdi)
 ; SSE4-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; SSE4-NEXT:    je .LBB15_58
-; SSE4-NEXT:  .LBB15_57: # %cond.store55
+; SSE4-NEXT:    je .LBB15_31
+; SSE4-NEXT:  .LBB15_61: # %cond.store55
 ; SSE4-NEXT:    pextrb $12, %xmm2, 28(%rdi)
 ; SSE4-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; SSE4-NEXT:    je .LBB15_60
-; SSE4-NEXT:  .LBB15_59: # %cond.store57
+; SSE4-NEXT:    je .LBB15_32
+; SSE4-NEXT:  .LBB15_62: # %cond.store57
 ; SSE4-NEXT:    pextrb $13, %xmm2, 29(%rdi)
 ; SSE4-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; SSE4-NEXT:    je .LBB15_62
-; SSE4-NEXT:  .LBB15_61: # %cond.store59
+; SSE4-NEXT:    je .LBB15_33
+; SSE4-NEXT:  .LBB15_63: # %cond.store59
 ; SSE4-NEXT:    pextrb $14, %xmm2, 30(%rdi)
 ; SSE4-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; SSE4-NEXT:    je .LBB15_64
-; SSE4-NEXT:  .LBB15_63: # %cond.store61
+; SSE4-NEXT:    je .LBB15_34
+; SSE4-NEXT:  .LBB15_64: # %cond.store61
 ; SSE4-NEXT:    pextrb $15, %xmm2, 31(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -6229,228 +6229,228 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX1-NEXT:    shll $16, %eax
 ; AVX1-NEXT:    orl %ecx, %eax
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB15_1
-; AVX1-NEXT:  # %bb.2: # %else
+; AVX1-NEXT:    jne .LBB15_34
+; AVX1-NEXT:  # %bb.1: # %else
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB15_3
-; AVX1-NEXT:  .LBB15_4: # %else2
+; AVX1-NEXT:    jne .LBB15_35
+; AVX1-NEXT:  .LBB15_2: # %else2
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB15_5
-; AVX1-NEXT:  .LBB15_6: # %else4
+; AVX1-NEXT:    jne .LBB15_36
+; AVX1-NEXT:  .LBB15_3: # %else4
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB15_7
-; AVX1-NEXT:  .LBB15_8: # %else6
+; AVX1-NEXT:    jne .LBB15_37
+; AVX1-NEXT:  .LBB15_4: # %else6
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    jne .LBB15_9
-; AVX1-NEXT:  .LBB15_10: # %else8
+; AVX1-NEXT:    jne .LBB15_38
+; AVX1-NEXT:  .LBB15_5: # %else8
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    jne .LBB15_11
-; AVX1-NEXT:  .LBB15_12: # %else10
+; AVX1-NEXT:    jne .LBB15_39
+; AVX1-NEXT:  .LBB15_6: # %else10
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    jne .LBB15_13
-; AVX1-NEXT:  .LBB15_14: # %else12
+; AVX1-NEXT:    jne .LBB15_40
+; AVX1-NEXT:  .LBB15_7: # %else12
 ; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    js .LBB15_15
-; AVX1-NEXT:  .LBB15_16: # %else14
+; AVX1-NEXT:    js .LBB15_41
+; AVX1-NEXT:  .LBB15_8: # %else14
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
-; AVX1-NEXT:    jne .LBB15_17
-; AVX1-NEXT:  .LBB15_18: # %else16
+; AVX1-NEXT:    jne .LBB15_42
+; AVX1-NEXT:  .LBB15_9: # %else16
 ; AVX1-NEXT:    testl $512, %eax # imm = 0x200
-; AVX1-NEXT:    jne .LBB15_19
-; AVX1-NEXT:  .LBB15_20: # %else18
+; AVX1-NEXT:    jne .LBB15_43
+; AVX1-NEXT:  .LBB15_10: # %else18
 ; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX1-NEXT:    jne .LBB15_21
-; AVX1-NEXT:  .LBB15_22: # %else20
+; AVX1-NEXT:    jne .LBB15_44
+; AVX1-NEXT:  .LBB15_11: # %else20
 ; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX1-NEXT:    jne .LBB15_23
-; AVX1-NEXT:  .LBB15_24: # %else22
+; AVX1-NEXT:    jne .LBB15_45
+; AVX1-NEXT:  .LBB15_12: # %else22
 ; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX1-NEXT:    jne .LBB15_25
-; AVX1-NEXT:  .LBB15_26: # %else24
+; AVX1-NEXT:    jne .LBB15_46
+; AVX1-NEXT:  .LBB15_13: # %else24
 ; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX1-NEXT:    jne .LBB15_27
-; AVX1-NEXT:  .LBB15_28: # %else26
+; AVX1-NEXT:    jne .LBB15_47
+; AVX1-NEXT:  .LBB15_14: # %else26
 ; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX1-NEXT:    jne .LBB15_29
-; AVX1-NEXT:  .LBB15_30: # %else28
+; AVX1-NEXT:    jne .LBB15_48
+; AVX1-NEXT:  .LBB15_15: # %else28
 ; AVX1-NEXT:    testw %ax, %ax
-; AVX1-NEXT:    jns .LBB15_32
-; AVX1-NEXT:  .LBB15_31: # %cond.store29
+; AVX1-NEXT:    jns .LBB15_17
+; AVX1-NEXT:  .LBB15_16: # %cond.store29
 ; AVX1-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
-; AVX1-NEXT:  .LBB15_32: # %else30
+; AVX1-NEXT:  .LBB15_17: # %else30
 ; AVX1-NEXT:    testl $65536, %eax # imm = 0x10000
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    jne .LBB15_33
-; AVX1-NEXT:  # %bb.34: # %else32
-; AVX1-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX1-NEXT:    jne .LBB15_35
-; AVX1-NEXT:  .LBB15_36: # %else34
-; AVX1-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX1-NEXT:    jne .LBB15_37
-; AVX1-NEXT:  .LBB15_38: # %else36
-; AVX1-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX1-NEXT:    jne .LBB15_39
-; AVX1-NEXT:  .LBB15_40: # %else38
-; AVX1-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX1-NEXT:    jne .LBB15_41
-; AVX1-NEXT:  .LBB15_42: # %else40
-; AVX1-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX1-NEXT:    jne .LBB15_43
-; AVX1-NEXT:  .LBB15_44: # %else42
-; AVX1-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX1-NEXT:    jne .LBB15_45
-; AVX1-NEXT:  .LBB15_46: # %else44
-; AVX1-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX1-NEXT:    jne .LBB15_47
-; AVX1-NEXT:  .LBB15_48: # %else46
-; AVX1-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX1-NEXT:    jne .LBB15_49
-; AVX1-NEXT:  .LBB15_50: # %else48
-; AVX1-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX1-NEXT:  # %bb.18: # %else32
+; AVX1-NEXT:    testl $131072, %eax # imm = 0x20000
+; AVX1-NEXT:    jne .LBB15_50
+; AVX1-NEXT:  .LBB15_19: # %else34
+; AVX1-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX1-NEXT:    jne .LBB15_51
-; AVX1-NEXT:  .LBB15_52: # %else50
-; AVX1-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; AVX1-NEXT:  .LBB15_20: # %else36
+; AVX1-NEXT:    testl $524288, %eax # imm = 0x80000
+; AVX1-NEXT:    jne .LBB15_52
+; AVX1-NEXT:  .LBB15_21: # %else38
+; AVX1-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX1-NEXT:    jne .LBB15_53
-; AVX1-NEXT:  .LBB15_54: # %else52
-; AVX1-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX1-NEXT:  .LBB15_22: # %else40
+; AVX1-NEXT:    testl $2097152, %eax # imm = 0x200000
+; AVX1-NEXT:    jne .LBB15_54
+; AVX1-NEXT:  .LBB15_23: # %else42
+; AVX1-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX1-NEXT:    jne .LBB15_55
-; AVX1-NEXT:  .LBB15_56: # %else54
-; AVX1-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; AVX1-NEXT:  .LBB15_24: # %else44
+; AVX1-NEXT:    testl $8388608, %eax # imm = 0x800000
+; AVX1-NEXT:    jne .LBB15_56
+; AVX1-NEXT:  .LBB15_25: # %else46
+; AVX1-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX1-NEXT:    jne .LBB15_57
-; AVX1-NEXT:  .LBB15_58: # %else56
-; AVX1-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX1-NEXT:  .LBB15_26: # %else48
+; AVX1-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX1-NEXT:    jne .LBB15_58
+; AVX1-NEXT:  .LBB15_27: # %else50
+; AVX1-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX1-NEXT:    jne .LBB15_59
-; AVX1-NEXT:  .LBB15_60: # %else58
-; AVX1-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; AVX1-NEXT:  .LBB15_28: # %else52
+; AVX1-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX1-NEXT:    jne .LBB15_60
+; AVX1-NEXT:  .LBB15_29: # %else54
+; AVX1-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX1-NEXT:    jne .LBB15_61
-; AVX1-NEXT:  .LBB15_62: # %else60
-; AVX1-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX1-NEXT:  .LBB15_30: # %else56
+; AVX1-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX1-NEXT:    jne .LBB15_62
+; AVX1-NEXT:  .LBB15_31: # %else58
+; AVX1-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX1-NEXT:    jne .LBB15_63
-; AVX1-NEXT:  .LBB15_64: # %else62
+; AVX1-NEXT:  .LBB15_32: # %else60
+; AVX1-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX1-NEXT:    jne .LBB15_64
+; AVX1-NEXT:  .LBB15_33: # %else62
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB15_1: # %cond.store
+; AVX1-NEXT:  .LBB15_34: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB15_4
-; AVX1-NEXT:  .LBB15_3: # %cond.store1
+; AVX1-NEXT:    je .LBB15_2
+; AVX1-NEXT:  .LBB15_35: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB15_6
-; AVX1-NEXT:  .LBB15_5: # %cond.store3
+; AVX1-NEXT:    je .LBB15_3
+; AVX1-NEXT:  .LBB15_36: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB15_8
-; AVX1-NEXT:  .LBB15_7: # %cond.store5
+; AVX1-NEXT:    je .LBB15_4
+; AVX1-NEXT:  .LBB15_37: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB15_10
-; AVX1-NEXT:  .LBB15_9: # %cond.store7
+; AVX1-NEXT:    je .LBB15_5
+; AVX1-NEXT:  .LBB15_38: # %cond.store7
 ; AVX1-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB15_12
-; AVX1-NEXT:  .LBB15_11: # %cond.store9
+; AVX1-NEXT:    je .LBB15_6
+; AVX1-NEXT:  .LBB15_39: # %cond.store9
 ; AVX1-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB15_14
-; AVX1-NEXT:  .LBB15_13: # %cond.store11
+; AVX1-NEXT:    je .LBB15_7
+; AVX1-NEXT:  .LBB15_40: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    jns .LBB15_16
-; AVX1-NEXT:  .LBB15_15: # %cond.store13
+; AVX1-NEXT:    jns .LBB15_8
+; AVX1-NEXT:  .LBB15_41: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
-; AVX1-NEXT:    je .LBB15_18
-; AVX1-NEXT:  .LBB15_17: # %cond.store15
+; AVX1-NEXT:    je .LBB15_9
+; AVX1-NEXT:  .LBB15_42: # %cond.store15
 ; AVX1-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    testl $512, %eax # imm = 0x200
-; AVX1-NEXT:    je .LBB15_20
-; AVX1-NEXT:  .LBB15_19: # %cond.store17
+; AVX1-NEXT:    je .LBB15_10
+; AVX1-NEXT:  .LBB15_43: # %cond.store17
 ; AVX1-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX1-NEXT:    je .LBB15_22
-; AVX1-NEXT:  .LBB15_21: # %cond.store19
+; AVX1-NEXT:    je .LBB15_11
+; AVX1-NEXT:  .LBB15_44: # %cond.store19
 ; AVX1-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX1-NEXT:    je .LBB15_24
-; AVX1-NEXT:  .LBB15_23: # %cond.store21
+; AVX1-NEXT:    je .LBB15_12
+; AVX1-NEXT:  .LBB15_45: # %cond.store21
 ; AVX1-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX1-NEXT:    je .LBB15_26
-; AVX1-NEXT:  .LBB15_25: # %cond.store23
+; AVX1-NEXT:    je .LBB15_13
+; AVX1-NEXT:  .LBB15_46: # %cond.store23
 ; AVX1-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX1-NEXT:    je .LBB15_28
-; AVX1-NEXT:  .LBB15_27: # %cond.store25
+; AVX1-NEXT:    je .LBB15_14
+; AVX1-NEXT:  .LBB15_47: # %cond.store25
 ; AVX1-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX1-NEXT:    je .LBB15_30
-; AVX1-NEXT:  .LBB15_29: # %cond.store27
+; AVX1-NEXT:    je .LBB15_15
+; AVX1-NEXT:  .LBB15_48: # %cond.store27
 ; AVX1-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX1-NEXT:    testw %ax, %ax
-; AVX1-NEXT:    js .LBB15_31
-; AVX1-NEXT:    jmp .LBB15_32
-; AVX1-NEXT:  .LBB15_33: # %cond.store31
+; AVX1-NEXT:    js .LBB15_16
+; AVX1-NEXT:    jmp .LBB15_17
+; AVX1-NEXT:  .LBB15_49: # %cond.store31
 ; AVX1-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
 ; AVX1-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX1-NEXT:    je .LBB15_36
-; AVX1-NEXT:  .LBB15_35: # %cond.store33
+; AVX1-NEXT:    je .LBB15_19
+; AVX1-NEXT:  .LBB15_50: # %cond.store33
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 17(%rdi)
 ; AVX1-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX1-NEXT:    je .LBB15_38
-; AVX1-NEXT:  .LBB15_37: # %cond.store35
+; AVX1-NEXT:    je .LBB15_20
+; AVX1-NEXT:  .LBB15_51: # %cond.store35
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 18(%rdi)
 ; AVX1-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX1-NEXT:    je .LBB15_40
-; AVX1-NEXT:  .LBB15_39: # %cond.store37
+; AVX1-NEXT:    je .LBB15_21
+; AVX1-NEXT:  .LBB15_52: # %cond.store37
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 19(%rdi)
 ; AVX1-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX1-NEXT:    je .LBB15_42
-; AVX1-NEXT:  .LBB15_41: # %cond.store39
+; AVX1-NEXT:    je .LBB15_22
+; AVX1-NEXT:  .LBB15_53: # %cond.store39
 ; AVX1-NEXT:    vpextrb $4, %xmm0, 20(%rdi)
 ; AVX1-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX1-NEXT:    je .LBB15_44
-; AVX1-NEXT:  .LBB15_43: # %cond.store41
+; AVX1-NEXT:    je .LBB15_23
+; AVX1-NEXT:  .LBB15_54: # %cond.store41
 ; AVX1-NEXT:    vpextrb $5, %xmm0, 21(%rdi)
 ; AVX1-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX1-NEXT:    je .LBB15_46
-; AVX1-NEXT:  .LBB15_45: # %cond.store43
+; AVX1-NEXT:    je .LBB15_24
+; AVX1-NEXT:  .LBB15_55: # %cond.store43
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 22(%rdi)
 ; AVX1-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX1-NEXT:    je .LBB15_48
-; AVX1-NEXT:  .LBB15_47: # %cond.store45
+; AVX1-NEXT:    je .LBB15_25
+; AVX1-NEXT:  .LBB15_56: # %cond.store45
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 23(%rdi)
 ; AVX1-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX1-NEXT:    je .LBB15_50
-; AVX1-NEXT:  .LBB15_49: # %cond.store47
+; AVX1-NEXT:    je .LBB15_26
+; AVX1-NEXT:  .LBB15_57: # %cond.store47
 ; AVX1-NEXT:    vpextrb $8, %xmm0, 24(%rdi)
 ; AVX1-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX1-NEXT:    je .LBB15_52
-; AVX1-NEXT:  .LBB15_51: # %cond.store49
+; AVX1-NEXT:    je .LBB15_27
+; AVX1-NEXT:  .LBB15_58: # %cond.store49
 ; AVX1-NEXT:    vpextrb $9, %xmm0, 25(%rdi)
 ; AVX1-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX1-NEXT:    je .LBB15_54
-; AVX1-NEXT:  .LBB15_53: # %cond.store51
+; AVX1-NEXT:    je .LBB15_28
+; AVX1-NEXT:  .LBB15_59: # %cond.store51
 ; AVX1-NEXT:    vpextrb $10, %xmm0, 26(%rdi)
 ; AVX1-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX1-NEXT:    je .LBB15_56
-; AVX1-NEXT:  .LBB15_55: # %cond.store53
+; AVX1-NEXT:    je .LBB15_29
+; AVX1-NEXT:  .LBB15_60: # %cond.store53
 ; AVX1-NEXT:    vpextrb $11, %xmm0, 27(%rdi)
 ; AVX1-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX1-NEXT:    je .LBB15_58
-; AVX1-NEXT:  .LBB15_57: # %cond.store55
+; AVX1-NEXT:    je .LBB15_30
+; AVX1-NEXT:  .LBB15_61: # %cond.store55
 ; AVX1-NEXT:    vpextrb $12, %xmm0, 28(%rdi)
 ; AVX1-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX1-NEXT:    je .LBB15_60
-; AVX1-NEXT:  .LBB15_59: # %cond.store57
+; AVX1-NEXT:    je .LBB15_31
+; AVX1-NEXT:  .LBB15_62: # %cond.store57
 ; AVX1-NEXT:    vpextrb $13, %xmm0, 29(%rdi)
 ; AVX1-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX1-NEXT:    je .LBB15_62
-; AVX1-NEXT:  .LBB15_61: # %cond.store59
+; AVX1-NEXT:    je .LBB15_32
+; AVX1-NEXT:  .LBB15_63: # %cond.store59
 ; AVX1-NEXT:    vpextrb $14, %xmm0, 30(%rdi)
 ; AVX1-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX1-NEXT:    je .LBB15_64
-; AVX1-NEXT:  .LBB15_63: # %cond.store61
+; AVX1-NEXT:    je .LBB15_33
+; AVX1-NEXT:  .LBB15_64: # %cond.store61
 ; AVX1-NEXT:    vpextrb $15, %xmm0, 31(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -6467,228 +6467,228 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX2-NEXT:    vpmovmskb %ymm1, %eax
 ; AVX2-NEXT:    notl %eax
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB15_1
-; AVX2-NEXT:  # %bb.2: # %else
+; AVX2-NEXT:    jne .LBB15_34
+; AVX2-NEXT:  # %bb.1: # %else
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB15_3
-; AVX2-NEXT:  .LBB15_4: # %else2
+; AVX2-NEXT:    jne .LBB15_35
+; AVX2-NEXT:  .LBB15_2: # %else2
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB15_5
-; AVX2-NEXT:  .LBB15_6: # %else4
+; AVX2-NEXT:    jne .LBB15_36
+; AVX2-NEXT:  .LBB15_3: # %else4
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB15_7
-; AVX2-NEXT:  .LBB15_8: # %else6
+; AVX2-NEXT:    jne .LBB15_37
+; AVX2-NEXT:  .LBB15_4: # %else6
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    jne .LBB15_9
-; AVX2-NEXT:  .LBB15_10: # %else8
+; AVX2-NEXT:    jne .LBB15_38
+; AVX2-NEXT:  .LBB15_5: # %else8
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    jne .LBB15_11
-; AVX2-NEXT:  .LBB15_12: # %else10
+; AVX2-NEXT:    jne .LBB15_39
+; AVX2-NEXT:  .LBB15_6: # %else10
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    jne .LBB15_13
-; AVX2-NEXT:  .LBB15_14: # %else12
+; AVX2-NEXT:    jne .LBB15_40
+; AVX2-NEXT:  .LBB15_7: # %else12
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    js .LBB15_15
-; AVX2-NEXT:  .LBB15_16: # %else14
+; AVX2-NEXT:    js .LBB15_41
+; AVX2-NEXT:  .LBB15_8: # %else14
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX2-NEXT:    jne .LBB15_17
-; AVX2-NEXT:  .LBB15_18: # %else16
+; AVX2-NEXT:    jne .LBB15_42
+; AVX2-NEXT:  .LBB15_9: # %else16
 ; AVX2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX2-NEXT:    jne .LBB15_19
-; AVX2-NEXT:  .LBB15_20: # %else18
+; AVX2-NEXT:    jne .LBB15_43
+; AVX2-NEXT:  .LBB15_10: # %else18
 ; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX2-NEXT:    jne .LBB15_21
-; AVX2-NEXT:  .LBB15_22: # %else20
+; AVX2-NEXT:    jne .LBB15_44
+; AVX2-NEXT:  .LBB15_11: # %else20
 ; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX2-NEXT:    jne .LBB15_23
-; AVX2-NEXT:  .LBB15_24: # %else22
+; AVX2-NEXT:    jne .LBB15_45
+; AVX2-NEXT:  .LBB15_12: # %else22
 ; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX2-NEXT:    jne .LBB15_25
-; AVX2-NEXT:  .LBB15_26: # %else24
+; AVX2-NEXT:    jne .LBB15_46
+; AVX2-NEXT:  .LBB15_13: # %else24
 ; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX2-NEXT:    jne .LBB15_27
-; AVX2-NEXT:  .LBB15_28: # %else26
+; AVX2-NEXT:    jne .LBB15_47
+; AVX2-NEXT:  .LBB15_14: # %else26
 ; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX2-NEXT:    jne .LBB15_29
-; AVX2-NEXT:  .LBB15_30: # %else28
+; AVX2-NEXT:    jne .LBB15_48
+; AVX2-NEXT:  .LBB15_15: # %else28
 ; AVX2-NEXT:    testw %ax, %ax
-; AVX2-NEXT:    jns .LBB15_32
-; AVX2-NEXT:  .LBB15_31: # %cond.store29
+; AVX2-NEXT:    jns .LBB15_17
+; AVX2-NEXT:  .LBB15_16: # %cond.store29
 ; AVX2-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
-; AVX2-NEXT:  .LBB15_32: # %else30
+; AVX2-NEXT:  .LBB15_17: # %else30
 ; AVX2-NEXT:    testl $65536, %eax # imm = 0x10000
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    jne .LBB15_33
-; AVX2-NEXT:  # %bb.34: # %else32
-; AVX2-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX2-NEXT:    jne .LBB15_35
-; AVX2-NEXT:  .LBB15_36: # %else34
-; AVX2-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX2-NEXT:    jne .LBB15_37
-; AVX2-NEXT:  .LBB15_38: # %else36
-; AVX2-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX2-NEXT:    jne .LBB15_39
-; AVX2-NEXT:  .LBB15_40: # %else38
-; AVX2-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX2-NEXT:    jne .LBB15_41
-; AVX2-NEXT:  .LBB15_42: # %else40
-; AVX2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX2-NEXT:    jne .LBB15_43
-; AVX2-NEXT:  .LBB15_44: # %else42
-; AVX2-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX2-NEXT:    jne .LBB15_45
-; AVX2-NEXT:  .LBB15_46: # %else44
-; AVX2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX2-NEXT:    jne .LBB15_47
-; AVX2-NEXT:  .LBB15_48: # %else46
-; AVX2-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX2-NEXT:    jne .LBB15_49
-; AVX2-NEXT:  .LBB15_50: # %else48
-; AVX2-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX2-NEXT:  # %bb.18: # %else32
+; AVX2-NEXT:    testl $131072, %eax # imm = 0x20000
+; AVX2-NEXT:    jne .LBB15_50
+; AVX2-NEXT:  .LBB15_19: # %else34
+; AVX2-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX2-NEXT:    jne .LBB15_51
-; AVX2-NEXT:  .LBB15_52: # %else50
-; AVX2-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; AVX2-NEXT:  .LBB15_20: # %else36
+; AVX2-NEXT:    testl $524288, %eax # imm = 0x80000
+; AVX2-NEXT:    jne .LBB15_52
+; AVX2-NEXT:  .LBB15_21: # %else38
+; AVX2-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX2-NEXT:    jne .LBB15_53
-; AVX2-NEXT:  .LBB15_54: # %else52
-; AVX2-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX2-NEXT:  .LBB15_22: # %else40
+; AVX2-NEXT:    testl $2097152, %eax # imm = 0x200000
+; AVX2-NEXT:    jne .LBB15_54
+; AVX2-NEXT:  .LBB15_23: # %else42
+; AVX2-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX2-NEXT:    jne .LBB15_55
-; AVX2-NEXT:  .LBB15_56: # %else54
-; AVX2-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; AVX2-NEXT:  .LBB15_24: # %else44
+; AVX2-NEXT:    testl $8388608, %eax # imm = 0x800000
+; AVX2-NEXT:    jne .LBB15_56
+; AVX2-NEXT:  .LBB15_25: # %else46
+; AVX2-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX2-NEXT:    jne .LBB15_57
-; AVX2-NEXT:  .LBB15_58: # %else56
-; AVX2-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX2-NEXT:  .LBB15_26: # %else48
+; AVX2-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX2-NEXT:    jne .LBB15_58
+; AVX2-NEXT:  .LBB15_27: # %else50
+; AVX2-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX2-NEXT:    jne .LBB15_59
-; AVX2-NEXT:  .LBB15_60: # %else58
-; AVX2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; AVX2-NEXT:  .LBB15_28: # %else52
+; AVX2-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX2-NEXT:    jne .LBB15_60
+; AVX2-NEXT:  .LBB15_29: # %else54
+; AVX2-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX2-NEXT:    jne .LBB15_61
-; AVX2-NEXT:  .LBB15_62: # %else60
-; AVX2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX2-NEXT:  .LBB15_30: # %else56
+; AVX2-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX2-NEXT:    jne .LBB15_62
+; AVX2-NEXT:  .LBB15_31: # %else58
+; AVX2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX2-NEXT:    jne .LBB15_63
-; AVX2-NEXT:  .LBB15_64: # %else62
+; AVX2-NEXT:  .LBB15_32: # %else60
+; AVX2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX2-NEXT:    jne .LBB15_64
+; AVX2-NEXT:  .LBB15_33: # %else62
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB15_1: # %cond.store
+; AVX2-NEXT:  .LBB15_34: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB15_4
-; AVX2-NEXT:  .LBB15_3: # %cond.store1
+; AVX2-NEXT:    je .LBB15_2
+; AVX2-NEXT:  .LBB15_35: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB15_6
-; AVX2-NEXT:  .LBB15_5: # %cond.store3
+; AVX2-NEXT:    je .LBB15_3
+; AVX2-NEXT:  .LBB15_36: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB15_8
-; AVX2-NEXT:  .LBB15_7: # %cond.store5
+; AVX2-NEXT:    je .LBB15_4
+; AVX2-NEXT:  .LBB15_37: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB15_10
-; AVX2-NEXT:  .LBB15_9: # %cond.store7
+; AVX2-NEXT:    je .LBB15_5
+; AVX2-NEXT:  .LBB15_38: # %cond.store7
 ; AVX2-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB15_12
-; AVX2-NEXT:  .LBB15_11: # %cond.store9
+; AVX2-NEXT:    je .LBB15_6
+; AVX2-NEXT:  .LBB15_39: # %cond.store9
 ; AVX2-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB15_14
-; AVX2-NEXT:  .LBB15_13: # %cond.store11
+; AVX2-NEXT:    je .LBB15_7
+; AVX2-NEXT:  .LBB15_40: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    jns .LBB15_16
-; AVX2-NEXT:  .LBB15_15: # %cond.store13
+; AVX2-NEXT:    jns .LBB15_8
+; AVX2-NEXT:  .LBB15_41: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX2-NEXT:    je .LBB15_18
-; AVX2-NEXT:  .LBB15_17: # %cond.store15
+; AVX2-NEXT:    je .LBB15_9
+; AVX2-NEXT:  .LBB15_42: # %cond.store15
 ; AVX2-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX2-NEXT:    je .LBB15_20
-; AVX2-NEXT:  .LBB15_19: # %cond.store17
+; AVX2-NEXT:    je .LBB15_10
+; AVX2-NEXT:  .LBB15_43: # %cond.store17
 ; AVX2-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX2-NEXT:    je .LBB15_22
-; AVX2-NEXT:  .LBB15_21: # %cond.store19
+; AVX2-NEXT:    je .LBB15_11
+; AVX2-NEXT:  .LBB15_44: # %cond.store19
 ; AVX2-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX2-NEXT:    je .LBB15_24
-; AVX2-NEXT:  .LBB15_23: # %cond.store21
+; AVX2-NEXT:    je .LBB15_12
+; AVX2-NEXT:  .LBB15_45: # %cond.store21
 ; AVX2-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX2-NEXT:    je .LBB15_26
-; AVX2-NEXT:  .LBB15_25: # %cond.store23
+; AVX2-NEXT:    je .LBB15_13
+; AVX2-NEXT:  .LBB15_46: # %cond.store23
 ; AVX2-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX2-NEXT:    je .LBB15_28
-; AVX2-NEXT:  .LBB15_27: # %cond.store25
+; AVX2-NEXT:    je .LBB15_14
+; AVX2-NEXT:  .LBB15_47: # %cond.store25
 ; AVX2-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX2-NEXT:    je .LBB15_30
-; AVX2-NEXT:  .LBB15_29: # %cond.store27
+; AVX2-NEXT:    je .LBB15_15
+; AVX2-NEXT:  .LBB15_48: # %cond.store27
 ; AVX2-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX2-NEXT:    testw %ax, %ax
-; AVX2-NEXT:    js .LBB15_31
-; AVX2-NEXT:    jmp .LBB15_32
-; AVX2-NEXT:  .LBB15_33: # %cond.store31
+; AVX2-NEXT:    js .LBB15_16
+; AVX2-NEXT:    jmp .LBB15_17
+; AVX2-NEXT:  .LBB15_49: # %cond.store31
 ; AVX2-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
 ; AVX2-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX2-NEXT:    je .LBB15_36
-; AVX2-NEXT:  .LBB15_35: # %cond.store33
+; AVX2-NEXT:    je .LBB15_19
+; AVX2-NEXT:  .LBB15_50: # %cond.store33
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 17(%rdi)
 ; AVX2-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX2-NEXT:    je .LBB15_38
-; AVX2-NEXT:  .LBB15_37: # %cond.store35
+; AVX2-NEXT:    je .LBB15_20
+; AVX2-NEXT:  .LBB15_51: # %cond.store35
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 18(%rdi)
 ; AVX2-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX2-NEXT:    je .LBB15_40
-; AVX2-NEXT:  .LBB15_39: # %cond.store37
+; AVX2-NEXT:    je .LBB15_21
+; AVX2-NEXT:  .LBB15_52: # %cond.store37
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 19(%rdi)
 ; AVX2-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX2-NEXT:    je .LBB15_42
-; AVX2-NEXT:  .LBB15_41: # %cond.store39
+; AVX2-NEXT:    je .LBB15_22
+; AVX2-NEXT:  .LBB15_53: # %cond.store39
 ; AVX2-NEXT:    vpextrb $4, %xmm0, 20(%rdi)
 ; AVX2-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX2-NEXT:    je .LBB15_44
-; AVX2-NEXT:  .LBB15_43: # %cond.store41
+; AVX2-NEXT:    je .LBB15_23
+; AVX2-NEXT:  .LBB15_54: # %cond.store41
 ; AVX2-NEXT:    vpextrb $5, %xmm0, 21(%rdi)
 ; AVX2-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX2-NEXT:    je .LBB15_46
-; AVX2-NEXT:  .LBB15_45: # %cond.store43
+; AVX2-NEXT:    je .LBB15_24
+; AVX2-NEXT:  .LBB15_55: # %cond.store43
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 22(%rdi)
 ; AVX2-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX2-NEXT:    je .LBB15_48
-; AVX2-NEXT:  .LBB15_47: # %cond.store45
+; AVX2-NEXT:    je .LBB15_25
+; AVX2-NEXT:  .LBB15_56: # %cond.store45
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 23(%rdi)
 ; AVX2-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX2-NEXT:    je .LBB15_50
-; AVX2-NEXT:  .LBB15_49: # %cond.store47
+; AVX2-NEXT:    je .LBB15_26
+; AVX2-NEXT:  .LBB15_57: # %cond.store47
 ; AVX2-NEXT:    vpextrb $8, %xmm0, 24(%rdi)
 ; AVX2-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX2-NEXT:    je .LBB15_52
-; AVX2-NEXT:  .LBB15_51: # %cond.store49
+; AVX2-NEXT:    je .LBB15_27
+; AVX2-NEXT:  .LBB15_58: # %cond.store49
 ; AVX2-NEXT:    vpextrb $9, %xmm0, 25(%rdi)
 ; AVX2-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX2-NEXT:    je .LBB15_54
-; AVX2-NEXT:  .LBB15_53: # %cond.store51
+; AVX2-NEXT:    je .LBB15_28
+; AVX2-NEXT:  .LBB15_59: # %cond.store51
 ; AVX2-NEXT:    vpextrb $10, %xmm0, 26(%rdi)
 ; AVX2-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX2-NEXT:    je .LBB15_56
-; AVX2-NEXT:  .LBB15_55: # %cond.store53
+; AVX2-NEXT:    je .LBB15_29
+; AVX2-NEXT:  .LBB15_60: # %cond.store53
 ; AVX2-NEXT:    vpextrb $11, %xmm0, 27(%rdi)
 ; AVX2-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX2-NEXT:    je .LBB15_58
-; AVX2-NEXT:  .LBB15_57: # %cond.store55
+; AVX2-NEXT:    je .LBB15_30
+; AVX2-NEXT:  .LBB15_61: # %cond.store55
 ; AVX2-NEXT:    vpextrb $12, %xmm0, 28(%rdi)
 ; AVX2-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX2-NEXT:    je .LBB15_60
-; AVX2-NEXT:  .LBB15_59: # %cond.store57
+; AVX2-NEXT:    je .LBB15_31
+; AVX2-NEXT:  .LBB15_62: # %cond.store57
 ; AVX2-NEXT:    vpextrb $13, %xmm0, 29(%rdi)
 ; AVX2-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX2-NEXT:    je .LBB15_62
-; AVX2-NEXT:  .LBB15_61: # %cond.store59
+; AVX2-NEXT:    je .LBB15_32
+; AVX2-NEXT:  .LBB15_63: # %cond.store59
 ; AVX2-NEXT:    vpextrb $14, %xmm0, 30(%rdi)
 ; AVX2-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX2-NEXT:    je .LBB15_64
-; AVX2-NEXT:  .LBB15_63: # %cond.store61
+; AVX2-NEXT:    je .LBB15_33
+; AVX2-NEXT:  .LBB15_64: # %cond.store61
 ; AVX2-NEXT:    vpextrb $15, %xmm0, 31(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -6706,228 +6706,228 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX512F-NEXT:    vpmovmskb %ymm1, %eax
 ; AVX512F-NEXT:    notl %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB15_1
-; AVX512F-NEXT:  # %bb.2: # %else
+; AVX512F-NEXT:    jne .LBB15_34
+; AVX512F-NEXT:  # %bb.1: # %else
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB15_3
-; AVX512F-NEXT:  .LBB15_4: # %else2
+; AVX512F-NEXT:    jne .LBB15_35
+; AVX512F-NEXT:  .LBB15_2: # %else2
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB15_5
-; AVX512F-NEXT:  .LBB15_6: # %else4
+; AVX512F-NEXT:    jne .LBB15_36
+; AVX512F-NEXT:  .LBB15_3: # %else4
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB15_7
-; AVX512F-NEXT:  .LBB15_8: # %else6
+; AVX512F-NEXT:    jne .LBB15_37
+; AVX512F-NEXT:  .LBB15_4: # %else6
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    jne .LBB15_9
-; AVX512F-NEXT:  .LBB15_10: # %else8
+; AVX512F-NEXT:    jne .LBB15_38
+; AVX512F-NEXT:  .LBB15_5: # %else8
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    jne .LBB15_11
-; AVX512F-NEXT:  .LBB15_12: # %else10
+; AVX512F-NEXT:    jne .LBB15_39
+; AVX512F-NEXT:  .LBB15_6: # %else10
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    jne .LBB15_13
-; AVX512F-NEXT:  .LBB15_14: # %else12
+; AVX512F-NEXT:    jne .LBB15_40
+; AVX512F-NEXT:  .LBB15_7: # %else12
 ; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    js .LBB15_15
-; AVX512F-NEXT:  .LBB15_16: # %else14
+; AVX512F-NEXT:    js .LBB15_41
+; AVX512F-NEXT:  .LBB15_8: # %else14
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512F-NEXT:    jne .LBB15_17
-; AVX512F-NEXT:  .LBB15_18: # %else16
+; AVX512F-NEXT:    jne .LBB15_42
+; AVX512F-NEXT:  .LBB15_9: # %else16
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512F-NEXT:    jne .LBB15_19
-; AVX512F-NEXT:  .LBB15_20: # %else18
+; AVX512F-NEXT:    jne .LBB15_43
+; AVX512F-NEXT:  .LBB15_10: # %else18
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512F-NEXT:    jne .LBB15_21
-; AVX512F-NEXT:  .LBB15_22: # %else20
+; AVX512F-NEXT:    jne .LBB15_44
+; AVX512F-NEXT:  .LBB15_11: # %else20
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512F-NEXT:    jne .LBB15_23
-; AVX512F-NEXT:  .LBB15_24: # %else22
+; AVX512F-NEXT:    jne .LBB15_45
+; AVX512F-NEXT:  .LBB15_12: # %else22
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512F-NEXT:    jne .LBB15_25
-; AVX512F-NEXT:  .LBB15_26: # %else24
+; AVX512F-NEXT:    jne .LBB15_46
+; AVX512F-NEXT:  .LBB15_13: # %else24
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512F-NEXT:    jne .LBB15_27
-; AVX512F-NEXT:  .LBB15_28: # %else26
+; AVX512F-NEXT:    jne .LBB15_47
+; AVX512F-NEXT:  .LBB15_14: # %else26
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512F-NEXT:    jne .LBB15_29
-; AVX512F-NEXT:  .LBB15_30: # %else28
+; AVX512F-NEXT:    jne .LBB15_48
+; AVX512F-NEXT:  .LBB15_15: # %else28
 ; AVX512F-NEXT:    testw %ax, %ax
-; AVX512F-NEXT:    jns .LBB15_32
-; AVX512F-NEXT:  .LBB15_31: # %cond.store29
+; AVX512F-NEXT:    jns .LBB15_17
+; AVX512F-NEXT:  .LBB15_16: # %cond.store29
 ; AVX512F-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
-; AVX512F-NEXT:  .LBB15_32: # %else30
+; AVX512F-NEXT:  .LBB15_17: # %else30
 ; AVX512F-NEXT:    testl $65536, %eax # imm = 0x10000
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512F-NEXT:    jne .LBB15_33
-; AVX512F-NEXT:  # %bb.34: # %else32
-; AVX512F-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512F-NEXT:    jne .LBB15_35
-; AVX512F-NEXT:  .LBB15_36: # %else34
-; AVX512F-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512F-NEXT:    jne .LBB15_37
-; AVX512F-NEXT:  .LBB15_38: # %else36
-; AVX512F-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512F-NEXT:    jne .LBB15_39
-; AVX512F-NEXT:  .LBB15_40: # %else38
-; AVX512F-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512F-NEXT:    jne .LBB15_41
-; AVX512F-NEXT:  .LBB15_42: # %else40
-; AVX512F-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512F-NEXT:    jne .LBB15_43
-; AVX512F-NEXT:  .LBB15_44: # %else42
-; AVX512F-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512F-NEXT:    jne .LBB15_45
-; AVX512F-NEXT:  .LBB15_46: # %else44
-; AVX512F-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512F-NEXT:    jne .LBB15_47
-; AVX512F-NEXT:  .LBB15_48: # %else46
-; AVX512F-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX512F-NEXT:    jne .LBB15_49
-; AVX512F-NEXT:  .LBB15_50: # %else48
-; AVX512F-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX512F-NEXT:  # %bb.18: # %else32
+; AVX512F-NEXT:    testl $131072, %eax # imm = 0x20000
+; AVX512F-NEXT:    jne .LBB15_50
+; AVX512F-NEXT:  .LBB15_19: # %else34
+; AVX512F-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX512F-NEXT:    jne .LBB15_51
-; AVX512F-NEXT:  .LBB15_52: # %else50
-; AVX512F-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; AVX512F-NEXT:  .LBB15_20: # %else36
+; AVX512F-NEXT:    testl $524288, %eax # imm = 0x80000
+; AVX512F-NEXT:    jne .LBB15_52
+; AVX512F-NEXT:  .LBB15_21: # %else38
+; AVX512F-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX512F-NEXT:    jne .LBB15_53
-; AVX512F-NEXT:  .LBB15_54: # %else52
-; AVX512F-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX512F-NEXT:  .LBB15_22: # %else40
+; AVX512F-NEXT:    testl $2097152, %eax # imm = 0x200000
+; AVX512F-NEXT:    jne .LBB15_54
+; AVX512F-NEXT:  .LBB15_23: # %else42
+; AVX512F-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX512F-NEXT:    jne .LBB15_55
-; AVX512F-NEXT:  .LBB15_56: # %else54
-; AVX512F-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; AVX512F-NEXT:  .LBB15_24: # %else44
+; AVX512F-NEXT:    testl $8388608, %eax # imm = 0x800000
+; AVX512F-NEXT:    jne .LBB15_56
+; AVX512F-NEXT:  .LBB15_25: # %else46
+; AVX512F-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX512F-NEXT:    jne .LBB15_57
-; AVX512F-NEXT:  .LBB15_58: # %else56
-; AVX512F-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX512F-NEXT:  .LBB15_26: # %else48
+; AVX512F-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX512F-NEXT:    jne .LBB15_58
+; AVX512F-NEXT:  .LBB15_27: # %else50
+; AVX512F-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX512F-NEXT:    jne .LBB15_59
-; AVX512F-NEXT:  .LBB15_60: # %else58
-; AVX512F-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; AVX512F-NEXT:  .LBB15_28: # %else52
+; AVX512F-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX512F-NEXT:    jne .LBB15_60
+; AVX512F-NEXT:  .LBB15_29: # %else54
+; AVX512F-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX512F-NEXT:    jne .LBB15_61
-; AVX512F-NEXT:  .LBB15_62: # %else60
-; AVX512F-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX512F-NEXT:  .LBB15_30: # %else56
+; AVX512F-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX512F-NEXT:    jne .LBB15_62
+; AVX512F-NEXT:  .LBB15_31: # %else58
+; AVX512F-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX512F-NEXT:    jne .LBB15_63
-; AVX512F-NEXT:  .LBB15_64: # %else62
+; AVX512F-NEXT:  .LBB15_32: # %else60
+; AVX512F-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX512F-NEXT:    jne .LBB15_64
+; AVX512F-NEXT:  .LBB15_33: # %else62
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB15_1: # %cond.store
+; AVX512F-NEXT:  .LBB15_34: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB15_4
-; AVX512F-NEXT:  .LBB15_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB15_2
+; AVX512F-NEXT:  .LBB15_35: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB15_6
-; AVX512F-NEXT:  .LBB15_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB15_3
+; AVX512F-NEXT:  .LBB15_36: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB15_8
-; AVX512F-NEXT:  .LBB15_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB15_4
+; AVX512F-NEXT:  .LBB15_37: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB15_10
-; AVX512F-NEXT:  .LBB15_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB15_5
+; AVX512F-NEXT:  .LBB15_38: # %cond.store7
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB15_12
-; AVX512F-NEXT:  .LBB15_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB15_6
+; AVX512F-NEXT:  .LBB15_39: # %cond.store9
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB15_14
-; AVX512F-NEXT:  .LBB15_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB15_7
+; AVX512F-NEXT:  .LBB15_40: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    jns .LBB15_16
-; AVX512F-NEXT:  .LBB15_15: # %cond.store13
+; AVX512F-NEXT:    jns .LBB15_8
+; AVX512F-NEXT:  .LBB15_41: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512F-NEXT:    je .LBB15_18
-; AVX512F-NEXT:  .LBB15_17: # %cond.store15
+; AVX512F-NEXT:    je .LBB15_9
+; AVX512F-NEXT:  .LBB15_42: # %cond.store15
 ; AVX512F-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512F-NEXT:    je .LBB15_20
-; AVX512F-NEXT:  .LBB15_19: # %cond.store17
+; AVX512F-NEXT:    je .LBB15_10
+; AVX512F-NEXT:  .LBB15_43: # %cond.store17
 ; AVX512F-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512F-NEXT:    je .LBB15_22
-; AVX512F-NEXT:  .LBB15_21: # %cond.store19
+; AVX512F-NEXT:    je .LBB15_11
+; AVX512F-NEXT:  .LBB15_44: # %cond.store19
 ; AVX512F-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512F-NEXT:    je .LBB15_24
-; AVX512F-NEXT:  .LBB15_23: # %cond.store21
+; AVX512F-NEXT:    je .LBB15_12
+; AVX512F-NEXT:  .LBB15_45: # %cond.store21
 ; AVX512F-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512F-NEXT:    je .LBB15_26
-; AVX512F-NEXT:  .LBB15_25: # %cond.store23
+; AVX512F-NEXT:    je .LBB15_13
+; AVX512F-NEXT:  .LBB15_46: # %cond.store23
 ; AVX512F-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512F-NEXT:    je .LBB15_28
-; AVX512F-NEXT:  .LBB15_27: # %cond.store25
+; AVX512F-NEXT:    je .LBB15_14
+; AVX512F-NEXT:  .LBB15_47: # %cond.store25
 ; AVX512F-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512F-NEXT:    je .LBB15_30
-; AVX512F-NEXT:  .LBB15_29: # %cond.store27
+; AVX512F-NEXT:    je .LBB15_15
+; AVX512F-NEXT:  .LBB15_48: # %cond.store27
 ; AVX512F-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX512F-NEXT:    testw %ax, %ax
-; AVX512F-NEXT:    js .LBB15_31
-; AVX512F-NEXT:    jmp .LBB15_32
-; AVX512F-NEXT:  .LBB15_33: # %cond.store31
+; AVX512F-NEXT:    js .LBB15_16
+; AVX512F-NEXT:    jmp .LBB15_17
+; AVX512F-NEXT:  .LBB15_49: # %cond.store31
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
 ; AVX512F-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512F-NEXT:    je .LBB15_36
-; AVX512F-NEXT:  .LBB15_35: # %cond.store33
+; AVX512F-NEXT:    je .LBB15_19
+; AVX512F-NEXT:  .LBB15_50: # %cond.store33
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 17(%rdi)
 ; AVX512F-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512F-NEXT:    je .LBB15_38
-; AVX512F-NEXT:  .LBB15_37: # %cond.store35
+; AVX512F-NEXT:    je .LBB15_20
+; AVX512F-NEXT:  .LBB15_51: # %cond.store35
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 18(%rdi)
 ; AVX512F-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512F-NEXT:    je .LBB15_40
-; AVX512F-NEXT:  .LBB15_39: # %cond.store37
+; AVX512F-NEXT:    je .LBB15_21
+; AVX512F-NEXT:  .LBB15_52: # %cond.store37
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 19(%rdi)
 ; AVX512F-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512F-NEXT:    je .LBB15_42
-; AVX512F-NEXT:  .LBB15_41: # %cond.store39
+; AVX512F-NEXT:    je .LBB15_22
+; AVX512F-NEXT:  .LBB15_53: # %cond.store39
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 20(%rdi)
 ; AVX512F-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512F-NEXT:    je .LBB15_44
-; AVX512F-NEXT:  .LBB15_43: # %cond.store41
+; AVX512F-NEXT:    je .LBB15_23
+; AVX512F-NEXT:  .LBB15_54: # %cond.store41
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 21(%rdi)
 ; AVX512F-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512F-NEXT:    je .LBB15_46
-; AVX512F-NEXT:  .LBB15_45: # %cond.store43
+; AVX512F-NEXT:    je .LBB15_24
+; AVX512F-NEXT:  .LBB15_55: # %cond.store43
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 22(%rdi)
 ; AVX512F-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512F-NEXT:    je .LBB15_48
-; AVX512F-NEXT:  .LBB15_47: # %cond.store45
+; AVX512F-NEXT:    je .LBB15_25
+; AVX512F-NEXT:  .LBB15_56: # %cond.store45
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 23(%rdi)
 ; AVX512F-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX512F-NEXT:    je .LBB15_50
-; AVX512F-NEXT:  .LBB15_49: # %cond.store47
+; AVX512F-NEXT:    je .LBB15_26
+; AVX512F-NEXT:  .LBB15_57: # %cond.store47
 ; AVX512F-NEXT:    vpextrb $8, %xmm0, 24(%rdi)
 ; AVX512F-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX512F-NEXT:    je .LBB15_52
-; AVX512F-NEXT:  .LBB15_51: # %cond.store49
+; AVX512F-NEXT:    je .LBB15_27
+; AVX512F-NEXT:  .LBB15_58: # %cond.store49
 ; AVX512F-NEXT:    vpextrb $9, %xmm0, 25(%rdi)
 ; AVX512F-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX512F-NEXT:    je .LBB15_54
-; AVX512F-NEXT:  .LBB15_53: # %cond.store51
+; AVX512F-NEXT:    je .LBB15_28
+; AVX512F-NEXT:  .LBB15_59: # %cond.store51
 ; AVX512F-NEXT:    vpextrb $10, %xmm0, 26(%rdi)
 ; AVX512F-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX512F-NEXT:    je .LBB15_56
-; AVX512F-NEXT:  .LBB15_55: # %cond.store53
+; AVX512F-NEXT:    je .LBB15_29
+; AVX512F-NEXT:  .LBB15_60: # %cond.store53
 ; AVX512F-NEXT:    vpextrb $11, %xmm0, 27(%rdi)
 ; AVX512F-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX512F-NEXT:    je .LBB15_58
-; AVX512F-NEXT:  .LBB15_57: # %cond.store55
+; AVX512F-NEXT:    je .LBB15_30
+; AVX512F-NEXT:  .LBB15_61: # %cond.store55
 ; AVX512F-NEXT:    vpextrb $12, %xmm0, 28(%rdi)
 ; AVX512F-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX512F-NEXT:    je .LBB15_60
-; AVX512F-NEXT:  .LBB15_59: # %cond.store57
+; AVX512F-NEXT:    je .LBB15_31
+; AVX512F-NEXT:  .LBB15_62: # %cond.store57
 ; AVX512F-NEXT:    vpextrb $13, %xmm0, 29(%rdi)
 ; AVX512F-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX512F-NEXT:    je .LBB15_62
-; AVX512F-NEXT:  .LBB15_61: # %cond.store59
+; AVX512F-NEXT:    je .LBB15_32
+; AVX512F-NEXT:  .LBB15_63: # %cond.store59
 ; AVX512F-NEXT:    vpextrb $14, %xmm0, 30(%rdi)
 ; AVX512F-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX512F-NEXT:    je .LBB15_64
-; AVX512F-NEXT:  .LBB15_63: # %cond.store61
+; AVX512F-NEXT:    je .LBB15_33
+; AVX512F-NEXT:  .LBB15_64: # %cond.store61
 ; AVX512F-NEXT:    vpextrb $15, %xmm0, 31(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -6945,228 +6945,228 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, ptr %p, <32 x i8> %mask) {
 ; AVX512FVL-NEXT:    vpmovmskb %ymm1, %eax
 ; AVX512FVL-NEXT:    notl %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB15_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
+; AVX512FVL-NEXT:    jne .LBB15_34
+; AVX512FVL-NEXT:  # %bb.1: # %else
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB15_3
-; AVX512FVL-NEXT:  .LBB15_4: # %else2
+; AVX512FVL-NEXT:    jne .LBB15_35
+; AVX512FVL-NEXT:  .LBB15_2: # %else2
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB15_5
-; AVX512FVL-NEXT:  .LBB15_6: # %else4
+; AVX512FVL-NEXT:    jne .LBB15_36
+; AVX512FVL-NEXT:  .LBB15_3: # %else4
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB15_7
-; AVX512FVL-NEXT:  .LBB15_8: # %else6
+; AVX512FVL-NEXT:    jne .LBB15_37
+; AVX512FVL-NEXT:  .LBB15_4: # %else6
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    jne .LBB15_9
-; AVX512FVL-NEXT:  .LBB15_10: # %else8
+; AVX512FVL-NEXT:    jne .LBB15_38
+; AVX512FVL-NEXT:  .LBB15_5: # %else8
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    jne .LBB15_11
-; AVX512FVL-NEXT:  .LBB15_12: # %else10
+; AVX512FVL-NEXT:    jne .LBB15_39
+; AVX512FVL-NEXT:  .LBB15_6: # %else10
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    jne .LBB15_13
-; AVX512FVL-NEXT:  .LBB15_14: # %else12
+; AVX512FVL-NEXT:    jne .LBB15_40
+; AVX512FVL-NEXT:  .LBB15_7: # %else12
 ; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    js .LBB15_15
-; AVX512FVL-NEXT:  .LBB15_16: # %else14
+; AVX512FVL-NEXT:    js .LBB15_41
+; AVX512FVL-NEXT:  .LBB15_8: # %else14
 ; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512FVL-NEXT:    jne .LBB15_17
-; AVX512FVL-NEXT:  .LBB15_18: # %else16
+; AVX512FVL-NEXT:    jne .LBB15_42
+; AVX512FVL-NEXT:  .LBB15_9: # %else16
 ; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512FVL-NEXT:    jne .LBB15_19
-; AVX512FVL-NEXT:  .LBB15_20: # %else18
+; AVX512FVL-NEXT:    jne .LBB15_43
+; AVX512FVL-NEXT:  .LBB15_10: # %else18
 ; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512FVL-NEXT:    jne .LBB15_21
-; AVX512FVL-NEXT:  .LBB15_22: # %else20
+; AVX512FVL-NEXT:    jne .LBB15_44
+; AVX512FVL-NEXT:  .LBB15_11: # %else20
 ; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512FVL-NEXT:    jne .LBB15_23
-; AVX512FVL-NEXT:  .LBB15_24: # %else22
+; AVX512FVL-NEXT:    jne .LBB15_45
+; AVX512FVL-NEXT:  .LBB15_12: # %else22
 ; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512FVL-NEXT:    jne .LBB15_25
-; AVX512FVL-NEXT:  .LBB15_26: # %else24
+; AVX512FVL-NEXT:    jne .LBB15_46
+; AVX512FVL-NEXT:  .LBB15_13: # %else24
 ; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512FVL-NEXT:    jne .LBB15_27
-; AVX512FVL-NEXT:  .LBB15_28: # %else26
+; AVX512FVL-NEXT:    jne .LBB15_47
+; AVX512FVL-NEXT:  .LBB15_14: # %else26
 ; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512FVL-NEXT:    jne .LBB15_29
-; AVX512FVL-NEXT:  .LBB15_30: # %else28
+; AVX512FVL-NEXT:    jne .LBB15_48
+; AVX512FVL-NEXT:  .LBB15_15: # %else28
 ; AVX512FVL-NEXT:    testw %ax, %ax
-; AVX512FVL-NEXT:    jns .LBB15_32
-; AVX512FVL-NEXT:  .LBB15_31: # %cond.store29
+; AVX512FVL-NEXT:    jns .LBB15_17
+; AVX512FVL-NEXT:  .LBB15_16: # %cond.store29
 ; AVX512FVL-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
-; AVX512FVL-NEXT:  .LBB15_32: # %else30
+; AVX512FVL-NEXT:  .LBB15_17: # %else30
 ; AVX512FVL-NEXT:    testl $65536, %eax # imm = 0x10000
 ; AVX512FVL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX512FVL-NEXT:    jne .LBB15_33
-; AVX512FVL-NEXT:  # %bb.34: # %else32
-; AVX512FVL-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512FVL-NEXT:    jne .LBB15_35
-; AVX512FVL-NEXT:  .LBB15_36: # %else34
-; AVX512FVL-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512FVL-NEXT:    jne .LBB15_37
-; AVX512FVL-NEXT:  .LBB15_38: # %else36
-; AVX512FVL-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512FVL-NEXT:    jne .LBB15_39
-; AVX512FVL-NEXT:  .LBB15_40: # %else38
-; AVX512FVL-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512FVL-NEXT:    jne .LBB15_41
-; AVX512FVL-NEXT:  .LBB15_42: # %else40
-; AVX512FVL-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512FVL-NEXT:    jne .LBB15_43
-; AVX512FVL-NEXT:  .LBB15_44: # %else42
-; AVX512FVL-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512FVL-NEXT:    jne .LBB15_45
-; AVX512FVL-NEXT:  .LBB15_46: # %else44
-; AVX512FVL-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512FVL-NEXT:    jne .LBB15_47
-; AVX512FVL-NEXT:  .LBB15_48: # %else46
-; AVX512FVL-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX512FVL-NEXT:    jne .LBB15_49
-; AVX512FVL-NEXT:  .LBB15_50: # %else48
-; AVX512FVL-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX512FVL-NEXT:  # %bb.18: # %else32
+; AVX512FVL-NEXT:    testl $131072, %eax # imm = 0x20000
+; AVX512FVL-NEXT:    jne .LBB15_50
+; AVX512FVL-NEXT:  .LBB15_19: # %else34
+; AVX512FVL-NEXT:    testl $262144, %eax # imm = 0x40000
 ; AVX512FVL-NEXT:    jne .LBB15_51
-; AVX512FVL-NEXT:  .LBB15_52: # %else50
-; AVX512FVL-NEXT:    testl $67108864, %eax # imm = 0x4000000
+; AVX512FVL-NEXT:  .LBB15_20: # %else36
+; AVX512FVL-NEXT:    testl $524288, %eax # imm = 0x80000
+; AVX512FVL-NEXT:    jne .LBB15_52
+; AVX512FVL-NEXT:  .LBB15_21: # %else38
+; AVX512FVL-NEXT:    testl $1048576, %eax # imm = 0x100000
 ; AVX512FVL-NEXT:    jne .LBB15_53
-; AVX512FVL-NEXT:  .LBB15_54: # %else52
-; AVX512FVL-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX512FVL-NEXT:  .LBB15_22: # %else40
+; AVX512FVL-NEXT:    testl $2097152, %eax # imm = 0x200000
+; AVX512FVL-NEXT:    jne .LBB15_54
+; AVX512FVL-NEXT:  .LBB15_23: # %else42
+; AVX512FVL-NEXT:    testl $4194304, %eax # imm = 0x400000
 ; AVX512FVL-NEXT:    jne .LBB15_55
-; AVX512FVL-NEXT:  .LBB15_56: # %else54
-; AVX512FVL-NEXT:    testl $268435456, %eax # imm = 0x10000000
+; AVX512FVL-NEXT:  .LBB15_24: # %else44
+; AVX512FVL-NEXT:    testl $8388608, %eax # imm = 0x800000
+; AVX512FVL-NEXT:    jne .LBB15_56
+; AVX512FVL-NEXT:  .LBB15_25: # %else46
+; AVX512FVL-NEXT:    testl $16777216, %eax # imm = 0x1000000
 ; AVX512FVL-NEXT:    jne .LBB15_57
-; AVX512FVL-NEXT:  .LBB15_58: # %else56
-; AVX512FVL-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX512FVL-NEXT:  .LBB15_26: # %else48
+; AVX512FVL-NEXT:    testl $33554432, %eax # imm = 0x2000000
+; AVX512FVL-NEXT:    jne .LBB15_58
+; AVX512FVL-NEXT:  .LBB15_27: # %else50
+; AVX512FVL-NEXT:    testl $67108864, %eax # imm = 0x4000000
 ; AVX512FVL-NEXT:    jne .LBB15_59
-; AVX512FVL-NEXT:  .LBB15_60: # %else58
-; AVX512FVL-NEXT:    testl $1073741824, %eax # imm = 0x40000000
+; AVX512FVL-NEXT:  .LBB15_28: # %else52
+; AVX512FVL-NEXT:    testl $134217728, %eax # imm = 0x8000000
+; AVX512FVL-NEXT:    jne .LBB15_60
+; AVX512FVL-NEXT:  .LBB15_29: # %else54
+; AVX512FVL-NEXT:    testl $268435456, %eax # imm = 0x10000000
 ; AVX512FVL-NEXT:    jne .LBB15_61
-; AVX512FVL-NEXT:  .LBB15_62: # %else60
-; AVX512FVL-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX512FVL-NEXT:  .LBB15_30: # %else56
+; AVX512FVL-NEXT:    testl $536870912, %eax # imm = 0x20000000
+; AVX512FVL-NEXT:    jne .LBB15_62
+; AVX512FVL-NEXT:  .LBB15_31: # %else58
+; AVX512FVL-NEXT:    testl $1073741824, %eax # imm = 0x40000000
 ; AVX512FVL-NEXT:    jne .LBB15_63
-; AVX512FVL-NEXT:  .LBB15_64: # %else62
+; AVX512FVL-NEXT:  .LBB15_32: # %else60
+; AVX512FVL-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
+; AVX512FVL-NEXT:    jne .LBB15_64
+; AVX512FVL-NEXT:  .LBB15_33: # %else62
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB15_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB15_34: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB15_4
-; AVX512FVL-NEXT:  .LBB15_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB15_2
+; AVX512FVL-NEXT:  .LBB15_35: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB15_6
-; AVX512FVL-NEXT:  .LBB15_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB15_3
+; AVX512FVL-NEXT:  .LBB15_36: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB15_8
-; AVX512FVL-NEXT:  .LBB15_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB15_4
+; AVX512FVL-NEXT:  .LBB15_37: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB15_10
-; AVX512FVL-NEXT:  .LBB15_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB15_5
+; AVX512FVL-NEXT:  .LBB15_38: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB15_12
-; AVX512FVL-NEXT:  .LBB15_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB15_6
+; AVX512FVL-NEXT:  .LBB15_39: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB15_14
-; AVX512FVL-NEXT:  .LBB15_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB15_7
+; AVX512FVL-NEXT:  .LBB15_40: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    jns .LBB15_16
-; AVX512FVL-NEXT:  .LBB15_15: # %cond.store13
+; AVX512FVL-NEXT:    jns .LBB15_8
+; AVX512FVL-NEXT:  .LBB15_41: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512FVL-NEXT:    je .LBB15_18
-; AVX512FVL-NEXT:  .LBB15_17: # %cond.store15
+; AVX512FVL-NEXT:    je .LBB15_9
+; AVX512FVL-NEXT:  .LBB15_42: # %cond.store15
 ; AVX512FVL-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512FVL-NEXT:    je .LBB15_20
-; AVX512FVL-NEXT:  .LBB15_19: # %cond.store17
+; AVX512FVL-NEXT:    je .LBB15_10
+; AVX512FVL-NEXT:  .LBB15_43: # %cond.store17
 ; AVX512FVL-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512FVL-NEXT:    je .LBB15_22
-; AVX512FVL-NEXT:  .LBB15_21: # %cond.store19
+; AVX512FVL-NEXT:    je .LBB15_11
+; AVX512FVL-NEXT:  .LBB15_44: # %cond.store19
 ; AVX512FVL-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512FVL-NEXT:    je .LBB15_24
-; AVX512FVL-NEXT:  .LBB15_23: # %cond.store21
+; AVX512FVL-NEXT:    je .LBB15_12
+; AVX512FVL-NEXT:  .LBB15_45: # %cond.store21
 ; AVX512FVL-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512FVL-NEXT:    je .LBB15_26
-; AVX512FVL-NEXT:  .LBB15_25: # %cond.store23
+; AVX512FVL-NEXT:    je .LBB15_13
+; AVX512FVL-NEXT:  .LBB15_46: # %cond.store23
 ; AVX512FVL-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512FVL-NEXT:    je .LBB15_28
-; AVX512FVL-NEXT:  .LBB15_27: # %cond.store25
+; AVX512FVL-NEXT:    je .LBB15_14
+; AVX512FVL-NEXT:  .LBB15_47: # %cond.store25
 ; AVX512FVL-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512FVL-NEXT:    je .LBB15_30
-; AVX512FVL-NEXT:  .LBB15_29: # %cond.store27
+; AVX512FVL-NEXT:    je .LBB15_15
+; AVX512FVL-NEXT:  .LBB15_48: # %cond.store27
 ; AVX512FVL-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX512FVL-NEXT:    testw %ax, %ax
-; AVX512FVL-NEXT:    js .LBB15_31
-; AVX512FVL-NEXT:    jmp .LBB15_32
-; AVX512FVL-NEXT:  .LBB15_33: # %cond.store31
+; AVX512FVL-NEXT:    js .LBB15_16
+; AVX512FVL-NEXT:    jmp .LBB15_17
+; AVX512FVL-NEXT:  .LBB15_49: # %cond.store31
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, 16(%rdi)
 ; AVX512FVL-NEXT:    testl $131072, %eax # imm = 0x20000
-; AVX512FVL-NEXT:    je .LBB15_36
-; AVX512FVL-NEXT:  .LBB15_35: # %cond.store33
+; AVX512FVL-NEXT:    je .LBB15_19
+; AVX512FVL-NEXT:  .LBB15_50: # %cond.store33
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 17(%rdi)
 ; AVX512FVL-NEXT:    testl $262144, %eax # imm = 0x40000
-; AVX512FVL-NEXT:    je .LBB15_38
-; AVX512FVL-NEXT:  .LBB15_37: # %cond.store35
+; AVX512FVL-NEXT:    je .LBB15_20
+; AVX512FVL-NEXT:  .LBB15_51: # %cond.store35
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 18(%rdi)
 ; AVX512FVL-NEXT:    testl $524288, %eax # imm = 0x80000
-; AVX512FVL-NEXT:    je .LBB15_40
-; AVX512FVL-NEXT:  .LBB15_39: # %cond.store37
+; AVX512FVL-NEXT:    je .LBB15_21
+; AVX512FVL-NEXT:  .LBB15_52: # %cond.store37
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 19(%rdi)
 ; AVX512FVL-NEXT:    testl $1048576, %eax # imm = 0x100000
-; AVX512FVL-NEXT:    je .LBB15_42
-; AVX512FVL-NEXT:  .LBB15_41: # %cond.store39
+; AVX512FVL-NEXT:    je .LBB15_22
+; AVX512FVL-NEXT:  .LBB15_53: # %cond.store39
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 20(%rdi)
 ; AVX512FVL-NEXT:    testl $2097152, %eax # imm = 0x200000
-; AVX512FVL-NEXT:    je .LBB15_44
-; AVX512FVL-NEXT:  .LBB15_43: # %cond.store41
+; AVX512FVL-NEXT:    je .LBB15_23
+; AVX512FVL-NEXT:  .LBB15_54: # %cond.store41
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 21(%rdi)
 ; AVX512FVL-NEXT:    testl $4194304, %eax # imm = 0x400000
-; AVX512FVL-NEXT:    je .LBB15_46
-; AVX512FVL-NEXT:  .LBB15_45: # %cond.store43
+; AVX512FVL-NEXT:    je .LBB15_24
+; AVX512FVL-NEXT:  .LBB15_55: # %cond.store43
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 22(%rdi)
 ; AVX512FVL-NEXT:    testl $8388608, %eax # imm = 0x800000
-; AVX512FVL-NEXT:    je .LBB15_48
-; AVX512FVL-NEXT:  .LBB15_47: # %cond.store45
+; AVX512FVL-NEXT:    je .LBB15_25
+; AVX512FVL-NEXT:  .LBB15_56: # %cond.store45
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 23(%rdi)
 ; AVX512FVL-NEXT:    testl $16777216, %eax # imm = 0x1000000
-; AVX512FVL-NEXT:    je .LBB15_50
-; AVX512FVL-NEXT:  .LBB15_49: # %cond.store47
+; AVX512FVL-NEXT:    je .LBB15_26
+; AVX512FVL-NEXT:  .LBB15_57: # %cond.store47
 ; AVX512FVL-NEXT:    vpextrb $8, %xmm0, 24(%rdi)
 ; AVX512FVL-NEXT:    testl $33554432, %eax # imm = 0x2000000
-; AVX512FVL-NEXT:    je .LBB15_52
-; AVX512FVL-NEXT:  .LBB15_51: # %cond.store49
+; AVX512FVL-NEXT:    je .LBB15_27
+; AVX512FVL-NEXT:  .LBB15_58: # %cond.store49
 ; AVX512FVL-NEXT:    vpextrb $9, %xmm0, 25(%rdi)
 ; AVX512FVL-NEXT:    testl $67108864, %eax # imm = 0x4000000
-; AVX512FVL-NEXT:    je .LBB15_54
-; AVX512FVL-NEXT:  .LBB15_53: # %cond.store51
+; AVX512FVL-NEXT:    je .LBB15_28
+; AVX512FVL-NEXT:  .LBB15_59: # %cond.store51
 ; AVX512FVL-NEXT:    vpextrb $10, %xmm0, 26(%rdi)
 ; AVX512FVL-NEXT:    testl $134217728, %eax # imm = 0x8000000
-; AVX512FVL-NEXT:    je .LBB15_56
-; AVX512FVL-NEXT:  .LBB15_55: # %cond.store53
+; AVX512FVL-NEXT:    je .LBB15_29
+; AVX512FVL-NEXT:  .LBB15_60: # %cond.store53
 ; AVX512FVL-NEXT:    vpextrb $11, %xmm0, 27(%rdi)
 ; AVX512FVL-NEXT:    testl $268435456, %eax # imm = 0x10000000
-; AVX512FVL-NEXT:    je .LBB15_58
-; AVX512FVL-NEXT:  .LBB15_57: # %cond.store55
+; AVX512FVL-NEXT:    je .LBB15_30
+; AVX512FVL-NEXT:  .LBB15_61: # %cond.store55
 ; AVX512FVL-NEXT:    vpextrb $12, %xmm0, 28(%rdi)
 ; AVX512FVL-NEXT:    testl $536870912, %eax # imm = 0x20000000
-; AVX512FVL-NEXT:    je .LBB15_60
-; AVX512FVL-NEXT:  .LBB15_59: # %cond.store57
+; AVX512FVL-NEXT:    je .LBB15_31
+; AVX512FVL-NEXT:  .LBB15_62: # %cond.store57
 ; AVX512FVL-NEXT:    vpextrb $13, %xmm0, 29(%rdi)
 ; AVX512FVL-NEXT:    testl $1073741824, %eax # imm = 0x40000000
-; AVX512FVL-NEXT:    je .LBB15_62
-; AVX512FVL-NEXT:  .LBB15_61: # %cond.store59
+; AVX512FVL-NEXT:    je .LBB15_32
+; AVX512FVL-NEXT:  .LBB15_63: # %cond.store59
 ; AVX512FVL-NEXT:    vpextrb $14, %xmm0, 30(%rdi)
 ; AVX512FVL-NEXT:    testl $-2147483648, %eax # imm = 0x80000000
-; AVX512FVL-NEXT:    je .LBB15_64
-; AVX512FVL-NEXT:  .LBB15_63: # %cond.store61
+; AVX512FVL-NEXT:    je .LBB15_33
+; AVX512FVL-NEXT:  .LBB15_64: # %cond.store61
 ; AVX512FVL-NEXT:    vpextrb $15, %xmm0, 31(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -7210,103 +7210,103 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    jne .LBB16_1
-; SSE2-NEXT:  # %bb.2: # %else
+; SSE2-NEXT:    jne .LBB16_28
+; SSE2-NEXT:  # %bb.1: # %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB16_3
-; SSE2-NEXT:  .LBB16_4: # %else2
+; SSE2-NEXT:    jne .LBB16_29
+; SSE2-NEXT:  .LBB16_2: # %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB16_5
-; SSE2-NEXT:  .LBB16_6: # %else4
+; SSE2-NEXT:    jne .LBB16_30
+; SSE2-NEXT:  .LBB16_3: # %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB16_8
-; SSE2-NEXT:  .LBB16_7: # %cond.store5
+; SSE2-NEXT:    je .LBB16_5
+; SSE2-NEXT:  .LBB16_4: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 3(%rdi)
-; SSE2-NEXT:  .LBB16_8: # %else6
+; SSE2-NEXT:  .LBB16_5: # %else6
 ; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    pextrw $2, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB16_10
-; SSE2-NEXT:  # %bb.9: # %cond.store7
+; SSE2-NEXT:    je .LBB16_7
+; SSE2-NEXT:  # %bb.6: # %cond.store7
 ; SSE2-NEXT:    movb %cl, 4(%rdi)
-; SSE2-NEXT:  .LBB16_10: # %else8
+; SSE2-NEXT:  .LBB16_7: # %else8
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB16_12
-; SSE2-NEXT:  # %bb.11: # %cond.store9
+; SSE2-NEXT:    je .LBB16_9
+; SSE2-NEXT:  # %bb.8: # %cond.store9
 ; SSE2-NEXT:    movb %ch, 5(%rdi)
-; SSE2-NEXT:  .LBB16_12: # %else10
+; SSE2-NEXT:  .LBB16_9: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB16_14
-; SSE2-NEXT:  # %bb.13: # %cond.store11
+; SSE2-NEXT:    je .LBB16_11
+; SSE2-NEXT:  # %bb.10: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
-; SSE2-NEXT:  .LBB16_14: # %else12
+; SSE2-NEXT:  .LBB16_11: # %else12
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jns .LBB16_16
-; SSE2-NEXT:  # %bb.15: # %cond.store13
+; SSE2-NEXT:    jns .LBB16_13
+; SSE2-NEXT:  # %bb.12: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
-; SSE2-NEXT:  .LBB16_16: # %else14
+; SSE2-NEXT:  .LBB16_13: # %else14
 ; SSE2-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE2-NEXT:    pextrw $4, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB16_18
-; SSE2-NEXT:  # %bb.17: # %cond.store15
+; SSE2-NEXT:    je .LBB16_15
+; SSE2-NEXT:  # %bb.14: # %cond.store15
 ; SSE2-NEXT:    movb %cl, 8(%rdi)
-; SSE2-NEXT:  .LBB16_18: # %else16
+; SSE2-NEXT:  .LBB16_15: # %else16
 ; SSE2-NEXT:    testl $512, %eax # imm = 0x200
-; SSE2-NEXT:    je .LBB16_20
-; SSE2-NEXT:  # %bb.19: # %cond.store17
+; SSE2-NEXT:    je .LBB16_17
+; SSE2-NEXT:  # %bb.16: # %cond.store17
 ; SSE2-NEXT:    movb %ch, 9(%rdi)
-; SSE2-NEXT:  .LBB16_20: # %else18
+; SSE2-NEXT:  .LBB16_17: # %else18
 ; SSE2-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE2-NEXT:    pextrw $5, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB16_22
-; SSE2-NEXT:  # %bb.21: # %cond.store19
+; SSE2-NEXT:    je .LBB16_19
+; SSE2-NEXT:  # %bb.18: # %cond.store19
 ; SSE2-NEXT:    movb %cl, 10(%rdi)
-; SSE2-NEXT:  .LBB16_22: # %else20
+; SSE2-NEXT:  .LBB16_19: # %else20
 ; SSE2-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE2-NEXT:    je .LBB16_24
-; SSE2-NEXT:  # %bb.23: # %cond.store21
+; SSE2-NEXT:    je .LBB16_21
+; SSE2-NEXT:  # %bb.20: # %cond.store21
 ; SSE2-NEXT:    movb %ch, 11(%rdi)
-; SSE2-NEXT:  .LBB16_24: # %else22
+; SSE2-NEXT:  .LBB16_21: # %else22
 ; SSE2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE2-NEXT:    pextrw $6, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB16_26
-; SSE2-NEXT:  # %bb.25: # %cond.store23
+; SSE2-NEXT:    je .LBB16_23
+; SSE2-NEXT:  # %bb.22: # %cond.store23
 ; SSE2-NEXT:    movb %cl, 12(%rdi)
-; SSE2-NEXT:  .LBB16_26: # %else24
+; SSE2-NEXT:  .LBB16_23: # %else24
 ; SSE2-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE2-NEXT:    je .LBB16_28
-; SSE2-NEXT:  # %bb.27: # %cond.store25
+; SSE2-NEXT:    je .LBB16_25
+; SSE2-NEXT:  # %bb.24: # %cond.store25
 ; SSE2-NEXT:    movb %ch, 13(%rdi)
-; SSE2-NEXT:  .LBB16_28: # %else26
+; SSE2-NEXT:  .LBB16_25: # %else26
 ; SSE2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE2-NEXT:    pextrw $7, %xmm0, %ecx
-; SSE2-NEXT:    jne .LBB16_29
-; SSE2-NEXT:  # %bb.30: # %else28
-; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    jne .LBB16_31
-; SSE2-NEXT:  .LBB16_32: # %else30
+; SSE2-NEXT:  # %bb.26: # %else28
+; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:    jne .LBB16_32
+; SSE2-NEXT:  .LBB16_27: # %else30
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB16_1: # %cond.store
+; SSE2-NEXT:  .LBB16_28: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB16_4
-; SSE2-NEXT:  .LBB16_3: # %cond.store1
+; SSE2-NEXT:    je .LBB16_2
+; SSE2-NEXT:  .LBB16_29: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB16_6
-; SSE2-NEXT:  .LBB16_5: # %cond.store3
+; SSE2-NEXT:    je .LBB16_3
+; SSE2-NEXT:  .LBB16_30: # %cond.store3
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB16_7
-; SSE2-NEXT:    jmp .LBB16_8
-; SSE2-NEXT:  .LBB16_29: # %cond.store27
+; SSE2-NEXT:    jne .LBB16_4
+; SSE2-NEXT:    jmp .LBB16_5
+; SSE2-NEXT:  .LBB16_31: # %cond.store27
 ; SSE2-NEXT:    movb %cl, 14(%rdi)
 ; SSE2-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE2-NEXT:    je .LBB16_32
-; SSE2-NEXT:  .LBB16_31: # %cond.store29
+; SSE2-NEXT:    je .LBB16_27
+; SSE2-NEXT:  .LBB16_32: # %cond.store29
 ; SSE2-NEXT:    movb %ch, 15(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -7321,115 +7321,115 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm3, %eax
 ; SSE4-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB16_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB16_3
-; SSE4-NEXT:  .LBB16_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB16_5
-; SSE4-NEXT:  .LBB16_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB16_7
-; SSE4-NEXT:  .LBB16_8: # %else6
-; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    jne .LBB16_9
-; SSE4-NEXT:  .LBB16_10: # %else8
-; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    jne .LBB16_11
-; SSE4-NEXT:  .LBB16_12: # %else10
-; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    jne .LBB16_13
-; SSE4-NEXT:  .LBB16_14: # %else12
-; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    js .LBB16_15
-; SSE4-NEXT:  .LBB16_16: # %else14
-; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB16_17
-; SSE4-NEXT:  .LBB16_18: # %else16
-; SSE4-NEXT:    testl $512, %eax # imm = 0x200
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB16_18
+; SSE4-NEXT:  .LBB16_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB16_19
-; SSE4-NEXT:  .LBB16_20: # %else18
-; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
+; SSE4-NEXT:  .LBB16_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB16_20
+; SSE4-NEXT:  .LBB16_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB16_21
-; SSE4-NEXT:  .LBB16_22: # %else20
-; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
+; SSE4-NEXT:  .LBB16_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB16_22
+; SSE4-NEXT:  .LBB16_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB16_23
-; SSE4-NEXT:  .LBB16_24: # %else22
-; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
+; SSE4-NEXT:  .LBB16_7: # %else12
+; SSE4-NEXT:    testb %al, %al
+; SSE4-NEXT:    js .LBB16_24
+; SSE4-NEXT:  .LBB16_8: # %else14
+; SSE4-NEXT:    testl $256, %eax # imm = 0x100
 ; SSE4-NEXT:    jne .LBB16_25
-; SSE4-NEXT:  .LBB16_26: # %else24
-; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE4-NEXT:  .LBB16_9: # %else16
+; SSE4-NEXT:    testl $512, %eax # imm = 0x200
+; SSE4-NEXT:    jne .LBB16_26
+; SSE4-NEXT:  .LBB16_10: # %else18
+; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
 ; SSE4-NEXT:    jne .LBB16_27
-; SSE4-NEXT:  .LBB16_28: # %else26
-; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
+; SSE4-NEXT:  .LBB16_11: # %else20
+; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
+; SSE4-NEXT:    jne .LBB16_28
+; SSE4-NEXT:  .LBB16_12: # %else22
+; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
 ; SSE4-NEXT:    jne .LBB16_29
-; SSE4-NEXT:  .LBB16_30: # %else28
-; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:  .LBB16_13: # %else24
+; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
+; SSE4-NEXT:    jne .LBB16_30
+; SSE4-NEXT:  .LBB16_14: # %else26
+; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
 ; SSE4-NEXT:    jne .LBB16_31
-; SSE4-NEXT:  .LBB16_32: # %else30
+; SSE4-NEXT:  .LBB16_15: # %else28
+; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
+; SSE4-NEXT:    jne .LBB16_32
+; SSE4-NEXT:  .LBB16_16: # %else30
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB16_1: # %cond.store
+; SSE4-NEXT:  .LBB16_17: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB16_4
-; SSE4-NEXT:  .LBB16_3: # %cond.store1
+; SSE4-NEXT:    je .LBB16_2
+; SSE4-NEXT:  .LBB16_18: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm0, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB16_6
-; SSE4-NEXT:  .LBB16_5: # %cond.store3
+; SSE4-NEXT:    je .LBB16_3
+; SSE4-NEXT:  .LBB16_19: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB16_8
-; SSE4-NEXT:  .LBB16_7: # %cond.store5
+; SSE4-NEXT:    je .LBB16_4
+; SSE4-NEXT:  .LBB16_20: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm0, 3(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB16_10
-; SSE4-NEXT:  .LBB16_9: # %cond.store7
+; SSE4-NEXT:    je .LBB16_5
+; SSE4-NEXT:  .LBB16_21: # %cond.store7
 ; SSE4-NEXT:    pextrb $4, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB16_12
-; SSE4-NEXT:  .LBB16_11: # %cond.store9
+; SSE4-NEXT:    je .LBB16_6
+; SSE4-NEXT:  .LBB16_22: # %cond.store9
 ; SSE4-NEXT:    pextrb $5, %xmm0, 5(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB16_14
-; SSE4-NEXT:  .LBB16_13: # %cond.store11
+; SSE4-NEXT:    je .LBB16_7
+; SSE4-NEXT:  .LBB16_23: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb %al, %al
-; SSE4-NEXT:    jns .LBB16_16
-; SSE4-NEXT:  .LBB16_15: # %cond.store13
+; SSE4-NEXT:    jns .LBB16_8
+; SSE4-NEXT:  .LBB16_24: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    testl $256, %eax # imm = 0x100
-; SSE4-NEXT:    je .LBB16_18
-; SSE4-NEXT:  .LBB16_17: # %cond.store15
+; SSE4-NEXT:    je .LBB16_9
+; SSE4-NEXT:  .LBB16_25: # %cond.store15
 ; SSE4-NEXT:    pextrb $8, %xmm0, 8(%rdi)
 ; SSE4-NEXT:    testl $512, %eax # imm = 0x200
-; SSE4-NEXT:    je .LBB16_20
-; SSE4-NEXT:  .LBB16_19: # %cond.store17
+; SSE4-NEXT:    je .LBB16_10
+; SSE4-NEXT:  .LBB16_26: # %cond.store17
 ; SSE4-NEXT:    pextrb $9, %xmm0, 9(%rdi)
 ; SSE4-NEXT:    testl $1024, %eax # imm = 0x400
-; SSE4-NEXT:    je .LBB16_22
-; SSE4-NEXT:  .LBB16_21: # %cond.store19
+; SSE4-NEXT:    je .LBB16_11
+; SSE4-NEXT:  .LBB16_27: # %cond.store19
 ; SSE4-NEXT:    pextrb $10, %xmm0, 10(%rdi)
 ; SSE4-NEXT:    testl $2048, %eax # imm = 0x800
-; SSE4-NEXT:    je .LBB16_24
-; SSE4-NEXT:  .LBB16_23: # %cond.store21
+; SSE4-NEXT:    je .LBB16_12
+; SSE4-NEXT:  .LBB16_28: # %cond.store21
 ; SSE4-NEXT:    pextrb $11, %xmm0, 11(%rdi)
 ; SSE4-NEXT:    testl $4096, %eax # imm = 0x1000
-; SSE4-NEXT:    je .LBB16_26
-; SSE4-NEXT:  .LBB16_25: # %cond.store23
+; SSE4-NEXT:    je .LBB16_13
+; SSE4-NEXT:  .LBB16_29: # %cond.store23
 ; SSE4-NEXT:    pextrb $12, %xmm0, 12(%rdi)
 ; SSE4-NEXT:    testl $8192, %eax # imm = 0x2000
-; SSE4-NEXT:    je .LBB16_28
-; SSE4-NEXT:  .LBB16_27: # %cond.store25
+; SSE4-NEXT:    je .LBB16_14
+; SSE4-NEXT:  .LBB16_30: # %cond.store25
 ; SSE4-NEXT:    pextrb $13, %xmm0, 13(%rdi)
 ; SSE4-NEXT:    testl $16384, %eax # imm = 0x4000
-; SSE4-NEXT:    je .LBB16_30
-; SSE4-NEXT:  .LBB16_29: # %cond.store27
+; SSE4-NEXT:    je .LBB16_15
+; SSE4-NEXT:  .LBB16_31: # %cond.store27
 ; SSE4-NEXT:    pextrb $14, %xmm0, 14(%rdi)
 ; SSE4-NEXT:    testl $32768, %eax # imm = 0x8000
-; SSE4-NEXT:    je .LBB16_32
-; SSE4-NEXT:  .LBB16_31: # %cond.store29
+; SSE4-NEXT:    je .LBB16_16
+; SSE4-NEXT:  .LBB16_32: # %cond.store29
 ; SSE4-NEXT:    pextrb $15, %xmm0, 15(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -7445,116 +7445,116 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX1-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX1-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX1-NEXT:    testb $1, %al
-; AVX1-NEXT:    jne .LBB16_1
-; AVX1-NEXT:  # %bb.2: # %else
-; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    jne .LBB16_3
-; AVX1-NEXT:  .LBB16_4: # %else2
-; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    jne .LBB16_5
-; AVX1-NEXT:  .LBB16_6: # %else4
-; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    jne .LBB16_7
-; AVX1-NEXT:  .LBB16_8: # %else6
-; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    jne .LBB16_9
-; AVX1-NEXT:  .LBB16_10: # %else8
-; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    jne .LBB16_11
-; AVX1-NEXT:  .LBB16_12: # %else10
-; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    jne .LBB16_13
-; AVX1-NEXT:  .LBB16_14: # %else12
-; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    js .LBB16_15
-; AVX1-NEXT:  .LBB16_16: # %else14
-; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB16_17
-; AVX1-NEXT:  .LBB16_18: # %else16
-; AVX1-NEXT:    testl $512, %eax # imm = 0x200
+; AVX1-NEXT:  # %bb.1: # %else
+; AVX1-NEXT:    testb $2, %al
+; AVX1-NEXT:    jne .LBB16_18
+; AVX1-NEXT:  .LBB16_2: # %else2
+; AVX1-NEXT:    testb $4, %al
 ; AVX1-NEXT:    jne .LBB16_19
-; AVX1-NEXT:  .LBB16_20: # %else18
-; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX1-NEXT:  .LBB16_3: # %else4
+; AVX1-NEXT:    testb $8, %al
+; AVX1-NEXT:    jne .LBB16_20
+; AVX1-NEXT:  .LBB16_4: # %else6
+; AVX1-NEXT:    testb $16, %al
 ; AVX1-NEXT:    jne .LBB16_21
-; AVX1-NEXT:  .LBB16_22: # %else20
-; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX1-NEXT:  .LBB16_5: # %else8
+; AVX1-NEXT:    testb $32, %al
+; AVX1-NEXT:    jne .LBB16_22
+; AVX1-NEXT:  .LBB16_6: # %else10
+; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne .LBB16_23
-; AVX1-NEXT:  .LBB16_24: # %else22
-; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX1-NEXT:  .LBB16_7: # %else12
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js .LBB16_24
+; AVX1-NEXT:  .LBB16_8: # %else14
+; AVX1-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX1-NEXT:    jne .LBB16_25
-; AVX1-NEXT:  .LBB16_26: # %else24
-; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX1-NEXT:  .LBB16_9: # %else16
+; AVX1-NEXT:    testl $512, %eax # imm = 0x200
+; AVX1-NEXT:    jne .LBB16_26
+; AVX1-NEXT:  .LBB16_10: # %else18
+; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX1-NEXT:    jne .LBB16_27
-; AVX1-NEXT:  .LBB16_28: # %else26
-; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX1-NEXT:  .LBB16_11: # %else20
+; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX1-NEXT:    jne .LBB16_28
+; AVX1-NEXT:  .LBB16_12: # %else22
+; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX1-NEXT:    jne .LBB16_29
-; AVX1-NEXT:  .LBB16_30: # %else28
-; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:  .LBB16_13: # %else24
+; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX1-NEXT:    jne .LBB16_30
+; AVX1-NEXT:  .LBB16_14: # %else26
+; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX1-NEXT:    jne .LBB16_31
-; AVX1-NEXT:  .LBB16_32: # %else30
+; AVX1-NEXT:  .LBB16_15: # %else28
+; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX1-NEXT:    jne .LBB16_32
+; AVX1-NEXT:  .LBB16_16: # %else30
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:  .LBB16_1: # %cond.store
+; AVX1-NEXT:  .LBB16_17: # %cond.store
 ; AVX1-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX1-NEXT:    testb $2, %al
-; AVX1-NEXT:    je .LBB16_4
-; AVX1-NEXT:  .LBB16_3: # %cond.store1
+; AVX1-NEXT:    je .LBB16_2
+; AVX1-NEXT:  .LBB16_18: # %cond.store1
 ; AVX1-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX1-NEXT:    testb $4, %al
-; AVX1-NEXT:    je .LBB16_6
-; AVX1-NEXT:  .LBB16_5: # %cond.store3
+; AVX1-NEXT:    je .LBB16_3
+; AVX1-NEXT:  .LBB16_19: # %cond.store3
 ; AVX1-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX1-NEXT:    testb $8, %al
-; AVX1-NEXT:    je .LBB16_8
-; AVX1-NEXT:  .LBB16_7: # %cond.store5
+; AVX1-NEXT:    je .LBB16_4
+; AVX1-NEXT:  .LBB16_20: # %cond.store5
 ; AVX1-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX1-NEXT:    testb $16, %al
-; AVX1-NEXT:    je .LBB16_10
-; AVX1-NEXT:  .LBB16_9: # %cond.store7
+; AVX1-NEXT:    je .LBB16_5
+; AVX1-NEXT:  .LBB16_21: # %cond.store7
 ; AVX1-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX1-NEXT:    testb $32, %al
-; AVX1-NEXT:    je .LBB16_12
-; AVX1-NEXT:  .LBB16_11: # %cond.store9
+; AVX1-NEXT:    je .LBB16_6
+; AVX1-NEXT:  .LBB16_22: # %cond.store9
 ; AVX1-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX1-NEXT:    testb $64, %al
-; AVX1-NEXT:    je .LBB16_14
-; AVX1-NEXT:  .LBB16_13: # %cond.store11
+; AVX1-NEXT:    je .LBB16_7
+; AVX1-NEXT:  .LBB16_23: # %cond.store11
 ; AVX1-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX1-NEXT:    testb %al, %al
-; AVX1-NEXT:    jns .LBB16_16
-; AVX1-NEXT:  .LBB16_15: # %cond.store13
+; AVX1-NEXT:    jns .LBB16_8
+; AVX1-NEXT:  .LBB16_24: # %cond.store13
 ; AVX1-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX1-NEXT:    testl $256, %eax # imm = 0x100
-; AVX1-NEXT:    je .LBB16_18
-; AVX1-NEXT:  .LBB16_17: # %cond.store15
+; AVX1-NEXT:    je .LBB16_9
+; AVX1-NEXT:  .LBB16_25: # %cond.store15
 ; AVX1-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX1-NEXT:    testl $512, %eax # imm = 0x200
-; AVX1-NEXT:    je .LBB16_20
-; AVX1-NEXT:  .LBB16_19: # %cond.store17
+; AVX1-NEXT:    je .LBB16_10
+; AVX1-NEXT:  .LBB16_26: # %cond.store17
 ; AVX1-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX1-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX1-NEXT:    je .LBB16_22
-; AVX1-NEXT:  .LBB16_21: # %cond.store19
+; AVX1-NEXT:    je .LBB16_11
+; AVX1-NEXT:  .LBB16_27: # %cond.store19
 ; AVX1-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX1-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX1-NEXT:    je .LBB16_24
-; AVX1-NEXT:  .LBB16_23: # %cond.store21
+; AVX1-NEXT:    je .LBB16_12
+; AVX1-NEXT:  .LBB16_28: # %cond.store21
 ; AVX1-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX1-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX1-NEXT:    je .LBB16_26
-; AVX1-NEXT:  .LBB16_25: # %cond.store23
+; AVX1-NEXT:    je .LBB16_13
+; AVX1-NEXT:  .LBB16_29: # %cond.store23
 ; AVX1-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX1-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX1-NEXT:    je .LBB16_28
-; AVX1-NEXT:  .LBB16_27: # %cond.store25
+; AVX1-NEXT:    je .LBB16_14
+; AVX1-NEXT:  .LBB16_30: # %cond.store25
 ; AVX1-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX1-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX1-NEXT:    je .LBB16_30
-; AVX1-NEXT:  .LBB16_29: # %cond.store27
+; AVX1-NEXT:    je .LBB16_15
+; AVX1-NEXT:  .LBB16_31: # %cond.store27
 ; AVX1-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX1-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX1-NEXT:    je .LBB16_32
-; AVX1-NEXT:  .LBB16_31: # %cond.store29
+; AVX1-NEXT:    je .LBB16_16
+; AVX1-NEXT:  .LBB16_32: # %cond.store29
 ; AVX1-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -7569,116 +7569,116 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX2-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX2-NEXT:    testb $1, %al
-; AVX2-NEXT:    jne .LBB16_1
-; AVX2-NEXT:  # %bb.2: # %else
-; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    jne .LBB16_3
-; AVX2-NEXT:  .LBB16_4: # %else2
-; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    jne .LBB16_5
-; AVX2-NEXT:  .LBB16_6: # %else4
-; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    jne .LBB16_7
-; AVX2-NEXT:  .LBB16_8: # %else6
-; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    jne .LBB16_9
-; AVX2-NEXT:  .LBB16_10: # %else8
-; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    jne .LBB16_11
-; AVX2-NEXT:  .LBB16_12: # %else10
-; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    jne .LBB16_13
-; AVX2-NEXT:  .LBB16_14: # %else12
-; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    js .LBB16_15
-; AVX2-NEXT:  .LBB16_16: # %else14
-; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB16_17
-; AVX2-NEXT:  .LBB16_18: # %else16
-; AVX2-NEXT:    testl $512, %eax # imm = 0x200
+; AVX2-NEXT:  # %bb.1: # %else
+; AVX2-NEXT:    testb $2, %al
+; AVX2-NEXT:    jne .LBB16_18
+; AVX2-NEXT:  .LBB16_2: # %else2
+; AVX2-NEXT:    testb $4, %al
 ; AVX2-NEXT:    jne .LBB16_19
-; AVX2-NEXT:  .LBB16_20: # %else18
-; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX2-NEXT:  .LBB16_3: # %else4
+; AVX2-NEXT:    testb $8, %al
+; AVX2-NEXT:    jne .LBB16_20
+; AVX2-NEXT:  .LBB16_4: # %else6
+; AVX2-NEXT:    testb $16, %al
 ; AVX2-NEXT:    jne .LBB16_21
-; AVX2-NEXT:  .LBB16_22: # %else20
-; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX2-NEXT:  .LBB16_5: # %else8
+; AVX2-NEXT:    testb $32, %al
+; AVX2-NEXT:    jne .LBB16_22
+; AVX2-NEXT:  .LBB16_6: # %else10
+; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne .LBB16_23
-; AVX2-NEXT:  .LBB16_24: # %else22
-; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX2-NEXT:  .LBB16_7: # %else12
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js .LBB16_24
+; AVX2-NEXT:  .LBB16_8: # %else14
+; AVX2-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX2-NEXT:    jne .LBB16_25
-; AVX2-NEXT:  .LBB16_26: # %else24
-; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX2-NEXT:  .LBB16_9: # %else16
+; AVX2-NEXT:    testl $512, %eax # imm = 0x200
+; AVX2-NEXT:    jne .LBB16_26
+; AVX2-NEXT:  .LBB16_10: # %else18
+; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX2-NEXT:    jne .LBB16_27
-; AVX2-NEXT:  .LBB16_28: # %else26
-; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX2-NEXT:  .LBB16_11: # %else20
+; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX2-NEXT:    jne .LBB16_28
+; AVX2-NEXT:  .LBB16_12: # %else22
+; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX2-NEXT:    jne .LBB16_29
-; AVX2-NEXT:  .LBB16_30: # %else28
-; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:  .LBB16_13: # %else24
+; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX2-NEXT:    jne .LBB16_30
+; AVX2-NEXT:  .LBB16_14: # %else26
+; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX2-NEXT:    jne .LBB16_31
-; AVX2-NEXT:  .LBB16_32: # %else30
+; AVX2-NEXT:  .LBB16_15: # %else28
+; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX2-NEXT:    jne .LBB16_32
+; AVX2-NEXT:  .LBB16_16: # %else30
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-; AVX2-NEXT:  .LBB16_1: # %cond.store
+; AVX2-NEXT:  .LBB16_17: # %cond.store
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX2-NEXT:    testb $2, %al
-; AVX2-NEXT:    je .LBB16_4
-; AVX2-NEXT:  .LBB16_3: # %cond.store1
+; AVX2-NEXT:    je .LBB16_2
+; AVX2-NEXT:  .LBB16_18: # %cond.store1
 ; AVX2-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX2-NEXT:    testb $4, %al
-; AVX2-NEXT:    je .LBB16_6
-; AVX2-NEXT:  .LBB16_5: # %cond.store3
+; AVX2-NEXT:    je .LBB16_3
+; AVX2-NEXT:  .LBB16_19: # %cond.store3
 ; AVX2-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX2-NEXT:    testb $8, %al
-; AVX2-NEXT:    je .LBB16_8
-; AVX2-NEXT:  .LBB16_7: # %cond.store5
+; AVX2-NEXT:    je .LBB16_4
+; AVX2-NEXT:  .LBB16_20: # %cond.store5
 ; AVX2-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX2-NEXT:    testb $16, %al
-; AVX2-NEXT:    je .LBB16_10
-; AVX2-NEXT:  .LBB16_9: # %cond.store7
+; AVX2-NEXT:    je .LBB16_5
+; AVX2-NEXT:  .LBB16_21: # %cond.store7
 ; AVX2-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX2-NEXT:    testb $32, %al
-; AVX2-NEXT:    je .LBB16_12
-; AVX2-NEXT:  .LBB16_11: # %cond.store9
+; AVX2-NEXT:    je .LBB16_6
+; AVX2-NEXT:  .LBB16_22: # %cond.store9
 ; AVX2-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX2-NEXT:    testb $64, %al
-; AVX2-NEXT:    je .LBB16_14
-; AVX2-NEXT:  .LBB16_13: # %cond.store11
+; AVX2-NEXT:    je .LBB16_7
+; AVX2-NEXT:  .LBB16_23: # %cond.store11
 ; AVX2-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX2-NEXT:    testb %al, %al
-; AVX2-NEXT:    jns .LBB16_16
-; AVX2-NEXT:  .LBB16_15: # %cond.store13
+; AVX2-NEXT:    jns .LBB16_8
+; AVX2-NEXT:  .LBB16_24: # %cond.store13
 ; AVX2-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX2-NEXT:    testl $256, %eax # imm = 0x100
-; AVX2-NEXT:    je .LBB16_18
-; AVX2-NEXT:  .LBB16_17: # %cond.store15
+; AVX2-NEXT:    je .LBB16_9
+; AVX2-NEXT:  .LBB16_25: # %cond.store15
 ; AVX2-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX2-NEXT:    testl $512, %eax # imm = 0x200
-; AVX2-NEXT:    je .LBB16_20
-; AVX2-NEXT:  .LBB16_19: # %cond.store17
+; AVX2-NEXT:    je .LBB16_10
+; AVX2-NEXT:  .LBB16_26: # %cond.store17
 ; AVX2-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX2-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX2-NEXT:    je .LBB16_22
-; AVX2-NEXT:  .LBB16_21: # %cond.store19
+; AVX2-NEXT:    je .LBB16_11
+; AVX2-NEXT:  .LBB16_27: # %cond.store19
 ; AVX2-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX2-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX2-NEXT:    je .LBB16_24
-; AVX2-NEXT:  .LBB16_23: # %cond.store21
+; AVX2-NEXT:    je .LBB16_12
+; AVX2-NEXT:  .LBB16_28: # %cond.store21
 ; AVX2-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX2-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX2-NEXT:    je .LBB16_26
-; AVX2-NEXT:  .LBB16_25: # %cond.store23
+; AVX2-NEXT:    je .LBB16_13
+; AVX2-NEXT:  .LBB16_29: # %cond.store23
 ; AVX2-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX2-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX2-NEXT:    je .LBB16_28
-; AVX2-NEXT:  .LBB16_27: # %cond.store25
+; AVX2-NEXT:    je .LBB16_14
+; AVX2-NEXT:  .LBB16_30: # %cond.store25
 ; AVX2-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX2-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX2-NEXT:    je .LBB16_30
-; AVX2-NEXT:  .LBB16_29: # %cond.store27
+; AVX2-NEXT:    je .LBB16_15
+; AVX2-NEXT:  .LBB16_31: # %cond.store27
 ; AVX2-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX2-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX2-NEXT:    je .LBB16_32
-; AVX2-NEXT:  .LBB16_31: # %cond.store29
+; AVX2-NEXT:    je .LBB16_16
+; AVX2-NEXT:  .LBB16_32: # %cond.store29
 ; AVX2-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -7693,116 +7693,116 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX512F-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX512F-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB16_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB16_3
-; AVX512F-NEXT:  .LBB16_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB16_5
-; AVX512F-NEXT:  .LBB16_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB16_7
-; AVX512F-NEXT:  .LBB16_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    jne .LBB16_9
-; AVX512F-NEXT:  .LBB16_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    jne .LBB16_11
-; AVX512F-NEXT:  .LBB16_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    jne .LBB16_13
-; AVX512F-NEXT:  .LBB16_14: # %else12
-; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    js .LBB16_15
-; AVX512F-NEXT:  .LBB16_16: # %else14
-; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB16_17
-; AVX512F-NEXT:  .LBB16_18: # %else16
-; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB16_18
+; AVX512F-NEXT:  .LBB16_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB16_19
-; AVX512F-NEXT:  .LBB16_20: # %else18
-; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX512F-NEXT:  .LBB16_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB16_20
+; AVX512F-NEXT:  .LBB16_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB16_21
-; AVX512F-NEXT:  .LBB16_22: # %else20
-; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512F-NEXT:  .LBB16_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB16_22
+; AVX512F-NEXT:  .LBB16_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB16_23
-; AVX512F-NEXT:  .LBB16_24: # %else22
-; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX512F-NEXT:  .LBB16_7: # %else12
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js .LBB16_24
+; AVX512F-NEXT:  .LBB16_8: # %else14
+; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512F-NEXT:    jne .LBB16_25
-; AVX512F-NEXT:  .LBB16_26: # %else24
-; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512F-NEXT:  .LBB16_9: # %else16
+; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512F-NEXT:    jne .LBB16_26
+; AVX512F-NEXT:  .LBB16_10: # %else18
+; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512F-NEXT:    jne .LBB16_27
-; AVX512F-NEXT:  .LBB16_28: # %else26
-; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX512F-NEXT:  .LBB16_11: # %else20
+; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512F-NEXT:    jne .LBB16_28
+; AVX512F-NEXT:  .LBB16_12: # %else22
+; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512F-NEXT:    jne .LBB16_29
-; AVX512F-NEXT:  .LBB16_30: # %else28
-; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512F-NEXT:  .LBB16_13: # %else24
+; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512F-NEXT:    jne .LBB16_30
+; AVX512F-NEXT:  .LBB16_14: # %else26
+; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512F-NEXT:    jne .LBB16_31
-; AVX512F-NEXT:  .LBB16_32: # %else30
+; AVX512F-NEXT:  .LBB16_15: # %else28
+; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512F-NEXT:    jne .LBB16_32
+; AVX512F-NEXT:  .LBB16_16: # %else30
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB16_1: # %cond.store
+; AVX512F-NEXT:  .LBB16_17: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB16_4
-; AVX512F-NEXT:  .LBB16_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB16_2
+; AVX512F-NEXT:  .LBB16_18: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB16_6
-; AVX512F-NEXT:  .LBB16_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB16_3
+; AVX512F-NEXT:  .LBB16_19: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB16_8
-; AVX512F-NEXT:  .LBB16_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB16_4
+; AVX512F-NEXT:  .LBB16_20: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB16_10
-; AVX512F-NEXT:  .LBB16_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB16_5
+; AVX512F-NEXT:  .LBB16_21: # %cond.store7
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB16_12
-; AVX512F-NEXT:  .LBB16_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB16_6
+; AVX512F-NEXT:  .LBB16_22: # %cond.store9
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB16_14
-; AVX512F-NEXT:  .LBB16_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB16_7
+; AVX512F-NEXT:  .LBB16_23: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb %al, %al
-; AVX512F-NEXT:    jns .LBB16_16
-; AVX512F-NEXT:  .LBB16_15: # %cond.store13
+; AVX512F-NEXT:    jns .LBB16_8
+; AVX512F-NEXT:  .LBB16_24: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512F-NEXT:    je .LBB16_18
-; AVX512F-NEXT:  .LBB16_17: # %cond.store15
+; AVX512F-NEXT:    je .LBB16_9
+; AVX512F-NEXT:  .LBB16_25: # %cond.store15
 ; AVX512F-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX512F-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512F-NEXT:    je .LBB16_20
-; AVX512F-NEXT:  .LBB16_19: # %cond.store17
+; AVX512F-NEXT:    je .LBB16_10
+; AVX512F-NEXT:  .LBB16_26: # %cond.store17
 ; AVX512F-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX512F-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512F-NEXT:    je .LBB16_22
-; AVX512F-NEXT:  .LBB16_21: # %cond.store19
+; AVX512F-NEXT:    je .LBB16_11
+; AVX512F-NEXT:  .LBB16_27: # %cond.store19
 ; AVX512F-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX512F-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512F-NEXT:    je .LBB16_24
-; AVX512F-NEXT:  .LBB16_23: # %cond.store21
+; AVX512F-NEXT:    je .LBB16_12
+; AVX512F-NEXT:  .LBB16_28: # %cond.store21
 ; AVX512F-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX512F-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512F-NEXT:    je .LBB16_26
-; AVX512F-NEXT:  .LBB16_25: # %cond.store23
+; AVX512F-NEXT:    je .LBB16_13
+; AVX512F-NEXT:  .LBB16_29: # %cond.store23
 ; AVX512F-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX512F-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512F-NEXT:    je .LBB16_28
-; AVX512F-NEXT:  .LBB16_27: # %cond.store25
+; AVX512F-NEXT:    je .LBB16_14
+; AVX512F-NEXT:  .LBB16_30: # %cond.store25
 ; AVX512F-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX512F-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512F-NEXT:    je .LBB16_30
-; AVX512F-NEXT:  .LBB16_29: # %cond.store27
+; AVX512F-NEXT:    je .LBB16_15
+; AVX512F-NEXT:  .LBB16_31: # %cond.store27
 ; AVX512F-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX512F-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512F-NEXT:    je .LBB16_32
-; AVX512F-NEXT:  .LBB16_31: # %cond.store29
+; AVX512F-NEXT:    je .LBB16_16
+; AVX512F-NEXT:  .LBB16_32: # %cond.store29
 ; AVX512F-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -7817,116 +7817,116 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, ptr %p, <16 x i8> %mask) {
 ; AVX512FVL-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX512FVL-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB16_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB16_3
-; AVX512FVL-NEXT:  .LBB16_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB16_5
-; AVX512FVL-NEXT:  .LBB16_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB16_7
-; AVX512FVL-NEXT:  .LBB16_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    jne .LBB16_9
-; AVX512FVL-NEXT:  .LBB16_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    jne .LBB16_11
-; AVX512FVL-NEXT:  .LBB16_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    jne .LBB16_13
-; AVX512FVL-NEXT:  .LBB16_14: # %else12
-; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    js .LBB16_15
-; AVX512FVL-NEXT:  .LBB16_16: # %else14
-; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512FVL-NEXT:    jne .LBB16_17
-; AVX512FVL-NEXT:  .LBB16_18: # %else16
-; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB16_18
+; AVX512FVL-NEXT:  .LBB16_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB16_19
-; AVX512FVL-NEXT:  .LBB16_20: # %else18
-; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
+; AVX512FVL-NEXT:  .LBB16_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB16_20
+; AVX512FVL-NEXT:  .LBB16_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB16_21
-; AVX512FVL-NEXT:  .LBB16_22: # %else20
-; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512FVL-NEXT:  .LBB16_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB16_22
+; AVX512FVL-NEXT:  .LBB16_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB16_23
-; AVX512FVL-NEXT:  .LBB16_24: # %else22
-; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
+; AVX512FVL-NEXT:  .LBB16_7: # %else12
+; AVX512FVL-NEXT:    testb %al, %al
+; AVX512FVL-NEXT:    js .LBB16_24
+; AVX512FVL-NEXT:  .LBB16_8: # %else14
+; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
 ; AVX512FVL-NEXT:    jne .LBB16_25
-; AVX512FVL-NEXT:  .LBB16_26: # %else24
-; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512FVL-NEXT:  .LBB16_9: # %else16
+; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
+; AVX512FVL-NEXT:    jne .LBB16_26
+; AVX512FVL-NEXT:  .LBB16_10: # %else18
+; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
 ; AVX512FVL-NEXT:    jne .LBB16_27
-; AVX512FVL-NEXT:  .LBB16_28: # %else26
-; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
+; AVX512FVL-NEXT:  .LBB16_11: # %else20
+; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
+; AVX512FVL-NEXT:    jne .LBB16_28
+; AVX512FVL-NEXT:  .LBB16_12: # %else22
+; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
 ; AVX512FVL-NEXT:    jne .LBB16_29
-; AVX512FVL-NEXT:  .LBB16_30: # %else28
-; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512FVL-NEXT:  .LBB16_13: # %else24
+; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
+; AVX512FVL-NEXT:    jne .LBB16_30
+; AVX512FVL-NEXT:  .LBB16_14: # %else26
+; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
 ; AVX512FVL-NEXT:    jne .LBB16_31
-; AVX512FVL-NEXT:  .LBB16_32: # %else30
+; AVX512FVL-NEXT:  .LBB16_15: # %else28
+; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
+; AVX512FVL-NEXT:    jne .LBB16_32
+; AVX512FVL-NEXT:  .LBB16_16: # %else30
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB16_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB16_17: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB16_4
-; AVX512FVL-NEXT:  .LBB16_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB16_2
+; AVX512FVL-NEXT:  .LBB16_18: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB16_6
-; AVX512FVL-NEXT:  .LBB16_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB16_3
+; AVX512FVL-NEXT:  .LBB16_19: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB16_8
-; AVX512FVL-NEXT:  .LBB16_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB16_4
+; AVX512FVL-NEXT:  .LBB16_20: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB16_10
-; AVX512FVL-NEXT:  .LBB16_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB16_5
+; AVX512FVL-NEXT:  .LBB16_21: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB16_12
-; AVX512FVL-NEXT:  .LBB16_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB16_6
+; AVX512FVL-NEXT:  .LBB16_22: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB16_14
-; AVX512FVL-NEXT:  .LBB16_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB16_7
+; AVX512FVL-NEXT:  .LBB16_23: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb %al, %al
-; AVX512FVL-NEXT:    jns .LBB16_16
-; AVX512FVL-NEXT:  .LBB16_15: # %cond.store13
+; AVX512FVL-NEXT:    jns .LBB16_8
+; AVX512FVL-NEXT:  .LBB16_24: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512FVL-NEXT:    testl $256, %eax # imm = 0x100
-; AVX512FVL-NEXT:    je .LBB16_18
-; AVX512FVL-NEXT:  .LBB16_17: # %cond.store15
+; AVX512FVL-NEXT:    je .LBB16_9
+; AVX512FVL-NEXT:  .LBB16_25: # %cond.store15
 ; AVX512FVL-NEXT:    vpextrb $8, %xmm0, 8(%rdi)
 ; AVX512FVL-NEXT:    testl $512, %eax # imm = 0x200
-; AVX512FVL-NEXT:    je .LBB16_20
-; AVX512FVL-NEXT:  .LBB16_19: # %cond.store17
+; AVX512FVL-NEXT:    je .LBB16_10
+; AVX512FVL-NEXT:  .LBB16_26: # %cond.store17
 ; AVX512FVL-NEXT:    vpextrb $9, %xmm0, 9(%rdi)
 ; AVX512FVL-NEXT:    testl $1024, %eax # imm = 0x400
-; AVX512FVL-NEXT:    je .LBB16_22
-; AVX512FVL-NEXT:  .LBB16_21: # %cond.store19
+; AVX512FVL-NEXT:    je .LBB16_11
+; AVX512FVL-NEXT:  .LBB16_27: # %cond.store19
 ; AVX512FVL-NEXT:    vpextrb $10, %xmm0, 10(%rdi)
 ; AVX512FVL-NEXT:    testl $2048, %eax # imm = 0x800
-; AVX512FVL-NEXT:    je .LBB16_24
-; AVX512FVL-NEXT:  .LBB16_23: # %cond.store21
+; AVX512FVL-NEXT:    je .LBB16_12
+; AVX512FVL-NEXT:  .LBB16_28: # %cond.store21
 ; AVX512FVL-NEXT:    vpextrb $11, %xmm0, 11(%rdi)
 ; AVX512FVL-NEXT:    testl $4096, %eax # imm = 0x1000
-; AVX512FVL-NEXT:    je .LBB16_26
-; AVX512FVL-NEXT:  .LBB16_25: # %cond.store23
+; AVX512FVL-NEXT:    je .LBB16_13
+; AVX512FVL-NEXT:  .LBB16_29: # %cond.store23
 ; AVX512FVL-NEXT:    vpextrb $12, %xmm0, 12(%rdi)
 ; AVX512FVL-NEXT:    testl $8192, %eax # imm = 0x2000
-; AVX512FVL-NEXT:    je .LBB16_28
-; AVX512FVL-NEXT:  .LBB16_27: # %cond.store25
+; AVX512FVL-NEXT:    je .LBB16_14
+; AVX512FVL-NEXT:  .LBB16_30: # %cond.store25
 ; AVX512FVL-NEXT:    vpextrb $13, %xmm0, 13(%rdi)
 ; AVX512FVL-NEXT:    testl $16384, %eax # imm = 0x4000
-; AVX512FVL-NEXT:    je .LBB16_30
-; AVX512FVL-NEXT:  .LBB16_29: # %cond.store27
+; AVX512FVL-NEXT:    je .LBB16_15
+; AVX512FVL-NEXT:  .LBB16_31: # %cond.store27
 ; AVX512FVL-NEXT:    vpextrb $14, %xmm0, 14(%rdi)
 ; AVX512FVL-NEXT:    testl $32768, %eax # imm = 0x8000
-; AVX512FVL-NEXT:    je .LBB16_32
-; AVX512FVL-NEXT:  .LBB16_31: # %cond.store29
+; AVX512FVL-NEXT:    je .LBB16_16
+; AVX512FVL-NEXT:  .LBB16_32: # %cond.store29
 ; AVX512FVL-NEXT:    vpextrb $15, %xmm0, 15(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
@@ -7970,59 +7970,59 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    jne .LBB17_1
-; SSE2-NEXT:  # %bb.2: # %else
+; SSE2-NEXT:    jne .LBB17_12
+; SSE2-NEXT:  # %bb.1: # %else
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    jne .LBB17_3
-; SSE2-NEXT:  .LBB17_4: # %else2
+; SSE2-NEXT:    jne .LBB17_13
+; SSE2-NEXT:  .LBB17_2: # %else2
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    jne .LBB17_5
-; SSE2-NEXT:  .LBB17_6: # %else4
+; SSE2-NEXT:    jne .LBB17_14
+; SSE2-NEXT:  .LBB17_3: # %else4
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    je .LBB17_8
-; SSE2-NEXT:  .LBB17_7: # %cond.store5
+; SSE2-NEXT:    je .LBB17_5
+; SSE2-NEXT:  .LBB17_4: # %cond.store5
 ; SSE2-NEXT:    shrl $24, %ecx
 ; SSE2-NEXT:    movb %cl, 3(%rdi)
-; SSE2-NEXT:  .LBB17_8: # %else6
+; SSE2-NEXT:  .LBB17_5: # %else6
 ; SSE2-NEXT:    testb $16, %al
 ; SSE2-NEXT:    pextrw $2, %xmm0, %ecx
-; SSE2-NEXT:    je .LBB17_10
-; SSE2-NEXT:  # %bb.9: # %cond.store7
+; SSE2-NEXT:    je .LBB17_7
+; SSE2-NEXT:  # %bb.6: # %cond.store7
 ; SSE2-NEXT:    movb %cl, 4(%rdi)
-; SSE2-NEXT:  .LBB17_10: # %else8
+; SSE2-NEXT:  .LBB17_7: # %else8
 ; SSE2-NEXT:    testb $32, %al
-; SSE2-NEXT:    je .LBB17_12
-; SSE2-NEXT:  # %bb.11: # %cond.store9
+; SSE2-NEXT:    je .LBB17_9
+; SSE2-NEXT:  # %bb.8: # %cond.store9
 ; SSE2-NEXT:    movb %ch, 5(%rdi)
-; SSE2-NEXT:  .LBB17_12: # %else10
+; SSE2-NEXT:  .LBB17_9: # %else10
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    pextrw $3, %xmm0, %ecx
-; SSE2-NEXT:    jne .LBB17_13
-; SSE2-NEXT:  # %bb.14: # %else12
-; SSE2-NEXT:    testb $-128, %al
 ; SSE2-NEXT:    jne .LBB17_15
-; SSE2-NEXT:  .LBB17_16: # %else14
+; SSE2-NEXT:  # %bb.10: # %else12
+; SSE2-NEXT:    testb $-128, %al
+; SSE2-NEXT:    jne .LBB17_16
+; SSE2-NEXT:  .LBB17_11: # %else14
 ; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB17_1: # %cond.store
+; SSE2-NEXT:  .LBB17_12: # %cond.store
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    testb $2, %al
-; SSE2-NEXT:    je .LBB17_4
-; SSE2-NEXT:  .LBB17_3: # %cond.store1
+; SSE2-NEXT:    je .LBB17_2
+; SSE2-NEXT:  .LBB17_13: # %cond.store1
 ; SSE2-NEXT:    movb %ch, 1(%rdi)
 ; SSE2-NEXT:    testb $4, %al
-; SSE2-NEXT:    je .LBB17_6
-; SSE2-NEXT:  .LBB17_5: # %cond.store3
+; SSE2-NEXT:    je .LBB17_3
+; SSE2-NEXT:  .LBB17_14: # %cond.store3
 ; SSE2-NEXT:    movl %ecx, %edx
 ; SSE2-NEXT:    shrl $16, %edx
 ; SSE2-NEXT:    movb %dl, 2(%rdi)
 ; SSE2-NEXT:    testb $8, %al
-; SSE2-NEXT:    jne .LBB17_7
-; SSE2-NEXT:    jmp .LBB17_8
-; SSE2-NEXT:  .LBB17_13: # %cond.store11
+; SSE2-NEXT:    jne .LBB17_4
+; SSE2-NEXT:    jmp .LBB17_5
+; SSE2-NEXT:  .LBB17_15: # %cond.store11
 ; SSE2-NEXT:    movb %cl, 6(%rdi)
 ; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je .LBB17_16
-; SSE2-NEXT:  .LBB17_15: # %cond.store13
+; SSE2-NEXT:    je .LBB17_11
+; SSE2-NEXT:  .LBB17_16: # %cond.store13
 ; SSE2-NEXT:    movb %ch, 7(%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -8036,59 +8036,59 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; SSE4-NEXT:    pmovmskb %xmm2, %eax
 ; SSE4-NEXT:    notl %eax
 ; SSE4-NEXT:    testb $1, %al
-; SSE4-NEXT:    jne .LBB17_1
-; SSE4-NEXT:  # %bb.2: # %else
-; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    jne .LBB17_3
-; SSE4-NEXT:  .LBB17_4: # %else2
-; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    jne .LBB17_5
-; SSE4-NEXT:  .LBB17_6: # %else4
-; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    jne .LBB17_7
-; SSE4-NEXT:  .LBB17_8: # %else6
-; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB17_9
-; SSE4-NEXT:  .LBB17_10: # %else8
-; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:  # %bb.1: # %else
+; SSE4-NEXT:    testb $2, %al
+; SSE4-NEXT:    jne .LBB17_10
+; SSE4-NEXT:  .LBB17_2: # %else2
+; SSE4-NEXT:    testb $4, %al
 ; SSE4-NEXT:    jne .LBB17_11
-; SSE4-NEXT:  .LBB17_12: # %else10
-; SSE4-NEXT:    testb $64, %al
+; SSE4-NEXT:  .LBB17_3: # %else4
+; SSE4-NEXT:    testb $8, %al
+; SSE4-NEXT:    jne .LBB17_12
+; SSE4-NEXT:  .LBB17_4: # %else6
+; SSE4-NEXT:    testb $16, %al
 ; SSE4-NEXT:    jne .LBB17_13
-; SSE4-NEXT:  .LBB17_14: # %else12
-; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:  .LBB17_5: # %else8
+; SSE4-NEXT:    testb $32, %al
+; SSE4-NEXT:    jne .LBB17_14
+; SSE4-NEXT:  .LBB17_6: # %else10
+; SSE4-NEXT:    testb $64, %al
 ; SSE4-NEXT:    jne .LBB17_15
-; SSE4-NEXT:  .LBB17_16: # %else14
+; SSE4-NEXT:  .LBB17_7: # %else12
+; SSE4-NEXT:    testb $-128, %al
+; SSE4-NEXT:    jne .LBB17_16
+; SSE4-NEXT:  .LBB17_8: # %else14
 ; SSE4-NEXT:    retq
-; SSE4-NEXT:  .LBB17_1: # %cond.store
+; SSE4-NEXT:  .LBB17_9: # %cond.store
 ; SSE4-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; SSE4-NEXT:    testb $2, %al
-; SSE4-NEXT:    je .LBB17_4
-; SSE4-NEXT:  .LBB17_3: # %cond.store1
+; SSE4-NEXT:    je .LBB17_2
+; SSE4-NEXT:  .LBB17_10: # %cond.store1
 ; SSE4-NEXT:    pextrb $1, %xmm0, 1(%rdi)
 ; SSE4-NEXT:    testb $4, %al
-; SSE4-NEXT:    je .LBB17_6
-; SSE4-NEXT:  .LBB17_5: # %cond.store3
+; SSE4-NEXT:    je .LBB17_3
+; SSE4-NEXT:  .LBB17_11: # %cond.store3
 ; SSE4-NEXT:    pextrb $2, %xmm0, 2(%rdi)
 ; SSE4-NEXT:    testb $8, %al
-; SSE4-NEXT:    je .LBB17_8
-; SSE4-NEXT:  .LBB17_7: # %cond.store5
+; SSE4-NEXT:    je .LBB17_4
+; SSE4-NEXT:  .LBB17_12: # %cond.store5
 ; SSE4-NEXT:    pextrb $3, %xmm0, 3(%rdi)
 ; SSE4-NEXT:    testb $16, %al
-; SSE4-NEXT:    je .LBB17_10
-; SSE4-NEXT:  .LBB17_9: # %cond.store7
+; SSE4-NEXT:    je .LBB17_5
+; SSE4-NEXT:  .LBB17_13: # %cond.store7
 ; SSE4-NEXT:    pextrb $4, %xmm0, 4(%rdi)
 ; SSE4-NEXT:    testb $32, %al
-; SSE4-NEXT:    je .LBB17_12
-; SSE4-NEXT:  .LBB17_11: # %cond.store9
+; SSE4-NEXT:    je .LBB17_6
+; SSE4-NEXT:  .LBB17_14: # %cond.store9
 ; SSE4-NEXT:    pextrb $5, %xmm0, 5(%rdi)
 ; SSE4-NEXT:    testb $64, %al
-; SSE4-NEXT:    je .LBB17_14
-; SSE4-NEXT:  .LBB17_13: # %cond.store11
+; SSE4-NEXT:    je .LBB17_7
+; SSE4-NEXT:  .LBB17_15: # %cond.store11
 ; SSE4-NEXT:    pextrb $6, %xmm0, 6(%rdi)
 ; SSE4-NEXT:    testb $-128, %al
-; SSE4-NEXT:    je .LBB17_16
-; SSE4-NEXT:  .LBB17_15: # %cond.store13
+; SSE4-NEXT:    je .LBB17_8
+; SSE4-NEXT:  .LBB17_16: # %cond.store13
 ; SSE4-NEXT:    pextrb $7, %xmm0, 7(%rdi)
 ; SSE4-NEXT:    retq
 ;
@@ -8102,59 +8102,59 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; AVX-NEXT:    vpmovmskb %xmm1, %eax
 ; AVX-NEXT:    notl %eax
 ; AVX-NEXT:    testb $1, %al
-; AVX-NEXT:    jne .LBB17_1
-; AVX-NEXT:  # %bb.2: # %else
-; AVX-NEXT:    testb $2, %al
-; AVX-NEXT:    jne .LBB17_3
-; AVX-NEXT:  .LBB17_4: # %else2
-; AVX-NEXT:    testb $4, %al
-; AVX-NEXT:    jne .LBB17_5
-; AVX-NEXT:  .LBB17_6: # %else4
-; AVX-NEXT:    testb $8, %al
-; AVX-NEXT:    jne .LBB17_7
-; AVX-NEXT:  .LBB17_8: # %else6
-; AVX-NEXT:    testb $16, %al
 ; AVX-NEXT:    jne .LBB17_9
-; AVX-NEXT:  .LBB17_10: # %else8
-; AVX-NEXT:    testb $32, %al
+; AVX-NEXT:  # %bb.1: # %else
+; AVX-NEXT:    testb $2, %al
+; AVX-NEXT:    jne .LBB17_10
+; AVX-NEXT:  .LBB17_2: # %else2
+; AVX-NEXT:    testb $4, %al
 ; AVX-NEXT:    jne .LBB17_11
-; AVX-NEXT:  .LBB17_12: # %else10
-; AVX-NEXT:    testb $64, %al
+; AVX-NEXT:  .LBB17_3: # %else4
+; AVX-NEXT:    testb $8, %al
+; AVX-NEXT:    jne .LBB17_12
+; AVX-NEXT:  .LBB17_4: # %else6
+; AVX-NEXT:    testb $16, %al
 ; AVX-NEXT:    jne .LBB17_13
-; AVX-NEXT:  .LBB17_14: # %else12
-; AVX-NEXT:    testb $-128, %al
+; AVX-NEXT:  .LBB17_5: # %else8
+; AVX-NEXT:    testb $32, %al
+; AVX-NEXT:    jne .LBB17_14
+; AVX-NEXT:  .LBB17_6: # %else10
+; AVX-NEXT:    testb $64, %al
 ; AVX-NEXT:    jne .LBB17_15
-; AVX-NEXT:  .LBB17_16: # %else14
+; AVX-NEXT:  .LBB17_7: # %else12
+; AVX-NEXT:    testb $-128, %al
+; AVX-NEXT:    jne .LBB17_16
+; AVX-NEXT:  .LBB17_8: # %else14
 ; AVX-NEXT:    retq
-; AVX-NEXT:  .LBB17_1: # %cond.store
+; AVX-NEXT:  .LBB17_9: # %cond.store
 ; AVX-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX-NEXT:    testb $2, %al
-; AVX-NEXT:    je .LBB17_4
-; AVX-NEXT:  .LBB17_3: # %cond.store1
+; AVX-NEXT:    je .LBB17_2
+; AVX-NEXT:  .LBB17_10: # %cond.store1
 ; AVX-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX-NEXT:    testb $4, %al
-; AVX-NEXT:    je .LBB17_6
-; AVX-NEXT:  .LBB17_5: # %cond.store3
+; AVX-NEXT:    je .LBB17_3
+; AVX-NEXT:  .LBB17_11: # %cond.store3
 ; AVX-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX-NEXT:    testb $8, %al
-; AVX-NEXT:    je .LBB17_8
-; AVX-NEXT:  .LBB17_7: # %cond.store5
+; AVX-NEXT:    je .LBB17_4
+; AVX-NEXT:  .LBB17_12: # %cond.store5
 ; AVX-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX-NEXT:    testb $16, %al
-; AVX-NEXT:    je .LBB17_10
-; AVX-NEXT:  .LBB17_9: # %cond.store7
+; AVX-NEXT:    je .LBB17_5
+; AVX-NEXT:  .LBB17_13: # %cond.store7
 ; AVX-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX-NEXT:    testb $32, %al
-; AVX-NEXT:    je .LBB17_12
-; AVX-NEXT:  .LBB17_11: # %cond.store9
+; AVX-NEXT:    je .LBB17_6
+; AVX-NEXT:  .LBB17_14: # %cond.store9
 ; AVX-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX-NEXT:    testb $64, %al
-; AVX-NEXT:    je .LBB17_14
-; AVX-NEXT:  .LBB17_13: # %cond.store11
+; AVX-NEXT:    je .LBB17_7
+; AVX-NEXT:  .LBB17_15: # %cond.store11
 ; AVX-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX-NEXT:    testb $-128, %al
-; AVX-NEXT:    je .LBB17_16
-; AVX-NEXT:  .LBB17_15: # %cond.store13
+; AVX-NEXT:    je .LBB17_8
+; AVX-NEXT:  .LBB17_16: # %cond.store13
 ; AVX-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX-NEXT:    retq
 ;
@@ -8169,60 +8169,60 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; AVX512F-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    kmovw %k0, %eax
 ; AVX512F-NEXT:    testb $1, %al
-; AVX512F-NEXT:    jne .LBB17_1
-; AVX512F-NEXT:  # %bb.2: # %else
-; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    jne .LBB17_3
-; AVX512F-NEXT:  .LBB17_4: # %else2
-; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    jne .LBB17_5
-; AVX512F-NEXT:  .LBB17_6: # %else4
-; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    jne .LBB17_7
-; AVX512F-NEXT:  .LBB17_8: # %else6
-; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB17_9
-; AVX512F-NEXT:  .LBB17_10: # %else8
-; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:  # %bb.1: # %else
+; AVX512F-NEXT:    testb $2, %al
+; AVX512F-NEXT:    jne .LBB17_10
+; AVX512F-NEXT:  .LBB17_2: # %else2
+; AVX512F-NEXT:    testb $4, %al
 ; AVX512F-NEXT:    jne .LBB17_11
-; AVX512F-NEXT:  .LBB17_12: # %else10
-; AVX512F-NEXT:    testb $64, %al
+; AVX512F-NEXT:  .LBB17_3: # %else4
+; AVX512F-NEXT:    testb $8, %al
+; AVX512F-NEXT:    jne .LBB17_12
+; AVX512F-NEXT:  .LBB17_4: # %else6
+; AVX512F-NEXT:    testb $16, %al
 ; AVX512F-NEXT:    jne .LBB17_13
-; AVX512F-NEXT:  .LBB17_14: # %else12
-; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:  .LBB17_5: # %else8
+; AVX512F-NEXT:    testb $32, %al
+; AVX512F-NEXT:    jne .LBB17_14
+; AVX512F-NEXT:  .LBB17_6: # %else10
+; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne .LBB17_15
-; AVX512F-NEXT:  .LBB17_16: # %else14
+; AVX512F-NEXT:  .LBB17_7: # %else12
+; AVX512F-NEXT:    testb $-128, %al
+; AVX512F-NEXT:    jne .LBB17_16
+; AVX512F-NEXT:  .LBB17_8: # %else14
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
-; AVX512F-NEXT:  .LBB17_1: # %cond.store
+; AVX512F-NEXT:  .LBB17_9: # %cond.store
 ; AVX512F-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512F-NEXT:    testb $2, %al
-; AVX512F-NEXT:    je .LBB17_4
-; AVX512F-NEXT:  .LBB17_3: # %cond.store1
+; AVX512F-NEXT:    je .LBB17_2
+; AVX512F-NEXT:  .LBB17_10: # %cond.store1
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512F-NEXT:    testb $4, %al
-; AVX512F-NEXT:    je .LBB17_6
-; AVX512F-NEXT:  .LBB17_5: # %cond.store3
+; AVX512F-NEXT:    je .LBB17_3
+; AVX512F-NEXT:  .LBB17_11: # %cond.store3
 ; AVX512F-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512F-NEXT:    testb $8, %al
-; AVX512F-NEXT:    je .LBB17_8
-; AVX512F-NEXT:  .LBB17_7: # %cond.store5
+; AVX512F-NEXT:    je .LBB17_4
+; AVX512F-NEXT:  .LBB17_12: # %cond.store5
 ; AVX512F-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512F-NEXT:    testb $16, %al
-; AVX512F-NEXT:    je .LBB17_10
-; AVX512F-NEXT:  .LBB17_9: # %cond.store7
+; AVX512F-NEXT:    je .LBB17_5
+; AVX512F-NEXT:  .LBB17_13: # %cond.store7
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512F-NEXT:    testb $32, %al
-; AVX512F-NEXT:    je .LBB17_12
-; AVX512F-NEXT:  .LBB17_11: # %cond.store9
+; AVX512F-NEXT:    je .LBB17_6
+; AVX512F-NEXT:  .LBB17_14: # %cond.store9
 ; AVX512F-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512F-NEXT:    testb $64, %al
-; AVX512F-NEXT:    je .LBB17_14
-; AVX512F-NEXT:  .LBB17_13: # %cond.store11
+; AVX512F-NEXT:    je .LBB17_7
+; AVX512F-NEXT:  .LBB17_15: # %cond.store11
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je .LBB17_16
-; AVX512F-NEXT:  .LBB17_15: # %cond.store13
+; AVX512F-NEXT:    je .LBB17_8
+; AVX512F-NEXT:  .LBB17_16: # %cond.store13
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -8238,60 +8238,60 @@ define void @truncstore_v8i16_v8i8(<8 x i16> %x, ptr %p, <8 x i16> %mask) {
 ; AVX512FVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX512FVL-NEXT:    kmovw %k0, %eax
 ; AVX512FVL-NEXT:    testb $1, %al
-; AVX512FVL-NEXT:    jne .LBB17_1
-; AVX512FVL-NEXT:  # %bb.2: # %else
-; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    jne .LBB17_3
-; AVX512FVL-NEXT:  .LBB17_4: # %else2
-; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    jne .LBB17_5
-; AVX512FVL-NEXT:  .LBB17_6: # %else4
-; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    jne .LBB17_7
-; AVX512FVL-NEXT:  .LBB17_8: # %else6
-; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB17_9
-; AVX512FVL-NEXT:  .LBB17_10: # %else8
-; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:  # %bb.1: # %else
+; AVX512FVL-NEXT:    testb $2, %al
+; AVX512FVL-NEXT:    jne .LBB17_10
+; AVX512FVL-NEXT:  .LBB17_2: # %else2
+; AVX512FVL-NEXT:    testb $4, %al
 ; AVX512FVL-NEXT:    jne .LBB17_11
-; AVX512FVL-NEXT:  .LBB17_12: # %else10
-; AVX512FVL-NEXT:    testb $64, %al
+; AVX512FVL-NEXT:  .LBB17_3: # %else4
+; AVX512FVL-NEXT:    testb $8, %al
+; AVX512FVL-NEXT:    jne .LBB17_12
+; AVX512FVL-NEXT:  .LBB17_4: # %else6
+; AVX512FVL-NEXT:    testb $16, %al
 ; AVX512FVL-NEXT:    jne .LBB17_13
-; AVX512FVL-NEXT:  .LBB17_14: # %else12
-; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:  .LBB17_5: # %else8
+; AVX512FVL-NEXT:    testb $32, %al
+; AVX512FVL-NEXT:    jne .LBB17_14
+; AVX512FVL-NEXT:  .LBB17_6: # %else10
+; AVX512FVL-NEXT:    testb $64, %al
 ; AVX512FVL-NEXT:    jne .LBB17_15
-; AVX512FVL-NEXT:  .LBB17_16: # %else14
+; AVX512FVL-NEXT:  .LBB17_7: # %else12
+; AVX512FVL-NEXT:    testb $-128, %al
+; AVX512FVL-NEXT:    jne .LBB17_16
+; AVX512FVL-NEXT:  .LBB17_8: # %else14
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq
-; AVX512FVL-NEXT:  .LBB17_1: # %cond.store
+; AVX512FVL-NEXT:  .LBB17_9: # %cond.store
 ; AVX512FVL-NEXT:    vpextrb $0, %xmm0, (%rdi)
 ; AVX512FVL-NEXT:    testb $2, %al
-; AVX512FVL-NEXT:    je .LBB17_4
-; AVX512FVL-NEXT:  .LBB17_3: # %cond.store1
+; AVX512FVL-NEXT:    je .LBB17_2
+; AVX512FVL-NEXT:  .LBB17_10: # %cond.store1
 ; AVX512FVL-NEXT:    vpextrb $1, %xmm0, 1(%rdi)
 ; AVX512FVL-NEXT:    testb $4, %al
-; AVX512FVL-NEXT:    je .LBB17_6
-; AVX512FVL-NEXT:  .LBB17_5: # %cond.store3
+; AVX512FVL-NEXT:    je .LBB17_3
+; AVX512FVL-NEXT:  .LBB17_11: # %cond.store3
 ; AVX512FVL-NEXT:    vpextrb $2, %xmm0, 2(%rdi)
 ; AVX512FVL-NEXT:    testb $8, %al
-; AVX512FVL-NEXT:    je .LBB17_8
-; AVX512FVL-NEXT:  .LBB17_7: # %cond.store5
+; AVX512FVL-NEXT:    je .LBB17_4
+; AVX512FVL-NEXT:  .LBB17_12: # %cond.store5
 ; AVX512FVL-NEXT:    vpextrb $3, %xmm0, 3(%rdi)
 ; AVX512FVL-NEXT:    testb $16, %al
-; AVX512FVL-NEXT:    je .LBB17_10
-; AVX512FVL-NEXT:  .LBB17_9: # %cond.store7
+; AVX512FVL-NEXT:    je .LBB17_5
+; AVX512FVL-NEXT:  .LBB17_13: # %cond.store7
 ; AVX512FVL-NEXT:    vpextrb $4, %xmm0, 4(%rdi)
 ; AVX512FVL-NEXT:    testb $32, %al
-; AVX512FVL-NEXT:    je .LBB17_12
-; AVX512FVL-NEXT:  .LBB17_11: # %cond.store9
+; AVX512FVL-NEXT:    je .LBB17_6
+; AVX512FVL-NEXT:  .LBB17_14: # %cond.store9
 ; AVX512FVL-NEXT:    vpextrb $5, %xmm0, 5(%rdi)
 ; AVX512FVL-NEXT:    testb $64, %al
-; AVX512FVL-NEXT:    je .LBB17_14
-; AVX512FVL-NEXT:  .LBB17_13: # %cond.store11
+; AVX512FVL-NEXT:    je .LBB17_7
+; AVX512FVL-NEXT:  .LBB17_15: # %cond.store11
 ; AVX512FVL-NEXT:    vpextrb $6, %xmm0, 6(%rdi)
 ; AVX512FVL-NEXT:    testb $-128, %al
-; AVX512FVL-NEXT:    je .LBB17_16
-; AVX512FVL-NEXT:  .LBB17_15: # %cond.store13
+; AVX512FVL-NEXT:    je .LBB17_8
+; AVX512FVL-NEXT:  .LBB17_16: # %cond.store13
 ; AVX512FVL-NEXT:    vpextrb $7, %xmm0, 7(%rdi)
 ; AVX512FVL-NEXT:    vzeroupper
 ; AVX512FVL-NEXT:    retq

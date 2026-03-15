@@ -13,11 +13,11 @@ define fastcc ptr @pushdecl(ptr %x) nounwind  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %bb17.i
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb17.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %bb160
+; CHECK-NEXT:  .LBB0_2: # %bb160
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl

@@ -10,11 +10,11 @@ define ptr @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %if.end
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    jmp qux@PLT # TAILCALL
-; CHECK-NEXT:  .LBB0_1: # %if.then
+; CHECK-NEXT:  .LBB0_2: # %if.then
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r14

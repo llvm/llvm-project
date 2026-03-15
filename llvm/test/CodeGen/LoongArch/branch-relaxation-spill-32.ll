@@ -120,21 +120,21 @@ define void @relax_b28_spill() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    addi.w $s8, $zero, 1
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    beq $s7, $s8, .LBB0_1
-; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    beq $s7, $s8, .LBB0_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    st.w $t8, $sp, 0 # 4-byte Folded Spill
 ; CHECK-NEXT:  .Lpcadd_hi0:
-; CHECK-NEXT:    pcaddu12i $t8, %pcadd_hi20(.LBB0_5)
+; CHECK-NEXT:    pcaddu12i $t8, %pcadd_hi20(.LBB0_3)
 ; CHECK-NEXT:    addi.w $t8, $t8, %pcadd_lo12(.Lpcadd_hi0)
 ; CHECK-NEXT:    jr $t8
-; CHECK-NEXT:  .LBB0_1: # %iftrue
+; CHECK-NEXT:  .LBB0_2: # %iftrue
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    .space 536870912
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:  .LBB0_5: # %iffalse
+; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:  .LBB0_3: # %iffalse
 ; CHECK-NEXT:    ld.w $t8, $sp, 0 # 4-byte Folded Reload
-; CHECK-NEXT:  # %bb.2: # %iffalse
+; CHECK-NEXT:  # %bb.4: # %iffalse
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use $zero
 ; CHECK-NEXT:    #NO_APP
@@ -225,7 +225,7 @@ define void @relax_b28_spill() {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # reg use $s8
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  .LBB0_3: # %iftrue
+; CHECK-NEXT:  .LBB0_5: # %iftrue
 ; CHECK-NEXT:    ld.w $s8, $sp, 4 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $s7, $sp, 8 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $s6, $sp, 12 # 4-byte Folded Reload

@@ -16,7 +16,7 @@
 define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main
 ; CHECK:       %33 = OpFunction %2 None %3 ; -- Begin function main
-; CHECK-NEXT:    %1 = OpLabel
+; CHECK-NEXT:    %43 = OpLabel
 ; CHECK-NEXT:    %34 = OpVariable %20 Function %29
 ; CHECK-NEXT:    %35 = OpVariable %19 Function %30
 ; CHECK-NEXT:    %36 = OpCopyObject %12 %31

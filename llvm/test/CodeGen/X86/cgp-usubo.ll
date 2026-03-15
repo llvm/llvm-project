@@ -129,18 +129,18 @@ define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-LABEL: usubo_ult_sub_dominates_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb $1, %cl
-; CHECK-NEXT:    je .LBB8_2
+; CHECK-NEXT:    je .LBB8_3
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %rsi, %rax
 ; CHECK-NEXT:    movq %rax, (%rdx)
 ; CHECK-NEXT:    testb $1, %cl
-; CHECK-NEXT:    je .LBB8_2
-; CHECK-NEXT:  # %bb.3: # %end
+; CHECK-NEXT:    je .LBB8_3
+; CHECK-NEXT:  # %bb.2: # %end
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB8_2: # %f
+; CHECK-NEXT:  .LBB8_3: # %f
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -169,7 +169,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %ecx, %ebp
 ; CHECK-NEXT:    testb $1, %bpl
-; CHECK-NEXT:    je .LBB9_2
+; CHECK-NEXT:    je .LBB9_3
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movq %rdi, %r14
@@ -179,14 +179,14 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    movq %rsi, %r15
 ; CHECK-NEXT:    callq call@PLT
 ; CHECK-NEXT:    subq %r15, %r14
-; CHECK-NEXT:    jae .LBB9_2
-; CHECK-NEXT:  # %bb.4: # %end
+; CHECK-NEXT:    jae .LBB9_3
+; CHECK-NEXT:  # %bb.2: # %end
 ; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    movq %r14, (%rbx)
-; CHECK-NEXT:    jmp .LBB9_3
-; CHECK-NEXT:  .LBB9_2: # %f
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    jmp .LBB9_4
 ; CHECK-NEXT:  .LBB9_3: # %f
+; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:  .LBB9_4: # %f
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14

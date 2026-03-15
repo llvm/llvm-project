@@ -391,16 +391,16 @@ define dso_local void @PR42880(i32 %t0) {
 ; X86-LABEL: PR42880:
 ; X86:       # %bb.0:
 ; X86-NEXT:    testb %al, %al
-; X86-NEXT:    je .LBB16_1
-; X86-NEXT:  # %bb.2: # %if
-; X86-NEXT:  .LBB16_1: # %then
+; X86-NEXT:    je .LBB16_2
+; X86-NEXT:  # %bb.1: # %if
+; X86-NEXT:  .LBB16_2: # %then
 ;
 ; X64-LABEL: PR42880:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb %al, %al
-; X64-NEXT:    je .LBB16_1
-; X64-NEXT:  # %bb.2: # %if
-; X64-NEXT:  .LBB16_1: # %then
+; X64-NEXT:    je .LBB16_2
+; X64-NEXT:  # %bb.1: # %if
+; X64-NEXT:  .LBB16_2: # %then
   %sub = add nsw i32 %t0, -1
   %add.ptr.i94 = getelementptr inbounds %"class.QPainterPath", ptr null, i32 %sub
   %x = ptrtoint ptr %add.ptr.i94 to i32

@@ -72,10 +72,10 @@ define i32 @baz(i32 %0) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl $13056, %edx # imm = 0x3300
 ; CHECK-NEXT:    btl %ecx, %edx
-; CHECK-NEXT:    jae .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    jae .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %return
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_1: # %sw.epilog8
+; CHECK-NEXT:  .LBB1_2: # %sw.epilog8
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retl
   switch i32 %0, label %if.then.unreachabledefault [

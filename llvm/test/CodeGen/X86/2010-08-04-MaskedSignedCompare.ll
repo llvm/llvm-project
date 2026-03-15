@@ -13,12 +13,12 @@ define dso_local i32 @main() nounwind {
 ; CHECK-NEXT:    cmpq g_16(%rip), %rax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    testb $-106, %al
-; CHECK-NEXT:    jle .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    jle .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movl $1, g_38(%rip)
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    jmp .LBB0_3
-; CHECK-NEXT:  .LBB0_1: # %entry.if.end_crit_edge
+; CHECK-NEXT:  .LBB0_2: # %entry.if.end_crit_edge
 ; CHECK-NEXT:    movl g_38(%rip), %esi
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    pushq %rax

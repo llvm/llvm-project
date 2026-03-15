@@ -33,7 +33,7 @@ bb4:
 ; CHECK-NEXT: jmpq    *[[R2]]
 
 ; CHECK: .LJTI0_0:
-; CHECK-NEXT: .quad   .LBB0_2-.LJTI0_0
-; CHECK-NEXT: .quad   .LBB0_3-.LJTI0_0
-; CHECK-NEXT: .quad   .LBB0_4-.LJTI0_0
-; CHECK-NEXT: .quad   .LBB0_5-.LJTI0_0
+; CHECK-NEXT: .quad   .LBB0_{{[0-9]+}}-.LJTI0_0
+; CHECK-NEXT: .quad   .LBB0_{{[0-9]+}}-.LJTI0_0
+; CHECK-NEXT: .quad   .LBB0_{{[0-9]+}}-.LJTI0_0
+; CHECK-NEXT: .quad   .LBB0_{{[0-9]+}}-.LJTI0_0

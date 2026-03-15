@@ -5,14 +5,14 @@ define i64 @foo() nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $12, 0
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %bb65
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb65
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %bb56
+; CHECK-NEXT:  .LBB0_2: # %bb56
 entry:
 	%t0 = load i32, ptr null, align 8
 	switch i32 %t0, label %bb65 [

@@ -79,13 +79,13 @@ define i64 @t4(i64 %x) nounwind  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    jne .LBB3_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB3_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl $32, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB3_1:
+; X86-NEXT:  .LBB3_2:
 ; X86-NEXT:    lzcntl %eax, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -172,13 +172,13 @@ define i64 @t8(i64 %x) nounwind  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    jne .LBB7_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB7_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl $32, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_1:
+; X86-NEXT:  .LBB7_2:
 ; X86-NEXT:    lzcntl %eax, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl

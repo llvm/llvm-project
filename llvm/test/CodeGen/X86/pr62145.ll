@@ -18,12 +18,12 @@ define void @f(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    calll ext2@PLT
 ; X86-NEXT:    andl %edi, %esi
 ; X86-NEXT:    cmpl $-589824, %esi # imm = 0xFFF70000
-; X86-NEXT:    jne .LBB0_3
-; X86-NEXT:  # %bb.4: # %if.then2
+; X86-NEXT:    jne .LBB0_4
+; X86-NEXT:  # %bb.3: # %if.then2
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    jmp ext1@PLT # TAILCALL
-; X86-NEXT:  .LBB0_3: # %if.end3
+; X86-NEXT:  .LBB0_4: # %if.end3
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -46,12 +46,12 @@ define void @f(i64 %a, i64 %b) nounwind {
 ; X64-NEXT:    movabsq $-2533274790395904, %rax # imm = 0xFFF7000000000000
 ; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:    cmpq %rax, %rbx
-; X64-NEXT:    jne .LBB0_3
-; X64-NEXT:  # %bb.4: # %if.then2
+; X64-NEXT:    jne .LBB0_4
+; X64-NEXT:  # %bb.3: # %if.then2
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r14
 ; X64-NEXT:    jmp ext1@PLT # TAILCALL
-; X64-NEXT:  .LBB0_3: # %if.end3
+; X64-NEXT:  .LBB0_4: # %if.end3
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r14
 ; X64-NEXT:    retq

@@ -16,12 +16,12 @@ define i256 @fshl_i256(i256 %a0, i256 %a1, i256 %a2) nounwind {
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSE-NEXT:    testb $-128, %cl
-; SSE-NEXT:    je .LBB0_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    je .LBB0_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movq %rbx, %r11
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; SSE-NEXT:    jmp .LBB0_3
-; SSE-NEXT:  .LBB0_1:
+; SSE-NEXT:  .LBB0_2:
 ; SSE-NEXT:    movq %rdi, %r9
 ; SSE-NEXT:    movq %rdx, %r11
 ; SSE-NEXT:    movq %rsi, %rdi
@@ -57,12 +57,12 @@ define i256 @fshl_i256(i256 %a0, i256 %a1, i256 %a2) nounwind {
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    testb $-128, %cl
-; AVX-NEXT:    je .LBB0_1
-; AVX-NEXT:  # %bb.2:
+; AVX-NEXT:    je .LBB0_2
+; AVX-NEXT:  # %bb.1:
 ; AVX-NEXT:    movq %rbx, %r11
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX-NEXT:    jmp .LBB0_3
-; AVX-NEXT:  .LBB0_1:
+; AVX-NEXT:  .LBB0_2:
 ; AVX-NEXT:    movq %rdi, %r9
 ; AVX-NEXT:    movq %rdx, %r11
 ; AVX-NEXT:    movq %rsi, %rdi
@@ -102,12 +102,12 @@ define i256 @fshr_i256(i256 %a0, i256 %a1, i256 %a2) nounwind {
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; SSE-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; SSE-NEXT:    testb %cl, %cl
-; SSE-NEXT:    js .LBB1_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    js .LBB1_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movq %rbx, %r11
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; SSE-NEXT:    jmp .LBB1_3
-; SSE-NEXT:  .LBB1_1:
+; SSE-NEXT:  .LBB1_2:
 ; SSE-NEXT:    movq %rdi, %r9
 ; SSE-NEXT:    movq %rsi, %rdi
 ; SSE-NEXT:    movq %rdx, %r11
@@ -141,12 +141,12 @@ define i256 @fshr_i256(i256 %a0, i256 %a1, i256 %a2) nounwind {
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX-NEXT:    testb %cl, %cl
-; AVX-NEXT:    js .LBB1_1
-; AVX-NEXT:  # %bb.2:
+; AVX-NEXT:    js .LBB1_2
+; AVX-NEXT:  # %bb.1:
 ; AVX-NEXT:    movq %rbx, %r11
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; AVX-NEXT:    jmp .LBB1_3
-; AVX-NEXT:  .LBB1_1:
+; AVX-NEXT:  .LBB1_2:
 ; AVX-NEXT:    movq %rdi, %r9
 ; AVX-NEXT:    movq %rsi, %rdi
 ; AVX-NEXT:    movq %rdx, %r11

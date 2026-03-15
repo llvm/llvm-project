@@ -297,11 +297,11 @@ define dso_local i32 @t12(i32 %x, i32 %y, ptr byval(%struct.t) align 4 %z) nounw
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    subl $20, %esp
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB12_1
-; X86-NEXT:  # %bb.2: # %bb
+; X86-NEXT:    je .LBB12_2
+; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    jmp foo6 # TAILCALL
-; X86-NEXT:  .LBB12_1: # %bb2
+; X86-NEXT:  .LBB12_2: # %bb2
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    retl

@@ -46,12 +46,12 @@ define i64 @sdiv_quotient(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-DAG:     movq %rdi, %rcx
 ; SLOW-DIVQ-DAG:     orq %rsi, %rcx
 ; SLOW-DIVQ-DAG:     shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB0_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
+; SLOW-DIVQ-NEXT:    je .LBB0_2
+; SLOW-DIVQ-NEXT:  # %bb.1:
 ; SLOW-DIVQ-NEXT:    cqto
 ; SLOW-DIVQ-NEXT:    idivq %rsi
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB0_1:
+; SLOW-DIVQ-NEXT:  .LBB0_2:
 ; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-DAG:     xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
@@ -98,13 +98,13 @@ define i64 @sdiv_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-DAG:     movq %rdi, %rcx
 ; SLOW-DIVQ-DAG:     orq %rsi, %rcx
 ; SLOW-DIVQ-DAG:     shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB3_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
+; SLOW-DIVQ-NEXT:    je .LBB3_2
+; SLOW-DIVQ-NEXT:  # %bb.1:
 ; SLOW-DIVQ-NEXT:    cqto
 ; SLOW-DIVQ-NEXT:    idivq %rsi
 ; SLOW-DIVQ-NEXT:    movq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB3_1:
+; SLOW-DIVQ-NEXT:  .LBB3_2:
 ; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-DAG:     xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
@@ -153,13 +153,13 @@ define i64 @sdiv_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-DAG:     movq %rdi, %rcx
 ; SLOW-DIVQ-DAG:     orq %rsi, %rcx
 ; SLOW-DIVQ-DAG:     shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB6_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
+; SLOW-DIVQ-NEXT:    je .LBB6_2
+; SLOW-DIVQ-NEXT:  # %bb.1:
 ; SLOW-DIVQ-NEXT:    cqto
 ; SLOW-DIVQ-NEXT:    idivq %rsi
 ; SLOW-DIVQ-NEXT:    addq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB6_1:
+; SLOW-DIVQ-NEXT:  .LBB6_2:
 ; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-DAG:     xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
@@ -219,12 +219,12 @@ define i64 @udiv_quotient(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-DAG:     movq %rdi, %rcx
 ; SLOW-DIVQ-DAG:     orq %rsi, %rcx
 ; SLOW-DIVQ-DAG:     shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB9_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
+; SLOW-DIVQ-NEXT:    je .LBB9_2
+; SLOW-DIVQ-NEXT:  # %bb.1:
 ; SLOW-DIVQ-NEXT:    xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divq %rsi
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB9_1:
+; SLOW-DIVQ-NEXT:  .LBB9_2:
 ; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-DAG:     xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
@@ -271,13 +271,13 @@ define i64 @udiv_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-DAG:     movq %rdi, %rcx
 ; SLOW-DIVQ-DAG:     orq %rsi, %rcx
 ; SLOW-DIVQ-DAG:     shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB12_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
+; SLOW-DIVQ-NEXT:    je .LBB12_2
+; SLOW-DIVQ-NEXT:  # %bb.1:
 ; SLOW-DIVQ-NEXT:    xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divq %rsi
 ; SLOW-DIVQ-NEXT:    movq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB12_1:
+; SLOW-DIVQ-NEXT:  .LBB12_2:
 ; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-DAG:     xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
@@ -326,13 +326,13 @@ define i64 @udiv_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-DAG:     movq %rdi, %rcx
 ; SLOW-DIVQ-DAG:     orq %rsi, %rcx
 ; SLOW-DIVQ-DAG:     shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB15_1
-; SLOW-DIVQ-NEXT:  # %bb.2:
+; SLOW-DIVQ-NEXT:    je .LBB15_2
+; SLOW-DIVQ-NEXT:  # %bb.1:
 ; SLOW-DIVQ-NEXT:    xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divq %rsi
 ; SLOW-DIVQ-NEXT:    addq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB15_1:
+; SLOW-DIVQ-NEXT:  .LBB15_2:
 ; SLOW-DIVQ-DAG:     # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-DAG:     xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi

@@ -644,8 +644,8 @@ define void @select_v1i1(ptr %w, ptr %x, ptr %y, i1 %z) nounwind {
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-AVX512F-NEXT:    jne .LBB18_1
-; X86-AVX512F-NEXT:  # %bb.2:
+; X86-AVX512F-NEXT:    jne .LBB18_2
+; X86-AVX512F-NEXT:  # %bb.1:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX512F-NEXT:    movzbl (%edx), %edx
@@ -654,7 +654,7 @@ define void @select_v1i1(ptr %w, ptr %x, ptr %y, i1 %z) nounwind {
 ; X86-AVX512F-NEXT:    kmovw %ecx, %k1
 ; X86-AVX512F-NEXT:    kxorw %k1, %k0, %k0
 ; X86-AVX512F-NEXT:    jmp .LBB18_3
-; X86-AVX512F-NEXT:  .LBB18_1:
+; X86-AVX512F-NEXT:  .LBB18_2:
 ; X86-AVX512F-NEXT:    movzbl (%eax), %ecx
 ; X86-AVX512F-NEXT:    kmovw %ecx, %k0
 ; X86-AVX512F-NEXT:  .LBB18_3:
@@ -667,15 +667,15 @@ define void @select_v1i1(ptr %w, ptr %x, ptr %y, i1 %z) nounwind {
 ; X64-AVX512F-LABEL: select_v1i1:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    testb $1, %cl
-; X64-AVX512F-NEXT:    jne .LBB18_1
-; X64-AVX512F-NEXT:  # %bb.2:
+; X64-AVX512F-NEXT:    jne .LBB18_2
+; X64-AVX512F-NEXT:  # %bb.1:
 ; X64-AVX512F-NEXT:    movzbl (%rdx), %eax
 ; X64-AVX512F-NEXT:    kmovw %eax, %k0
 ; X64-AVX512F-NEXT:    movzbl (%rdi), %eax
 ; X64-AVX512F-NEXT:    kmovw %eax, %k1
 ; X64-AVX512F-NEXT:    kxorw %k1, %k0, %k0
 ; X64-AVX512F-NEXT:    jmp .LBB18_3
-; X64-AVX512F-NEXT:  .LBB18_1:
+; X64-AVX512F-NEXT:  .LBB18_2:
 ; X64-AVX512F-NEXT:    movzbl (%rsi), %eax
 ; X64-AVX512F-NEXT:    kmovw %eax, %k0
 ; X64-AVX512F-NEXT:  .LBB18_3:
@@ -689,8 +689,8 @@ define void @select_v1i1(ptr %w, ptr %x, ptr %y, i1 %z) nounwind {
 ; X86-AVX512BW:       # %bb.0:
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-AVX512BW-NEXT:    jne .LBB18_1
-; X86-AVX512BW-NEXT:  # %bb.2:
+; X86-AVX512BW-NEXT:    jne .LBB18_2
+; X86-AVX512BW-NEXT:  # %bb.1:
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX512BW-NEXT:    movzbl (%edx), %edx
@@ -699,7 +699,7 @@ define void @select_v1i1(ptr %w, ptr %x, ptr %y, i1 %z) nounwind {
 ; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
 ; X86-AVX512BW-NEXT:    kxorw %k1, %k0, %k0
 ; X86-AVX512BW-NEXT:    jmp .LBB18_3
-; X86-AVX512BW-NEXT:  .LBB18_1:
+; X86-AVX512BW-NEXT:  .LBB18_2:
 ; X86-AVX512BW-NEXT:    movzbl (%eax), %ecx
 ; X86-AVX512BW-NEXT:    kmovd %ecx, %k0
 ; X86-AVX512BW-NEXT:  .LBB18_3:
@@ -712,15 +712,15 @@ define void @select_v1i1(ptr %w, ptr %x, ptr %y, i1 %z) nounwind {
 ; X64-AVX512BW-LABEL: select_v1i1:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    testb $1, %cl
-; X64-AVX512BW-NEXT:    jne .LBB18_1
-; X64-AVX512BW-NEXT:  # %bb.2:
+; X64-AVX512BW-NEXT:    jne .LBB18_2
+; X64-AVX512BW-NEXT:  # %bb.1:
 ; X64-AVX512BW-NEXT:    movzbl (%rdx), %eax
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k0
 ; X64-AVX512BW-NEXT:    movzbl (%rdi), %eax
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k1
 ; X64-AVX512BW-NEXT:    kxorw %k1, %k0, %k0
 ; X64-AVX512BW-NEXT:    jmp .LBB18_3
-; X64-AVX512BW-NEXT:  .LBB18_1:
+; X64-AVX512BW-NEXT:  .LBB18_2:
 ; X64-AVX512BW-NEXT:    movzbl (%rsi), %eax
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k0
 ; X64-AVX512BW-NEXT:  .LBB18_3:

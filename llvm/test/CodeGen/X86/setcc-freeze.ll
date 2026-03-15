@@ -5,11 +5,11 @@ define i32 @f(ptr %p) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $8, 1(%rdi)
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %B
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %B
 ; CHECK-NEXT:    movl $20, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_1: # %A
+; CHECK-NEXT:  .LBB0_2: # %A
 ; CHECK-NEXT:    movl $10, %eax
 ; CHECK-NEXT:    retq
   %v = load i16, ptr %p, align 2

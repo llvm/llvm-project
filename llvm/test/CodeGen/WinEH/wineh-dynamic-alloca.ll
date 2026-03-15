@@ -24,9 +24,9 @@ define dso_local noundef i32 @foo() local_unnamed_addr #0 personality ptr @__Cxx
 ; CHECK-NEXT:    movl %ecx, -24(%ebp)
 ; CHECK-NEXT:    movl %eax, %fs:0
 ; CHECK-NEXT:    cmpb $1, _bar
-; CHECK-NEXT:    je LBB0_1
-; CHECK-NEXT:  LBB0_5: # %exit
-; CHECK-NEXT:  $ehgcr_0_5:
+; CHECK-NEXT:    je LBB0_2
+; CHECK-NEXT:  LBB0_1: # %exit
+; CHECK-NEXT:  $ehgcr_0_1:
 ; CHECK-NEXT:    movl -24(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, %fs:0
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -36,7 +36,7 @@ define dso_local noundef i32 @foo() local_unnamed_addr #0 personality ptr @__Cxx
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  LBB0_1: # %if.then
+; CHECK-NEXT:  LBB0_2: # %if.then
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl %esp, %eax
@@ -44,22 +44,22 @@ define dso_local noundef i32 @foo() local_unnamed_addr #0 personality ptr @__Cxx
 ; CHECK-NEXT:    movl $123, (%eax)
 ; CHECK-NEXT:    movl $0, -16(%ebp)
 ; CHECK-NEXT:    calll _alwaysthrows
-; CHECK-NEXT:  # %bb.4: # %unreachable.i
-; CHECK-NEXT:  LBB0_3: # Block address taken
+; CHECK-NEXT:  # %bb.3: # %unreachable.i
+; CHECK-NEXT:  LBB0_4: # Block address taken
 ; CHECK-NEXT:    # %catch.i
 ; CHECK-NEXT:    addl $12, %ebp
-; CHECK-NEXT:    jmp LBB0_5
-; CHECK-NEXT:    .def "?catch$2@?0?foo@4HA";
+; CHECK-NEXT:    jmp LBB0_1
+; CHECK-NEXT:    .def "?catch$5@?0?foo@4HA";
 ; CHECK-NEXT:    .scl 3;
 ; CHECK-NEXT:    .type 32;
 ; CHECK-NEXT:    .endef
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  "?catch$2@?0?foo@4HA":
-; CHECK-NEXT:  LBB0_2: # %catch.i
+; CHECK-NEXT:  "?catch$5@?0?foo@4HA":
+; CHECK-NEXT:  LBB0_5: # %catch.i
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    addl $12, %ebp
 ; CHECK-NEXT:    movl %esp, -28(%ebp)
-; CHECK-NEXT:    movl $LBB0_3, %eax
+; CHECK-NEXT:    movl $LBB0_4, %eax
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl # CATCHRET
 ; CHECK-NEXT:  Lfunc_end0:

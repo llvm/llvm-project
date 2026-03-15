@@ -199,12 +199,12 @@ define i32 @PR40483_sub3(ptr, i32) nounwind {
 ; X86-NEXT:    subl %esi, %ecx
 ; X86-NEXT:    subl %esi, %edx
 ; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    jae .LBB5_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jae .LBB5_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB5_1:
+; X86-NEXT:  .LBB5_2:
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
 ; X86-NEXT:    orl %ecx, %eax

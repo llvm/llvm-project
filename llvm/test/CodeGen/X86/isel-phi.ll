@@ -11,14 +11,14 @@ define i1 @test_i1(i1 %a, i1 %b, i1 %c, i1 %pred0, i1 %pred1) {
 ; X86-LABEL: test_i1:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2: # %cond
+; X86-NEXT:    je .LBB0_3
+; X86-NEXT:  # %bb.1: # %cond
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB0_4
-; X86-NEXT:  # %bb.3:
+; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_1:
+; X86-NEXT:  .LBB0_3:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_4: # %cond.false
@@ -28,17 +28,17 @@ define i1 @test_i1(i1 %a, i1 %b, i1 %c, i1 %pred0, i1 %pred1) {
 ; X64-LABEL: test_i1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testb $1, %cl
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # %bb.2: # %cond
+; X64-NEXT:    je .LBB0_4
+; X64-NEXT:  # %bb.1: # %cond
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    testb $1, %r8b
-; X64-NEXT:    jne .LBB0_4
-; X64-NEXT:  # %bb.3: # %cond.false
+; X64-NEXT:    jne .LBB0_3
+; X64-NEXT:  # %bb.2: # %cond.false
 ; X64-NEXT:    movl %edx, %eax
-; X64-NEXT:  .LBB0_4: # %cond.end
+; X64-NEXT:  .LBB0_3: # %cond.end
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB0_1:
+; X64-NEXT:  .LBB0_4:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -287,38 +287,38 @@ define ptr @test_ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, i1 
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB7_6
+; X86-NEXT:    je .LBB7_3
 ; X86-NEXT:  # %bb.1: # %cond.true
 ; X86-NEXT:    testb $1, %cl
-; X86-NEXT:    je .LBB7_3
+; X86-NEXT:    je .LBB7_6
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_6: # %cond.false
+; X86-NEXT:  .LBB7_3: # %cond.false
 ; X86-NEXT:    testb $1, %cl
+; X86-NEXT:    je .LBB7_8
+; X86-NEXT:  # %bb.4: # %cond.false.true
+; X86-NEXT:    testb $1, %al
 ; X86-NEXT:    je .LBB7_10
-; X86-NEXT:  # %bb.7: # %cond.false.true
-; X86-NEXT:    testb $1, %al
-; X86-NEXT:    je .LBB7_9
-; X86-NEXT:  # %bb.8:
+; X86-NEXT:  # %bb.5:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_3: # %cond.true.false
+; X86-NEXT:  .LBB7_6: # %cond.true.false
 ; X86-NEXT:    testb $1, %al
-; X86-NEXT:    je .LBB7_5
-; X86-NEXT:  # %bb.4:
+; X86-NEXT:    je .LBB7_11
+; X86-NEXT:  # %bb.7:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_10: # %cond.false.false
+; X86-NEXT:  .LBB7_8: # %cond.false.false
 ; X86-NEXT:    testb $1, %al
 ; X86-NEXT:    je .LBB7_12
-; X86-NEXT:  # %bb.11:
+; X86-NEXT:  # %bb.9:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_9: # %cond.false.true.false
+; X86-NEXT:  .LBB7_10: # %cond.false.true.false
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_5: # %cond.true.false.false
+; X86-NEXT:  .LBB7_11: # %cond.true.false.false
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB7_12: # %cond.false.false.false

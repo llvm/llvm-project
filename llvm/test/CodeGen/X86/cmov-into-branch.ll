@@ -117,10 +117,10 @@ define i32 @weighted_select3(i32 %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB7_1
-; CHECK-NEXT:  # %bb.2: # %select.end
+; CHECK-NEXT:    je .LBB7_2
+; CHECK-NEXT:  # %bb.1: # %select.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB7_1: # %select.false
+; CHECK-NEXT:  .LBB7_2: # %select.false
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0

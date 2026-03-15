@@ -13,12 +13,12 @@ define fastcc void @set_proof_and_disproof_numbers(ptr nocapture %node) nounwind
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movzbl 0, %eax
 ; CHECK-NEXT:    cmpl $3, %eax
-; CHECK-NEXT:    ja LBB0_3
+; CHECK-NEXT:    ja LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %entry
 ; CHECK-NEXT:    jmpl *LJTI0_0(,%eax,4)
-; CHECK-NEXT:  LBB0_3: ## %return
+; CHECK-NEXT:  LBB0_2: ## %return
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  LBB0_2: ## %bb31
+; CHECK-NEXT:  LBB0_3: ## %bb31
 ; CHECK-NEXT:    ud2
 entry:
 	%0 = load i8, ptr null, align 1		; <i8> [#uses=1]

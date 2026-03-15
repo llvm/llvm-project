@@ -12,12 +12,12 @@ define void @test_select(ptr %p, ptr %q, i1 zeroext %c) nounwind {
 ; SSE-LABEL: test_select:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    testl %edx, %edx
-; SSE-NEXT:    jne .LBB0_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:    jne .LBB0_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [NaN]
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB0_1:
+; SSE-NEXT:  .LBB0_2:
 ; SSE-NEXT:    movups (%rdi), %xmm0
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    retq
@@ -53,11 +53,11 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-NEXT:    callq __eqtf2@PLT
 ; SSE-NEXT:    testl %eax, %eax
-; SSE-NEXT:    je .LBB1_1
-; SSE-NEXT:  # %bb.2: # %BB0
+; SSE-NEXT:    je .LBB1_2
+; SSE-NEXT:  # %bb.1: # %BB0
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    jmp .LBB1_3
-; SSE-NEXT:  .LBB1_1:
+; SSE-NEXT:  .LBB1_2:
 ; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.0E+0]
 ; SSE-NEXT:  .LBB1_3: # %BB0
 ; SSE-NEXT:    testl %ebx, %ebx

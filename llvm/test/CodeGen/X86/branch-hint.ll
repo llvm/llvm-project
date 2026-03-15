@@ -43,10 +43,10 @@ define void @p61(i32 %x, ptr %p) {
 ; CHECK-LABEL: p61:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %if.end
+; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_1: # %if.then
+; CHECK-NEXT:  .LBB1_2: # %if.then
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    retq
 ;

@@ -100,11 +100,11 @@ define float @test_ui64_to_float(i64 %x) {
 ; SDAG-X64-LABEL: test_ui64_to_float:
 ; SDAG-X64:       # %bb.0: # %entry
 ; SDAG-X64-NEXT:    testq %rdi, %rdi
-; SDAG-X64-NEXT:    js .LBB4_1
-; SDAG-X64-NEXT:  # %bb.2: # %entry
+; SDAG-X64-NEXT:    js .LBB4_2
+; SDAG-X64-NEXT:  # %bb.1: # %entry
 ; SDAG-X64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  .LBB4_1:
+; SDAG-X64-NEXT:  .LBB4_2:
 ; SDAG-X64-NEXT:    movq %rdi, %rax
 ; SDAG-X64-NEXT:    shrq %rax
 ; SDAG-X64-NEXT:    andl $1, %edi

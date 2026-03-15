@@ -24,12 +24,12 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    movl $1, -16(%ebp)
 ; I686-NEXT:    calll _throw
 ; I686-NEXT:  # %bb.1: # %bb14
-; I686-NEXT:  LBB0_3: # Block address taken
+; I686-NEXT:  LBB0_2: # Block address taken
 ; I686-NEXT:    # %bb17
 ; I686-NEXT:    addl $12, %ebp
-; I686-NEXT:    jmp LBB0_4
-; I686-NEXT:  LBB0_4: # %exit
-; I686-NEXT:  $ehgcr_0_4:
+; I686-NEXT:    jmp LBB0_3
+; I686-NEXT:  LBB0_3: # %exit
+; I686-NEXT:  $ehgcr_0_3:
 ; I686-NEXT:    movl -24(%ebp), %eax
 ; I686-NEXT:    movl %eax, %fs:0
 ; I686-NEXT:    addl $24, %esp
@@ -38,20 +38,20 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; I686-NEXT:    popl %ebx
 ; I686-NEXT:    popl %ebp
 ; I686-NEXT:    retl
-; I686-NEXT:    .def "?catch$2@?0?pr66984@4HA";
+; I686-NEXT:    .def "?catch$4@?0?pr66984@4HA";
 ; I686-NEXT:    .scl 3;
 ; I686-NEXT:    .type 32;
 ; I686-NEXT:    .endef
 ; I686-NEXT:    .p2align 4
-; I686-NEXT:  "?catch$2@?0?pr66984@4HA":
-; I686-NEXT:  LBB0_2: # %bb17
+; I686-NEXT:  "?catch$4@?0?pr66984@4HA":
+; I686-NEXT:  LBB0_4: # %bb17
 ; I686-NEXT:    pushl %ebp
 ; I686-NEXT:    addl $12, %ebp
 ; I686-NEXT:    movl %esp, -28(%ebp)
 ; I686-NEXT:    movl -36(%ebp), %ecx
 ; I686-NEXT:    movl $2, -16(%ebp)
 ; I686-NEXT:    calll _cleanup
-; I686-NEXT:    movl $LBB0_3, %eax
+; I686-NEXT:    movl $LBB0_2, %eax
 ; I686-NEXT:    popl %ebp
 ; I686-NEXT:    retl # CATCHRET
 ; I686-NEXT:    .def "?dtor$5@?0?pr66984@4HA";
@@ -82,14 +82,14 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .seh_endprologue
 ; X86_64-NEXT:    movq $-2, -16(%rbp)
 ; X86_64-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X86_64-NEXT:  .Ltmp0:
+; X86_64-NEXT:  .Ltmp0: # EH_LABEL
 ; X86_64-NEXT:    callq throw
 ; X86_64-NEXT:    nop
-; X86_64-NEXT:  .Ltmp1:
+; X86_64-NEXT:  .Ltmp1: # EH_LABEL
 ; X86_64-NEXT:  # %bb.1: # %bb14
-; X86_64-NEXT:  .LBB0_3: # Block address taken
+; X86_64-NEXT:  .LBB0_2: # Block address taken
 ; X86_64-NEXT:    # %exit
-; X86_64-NEXT:  $ehgcr_0_3:
+; X86_64-NEXT:  $ehgcr_0_2:
 ; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $64, %rsp
 ; X86_64-NEXT:    popq %rbp
@@ -99,15 +99,15 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .long $cppxdata$pr66984@IMGREL
 ; X86_64-NEXT:    .text
 ; X86_64-NEXT:    .seh_endproc
-; X86_64-NEXT:    .def "?catch$2@?0?pr66984@4HA";
+; X86_64-NEXT:    .def "?catch$3@?0?pr66984@4HA";
 ; X86_64-NEXT:    .scl 3;
 ; X86_64-NEXT:    .type 32;
 ; X86_64-NEXT:    .endef
 ; X86_64-NEXT:    .p2align 4
-; X86_64-NEXT:  "?catch$2@?0?pr66984@4HA":
-; X86_64-NEXT:  .seh_proc "?catch$2@?0?pr66984@4HA"
+; X86_64-NEXT:  "?catch$3@?0?pr66984@4HA":
+; X86_64-NEXT:  .seh_proc "?catch$3@?0?pr66984@4HA"
 ; X86_64-NEXT:    .seh_handler __CxxFrameHandler3, @unwind, @except
-; X86_64-NEXT:  .LBB0_2: # %bb17
+; X86_64-NEXT:  .LBB0_3: # %bb17
 ; X86_64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; X86_64-NEXT:    pushq %rbp
 ; X86_64-NEXT:    .seh_pushreg %rbp
@@ -117,7 +117,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .seh_endprologue
 ; X86_64-NEXT:    movq -8(%rbp), %rcx
 ; X86_64-NEXT:    callq cleanup
-; X86_64-NEXT:    leaq .LBB0_3(%rip), %rax
+; X86_64-NEXT:    leaq .LBB0_2(%rip), %rax
 ; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $32, %rsp
 ; X86_64-NEXT:    popq %rbp

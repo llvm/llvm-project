@@ -55,28 +55,28 @@ cold:
 ; CHECK:      foo:
 ; CHECK:      # %bb.0:        # %b0
 ; CHECK:        jne foo.__part.1
-; CHECK-NEXT: # %bb.7:        # %b3
-; CHECK:        jne .LBB0_4
-; CHECK-NEXT: # %bb.8:        # %b5
+; CHECK-NEXT: # %bb.1:        # %b3
+; CHECK:        jne .LBB0_9
+; CHECK-NEXT: # %bb.2:        # %b5
 ; CHECK:        retq
 
 ;; second cluster:
 ; CHECK:        .section    .text.foo,"ax",@progbits,unique,1
 ; CHECK-NEXT: foo.__part.1:   # %b1
-; CHECK:        jne .LBB0_2
-; CHECK-NEXT: # %bb.9:        # %b3
-; CHECK:        je .LBB0_5
-; CHECK-NEXT: # %bb.10:       # %b4
+; CHECK:        jne .LBB0_7
+; CHECK-NEXT: # %bb.4:        # %b3
+; CHECK:        je .LBB0_10
+; CHECK-NEXT: # %bb.5:        # %b4
 ; CHECK:        je foo.cold
-; CHECK-NEXT: # %bb.11:       # %b5
+; CHECK-NEXT: # %bb.6:        # %b5
 ; CHECK:        retq
-; CHECK-NEXT: .LBB0_2:        # %b2
+; CHECK-NEXT: .LBB0_7:        # %b2
 ; CHECK:        callq	effect@PLT
-; CHECK-NEXT: # %bb.3:        # %b3
-; CHECK:        je .LBB0_5
-; CHECK-NEXT: .LBB0_4:        # %b4
+; CHECK-NEXT: # %bb.8:        # %b3
+; CHECK:        je .LBB0_10
+; CHECK-NEXT: .LBB0_9:        # %b4
 ; CHECK:        je foo.cold
-; CHECK-NEXT: .LBB0_5:       # %b5
+; CHECK-NEXT: .LBB0_10:       # %b5
 ; CHECK:        retq
 
 ;; split section

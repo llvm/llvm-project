@@ -173,12 +173,12 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; X86-LABEL: icmpasreq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    js .LBB8_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    js .LBB8_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB8_1:
+; X86-NEXT:  .LBB8_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -199,12 +199,12 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; X86-LABEL: icmpasrne:
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    jns .LBB9_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jns .LBB9_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB9_1:
+; X86-NEXT:  .LBB9_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -229,12 +229,12 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    xorl $127, %eax
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    js .LBB10_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    js .LBB10_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    addl (%ecx), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB10_1:
+; X86-NEXT:  .LBB10_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    addl (%ecx), %eax
 ; X86-NEXT:    retl

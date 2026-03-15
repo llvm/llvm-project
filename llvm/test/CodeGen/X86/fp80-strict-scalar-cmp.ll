@@ -50,12 +50,12 @@ define i32 @test_ogt_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    ja .LBB1_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    ja .LBB1_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB1_1:
+; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -87,12 +87,12 @@ define i32 @test_oge_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jae .LBB2_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jae .LBB2_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB2_1:
+; X86-NEXT:  .LBB2_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -124,12 +124,12 @@ define i32 @test_olt_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    ja .LBB3_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    ja .LBB3_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB3_1:
+; X86-NEXT:  .LBB3_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -161,12 +161,12 @@ define i32 @test_ole_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jae .LBB4_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jae .LBB4_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB4_1:
+; X86-NEXT:  .LBB4_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -198,12 +198,12 @@ define i32 @test_one_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jne .LBB5_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB5_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB5_1:
+; X86-NEXT:  .LBB5_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -235,12 +235,12 @@ define i32 @test_ord_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jnp .LBB6_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jnp .LBB6_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB6_1:
+; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -272,12 +272,12 @@ define i32 @test_ueq_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    je .LBB7_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    je .LBB7_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB7_1:
+; X86-NEXT:  .LBB7_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -309,12 +309,12 @@ define i32 @test_ugt_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jb .LBB8_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jb .LBB8_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB8_1:
+; X86-NEXT:  .LBB8_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -346,12 +346,12 @@ define i32 @test_uge_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jbe .LBB9_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jbe .LBB9_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB9_1:
+; X86-NEXT:  .LBB9_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -383,12 +383,12 @@ define i32 @test_ult_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jb .LBB10_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jb .LBB10_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB10_1:
+; X86-NEXT:  .LBB10_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -420,12 +420,12 @@ define i32 @test_ule_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jbe .LBB11_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jbe .LBB11_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB11_1:
+; X86-NEXT:  .LBB11_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -495,12 +495,12 @@ define i32 @test_uno_q(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jp .LBB13_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jp .LBB13_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB13_1:
+; X86-NEXT:  .LBB13_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -570,12 +570,12 @@ define i32 @test_ogt_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    ja .LBB15_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    ja .LBB15_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB15_1:
+; X86-NEXT:  .LBB15_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -607,12 +607,12 @@ define i32 @test_oge_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jae .LBB16_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jae .LBB16_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB16_1:
+; X86-NEXT:  .LBB16_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -644,12 +644,12 @@ define i32 @test_olt_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    ja .LBB17_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    ja .LBB17_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB17_1:
+; X86-NEXT:  .LBB17_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -681,12 +681,12 @@ define i32 @test_ole_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jae .LBB18_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jae .LBB18_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB18_1:
+; X86-NEXT:  .LBB18_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -718,12 +718,12 @@ define i32 @test_one_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jne .LBB19_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jne .LBB19_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB19_1:
+; X86-NEXT:  .LBB19_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -755,12 +755,12 @@ define i32 @test_ord_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jnp .LBB20_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jnp .LBB20_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB20_1:
+; X86-NEXT:  .LBB20_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -792,12 +792,12 @@ define i32 @test_ueq_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    je .LBB21_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    je .LBB21_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB21_1:
+; X86-NEXT:  .LBB21_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -829,12 +829,12 @@ define i32 @test_ugt_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jb .LBB22_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jb .LBB22_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB22_1:
+; X86-NEXT:  .LBB22_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -866,12 +866,12 @@ define i32 @test_uge_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jbe .LBB23_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jbe .LBB23_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB23_1:
+; X86-NEXT:  .LBB23_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -903,12 +903,12 @@ define i32 @test_ult_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jb .LBB24_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jb .LBB24_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB24_1:
+; X86-NEXT:  .LBB24_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -940,12 +940,12 @@ define i32 @test_ule_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jbe .LBB25_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jbe .LBB25_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB25_1:
+; X86-NEXT:  .LBB25_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
@@ -1015,12 +1015,12 @@ define i32 @test_uno_s(i32 %a, i32 %b, x86_fp80 %f1, x86_fp80 %f2) #0 {
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
-; X86-NEXT:    jp .LBB27_1
-; X86-NEXT:  # %bb.2:
+; X86-NEXT:    jp .LBB27_2
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB27_1:
+; X86-NEXT:  .LBB27_2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
 ; X86-NEXT:    retl

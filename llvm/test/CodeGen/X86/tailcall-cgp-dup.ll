@@ -19,13 +19,13 @@ define i32 @foo(i32 %x) nounwind ssp {
 ; CHECK-NEXT:    jmpq *%rcx
 ; CHECK-NEXT:  LBB0_2: ## %sw.bb
 ; CHECK-NEXT:    jmp _f1 ## TAILCALL
-; CHECK-NEXT:  LBB0_6: ## %sw.bb7
+; CHECK-NEXT:  LBB0_3: ## %sw.bb7
 ; CHECK-NEXT:    jmp _f5 ## TAILCALL
 ; CHECK-NEXT:  LBB0_4: ## %sw.bb3
 ; CHECK-NEXT:    jmp _f3 ## TAILCALL
 ; CHECK-NEXT:  LBB0_5: ## %sw.bb5
 ; CHECK-NEXT:    jmp _f4 ## TAILCALL
-; CHECK-NEXT:  LBB0_3: ## %sw.bb1
+; CHECK-NEXT:  LBB0_6: ## %sw.bb1
 ; CHECK-NEXT:    jmp _f2 ## TAILCALL
 ; CHECK-NEXT:  LBB0_7: ## %sw.bb9
 ; CHECK-NEXT:    jmp _f6 ## TAILCALL
@@ -35,17 +35,17 @@ define i32 @foo(i32 %x) nounwind ssp {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:    .data_region jt32
 ; CHECK-NEXT:  L0_0_set_2 = LBB0_2-LJTI0_0
-; CHECK-NEXT:  L0_0_set_3 = LBB0_3-LJTI0_0
+; CHECK-NEXT:  L0_0_set_6 = LBB0_6-LJTI0_0
 ; CHECK-NEXT:  L0_0_set_4 = LBB0_4-LJTI0_0
 ; CHECK-NEXT:  L0_0_set_5 = LBB0_5-LJTI0_0
-; CHECK-NEXT:  L0_0_set_6 = LBB0_6-LJTI0_0
+; CHECK-NEXT:  L0_0_set_3 = LBB0_3-LJTI0_0
 ; CHECK-NEXT:  L0_0_set_7 = LBB0_7-LJTI0_0
 ; CHECK-NEXT:  LJTI0_0:
 ; CHECK-NEXT:    .long L0_0_set_2
-; CHECK-NEXT:    .long L0_0_set_3
+; CHECK-NEXT:    .long L0_0_set_6
 ; CHECK-NEXT:    .long L0_0_set_4
 ; CHECK-NEXT:    .long L0_0_set_5
-; CHECK-NEXT:    .long L0_0_set_6
+; CHECK-NEXT:    .long L0_0_set_3
 ; CHECK-NEXT:    .long L0_0_set_7
 ; CHECK-NEXT:    .end_data_region
 entry:
@@ -188,12 +188,12 @@ define ptr @memset_tailc(ptr %ret_val, i64 %sz) nounwind {
 ; CHECK-LABEL: memset_tailc:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB4_1
-; CHECK-NEXT:  ## %bb.2: ## %if.then
+; CHECK-NEXT:    je LBB4_2
+; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    jmp _memset ## TAILCALL
-; CHECK-NEXT:  LBB4_1: ## %return
+; CHECK-NEXT:  LBB4_2: ## %return
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -212,13 +212,13 @@ define ptr @memcpy_tailc(ptr %ret_val, i64 %sz, ptr %src) nounwind {
 ; CHECK-LABEL: memcpy_tailc:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    je LBB5_1
-; CHECK-NEXT:  ## %bb.2: ## %if.then
+; CHECK-NEXT:    je LBB5_2
+; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    movq %rdx, %rsi
 ; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    jmp _memcpy ## TAILCALL
-; CHECK-NEXT:  LBB5_1: ## %return
+; CHECK-NEXT:  LBB5_2: ## %return
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -246,15 +246,15 @@ define ptr @strcpy_legal_and_baz_illegal(ptr %arg, i64 %sz, ptr %2) nounwind {
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq _malloc
 ; CHECK-NEXT:    testq %r15, %r15
-; CHECK-NEXT:    je LBB6_1
-; CHECK-NEXT:  ## %bb.2: ## %if.then
+; CHECK-NEXT:    je LBB6_2
+; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    jmp _strcpy ## TAILCALL
-; CHECK-NEXT:  LBB6_1: ## %if.else
+; CHECK-NEXT:  LBB6_2: ## %if.else
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    callq _baz

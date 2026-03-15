@@ -50,20 +50,20 @@ cold:
 ; CHECK:        .section    .text.foo,"ax",@progbits
 ; CHECK:      foo:
 ; CHECK:      # %bb.0:        # %b0
-; CHECK:        jne .LBB0_1
-; CHECK-NEXT: # %bb.7:        # %b3
-; CHECK:        jne .LBB0_4
-; CHECK-NEXT: # %bb.8:        # %b5
+; CHECK:        jne .LBB0_3
+; CHECK-NEXT: # %bb.1:        # %b3
+; CHECK:        jne .LBB0_6
+; CHECK-NEXT: # %bb.2:        # %b5
 ; CHECK:        retq
-; CHECK-NEXT: .LBB0_1:        # %b1
-; CHECK:        je .LBB0_3
-; CHECK-NEXT: # %bb.2:        # %b2
-; CHECK:        callq effect@PLT
-; CHECK-NEXT: .LBB0_3:        # %b3
+; CHECK-NEXT: .LBB0_3:        # %b1
 ; CHECK:        je .LBB0_5
-; CHECK-NEXT: .LBB0_4:        # %b4
+; CHECK-NEXT: # %bb.4:        # %b2
+; CHECK:        callq effect@PLT
+; CHECK-NEXT: .LBB0_5:        # %b3
+; CHECK:        je .LBB0_7
+; CHECK-NEXT: .LBB0_6:        # %b4
 ; CHECK:        je foo.cold
-; CHECK-NEXT: .LBB0_5:        # %b5
+; CHECK-NEXT: .LBB0_7:        # %b5
 ; CHECK:        retq
 
 ;; split section

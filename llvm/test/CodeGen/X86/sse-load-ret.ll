@@ -31,11 +31,11 @@ define double @test3(i1 %B) {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    testb $1, 8(%ebp)
-; CHECK-NEXT:    jne .LBB2_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    jne .LBB2_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [5.2301123123000002E+2,0.0E+0]
 ; CHECK-NEXT:    jmp .LBB2_3
-; CHECK-NEXT:  .LBB2_1:
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.2341200000000001E+2,0.0E+0]
 ; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    movsd %xmm0, (%esp)

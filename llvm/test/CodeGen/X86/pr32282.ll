@@ -44,12 +44,12 @@ define dso_local void @foo(i64 %x) nounwind {
 ; X64-NEXT:    movq %rdi, %rdx
 ; X64-NEXT:    orq %rcx, %rdx
 ; X64-NEXT:    shrq $32, %rdx
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # %bb.2:
+; X64-NEXT:    je .LBB0_2
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rcx
 ; X64-NEXT:    jmp .LBB0_3
-; X64-NEXT:  .LBB0_1:
+; X64-NEXT:  .LBB0_2:
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
