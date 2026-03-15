@@ -60065,6 +60065,25 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case X86ISD::VTRUNCS:
+      if (!IsSplat && NumOps == 2 && VT.is512BitVector() &&
+          Subtarget.useBWIRegs()) {
+        MVT SrcVT = Ops[0].getOperand(0).getSimpleValueType();
+        if (SrcVT.is512BitVector() &&
+            SrcVT == Ops[1].getOperand(0).getSimpleValueType() &&
+            SrcVT.getScalarSizeInBits() <= 32 &&
+            (VT.getScalarSizeInBits() * 2 == SrcVT.getScalarSizeInBits())) {
+          SDValue N0 = DAG.getBitcast(MVT::v8i64, Ops[0].getOperand(0));
+          SDValue N1 = DAG.getBitcast(MVT::v8i64, Ops[1].getOperand(0));
+          SDValue LHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
+                                             {0, 1, 4, 5, 8, 9, 12, 13});
+          SDValue RHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
+                                             {2, 3, 6, 7, 10, 11, 14, 15});
+          return DAG.getNode(X86ISD::PACKSS, DL, VT, DAG.getBitcast(SrcVT, LHS),
+                             DAG.getBitcast(SrcVT, RHS));
+        }
+      }
+      break;
     case ISD::ANY_EXTEND:
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
