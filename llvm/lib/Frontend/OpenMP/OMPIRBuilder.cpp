@@ -5586,6 +5586,7 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
 
   Function *F = CLI->getFunction();
   // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
     if (!BB.getTerminator())
@@ -6882,6 +6883,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   Function *F = CanonicalLoop->getFunction();
 
   // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
     if (!BB.getTerminator())
@@ -7020,6 +7022,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
 
   // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
   SmallVector<Instruction *> UIs;
   for (BasicBlock &BB : *F)
     if (!BB.getTerminator())
