@@ -225,6 +225,53 @@ struct PointerType : PyConcreteType<PointerType> {
 };
 
 //===--------------------------------------------------------------------===//
+// FunctionType
+//===--------------------------------------------------------------------===//
+
+struct FunctionType : PyConcreteType<FunctionType> {
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsALLVMFunctionType;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirLLVMFunctionTypeGetTypeID;
+  static constexpr const char *pyClassName = "FunctionType";
+  static inline const MlirStringRef name = mlirLLVMFunctionTypeGetName();
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](PyType &resultType, const std::vector<PyType> &argumentTypes,
+           bool isVarArg) {
+          std::vector<MlirType> argTypes(argumentTypes.size());
+          std::copy(argumentTypes.begin(), argumentTypes.end(),
+                    argTypes.begin());
+          return FunctionType(
+              resultType.getContext(),
+              mlirLLVMFunctionTypeGet(resultType, argTypes.size(),
+                                      argTypes.data(), isVarArg));
+        },
+        "result_type"_a, "argument_types"_a, nb::kw_only(),
+        "is_var_arg"_a = false);
+    c.def_prop_ro("return_type", [](const FunctionType &type) {
+      return mlirLLVMFunctionTypeGetReturnType(type);
+    });
+    c.def_prop_ro("num_inputs", [](const FunctionType &type) {
+      return mlirLLVMFunctionTypeGetNumInputs(type);
+    });
+    c.def_prop_ro("inputs", [](const FunctionType &type) {
+      nb::list inputs;
+      for (intptr_t i = 0, e = mlirLLVMFunctionTypeGetNumInputs(type); i < e;
+           ++i) {
+        inputs.append(mlirLLVMFunctionTypeGetInput(type, i));
+      }
+      return inputs;
+    });
+    c.def_prop_ro("is_var_arg", [](const FunctionType &type) {
+      return mlirLLVMFunctionTypeIsVarArg(type);
+    });
+  }
+};
+
+//===--------------------------------------------------------------------===//
 // Metadata Attributes
 //===--------------------------------------------------------------------===//
 
@@ -343,6 +390,7 @@ static void populateDialectLLVMSubmodule(nanobind::module_ &m) {
   StructType::bind(m);
   ArrayType::bind(m);
   PointerType::bind(m);
+  FunctionType::bind(m);
   MDStringAttr::bind(m);
   MDConstantAttr::bind(m);
   MDFuncAttr::bind(m);

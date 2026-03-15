@@ -85,6 +85,14 @@ MlirStringRef mlirLLVMFunctionTypeGetName(void) {
   return wrap(LLVMFunctionType::name);
 }
 
+bool mlirTypeIsALLVMFunctionType(MlirType type) {
+  return isa<LLVM::LLVMFunctionType>(unwrap(type));
+}
+
+MlirTypeID mlirLLVMFunctionTypeGetTypeID(void) {
+  return wrap(LLVM::LLVMFunctionType::getTypeID());
+}
+
 intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
   return llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getNumParams();
 }
@@ -97,6 +105,10 @@ MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
 
 MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
   return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getReturnType());
+}
+
+bool mlirLLVMFunctionTypeIsVarArg(MlirType type) {
+  return llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).isVarArg();
 }
 
 bool mlirTypeIsALLVMStructType(MlirType type) {
