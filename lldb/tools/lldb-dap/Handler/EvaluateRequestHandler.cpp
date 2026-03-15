@@ -189,7 +189,7 @@ void EvaluateRequestHandler::operator()(
     // "frame variable" is more reliable than the expression parser in
     // many cases and it is faster.
     lldb::SBValue value = frame.GetValueForVariablePath(
-        expression.data(), lldb::eDynamicDontRunTarget);
+        expression.data(), lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
 
     // Freeze dry the value in case users expand it later in the debug console
     if (value.GetError().Success() && context == "repl")

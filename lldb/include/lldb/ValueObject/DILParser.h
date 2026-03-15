@@ -87,6 +87,7 @@ private:
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+  ASTNodeUP ParseAdditiveExpression();
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
@@ -95,11 +96,22 @@ private:
 
   std::string ParseIdExpression();
   std::string ParseUnqualifiedId();
-  std::optional<int64_t> ParseIntegerConstant();
+  ASTNodeUP ParseNumericLiteral();
+  ASTNodeUP ParseIntegerLiteral();
+  ASTNodeUP ParseFloatingPointLiteral();
+  ASTNodeUP ParseBooleanLiteral();
+
+  ASTNodeUP ParseCastExpression();
+  std::optional<CompilerType> ParseBuiltinType();
+  std::optional<CompilerType> ParseTypeId();
+  CompilerType ResolveTypeDeclarators(CompilerType type,
+                                      const std::vector<Token> &ptr_operators);
 
   void BailOut(const std::string &error, uint32_t loc, uint16_t err_len);
 
   void Expect(Token::Kind kind);
+
+  void ExpectOneOf(std::vector<Token::Kind> kinds_vec);
 
   void TentativeParsingRollback(uint32_t saved_idx) {
     if (m_error)

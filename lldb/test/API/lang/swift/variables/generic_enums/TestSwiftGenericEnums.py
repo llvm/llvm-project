@@ -44,8 +44,8 @@ class TestSwiftGenericEnumTypes(TestBase):
                         "static type has a value when it shouldn't")
         enumvar = enumvar.GetDynamicValue(lldb.eDynamicCanRunTarget)
         self.assertEqual(
-            enumvar.GetValue(), "some",
-            "dynamic type's value should be some")
+            enumvar.GetValue(), "3",
+            "dynamic type's value should be 3")
         self.assertEqual(
             enumvar.GetSummary(), "3",
             "Some's summary should be 3")
