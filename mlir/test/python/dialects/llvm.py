@@ -250,6 +250,14 @@ def testMetadataAttrs():
     print(md_node)
     assert len(md_node) == 2
 
+    # MDNodeAttr - __getitem__
+    # CHECK: #llvm.md_const<42 : i32>
+    print(md_node[0])
+    # CHECK: #llvm.md_string<"foo.buffer">
+    print(md_node[1])
+    assert str(md_node[0]) == str(md_const)
+    assert str(md_node[1]) == str(md_str)
+
     # MDNodeAttr - nested
     md_nested = llvm.MDNodeAttr.get([md_node, md_empty])
     # CHECK: #llvm.md_node<[#llvm.md_node<[#llvm.md_const<42 : i32>, #llvm.md_string<"foo.buffer">]>, #llvm.md_node<[]>]>
@@ -260,14 +268,6 @@ def testMetadataAttrs():
 # CHECK-LABEL: testNamedMetadata
 @constructAndPrintInModule
 def testNamedMetadata():
-    i32 = IntegerType.get_signless(32)
-
-    def md_const(val):
-        return llvm.MDConstantAttr.get(IntegerAttr.get(i32, val))
-
-    def md_str(s):
-        return llvm.MDStringAttr.get(s)
-
     void = Type.parse("!llvm.void")
     func_ty = llvm.FunctionType.get(void, [])
 
@@ -277,7 +277,11 @@ def testNamedMetadata():
     llvm.NamedMetadataOp(
         metadata_name="foo.version",
         nodes=ArrayAttr.get(
-            [llvm.MDNodeAttr.get([md_const(1), md_const(0), md_const(0)])]
+            [
+                llvm.MDNodeAttr.get(
+                    [llvm.md_const(1), llvm.md_const(0), llvm.md_const(0)]
+                )
+            ]
         ),
     )
     # CHECK: llvm.named_metadata "foo.version" [#llvm.md_node<[#llvm.md_const<1 : i32>, #llvm.md_const<0 : i32>, #llvm.md_const<0 : i32>]>]
@@ -287,7 +291,12 @@ def testNamedMetadata():
         nodes=ArrayAttr.get(
             [
                 llvm.MDNodeAttr.get(
-                    [md_str("Bar"), md_const(1), md_const(2), md_const(3)]
+                    [
+                        llvm.md_str("Bar"),
+                        llvm.md_const(1),
+                        llvm.md_const(2),
+                        llvm.md_const(3),
+                    ]
                 )
             ]
         ),
@@ -296,18 +305,18 @@ def testNamedMetadata():
 
     buf0 = llvm.MDNodeAttr.get(
         [
-            md_const(0),
-            md_str("foo.buffer"),
-            md_str("foo.idx"),
-            md_const(0),
-            md_const(1),
-            md_str("foo.read"),
-            md_str("foo.address_space"),
-            md_const(1),
-            md_str("foo.size"),
-            md_const(4),
-            md_str("foo.align_size"),
-            md_const(4),
+            llvm.md_const(0),
+            llvm.md_str("foo.buffer"),
+            llvm.md_str("foo.idx"),
+            llvm.md_const(0),
+            llvm.md_const(1),
+            llvm.md_str("foo.read"),
+            llvm.md_str("foo.address_space"),
+            llvm.md_const(1),
+            llvm.md_str("foo.size"),
+            llvm.md_const(4),
+            llvm.md_str("foo.align_size"),
+            llvm.md_const(4),
         ]
     )
 

@@ -1713,14 +1713,15 @@ def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
   let summary = "LLVM constant-as-metadata";
   let description = [{
     Wraps an integer constant as an LLVM metadata node, corresponding to
-    `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantInt` in LLVM IR.
+    `llvm::ConstantAsMetadata` wrapping a `llvm::Constant*` in LLVM IR.
+    Currently, only integers/IntegerAttrs supported.
 
     Example:
     ```mlir
     #llvm.md_const<42 : i32>
     ```
   }];
-  let parameters = (ins "IntegerAttr":$value);
+  let parameters = (ins "Attribute":$value);
   let assemblyFormat = "`<` $value `>`";
 }
 
@@ -1740,9 +1741,9 @@ def LLVM_MDFuncAttr : LLVM_Attr<"MDFunc", "md_func"> {
 }
 
 def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
-  let summary = "LLVM metadata tuple node";
+  let summary = "LLVM metadata node";
   let description = [{
-    Represents an LLVM metadata tuple node (`llvm::MDTuple`). The operands
+    Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
     `#llvm.md_const`, `#llvm.md_func`, or nested `#llvm.md_node`.
 

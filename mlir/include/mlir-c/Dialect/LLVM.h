@@ -516,7 +516,7 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void);
 /// Returns the symbol name of an LLVM MDFuncAttr.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr);
 
-/// Creates an LLVM MDNodeAttr (metadata tuple).
+/// Creates an LLVM MDNodeAttr.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDNodeAttrGet(
     MlirContext ctx, intptr_t nOperands, MlirAttribute const *operands);
 

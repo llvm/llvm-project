@@ -26,8 +26,7 @@ using namespace mlir::python::nanobind_adaptors;
 
 namespace mlir {
 namespace python {
-namespace
-MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 namespace llvm {
 //===--------------------------------------------------------------------===//
 // StructType
@@ -286,16 +285,15 @@ struct MDStringAttr : PyConcreteAttribute<MDStringAttr> {
     c.def_static(
         "get",
         [](const std::string &value, DefaultingPyMlirContext context) {
-          return MDStringAttr(context->getRef(),
-                              mlirLLVMMDStringAttrGet(
-                                  context.get()->get(),
-                                  mlirStringRefCreate(value.data(),
-                                    value.size())));
+          return MDStringAttr(
+              context->getRef(),
+              mlirLLVMMDStringAttrGet(
+                  context.get()->get(),
+                  mlirStringRefCreate(value.data(), value.size())));
         },
         "value"_a, nb::kw_only(), "context"_a = nb::none());
     c.def_prop_ro("value", [](const MDStringAttr &self) {
-      MlirStringRef ref =
-          mlirLLVMMDStringAttrGetValue(self);
+      MlirStringRef ref = mlirLLVMMDStringAttrGetValue(self);
       return nb::str(ref.data, ref.length);
     });
   }
@@ -311,10 +309,10 @@ struct MDConstantAttr : PyConcreteAttribute<MDConstantAttr> {
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyAttribute &integerAttr, DefaultingPyMlirContext context) {
+        [](PyAttribute &valueAttr, DefaultingPyMlirContext context) {
           return MDConstantAttr(
               context->getRef(),
-              mlirLLVMMDConstantAttrGet(context.get()->get(), integerAttr));
+              mlirLLVMMDConstantAttrGet(context.get()->get(), valueAttr));
         },
         "value"_a, nb::kw_only(), "context"_a = nb::none());
     c.def_prop_ro("value", [](const MDConstantAttr &self) {
@@ -337,9 +335,9 @@ struct MDFuncAttr : PyConcreteAttribute<MDFuncAttr> {
           MlirAttribute symRef = mlirFlatSymbolRefAttrGet(
               context.get()->get(),
               mlirStringRefCreate(name.data(), name.size()));
-          return MDFuncAttr(context->getRef(),
-                            mlirLLVMMDFuncAttrGet(context.get()->get(),
-                                                  symRef));
+          return MDFuncAttr(
+              context->getRef(),
+              mlirLLVMMDFuncAttrGet(context.get()->get(), symRef));
         },
         "name"_a, nb::kw_only(), "context"_a = nb::none());
     c.def_prop_ro("name", [](const MDFuncAttr &self) {
@@ -364,22 +362,21 @@ struct MDNodeAttr : PyConcreteAttribute<MDNodeAttr> {
            DefaultingPyMlirContext context) {
           std::vector<MlirAttribute> operands_(operands.size());
           std::copy(operands.begin(), operands.end(), operands_.begin());
-          return MDNodeAttr(
-              context->getRef(),
-              mlirLLVMMDNodeAttrGet(context.get()->get(), operands_.size(),
-                                    operands_.data()));
+          return MDNodeAttr(context->getRef(),
+                            mlirLLVMMDNodeAttrGet(context.get()->get(),
+                                                  operands_.size(),
+                                                  operands_.data()));
         },
         "operands"_a, nb::kw_only(), "context"_a = nb::none());
     c.def_prop_ro("num_operands", [](const MDNodeAttr &self) {
       return mlirLLVMMDNodeAttrGetNumOperands(self);
     });
-    c.def("__getitem__",
-          [](const MDNodeAttr &self, intptr_t index) {
-            intptr_t n = mlirLLVMMDNodeAttrGetNumOperands(self);
-            if (index < 0 || index >= n)
-              throw nb::index_error("MDNodeAttr operand index out of range");
-            return mlirLLVMMDNodeAttrGetOperand(self, index);
-          });
+    c.def("__getitem__", [](const MDNodeAttr &self, intptr_t index) {
+      intptr_t n = mlirLLVMMDNodeAttrGetNumOperands(self);
+      if (index < 0 || index >= n)
+        throw nb::index_error("MDNodeAttr operand index out of range");
+      return mlirLLVMMDNodeAttrGetOperand(self, index);
+    });
     c.def("__len__", [](const MDNodeAttr &self) {
       return mlirLLVMMDNodeAttrGetNumOperands(self);
     });

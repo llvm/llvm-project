@@ -100,7 +100,7 @@ intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
 MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
   assert(pos >= 0 && "pos in array must be positive");
   return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type))
-      .getParamType(static_cast<unsigned>(pos)));
+                  .getParamType(static_cast<unsigned>(pos)));
 }
 
 MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
@@ -191,7 +191,7 @@ MlirLogicalResult mlirLLVMStructTypeSetBody(MlirType structType,
   SmallVector<Type> fields;
   return wrap(
       cast<LLVM::LLVMStructType>(unwrap(structType))
-      .setBody(unwrapList(nFieldTypes, fieldTypes, fields), isPacked));
+          .setBody(unwrapList(nFieldTypes, fieldTypes, fields), isPacked));
 }
 
 MlirAttribute mlirLLVMDIExpressionElemAttrGet(MlirContext ctx,
@@ -541,9 +541,8 @@ MlirStringRef mlirLLVMDIAnnotationAttrGetName(void) {
 //===----------------------------------------------------------------------===//
 
 MlirAttribute mlirLLVMMDStringAttrGet(MlirContext ctx, MlirStringRef value) {
-  return wrap(
-      MDStringAttr::get(unwrap(ctx),
-                        StringAttr::get(unwrap(ctx), unwrap(value))));
+  return wrap(MDStringAttr::get(unwrap(ctx),
+                                StringAttr::get(unwrap(ctx), unwrap(value))));
 }
 
 bool mlirLLVMAttrIsAMDStringAttr(MlirAttribute attr) {
@@ -560,8 +559,8 @@ MlirStringRef mlirLLVMMDStringAttrGetValue(MlirAttribute attr) {
 
 MlirAttribute mlirLLVMMDConstantAttrGet(MlirContext ctx,
                                         MlirAttribute integerAttr) {
-  return wrap(MDConstantAttr::get(unwrap(ctx),
-                                  cast<IntegerAttr>(unwrap(integerAttr))));
+  return wrap(
+      MDConstantAttr::get(unwrap(ctx), cast<IntegerAttr>(unwrap(integerAttr))));
 }
 
 bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr) {
@@ -598,9 +597,8 @@ MlirAttribute mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,
   SmallVector<Attribute> attrStorage;
   attrStorage.reserve(nOperands);
   return wrap(MDNodeAttr::get(
-      unwrap(ctx),
-      ArrayAttr::get(unwrap(ctx),
-                     unwrapList(nOperands, operands, attrStorage))));
+      unwrap(ctx), ArrayAttr::get(unwrap(ctx), unwrapList(nOperands, operands,
+                                                          attrStorage))));
 }
 
 bool mlirLLVMAttrIsAMDNodeAttr(MlirAttribute attr) {
@@ -615,7 +613,6 @@ intptr_t mlirLLVMMDNodeAttrGetNumOperands(MlirAttribute attr) {
   return cast<MDNodeAttr>(unwrap(attr)).getOperands().size();
 }
 
-MlirAttribute mlirLLVMMDNodeAttrGetOperand(MlirAttribute attr,
-                                           intptr_t index) {
+MlirAttribute mlirLLVMMDNodeAttrGetOperand(MlirAttribute attr, intptr_t index) {
   return wrap(cast<MDNodeAttr>(unwrap(attr)).getOperands()[index]);
 }
