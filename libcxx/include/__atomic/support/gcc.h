@@ -258,6 +258,50 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
   return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
 }
 
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old < __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old < __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old > __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old > __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+
 #define __cxx_atomic_is_lock_free(__s) __atomic_is_lock_free(__s, 0)
 
 _LIBCPP_END_NAMESPACE_STD

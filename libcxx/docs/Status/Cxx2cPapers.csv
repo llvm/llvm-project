@@ -53,7 +53,7 @@
 "`P3107R5 <https://wg21.link/P3107R5>`__","Permit an efficient implementation of ``std::print``","2024-03 (Tokyo)","","","`#105414 <https://github.com/llvm/llvm-project/issues/105414>`__",""
 "`P3142R0 <https://wg21.link/P3142R0>`__","Printing Blank Lines with ``println``","2024-03 (Tokyo)","|Complete|","19","`#105415 <https://github.com/llvm/llvm-project/issues/105415>`__","Implemented as a DR against C++23. (MSVC STL and libstdc++ will do the same.)"
 "`P2845R8 <https://wg21.link/P2845R8>`__","Formatting of ``std::filesystem::path``","2024-03 (Tokyo)","","","`#105416 <https://github.com/llvm/llvm-project/issues/105416>`__",""
-"`P0493R5 <https://wg21.link/P0493R5>`__","Atomic minimum/maximum","2024-03 (Tokyo)","","","`#105418 <https://github.com/llvm/llvm-project/issues/105418>`__",""
+"`P0493R5 <https://wg21.link/P0493R5>`__","Atomic minimum/maximum","2024-03 (Tokyo)","|Complete|","23","`#105418 <https://github.com/llvm/llvm-project/issues/105418>`__",""
 "`P2542R8 <https://wg21.link/P2542R8>`__","``views::concat``","2024-03 (Tokyo)","","","`#105419 <https://github.com/llvm/llvm-project/issues/105419>`__",""
 "`P2591R5 <https://wg21.link/P2591R5>`__","Concatenation of strings and string views","2024-03 (Tokyo)","|Complete|","19","`#105420 <https://github.com/llvm/llvm-project/issues/105420>`__",""
 "`P2248R8 <https://wg21.link/P2248R8>`__","Enabling list-initialization for algorithms","2024-03 (Tokyo)","","","`#105421 <https://github.com/llvm/llvm-project/issues/105421>`__",""

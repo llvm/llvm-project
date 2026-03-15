@@ -13,7 +13,9 @@
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -257,6 +259,48 @@ _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) _NOEXCEPT {
   return __c11_atomic_fetch_xor(
       std::addressof(__a->__a_value), __pattern, static_cast<__memory_order_underlying_t>(__order));
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old < __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old < __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old > __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
+}
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+  _Tp __old = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __new;
+  do {
+    __new = __old > __val ? __old : __val;
+  } while (!__cxx_atomic_compare_exchange_weak(__a, &__old, __new, __order, memory_order_relaxed));
+  return __old;
 }
 
 _LIBCPP_END_NAMESPACE_STD
