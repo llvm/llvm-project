@@ -191,14 +191,15 @@ private:
 class ScopedMacroState : public FormatTokenSource {
 public:
   ScopedMacroState(UnwrappedLine &Line, FormatTokenSource *&TokenSource,
-                   FormatToken *&ResetToken)
+                   FormatToken *&ResetToken, bool PreserveLevel = false)
       : Line(Line), TokenSource(TokenSource), ResetToken(ResetToken),
         PreviousLineLevel(Line.Level), PreviousTokenSource(TokenSource),
         Token(nullptr), PreviousToken(nullptr) {
     FakeEOF.Tok.startToken();
     FakeEOF.Tok.setKind(tok::eof);
     TokenSource = this;
-    Line.Level = 0;
+    if (!PreserveLevel)
+      Line.Level = 0;
     Line.InPPDirective = true;
     // InMacroBody gets set after the `#define x` part.
   }

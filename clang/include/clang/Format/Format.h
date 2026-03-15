@@ -3247,6 +3247,19 @@ struct FormatStyle {
     ///    #endif
     /// \endcode
     PPDIS_BeforeHash,
+    /// Indents directives before the hash with the current code indentation
+    /// level.
+    /// \code
+    ///    if (foo)
+    ///    {
+    ///      #if FOO
+    ///        #if BAR
+    ///          #include <foo>
+    ///        #endif
+    ///      #endif
+    ///    }
+    /// \endcode
+    PPDIS_BeforeHashWithCode,
     /// Leaves indentation of directives as-is.
     /// \note
     ///  Ignores ``PPIndentWidth``.

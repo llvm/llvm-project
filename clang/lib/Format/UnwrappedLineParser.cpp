@@ -998,7 +998,12 @@ void UnwrappedLineParser::parseChildBlock() {
 
 void UnwrappedLineParser::parsePPDirective() {
   assert(FormatTok->is(tok::hash) && "'#' expected");
-  ScopedMacroState MacroState(*Line, Tokens, FormatTok);
+  // For BeforeHashWithCode, PP directives are indented at the surrounding code
+  // level. Preserving Line->Level allows ScopedMacroState to keep the code
+  // context level instead of resetting it to 0.
+  const bool PreserveLevel =
+      Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
+  ScopedMacroState MacroState(*Line, Tokens, FormatTok, PreserveLevel);
 
   nextToken();
 
@@ -4639,7 +4644,27 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
     // At the top level we only get here when no unexpansion is going on, or
     // when conditional formatting led to unfinished macro reconstructions.
     assert(!Reconstruct || (CurrentLines != &Lines) || !PPStack.empty());
+    // For BeforeHashWithCode, code lines inside PP conditional blocks must be
+    // indented by the PP nesting depth so that code appears more indented than
+    // its enclosing PP directive (mirroring how C++ block content is indented
+    // relative to the opening brace). PP directive lines already have
+    // PPBranchLevel+1 added in parsePPUnknown; code lines need the same
+    // treatment. We temporarily adjust Level here and restore it afterwards so
+    // that the next line still starts from the correct C++ brace level.
+    // For BeforeHashWithCode, code lines inside PP blocks need their level
+    // raised to match the enclosing PP directive's nesting depth. Using
+    // Line->PPLevel (set at first-token push time) instead of the current
+    // PPBranchLevel, which may have been altered by later PP directives that
+    // readToken processed after the code tokens but before addUnwrappedLine.
+    const bool BWHCCodeLine =
+        Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+        !Line->InPPDirective && Line->PPLevel > 0;
+    const unsigned PPAdj = BWHCCodeLine ? Line->PPLevel : 0;
+    if (BWHCCodeLine)
+      Line->Level += PPAdj;
     CurrentLines->push_back(std::move(*Line));
+    if (BWHCCodeLine)
+      Line->Level -= PPAdj;
   }
   Line->Tokens.clear();
   Line->MatchingOpeningBlockLineIndex = UnwrappedLine::kInvalidIndex;
@@ -4926,16 +4951,28 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
       ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
-      assert((LevelDifference >= 0 ||
-              static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
-             "LevelDifference makes Line->Level negative");
-      Line->Level += LevelDifference;
-      // Comments stored before the preprocessor directive need to be output
-      // before the preprocessor directive, at the same level as the
-      // preprocessor directive, as we consider them to apply to the directive.
-      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
-          PPBranchLevel > 0) {
-        Line->Level += PPBranchLevel;
+      // For BeforeHashWithCode, the PP directive is indented at the surrounding
+      // code level. Apply LevelDifference to get the correct code context level
+      // (e.g. leaving a block), but do NOT apply PPBranchLevel since PP
+      // directives should align with the code rather than nesting PP levels.
+      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
+        assert((LevelDifference >= 0 ||
+                static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
+               "LevelDifference makes Line->Level negative");
+        Line->Level += LevelDifference;
+      } else {
+        assert((LevelDifference >= 0 ||
+                static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
+              "LevelDifference makes Line->Level negative");
+        Line->Level += LevelDifference;
+        // Comments stored before the preprocessor directive need to be output
+        // before the preprocessor directive, at the same level as the
+        // preprocessor directive, as we consider them to apply to the
+        // directive.
+       if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+            PPBranchLevel > 0) {
+          Line->Level += PPBranchLevel;
+        }
       }
       assert(Line->Level >= Line->UnbracedBodyLevel);
       Line->Level -= Line->UnbracedBodyLevel;
@@ -5111,6 +5148,15 @@ UnwrappedLineParser::parseMacroCall() {
 }
 
 void UnwrappedLineParser::pushToken(FormatToken *Tok) {
+  // For BeforeHashWithCode style, record the actual PP nesting depth when the
+  // first token of a code (non-PP) line is pushed. This captures the true PP
+  // context at line-start time, before readToken may subsequently process
+  // more PP directives and change PPBranchLevel before addUnwrappedLine.
+  if (Line->Tokens.empty() && !Line->InPPDirective &&
+      Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
+    Line->PPLevel =
+        PPBranchLevel >= 0 ? static_cast<unsigned>(PPBranchLevel + 1) : 0;
+  }
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (AtEndOfPPLine) {
     auto &Tok = *Line->Tokens.back().Tok;
