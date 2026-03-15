@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s
 
-struct NoCopyConstruct {};
+struct NoCopyConstruct {
+  int x;
+};
 
 struct CopyConstruct {
   CopyConstruct() = default;
@@ -10,10 +12,12 @@ struct CopyConstruct {
 
 struct NonDefaultCtor {
   NonDefaultCtor();
+  int x;
 };
 
 struct HasDtor {
   ~HasDtor();
+  int x;
 };
 
 // CHECK: acc.firstprivate.recipe @firstprivatization__ZTSi : !cir.ptr<!s32i> init {
