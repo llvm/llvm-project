@@ -1,7 +1,9 @@
 # REQUIRES: powerpc-registered-target
 
 # RUN: yaml2obj %s -o %t.o
-# RUN: sancov -print-coverage-pcs %t.o
+# RUN: sancov -print-coverage-pcs %t.o | FileCheck %s
+
+# CHECK: 0x1000
 
 --- !XCOFF
 FileHeader:
