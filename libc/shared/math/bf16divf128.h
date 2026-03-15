@@ -1,4 +1,4 @@
-//===-- Implementation of bf16divf128 function ----------------------------===//
+//===-- Shared bf16divf128 function -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/bf16divf128.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#ifndef LLVM_LIBC_SHARED_MATH_BF16DIVF128_H
+#define LLVM_LIBC_SHARED_MATH_BF16DIVF128_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/bf16divf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, bf16divf128, (float128 x, float128 y)) {
-  return math::bf16divf128(x, y);
-}
+using math::bf16divf128;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_BF16DIVF128_H

@@ -470,6 +470,17 @@ add_header_library(
 )
 
 add_header_library(
+  bf16divf128
+  HDRS
+    bf16divf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
   bf16fma
   HDRS
     bf16fma.h
