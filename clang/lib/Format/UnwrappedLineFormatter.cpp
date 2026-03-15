@@ -1614,7 +1614,8 @@ unsigned UnwrappedLineFormatter::format(
         if (ReformatLeadingWhitespace) {
           formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines,
                            TheLine.First->OriginalColumn,
-                           TheLine.First->OriginalColumn, 0);
+                           TheLine.First->OriginalColumn, 
+                           /*PPNestingLevel=*/0);
         } else {
           Whitespaces->addUntouchableToken(*TheLine.First,
                                            TheLine.InPPDirective);

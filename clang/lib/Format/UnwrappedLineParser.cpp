@@ -1243,15 +1243,15 @@ void UnwrappedLineParser::parsePPUnknown() {
     nextToken();
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
-  // For BeforeHashWithCode, PP directives inside unreachable branches must
-  // not be emitted: in multi-pass formatting the surrounding C++ braces may
-  // have been skipped (PP_Unreachable code is not parsed), leaving
-  // Line->Level too low.  The resulting incorrect replacement would conflict
-  // with the correct one produced by the reachable pass, causing an
-  // "overlapping replacement" error and an empty output.  Simply discard the
-  // accumulated tokens so the reachable pass wins.
   if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
       !PPStack.empty() && PPStack.back().Kind == PP_Unreachable) {
+    // PP directives inside unreachable branches must
+    // not be emitted: in multi-pass formatting the surrounding C++ braces may
+    // have been skipped (PP_Unreachable code is not parsed), leaving
+    // Line->Level too low. The resulting incorrect replacement would conflict
+    // with the correct one produced by the reachable pass, causing an
+    // "overlapping replacement" error and an empty output. Simply discard the
+    // accumulated tokens so the reachable pass wins.
     Line->Tokens.clear();
     return;
   }
@@ -3922,23 +3922,15 @@ bool UnwrappedLineParser::parseEnum() {
   }
   // Parse enum body.
   nextToken();
-  if (!Style.AllowShortEnumsOnASingleLine) {
+  bool updateLevel = !Style.AllowShortEnumsOnASingleLine ||
+                     Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
+  if (updateLevel) {
     addUnwrappedLine();
     Line->Level += 1;
-  } else if (Style.IndentPPDirectives ==
-             FormatStyle::PPDIS_BeforeHashWithCode) {
-    // For BeforeHashWithCode, flush the enum declaration as its own
-    // UnwrappedLine (like AllowShortEnumsOnASingleLine=false does) so that
-    // body tokens start in a fresh line.  Each PP-separated segment of the
-    // body can then be emitted at its correct indentation via BWHCCodeLine.
-    addUnwrappedLine();
-    ++Line->Level;
   }
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
-  if (!Style.AllowShortEnumsOnASingleLine)
+  if (updateLevel)
     Line->Level -= 1;
-  else if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode)
-    --Line->Level;
   if (HasError) {
     if (FormatTok->is(tok::semi))
       nextToken();
@@ -4887,9 +4879,9 @@ void UnwrappedLineParser::nextToken(int LevelDifference) {
   if (Style.isVerilog()) {
     // Blocks in Verilog can have `begin` and `end` instead of braces.  For
     // keywords like `begin`, we can't treat them the same as left braces
-    // because some contexts require one of them.  For example structs use
+    // because some contexts require one of them. For example structs use
     // braces and if blocks use keywords, and a left brace can occur in an if
-    // statement, but it is not a block.  For keywords like `end`, we simply
+    // statement, but it is not a block. For keywords like `end`, we simply
     // treat them the same as right braces.
     if (Keywords.isVerilogEnd(*FormatTok))
       FormatTok->Tok.setKind(tok::r_brace);
@@ -5011,11 +5003,11 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // code level. Apply LevelDifference to get the correct code context level
       // (e.g. leaving a block), but do NOT apply PPBranchLevel since PP
       // directives should align with the code rather than nesting PP levels.
-      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
-        assert((LevelDifference >= 0 ||
+      assert((LevelDifference >= 0 ||
                 static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
                "LevelDifference makes Line->Level negative");
-        Line->Level += LevelDifference;
+      Line->Level += LevelDifference;
+      if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
         // When this PP directive is being deferred to PreprocessorDirectives
         // (SwitchToPreprocessorLines=true), it may be encountered at a deeper
         // C++ brace nesting than the opening PP directive of the same
@@ -5034,10 +5026,6 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           Line->Level = PreprocessorDirectives.front().Level;
         }
       } else {
-        assert((LevelDifference >= 0 ||
-                static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
-               "LevelDifference makes Line->Level negative");
-        Line->Level += LevelDifference;
         // Comments stored before the preprocessor directive need to be output
         // before the preprocessor directive, at the same level as the
         // preprocessor directive, as we consider them to apply to the
