@@ -15,11 +15,7 @@ set(clangSupport_sources
 
 add_clang_library(clangSupport ${clangSupport_sources})
 
-if (TARGET obj.clangSupport)
-  add_library(clangSupport_tablegen ALIAS obj.clangSupport)
-elseif (NOT LLVM_LINK_LLVM_DYLIB)
-  add_library(clangSupport_tablegen ALIAS clangSupport)
-else()
+if (LLVM_LINK_LLVM_DYLIB)
   # Build a version of the support library that does not link against
   # libLLVM-*.so, to be used by clang-tblgen. This is so clang-tblgen doesn't
   # link against libLLVMSupport twice (once statically and once via
@@ -27,6 +23,10 @@ else()
   add_llvm_library(clangSupport_tablegen
     BUILDTREE_ONLY STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
     ${clangSupport_sources})
+elseif (TARGET obj.clangSupport)
+  add_library(clangSupport_tablegen ALIAS obj.clangSupport)
+else()
+  add_library(clangSupport_tablegen ALIAS clangSupport)
 endif()
 
 set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS_OLD})
