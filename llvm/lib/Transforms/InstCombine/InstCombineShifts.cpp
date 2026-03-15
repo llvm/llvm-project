@@ -580,8 +580,9 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt,
 }
 
 /// See if we can compute the specified value, but shifted logically to the left
-/// or right by some number of bits. This should return true if the expression
-/// can be computed for the same cost as the current expression tree. This is
+/// or right by some number of bits. This should return true if the
+/// transformation maintains correctness. For right shifts, this requires the
+/// transformation is lossless (i.e. no non-zero bits are shifted out). This is
 /// used to eliminate extraneous shifting from things like:
 ///      %C = shl i128 %A, 64
 ///      %D = shl i128 %B, 96
