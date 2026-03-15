@@ -63,12 +63,6 @@ void Session::waitForShutdown() {
   F.get();
 }
 
-void Session::addService(std::unique_ptr<Service> Srv) {
-  std::scoped_lock<std::mutex> Lock(M);
-  assert(!SI && "addService called after shutdown");
-  Services.push_back(std::move(Srv));
-}
-
 void Session::setController(std::shared_ptr<ControllerAccess> CA) {
   assert(CA && "Cannot attach null controller");
   std::scoped_lock<std::mutex> Lock(M);

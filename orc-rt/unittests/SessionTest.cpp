@@ -55,6 +55,21 @@ private:
   move_only_function<Error(Op)> GenResult;
 };
 
+class ConfigurableService : public Service {
+public:
+  ConfigurableService(int ConstructorOption) {}
+
+  void onDetach(OnCompleteFn OnComplete) override {
+    OnComplete(Error::success());
+  }
+
+  void onShutdown(OnCompleteFn OnComplete) override {
+    OnComplete(Error::success());
+  }
+
+  void doMoreConfig(int) noexcept {}
+};
+
 class NoDispatcher : public TaskDispatcher {
 public:
   void dispatch(std::unique_ptr<Task> T) override {
@@ -360,6 +375,18 @@ TEST(SessionTest, ExpectedShutdownSequence) {
   S.waitForShutdown();
 
   EXPECT_TRUE(SessionShutdownComplete);
+}
+
+TEST(SessionTest, AddServiceAndUseRef) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  auto &CS = S.addService(std::make_unique<ConfigurableService>(42));
+  CS.doMoreConfig(1);
+}
+
+TEST(SessionTest, CreateServiceAndUseRef) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  auto &CS = S.createService<ConfigurableService>(42);
+  CS.doMoreConfig(1);
 }
 
 TEST(ControllerAccessTest, Basics) {

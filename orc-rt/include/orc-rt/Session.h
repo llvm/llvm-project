@@ -143,7 +143,22 @@ public:
   void waitForShutdown();
 
   /// Add a Service to the session.
-  void addService(std::unique_ptr<Service> Srv);
+  template <typename ServiceT>
+  ServiceT &addService(std::unique_ptr<ServiceT> Srv) {
+    assert(Srv && "addService called with null value");
+    ServiceT &Ref = *Srv;
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(!SI && "addService called after shutdown");
+    Services.push_back(std::move(Srv));
+    return Ref;
+  }
+
+  /// Construct an instance of ServiceT from the given arguments and add it to
+  /// the Session.
+  template <typename ServiceT, typename... ArgTs>
+  ServiceT &createService(ArgTs &&...Args) {
+    return addService(std::make_unique<ServiceT>(std::forward<ArgTs>(Args)...));
+  }
 
   /// Set the ControllerAccess object.
   void setController(std::shared_ptr<ControllerAccess> CA);
