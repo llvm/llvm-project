@@ -1,4 +1,4 @@
-//===- ResourceManager.cpp ------------------------------------------------===//
+//===- Service.cpp --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/ResourceManager.h header.
+// Contains the implementation of APIs in the orc-rt/Service.h header.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt/ResourceManager.h"
+#include "orc-rt/Service.h"
 
 namespace orc_rt {
 
-ResourceManager::~ResourceManager() = default;
+Service::~Service() = default;
 
 } // namespace orc_rt
