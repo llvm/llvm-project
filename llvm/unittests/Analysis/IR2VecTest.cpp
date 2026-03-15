@@ -363,8 +363,8 @@ TEST_F(IR2VecTestFixture, GetInstVec_Symbolic) {
   EXPECT_EQ(AddEmb.size(), 2u);
   EXPECT_EQ(RetEmb.size(), 2u);
 
-  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 26.1)));
-  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 15.8)));
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.9)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 15.7)));
 }
 
 TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
@@ -376,8 +376,8 @@ TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
   EXPECT_EQ(AddEmb.size(), 2u);
   EXPECT_EQ(RetEmb.size(), 2u);
 
-  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 26.1)));
-  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 33.3)));
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.9)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 33.1)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
@@ -387,9 +387,9 @@ TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
-  // BB vector should be sum of add and ret: {26.1, 26.1} + {15.8, 15.8} =
-  // {41.9, 41.9}
-  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 41.9)));
+  // BB vector should be sum of add and ret: {25.9, 25.9} + {15.7, 15.7} =
+  // {41.6, 41.6}
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 41.6)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector_FlowAware) {
@@ -399,9 +399,9 @@ TEST_F(IR2VecTestFixture, GetBBVector_FlowAware) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
-  // BB vector should be sum of add and ret: {26.1, 26.1} + {33.3, 33.3} =
-  // {59.4, 59.4}
-  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 59.4)));
+  // BB vector should be sum of add and ret: {25.9, 25.9} + {33.1, 33.1} =
+  // {59.0, 59.0}
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 59.0)));
 }
 
 TEST_F(IR2VecTestFixture, GetFunctionVector_Symbolic) {
@@ -412,8 +412,8 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_Symbolic) {
 
   EXPECT_EQ(FuncVec.size(), 2u);
 
-  // Function vector should match BB vector (only one BB): {41.9, 41.9}
-  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 41.9)));
+  // Function vector should match BB vector (only one BB): {41.6, 41.6}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 41.6)));
 }
 
 TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
@@ -423,8 +423,8 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
   const auto &FuncVec = Emb->getFunctionVector();
 
   EXPECT_EQ(FuncVec.size(), 2u);
-  // Function vector should match BB vector (only one BB): {59.4, 59.4}
-  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 59.4)));
+  // Function vector should match BB vector (only one BB): {59.0, 59.0}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 59.0)));
 }
 
 TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
@@ -480,7 +480,6 @@ static constexpr unsigned MaxPredicateKinds = Vocabulary::MaxPredicateKinds;
 // names and their canonical string keys.
 #define IR2VEC_HANDLE_TYPE_BIMAP(X)                                            \
   X(VoidTyID, VoidTy, "VoidTy")                                                \
-  X(ByteTyID, ByteTy, "ByteTy")                                                \
   X(IntegerTyID, IntegerTy, "IntegerTy")                                       \
   X(FloatTyID, FloatTy, "FloatTy")                                             \
   X(PointerTyID, PointerTy, "PointerTy")                                       \
