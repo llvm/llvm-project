@@ -5,3 +5,5 @@ rocwmma and CK needs changes
 breaks build of hipblaslt
 [AMDGPU][AsmParser] Forbid Fake16 instructions in Real16 mode (#176934)
 ---
+breaks comgr builds
+[comgr] Auto-discover and embed libc++ headers for HIPRTC (#1696)
