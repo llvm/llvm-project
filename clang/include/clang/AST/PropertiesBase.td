@@ -81,6 +81,8 @@ def AutoTypeKeyword : EnumPropertyType;
 def Bool : PropertyType<"bool">;
 def BuiltinTypeKind : EnumPropertyType<"BuiltinType::Kind">;
 def BTFTypeTagAttr : PropertyType<"const BTFTypeTagAttr *">;
+def OverflowBehaviorKind
+    : EnumPropertyType<"OverflowBehaviorType::OverflowBehaviorKind">;
 def CallingConv : EnumPropertyType;
 def DeclarationName : PropertyType;
 def DeclarationNameKind : EnumPropertyType<"DeclarationName::NameKind">;
@@ -91,6 +93,7 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"FunctionDecl", DeclRef>;
   def NamedDeclRef :
     SubclassPropertyType<"NamedDecl", DeclRef>;
+  def NamespaceBaseDeclRef : SubclassPropertyType<"NamespaceBaseDecl", DeclRef>;
   def NamespaceDeclRef :
     SubclassPropertyType<"NamespaceDecl", DeclRef>;
   def NamespaceAliasDeclRef :
@@ -126,9 +129,8 @@ def LValuePathSerializationHelper :
     PropertyType<"APValue::LValuePathSerializationHelper"> {
   let BufferElementTypes = [ LValuePathEntry ];
 }
-def NestedNameSpecifier : PropertyType<"NestedNameSpecifier *">;
-def NestedNameSpecifierKind :
-  EnumPropertyType<"NestedNameSpecifier::SpecifierKind">;
+def NestedNameSpecifier : PropertyType<"NestedNameSpecifier">;
+def NestedNameSpecifierKind : EnumPropertyType<"NestedNameSpecifier::Kind">;
 def OverloadedOperatorKind : EnumPropertyType;
 def Qualifiers : PropertyType;
 def QualType : DefaultValuePropertyType;
@@ -348,6 +350,29 @@ let Class = PropertyTypeCase<APValue, "Vector"> in {
     (void)result.setVectorUninit(length);
     for (unsigned i = 0; i < length; i++)
       result.getVectorElt(i) = elements[i];
+    return result;
+  }]>;
+}
+let Class = PropertyTypeCase<APValue, "Matrix"> in {
+  def : ReadHelper<[{
+    SmallVector<APValue, 16> buffer;
+    unsigned numElts = node.getMatrixNumElements();
+    for (unsigned i = 0; i < numElts; ++i)
+      buffer.push_back(node.getMatrixElt(i));
+  }]>;
+  def : Property<"numRows", UInt32> {
+    let Read = [{ node.getMatrixNumRows() }];
+  }
+  def : Property<"numCols", UInt32> {
+    let Read = [{ node.getMatrixNumColumns() }];
+  }
+  def : Property<"elements", Array<APValue>> { let Read = [{ buffer }]; }
+  def : Creator<[{
+    APValue result;
+    result.MakeMatrix();
+    (void)result.setMatrixUninit(numRows, numCols);
+    for (unsigned i = 0; i < elements.size(); i++)
+      result.getMatrixElt(i) = elements[i];
     return result;
   }]>;
 }

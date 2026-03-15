@@ -89,6 +89,15 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 }
 
 static void defineXLCompatMacros(MacroBuilder &Builder) {
+  Builder.defineMacro("__builtin_bcdcopysign", "__builtin_ppc_bcdcopysign");
+  Builder.defineMacro("__builtin_bcdsetsign", "__builtin_ppc_bcdsetsign");
+  Builder.defineMacro("__builtin_bcdshift", "__builtin_ppc_bcdshift");
+  Builder.defineMacro("__builtin_bcdshiftround", "__builtin_ppc_bcdshiftround");
+  Builder.defineMacro("__builtin_bcdtruncate", "__builtin_ppc_bcdtruncate");
+  Builder.defineMacro("__builtin_bcdunsignedtruncate",
+                      "__builtin_ppc_bcdunsignedtruncate");
+  Builder.defineMacro("__builtin_bcdunsignedshift",
+                      "__builtin_ppc_bcdunsignedshift");
   Builder.defineMacro("__builtin_national2packed",
                       "__builtin_ppc_national2packed");
   Builder.defineMacro("__builtin_packed2national",
@@ -758,10 +767,11 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::PPC::fillValidCPUList(Values);
 }
 
-void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                           const TargetInfo *Aux) {
   if (HasAltivec)
     Opts.AltiVec = 1;
-  TargetInfo::adjust(Diags, Opts);
+  TargetInfo::adjust(Diags, Opts, Aux);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()

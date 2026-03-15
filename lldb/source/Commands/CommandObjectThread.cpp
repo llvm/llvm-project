@@ -1570,7 +1570,7 @@ protected:
     uint32_t frame_idx = frame_sp->GetFrameIndex();
 
     if (frame_sp->IsInlined()) {
-      result.AppendError("Don't know how to return from inlined frames.");
+      result.AppendError("don't know how to return from inlined frames");
       return;
     }
 
@@ -2031,15 +2031,10 @@ public:
             "process to different formats.",
             "thread trace export <export-plugin> [<subcommand objects>]") {
 
-    unsigned i = 0;
-    for (llvm::StringRef plugin_name =
-             PluginManager::GetTraceExporterPluginNameAtIndex(i);
-         !plugin_name.empty();
-         plugin_name = PluginManager::GetTraceExporterPluginNameAtIndex(i++)) {
-      if (ThreadTraceExportCommandCreator command_creator =
-              PluginManager::GetThreadTraceExportCommandCreatorAtIndex(i)) {
-        LoadSubCommand(plugin_name, command_creator(interpreter));
-      }
+    for (auto &cbs : PluginManager::GetTraceExporterCallbacks()) {
+      if (cbs.create_thread_trace_export_command)
+        LoadSubCommand(cbs.name,
+                       cbs.create_thread_trace_export_command(interpreter));
     }
   }
 };

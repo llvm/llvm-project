@@ -585,6 +585,7 @@ public:
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI = nullptr);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
 
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI,
@@ -744,6 +745,11 @@ public:
                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
                             const Instruction *CtxI) = 0;
 
+  /// Returns an AliasResult indicating whether a specific memory location
+  /// aliases errno.
+  virtual AliasResult aliasErrno(const MemoryLocation &Loc,
+                                 const Module *M) = 0;
+
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Simple mod/ref information
@@ -805,6 +811,10 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
+    return Result.aliasErrno(Loc, M);
+  }
+
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals) override {
     return Result.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -851,12 +861,16 @@ protected:
 
   // Provide all the copy and move constructors so that derived types aren't
   // constrained.
-  AAResultBase(const AAResultBase &Arg) {}
+  AAResultBase(const AAResultBase &Arg) = default;
   AAResultBase(AAResultBase &&Arg) {}
 
 public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *I) {
+    return AliasResult::MayAlias;
+  }
+
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
     return AliasResult::MayAlias;
   }
 

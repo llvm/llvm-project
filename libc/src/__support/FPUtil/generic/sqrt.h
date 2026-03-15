@@ -69,10 +69,10 @@ LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE static constexpr cpp::enable_if_t<
+    cpp::is_floating_point_v<OutType> && cpp::is_floating_point_v<InType> &&
+        sizeof(OutType) <= sizeof(InType),
+    OutType>
 sqrt(InType x) {
   if constexpr (internal::SpecialLongDouble<OutType>::VALUE &&
                 internal::SpecialLongDouble<InType>::VALUE) {

@@ -31,23 +31,22 @@ llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
   HANDLE hThread = (HANDLE)::_beginthreadex(NULL, StackSizeInBytes.value_or(0),
                                             ThreadFunc, Arg, 0, NULL);
 
-  if (!hThread) {
+  if (!hThread)
     ReportLastErrorFatal("_beginthreadex failed");
-  }
 
   return hThread;
 }
 
 void llvm_thread_join_impl(HANDLE hThread) {
-  if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
+  if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED)
     ReportLastErrorFatal("WaitForSingleObject failed");
-  }
+  if (::CloseHandle(hThread) == FALSE)
+    ReportLastErrorFatal("CloseHandle failed");
 }
 
 void llvm_thread_detach_impl(HANDLE hThread) {
-  if (::CloseHandle(hThread) == FALSE) {
+  if (::CloseHandle(hThread) == FALSE)
     ReportLastErrorFatal("CloseHandle failed");
-  }
 }
 
 DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
@@ -106,7 +105,41 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.clear();
 }
 
-SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+llvm::SetThreadPriorityResult
+llvm::set_thread_priority(ThreadPriority Priority) {
+#ifdef THREAD_POWER_THROTTLING_CURRENT_VERSION
+  HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+  if (kernelM) {
+    // SetThreadInformation is only available on Windows 8 and later. Since we
+    // still support compilation on Windows 7, we load the function dynamically.
+    typedef BOOL(WINAPI * SetThreadInformation_t)(
+        HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass,
+        _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
+        ULONG ThreadInformationSize);
+    static const auto pfnSetThreadInformation =
+        (SetThreadInformation_t)::GetProcAddress(kernelM,
+                                                 "SetThreadInformation");
+    if (pfnSetThreadInformation) {
+      auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
+        THREAD_POWER_THROTTLING_STATE state{};
+        state.Version = THREAD_POWER_THROTTLING_CURRENT_VERSION;
+        state.ControlMask = ControlMaskAndStateMask;
+        state.StateMask = ControlMaskAndStateMask;
+        return pfnSetThreadInformation(
+            ::GetCurrentThread(), ThreadPowerThrottling, &state, sizeof(state));
+      };
+
+      // Use EcoQoS for ThreadPriority::Background available (running on most
+      // efficent cores at the most efficient cpu frequency):
+      // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadinformation
+      // https://learn.microsoft.com/en-us/windows/win32/procthread/quality-of-service
+      setThreadInformation(Priority == ThreadPriority::Background
+                               ? THREAD_POWER_THROTTLING_EXECUTION_SPEED
+                               : 0);
+    }
+  }
+#endif
+
   // https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
   // Begin background processing mode. The system lowers the resource scheduling
   // priorities of the thread so that it can perform background work without
@@ -140,9 +173,9 @@ template <typename F>
 static bool IterateProcInfo(LOGICAL_PROCESSOR_RELATIONSHIP Relationship, F Fn) {
   DWORD Len = 0;
   BOOL R = ::GetLogicalProcessorInformationEx(Relationship, NULL, &Len);
-  if (R || GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+  if (R || GetLastError() != ERROR_INSUFFICIENT_BUFFER)
     return false;
-  }
+
   auto *Info = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)calloc(1, Len);
   R = ::GetLogicalProcessorInformationEx(Relationship, Info, &Len);
   if (R) {
@@ -176,9 +209,9 @@ static std::optional<std::vector<USHORT>> getActiveGroups() {
   return Groups;
 }
 
-static ArrayRef<ProcessorGroup> getProcessorGroups() {
+static llvm::ArrayRef<ProcessorGroup> getProcessorGroups() {
   auto computeGroups = []() {
-    SmallVector<ProcessorGroup, 4> Groups;
+    llvm::SmallVector<ProcessorGroup, 4> Groups;
 
     auto HandleGroup = [&](SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *ProcInfo) {
       GROUP_RELATIONSHIP &El = ProcInfo->Group;
@@ -242,7 +275,7 @@ static ArrayRef<ProcessorGroup> getProcessorGroups() {
     return std::vector<ProcessorGroup>(Groups.begin(), Groups.end());
   };
   static auto Groups = computeGroups();
-  return ArrayRef<ProcessorGroup>(Groups);
+  return llvm::ArrayRef<ProcessorGroup>(Groups);
 }
 
 template <typename R, typename UnaryPredicate>

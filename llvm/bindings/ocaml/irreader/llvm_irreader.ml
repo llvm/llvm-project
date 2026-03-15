@@ -11,5 +11,6 @@ exception Error of string
 
 let _ = Callback.register_exception "Llvm_irreader.Error" (Error "")
 
-external parse_ir : Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule
-                  = "llvm_parse_ir"
+external parse_ir_bitcode_or_assembly
+  : Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule
+  = "llvm_parse_ir"

@@ -16,15 +16,15 @@
 define dso_local spir_kernel void @test(i8 %x8, i16 %x16, i32 %x32, i64 %x64, <2 x i32> %x2i32) local_unnamed_addr {
 entry:
   %0 = tail call i8 @llvm.ctpop.i8(i8 %x8)
-  store i8 %0, i8 addrspace(1)* @g1, align 4
+  store i8 %0, ptr addrspace(1) @g1, align 4
   %1 = tail call i16 @llvm.ctpop.i16(i16 %x16)
-  store i16 %1, i16 addrspace(1)* @g2, align 4
+  store i16 %1, ptr addrspace(1) @g2, align 4
   %2 = tail call i32 @llvm.ctpop.i32(i32 %x32)
-  store i32 %2, i32 addrspace(1)* @g3, align 4
+  store i32 %2, ptr addrspace(1) @g3, align 4
   %3 = tail call i64 @llvm.ctpop.i64(i64 %x64)
-  store i64 %3, i64 addrspace(1)* @g4, align 8
+  store i64 %3, ptr addrspace(1) @g4, align 8
   %4 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %x2i32)
-  store <2 x i32> %4, <2 x i32> addrspace(1)* @g5, align 4
+  store <2 x i32> %4, ptr addrspace(1) @g5, align 4
 
   ret void
 }

@@ -72,9 +72,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/Iterators.h"
-#include "mlir/IR/Matchers.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <memory>
 #include <set>
 #include <stack>
 
@@ -180,10 +178,8 @@ std::optional<DenseElementsAttr>
 TosaReduceTransposes::transposeDenseAttribute(DenseElementsAttr input,
                                               ArrayRef<int32_t> perms) {
   RankedTensorType oldType = llvm::cast<RankedTensorType>(input.getType());
-  RankedTensorType newType =
-      RankedTensorType::get(applyTOSAPermutation(oldType.getShape(), perms),
-                            oldType.getElementType());
-  size_t rank = oldType.getRank();
+  ArrayRef<int64_t> oldShape = oldType.getShape();
+  int64_t rank = oldType.getRank();
 
   // Asserted by TransposeOp verifier and TOSA disallowing tensor with dimension
   // 0. If not in place, something is very wrong.
@@ -192,65 +188,83 @@ TosaReduceTransposes::transposeDenseAttribute(DenseElementsAttr input,
     return std::nullopt;
   }
 
-  if (input.isSplat())
+  auto newShape = applyTOSAPermutation(oldShape, perms);
+  RankedTensorType newType =
+      RankedTensorType::get(newShape, oldType.getElementType());
+
+  if (input.isSplat()) {
     return input.reshape(newType);
+  }
+
+  auto rawData = input.getRawData();
+  if (!rawData.data()) {
+    return std::nullopt;
+  }
 
   // The algorithm is approximately as follows:
-  // input: perms, input flat array, input tensor type
-  // (1/2) determine the strides of input/output if
-  // they were strided in row-major order. (3) adjust the strides for the
-  // input to be in the same order of indices as the output is written.
-  // (4) process dimension by dimension. example: perms 2, 0, 1; input
-  // 2x3x4; output 4x2x3 for i ... 4, j ... 2, k ... 3: output[i][j][k] =
-  // input[j][k][i] output[6i + 3j + k] = input[12j + 4k + i] and we adjust
-  // input strides to be as input[i + 12j + 4k] so we may process
-  // layer-by-layer.
+  // 1. Determine the strides of both input and output tensors in row-major
+  // order
+  // 2. Iterate through the output tensor linearly.
+  // 3. For each output position, decompose the linear index into
+  //    multi-dimensional coordinates using output strides.
+  // 4. Use the permutation to map output coordinates to input coordinates and
+  //    calculate the source linear index.
 
-  // Step 1/2: Strides for input. We ignore output since row-major and can just
-  // push_back.
+  // Example: perms [2, 0, 1]; input 2x3x4; output 4x2x3
+  // for output linear index 11: decompose to output[1][1][2]
+  // using output strides [6,3,1]. Map to input coordinates using
+  // perms: dim 0→2, dim 1→0, dim 2→1, giving source position
+  // calculated as 1*inputStrides[2] + 1*inputStrides[0] + 2*inputStrides[1]
+  // = 1*1 + 1*12 + 2*4 = 21
 
-  SmallVector<int64_t> originalInputStrides(rank);
-  originalInputStrides[rank - 1] = 1;
-  // index with int64_t to avoid overflow
-  for (int64_t i = rank - 2; i >= 0; i--)
-    originalInputStrides[i] =
-        originalInputStrides[i + 1] * oldType.getDimSize(i + 1);
+  size_t elementSize = oldType.getElementTypeBitWidth() / 8;
+  int64_t numElements = oldType.getNumElements();
 
-  // Step 3: Transpose strides of input to be same indexing (i, j, k, ...) as
-  // output which is done in row-major order.
+  SmallVector<char> outputBuffer(numElements * elementSize);
+  const char *inputPtr = rawData.data();
+  char *outputPtr = outputBuffer.data();
 
-  SmallVector<int64_t> newInputStrides;
-  newInputStrides.reserve(rank);
-  for (int32_t v : perms)
-    newInputStrides.push_back(originalInputStrides[v]);
+  auto calculateStrides = [](ArrayRef<int64_t> shape) -> SmallVector<int64_t> {
+    int64_t rank = shape.size();
+    SmallVector<int64_t> strides(rank);
+    strides[rank - 1] = 1;
+    for (int64_t i = rank - 2; i >= 0; --i) {
+      strides[i] = strides[i + 1] * shape[i + 1];
+    }
+    return strides;
+  };
 
-  // Step 4: Write out the transposed "flat array" dimension by dimension.
+  // Calculate strides for both input and output tensors
+  SmallVector<int64_t> inputStrides = calculateStrides(oldShape);
+  SmallVector<int64_t> outputStrides = calculateStrides(newShape);
 
-  auto inputArray = input.getValues<Attribute>();
-  SmallVector<std::pair<int64_t, int64_t>> boundsAndStrides;
-  for (size_t i = 0; i < rank; i++)
-    boundsAndStrides.push_back({newType.getDimSize(i), newInputStrides[i]});
+  auto mapCoordinates = [&](int64_t destLinearIndex) -> int64_t {
+    int64_t tempDestIndex = destLinearIndex;
+    int64_t sourceLinearIndex = 0;
 
-  SmallVector<Attribute> resultArray;
-  resultArray.reserve(inputArray.size());
+    // Decompose linear destination index into multi-dimensional
+    // coordinates dividing by output strides.
+    // Simultaneously map these coordinates through the permutation
+    // to calculate the corresponding source linear index.
+    for (auto j : llvm::seq<int64_t>(rank)) {
+      int64_t destCoord = tempDestIndex / outputStrides[j];
+      tempDestIndex %= outputStrides[j];
+      sourceLinearIndex += destCoord * inputStrides[perms[j]];
+    }
 
-  std::function<void(int64_t,
-                     SmallVector<std::pair<int64_t, int64_t>>::const_iterator)>
-      processTransposeDim = [&](auto accumulatedIndex, auto it) {
-        if (it == boundsAndStrides.end()) {
-          resultArray.push_back(inputArray[accumulatedIndex]);
-          return;
-        }
+    return sourceLinearIndex;
+  };
 
-        for (int64_t i = 0; i < it->first; i++) {
-          int64_t j = accumulatedIndex + i * it->second;
-          processTransposeDim(j, it + 1);
-        }
-      };
+  for (auto destLinearIndex : llvm::seq<int64_t>(numElements)) {
+    int64_t sourceLinearIndex = mapCoordinates(destLinearIndex);
 
-  processTransposeDim(0, boundsAndStrides.begin());
+    // Copy the element from source to destination using type-agnostic byte
+    // copying.
+    std::memcpy(outputPtr + destLinearIndex * elementSize,
+                inputPtr + sourceLinearIndex * elementSize, elementSize);
+  }
 
-  return DenseElementsAttr::get(newType, resultArray);
+  return DenseElementsAttr::getFromRawBuffer(newType, outputBuffer);
 }
 
 // The SetVector should only contain ConstOp, ReshapeOp, TransposeOp
@@ -405,8 +419,8 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     return std::nullopt;
   }
   ImplicitLocOpBuilder builder(reshapeOp.getLoc(), rewriter);
-  auto foldedReshape = rewriter.create<ReshapeOp>(
-      reshapeOp.getLoc(),
+  auto foldedReshape = ReshapeOp::create(
+      rewriter, reshapeOp.getLoc(),
       RankedTensorType::get(applyTOSAPermutation(shape, hoistedPerms),
                             reshapeOutputType.getElementType()),
       reshapeOp.getInput1(),
@@ -425,8 +439,8 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   if (!maybeNewDenseAttr.has_value())
     return std::nullopt;
   auto newDenseAttr = maybeNewDenseAttr.value();
-  auto newConstOp = rewriter.create<ConstOp>(
-      constOp.getLoc(), newDenseAttr.getType(), newDenseAttr);
+  auto newConstOp = ConstOp::create(rewriter, constOp.getLoc(),
+                                    newDenseAttr.getType(), newDenseAttr);
   return newConstOp->getResult(0);
 }
 
@@ -602,8 +616,7 @@ void TosaReduceTransposes::runOnOperation() {
         !llvm::isa<RankedTensorType>(output.getType()))
       return;
 
-    llvm::for_each(transposeOp.getPerms(),
-                   [&perms](const auto i) { perms.emplace_back(i); });
+    llvm::append_range(perms, transposeOp.getPerms());
 
     // We let --canonicalize deal with identity transpose.
     if (llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))
@@ -645,10 +658,10 @@ void TosaReduceTransposes::runOnOperation() {
     // (like the TransposeOp we insert for ReshapeOp),
     // but in this case, that is specialized enough and overlaps
     // with another direct-use TransposeOp case we need to cover anyway.
-    transposeInfo.push_back({transposeOp, dependentOps});
+    transposeInfo.emplace_back(transposeOp, dependentOps);
 
     // This is for the final replacement across all transposes.
-    totalTransposeOrder.push({transposeOp, perms});
+    totalTransposeOrder.emplace(transposeOp, perms);
   });
 
   // We want to do a full fan-in analysis on a perms-level,

@@ -289,11 +289,11 @@ protected:
 static const char *g_synth_addreader_instructions =
     "Enter your Python command(s). Type 'DONE' to end.\n"
     "You must define a Python class with these methods:\n"
-    "    def __init__(self, valobj, internal_dict):\n"
-    "    def num_children(self):\n"
-    "    def get_child_at_index(self, index):\n"
-    "    def get_child_index(self, name):\n"
-    "    def update(self):\n"
+    "    def __init__(self, valobj: lldb.SBValue, internal_dict):\n"
+    "    def num_children(self) -> int:\n"
+    "    def get_child_at_index(self, index: int) -> lldb.SBValue | None:\n"
+    "    def get_child_index(self, name: str) -> int:\n"
+    "    def update(self) -> bool:\n"
     "        '''Optional'''\n"
     "class synthProvider:\n";
 
@@ -2181,10 +2181,12 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
 
   ScriptInterpreter *interpreter = GetDebugger().GetScriptInterpreter();
 
-  if (interpreter &&
-      !interpreter->CheckObjectExists(impl->GetPythonClassName()))
-    result.AppendWarning("The provided class does not exist - please define it "
-                         "before attempting to use this synthetic provider");
+  const char *python_class_name = impl->GetPythonClassName();
+  if (interpreter && !interpreter->CheckObjectExists(python_class_name))
+    result.AppendWarningWithFormatv(
+        "The provided class '{0}' does not exist - please define it "
+        "before attempting to use this synthetic provider",
+        llvm::StringRef(python_class_name));
 
   // now I have a valid provider, let's add it to every type
 
@@ -2534,7 +2536,7 @@ protected:
     if (lang_type != lldb::eLanguageTypeUnknown)
       return lang_type;
 
-    Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+    const Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
     if (s)
       lang_type = s->GetMangled().GuessLanguage();
 
@@ -2610,7 +2612,7 @@ public:
     Language::ForEach([&](Language *lang) {
       if (const char *help = lang->GetLanguageSpecificTypeLookupHelp())
         stream.Printf("%s\n", help);
-      return true;
+      return IterationAction::Continue;
     });
 
     m_cmd_help_long = std::string(stream.GetString());
@@ -2649,7 +2651,7 @@ public:
              (m_command_options.m_language == eLanguageTypeUnknown))) {
       Language::ForEach([&](Language *lang) {
         languages.push_back(lang);
-        return true;
+        return IterationAction::Continue;
       });
     } else {
       languages.push_back(Language::FindPlugin(m_command_options.m_language));
@@ -2711,8 +2713,8 @@ public:
     }
 
     if (!any_found)
-      result.AppendMessageWithFormat("no type was found matching '%s'\n",
-                                     name_of_type);
+      result.AppendMessageWithFormatv("no type was found matching '{0}'",
+                                      name_of_type);
 
     result.SetStatus(any_found ? lldb::eReturnStatusSuccessFinishResult
                                : lldb::eReturnStatusSuccessFinishNoResult);

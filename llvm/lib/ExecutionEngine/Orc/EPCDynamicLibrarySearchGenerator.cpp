@@ -79,12 +79,16 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     assert(Result->front().size() == LookupSymbols.size() &&
            "Result has incorrect number of elements");
 
+    auto SymsIt = Result->front().begin();
+    SymbolNameSet MissingSymbols;
     SymbolMap NewSymbols;
-    auto ResultI = Result->front().begin();
-    for (auto &KV : LookupSymbols) {
-      if (ResultI->getAddress())
-        NewSymbols[KV.first] = *ResultI;
-      ++ResultI;
+    for (auto &[Name, Flags] : LookupSymbols) {
+      const auto &Sym = *SymsIt++;
+      if (Sym && Sym->getAddress())
+        NewSymbols[Name] = *Sym;
+      else if (LLVM_UNLIKELY(!Sym &&
+                             Flags == SymbolLookupFlags::RequiredSymbol))
+        MissingSymbols.insert(Name);
     }
 
     LLVM_DEBUG({
@@ -95,6 +99,10 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     // If there were no resolved symbols bail out.
     if (NewSymbols.empty())
       return LS.continueLookup(Error::success());
+
+    if (LLVM_UNLIKELY(!MissingSymbols.empty()))
+      return LS.continueLookup(make_error<SymbolsNotFound>(
+          this->EPC.getSymbolStringPool(), std::move(MissingSymbols)));
 
     // Define resolved symbols.
     Error Err = addAbsolutes(JD, std::move(NewSymbols));

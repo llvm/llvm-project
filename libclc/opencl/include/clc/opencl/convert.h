@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_CONVERT_H__
+#define __CLC_OPENCL_CONVERT_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define _CLC_CONVERT_DECL(FROM_TYPE, TO_TYPE, SUFFIX)                          \
   _CLC_OVERLOAD _CLC_DECL TO_TYPE convert_##TO_TYPE##SUFFIX(FROM_TYPE x);
 
@@ -99,3 +104,5 @@ _CLC_VECTOR_CONVERT_TO_SUFFIX()
 #undef _CLC_VECTOR_CONVERT_FROM1
 #undef _CLC_VECTOR_CONVERT_DECL
 #undef _CLC_CONVERT_DECL
+
+#endif // __CLC_OPENCL_CONVERT_H__

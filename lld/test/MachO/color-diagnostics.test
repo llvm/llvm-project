@@ -1,5 +1,5 @@
 # Windows command prompt doesn't support ANSI escape sequences.
-# REQUIRES: shell
+# UNSUPPORTED: system-windows
 
 # RUN: not %lld --color-diagnostics /nosuchfile 2>&1 \
 # RUN:   | FileCheck -check-prefix=COLOR %s

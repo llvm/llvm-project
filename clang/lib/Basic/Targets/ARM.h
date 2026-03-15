@@ -98,13 +98,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasBTI : 1;
 
-  enum {
-    LDREX_B = (1 << 0), /// byte (8-bit)
-    LDREX_H = (1 << 1), /// half (16-bit)
-    LDREX_W = (1 << 2), /// word (32-bit)
-    LDREX_D = (1 << 3), /// double (64-bit)
-  };
-
   uint32_t LDREX;
 
   // ACLE 6.5.1 Hardware floating point
@@ -224,6 +217,8 @@ public:
   bool hasSjLjLowering() const override;
 
   bool hasBitIntType() const override { return true; }
+
+  unsigned getARMLDREXMask() const override { return LDREX; }
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 

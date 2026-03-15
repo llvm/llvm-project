@@ -23,7 +23,7 @@ struct SymbolUsesPass
   StringRef getDescription() const final {
     return "Test detection of symbol uses";
   }
-  WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
+  WalkResult operateOnSymbol(SymbolOpInterface symbol, ModuleOp module,
                              SmallVectorImpl<func::FuncOp> &deadFunctions) {
     // Test computing uses on a non symboltable op.
     std::optional<SymbolTable::UseRange> symbolUses =
@@ -42,8 +42,13 @@ struct SymbolUsesPass
 
     // Test the functionality of symbolKnownUseEmpty.
     if (SymbolTable::symbolKnownUseEmpty(symbol, &module.getBodyRegion())) {
-      func::FuncOp funcSymbol = dyn_cast<func::FuncOp>(symbol);
-      if (funcSymbol && funcSymbol.isExternal())
+      func::FuncOp funcSymbol = dyn_cast<func::FuncOp>(symbol.getOperation());
+      // Only track functions that are direct children of the enclosing module.
+      // Functions in nested symbol tables (e.g., nested modules) belong to a
+      // different symbol table and cannot be erased via the outer module's
+      // SymbolTable instance.
+      if (funcSymbol && funcSymbol.isExternal() &&
+          funcSymbol->getParentOp() == module.getOperation())
         deadFunctions.push_back(funcSymbol);
 
       symbol->emitRemark() << "symbol has no uses";
@@ -51,7 +56,7 @@ struct SymbolUsesPass
     }
 
     // Test the functionality of getSymbolUses.
-    symbolUses = SymbolTable::getSymbolUses(symbol, &module.getBodyRegion());
+    symbolUses = symbol.getSymbolUses(module);
     assert(symbolUses && "expected no unknown operations");
     for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
       // Check that we can resolve back to our symbol.
@@ -59,7 +64,11 @@ struct SymbolUsesPass
               symbolUse.getUser()->getParentOp(), symbolUse.getSymbolRef())) {
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
-            << *symbol->getInherentAttr(SymbolTable::getSymbolAttrName());
+            << symbol.getNameAttr();
+      } else {
+        symbolUse.getUser()->emitRemark()
+            << "failed to resolve use of symbol : " << symbolUse.getSymbolRef()
+            << " : " << symbol.getNameAttr();
       }
     }
     symbol->emitRemark() << "symbol has " << llvm::size(*symbolUses) << " uses";
@@ -71,10 +80,8 @@ struct SymbolUsesPass
 
     // Walk nested symbols.
     SmallVector<func::FuncOp, 4> deadFunctions;
-    module.getBodyRegion().walk([&](Operation *nestedOp) {
-      if (isa<SymbolOpInterface>(nestedOp))
-        return operateOnSymbol(nestedOp, module, deadFunctions);
-      return WalkResult::advance();
+    module.getBodyRegion().walk([&](SymbolOpInterface nestedOp) {
+      return operateOnSymbol(nestedOp, module, deadFunctions);
     });
 
     SymbolTable table(module);

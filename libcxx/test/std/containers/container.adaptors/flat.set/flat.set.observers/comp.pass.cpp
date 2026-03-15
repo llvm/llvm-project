@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-void test() {
+constexpr bool test() {
   {
     using M    = std::flat_set<int>;
     using Comp = std::less<int>; // the default
@@ -36,7 +36,7 @@ void test() {
     assert(vc(1, 2));
     assert(!vc(2, 1));
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using Comp = std::function<bool(int, int)>;
     using M    = std::flat_set<int, Comp>;
     Comp comp  = std::greater<int>();
@@ -67,10 +67,15 @@ void test() {
     assert(vc(1, 2));
     assert(!vc(2, 1));
   }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

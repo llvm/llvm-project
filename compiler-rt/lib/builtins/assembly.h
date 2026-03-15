@@ -14,7 +14,7 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__linux__) && defined(__CET__)
+#ifdef __CET__
 #if __has_include(<cet.h>)
 #include <cet.h>
 #endif
@@ -71,19 +71,35 @@
 
 #endif
 
+#if defined(__aarch64__) && defined(__ELF__) &&                                \
+    defined(COMPILER_RT_EXECUTE_ONLY_CODE)
+// The assembler always creates an implicit '.text' section with default flags
+// (SHF_ALLOC | SHF_EXECINSTR), which is incompatible with the execute-only
+// '.text' section we want to create here because of the missing
+// SHF_AARCH64_PURECODE section flag. To solve this, we use 'unique,0' to
+// differentiate the two sections. The output will therefore have two separate
+// sections named '.text', where code will be placed into the execute-only
+// '.text' section, and the implicitly-created one will be empty.
+#define TEXT_SECTION                                                           \
+  .section .text,"axy",@progbits,unique,0
+#else
+#define TEXT_SECTION                                                           \
+  .text
+#endif
+
 #if defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__)
 #define FUNC_ALIGN                                                             \
-  .text SEPARATOR                                                              \
   .balign 16 SEPARATOR
 #else
 #define FUNC_ALIGN
 #endif
 
-// BTI and PAC gnu property note
+// BTI, PAC, and GCS gnu property note
 #define NT_GNU_PROPERTY_TYPE_0 5
 #define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
 #define GNU_PROPERTY_AARCH64_FEATURE_1_BTI 1
 #define GNU_PROPERTY_AARCH64_FEATURE_1_PAC 2
+#define GNU_PROPERTY_AARCH64_FEATURE_1_GCS 4
 
 #if defined(__ARM_FEATURE_BTI_DEFAULT)
 #define BTI_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_BTI
@@ -95,6 +111,12 @@
 #define PAC_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_PAC
 #else
 #define PAC_FLAG 0
+#endif
+
+#if defined(__ARM_FEATURE_GCS_DEFAULT)
+#define GCS_FLAG GNU_PROPERTY_AARCH64_FEATURE_1_GCS
+#else
+#define GCS_FLAG 0
 #endif
 
 #define GNU_PROPERTY(type, value)                                              \
@@ -118,11 +140,12 @@
 #define BTI_J
 #endif
 
-#if (BTI_FLAG | PAC_FLAG) != 0
-#define GNU_PROPERTY_BTI_PAC                                                   \
-  GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND, BTI_FLAG | PAC_FLAG)
+#if (BTI_FLAG | PAC_FLAG | GCS_FLAG) != 0
+#define GNU_PROPERTY_BTI_PAC_GCS                                               \
+  GNU_PROPERTY(GNU_PROPERTY_AARCH64_FEATURE_1_AND,                             \
+               BTI_FLAG | PAC_FLAG | GCS_FLAG)
 #else
-#define GNU_PROPERTY_BTI_PAC
+#define GNU_PROPERTY_BTI_PAC_GCS
 #endif
 
 #if defined(__clang__) || defined(__GCC_HAVE_DWARF2_CFI_ASM)
@@ -247,6 +270,7 @@
 #endif
 
 #define DEFINE_COMPILERRT_FUNCTION(name)                                       \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -256,6 +280,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_THUMB_FUNCTION(name)                                 \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -265,6 +290,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION(name)                               \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FILE_LEVEL_DIRECTIVE SEPARATOR                                               \
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
@@ -274,6 +300,7 @@
   FUNC_SYMBOL(SYMBOL_NAME(name)):
 
 #define DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(name)                     \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   .globl FUNC_SYMBOL(name) SEPARATOR                                           \
   SYMBOL_IS_FUNC(name) SEPARATOR                                               \
@@ -282,6 +309,7 @@
   FUNC_SYMBOL(name):
 
 #define DEFINE_COMPILERRT_OUTLINE_FUNCTION_UNMANGLED(name)                     \
+  TEXT_SECTION SEPARATOR                                                       \
   DEFINE_CODE_STATE                                                            \
   FUNC_ALIGN                                                                   \
   .globl FUNC_SYMBOL(name) SEPARATOR                                           \
@@ -296,7 +324,7 @@
   .globl FUNC_SYMBOL(SYMBOL_NAME(name)) SEPARATOR                              \
   SYMBOL_IS_FUNC(SYMBOL_NAME(name)) SEPARATOR                                  \
   DECLARE_SYMBOL_VISIBILITY(name) SEPARATOR                                    \
-  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(target) SEPARATOR
+  .set FUNC_SYMBOL(SYMBOL_NAME(name)), FUNC_SYMBOL(SYMBOL_NAME(target)) SEPARATOR
 
 #if defined(__ARM_EABI__)
 #define DEFINE_AEABI_FUNCTION_ALIAS(aeabi_name, name)                          \
@@ -327,6 +355,11 @@
 #define VMOV_TO_DOUBLE(dst, src0, src1) vmov dst, src0, src1 SEPARATOR
 #define VMOV_FROM_DOUBLE(dst0, dst1, src) vmov dst0, dst1, src SEPARATOR
 #endif
+#endif
+
+#if defined(__ASSEMBLER__) && (defined(__i386__) || defined(__amd64__)) &&     \
+    !defined(__arm64ec__)
+.att_syntax
 #endif
 
 #endif // COMPILERRT_ASSEMBLY_H

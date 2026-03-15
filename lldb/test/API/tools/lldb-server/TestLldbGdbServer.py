@@ -22,7 +22,10 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
 from lldbsuite.test import lldbutil, lldbplatformutil
 
-
+# On Linux systems with Yama ptrace_scope = 1 there is a race condition when the
+# debugee enables tracing. See https://github.com/llvm/llvm-project/issues/161510.
+@skipIfLinux
+@skipIfMTE  # MTE security transition shims restrict socket operations.
 class LldbGdbServerTestCase(
     gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcodeParser
 ):

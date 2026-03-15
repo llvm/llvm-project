@@ -331,6 +331,11 @@ SBPlatform::operator bool() const {
   return m_opaque_sp.get() != nullptr;
 }
 
+bool SBPlatform::IsHost() const {
+  LLDB_INSTRUMENT_VA(this);
+  return m_opaque_sp.get() != nullptr && m_opaque_sp->IsHost();
+}
+
 void SBPlatform::Clear() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -559,7 +564,7 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
             FileSpec(shell_command.GetWorkingDirectory()),
             &shell_command.m_opaque_ptr->m_status,
             &shell_command.m_opaque_ptr->m_signo,
-            &shell_command.m_opaque_ptr->m_output,
+            &shell_command.m_opaque_ptr->m_output, nullptr,
             shell_command.m_opaque_ptr->m_timeout);
       });
 }

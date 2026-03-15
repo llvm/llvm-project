@@ -9,23 +9,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-let Namespace = "PPC" in {
-def sub_lt : SubRegIndex<1>;
-def sub_gt : SubRegIndex<1, 1>;
-def sub_eq : SubRegIndex<1, 2>;
-def sub_un : SubRegIndex<1, 3>;
-def sub_32 : SubRegIndex<32>;
-def sub_32_hi_phony : SubRegIndex<32,32>;
-def sub_64 : SubRegIndex<64>;
-def sub_64_hi_phony : SubRegIndex<64,64>;
-def sub_vsx0 : SubRegIndex<128>;
-def sub_vsx1 : SubRegIndex<128, 128>;
-def sub_gp8_x0 : SubRegIndex<64>;
-def sub_gp8_x1 : SubRegIndex<64, 64>;
-def sub_fp0 : SubRegIndex<64>;
-def sub_fp1 : SubRegIndex<64, 64>;
-}
+include "PPCOperands.td"
 
+let Namespace = "PPC" in {
+  def sub_lt : SubRegIndex<1>;
+  def sub_gt : SubRegIndex<1, 1>;
+  def sub_eq : SubRegIndex<1, 2>;
+  def sub_un : SubRegIndex<1, 3>;
+  def sub_32 : SubRegIndex<32>;
+  def sub_32_hi_phony : SubRegIndex<32,32>;
+  def sub_64 : SubRegIndex<64>;
+  def sub_64_hi_phony : SubRegIndex<64,64>;
+  def sub_vsx0 : SubRegIndex<128>;
+  def sub_vsx1 : SubRegIndex<128, 128>;
+  def sub_gp8_x0 : SubRegIndex<64>;
+  def sub_gp8_x1 : SubRegIndex<64, 64>;
+  def sub_fp0 : SubRegIndex<64>;
+  def sub_fp1 : SubRegIndex<64, 64>;
+}
 
 class PPCReg<string n> : Register<n> {
   let Namespace = "PPC";
@@ -106,7 +107,7 @@ class CR<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
 }
 
 // CRBIT - One of the 32 1-bit condition register fields
-class CRBIT<bits<5> num, string n> : PPCReg<n> {
+class CRBIT<bits<5> num> : PPCReg<!cast<string>(num)> {
   let HWEncoding{4-0} = num;
 }
 
@@ -149,7 +150,6 @@ foreach Index = 0-31 in {
 
 }
 
-
 // Floating-point registers
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
@@ -186,17 +186,16 @@ foreach Index = 0-31 in {
 }
 
 let CoveredBySubRegs = 1 in {
-// Vector registers
-foreach Index = 0-31 in {
-  def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
-                DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
-}
-
-// VSX registers
-foreach Index = 0-31 in {
-  def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
-                  DwarfRegAlias<!cast<FPR>("F"#Index)>;
-}
+  // Vector registers
+  foreach Index = 0-31 in {
+    def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
+                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
+  }
+  // VSX registers
+  foreach Index = 0-31 in {
+    def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
+                    DwarfRegAlias<!cast<FPR>("F"#Index)>;
+  }
 }
 
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
@@ -229,8 +228,8 @@ foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in
 
 // The representation of r0 when treated as the constant 0.
 let isConstant = true in {
-def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
-def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
+  def ZERO  : GPR<0, "0">,    DwarfRegAlias<R0>;
+  def ZERO8 : GP8<ZERO, "0">, DwarfRegAlias<X0>;
 } // isConstant = true
 
 // Representations of the frame pointer used by ISD::FRAMEADDR.
@@ -242,49 +241,23 @@ def BP   : GPR<0 /* arbitrary */, "**BASE POINTER**">;
 def BP8  : GP8<BP, "**BASE POINTER**">;
 
 // Condition register bits
-def CR0LT : CRBIT< 0, "0">;
-def CR0GT : CRBIT< 1, "1">;
-def CR0EQ : CRBIT< 2, "2">;
-def CR0UN : CRBIT< 3, "3">;
-def CR1LT : CRBIT< 4, "4">;
-def CR1GT : CRBIT< 5, "5">;
-def CR1EQ : CRBIT< 6, "6">;
-def CR1UN : CRBIT< 7, "7">;
-def CR2LT : CRBIT< 8, "8">;
-def CR2GT : CRBIT< 9, "9">;
-def CR2EQ : CRBIT<10, "10">;
-def CR2UN : CRBIT<11, "11">;
-def CR3LT : CRBIT<12, "12">;
-def CR3GT : CRBIT<13, "13">;
-def CR3EQ : CRBIT<14, "14">;
-def CR3UN : CRBIT<15, "15">;
-def CR4LT : CRBIT<16, "16">;
-def CR4GT : CRBIT<17, "17">;
-def CR4EQ : CRBIT<18, "18">;
-def CR4UN : CRBIT<19, "19">;
-def CR5LT : CRBIT<20, "20">;
-def CR5GT : CRBIT<21, "21">;
-def CR5EQ : CRBIT<22, "22">;
-def CR5UN : CRBIT<23, "23">;
-def CR6LT : CRBIT<24, "24">;
-def CR6GT : CRBIT<25, "25">;
-def CR6EQ : CRBIT<26, "26">;
-def CR6UN : CRBIT<27, "27">;
-def CR7LT : CRBIT<28, "28">;
-def CR7GT : CRBIT<29, "29">;
-def CR7EQ : CRBIT<30, "30">;
-def CR7UN : CRBIT<31, "31">;
+foreach Index = 0-7 in {
+  foreach CmpIdx = 0-3 in {
+    def CR#Index#["LT", "GT", "EQ", "UN"][CmpIdx] :
+          CRBIT<!add(!mul(Index, 4), CmpIdx)>;
+  }
+}
 
 // Condition registers
 let SubRegIndices = [sub_lt, sub_gt, sub_eq, sub_un] in {
-def CR0 : CR<0, "cr0", [CR0LT, CR0GT, CR0EQ, CR0UN]>, DwarfRegNum<[68, 68]>;
-def CR1 : CR<1, "cr1", [CR1LT, CR1GT, CR1EQ, CR1UN]>, DwarfRegNum<[69, 69]>;
-def CR2 : CR<2, "cr2", [CR2LT, CR2GT, CR2EQ, CR2UN]>, DwarfRegNum<[70, 70]>;
-def CR3 : CR<3, "cr3", [CR3LT, CR3GT, CR3EQ, CR3UN]>, DwarfRegNum<[71, 71]>;
-def CR4 : CR<4, "cr4", [CR4LT, CR4GT, CR4EQ, CR4UN]>, DwarfRegNum<[72, 72]>;
-def CR5 : CR<5, "cr5", [CR5LT, CR5GT, CR5EQ, CR5UN]>, DwarfRegNum<[73, 73]>;
-def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
-def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
+  def CR0 : CR<0, "cr0", [CR0LT, CR0GT, CR0EQ, CR0UN]>, DwarfRegNum<[68, 68]>;
+  def CR1 : CR<1, "cr1", [CR1LT, CR1GT, CR1EQ, CR1UN]>, DwarfRegNum<[69, 69]>;
+  def CR2 : CR<2, "cr2", [CR2LT, CR2GT, CR2EQ, CR2UN]>, DwarfRegNum<[70, 70]>;
+  def CR3 : CR<3, "cr3", [CR3LT, CR3GT, CR3EQ, CR3UN]>, DwarfRegNum<[71, 71]>;
+  def CR4 : CR<4, "cr4", [CR4LT, CR4GT, CR4EQ, CR4UN]>, DwarfRegNum<[72, 72]>;
+  def CR5 : CR<5, "cr5", [CR5LT, CR5GT, CR5EQ, CR5UN]>, DwarfRegNum<[73, 73]>;
+  def CR6 : CR<6, "cr6", [CR6LT, CR6GT, CR6EQ, CR6UN]>, DwarfRegNum<[74, 74]>;
+  def CR7 : CR<7, "cr7", [CR7LT, CR7GT, CR7EQ, CR7UN]>, DwarfRegNum<[75, 75]>;
 }
 
 // Link register
@@ -501,7 +474,7 @@ def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
 // Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
 // at last.
 def G8pRC :
-  RegisterClass<"PPC", [i128], 128,
+  RegisterClass<"PPC", [untyped], 128,
                 (add (sequence "G8p%u", 1, 5),
                      (sequence "G8p%u", 14, 7),
                      G8p15, G8p6, G8p0)> {
@@ -516,7 +489,7 @@ include "PPCRegisterInfoMMA.td"
 include "PPCRegisterInfoDMR.td"
 
 //===----------------------------------------------------------------------===//
-// PowerPC Operand Definitions.
+// PowerPC Register Operand Definitions.
 
 // In the default PowerPC assembler syntax, registers are specified simply
 // by number, so they cannot be distinguished from immediate values (without
@@ -614,279 +587,40 @@ def spe4rc : RegisterOperand<GPRC> {
   let ParserMatchClass = PPCRegSPE4RCAsmOperand;
 }
 
-def PPCU1ImmAsmOperand : AsmOperandClass {
-  let Name = "U1Imm"; let PredicateMethod = "isU1Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u1imm   : Operand<i32> {
-  let PrintMethod = "printU1ImmOperand";
-  let ParserMatchClass = PPCU1ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<1>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCU2ImmAsmOperand : AsmOperandClass {
-  let Name = "U2Imm"; let PredicateMethod = "isU2Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u2imm   : Operand<i32> {
-  let PrintMethod = "printU2ImmOperand";
-  let ParserMatchClass = PPCU2ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<2>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCATBitsAsHintAsmOperand : AsmOperandClass {
-  let Name = "ATBitsAsHint"; let PredicateMethod = "isATBitsAsHint";
-  let RenderMethod = "addImmOperands"; // Irrelevant, predicate always fails.
-}
-def atimm   : Operand<i32> {
-  let PrintMethod = "printATBitsAsHint";
-  let ParserMatchClass = PPCATBitsAsHintAsmOperand;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCU3ImmAsmOperand : AsmOperandClass {
-  let Name = "U3Imm"; let PredicateMethod = "isU3Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u3imm   : Operand<i32> {
-  let PrintMethod = "printU3ImmOperand";
-  let ParserMatchClass = PPCU3ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<3>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def PPCU4ImmAsmOperand : AsmOperandClass {
-  let Name = "U4Imm"; let PredicateMethod = "isU4Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u4imm   : Operand<i32> {
-  let PrintMethod = "printU4ImmOperand";
-  let ParserMatchClass = PPCU4ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<4>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS5ImmAsmOperand : AsmOperandClass {
-  let Name = "S5Imm"; let PredicateMethod = "isS5Imm";
-  let RenderMethod = "addImmOperands";
-}
-def s5imm   : Operand<i32> {
-  let PrintMethod = "printS5ImmOperand";
-  let ParserMatchClass = PPCS5ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU5ImmAsmOperand : AsmOperandClass {
-  let Name = "U5Imm"; let PredicateMethod = "isU5Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u5imm   : Operand<i32> {
-  let PrintMethod = "printU5ImmOperand";
-  let ParserMatchClass = PPCU5ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU6ImmAsmOperand : AsmOperandClass {
-  let Name = "U6Imm"; let PredicateMethod = "isU6Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u6imm   : Operand<i32> {
-  let PrintMethod = "printU6ImmOperand";
-  let ParserMatchClass = PPCU6ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<6>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU7ImmAsmOperand : AsmOperandClass {
-  let Name = "U7Imm"; let PredicateMethod = "isU7Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u7imm   : Operand<i32> {
-  let PrintMethod = "printU7ImmOperand";
-  let ParserMatchClass = PPCU7ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU8ImmAsmOperand : AsmOperandClass {
-  let Name = "U8Imm"; let PredicateMethod = "isU8Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u8imm   : Operand<i32> {
-  let PrintMethod = "printU8ImmOperand";
-  let ParserMatchClass = PPCU8ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<8>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU10ImmAsmOperand : AsmOperandClass {
-  let Name = "U10Imm"; let PredicateMethod = "isU10Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u10imm  : Operand<i32> {
-  let PrintMethod = "printU10ImmOperand";
-  let ParserMatchClass = PPCU10ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<10>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU12ImmAsmOperand : AsmOperandClass {
-  let Name = "U12Imm"; let PredicateMethod = "isU12Imm";
-  let RenderMethod = "addImmOperands";
-}
-def u12imm  : Operand<i32> {
-  let PrintMethod = "printU12ImmOperand";
-  let ParserMatchClass = PPCU12ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<12>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS16ImmAsmOperand : AsmOperandClass {
-  let Name = "S16Imm"; let PredicateMethod = "isS16Imm";
-  let RenderMethod = "addS16ImmOperands";
-}
-def s16imm  : Operand<i32> {
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCS16ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCU16ImmAsmOperand : AsmOperandClass {
-  let Name = "U16Imm"; let PredicateMethod = "isU16Imm";
-  let RenderMethod = "addU16ImmOperands";
-}
-def u16imm  : Operand<i32> {
-  let PrintMethod = "printU16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCU16ImmAsmOperand;
-  let DecoderMethod = "decodeUImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS17ImmAsmOperand : AsmOperandClass {
-  let Name = "S17Imm"; let PredicateMethod = "isS17Imm";
-  let RenderMethod = "addS16ImmOperands";
-}
-def s17imm  : Operand<i32> {
-  // This operand type is used for addis/lis to allow the assembler parser
-  // to accept immediates in the range -65536..65535 for compatibility with
-  // the GNU assembler.  The operand is treated as 16-bit otherwise.
-  let PrintMethod = "printS16ImmOperand";
-  let EncoderMethod = "getImm16Encoding";
-  let ParserMatchClass = PPCS17ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<16>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCS34ImmAsmOperand : AsmOperandClass {
-  let Name = "S34Imm";
-  let PredicateMethod = "isS34Imm";
-  let RenderMethod = "addImmOperands";
-}
-def s34imm : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImm34EncodingNoPCRel";
-  let ParserMatchClass = PPCS34ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<34>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def s34imm_pcrel : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
-  let EncoderMethod = "getImm34EncodingPCRel";
-  let ParserMatchClass = PPCS34ImmAsmOperand;
-  let DecoderMethod = "decodeSImmOperand<34>";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-def PPCImmZeroAsmOperand : AsmOperandClass {
-  let Name = "ImmZero";
-  let PredicateMethod = "isImmZero";
-  let RenderMethod = "addImmOperands";
-}
-def immZero : Operand<i32> {
-  let PrintMethod = "printImmZeroOperand";
-  let ParserMatchClass = PPCImmZeroAsmOperand;
-  let DecoderMethod = "decodeImmZeroOperand";
-  let OperandType = "OPERAND_IMMEDIATE";
-}
-
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
-def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
-
-def PPCDirectBrAsmOperand : AsmOperandClass {
-  let Name = "DirectBr"; let PredicateMethod = "isDirectBr";
-  let RenderMethod = "addBranchTargetOperands";
-}
-def directbrtarget : Operand<OtherVT> {
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getDirectBrEncoding";
-  let DecoderMethod = "decodeDirectBrTarget";
-  let ParserMatchClass = PPCDirectBrAsmOperand;
-  let OperandType = "OPERAND_PCREL";
-}
-def absdirectbrtarget : Operand<OtherVT> {
-  let PrintMethod = "printAbsBranchOperand";
-  let EncoderMethod = "getAbsDirectBrEncoding";
-  let DecoderMethod = "decodeDirectBrTarget";
-  let ParserMatchClass = PPCDirectBrAsmOperand;
-}
-def PPCCondBrAsmOperand : AsmOperandClass {
-  let Name = "CondBr"; let PredicateMethod = "isCondBr";
-  let RenderMethod = "addBranchTargetOperands";
-}
-def condbrtarget : Operand<OtherVT> {
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getCondBrEncoding";
-  let DecoderMethod = "decodeCondBrTarget";
-  let ParserMatchClass = PPCCondBrAsmOperand;
-  let OperandType = "OPERAND_PCREL";
-}
-def abscondbrtarget : Operand<OtherVT> {
-  let PrintMethod = "printAbsBranchOperand";
-  let EncoderMethod = "getAbsCondBrEncoding";
-  let DecoderMethod = "decodeCondBrTarget";
-  let ParserMatchClass = PPCCondBrAsmOperand;
-}
-def calltarget : Operand<iPTR> {
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getDirectBrEncoding";
-  let DecoderMethod = "decodeDirectBrTarget";
-  let ParserMatchClass = PPCDirectBrAsmOperand;
-  let OperandType = "OPERAND_PCREL";
-}
-def abscalltarget : Operand<iPTR> {
-  let PrintMethod = "printAbsBranchOperand";
-  let EncoderMethod = "getAbsDirectBrEncoding";
-  let DecoderMethod = "decodeDirectBrTarget";
-  let ParserMatchClass = PPCDirectBrAsmOperand;
-}
-def PPCCRBitMaskOperand : AsmOperandClass {
- let Name = "CRBitMask"; let PredicateMethod = "isCRBitMask";
-}
-def crbitm: Operand<i8> {
-  let PrintMethod = "printcrbitm";
-  let EncoderMethod = "get_crbitm_encoding";
-  let DecoderMethod = "decodeCRBitMOperand";
-  let ParserMatchClass = PPCCRBitMaskOperand;
-}
 // Address operands
 // A version of ptr_rc which excludes R0 (or X0 in 64-bit mode).
 def PPCRegGxRCNoR0Operand : AsmOperandClass {
   let Name = "RegGxRCNoR0"; let PredicateMethod = "isRegNumber";
 }
-def ptr_rc_nor0 : Operand<iPTR>, PointerLikeRegClass<1> {
+
+def ppc_ptr_rc : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC, G8RC]>;
+
+def ptr_rc_nor0_by_hwmode : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC_NOR0, G8RC_NOX0]>;
+
+def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
   let ParserMatchClass = PPCRegGxRCNoR0Operand;
 }
 
-// New addressing modes with 34 bit immediates.
-def PPCDispRI34Operand : AsmOperandClass {
-  let Name = "DispRI34"; let PredicateMethod = "isS34Imm";
-  let RenderMethod = "addImmOperands";
+// A version of ptr_rc usable with the asm parser.
+def PPCRegGxRCOperand : AsmOperandClass {
+  let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
 }
-def dispRI34 : Operand<iPTR> {
-  let ParserMatchClass = PPCDispRI34Operand;
-  let EncoderMethod = "getDispRI34Encoding";
-  let DecoderMethod = "decodeSImmOperand<34>";
+
+def ptr_rc_idx_by_hwmode : RegClassByHwMode<[PPC32, PPC64],
+                                            [GPRC, G8RC]>;
+
+def ptr_rc_idx : RegisterOperand<ptr_rc_idx_by_hwmode> {
+  let ParserMatchClass = PPCRegGxRCOperand;
 }
-def dispRI34_pcrel : Operand<iPTR> {
-  let ParserMatchClass = PPCDispRI34Operand;
-  let EncoderMethod = "getDispRI34PCRelEncoding";
-  let DecoderMethod = "decodeSImmOperand<34>";
-}
+
+//===----------------------------------------------------------------------===//
+// Memory operands (depend on register operands defined above)
+//===----------------------------------------------------------------------===//
+
 def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34";
   let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
@@ -896,78 +630,6 @@ def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
 def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34PCRel";
   let MIOperandInfo = (ops dispRI34_pcrel:$imm, immZero:$reg);
-}
-
-// A version of ptr_rc usable with the asm parser.
-def PPCRegGxRCOperand : AsmOperandClass {
-  let Name = "RegGxRC"; let PredicateMethod = "isRegNumber";
-}
-def ptr_rc_idx : Operand<iPTR>, PointerLikeRegClass<0> {
-  let ParserMatchClass = PPCRegGxRCOperand;
-}
-
-def PPCDispRIOperand : AsmOperandClass {
- let Name = "DispRI"; let PredicateMethod = "isS16Imm";
- let RenderMethod = "addS16ImmOperands";
-}
-def dispRI : Operand<iPTR> {
-  let ParserMatchClass = PPCDispRIOperand;
-  let EncoderMethod = "getDispRIEncoding";
-}
-def PPCDispRIXOperand : AsmOperandClass {
- let Name = "DispRIX"; let PredicateMethod = "isS16ImmX4";
- let RenderMethod = "addS16ImmOperands";
-}
-def dispRIX : Operand<iPTR> {
-  let ParserMatchClass = PPCDispRIXOperand;
-  let EncoderMethod = "getDispRIXEncoding";
-  let DecoderMethod = "decodeDispRIXOperand";
-}
-def PPCDispRIHashOperand : AsmOperandClass {
-  let Name = "DispRIHash"; let PredicateMethod = "isHashImmX8";
-  let RenderMethod = "addImmOperands";
-}
-def dispRIHash : Operand<iPTR> {
-  let ParserMatchClass = PPCDispRIHashOperand;
-  let EncoderMethod = "getDispRIHashEncoding";
-  let DecoderMethod = "decodeDispRIHashOperand";
-}
-def PPCDispRIX16Operand : AsmOperandClass {
- let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
- let RenderMethod = "addS16ImmOperands";
-}
-def dispRIX16 : Operand<iPTR> {
-  let ParserMatchClass = PPCDispRIX16Operand;
-  let EncoderMethod = "getDispRIX16Encoding";
-  let DecoderMethod = "decodeDispRIX16Operand";
-
-}
-def PPCDispSPE8Operand : AsmOperandClass {
- let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
- let RenderMethod = "addImmOperands";
-}
-def dispSPE8 : Operand<iPTR> {
-  let ParserMatchClass = PPCDispSPE8Operand;
-  let DecoderMethod = "decodeDispSPE8Operand";
-  let EncoderMethod = "getDispSPE8Encoding";
-}
-def PPCDispSPE4Operand : AsmOperandClass {
- let Name = "DispSPE4"; let PredicateMethod = "isU7ImmX4";
- let RenderMethod = "addImmOperands";
-}
-def dispSPE4 : Operand<iPTR> {
-  let ParserMatchClass = PPCDispSPE4Operand;
-  let DecoderMethod = "decodeDispSPE4Operand";
-  let EncoderMethod = "getDispSPE4Encoding";
-}
-def PPCDispSPE2Operand : AsmOperandClass {
- let Name = "DispSPE2"; let PredicateMethod = "isU6ImmX2";
- let RenderMethod = "addImmOperands";
-}
-def dispSPE2 : Operand<iPTR> {
-  let ParserMatchClass = PPCDispSPE2Operand;
-  let DecoderMethod = "decodeDispSPE2Operand";
-  let EncoderMethod = "getDispSPE2Encoding";
 }
 
 def memri : Operand<iPTR> {
@@ -1019,20 +681,10 @@ def memr : Operand<iPTR> {
   let MIOperandInfo = (ops ptr_rc_nor0:$ptrreg);
   let OperandType = "OPERAND_MEMORY";
 }
-def PPCTLSRegOperand : AsmOperandClass {
-  let Name = "TLSReg"; let PredicateMethod = "isTLSReg";
-  let RenderMethod = "addTLSRegOperands";
-}
-def tlsreg32 : Operand<i32> {
-  let EncoderMethod = "getTLSRegEncoding";
-  let ParserMatchClass = PPCTLSRegOperand;
-}
-def tlsgd32 : Operand<i32> {}
-def tlscall32 : Operand<i32> {
-  let PrintMethod = "printTLSCall";
-  let MIOperandInfo = (ops calltarget:$func, tlsgd32:$sym);
-  let EncoderMethod = "getTLSCallEncoding";
-}
+
+//===----------------------------------------------------------------------===//
+// Predicate operand (depends on register operands defined above)
+//===----------------------------------------------------------------------===//
 
 // PowerPC Predicate operand.
 def pred : Operand<OtherVT> {

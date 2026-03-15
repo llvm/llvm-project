@@ -56,8 +56,8 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
   const llvm::APSInt &Val = TemplArg.getAsIntegral();
 
   if (Policy.UseEnumerators) {
-    if (const EnumType *ET = T->getAs<EnumType>()) {
-      for (const EnumConstantDecl *ECD : ET->getDecl()->enumerators()) {
+    if (const auto *ED = T->getAsEnumDecl()) {
+      for (const EnumConstantDecl *ECD : ED->enumerators()) {
         // In Sema::CheckTemplateArugment, enum template arguments value are
         // extended to the size of the integer underlying the enum type.  This
         // may create a size difference between the enum value and template
@@ -339,6 +339,18 @@ bool TemplateArgument::isPackExpansion() const {
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
+bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
+  if (getKind() != TemplateArgument::Template)
+    return false;
+
+  if (isa_and_nonnull<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
+    return true;
+  if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
+          getAsTemplate().getAsTemplateDecl()))
+    return TTP->templateParameterKind() == TNK_Concept_template;
+  return false;
+}
+
 bool TemplateArgument::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateArgumentDependence::UnexpandedPack;
 }
@@ -585,6 +597,29 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
 // TemplateArgumentLoc Implementation
 //===----------------------------------------------------------------------===//
 
+TemplateArgumentLoc::TemplateArgumentLoc(ASTContext &Ctx,
+                                         const TemplateArgument &Argument,
+                                         SourceLocation TemplateKWLoc,
+                                         NestedNameSpecifierLoc QualifierLoc,
+                                         SourceLocation TemplateNameLoc,
+                                         SourceLocation EllipsisLoc)
+    : Argument(Argument),
+      LocInfo(Ctx, TemplateKWLoc, QualifierLoc, TemplateNameLoc, EllipsisLoc) {
+  assert(Argument.getKind() == TemplateArgument::Template ||
+         Argument.getKind() == TemplateArgument::TemplateExpansion);
+  assert(QualifierLoc.getNestedNameSpecifier() ==
+         Argument.getAsTemplateOrTemplatePattern().getQualifier());
+}
+
+NestedNameSpecifierLoc TemplateArgumentLoc::getTemplateQualifierLoc() const {
+  if (Argument.getKind() != TemplateArgument::Template &&
+      Argument.getKind() != TemplateArgument::TemplateExpansion)
+    return NestedNameSpecifierLoc();
+  return NestedNameSpecifierLoc(
+      Argument.getAsTemplateOrTemplatePattern().getQualifier(),
+      LocInfo.getTemplate()->QualifierLocData);
+}
+
 SourceRange TemplateArgumentLoc::getSourceRange() const {
   switch (Argument.getKind()) {
   case TemplateArgument::Expression:
@@ -691,10 +726,11 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
 }
 
 clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
-    ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
-    SourceLocation TemplateNameLoc, SourceLocation EllipsisLoc) {
+    ASTContext &Ctx, SourceLocation TemplateKWLoc,
+    NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateNameLoc,
+    SourceLocation EllipsisLoc) {
   TemplateTemplateArgLocInfo *Template = new (Ctx) TemplateTemplateArgLocInfo;
-  Template->Qualifier = QualifierLoc.getNestedNameSpecifier();
+  Template->TemplateKwLoc = TemplateKWLoc;
   Template->QualifierLocData = QualifierLoc.getOpaqueData();
   Template->TemplateNameLoc = TemplateNameLoc;
   Template->EllipsisLoc = EllipsisLoc;

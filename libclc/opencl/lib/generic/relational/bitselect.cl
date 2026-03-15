@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
 #include <clc/relational/clc_bitselect.h>
 
 #define __CLC_BODY <bitselect.inc>

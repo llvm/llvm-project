@@ -28,7 +28,7 @@ body:             |
     ; CHECK-LABEL: name: bic_i16_zero
     ; CHECK: liveins: $p0, $z0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $z0, implicit-def $q0, implicit-def $d0, implicit-def $s0, implicit-def $h0, implicit-def $b0, implicit-def $b0_hi, implicit-def $h0_hi, implicit-def $s0_hi, implicit-def $d0_hi, implicit-def $q0_hi, implicit killed $p0, implicit $z0 {
+    ; CHECK-NEXT: BUNDLE implicit-def $z0, implicit killed $p0, implicit $z0 {
     ; CHECK-NEXT:   $z0 = MOVPRFX_ZPzZ_H $p0, $z0
     ; CHECK-NEXT:   $z0 = LSL_ZPmI_H killed renamable $p0, internal $z0, 0
     ; CHECK-NEXT:   $z0 = BIC_ZPmZ_H killed renamable $p0, internal killed $z0, internal killed renamable $z0

@@ -15,7 +15,7 @@ void only_for_loops() {
 }
 
 void only_one_on_loop() {
-  // expected-error@+2{{OpenACC 'collapse' clause cannot appear more than once on a 'loop' directive}}
+  // expected-error@+2{{OpenACC clause 'collapse' cannot combine with previous 'collapse' clause on a 'loop' directive}}
   // expected-note@+1{{previous 'collapse' clause is here}}
 #pragma acc loop collapse(1) collapse(1)
   for(int i = 0; i < 5; ++i);
@@ -529,13 +529,14 @@ void allow_multiple_collapse() {
 }
 
 void no_dupes_since_last_device_type() {
-  // expected-error@+3{{OpenACC 'collapse' clause cannot appear more than once in a 'device_type' region on a 'loop' directive}}
+
+  // expected-error@+3{{OpenACC clause 'collapse' cannot combine with previous 'collapse' clause in the same 'device_type' region on a 'loop' directive}}
   // expected-note@+2{{previous 'collapse' clause is here}}
   // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc loop collapse(1) device_type(*) collapse(1) collapse(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
- 
+
 #pragma acc loop collapse(1) device_type(*) collapse(1) device_type(nvidia) collapse(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
@@ -548,7 +549,7 @@ void no_dupes_since_last_device_type() {
 #pragma acc loop device_type(nvidia) collapse(1) device_type(*) collapse(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
-  
+
   // expected-error@+4{{OpenACC 'collapse' clause applies to 'device_type' '*', which conflicts with previous 'collapse' clause}}
   // expected-note@+3{{active 'device_type' clause here}}
   // expected-note@+2{{previous 'collapse' clause is here}}
@@ -570,6 +571,21 @@ void no_dupes_since_last_device_type() {
   // expected-note@+2{{previous 'collapse' clause is here}}
   // expected-note@+1{{which applies to 'device_type' clause here}}
 #pragma acc loop device_type(radeon) collapse(1) device_type(nvidia, radeon) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+
+  // expected-error@+4{{OpenACC 'collapse' clause applies to 'device_type' 'acc_device_nvidia', which conflicts with previous 'collapse' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'collapse' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc loop device_type(nvidia) collapse(1) device_type(acc_device_nvidia) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+  // expected-error@+4{{OpenACC 'collapse' clause applies to 'device_type' 'nvidia', which conflicts with previous 'collapse' clause}}
+  // expected-note@+3{{active 'device_type' clause here}}
+  // expected-note@+2{{previous 'collapse' clause is here}}
+  // expected-note@+1{{which applies to 'device_type' clause here}}
+#pragma acc loop device_type(acc_device_nvidia) collapse(1) device_type(nvidia) collapse(2)
   for(unsigned i = 0; i < 5; ++i)
     for(unsigned j = 0; j < 5; ++j);
 

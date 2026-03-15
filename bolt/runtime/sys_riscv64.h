@@ -105,7 +105,7 @@
 // Anonymous namespace covering everything but our library entry point
 namespace {
 
-// Get the difference between runtime addrress of .text section and
+// Get the difference between runtime address of .text section and
 // static address in section header table. Can be extracted from arbitrary
 // pc value recorded at runtime to get the corresponding static address, which
 // in turn can be used to search for indirect call description. Needed because

@@ -235,6 +235,7 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
+def : PfmCountersBinding<"emeraldrapids", SapphireRapidsPfmCounters>;
 
 def LunarLakePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
@@ -254,7 +255,7 @@ def LunarLakePfmCounters : ProcPfmCounters {
   ];
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
-def : PfmCountersBinding<"Lunarlake", LunarLakePfmCounters>;
+def : PfmCountersBinding<"lunarlake", LunarLakePfmCounters>;
 
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [
@@ -387,3 +388,4 @@ def ZnVer4PfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"znver4", ZnVer4PfmCounters>;
 def : PfmCountersBinding<"znver5", ZnVer4PfmCounters>;
+def : PfmCountersBinding<"znver6", ZnVer4PfmCounters>;

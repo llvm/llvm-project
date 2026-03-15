@@ -21,7 +21,6 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_expm1(__CLC_GENTYPE x) {
   // log2/64 tail: 0.0000272020388
   const __CLC_GENTYPE R_LOG2_BY_64_TL = 0x1.c85fdep-16f;
 
-  __CLC_UINTN xi = __CLC_AS_UINTN(x);
   __CLC_INTN n = __CLC_CONVERT_INTN(x * R_64_BY_LOG2);
   __CLC_GENTYPE fn = __CLC_CONVERT_GENTYPE(n);
 
@@ -37,8 +36,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_expm1(__CLC_GENTYPE x) {
       r);
 
   __CLC_GENTYPE m2 = __CLC_AS_GENTYPE((m + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
-  __CLC_GENTYPE exp_head = USE_TABLE(exp_tbl_ep_head, j);
-  __CLC_GENTYPE exp_tail = USE_TABLE(exp_tbl_ep_tail, j);
+  __CLC_GENTYPE exp_head = __CLC_USE_TABLE(exp_tbl_ep_head, j);
+  __CLC_GENTYPE exp_tail = __CLC_USE_TABLE(exp_tbl_ep_tail, j);
 
   __CLC_GENTYPE two_to_jby64_h = exp_head * m2;
   __CLC_GENTYPE two_to_jby64_t = exp_tail * m2;
@@ -108,8 +107,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_expm1(__CLC_GENTYPE x) {
   __CLC_INTN j = n & 0x3f;
   __CLC_INTN m = n >> 6;
 
-  __CLC_GENTYPE f1 = USE_TABLE(two_to_jby64_ep_tbl_head, j);
-  __CLC_GENTYPE f2 = USE_TABLE(two_to_jby64_ep_tbl_tail, j);
+  __CLC_GENTYPE f1 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_head, j);
+  __CLC_GENTYPE f2 = __CLC_USE_TABLE(two_to_jby64_ep_tbl_tail, j);
   __CLC_GENTYPE f = f1 + f2;
 
   __CLC_GENTYPE dn = __CLC_CONVERT_GENTYPE(-n);

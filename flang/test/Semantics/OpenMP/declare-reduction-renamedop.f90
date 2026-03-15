@@ -22,7 +22,7 @@ contains
 end module module1
 
 program test_omp_reduction
-!CHECK: MainProgram scope: test_omp_reduction
+!CHECK: MainProgram scope: TEST_OMP_REDUCTION
   use module1, only: t1, operator(.modmul.) => operator(.mul.)
 
 !CHECK: .modmul. (Function): Use from .mul. in module1
@@ -33,11 +33,12 @@ program test_omp_reduction
   !$omp declare reduction (.modmul. : t1 : omp_out = omp_out .modmul. omp_in) initializer(omp_priv = t1(1.0))
 !CHECK: op.modmul.: UserReductionDetails TYPE(t1)
 !CHECK: t1: Use from t1 in module1
-!CHECK: OtherConstruct scope: size=16 alignment=4 sourceRange=0 bytes
+!CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
 !CHECK: omp_in size=4 offset=0: ObjectEntity type: TYPE(t1)
-!CHECK: omp_orig size=4 offset=4: ObjectEntity type: TYPE(t1)
-!CHECK: omp_out size=4 offset=8: ObjectEntity type: TYPE(t1)
-!CHECK: omp_priv size=4 offset=12: ObjectEntity type: TYPE(t1)
+!CHECK: omp_out size=4 offset=4: ObjectEntity type: TYPE(t1)
+!CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
+!CHECK: omp_orig size=4 offset=0: ObjectEntity type: TYPE(t1)
+!CHECK: omp_priv size=4 offset=4: ObjectEntity type: TYPE(t1)
   result = t1(1.0)
   !$omp parallel do reduction(.modmul.:result)
   do i = 1, 10

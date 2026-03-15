@@ -5,7 +5,7 @@
 
 struct S { int a, b, c; }; // expected-note 2 {{'S::a' declared here}}
 
-// A simple-declaration can be a decompsition declaration.
+// A simple-declaration can be a structured binding declaration.
 namespace SimpleDecl {
   auto [a_x, b_x, c_x] = S();
 
@@ -19,7 +19,7 @@ namespace SimpleDecl {
   }
 }
 
-// A for-range-declaration can be a decomposition declaration.
+// A for-range-declaration can be a structured binding declaration.
 namespace ForRangeDecl {
   extern S arr[10];
   void h() {
@@ -83,21 +83,29 @@ namespace BadSpecifiers {
       friend auto &[g] = n; // expected-error {{'auto' not allowed}} expected-error {{friends can only be classes or functions}}
     };
     typedef auto &[h] = n; // expected-error {{cannot be declared 'typedef'}}
-    constexpr auto &[i] = n; // expected-error {{cannot be declared 'constexpr'}}
+    constexpr auto &[i] = n; // pre2c-error {{cannot be declared 'constexpr'}}
   }
 
-  static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
-  static thread_local auto &[j2] = n; // cxx17-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
+  static constexpr inline thread_local auto &[j1] = n;
+  // pre2c-error@-1 {{cannot be declared 'constexpr'}} \
+  // expected-error@-1 {{cannot be declared 'inline'}} \
+  // cxx17-warning@-1 {{declared 'static' is a C++20 extension}} \
+  // cxx17-warning@-1 {{declared 'thread_local' is a C++20 extension}}
+
+  static thread_local auto &[j2] = n;
+  // cxx17-warning@-1 {{declared 'static' is a C++20 extension}}\
+  // cxx17-warning@-1 {{declared 'thread_local' is a C++20 extension}}
+
 
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 
   const int K = 5;
-  auto ([c]) = s; // expected-error {{decomposition declaration cannot be declared with parentheses}}
+  auto ([c]) = s; // expected-error {{structured binding declaration cannot be declared with parentheses}}
   void g() {
     // defining-type-specifiers other than cv-qualifiers and 'auto'
     S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
-    auto ([c2]) = s; // cxx17-error {{decomposition declaration cannot be declared with parenthese}} \
+    auto ([c2]) = s; // cxx17-error {{structured binding declaration cannot be declared with parenthese}} \
                      // post2b-error {{use of undeclared identifier 'c2'}} \
                      // post2b-error {{expected body of lambda expression}} \
 
@@ -106,7 +114,7 @@ namespace BadSpecifiers {
     auto [e][1] = s; // expected-error {{expected ';'}} expected-error {{requires an initializer}}
 
     // FIXME: This should fire the 'misplaced array declarator' diagnostic.
-    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}} expected-error {{decomposition declaration '[K]' requires an initializer}}
+    int [K] arr = {0}; // expected-error {{expected ';'}} expected-error {{cannot be declared with type 'int'}} expected-error {{structured binding declaration '[K]' requires an initializer}}
     int [5] arr = {0}; // expected-error {{place the brackets after the name}}
 
     auto *[f] = s; // expected-error {{cannot be declared with type 'auto *'}} expected-error {{incompatible initializer}}
@@ -137,14 +145,14 @@ namespace MultiDeclarator {
 namespace Template {
   int n[3];
   // Structured binding template is not allowed.
-  template<typename T> auto [a, b, c] = n; // expected-error {{decomposition declaration cannot be a template}}
+  template<typename T> auto [a, b, c] = n; // expected-error {{structured binding declaration cannot be a template}}
 }
 
 namespace Init {
   void f() {
     int arr[1];
     struct S { int n; };
-    auto &[bad1]; // expected-error {{decomposition declaration '[bad1]' requires an initializer}}
+    auto &[bad1]; // expected-error {{structured binding declaration '[bad1]' requires an initializer}}
     const auto &[bad2](S{}, S{}); // expected-error {{initializer for variable '[bad2]' with type 'const auto &' contains multiple expressions}}
     const auto &[bad3](); // expected-error {{expected expression}}
     auto &[good1] = arr;

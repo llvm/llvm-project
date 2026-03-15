@@ -1,9 +1,9 @@
-<!--===- docs/Overview.md 
-  
+<!--===- docs/Overview.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Overview of Compiler Phases
@@ -13,7 +13,7 @@
 local:
 ---
 ```
-The Flang compiler transforms Fortran source code into an executable file. 
+The Flang compiler transforms Fortran source code into an executable file.
 This transformation proceeds in three high level phases -- analysis, lowering,
 and code generation/linking.
 
@@ -64,7 +64,7 @@ See [Preprocessing.md](Preprocessing.md).
 
 **Entry point:** `parser::Parsing::Prescan`
 
-**Commands:** 
+**Commands:**
  - `flang -fc1 -E src.f90` dumps the cooked character stream
  - `flang -fc1 -fdebug-dump-provenance src.f90` dumps provenance
    information
@@ -90,7 +90,7 @@ representing a syntactically correct program, rooted at the program unit.  See:
 **Input:** the parse tree, the cooked character stream, and provenance
 information
 
-**Output:** 
+**Output:**
 * a symbol table
 * modified parse tree
 * module files, (see: [ModFiles.md](ModFiles.md))
@@ -101,15 +101,15 @@ information
 **Entry point:** `semantics::Semantics::Perform`
 
 For more detail on semantic analysis, see: [Semantics.md](Semantics.md).
-Semantic processing performs several tasks: 
+Semantic processing performs several tasks:
 * validates labels, see: [LabelResolution.md](LabelResolution.md).
-* canonicalizes DO statements, 
+* canonicalizes DO statements,
 * canonicalizes OpenACC and OpenMP code
 * resolves names, building a tree of scopes and symbols
 * rewrites the parse tree to correct parsing mistakes (when needed) once semantic information is available to clarify the program's meaning
 * checks the validity of declarations
 * analyzes expressions and statements, emitting error messages where appropriate
-* creates module files if the source code contains modules, 
+* creates module files if the source code contains modules,
   see [ModFiles.md](ModFiles.md).
 
 In the course of semantic analysis, the compiler:
@@ -132,7 +132,7 @@ produces LLVM IR.
 
 ### Create the lowering bridge
 
-**Inputs:** 
+**Inputs:**
   - the parse tree
   - the symbol table
   - The default KINDs for intrinsic types (specified by default or command line option)

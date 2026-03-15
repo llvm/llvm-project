@@ -22,11 +22,11 @@ define void @store.v4f32.1110(ptr %p, <4 x float> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <4 x float>, ptr [[P]], i64 0, i64 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
 ; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP6]])
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr align 4 [[P]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @store.v4f32.1110(
-; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P:%.*]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
+; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr align 4 [[P:%.*]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
@@ -47,11 +47,11 @@ define void @store.v8i32.10010110(ptr %p, <8 x i32> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <8 x i32>, ptr [[P]], i64 0, i64 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
 ; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP8]])
-; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> [[ARG:%.*]], ptr [[P]], i32 8, <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
+; CHECK-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> [[ARG:%.*]], ptr align 8 [[P]], <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @store.v8i32.10010110(
-; DISABLED-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> [[ARG:%.*]], ptr [[P:%.*]], i32 8, <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
+; DISABLED-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> [[ARG:%.*]], ptr align 8 [[P:%.*]], <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.store.v8i32.p0(<8 x i32> %arg, ptr %p, i32 8, <8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false>)
@@ -63,11 +63,11 @@ define void @store.v4i64.0001(ptr %p, <4 x ptr> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x ptr>, ptr [[P:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    call void @__asan_store8(i64 [[TMP2]])
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> [[ARG:%.*]], ptr [[P]], i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> [[ARG:%.*]], ptr align 8 [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @store.v4i64.0001(
-; DISABLED-NEXT:    tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> [[ARG:%.*]], ptr [[P:%.*]], i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
+; DISABLED-NEXT:    tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> [[ARG:%.*]], ptr align 8 [[P:%.*]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.store.v4p0.p0(<4 x ptr> %arg, ptr %p, i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>)
@@ -108,11 +108,11 @@ define void @store.v4f32.variable(ptr %p, <4 x float> %arg, <4 x i1> %mask) sani
 ; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP19]])
 ; CHECK-NEXT:    br label [[TMP20]]
 ; CHECK:       20:
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P]], i32 4, <4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr align 4 [[P]], <4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @store.v4f32.variable(
-; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P:%.*]], i32 4, <4 x i1> [[MASK:%.*]])
+; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr align 4 [[P:%.*]], <4 x i1> [[MASK:%.*]])
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> %mask)
@@ -125,11 +125,11 @@ define void @store.v4f32.1010.split(ptr %p, <4 x float> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x float>, ptr [[P:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP2]])
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @store.v4f32.1010.split(
-; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P:%.*]], i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
+; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr align 4 [[P:%.*]], <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.store.v4f32.p0(<4 x float> %arg, ptr %p, i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
@@ -142,12 +142,12 @@ define void @store.v4f32.0010.after.full.store(ptr %p, <4 x float> %arg) sanitiz
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    call void @__asan_store16(i64 [[TMP1]])
 ; CHECK-NEXT:    store <4 x float> [[ARG:%.*]], ptr [[P]], align 16
-; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG]], ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
+; CHECK-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG]], ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @store.v4f32.0010.after.full.store(
 ; DISABLED-NEXT:    store <4 x float> [[ARG:%.*]], ptr [[P:%.*]], align 16
-; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG]], ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
+; DISABLED-NEXT:    tail call void @llvm.masked.store.v4f32.p0(<4 x float> [[ARG]], ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 true, i1 false>)
 ; DISABLED-NEXT:    ret void
 ;
   store <4 x float> %arg, ptr %p
@@ -174,11 +174,11 @@ define <8 x i32> @load.v8i32.11100001(ptr %p, <8 x i32> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <8 x i32>, ptr [[P]], i64 0, i64 7
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
 ; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP8]])
-; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[P]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 8 [[P]], <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> [[ARG:%.*]])
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
 ; DISABLED-LABEL: @load.v8i32.11100001(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[P:%.*]], i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> [[ARG:%.*]])
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 8 [[P:%.*]], <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> [[ARG:%.*]])
 ; DISABLED-NEXT:    ret <8 x i32> [[RES]]
 ;
   %res = tail call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %p, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> %arg)
@@ -193,11 +193,11 @@ define <4 x float> @load.v4f32.1001(ptr %p, <4 x float> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <4 x float>, ptr [[P]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP4]])
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
 ; DISABLED-LABEL: @load.v4f32.1001(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P:%.*]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P:%.*]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
 ; DISABLED-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x float> %arg)
@@ -209,11 +209,11 @@ define <4 x ptr> @load.v4i64.0001(ptr %p, <4 x ptr> %arg) sanitize_address {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x ptr>, ptr [[P:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    call void @__asan_load8(i64 [[TMP2]])
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr [[P]], i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr align 8 [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> [[ARG:%.*]])
 ; CHECK-NEXT:    ret <4 x ptr> [[RES]]
 ;
 ; DISABLED-LABEL: @load.v4i64.0001(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr [[P:%.*]], i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> [[ARG:%.*]])
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr align 8 [[P:%.*]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> [[ARG:%.*]])
 ; DISABLED-NEXT:    ret <4 x ptr> [[RES]]
 ;
   %res = tail call <4 x ptr> @llvm.masked.load.v4p0.p0(ptr %p, i32 8, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x ptr> %arg)
@@ -254,11 +254,11 @@ define <4 x float> @load.v4f32.variable(ptr %p, <4 x float> %arg, <4 x i1> %mask
 ; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP19]])
 ; CHECK-NEXT:    br label [[TMP20]]
 ; CHECK:       20:
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> [[MASK]], <4 x float> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> [[MASK]], <4 x float> [[ARG:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
 ;
 ; DISABLED-LABEL: @load.v4f32.variable(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P:%.*]], i32 4, <4 x i1> [[MASK:%.*]], <4 x float> [[ARG:%.*]])
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P:%.*]], <4 x i1> [[MASK:%.*]], <4 x float> [[ARG:%.*]])
 ; DISABLED-NEXT:    ret <4 x float> [[RES]]
 ;
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> %mask, <4 x float> %arg)
@@ -271,16 +271,16 @@ define <4 x float> @load.v4f32.1001.split(ptr %p, <4 x float> %arg) sanitize_add
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x float>, ptr [[P:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP2]])
-; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> [[ARG:%.*]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <4 x float>, ptr [[P]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
 ; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP4]])
-; CHECK-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[RES]])
+; CHECK-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[RES]])
 ; CHECK-NEXT:    ret <4 x float> [[RES2]]
 ;
 ; DISABLED-LABEL: @load.v4f32.1001.split(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P:%.*]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> [[ARG:%.*]])
-; DISABLED-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[RES]])
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P:%.*]], <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> [[ARG:%.*]])
+; DISABLED-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[RES]])
 ; DISABLED-NEXT:    ret <4 x float> [[RES2]]
 ;
   %res = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr %p, i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> %arg)
@@ -294,12 +294,12 @@ define <4 x float> @load.v4f32.1001.after.full.load(ptr %p, <4 x float> %arg) sa
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    call void @__asan_load16(i64 [[TMP1]])
 ; CHECK-NEXT:    [[RES:%.*]] = load <4 x float>, ptr [[P]], align 16
-; CHECK-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
+; CHECK-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[RES2]]
 ;
 ; DISABLED-LABEL: @load.v4f32.1001.after.full.load(
 ; DISABLED-NEXT:    [[RES:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
-; DISABLED-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[P]], i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
+; DISABLED-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> [[ARG:%.*]])
 ; DISABLED-NEXT:    ret <4 x float> [[RES2]]
 ;
   %res = load <4 x float>, ptr %p
@@ -331,11 +331,11 @@ define <vscale x 4 x float> @scalable.load.nxv4f32(ptr %p, <vscale x 4 x i1> %ma
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; CHECK:       .split.split:
-; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[P]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[P]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
 ; DISABLED-LABEL: @scalable.load.nxv4f32(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[P:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
 ; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %res = tail call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr %p, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
@@ -361,11 +361,11 @@ define void @scalable.store.nxv4f32(ptr %p, <vscale x 4 x float> %arg, <vscale x
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; CHECK:       .split.split:
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], i32 4, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr align 4 [[P]], <vscale x 4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @scalable.store.nxv4f32(
-; DISABLED-NEXT:    tail call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr [[P:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]])
+; DISABLED-NEXT:    tail call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr align 4 [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]])
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %arg, ptr %p, i32 4, <vscale x 4 x i1> %mask)
@@ -395,11 +395,11 @@ define <vscale x 4 x float> @scalable.gather.nxv4f32(<vscale x 4 x ptr> %vp, <vs
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; CHECK:       .split.split:
-; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[VP]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[VP]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
 ; DISABLED-LABEL: @scalable.gather.nxv4f32(
-; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[VP:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[VP:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
 ; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %res = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr>  %vp, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
@@ -425,11 +425,11 @@ define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x p
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; CHECK:       .split.split:
-; CHECK-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[VP]], i32 4, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> align 4 [[VP]], <vscale x 4 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 ; DISABLED-LABEL: @scalable.scatter.nxv4f32(
-; DISABLED-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[VP:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]])
+; DISABLED-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> align 4 [[VP:%.*]], <vscale x 4 x i1> [[MASK:%.*]])
 ; DISABLED-NEXT:    ret void
 ;
   tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %val, <vscale x 4 x ptr>  %vp, i32 4, <vscale x 4 x i1> %mask)

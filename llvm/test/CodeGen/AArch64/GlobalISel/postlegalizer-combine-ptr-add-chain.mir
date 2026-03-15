@@ -27,3 +27,51 @@ body:             |
     $x0 = COPY %4(p0)
     RET_ReallyLR implicit $x0
 ...
+---
+name: ptradd_chain_nuw
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: ptradd_chain_nuw
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[PTR_ADD]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(p0) = COPY $x0
+    %1:_(s64) = G_CONSTANT i64 4
+    %2:_(s64) = G_CONSTANT i64 12
+    %3:_(p0) = nuw G_PTR_ADD %0(p0), %1
+    %4:_(p0) = nuw G_PTR_ADD %3(p0), %2
+    $x0 = COPY %4(p0)
+    RET_ReallyLR implicit $x0
+...
+---
+name: ptradd_chain_nuw_inbounds
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: ptradd_chain_nuw_inbounds
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw nusw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[PTR_ADD]](p0)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:_(p0) = COPY $x0
+    %1:_(s64) = G_CONSTANT i64 4
+    %2:_(s64) = G_CONSTANT i64 12
+    %3:_(p0) = nuw nusw inbounds G_PTR_ADD %0(p0), %1
+    %4:_(p0) = nuw nusw inbounds G_PTR_ADD %3(p0), %2
+    $x0 = COPY %4(p0)
+    RET_ReallyLR implicit $x0
+...

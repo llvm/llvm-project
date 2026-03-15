@@ -32,6 +32,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
 #include <cassert>
@@ -239,6 +240,14 @@ public:
     return *this;
   }
 
+  /// Reset all properties and re-establish baseline invariants.
+  MachineFunctionProperties &resetToInitial() {
+    reset();
+    setIsSSA();
+    setTracksLiveness();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
@@ -286,7 +295,7 @@ struct LandingPadInfo {
 class LLVM_ABI MachineFunction {
   Function &F;
   const TargetMachine &Target;
-  const TargetSubtargetInfo *STI;
+  const TargetSubtargetInfo &STI;
   MCContext &Ctx;
 
   // RegInfo - Information about each register in use in the function.
@@ -414,6 +423,10 @@ class LLVM_ABI MachineFunction {
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
 
+  /// Prefetch targets in this function. This includes targets that are mapped
+  /// to a basic block and dangling targets.
+  DenseMap<UniqueBBID, SmallVector<unsigned>> PrefetchTargets;
+
   /// List of C++ TypeInfo used.
   std::vector<const GlobalValue *> TypeInfos;
 
@@ -515,6 +528,21 @@ public:
   struct CallSiteInfo {
     /// Vector of call argument and its forwarding register.
     SmallVector<ArgRegPair, 1> ArgRegPairs;
+    /// Callee type ids.
+    SmallVector<ConstantInt *, 4> CalleeTypeIds;
+
+    /// 'call_target' metadata for the DISubprogram. It is the declaration
+    /// or definition of the target function and might be indirect.
+    MDNode *CallTarget = nullptr;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's callee_type Metadata,
+    /// and sets CalleeTypeIds. This is used as type id for the indirect call in
+    /// the call graph section.
+    /// Extracts the MDNode from the CallBase's call_target Metadata to be used
+    /// during the construction of the debug info call site entries.
+    LLVM_ABI CallSiteInfo(const CallBase &CB);
   };
 
   struct CalledGlobalInfo {
@@ -522,11 +550,12 @@ public:
     unsigned TargetFlags;
   };
 
+  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
+
 private:
   Delegate *TheDelegate = nullptr;
   GISelChangeObserver *Observer = nullptr;
 
-  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
   /// Map a call instruction to call site arguments forwarding info.
   CallSiteInfoMap CallSitesInfo;
 
@@ -740,6 +769,16 @@ public:
 
   void setBBSectionsType(BasicBlockSection V) { BBSectionsType = V; }
 
+  void
+  setPrefetchTargets(const DenseMap<UniqueBBID, SmallVector<unsigned>> &V) {
+    PrefetchTargets = V;
+  }
+
+  const DenseMap<UniqueBBID, SmallVector<unsigned>> &
+  getPrefetchTargets() const {
+    return PrefetchTargets;
+  }
+
   /// Assign IsBeginSection IsEndSection fields for basic blocks in this
   /// function.
   void assignBeginEndSections();
@@ -749,13 +788,13 @@ public:
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
-  const TargetSubtargetInfo &getSubtarget() const { return *STI; }
+  const TargetSubtargetInfo &getSubtarget() const { return STI; }
 
   /// getSubtarget - This method returns a pointer to the specified type of
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
   template<typename STC> const STC &getSubtarget() const {
-    return *static_cast<const STC *>(STI);
+    return static_cast<const STC &>(STI);
   }
 
   /// getRegInfo - Return information about the registers currently in use.
@@ -807,6 +846,10 @@ public:
     if (Alignment < A)
       Alignment = A;
   }
+
+  /// Returns the preferred alignment which comes from the function attributes
+  /// (optsize, minsize, prefalign) and TargetLowering.
+  Align getPreferredAlignment() const;
 
   /// exposesReturnsTwice - Returns true if the function calls setjmp or
   /// any other similar functions with attribute "returns twice" without
@@ -1197,7 +1240,7 @@ public:
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
       MDNode *PCSections = nullptr, uint32_t CFIType = 0,
-      MDNode *MMRAs = nullptr);
+      MDNode *MMRAs = nullptr, Value *DS = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1254,6 +1297,8 @@ public:
   /// Notes the global and target flags for a call site.
   void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
     assert(MI && "MI must not be null");
+    assert(MI->isCandidateForAdditionalCallInfo() &&
+           "Cannot store called global info for this instruction");
     assert(Details.Callee && "Global must not be null");
     CalledGlobalsInfo.insert({MI, Details});
   }

@@ -1911,13 +1911,13 @@ define <2 x i64> @test_v2f64_ogt_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmoval %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm4, %xmm2
 ; SSE-32-NEXT:    cmoval %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -2031,13 +2031,13 @@ define <2 x i64> @test_v2f64_oge_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmovael %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm4, %xmm2
 ; SSE-32-NEXT:    cmovael %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -2151,13 +2151,13 @@ define <2 x i64> @test_v2f64_olt_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmoval %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmoval %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -2269,13 +2269,13 @@ define <2 x i64> @test_v2f64_ole_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmovael %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmovael %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -2680,13 +2680,13 @@ define <2 x i64> @test_v2f64_ugt_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmovbl %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmovbl %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -2798,13 +2798,13 @@ define <2 x i64> @test_v2f64_uge_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmovbel %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm2, %xmm4
 ; SSE-32-NEXT:    cmovbel %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -2916,13 +2916,13 @@ define <2 x i64> @test_v2f64_ult_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmovbl %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm4, %xmm2
 ; SSE-32-NEXT:    cmovbl %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3
@@ -3036,13 +3036,13 @@ define <2 x i64> @test_v2f64_ule_q(<2 x i64> %a, <2 x i64> %b, <2 x double> %f1,
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmovbel %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,0,0,0]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-32-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-32-NEXT:    ucomisd %xmm4, %xmm2
 ; SSE-32-NEXT:    cmovbel %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
+; SSE-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; SSE-32-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
 ; SSE-32-NEXT:    pand %xmm3, %xmm0
 ; SSE-32-NEXT:    pandn %xmm1, %xmm3

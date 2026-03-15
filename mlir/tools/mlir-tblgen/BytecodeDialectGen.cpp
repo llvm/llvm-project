@@ -141,19 +141,19 @@ void Generator::emitParse(StringRef kind, const Record &x) {
                 kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type",
                 x.getName());
   const DagInit *members = x.getValueAsDag("members");
-  SmallVector<std::string> argNames = llvm::to_vector(
-      map_range(members->getArgNames(), [](const StringInit *init) {
+  SmallVector<std::string> argNames =
+      llvm::map_to_vector(members->getArgNames(), [](const StringInit *init) {
         return init->getAsUnquotedString();
-      }));
+      });
   StringRef builder = x.getValueAsString("cBuilder").trim();
   emitParseHelper(kind, returnType, builder, members->getArgs(), argNames,
                   returnType + "()", os);
   os << "\n\n";
 }
 
-void printParseConditional(mlir::raw_indented_ostream &ios,
-                           ArrayRef<const Init *> args,
-                           ArrayRef<std::string> argNames) {
+static void printParseConditional(mlir::raw_indented_ostream &ios,
+                                  ArrayRef<const Init *> args,
+                                  ArrayRef<std::string> argNames) {
   ios << "if ";
   auto parenScope = ios.scope("(", ") {");
   ios.indent();
@@ -259,10 +259,9 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
     if (def->isSubClassOf("CompositeBytecode")) {
       const DagInit *members = def->getValueAsDag("members");
       args = llvm::to_vector(members->getArgs());
-      argNames = llvm::to_vector(
-          map_range(members->getArgNames(), [](const StringInit *init) {
-            return init->getAsUnquotedString();
-          }));
+      argNames = llvm::map_to_vector(
+          members->getArgNames(),
+          [](const StringInit *init) { return init->getAsUnquotedString(); });
     } else {
       args = {def->getDefInit()};
       argNames = {"temp"};
@@ -302,7 +301,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
     return;
 
   char const *head =
-      R"(static void write({0} {1}, DialectBytecodeWriter &writer) )";
+      R"(static LogicalResult write({0} {1}, DialectBytecodeWriter &writer) )";
   mlir::raw_indented_ostream os(output);
   os << formatv(head, type, kind);
   auto funScope = os.scope("{\n", "}\n\n");
@@ -316,7 +315,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
         StringRef pred = rec->getValueAsString("printerPredicate");
         if (vec.size() > 1 && pred.empty())
           PrintError(rec->getLoc(),
-                     "Requires parsing predicate given common cType");
+                     "Requires printing predicate given common cType");
       }
       PrintFatalError("Unspecified for shared cType " + type);
     }
@@ -342,10 +341,14 @@ void Generator::emitPrint(StringRef kind, StringRef type,
     }
 
     if (!pred.empty()) {
+      os << "return success();\n";
       os.unindent();
       os << "}\n";
+    } else {
+      os << "return success();\n";
     }
   }
+  os << "return failure();\n";
 }
 
 void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
@@ -419,7 +422,7 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
 
     os << "\n.Case([&](" << type << " t)";
     auto caseScope = os.scope(" {\n", "})");
-    os << "return write(t, writer), success();\n";
+    os << "return write(t, writer);\n";
   }
   os << "\n.Default([&](" << capitalize(kind) << ") { return failure(); });\n";
 }
@@ -476,9 +479,8 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
     gen.emitParseDispatch(kind, *vec);
 
     SmallVector<std::string> types;
-    for (const auto &it : perType) {
+    for (const auto &it : perType)
       types.push_back(it.first);
-    }
     gen.emitPrintDispatch(kind, types);
   }
 

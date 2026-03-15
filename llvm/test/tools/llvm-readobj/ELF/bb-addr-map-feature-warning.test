@@ -1,0 +1,37 @@
+## This test checks that we output a warning when the specified version is too old to support the given features.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --bb-addr-map %t 2>&1 | FileCheck -DFILE=%t %s
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+
+# CHECK: BBAddrMap [
+# CHECK-NEXT: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 1: version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when callsite offsets feature is enabled: version = 2 feature = 32
+Sections:
+  - Name: '.llvm_bb_addr_map (1)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        Feature: 0x20
+
+# CHECK: BBAddrMap [
+# CHECK-NEXT: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 2: version should be >= 4 for SHT_LLVM_BB_ADDR_MAP when basic block hash feature is enabled: version = 3 feature = 64
+
+  - Name: '.llvm_bb_addr_map (2)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 3
+        Feature: 0x40
+
+# CHECK: BBAddrMap [
+# CHECK-NEXT: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: version should be >= 5 for SHT_LLVM_BB_ADDR_MAP when post link cfg feature is enabled: version = 4 feature = 128
+
+  - Name: '.llvm_bb_addr_map (3)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 4
+        Feature: 0x80

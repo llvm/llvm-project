@@ -112,7 +112,7 @@ Attribute mlir::convertToAttribute(MLIRContext *ctx, bool storage) {
 }
 
 template <typename DenseArrayTy, typename T>
-LogicalResult
+static LogicalResult
 convertDenseArrayFromAttr(MutableArrayRef<T> storage, Attribute attr,
                           function_ref<InFlightDiagnostic()> emitError,
                           StringRef denseArrayTyStr) {
@@ -143,7 +143,7 @@ mlir::convertFromAttribute(MutableArrayRef<int32_t> storage, Attribute attr,
 }
 
 template <typename DenseArrayTy, typename T>
-LogicalResult
+static LogicalResult
 convertDenseArrayFromAttr(SmallVectorImpl<T> &storage, Attribute attr,
                           function_ref<InFlightDiagnostic()> emitError,
                           StringRef denseArrayTyStr) {
@@ -172,4 +172,9 @@ mlir::convertFromAttribute(SmallVectorImpl<int32_t> &storage, Attribute attr,
 Attribute mlir::convertToAttribute(MLIRContext *ctx,
                                    ArrayRef<int64_t> storage) {
   return DenseI64ArrayAttr::get(ctx, storage);
+}
+
+Attribute mlir::convertToAttribute(MLIRContext *ctx,
+                                   ArrayRef<int32_t> storage) {
+  return DenseI32ArrayAttr::get(ctx, storage);
 }

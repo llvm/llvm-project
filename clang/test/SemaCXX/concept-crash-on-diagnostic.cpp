@@ -60,3 +60,17 @@ concept atomicish = requires() {
 };
 atomicish<int> f(); // expected-error {{expected 'auto' or 'decltype(auto)' after concept name}}
 } // namespace GH138820
+
+namespace GH138823 {
+  template <typename T> void foo();
+  template <class... Ts>
+  concept ConceptA = requires { foo<Ts>(); };
+  // expected-error@-1 {{expression contains unexpanded parameter pack 'Ts'}}
+
+  template <class>
+  concept ConceptB = ConceptA<int>;
+
+  template <ConceptB Foo> void bar(Foo);
+
+  void test() { bar(1); }
+}

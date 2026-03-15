@@ -58,8 +58,8 @@ _CLC_DEF _CLC_OVERLOAD void __clc_ep_log(__CLC_GENTYPE x,
   __CLC_GENTYPE f2 = f - f1;
   __CLC_GENTYPE u2 = MATH_DIVIDE(f2, __clc_fma(0.5, f2, f1));
 
-  __CLC_GENTYPE z1 = USE_TABLE(ln_tbl_lo, (index - 64));
-  __CLC_GENTYPE q = USE_TABLE(ln_tbl_hi, (index - 64));
+  __CLC_GENTYPE z1 = __CLC_USE_TABLE(ln_tbl_lo, (index - 64));
+  __CLC_GENTYPE q = __CLC_USE_TABLE(ln_tbl_hi, (index - 64));
 
   z1 = near_one ? r : z1;
   q = near_one ? 0.0 : q;

@@ -74,8 +74,7 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[ADD_US]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP17]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP18]], ptr [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
@@ -215,7 +214,7 @@ for.end15:                                        ; preds = %for.end.us, %entry
   ret void
 }
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
 !3 = !{!4, !5}
 !4 = !{!4}

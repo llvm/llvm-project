@@ -54,7 +54,40 @@
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=REMARKS
 
-; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR
+; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefixes=IR,IR-INLINE
+
+;; Next, add a threshold to prevent inlining of the promoted calls which have
+;; count 2 (the default threshold of 2 means they are inlinable by default).
+; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-memprof-icp-noinline-threshold=3 \
+; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:  -memprof-allow-recursive-callsites \
+; RUN:  -supports-hot-cold-new \
+; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \
+; RUN:  -r=%t/foo.o,_ZN2B03barEj, \
+; RUN:  -r=%t/foo.o,_ZN1B3barEj, \
+; RUN:  -r=%t/main.o,_Z3fooR2B0j, \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:  -r=%t/main.o,_ZdlPvm, \
+; RUN:  -r=%t/main.o,_Z8externalPi, \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_ZN2B03barEj,plx \
+; RUN:  -r=%t/main.o,_ZN1B3barEj,plx \
+; RUN:  -r=%t/main.o,_ZTV1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv120__si_class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS1B,plx \
+; RUN:  -r=%t/main.o,_ZTVN10__cxxabiv117__class_type_infoE,plx \
+; RUN:  -r=%t/main.o,_ZTS2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI2B0,plx \
+; RUN:  -r=%t/main.o,_ZTI1B,plx \
+; RUN:  -r=%t/main.o,_ZTV2B0,plx \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
+; RUN:  -pass-remarks=. -save-temps \
+; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
+; RUN:  --check-prefix=REMARKS
+
+; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefixes=IR,IR-NOINLINE
 
 ; REMARKS: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
 ; REMARKS: call in clone main assigned to call function clone _Z3fooR2B0j.memprof.1
@@ -98,12 +131,14 @@
 ; IR:   %[[R1:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
 ; IR:   br i1 %[[R1]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD:[0-9]+]]
+; IR-INLINE:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD:[0-9]+]]
+; IR-NOINLINE:   call {{.*}} @_ZN1B3barEj(ptr null, i32 0) #[[NOINLINE:[0-9]+]]
 ; IR: if.false.orig_indirect:
 ; IR:   %[[R2:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
 ; IR:   br i1 %[[R2]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD]]
+; IR-INLINE:   call {{.*}} @_Znwm(i64 noundef 4) #[[NOTCOLD]]
+; IR-NOINLINE:   call {{.*}} @_ZN2B03barEj(ptr null, i32 0) #[[NOINLINE]]
 ; IR: if.false.orig_indirect2:
 ; IR:   call {{.*}} %0
 
@@ -114,17 +149,20 @@
 ; IR:   %[[R3:[0-9]+]] = icmp eq ptr %0, @_ZN1B3barEj
 ; IR:   br i1 %[[R3]], label %if.true.direct_targ, label %if.false.orig_indirect
 ; IR: if.true.direct_targ:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD:[0-9]+]]
+; IR-INLINE:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD:[0-9]+]]
+; IR-NOINLINE:   call {{.*}} @_ZN1B3barEj.memprof.1(ptr null, i32 0) #[[NOINLINE]]
 ; IR: if.false.orig_indirect:
 ; IR:   %[[R4:[0-9]+]] = icmp eq ptr %0, @_ZN2B03barEj
 ; IR:   br i1 %[[R4]], label %if.true.direct_targ1, label %if.false.orig_indirect2
 ; IR: if.true.direct_targ1:
-; IR:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD]]
+; IR-INLINE:   call {{.*}} @_Znwm(i64 noundef 4) #[[COLD]]
+; IR-NOINLINE:   call {{.*}} @_ZN2B03barEj.memprof.1(ptr null, i32 0) #[[NOINLINE]]
 ; IR: if.false.orig_indirect2:
 ; IR:   call {{.*}} %0
 
-; IR: attributes #[[NOTCOLD]] = {{.*}} "memprof"="notcold"
-; IR: attributes #[[COLD]] = {{.*}} "memprof"="cold"
+; IR-INLINE: attributes #[[NOTCOLD]] = {{.*}} "memprof"="notcold"
+; IR-INLINE: attributes #[[COLD]] = {{.*}} "memprof"="cold"
+; IR-NOINLINE: attributes #[[NOINLINE]] = { noinline }
 
 ;--- foo.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

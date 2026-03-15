@@ -353,6 +353,13 @@ define <2 x i64> @rotr_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; 4 x f32
 ; ==============================================================================
 
+; CHECK-LABEL: frem_v4f32:
+; CHECK: call $push[[L:[0-9]+]]=, fmod
+define <4 x float> @frem_v4f32(<4 x float> %a, <4 x float> %b) #0 {
+  %frem = frem <4 x float> %a, %b
+  ret <4 x float> %frem
+}
+
 ; CHECK-LABEL: copysign_v4f32:
 ; CHECK: v128.const
 ; CHECK-NEXT: v128.and
@@ -456,6 +463,13 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
 ; ==============================================================================
 ; 2 x f64
 ; ==============================================================================
+
+; CHECK-LABEL: frem_v2f64:
+; CHECK: call $push[[L:[0-9]+]]=, fmod
+define <2 x double> @frem_v2f64(<2 x double> %a, <2 x double> %b) #0 {
+  %frem = frem <2 x double> %a, %b
+  ret <2 x double> %frem
+}
 
 ; CHECK-LABEL: copysign_v2f64:
 ; CHECK: v128.const

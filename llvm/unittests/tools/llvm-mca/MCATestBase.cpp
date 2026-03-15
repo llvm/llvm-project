@@ -31,17 +31,15 @@ void MCATestBase::SetUp() {
   TheTarget = getLLVMTarget();
   ASSERT_NE(TheTarget, nullptr);
 
-  StringRef TripleName = TheTriple.getTriple();
-
-  STI.reset(TheTarget->createMCSubtargetInfo(TripleName, CPUName, MAttr));
+  STI.reset(TheTarget->createMCSubtargetInfo(TheTriple, CPUName, MAttr));
   ASSERT_TRUE(STI);
   ASSERT_TRUE(STI->isCPUStringValid(CPUName));
 
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   ASSERT_TRUE(MRI);
 
   auto MCOptions = getMCTargetOptions();
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   ASSERT_TRUE(MAI);
 
   Ctx = std::make_unique<MCContext>(TheTriple, MAI.get(), MRI.get(), STI.get());
@@ -59,16 +57,24 @@ void MCATestBase::SetUp() {
   ASSERT_TRUE(IP);
 }
 
-Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
-                                  ArrayRef<mca::View *> Views,
-                                  const mca::PipelineOptions *PO) {
+Error MCATestBase::runBaselineMCA(
+    json::Object &Result, ArrayRef<MCInst> Insts, ArrayRef<mca::View *> Views,
+    const mca::PipelineOptions *PO,
+    ArrayRef<std::pair<StringRef, StringRef>> Descs) {
   mca::Context MCA(*MRI, *STI);
 
-  // Default InstrumentManager
-  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+  // Enable instruments when descriptions are provided
+  auto IM =
+      std::make_unique<mca::InstrumentManager>(*STI, *MCII, !Descs.empty());
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100);
 
-  const SmallVector<mca::Instrument *> Instruments;
+  SmallVector<mca::Instrument *> Instruments;
+  SmallVector<mca::UniqueInstrument> InstrumentsOwner;
+  for (const auto &Desc : Descs) {
+    auto I = IM->createInstrument(Desc.first, Desc.second);
+    Instruments.push_back(I.get());
+    InstrumentsOwner.push_back(std::move(I));
+  }
   SmallVector<std::unique_ptr<mca::Instruction>> LoweredInsts;
   for (const auto &MCI : Insts) {
     Expected<std::unique_ptr<mca::Instruction>> Inst =

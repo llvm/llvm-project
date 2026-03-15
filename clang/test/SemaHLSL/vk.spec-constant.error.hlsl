@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.8-compute -verify %s
 
 #ifndef __spirv__
-// expected-warning@+2{{'constant_id' attribute ignored}}
+// expected-warning@+2{{'vk::constant_id' attribute ignored}}
 #endif
 [[vk::constant_id(0)]]
 const bool sc0 = true;
@@ -12,7 +12,7 @@ const bool sc0 = true;
 [[vk::constant_id(1)]]
 const bool sc1 = sc0; // error
 
-// expected-warning@+1{{'constant_id' attribute only applies to external global variables}}
+// expected-warning@+1{{'vk::constant_id' attribute only applies to external global variables}}
 [[vk::constant_id(2)]]
 static const bool sc2 = false; // error
 
@@ -30,7 +30,7 @@ const int2 sc5 = {0,0}; // error
 
 [numthreads(1,1,1)]
 void main() {
-  // expected-warning@+1{{'constant_id' attribute only applies to external global variables}}
+  // expected-warning@+1{{'vk::constant_id' attribute only applies to external global variables}}
   [[vk::constant_id(6)]]
   const bool sc6 = false; // error
 }

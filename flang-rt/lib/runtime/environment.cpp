@@ -8,7 +8,7 @@
 
 #include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
-#include "memory.h"
+#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
 #include <cstdlib>
@@ -16,7 +16,14 @@
 #include <limits>
 
 #ifdef _WIN32
+#ifdef _MSC_VER
 extern char **_environ;
+#endif
+#elif defined(__FreeBSD__) || RT_GPU_TARGET
+// FreeBSD has environ in crt rather than libc. Using "extern char** environ"
+// in the code of a shared library makes it fail to link with -Wl,--no-undefined
+// See https://reviews.freebsd.org/D30842#840642
+// GPU targets do not provide environ.
 #else
 extern char **environ;
 #endif
@@ -29,6 +36,24 @@ RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
 #endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
+// Optional callback routines to be invoked pre and post execution
+// environment setup.
+// RTNAME(RegisterConfigureEnv) will return true if callback function(s)
+// is(are) successfully added to small array of pointers.  False if more
+// than nConfigEnvCallback registrations for either pre or post functions.
+
+static int nPreConfigEnvCallback{0};
+static void (*PreConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
+static int nPostConfigEnvCallback{0};
+static void (*PostConfigEnvCallback[ExecutionEnvironment::nConfigEnvCallback])(
+    int, const char *[], const char *[], const EnvironmentDefaultList *){
+    nullptr};
+
+// No environment support on the GPU.
+#if !RT_GPU_TARGET
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
     return;
@@ -52,8 +77,7 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
 }
 
 RT_OFFLOAD_API_GROUP_BEGIN
-Fortran::common::optional<Convert> GetConvertFromString(
-    const char *x, std::size_t n) {
+common::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   static const char *keywords[]{
       "UNKNOWN", "NATIVE", "LITTLE_ENDIAN", "BIG_ENDIAN", "SWAP", nullptr};
   switch (IdentifyValue(x, n, keywords)) {
@@ -68,7 +92,7 @@ Fortran::common::optional<Convert> GetConvertFromString(
   case 4:
     return Convert::Swap;
   default:
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
 }
 RT_OFFLOAD_API_GROUP_END
@@ -78,8 +102,22 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
   argc = ac;
   argv = av;
   SetEnvironmentDefaults(envDefaults);
+
+  if (0 != nPreConfigEnvCallback) {
+    // Run an optional callback function after the core of the
+    // ExecutionEnvironment() logic.
+    for (int i{0}; i != nPreConfigEnvCallback; ++i) {
+      PreConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
+  }
+
 #ifdef _WIN32
   envp = _environ;
+#elif defined(__FreeBSD__)
+  auto envpp{reinterpret_cast<char ***>(dlsym(RTLD_DEFAULT, "environ"))};
+  if (envpp) {
+    envp = *envpp;
+  }
 #else
   envp = environ;
 #endif
@@ -105,6 +143,17 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(
           stderr, "Fortran runtime: FORT_CONVERT=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_TRUNCATE_STREAM")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      truncateStream = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_TRUNCATE_STREAM=%s is invalid; ignored\n", x);
     }
   }
 
@@ -172,7 +221,27 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FORT_NO_EMPTY_ALLOCATION")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      noEmptyAllocation = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_NO_EMPTY_ALLOCATION=%s is invalid; ignored\n",
+          x);
+    }
+  }
+
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
+
+  if (0 != nPostConfigEnvCallback) {
+    // Run an optional callback function in reverse order of registration
+    // after the core of the ExecutionEnvironment() logic.
+    for (int i{0}; i != nPostConfigEnvCallback; ++i) {
+      PostConfigEnvCallback[i](ac, av, env, envDefaults);
+    }
+  }
 }
 
 const char *ExecutionEnvironment::GetEnv(
@@ -248,5 +317,38 @@ std::int32_t ExecutionEnvironment::UnsetEnv(
 
   return status;
 }
+#endif
+
+extern "C" {
+
+// User supplied callback functions to further customize the configuration
+// of the runtime environment.
+// The pre and post callback functions are called upon entry and exit
+// of ExecutionEnvironment::Configure() respectively.
+
+bool RTNAME(RegisterConfigureEnv)(
+    ExecutionEnvironment::ConfigEnvCallbackPtr pre,
+    ExecutionEnvironment::ConfigEnvCallbackPtr post) {
+  bool ret{true};
+
+  if (nullptr != pre) {
+    if (nPreConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PreConfigEnvCallback[nPreConfigEnvCallback++] = pre;
+    } else {
+      ret = false;
+    }
+  }
+
+  if (ret && nullptr != post) {
+    if (nPostConfigEnvCallback < ExecutionEnvironment::nConfigEnvCallback) {
+      PostConfigEnvCallback[nPostConfigEnvCallback++] = post;
+    } else {
+      ret = false;
+    }
+  }
+
+  return ret;
+}
+} // extern "C"
 
 } // namespace Fortran::runtime

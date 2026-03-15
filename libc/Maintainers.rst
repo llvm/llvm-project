@@ -8,10 +8,6 @@ LLVM-libc. The following people are the active maintainers for the project.
 Please reach out to them for code reviews, questions about their area of
 expertise, or other assistance.
 
-.. contents::
-   :depth: 1
-   :local:
-
 Lead Maintainer
 ---------------
 | Michael Jones
@@ -49,11 +45,6 @@ Threading
 | Yifan Zhu
 | yifanzhu\@rochester.edu (email), `Schrodinger ZHU Yifan <https://github.com/schrodingerzhu>`_ (github)
 
-UEFI
-----
-| Tristan Ross
-| tristan.ross\@midstall.com (email), `RossComputerGuy <https://github.com/RossComputerGuy>`_ (github)
-
 RISC-V
 ------
 | Mikhail R. Gadelha
@@ -64,4 +55,8 @@ Public Headers / hdrgen
 | Roland McGrath
 | mcgrathr\@google.com (email), `frobtech <https://github.com/frobtech>`_ (github)
 
-.. TODO: add "Inactive Maintainers" section when needed.
+
+Inactive Maintainers
+====================
+| Tristan Ross
+| tristan.ross\@midstall.com (email), `RossComputerGuy <https://github.com/RossComputerGuy>`_ (github)

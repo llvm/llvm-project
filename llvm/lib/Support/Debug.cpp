@@ -24,11 +24,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Debug.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/circular_raw_ostream.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 #include "DebugOptions.h"
 
@@ -38,27 +40,62 @@
 
 using namespace llvm;
 
+/// Parse a debug type string into a pair of the debug type and the debug level.
+/// The expected format is "type[:level]", where the level is an optional
+/// integer.
+static std::pair<std::string, std::optional<int>>
+parseDebugType(StringRef DbgType) {
+  std::optional<int> Level;
+  size_t ColonPos = DbgType.find(':');
+  if (ColonPos != StringRef::npos) {
+    StringRef LevelStr = DbgType.substr(ColonPos + 1);
+    DbgType = DbgType.take_front(ColonPos);
+    if (LevelStr.empty())
+      Level = 0;
+    else {
+      int parsedLevel;
+      if (to_integer(LevelStr, parsedLevel, 10))
+        Level = parsedLevel;
+    }
+  }
+  return std::make_pair(DbgType.str(), Level);
+}
+
 // Even though LLVM might be built with NDEBUG, define symbols that the code
 // built without NDEBUG can depend on via the llvm/Support/Debug.h header.
 namespace llvm {
 /// Exported boolean set by the -debug option.
 bool DebugFlag = false;
 
-static ManagedStatic<std::vector<std::string>> CurrentDebugType;
+/// The current debug type and an optional debug level.
+/// The debug level is the verbosity of the debug output.
+/// 0 is a special level that acts as an opt-out for this specific debug type.
+/// If provided, the debug output is enabled only if the user specified a level
+/// at least as high as the provided level.
+static ManagedStatic<std::vector<std::pair<std::string, std::optional<int>>>>
+    CurrentDebugType;
 
 /// Return true if the specified string is the debug type
 /// specified on the command line, or if none was specified on the command line
 /// with the -debug-only=X option.
-bool isCurrentDebugType(const char *DebugType) {
+bool isCurrentDebugType(const char *DebugType, int Level) {
   if (CurrentDebugType->empty())
     return true;
+  // Track if there is at least one debug type with a level, this is used
+  // to allow to opt-out of some DebugType and leaving all the others enabled.
+  bool HasEnabledDebugType = false;
   // See if DebugType is in list. Note: do not use find() as that forces us to
   // unnecessarily create an std::string instance.
-  for (auto &d : *CurrentDebugType) {
-    if (d == DebugType)
+  for (auto &D : *CurrentDebugType) {
+    HasEnabledDebugType =
+        HasEnabledDebugType || (!D.second.has_value() || D.second.value() > 0);
+    if (D.first != DebugType)
+      continue;
+    if (!D.second.has_value())
       return true;
+    return D.second >= Level;
   }
-  return false;
+  return !HasEnabledDebugType;
 }
 
 /// Set the current debug type, as if the -debug-only=X
@@ -73,8 +110,11 @@ void setCurrentDebugType(const char *Type) {
 
 void setCurrentDebugTypes(const char **Types, unsigned Count) {
   CurrentDebugType->clear();
-  llvm::append_range(*CurrentDebugType, ArrayRef(Types, Count));
+  CurrentDebugType->reserve(Count);
+  for (const char *Type : ArrayRef(Types, Count))
+    CurrentDebugType->push_back(parseDebugType(Type));
 }
+
 } // namespace llvm
 
 // All Debug.h functionality is a no-op in NDEBUG mode.
@@ -114,10 +154,10 @@ struct DebugOnlyOpt {
     if (Val.empty())
       return;
     DebugFlag = true;
-    SmallVector<StringRef,8> dbgTypes;
-    StringRef(Val).split(dbgTypes, ',', -1, false);
-    for (auto dbgType : dbgTypes)
-      CurrentDebugType->push_back(std::string(dbgType));
+    SmallVector<StringRef, 8> DbgTypes;
+    StringRef(Val).split(DbgTypes, ',', -1, false);
+    for (auto DbgType : DbgTypes)
+      CurrentDebugType->push_back(parseDebugType(DbgType));
   }
 };
 } // namespace
@@ -129,8 +169,13 @@ struct CreateDebugOnly {
   static void *call() {
     return new cl::opt<DebugOnlyOpt, true, cl::parser<std::string>>(
         "debug-only",
-        cl::desc("Enable a specific type of debug output (comma separated list "
-                 "of types)"),
+        cl::desc(
+            "Enable a specific type of debug output (comma separated list "
+            "of types using the format \"type[:level]\", where the level "
+            "is an optional integer. The level can be set to 1, 2, 3, etc. to "
+            "control the verbosity of the output. Setting a debug-type level "
+            "to zero acts as an opt-out for this specific debug-type without "
+            "affecting the others."),
         cl::Hidden, cl::value_desc("debug string"),
         cl::location(DebugOnlyOptLoc), cl::ValueRequired);
   }

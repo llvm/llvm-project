@@ -4,8 +4,8 @@
 define void @signed(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @signed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -23,12 +23,10 @@ define void @signed(ptr %x, ptr %y, i32 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -79,8 +77,8 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @unsigned(ptr %x, ptr %y, i32 %n) {
 ; CHECK-LABEL: @unsigned(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -98,12 +96,10 @@ define void @unsigned(ptr %x, ptr %y, i32 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

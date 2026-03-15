@@ -1,4 +1,4 @@
-//===--- ReservedIdentifierCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,9 +37,9 @@ static int getMessageSelectIndex(StringRef Tag) {
   return 0;
 }
 
-llvm::SmallVector<llvm::Regex>
+SmallVector<llvm::Regex>
 ReservedIdentifierCheck::parseAllowedIdentifiers() const {
-  llvm::SmallVector<llvm::Regex> AllowedIdentifiers;
+  SmallVector<llvm::Regex> AllowedIdentifiers;
   AllowedIdentifiers.reserve(AllowedIdentifiersRaw.size());
 
   for (const auto &Identifier : AllowedIdentifiersRaw) {

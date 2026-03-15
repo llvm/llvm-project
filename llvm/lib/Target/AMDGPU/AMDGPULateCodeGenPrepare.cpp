@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -79,8 +80,6 @@ private:
 
   /// The scalar type to convert to
   Type *const ConvertToScalar;
-  /// The set of visited Instructions
-  SmallPtrSet<Instruction *, 4> Visited;
   /// Map of Value -> Converted Value
   ValueToValueMap ValMap;
   /// Map of containing conversions from Optimal Type -> Original Type per BB.
@@ -127,7 +126,38 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+  bool isOpLegal(const Instruction *I) {
+    if (isa<IntrinsicInst>(I))
+      return true;
+
+    // Any store is a profitable sink (prevents flip-flopping)
+    if (isa<StoreInst>(I))
+      return true;
+
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      if (auto *VT = dyn_cast<FixedVectorType>(BO->getType())) {
+        if (const auto *IT = dyn_cast<IntegerType>(VT->getElementType())) {
+          unsigned EB = IT->getBitWidth();
+          unsigned EC = VT->getNumElements();
+          // Check for SDWA-compatible operation
+          if ((EB == 8 || EB == 16) && ST.hasSDWA() && EC * EB <= 32) {
+            switch (BO->getOpcode()) {
+            case Instruction::Add:
+            case Instruction::Sub:
+            case Instruction::And:
+            case Instruction::Or:
+            case Instruction::Xor:
+              return true;
+            default:
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;
@@ -151,7 +181,10 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+      // Same-BB filter must look at the *user*; and allow non-lookthrough
+      // users when the def is a PHI (loop-header pattern).
+      if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
+          !isa<PHINode>(II))
         continue;
 
       if (isOpLegal(CII))
@@ -288,6 +321,7 @@ bool LiveRegOptimizer::optimizeLiveType(
   SmallPtrSet<PHINode *, 4> PhiNodes;
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
+  SmallPtrSet<Instruction *, 4> Visited;
 
   Worklist.push_back(cast<Instruction>(I));
   while (!Worklist.empty()) {
@@ -546,7 +580,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    // Invalidates UniformityInfo
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;

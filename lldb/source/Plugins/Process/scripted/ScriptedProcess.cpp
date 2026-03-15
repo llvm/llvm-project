@@ -27,12 +27,10 @@
 
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 
-#include <mutex>
-
-LLDB_PLUGIN_DEFINE(ScriptedProcess)
-
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(ScriptedProcess)
 
 llvm::StringRef ScriptedProcess::GetPluginDescriptionStatic() {
   return "Scripted Process plug-in.";
@@ -146,12 +144,8 @@ ScriptedProcess::~ScriptedProcess() {
 }
 
 void ScriptedProcess::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 void ScriptedProcess::Terminate() {
@@ -231,7 +225,7 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize() || error.Fail())
+  if (!data_extractor_sp || !data_extractor_sp->HasData() || error.Fail())
     return 0;
 
   offset_t bytes_copied = data_extractor_sp->CopyByteOrderedData(
@@ -252,7 +246,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   lldb::DataExtractorSP data_extractor_sp = std::make_shared<DataExtractor>(
       buf, size, GetByteOrder(), GetAddressByteSize());
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize())
+  if (!data_extractor_sp || !data_extractor_sp->HasData())
     return 0;
 
   lldb::offset_t bytes_written =

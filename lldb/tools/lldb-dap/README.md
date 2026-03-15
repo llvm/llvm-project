@@ -44,6 +44,34 @@ adds `FOO=1` and `bar` to the environment:
 }
 ```
 
+#### Launch in integrated terminal
+
+This will launch process in IDE's integrated terminal.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "console": "integratedTerminal"
+}
+```
+
+#### Setup IO redirection
+
+This will launch process and connect `stdin` to `in.txt`, both of `stdout` and `stderr` to `out.txt`.
+
+```javascript
+{
+  "type": "lldb-dap",
+  "request": "launch",
+  "name": "Debug",
+  "program": "/tmp/a.out",
+  "stdio": ["in.txt", "out.txt"]
+}
+```
+
 ### Attaching to a process
 
 When attaching to a process using LLDB, you can attach in multiple ways:
@@ -235,7 +263,9 @@ contain the following key/value pairs:
 | **cwd**                           | string      |     | The program working directory.
 | **env**                           | dictionary  |     | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
-| **runInTerminal**                 | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **runInTerminal** (deprecated)    | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **console**                       | string      |     | Specify where to launch the program: internal console (`internalConsole`), integrated terminal (`integratedTerminal`) or external terminal (`externalTerminal`). Supported from lldb-dap 21.0 version.
+| **stdio**                         | [string]    |     | Redirects the debuggee's standard I/O (stdin, stdout, stderr) to a file path, named pipe, or TTY device.<br/>Use null to redirect a stream to the default debug terminal.<br/>The first three values map to stdin, stdout, and stderr respectively, Additional values create extra file descriptors (4, 5, etc.).<br/><br/>Example: `stdio: [null, "./output_file"]`, the debuggee uses the default terminal for `stdin` and `stderr`, but writes `stdout` to `./output_file`.<br/>Added in version 22.0.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain
@@ -246,7 +276,10 @@ the following `lldb-dap` specific key/value pairs:
 | **program**                       | string      |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
 | **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **program**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
 | **waitFor**                       | boolean     |     | Wait for the process to launch.
+| **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after attaching.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
+| **gdb-remote-port** | int      |     | TCP/IP port to attach to a remote system. Specifying both pid and port is an error.
+| **gdb-remote-host** | string   |     | The hostname to connect to a remote system. The default hostname being used `localhost`.                    
 
 ### Configuring `lldb-dap` defaults
 
@@ -274,9 +307,9 @@ User settings can set the default value for the following supported
 | **exitCommands**                  | [string] |  `[]`   |
 | **terminateCommands**             | [string] |  `[]`   |
 
-To adjust your settings, open the Settings editor via the 
-`File > Preferences > Settings` menu or press `Ctrl+`, on Windows/Linux and
-`Cmd+`, on Mac.
+To adjust your settings, open the Settings editor
+via the `File > Preferences > Settings` menu or press `Ctrl+,` on Windows/Linux,
+and the `VS Code > Settings... > Settings` menu or press `Cmd+,` on Mac.
 
 ## Debug Console
 
@@ -371,6 +404,19 @@ for more details on Debug Adapter Protocol events and the VS Code
 [debug.onDidReceiveDebugSessionCustomEvent](https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent)
 API for handling a custom event from an extension.
 
+## Server Mode
+
+lldb-dap supports a server mode that can be enabled via the following user settings.
+
+| Setting                    | Type     | Default |           |
+| -------------------------- | -------- | :-----: | --------- |
+| **Server Mode**            | string   | `False` | Run lldb-dap in server mode. When enabled, lldb-dap will start a background server that will be reused between debug sessions. This allows caching of debug symbols between sessions and improves launch performance.
+| **Connection Timeout**     | number   |   `0`   | When running lldb-dap in server mode, the time in seconds to wait for new connections after the server has started and after all clients have disconnected. Each new connection will reset the timeout. When the timeout is reached, the server will be closed and the process will exit. Specifying non-positive values will cause the server to wait for new connections indefinitely.
+
+To adjust your settings, open the Settings editor
+via the `File > Preferences > Settings` menu or press `Ctrl+,` on Windows/Linux,
+and the `VS Code > Settings... > Settings` menu or press `Cmd+,` on Mac.
+
 ## Contributing
 
 `lldb-dap` and `lldb` are developed under the umbrella of the [LLVM project](https://llvm.org/).
@@ -378,4 +424,4 @@ The source code is part of the [LLVM repository](https://github.com/llvm/llvm-pr
 We use Github's [issue tracker](https://github.com/llvm/llvm-project/issues?q=label%3Alldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls?q=label%3Alldb-dap).
 Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
 
-For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)" guide.
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap-contributing.html)" guide.

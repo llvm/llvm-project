@@ -117,6 +117,11 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     return BD->getBody();
   else if (const auto *FunTmpl = dyn_cast_or_null<FunctionTemplateDecl>(D))
     return FunTmpl->getTemplatedDecl()->getBody();
+  else if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    if (VD->isFileVarDecl()) {
+      return const_cast<Stmt *>(dyn_cast_or_null<Stmt>(VD->getInit()));
+    }
+  }
 
   llvm_unreachable("unknown code decl");
 }
@@ -245,13 +250,13 @@ CFG *AnalysisDeclContext::getUnoptimizedCFG() {
   return completeCFG.get();
 }
 
-CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
+const CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
   if (cfgStmtMap)
-    return cfgStmtMap.get();
+    return &*cfgStmtMap;
 
-  if (CFG *c = getCFG()) {
-    cfgStmtMap.reset(CFGStmtMap::Build(c, &getParentMap()));
-    return cfgStmtMap.get();
+  if (const CFG *c = getCFG()) {
+    cfgStmtMap.emplace(*c, getParentMap());
+    return &*cfgStmtMap;
   }
 
   return nullptr;

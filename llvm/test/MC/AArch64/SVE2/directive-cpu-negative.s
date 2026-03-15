@@ -20,7 +20,7 @@ aesd z23.b, z23.b, z13.b
 .cpu generic+sve2-sm4
 .cpu generic+nosve2-sm4
 sm4e z0.s, z0.s, z0.s
-// CHECK: error: instruction requires: sve2-sm4
+// CHECK: error: instruction requires: sve-sm4
 // CHECK-NEXT: sm4e z0.s, z0.s, z0.s
 
 .cpu generic+sve2-sha3

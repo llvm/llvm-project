@@ -245,6 +245,10 @@ public:
   /// The set of GNU address of label extension "&&label".
   llvm::SmallVector<AddrLabelExpr *, 4> AddrLabels;
 
+  /// An unresolved identifier lookup expression for an implicit call
+  /// to a SYCL kernel launch function in a dependent context.
+  Expr *SYCLKernelLaunchIdExpr = nullptr;
+
 public:
   /// Represents a simple identification of a weak object.
   ///
@@ -933,7 +937,7 @@ public:
   ///  to local variables that are usable as constant expressions and
   ///  do not involve an odr-use (they may still need to be captured
   ///  if the enclosing full-expression is instantiation dependent).
-  llvm::SmallSet<Expr *, 8> NonODRUsedCapturingExprs;
+  llvm::SmallPtrSet<Expr *, 8> NonODRUsedCapturingExprs;
 
   /// A map of explicit capture indices to their introducer source ranges.
   llvm::DenseMap<unsigned, SourceRange> ExplicitCaptureRanges;

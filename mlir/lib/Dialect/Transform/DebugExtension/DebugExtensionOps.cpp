@@ -8,9 +8,7 @@
 
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h"
 
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
@@ -36,9 +34,8 @@ transform::EmitRemarkAtOp::apply(transform::TransformRewriter &rewriter,
     os << "value handle points to ";
     if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
       os << "a block argument #" << arg.getArgNumber() << " in block #"
-         << std::distance(arg.getOwner()->getParent()->begin(),
-                          arg.getOwner()->getIterator())
-         << " in region #" << arg.getOwner()->getParent()->getRegionNumber();
+         << arg.getOwner()->computeBlockNumber() << " in region #"
+         << arg.getOwner()->getParent()->getRegionNumber();
     } else {
       os << "an op result #" << llvm::cast<OpResult>(value).getResultNumber();
     }

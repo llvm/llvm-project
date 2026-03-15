@@ -36,15 +36,15 @@ define void @caller(i32 %n) {
 ;
 ; LA64-LABEL: caller:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.d $sp, $sp, -64
-; LA64-NEXT:    .cfi_def_cfa_offset 64
-; LA64-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $s8, $sp, 40 # 8-byte Folded Spill
+; LA64-NEXT:    addi.d $sp, $sp, -128
+; LA64-NEXT:    .cfi_def_cfa_offset 128
+; LA64-NEXT:    st.d $ra, $sp, 120 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $fp, $sp, 112 # 8-byte Folded Spill
+; LA64-NEXT:    st.d $s8, $sp, 104 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    .cfi_offset 22, -16
 ; LA64-NEXT:    .cfi_offset 31, -24
-; LA64-NEXT:    addi.d $fp, $sp, 64
+; LA64-NEXT:    addi.d $fp, $sp, 128
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 5, 0
 ; LA64-NEXT:    move $s8, $sp
@@ -54,14 +54,14 @@ define void @caller(i32 %n) {
 ; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
-; LA64-NEXT:    addi.d $a1, $s8, 0
+; LA64-NEXT:    addi.d $a1, $s8, 64
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    addi.d $sp, $fp, -64
-; LA64-NEXT:    ld.d $s8, $sp, 40 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; LA64-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; LA64-NEXT:    addi.d $sp, $sp, 64
+; LA64-NEXT:    addi.d $sp, $fp, -128
+; LA64-NEXT:    ld.d $s8, $sp, 104 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $fp, $sp, 112 # 8-byte Folded Reload
+; LA64-NEXT:    ld.d $ra, $sp, 120 # 8-byte Folded Reload
+; LA64-NEXT:    addi.d $sp, $sp, 128
 ; LA64-NEXT:    ret
   %1 = alloca i8, i32 %n
   %2 = alloca i32, align 64

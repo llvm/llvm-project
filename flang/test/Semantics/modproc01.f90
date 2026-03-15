@@ -125,7 +125,7 @@ program test
   x = mf(3, "abc", pdt1(1,3)())
 !  call ms(mf)
 end program
-!CHECK:  MainProgram scope: test size=88 alignment=8
+!CHECK:  MainProgram scope: TEST size=88 alignment=8
 !CHECK:    mf, MODULE (Function): Use from mf in m
 !CHECK:    pdt1: Use from pdt1 in m
 !CHECK:    pdt2: Use from pdt2 in m

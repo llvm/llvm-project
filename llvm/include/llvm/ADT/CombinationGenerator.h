@@ -118,10 +118,9 @@ public:
       : VariablesChoices(VariablesChoices_) {
 #ifndef NDEBUG
     assert(!VariablesChoices.empty() && "There should be some variables.");
-    llvm::for_each(VariablesChoices, [](ArrayRef<choice_type> VariableChoices) {
+    for (ArrayRef<choice_type> VariableChoices : VariablesChoices)
       assert(!VariableChoices.empty() &&
              "There must always be some choice, at least a placeholder one.");
-    });
 #endif
   }
 

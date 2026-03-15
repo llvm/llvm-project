@@ -21,6 +21,7 @@
 #endif
 
 AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_buffer_rsrc_t", AMDGPUBufferRsrc, AMDGPUBufferRsrcTy, 128, 128, 8)
+AMDGPU_OPAQUE_PTR_TYPE("__amdgpu_texture_t", AMDGPUTexture, AMDGPUTextureTy, 256, 256, 0)
 
 AMDGPU_NAMED_BARRIER_TYPE("__amdgpu_named_workgroup_barrier_t", AMDGPUNamedWorkgroupBarrier, AMDGPUNamedWorkgroupBarrierTy, 128, 32, 0)
 

@@ -16,6 +16,7 @@
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -54,15 +55,13 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
 public:
   MemCpyOptPass() = default;
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  // Glue for the old PM.
-  bool runImpl(Function &F, TargetLibraryInfo *TLI, AAResults *AA,
-               AssumptionCache *AC, DominatorTree *DT, PostDominatorTree *PDT,
-               MemorySSA *MSSA);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   // Helper functions
+  bool runImpl(Function &F, TargetLibraryInfo *TLI, AAResults *AA,
+               AssumptionCache *AC, DominatorTree *DT, PostDominatorTree *PDT,
+               MemorySSA *MSSA);
   bool processStore(StoreInst *SI, BasicBlock::iterator &BBI);
   bool processStoreOfLoad(StoreInst *SI, LoadInst *LI, const DataLayout &DL,
                           BasicBlock::iterator &BBI);
@@ -85,8 +84,8 @@ private:
                                     Value *ByteVal);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
-                             AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
-                             TypeSize Size, BatchAAResults &BAA);
+                             Value *DestPtr, Value *SrcPtr, TypeSize Size,
+                             BatchAAResults &BAA);
   bool isMemMoveMemSetDependency(MemMoveInst *M);
 
   void eraseInstruction(Instruction *I);

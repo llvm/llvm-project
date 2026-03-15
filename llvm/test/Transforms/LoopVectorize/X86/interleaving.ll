@@ -8,7 +8,7 @@
 define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-LABEL: @foo(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SSE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; SSE:       vector.ph:
 ; SSE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SSE:       vector.body:
@@ -26,7 +26,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <8 x i32> [[WIDE_VEC2]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; SSE-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[STRIDED_VEC1]], [[STRIDED_VEC]]
 ; SSE-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC3]]
-; SSE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; SSE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; SSE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP6]], i64 16
 ; SSE-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP6]], align 4
 ; SSE-NEXT:    store <4 x i32> [[TMP5]], ptr [[TMP7]], align 4
@@ -34,17 +34,13 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SSE-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SSE:       middle.block:
-; SSE-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; SSE:       scalar.ph:
 ; SSE-NEXT:    br label [[FOR_BODY:%.*]]
 ; SSE:       for.cond.cleanup:
 ; SSE-NEXT:    ret void
-; SSE:       for.body:
-; SSE-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 ; AVX1-LABEL: @foo(
 ; AVX1-NEXT:  entry:
-; AVX1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; AVX1-NEXT:    br label [[VECTOR_PH:%.*]]
 ; AVX1:       vector.ph:
 ; AVX1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX1:       vector.body:
@@ -76,7 +72,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC3]]
 ; AVX1-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[STRIDED_VEC7]], [[STRIDED_VEC6]]
 ; AVX1-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC9]]
-; AVX1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; AVX1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; AVX1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP14]], i64 16
 ; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP14]], i64 32
 ; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP14]], i64 48
@@ -88,17 +84,13 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX1-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX1:       middle.block:
-; AVX1-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; AVX1:       scalar.ph:
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.cond.cleanup:
 ; AVX1-NEXT:    ret void
-; AVX1:       for.body:
-; AVX1-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 ; AVX2-LABEL: @foo(
 ; AVX2-NEXT:  entry:
-; AVX2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; AVX2-NEXT:    br label [[VECTOR_PH:%.*]]
 ; AVX2:       vector.ph:
 ; AVX2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX2:       vector.body:
@@ -130,7 +122,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[TMP11:%.*]] = add nsw <8 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC3]]
 ; AVX2-NEXT:    [[TMP12:%.*]] = add nsw <8 x i32> [[STRIDED_VEC7]], [[STRIDED_VEC6]]
 ; AVX2-NEXT:    [[TMP13:%.*]] = add nsw <8 x i32> [[STRIDED_VEC10]], [[STRIDED_VEC9]]
-; AVX2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
+; AVX2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDEX]]
 ; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP14]], i64 32
 ; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP14]], i64 64
 ; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP14]], i64 96
@@ -142,13 +134,9 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX2:       middle.block:
-; AVX2-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; AVX2:       scalar.ph:
 ; AVX2-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX2:       for.cond.cleanup:
 ; AVX2-NEXT:    ret void
-; AVX2:       for.body:
-; AVX2-NEXT:    br i1 poison, label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 ; ATOM-LABEL: @foo(
 ; ATOM-NEXT:  entry:
@@ -158,13 +146,13 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; ATOM:       for.body:
 ; ATOM-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; ATOM-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 1
-; ATOM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B:%.*]], i64 [[TMP0]]
+; ATOM-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B:%.*]], i64 [[TMP0]]
 ; ATOM-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; ATOM-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP0]]
+; ATOM-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP0]]
 ; ATOM-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 4
 ; ATOM-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; ATOM-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP3]], [[TMP1]]
-; ATOM-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; ATOM-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A:%.*]], i64 [[INDVARS_IV]]
 ; ATOM-NEXT:    store i32 [[ADD4]], ptr [[ARRAYIDX6]], align 4
 ; ATOM-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; ATOM-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024

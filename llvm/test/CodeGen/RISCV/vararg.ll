@@ -40,9 +40,6 @@
 ; The nounwind attribute is omitted for some of the tests, to check that CFI
 ; directives are correctly generated.
 
-declare void @llvm.va_start(ptr)
-declare void @llvm.va_end(ptr)
-
 declare void @notdead(ptr)
 
 ; Although frontends are recommended to not generate va_arg due to the lack of
@@ -822,7 +819,7 @@ define void @va1_caller() nounwind {
 ; LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    addi sp, sp, 16
 ; LP64E-WITHFP-NEXT:    ret
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -1326,7 +1323,7 @@ define void @va2_caller() nounwind {
 ; LP64E-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; LP64E-WITHFP-NEXT:    addi sp, sp, 16
 ; LP64E-WITHFP-NEXT:    ret
- %1 = call i64 (ptr, ...) @va2(ptr undef, double 1.000000e+00)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, double 1.000000e+00)
  ret void
 }
 
@@ -1870,8 +1867,6 @@ define void @va3_caller() nounwind {
  %1 = call i64 (i32, i64, ...) @va3(i32 2, i64 1111, double 2.000000e+00)
  ret void
 }
-
-declare void @llvm.va_copy(ptr, ptr)
 
 define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; ILP32-ILP32F-FPELIM-LABEL: va4_va_copy:

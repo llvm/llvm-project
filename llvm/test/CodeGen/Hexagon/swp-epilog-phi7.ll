@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -O2 -enable-pipeliner -disable-block-placement=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -enable-pipeliner -disable-block-placement=0 -terminal-rule=0 < %s | FileCheck %s
 
 ; For the Phis generated in the epilog, test that we generate the correct
 ; names for the values coming from the prolog stages. The test belows
@@ -12,8 +12,8 @@
 ; CHECK: [[EPLOG]]:
 ; CHECK: [[VREG1:v([0-9]+)]] = [[VREG]]
 ; CHECK: [[EPLOG1]]:
-; CHECK: [[VREG2:v[0-9]+]] = [[VREG]]
-; CHECK: = vlalign([[VREG2]],[[VREG1]],#1)
+; CHECK: [[VREG2:v[0-9]+]] = [[VREG1]]
+; CHECK: = vlalign([[VREG1]],[[VREG2]],#1)
 
 ; Function Attrs: nounwind
 define void @f0(ptr noalias nocapture readonly %a0, i32 %a1, i32 %a2, ptr noalias nocapture readonly %a3, i32 %a4, ptr noalias nocapture %a5, i32 %a6) #0 {

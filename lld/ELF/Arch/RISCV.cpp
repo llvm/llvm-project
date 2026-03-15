@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -38,14 +39,31 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSection(InputSectionBase &) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
+  template <class ELFT, class RelTy>
+  bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                               Relocs<RelTy> rels);
+  template <class ELFT, class RelTy>
+  void finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                Relocs<RelTy> rels);
+  template <class ELFT>
+  bool synthesizeAlignAux(uint64_t &dot, InputSection *sec);
+  bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
+
+  // The following two variables are used by synthesized ALIGN relocations.
+  InputSection *baseSec = nullptr;
+  // r_offset and r_addend pairs.
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 
 } // end anonymous namespace
@@ -260,6 +278,8 @@ RelType RISCV::getDynRel(RelType type) const {
                                          : static_cast<RelType>(R_RISCV_NONE);
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
@@ -267,9 +287,6 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
     return R_NONE;
   case R_RISCV_32:
   case R_RISCV_64:
-  case R_RISCV_HI20:
-  case R_RISCV_LO12_I:
-  case R_RISCV_LO12_S:
     return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
@@ -285,42 +302,8 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB32:
   case R_RISCV_SUB64:
     return RE_RISCV_ADD;
-  case R_RISCV_JAL:
-  case R_RISCV_BRANCH:
-  case R_RISCV_PCREL_HI20:
-  case R_RISCV_RVC_BRANCH:
-  case R_RISCV_RVC_JUMP:
   case R_RISCV_32_PCREL:
     return R_PC;
-  case R_RISCV_CALL:
-  case R_RISCV_CALL_PLT:
-  case R_RISCV_PLT32:
-    return R_PLT_PC;
-  case R_RISCV_GOT_HI20:
-  case R_RISCV_GOT32_PCREL:
-    return R_GOT_PC;
-  case R_RISCV_PCREL_LO12_I:
-  case R_RISCV_PCREL_LO12_S:
-    return RE_RISCV_PC_INDIRECT;
-  case R_RISCV_TLSDESC_HI20:
-  case R_RISCV_TLSDESC_LOAD_LO12:
-  case R_RISCV_TLSDESC_ADD_LO12:
-    return R_TLSDESC_PC;
-  case R_RISCV_TLSDESC_CALL:
-    return R_TLSDESC_CALL;
-  case R_RISCV_TLS_GD_HI20:
-    return R_TLSGD_PC;
-  case R_RISCV_TLS_GOT_HI20:
-    return R_GOT_PC;
-  case R_RISCV_TPREL_HI20:
-  case R_RISCV_TPREL_LO12_I:
-  case R_RISCV_TPREL_LO12_S:
-    return R_TPREL;
-  case R_RISCV_ALIGN:
-    return R_RELAX_HINT;
-  case R_RISCV_TPREL_ADD:
-  case R_RISCV_RELAX:
-    return ctx.arg.relax ? R_RELAX_HINT : R_NONE;
   case R_RISCV_SET_ULEB128:
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
@@ -329,6 +312,175 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
              << ") against symbol " << &s;
     return R_NONE;
   }
+}
+
+template <class ELFT, class RelTy>
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  // Many relocations end up in sec.relocations.
+  sec.relocations.reserve(rels.size());
+
+  StringRef vendor;
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    uint64_t offset = it->r_offset;
+    if (sym.isUndefined() && symIndex != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_RISCV_NONE:
+      continue;
+
+    // Absolute relocations:
+    case R_RISCV_32:
+    case R_RISCV_64:
+    case R_RISCV_HI20:
+    case R_RISCV_LO12_I:
+    case R_RISCV_LO12_S:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_RISCV_JAL:
+    case R_RISCV_BRANCH:
+    case R_RISCV_PCREL_HI20:
+    case R_RISCV_RVC_BRANCH:
+    case R_RISCV_RVC_JUMP:
+    case R_RISCV_32_PCREL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+    case R_RISCV_PCREL_LO12_I:
+    case R_RISCV_PCREL_LO12_S:
+      expr = RE_RISCV_PC_INDIRECT;
+      break;
+
+    // PLT-generating relocations:
+    case R_RISCV_CALL:
+    case R_RISCV_CALL_PLT:
+    case R_RISCV_PLT32:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT-generating relocations:
+    case R_RISCV_GOT_HI20:
+    case R_RISCV_GOT32_PCREL:
+      expr = R_GOT_PC;
+      break;
+
+    // TLS relocations:
+    case R_RISCV_TPREL_HI20:
+    case R_RISCV_TPREL_LO12_I:
+    case R_RISCV_TPREL_LO12_S:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_RISCV_TLS_GOT_HI20:
+      // There is no IE to LE optimization.
+      rs.handleTlsIe<false>(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_RISCV_TLS_GD_HI20:
+      // There is no GD to IE/LE optimization.
+      rs.handleTlsGd(R_TLSGD_PC, R_NONE, R_NONE, type, offset, addend, sym);
+      continue;
+
+    // TLSDESC relocations:
+    case R_RISCV_TLSDESC_HI20:
+      rs.handleTlsDesc(R_TLSDESC_PC, R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_RISCV_TLSDESC_LOAD_LO12:
+    case R_RISCV_TLSDESC_ADD_LO12:
+      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} reference a label, not the
+      // TLS symbol, so we cannot use handleTlsDesc (which sets NEEDS_TLSDESC).
+      // For TLSDESC->IE, use R_TPREL as well, but relocateAlloc uses isToLe
+      // (from HI20) to select the correct transform.
+      sec.addReloc({ctx.arg.shared ? R_TLSDESC_PC : R_TPREL, type, offset,
+                    addend, &sym});
+      continue;
+    case R_RISCV_TLSDESC_CALL:
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    // Relaxation hints:
+    case R_RISCV_ALIGN:
+      sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
+      continue;
+    case R_RISCV_TPREL_ADD:
+    case R_RISCV_RELAX:
+      if (ctx.arg.relax)
+        sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
+      continue;
+
+    // Misc relocations:
+    case R_RISCV_ADD8:
+    case R_RISCV_ADD16:
+    case R_RISCV_ADD32:
+    case R_RISCV_ADD64:
+    case R_RISCV_SET6:
+    case R_RISCV_SET8:
+    case R_RISCV_SET16:
+    case R_RISCV_SET32:
+    case R_RISCV_SUB6:
+    case R_RISCV_SUB8:
+    case R_RISCV_SUB16:
+    case R_RISCV_SUB32:
+    case R_RISCV_SUB64:
+      expr = RE_RISCV_ADD;
+      break;
+    case R_RISCV_SET_ULEB128:
+    case R_RISCV_SUB_ULEB128:
+      expr = RE_RISCV_LEB128;
+      break;
+
+    case R_RISCV_VENDOR: {
+      auto it1 = it;
+      ++it1;
+      if (it1 == rels.end() || it1->getType(false) - 192u > 63u) {
+        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+                 << "R_RISCV_VENDOR is not followed by a relocation of code "
+                    "192 to 255";
+        continue;
+      }
+      vendor = sym.getName();
+    }
+      continue;
+    default:
+      auto diag = Err(ctx);
+      diag << getErrorLoc(ctx, sec.content().data() + offset);
+      if (!vendor.empty()) {
+        diag << "unknown vendor-specific relocation (" << type.v
+             << ") in namespace '" << vendor << "' against symbol '" << &sym
+             << "'";
+        vendor = "";
+      } else {
+        diag << "unknown relocation (" << type.v << ") against symbol " << &sym;
+      }
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  // Sort relocations by offset for more efficient searching for
+  // R_RISCV_PCREL_HI20.
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
+}
+
+void RISCV::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+  else
+    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -589,12 +741,8 @@ static void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   uint64_t tlsdescVal = 0;
   bool tlsdescRelax = false, isToLe = false;
   const ArrayRef<Relocation> relocs = sec.relocs();
@@ -603,47 +751,52 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     uint8_t *loc = buf + rel.offset;
     uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
-    switch (rel.expr) {
-    case R_RELAX_HINT:
+    switch (rel.type) {
+    case R_RISCV_ALIGN:
+    case R_RISCV_RELAX:
+    case R_RISCV_TPREL_ADD:
       continue;
-    case R_TLSDESC_PC:
-      // For R_RISCV_TLSDESC_HI20, store &got(sym)-PC to be used by the
-      // following two instructions L[DW] and ADDI.
-      if (rel.type == R_RISCV_TLSDESC_HI20)
+    case R_RISCV_TLSDESC_HI20:
+      if (rel.expr == R_TLSDESC_PC) {
+        // Shared object: store &got(sym)-PC for the following L[DW]/ADDI.
         tlsdescVal = val;
-      else
-        val = tlsdescVal;
-      break;
-    case R_RELAX_TLS_GD_TO_IE:
-      // Only R_RISCV_TLSDESC_HI20 reaches here. tlsdescVal will be finalized
-      // after we see R_RISCV_TLSDESC_ADD_LO12 in the R_RELAX_TLS_GD_TO_LE case.
-      // The net effect is that tlsdescVal will be smaller than `val` to take
-      // into account of NOP instructions (in the absence of R_RISCV_RELAX)
-      // before AUIPC.
-      tlsdescVal = val + rel.offset;
-      isToLe = false;
-      tlsdescRelax = relaxable(relocs, i);
-      if (!tlsdescRelax)
-        tlsdescToIe(ctx, loc, rel, val);
-      continue;
-    case R_RELAX_TLS_GD_TO_LE:
-      // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToLe is
-      // false, this is actually TLSDESC=>IE optimization.
-      if (rel.type == R_RISCV_TLSDESC_HI20) {
-        tlsdescVal = val;
-        isToLe = true;
-        tlsdescRelax = relaxable(relocs, i);
-      } else {
-        if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
-          tlsdescVal -= rel.offset;
-        val = tlsdescVal;
+        break;
       }
+      // Executable: TLSDESC->LE (R_TPREL) or TLSDESC->IE (R_GOT_PC).
+      isToLe = rel.expr == R_TPREL;
+      if (isToLe) {
+        tlsdescVal = val;
+      } else {
+        // tlsdescVal will be finalized after we see R_RISCV_TLSDESC_ADD_LO12.
+        // The net effect is that tlsdescVal will be smaller than `val` to
+        // take into account of NOP instructions (in the absence of
+        // R_RISCV_RELAX) before AUIPC.
+        tlsdescVal = val + rel.offset;
+      }
+      tlsdescRelax = relaxable(relocs, i);
+      if (!tlsdescRelax) {
+        if (isToLe)
+          tlsdescToLe(loc, rel, val);
+        else
+          tlsdescToIe(ctx, loc, rel, val);
+      }
+      continue;
+    case R_RISCV_TLSDESC_LOAD_LO12:
+    case R_RISCV_TLSDESC_ADD_LO12:
+    case R_RISCV_TLSDESC_CALL:
+      if (rel.expr == R_TLSDESC_PC) {
+        // Shared object: propagate the stored GOT value.
+        val = tlsdescVal;
+        break;
+      }
+      // Executable: IE or LE instruction rewrite.
+      if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
+        tlsdescVal -= rel.offset;
+      val = tlsdescVal;
       // When NOP conversion is eligible and relaxation applies, don't write a
       // NOP in case an unrelated instruction follows the current instruction.
       if (tlsdescRelax &&
-          (rel.type == R_RISCV_TLSDESC_HI20 ||
-           rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
+          (rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
            (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))))
         continue;
       if (isToLe)
@@ -651,11 +804,10 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       else
         tlsdescToIe(ctx, loc, rel, val);
       continue;
-    case RE_RISCV_LEB128:
+    case R_RISCV_SET_ULEB128:
       if (i + 1 < size) {
         const Relocation &rel1 = relocs[i + 1];
-        if (rel.type == R_RISCV_SET_ULEB128 &&
-            rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
+        if (rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
           auto val = rel.sym->getVA(ctx, rel.addend) -
                      rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
@@ -667,7 +819,7 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         }
       }
       Err(ctx) << sec.getLocation(rel.offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     default:
       break;
@@ -691,28 +843,33 @@ void elf::initSymbolAnchors(Ctx &ctx) {
       }
     }
   }
-  // Store anchors (st_value and st_value+st_size) for symbols relative to text
-  // sections.
+  // Store symbol anchors for adjusting st_value/st_size during relaxation.
+  // We include symbols where d->file == file for the prevailing copies.
   //
   // For a defined symbol foo, we may have `d->file != file` with --wrap=foo.
   // We should process foo, as the defining object file's symbol table may not
-  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. To
-  // avoid adding a Defined that is undefined in one object file, use
-  // `!d->scriptDefined` to exclude symbols that are definitely not wrapped.
+  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. Use
+  // `d->scriptDefined` to include such symbols.
   //
   // `relaxAux->anchors` may contain duplicate symbols, but that is fine.
+  auto addAnchor = [](Defined *d) {
+    if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+      if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
+        // If sec is discarded, relaxAux will be nullptr.
+        sec->relaxAux->anchors.push_back({d->value, d, false});
+        sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
+      }
+  };
   for (InputFile *file : ctx.objectFiles)
     for (Symbol *sym : file->getSymbols()) {
       auto *d = dyn_cast<Defined>(sym);
-      if (!d || (d->file != file && !d->scriptDefined))
-        continue;
-      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
-        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
-          // If sec is discarded, relaxAux will be nullptr.
-          sec->relaxAux->anchors.push_back({d->value, d, false});
-          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
-        }
+      if (d && (d->file == file || d->scriptDefined))
+        addAnchor(d);
     }
+  // Add anchors for IRELATIVE symbols (see `handleNonPreemptibleIfunc`).
+  // Their values must be adjusted so IRELATIVE addends remain correct.
+  for (Defined *d : ctx.irelativeSyms)
+    addAnchor(d);
   // Sort anchors by offset so that we can find the closest relocation
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
@@ -742,7 +899,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 
   // When the caller specifies the old value of `remove`, disallow its
   // increment.
-  if (remove >= 6 && rvc && isInt<12>(displace) && rd == 0) {
+  if (remove >= 6 && rvc && isInt<12>(displace) && rd == X_X0) {
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0xa001); // c.j
     remove = 6;
@@ -890,7 +1047,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
       tlsdescRelax = relaxable(relocs, i);
-      toLeShortForm = tlsdescRelax && r.expr == R_RELAX_TLS_GD_TO_LE &&
+      toLeShortForm = tlsdescRelax && r.expr == R_TPREL &&
                       !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];
     case R_RISCV_TLSDESC_LOAD_LO12:
@@ -942,9 +1099,6 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 // relaxation pass.
 bool RISCV::relaxOnce(int pass) const {
   llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
-  if (ctx.arg.relocatable)
-    return false;
-
   if (pass == 0)
     initSymbolAnchors(ctx);
 
@@ -957,6 +1111,117 @@ bool RISCV::relaxOnce(int pass) const {
       changed |= relax(ctx, pass, *sec);
   }
   return changed;
+}
+
+// If the section alignment is >= 4, advance `dot` to insert NOPs and synthesize
+// an ALIGN relocation. Otherwise, return false to use default handling.
+template <class ELFT, class RelTy>
+bool RISCV::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                                    Relocs<RelTy> rels) {
+  if (!baseSec) {
+    // Record the first input section with RELAX relocations. We will synthesize
+    // ALIGN relocations here.
+    for (auto rel : rels) {
+      if (rel.getType(false) == R_RISCV_RELAX) {
+        baseSec = sec;
+        break;
+      }
+    }
+  } else if (sec->addralign >= 4) {
+    // If the alignment is >= 4 and the section does not start with an ALIGN
+    // relocation, synthesize one.
+    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
+      return rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN;
+    });
+    if (!hasAlignRel) {
+      synthesizedAligns.emplace_back(dot - baseSec->getVA(),
+                                     sec->addralign - 2);
+      dot += sec->addralign - 2;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Finalize the relocation section by appending synthesized ALIGN relocations
+// after processing all input sections.
+template <class ELFT, class RelTy>
+void RISCV::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                     Relocs<RelTy> rels) {
+  auto *f = cast<ObjFile<ELFT>>(baseSec->file);
+  auto shdr = f->template getELFShdrs<ELFT>()[baseSec->relSecIdx];
+  // Create a copy of InputSection.
+  sec = make<InputSection>(*f, shdr, baseSec->name);
+  auto *baseRelSec = cast<InputSection>(f->getSections()[baseSec->relSecIdx]);
+  *sec = *baseRelSec;
+  baseSec = nullptr;
+
+  // Allocate buffer for original and synthesized relocations in RELA format.
+  // If CREL is used, OutputSection::finalizeNonAllocCrel will convert RELA to
+  // CREL.
+  auto newSize = rels.size() + synthesizedAligns.size();
+  auto *relas = makeThreadLocalN<typename ELFT::Rela>(newSize);
+  sec->size = newSize * sizeof(typename ELFT::Rela);
+  sec->content_ = reinterpret_cast<uint8_t *>(relas);
+  sec->type = SHT_RELA;
+  // Copy original relocations to the new buffer, potentially converting CREL to
+  // RELA.
+  for (auto [i, r] : llvm::enumerate(rels)) {
+    relas[i].r_offset = r.r_offset;
+    relas[i].setSymbolAndType(r.getSymbol(0), r.getType(0), false);
+    if constexpr (RelTy::HasAddend)
+      relas[i].r_addend = r.r_addend;
+  }
+  // Append synthesized ALIGN relocations to the buffer.
+  for (auto [i, r] : llvm::enumerate(synthesizedAligns)) {
+    auto &rela = relas[rels.size() + i];
+    rela.r_offset = r.first;
+    rela.setSymbolAndType(0, R_RISCV_ALIGN, false);
+    rela.r_addend = r.second;
+  }
+  synthesizedAligns.clear();
+  // Replace the old relocation section with the new one in the output section.
+  // addOrphanSections ensures that the output relocation section is processed
+  // after osec.
+  for (SectionCommand *cmd : sec->getParent()->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    for (auto *&isec : isd->sections)
+      if (isec == baseRelSec)
+        isec = sec;
+  }
+}
+
+template <class ELFT>
+bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
+  bool ret = false;
+  if (sec) {
+    invokeOnRelocs(*sec, ret = synthesizeAlignForInput<ELFT>, dot, sec);
+  } else if (baseSec) {
+    invokeOnRelocs(*baseSec, finalizeSynthesizeAligns<ELFT>, dot, sec);
+  }
+  return ret;
+}
+
+// Without linker relaxation enabled for a particular relocatable file or
+// section, the assembler will not generate R_RISCV_ALIGN relocations for
+// alignment directives. This becomes problematic in a two-stage linking
+// process: ld -r a.o b.o -o ab.o; ld ab.o -o ab. This function synthesizes an
+// R_RISCV_ALIGN relocation at section start when needed.
+//
+// When called with an input section (`sec` is not null): If the section
+// alignment is >= 4, advance `dot` to insert NOPs and synthesize an ALIGN
+// relocation.
+//
+// When called after all input sections are processed (`sec` is null): The
+// output relocation section is updated with all the newly synthesized ALIGN
+// relocations.
+bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec) {
+  assert(ctx.arg.relocatable);
+  if (ctx.arg.is64)
+    return synthesizeAlignAux<ELF64LE>(dot, sec);
+  return synthesizeAlignAux<ELF32LE>(dot, sec);
 }
 
 void RISCV::finalizeRelax(int passes) const {

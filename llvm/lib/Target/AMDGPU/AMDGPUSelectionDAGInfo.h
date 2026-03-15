@@ -11,13 +11,49 @@
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
-namespace llvm {
+#define GET_SDNODE_ENUM
+#include "AMDGPUGenSDNodeInfo.inc"
 
-class AMDGPUSelectionDAGInfo : public SelectionDAGTargetInfo {
+namespace llvm {
+namespace AMDGPUISD {
+
+enum NodeType : unsigned {
+  // Convert a unswizzled wave uniform stack address to an address compatible
+  // with a vector offset for use in stack access.
+  WAVE_ADDRESS = GENERATED_OPCODE_END,
+
+  DOT4,
+  MAD_U64_U32,
+  MAD_I64_I32,
+  TEXTURE_FETCH,
+  R600_EXPORT,
+  CONST_ADDRESS,
+
+  /// This node is for VLIW targets and it is used to represent a vector
+  /// that is stored in consecutive registers with the same channel.
+  /// For example:
+  ///   |X  |Y|Z|W|
+  /// T0|v.x| | | |
+  /// T1|v.y| | | |
+  /// T2|v.z| | | |
+  /// T3|v.w| | | |
+  BUILD_VERTICAL_VECTOR,
+
+  DUMMY_CHAIN,
+};
+
+} // namespace AMDGPUISD
+
+class AMDGPUSelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
+  AMDGPUSelectionDAGInfo();
+
   ~AMDGPUSelectionDAGInfo() override;
 
-  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+  const char *getTargetNodeName(unsigned Opcode) const override;
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
 };
 
 } // namespace llvm

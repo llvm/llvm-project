@@ -40,7 +40,7 @@ define i8 @shl_cttz_i8(i8 %x, i8 %y) {
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    srli a2, a1, 1
 ; RV64I-NEXT:    andi a2, a2, 85
-; RV64I-NEXT:    subw a1, a1, a2
+; RV64I-NEXT:    sub a1, a1, a2
 ; RV64I-NEXT:    andi a2, a1, 51
 ; RV64I-NEXT:    srli a1, a1, 2
 ; RV64I-NEXT:    andi a1, a1, 51
@@ -96,7 +96,7 @@ define i8 @shl_cttz_constant_i8(i8 %y) {
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 1
 ; RV64I-NEXT:    andi a1, a1, 85
-; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sub a0, a0, a1
 ; RV64I-NEXT:    andi a1, a0, 51
 ; RV64I-NEXT:    srli a0, a0, 2
 ; RV64I-NEXT:    andi a0, a0, 51
@@ -276,7 +276,7 @@ define i32 @shl_cttz_i32(i32 %x, i32 %y) {
 ;
 ; RV64I-LABEL: shl_cttz_i32:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    negw a2, a1
+; RV64I-NEXT:    neg a2, a1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    lui a2, 30667
 ; RV64I-NEXT:    addi a2, a2, 1329
@@ -333,7 +333,7 @@ define i32 @shl_cttz_i32_zero_is_defined(i32 %x, i32 %y) {
 ; RV64I-NEXT:    sext.w a2, a1
 ; RV64I-NEXT:    beqz a2, .LBB5_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
-; RV64I-NEXT:    negw a2, a1
+; RV64I-NEXT:    neg a2, a1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    lui a2, 30667
 ; RV64I-NEXT:    addi a2, a2, 1329
@@ -378,7 +378,7 @@ define i32 @shl_cttz_constant_i32(i32 %y) {
 ;
 ; RV64I-LABEL: shl_cttz_constant_i32:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    negw a1, a0
+; RV64I-NEXT:    neg a1, a0
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    lui a1, 30667
 ; RV64I-NEXT:    addi a1, a1, 1329
@@ -474,7 +474,7 @@ define i32 @shl_cttz_multiuse_i32(i32 %x, i32 %y) {
 ; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    .cfi_offset s0, -16
 ; RV64I-NEXT:    .cfi_offset s1, -24
-; RV64I-NEXT:    negw a2, a1
+; RV64I-NEXT:    neg a2, a1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    lui a2, 30667
 ; RV64I-NEXT:    addi a2, a2, 1329
@@ -532,8 +532,8 @@ entry:
 define i64 @shl_cttz_i64(i64 %x, i64 %y) {
 ; RV32I-LABEL: shl_cttz_i64:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a4, 30667
-; RV32I-NEXT:    addi a5, a4, 1329
+; RV32I-NEXT:    lui a5, 30667
+; RV32I-NEXT:    addi a5, a5, 1329
 ; RV32I-NEXT:    lui a4, %hi(.LCPI8_0)
 ; RV32I-NEXT:    addi a4, a4, %lo(.LCPI8_0)
 ; RV32I-NEXT:    bnez a2, .LBB8_2
@@ -619,8 +619,8 @@ entry:
 define i64 @shl_cttz_constant_i64(i64 %y) {
 ; RV32I-LABEL: shl_cttz_constant_i64:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    lui a2, 30667
-; RV32I-NEXT:    addi a3, a2, 1329
+; RV32I-NEXT:    lui a3, 30667
+; RV32I-NEXT:    addi a3, a3, 1329
 ; RV32I-NEXT:    lui a2, %hi(.LCPI9_0)
 ; RV32I-NEXT:    addi a2, a2, %lo(.LCPI9_0)
 ; RV32I-NEXT:    bnez a0, .LBB9_2

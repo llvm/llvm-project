@@ -148,6 +148,10 @@ inline constexpr uptr getPageSizeLogCached() {
 extern uptr PageSizeCached;
 extern uptr PageSizeLogCached;
 
+// Must be defined in platform specific code.
+uptr getPageSize();
+
+// Always calls getPageSize(), but caches the results for get*Cached(), below.
 uptr getPageSizeSlow();
 
 inline uptr getPageSizeCached() {
@@ -240,8 +244,10 @@ enum class Option : u8 {
 enum class ReleaseToOS : u8 {
   Normal, // Follow the normal rules for releasing pages to the OS
   Force,  // Force release pages to the OS, but avoid cases that take too long.
-  ForceAll, // Force release every page possible regardless of how long it will
-            // take.
+  ForceAll,  // Force release every page possible regardless of how long it will
+             // take.
+  ForceFast, // Force release pages to the OS, but do it quickly and skip any
+             // cases where a lock is held by another thread.
 };
 
 constexpr unsigned char PatternFillByte = 0xAB;

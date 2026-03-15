@@ -16,7 +16,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       %16 = llvm.load %arg1 : !llvm.ptr -> i32 loc(#loc5)
       llvm.store %16, %arg0 : i32, !llvm.ptr loc(#loc5)
       omp.terminator loc(#loc5)
-    } loc(#loc5)
+    } loc(#loc16)
     llvm.return loc(#loc6)
   } loc(#loc15)
 }
@@ -31,9 +31,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   compileUnit = #di_compile_unit, scope = #di_file, name = "main",
   file = #di_file, subprogramFlags = "Definition|MainSubprogram",
   type = #di_subroutine_type>
+#di_subprogram1 = #llvm.di_subprogram<compileUnit = #di_compile_unit,
+  name = "target", file = #di_file, subprogramFlags = "Definition",
+  type = #di_subroutine_type>
 #loc1 = loc("test.f90":3:18)
 #loc2 = loc("test.f90":7:7)
 #loc3 = loc("test.f90":9:18)
 #loc5 = loc("test.f90":11:7)
 #loc6 = loc("test.f90":12:7)
 #loc15 = loc(fused<#di_subprogram>[#loc2])
+#loc16 = loc(fused<#di_subprogram1>[#loc5])

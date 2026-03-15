@@ -1421,12 +1421,6 @@
 // CHECK:  encoding: [0xd1,0x0d,0x78,0x56,0x34,0x12]
         	rorl	0x12345678
 
-// CHECK: rorl  $foo, (%ebx)
-// INTEL: ror dword ptr [ebx], foo
-// CHECK:  encoding: [0xc1,0x0b,A]
-// CHECK:    fixup A - offset: 2, value: foo, kind: FK_Data_1
-                rorl    $foo, (%ebx)
-
 // CHECK: shll	$0, 3735928559(%ebx,%ecx,8)
 // CHECK:  encoding: [0xc1,0xa4,0xcb,0xef,0xbe,0xad,0xde,0x00]
         	sall	$0,0xdeadbeef(%ebx,%ecx,8)

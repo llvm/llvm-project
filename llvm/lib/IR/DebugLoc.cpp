@@ -9,11 +9,33 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
+
 using namespace llvm;
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#include "llvm/Support/Signals.h"
+
+DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
+  if (!ShouldCollectTrace)
+    return;
+  auto &[Depth, StackTrace] = StackTraces.emplace_back();
+  Depth = sys::getStackTrace(StackTrace);
+}
+void DbgLocOrigin::addTrace() {
+  // We only want to add new stacktraces if we already have one: addTrace exists
+  // to provide more context to how missing DebugLocs have propagated through
+  // the program, but by design if there is no existing stacktrace then we have
+  // decided not to track this DebugLoc as being "missing".
+  if (StackTraces.empty())
+    return;
+  auto &[Depth, StackTrace] = StackTraces.emplace_back();
+  Depth = sys::getStackTrace(StackTrace);
+}
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
-    : TrackingMDNodeRef(const_cast<DILocation *>(L)),
+    : TrackingMDNodeRef(const_cast<DILocation *>(L)), DbgLocOrigin(!L),
       Kind(DebugLocKind::Normal) {}
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
@@ -61,16 +83,14 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
 }
 
 bool DebugLoc::isImplicitCode() const {
-  if (DILocation *Loc = get()) {
+  if (DILocation *Loc = get())
     return Loc->isImplicitCode();
-  }
   return true;
 }
 
 void DebugLoc::setImplicitCode(bool ImplicitCode) {
-  if (DILocation *Loc = get()) {
+  if (DILocation *Loc = get())
     Loc->setImplicitCode(ImplicitCode);
-  }
 }
 
 DebugLoc DebugLoc::replaceInlinedAtSubprogram(
@@ -157,10 +177,19 @@ DebugLoc DebugLoc::getMergedLocations(ArrayRef<DebugLoc> Locs) {
   return Merged;
 }
 DebugLoc DebugLoc::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
-  if (!LocA)
-    return LocA;
-  if (!LocB)
+  if (!LocA || !LocB) {
+    // If coverage tracking is enabled, prioritize returning empty non-annotated
+    // locations to empty annotated locations.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+    if (!LocA && LocA.getKind() == DebugLocKind::Normal)
+      return LocA;
+    if (!LocB && LocB.getKind() == DebugLocKind::Normal)
+      return LocB;
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+    if (!LocA)
+      return LocA;
     return LocB;
+  }
   return DILocation::getMergedLocation(LocA, LocB);
 }
 

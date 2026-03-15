@@ -48,7 +48,16 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
+  unsigned TypeOperand = 0;
+  unsigned TableOperand = 1;
   switch (MI->getOpcode()) {
+  case WebAssembly::CALL_INDIRECT: {
+    unsigned NumDefs = MI->getOperand(0).getImm();
+    TypeOperand = NumDefs + 1;
+    TableOperand = NumDefs + 2;
+    [[fallthrough]];
+  }
+  case WebAssembly::RET_CALL_INDIRECT:
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT_S: {
     // A special case for call_indirect (and ret_call_indirect), if the table
@@ -59,22 +68,20 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     OS << "\t";
     OS << getMnemonic(*MI).first;
     OS << " ";
-
-    assert(MI->getNumOperands() == 2);
-    const unsigned TypeOperand = 0;
-    const unsigned TableOperand = 1;
     if (MI->getOperand(TableOperand).isExpr()) {
-      printOperand(MI, TableOperand, OS);
+      printOperand(MI, TableOperand, STI, OS);
       OS << ", ";
     } else {
       assert(MI->getOperand(TableOperand).getImm() == 0);
     }
-    printOperand(MI, TypeOperand, OS);
+    printOperand(MI, TypeOperand, STI, OS);
+    if (MI->getOpcode() == WebAssembly::CALL_INDIRECT)
+      OS << ", ";
     break;
   }
   default:
     // Print the instruction (this uses the AsmStrings from the .td files).
-    printInstruction(MI, Address, OS);
+    printInstruction(MI, Address, STI, OS);
     break;
   }
 
@@ -101,7 +108,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       }
       if (NeedsComma)
         OS << ", ";
-      printOperand(MI, I, OS, I - Start < NumVariadicDefs);
+      printOperand(MI, I, STI, OS, I - Start < NumVariadicDefs);
       NeedsComma = true;
     }
   }
@@ -313,12 +320,13 @@ static std::string toString(const APFloat &FP) {
 }
 
 void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
                                           raw_ostream &O, bool IsVariadicDef) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    unsigned WAReg = Op.getReg();
-    if (int(WAReg) >= 0)
+    MCRegister WAReg = Op.getReg();
+    if (int(WAReg.id()) >= 0)
       printRegName(O, WAReg);
     else if (OpNo >= Desc.getNumDefs() && !IsVariadicDef)
       O << "$pop" << WebAssembly::getWARegStackId(WAReg);
@@ -351,6 +359,7 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 }
 
 void WebAssemblyInstPrinter::printBrList(const MCInst *MI, unsigned OpNo,
+                                         const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
   O << "{";
   for (unsigned I = OpNo, E = MI->getNumOperands(); I != E; ++I) {
@@ -361,18 +370,37 @@ void WebAssemblyInstPrinter::printBrList(const MCInst *MI, unsigned OpNo,
   O << "}";
 }
 
-void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(const MCInst *MI,
-                                                            unsigned OpNo,
-                                                            raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblyP2AlignOperand(
+    const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+    raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm == WebAssembly::GetDefaultP2Align(MI->getOpcode()))
     return;
   O << ":p2align=" << Imm;
 }
 
-void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
-                                                              unsigned OpNo,
-                                                              raw_ostream &O) {
+void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(
+    const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+    raw_ostream &O) {
+  int64_t Imm = MI->getOperand(OpNo).getImm();
+
+  switch (Imm) {
+  case wasm::WASM_MEM_ORDER_RMW_ACQ_REL:
+  case wasm::WASM_MEM_ORDER_ACQ_REL:
+    O << "acqrel";
+    break;
+  case wasm::WASM_MEM_ORDER_SEQ_CST:
+    if (STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics])
+      O << "seqcst";
+    break;
+  default:
+    llvm_unreachable("Unknown memory ordering");
+  }
+}
+
+void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(
+    const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+    raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
     auto Imm = static_cast<unsigned>(Op.getImm());
@@ -380,7 +408,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
       O << WebAssembly::anyTypeToString(Imm);
   } else {
     auto Expr = cast<MCSymbolRefExpr>(Op.getExpr());
-    auto *Sym = cast<MCSymbolWasm>(&Expr->getSymbol());
+    auto *Sym = static_cast<const MCSymbolWasm *>(&Expr->getSymbol());
     if (Sym->getSignature()) {
       O << WebAssembly::signatureToString(Sym->getSignature());
     } else {
@@ -391,6 +419,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
 }
 
 void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   unsigned OpIdx = OpNo;
   const MCOperand &Op = MI->getOperand(OpIdx++);
@@ -398,10 +427,10 @@ void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
 
   auto PrintTagOp = [&](const MCOperand &Op) {
     const MCSymbolRefExpr *TagExpr = nullptr;
-    const MCSymbolWasm *TagSym = nullptr;
+    const MCSymbol *TagSym = nullptr;
     if (Op.isExpr()) {
       TagExpr = cast<MCSymbolRefExpr>(Op.getExpr());
-      TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
+      TagSym = &TagExpr->getSymbol();
       O << TagSym->getName() << " ";
     } else {
       // When instructions are parsed from the disassembler, we have an

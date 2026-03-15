@@ -172,7 +172,7 @@ public:
       break;
     case Register:
       OS << "<register x";
-      OS << getReg() << ">";
+      OS << getReg().id() << ">";
       break;
     case Token:
       OS << "'" << getToken() << "'";
@@ -234,6 +234,7 @@ public:
         .Case("callx", true)
         .Case("goto", true)
         .Case("gotol", true)
+        .Case("gotox", true)
         .Case("may_goto", true)
         .Case("*", true)
         .Case("exit", true)
@@ -348,6 +349,9 @@ bool BPFAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm16:
     return Error(Operands[ErrorInfo]->getStartLoc(),
                  "operand is not a 16-bit signed integer");
+  case Match_InvalidTiedOperand:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not the same as the dst register");
   }
 
   llvm_unreachable("Unknown match type detected!");

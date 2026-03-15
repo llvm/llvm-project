@@ -338,10 +338,9 @@ public:
                               ExprEngine &Eng);
 
   /// Run checkers for binding of a value to a location.
-  void runCheckersForBind(ExplodedNodeSet &Dst,
-                          const ExplodedNodeSet &Src,
-                          SVal location, SVal val,
-                          const Stmt *S, ExprEngine &Eng,
+  void runCheckersForBind(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
+                          SVal location, SVal val, const Stmt *S,
+                          bool AtDeclInit, ExprEngine &Eng,
                           const ProgramPoint &PP);
 
   /// Run checkers after taking a control flow edge.
@@ -361,11 +360,8 @@ public:
                                    ExprEngine &Eng);
 
   /// Run checkers on end of function.
-  void runCheckersForEndFunction(NodeBuilderContext &BC,
-                                 ExplodedNodeSet &Dst,
-                                 ExplodedNode *Pred,
-                                 ExprEngine &Eng,
-                                 const ReturnStmt *RS);
+  void runCheckersForEndFunction(ExplodedNodeSet &Dst, ExplodedNode *Pred,
+                                 ExprEngine &Eng, const ReturnStmt *RS);
 
   /// Run checkers for branch condition.
   void runCheckersForBranchCondition(const Stmt *condition,
@@ -499,8 +495,8 @@ public:
   using CheckLocationFunc = CheckerFn<void(SVal location, bool isLoad,
                                            const Stmt *S, CheckerContext &)>;
 
-  using CheckBindFunc =
-      CheckerFn<void(SVal location, SVal val, const Stmt *S, CheckerContext &)>;
+  using CheckBindFunc = CheckerFn<void(SVal location, SVal val, const Stmt *S,
+                                       bool AtDeclInit, CheckerContext &)>;
 
   using CheckBlockEntranceFunc =
       CheckerFn<void(const BlockEntrance &, CheckerContext &)>;

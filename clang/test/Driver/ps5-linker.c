@@ -165,7 +165,7 @@
 // CHECK-SHARED-CRT-SAME: "-l:crtendS.o" "-l:crtn.o"
 // CHECK-STATIC-CRT-SAME: "-l:crtend.o" "-l:crtn.o"
 
-// CHECK-NO-CRT-NOT: crt{{[^"]*}}.o"
+// CHECK-NO-CRT-NOT: "-l:crt
 // CHECK-NO-LIBS-NOT: "-l{{[^"]*}}"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.
@@ -207,3 +207,16 @@
 // CHECK-TARGETLIB-SAME: "-Luser"
 // CHECK-TARGETLIB-SAME: "-L{{.*}}myroot{{/|\\\\}}target{{/|\\\\}}lib"
 // CHECK-TARGETLIB-SAME: "-L."
+
+// Test that -ffat-lto-objects is forwarded to the linker.
+
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full -ffat-lto-objects %s -### 2>&1 | FileCheck --check-prefixes=CHECK-FAT-LTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full -funified-lto -ffat-lto-objects %s -### 2>&1 | FileCheck --check-prefixes=CHECK-FAT-LTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-FAT-LTO %s
+// RUN: %clang --target=x86_64-sie-ps5 -flto=full -funified-lto %s -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-FAT-LTO %s
+
+// CHECK-FAT-LTO: {{ld(\.exe)?}}"
+// CHECK-FAT-LTO-SAME: "--fat-lto-objects"
+// CHECK-NO-FAT-LTO: {{ld(\.exe)?}}"
+// CHECK-NO-FAT-LTO-NOT: "--fat-lto-objects"
+// CHECK-NO-FAT-LTO-SAME: {{$}}

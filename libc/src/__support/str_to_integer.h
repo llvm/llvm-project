@@ -25,37 +25,51 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
+#include "src/__support/wctype_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-// Returns a pointer to the first character in src that is not a whitespace
+// Returns the idx to the first character in src that is not a whitespace
 // character (as determined by isspace())
-// TODO: Change from returning a pointer to returning a length.
-LIBC_INLINE const char *
-first_non_whitespace(const char *__restrict src,
+template <typename CharType>
+LIBC_INLINE size_t
+first_non_whitespace(const CharType *__restrict src,
                      size_t src_len = cpp::numeric_limits<size_t>::max()) {
   size_t src_cur = 0;
-  while (src_cur < src_len && internal::isspace(src[src_cur])) {
-    ++src_cur;
-  }
-  return src + src_cur;
+  for (; src_cur < src_len && internal::isspace(src[src_cur]); ++src_cur)
+    ;
+  return src_cur;
+}
+
+// Returns +1, -1, or 0 if 'src' starts with (respectively)
+// plus sign, minus sign, or neither.
+template <typename CharType>
+LIBC_INLINE static int get_sign(const CharType *__restrict src) {
+  if (is_char_or_wchar(src[0], '+', L'+'))
+    return 1;
+  if (is_char_or_wchar(src[0], '-', L'-'))
+    return -1;
+  return 0;
 }
 
 // checks if the next 3 characters of the string pointer are the start of a
 // hexadecimal number. Does not advance the string pointer.
-LIBC_INLINE bool
-is_hex_start(const char *__restrict src,
-             size_t src_len = cpp::numeric_limits<size_t>::max()) {
+template <typename CharType>
+LIBC_INLINE static bool is_hex_start(const CharType *__restrict src,
+                                     size_t src_len) {
   if (src_len < 3)
     return false;
-  return *src == '0' && tolower(*(src + 1)) == 'x' && isalnum(*(src + 2)) &&
-         b36_char_to_int(*(src + 2)) < 16;
+  return is_char_or_wchar(src[0], '0', L'0') &&
+         is_char_or_wchar(tolower(src[1]), 'x', L'x') && isalnum(src[2]) &&
+         b36_char_to_int(src[2]) < 16;
 }
 
 // Takes the address of the string pointer and parses the base from the start of
 // it.
-LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
+template <typename CharType>
+LIBC_INLINE static int infer_base(const CharType *__restrict src,
+                                  size_t src_len) {
   // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
   // sequence of the decimal digits and the letters a (or A) through f (or F)
   // with values 10 through 15 respectively." (C standard 6.4.4.1)
@@ -64,8 +78,9 @@ LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
   // An octal number is defined as "the prefix 0 optionally followed by a
   // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
   // number that starts with 0, including just 0, is an octal number.
-  if (src_len > 0 && src[0] == '0')
+  if (src_len > 0 && is_char_or_wchar(src[0], '0', L'0')) {
     return 8;
+  }
   // A decimal number is defined as beginning "with a nonzero digit and
   // consist[ing] of a sequence of decimal digits." (C standard 6.4.4.1)
   return 10;
@@ -78,17 +93,11 @@ LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
 // -----------------------------------------------------------------------------
 // Takes a pointer to a string and the base to convert to. This function is used
 // as the backend for all of the string to int functions.
-template <class T>
+template <typename T, typename CharType>
 LIBC_INLINE StrToNumResult<T>
-strtointeger(const char *__restrict src, int base,
+strtointeger(const CharType *__restrict src, int base,
              const size_t src_len = cpp::numeric_limits<size_t>::max()) {
   using ResultType = make_integral_or_big_int_unsigned_t<T>;
-
-  ResultType result = 0;
-
-  bool is_number = false;
-  size_t src_cur = 0;
-  int error_val = 0;
 
   if (src_len == 0)
     return {0, 0, 0};
@@ -96,13 +105,14 @@ strtointeger(const char *__restrict src, int base,
   if (base < 0 || base == 1 || base > 36)
     return {0, 0, EINVAL};
 
-  src_cur = static_cast<size_t>(first_non_whitespace(src, src_len) - src);
-
-  char result_sign = '+';
-  if (src[src_cur] == '+' || src[src_cur] == '-') {
-    result_sign = src[src_cur];
-    ++src_cur;
+  size_t src_cur = first_non_whitespace(src, src_len);
+  if (src_cur == src_len) {
+    return {0, 0, 0};
   }
+
+  int sign = get_sign(src + src_cur);
+  bool is_positive = (sign >= 0);
+  src_cur += (sign != 0);
 
   if (base == 0)
     base = infer_base(src + src_cur, src_len - src_cur);
@@ -111,8 +121,6 @@ strtointeger(const char *__restrict src, int base,
     src_cur = src_cur + 2;
 
   constexpr bool IS_UNSIGNED = cpp::is_unsigned_v<T>;
-  const bool is_positive = (result_sign == '+');
-
   ResultType constexpr NEGATIVE_MAX =
       !IS_UNSIGNED ? static_cast<ResultType>(cpp::numeric_limits<T>::max()) + 1
                    : cpp::numeric_limits<T>::max();
@@ -121,6 +129,9 @@ strtointeger(const char *__restrict src, int base,
   ResultType const abs_max_div_by_base =
       abs_max / static_cast<ResultType>(base);
 
+  bool is_number = false;
+  int error_val = 0;
+  ResultType result = 0;
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);
     if (cur_digit >= base)

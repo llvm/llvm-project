@@ -19,12 +19,13 @@ unittest("AArch64Tests") {
   sources = [
     "AArch64InstPrinterTest.cpp",
     "AArch64RegisterInfoTest.cpp",
-    "AArch64SelectionDAGTest.cpp",
     "AArch64SVESchedPseudoTest.cpp",
+    "AArch64SelectionDAGTest.cpp",
     "AddressingModes.cpp",
     "DecomposeStackOffsetTest.cpp",
     "Immediates.cpp",
     "InstSizes.cpp",
+    "MCInstrAnalysisTest.cpp",
     "MatrixRegisterAliasing.cpp",
     "SMEAttributesTest.cpp",
   ]

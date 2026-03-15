@@ -7,209 +7,209 @@
 ## fp option generates warnings.
 
 [0x10,0x23,0xfa]
-# CHECK-FLOAT: abs.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: abs.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x0a]
-# CHECK-FLOAT: add.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: add.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0xe0,0x23,0xfa]
-# CHECK-FLOAT: addexp.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: addexp.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0xf0,0x23,0xfa]
-# CHECK-FLOAT: addexpm.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: addexpm.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0xba]
-# CHECK-FLOAT: ceil.s a2, f3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ceil.s	a2, f3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x35,0xfa]
-# CHECK-FLOAT: const.s f3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: const.s	f3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x70,0x23,0xfa]
-# CHECK-FLOAT: div0.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: div0.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x7a]
-# CHECK-FLOAT: divn.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: divn.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0xca]
-# CHECK-FLOAT: float.s f2, a3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: float.s	f2, a3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0xaa]
-# CHECK-FLOAT: floor.s a2, f3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: floor.s	a2, f3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x23,0x03,0x02]
-# CHECK-FLOAT: lsi f2, a3, 8
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: lsi	f2, a3, 8
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x23,0x83,0x02]
-# CHECK-FLOAT: lsip f2, a3, 8
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: lsip	f2, a3, 8
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x08]
-# CHECK-FLOAT: lsx f2, a3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: lsx	f2, a3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x18]
-# CHECK-FLOAT: lsxp f2, a3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: lsxp	f2, a3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x4a]
-# CHECK-FLOAT: madd.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: madd.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x6a]
-# CHECK-FLOAT: maddn.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: maddn.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0xd0,0x23,0xfa]
-# CHECK-FLOAT: mkdadj.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: mkdadj.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0xc0,0x23,0xfa]
-# CHECK-FLOAT: mksadj.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: mksadj.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x00,0x23,0xfa]
-# CHECK-FLOAT: mov.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: mov.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x8b]
-# CHECK-FLOAT: moveqz.s f2, f3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: moveqz.s	f2, f3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x00,0x23,0xcb]
-# CHECK-FLOAT: movf.s f2, f3, b0
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: movf.s	f2, f3, b0
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0xbb]
-# CHECK-FLOAT: movgez.s f2, f3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: movgez.s	f2, f3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0xab]
-# CHECK-FLOAT: movltz.s f2, f3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: movltz.s	f2, f3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x9b]
-# CHECK-FLOAT: movnez.s f2, f3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: movnez.s	f2, f3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x00,0x23,0xdb]
-# CHECK-FLOAT: movt.s f2, f3, b0
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: movt.s	f2, f3, b0
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x5a]
-# CHECK-FLOAT: msub.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: msub.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x2a]
-# CHECK-FLOAT: mul.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: mul.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x60,0x23,0xfa]
-# CHECK-FLOAT: neg.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: neg.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0xb0,0x23,0xfa]
-# CHECK-FLOAT: nexp01.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: nexp01.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x2b]
-# CHECK-FLOAT: oeq.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: oeq.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x6b]
-# CHECK-FLOAT: ole.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ole.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x4b]
-# CHECK-FLOAT: olt.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: olt.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x80,0x23,0xfa]
-# CHECK-FLOAT: recip0.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: recip0.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0xfa]
-# CHECK-FLOAT: rfr a2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: rfr	a2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0x8a]
-# CHECK-FLOAT: round.s a2, f3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: round.s	a2, f3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0xa0,0x23,0xfa]
-# CHECK-FLOAT: rsqrt0.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: rsqrt0.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x90,0x23,0xfa]
-# CHECK-FLOAT: sqrt0.s f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: sqrt0.s	f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x23,0x43,0x02]
-# CHECK-FLOAT: ssi f2, a3, 8
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ssi	f2, a3, 8
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x23,0xc3,0x02]
-# CHECK-FLOAT: ssip f2, a3, 8
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ssip	f2, a3, 8
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x48]
-# CHECK-FLOAT: ssx f2, a3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ssx	f2, a3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x58]
-# CHECK-FLOAT: ssxp f2, a3, a4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ssxp	f2, a3, a4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x40,0x23,0x1a]
-# CHECK-FLOAT: sub.s f2, f3, f4
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: sub.s	f2, f3, f4
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0x9a]
-# CHECK-FLOAT: trunc.s a2, f3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: trunc.s	a2, f3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x3b]
-# CHECK-FLOAT: ueq.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ueq.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0xda]
-# CHECK-FLOAT: ufloat.s f2, a3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ufloat.s	f2, a3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x7b]
-# CHECK-FLOAT: ule.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ule.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x5b]
-# CHECK-FLOAT: ult.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: ult.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x30,0x02,0x1b]
-# CHECK-FLOAT: un.s b0, f2, f3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: un.s	b0, f2, f3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0xea]
-# CHECK-FLOAT: utrunc.s a2, f3, 5
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: utrunc.s	a2, f3, 5
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x50,0x23,0xfa]
-# CHECK-FLOAT: wfr f2, a3
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: wfr	f2, a3
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x80,0x3e,0xe3]
-# CHECK-FLOAT: rur a3, fcr
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: rur	a3, fcr
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding
 
 [0x90,0x3e,0xe3]
-# CHECK-FLOAT: rur a3, fsr
-# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+# CHECK-FLOAT: rur	a3, fsr
+# CHECK-CORE: :[[@LINE-2]]:2: warning: invalid instruction encoding

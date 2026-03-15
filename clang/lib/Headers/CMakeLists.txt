@@ -4,6 +4,9 @@
 set(core_files
   builtins.h
   float.h
+  __float_float.h
+  __float_header_macro.h
+  __float_infinity_nan.h
   inttypes.h
   iso646.h
   limits.h
@@ -21,6 +24,7 @@ set(core_files
   stdcountof.h
   stdckdint.h
   stddef.h
+  stddefer.h
   __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
@@ -116,6 +120,7 @@ set(opencl_files
 
 set(ppc_files
   altivec.h
+  amo.h
   )
 
 set(ppc_htm_files
@@ -124,12 +129,16 @@ set(ppc_htm_files
   )
 
 set(riscv_files
+  # Standard headers
   riscv_bitmanip.h
-  riscv_corev_alu.h
   riscv_crypto.h
   riscv_ntlh.h
-  sifive_vector.h
+  # Vendor headers
   andes_vector.h
+  riscv_corev_alu.h
+  riscv_mips.h
+  riscv_nds.h
+  sifive_vector.h
   )
 
 set(spirv_files
@@ -157,18 +166,12 @@ set(x86_files
   adxintrin.h
   ammintrin.h
   amxavx512intrin.h
-  amxbf16transposeintrin.h
   amxcomplexintrin.h
-  amxcomplextransposeintrin.h
   amxfp16intrin.h
-  amxfp16transposeintrin.h
   amxfp8intrin.h
   amxintrin.h
   amxmovrsintrin.h
-  amxmovrstransposeintrin.h
   amxtf32intrin.h
-  amxtf32transposeintrin.h
-  amxtransposeintrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -293,9 +296,11 @@ set(x86_files
   )
 
 set(gpu_files
+  amdhsa_abi.h
   gpuintrin.h
   nvptxintrin.h
   amdgpuintrin.h
+  spirvintrin.h
   )
 
 set(windows_only_files
@@ -345,6 +350,10 @@ set(cuda_wrapper_bits_files
   cuda_wrappers/bits/shared_ptr_base.h
   cuda_wrappers/bits/basic_string.h
   cuda_wrappers/bits/basic_string.tcc
+)
+
+set(cuda_wrapper_utility_files
+  cuda_wrappers/__utility/declval.h
 )
 
 set(ppc_wrapper_files
@@ -443,8 +452,9 @@ endfunction(clang_generate_header)
 
 # Copy header files from the source directory to the build directory
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
-           ${ppc_wrapper_files} ${openmp_wrapper_files} ${zos_wrapper_files} ${hlsl_files}
-	   ${llvm_libc_wrapper_files} ${llvm_offload_wrapper_files})
+           ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
+           ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
+           ${llvm_offload_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -509,8 +519,8 @@ foreach( f ${generated_files} )
   endif()
 endforeach( f )
 
-function(add_header_target target_name file_list)
-  add_library(${target_name} INTERFACE ${file_list})
+function(add_header_target target_name)
+  add_library(${target_name} INTERFACE ${ARGN})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
@@ -553,7 +563,7 @@ add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_commo
 # Architecture/platform specific targets
 add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
 add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_only_generated_files}")
-add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files}")
+add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files};${cuda_wrapper_utility_files}")
 add_header_target("hexagon-resource-headers" "${hexagon_files}")
 add_header_target("hip-resource-headers" "${hip_files}")
 add_header_target("loongarch-resource-headers" "${loongarch_files}")
@@ -598,6 +608,11 @@ install(
 install(
   FILES ${cuda_wrapper_bits_files}
   DESTINATION ${header_install_dir}/cuda_wrappers/bits
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_utility_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers/__utility
   COMPONENT clang-resource-headers)
 
 install(
@@ -660,6 +675,12 @@ install(
 install(
   FILES ${cuda_wrapper_bits_files}
   DESTINATION ${header_install_dir}/cuda_wrappers/bits
+  EXCLUDE_FROM_ALL
+  COMPONENT cuda-resource-headers)
+
+install(
+  FILES ${cuda_wrapper_utility_files}
+  DESTINATION ${header_install_dir}/cuda_wrappers/__utility
   EXCLUDE_FROM_ALL
   COMPONENT cuda-resource-headers)
 

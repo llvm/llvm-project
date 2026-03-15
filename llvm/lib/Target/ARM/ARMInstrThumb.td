@@ -14,6 +14,7 @@
 // Thumb specific DAG Nodes.
 //
 
+// CMSE non-secure function call.
 def ARMtsecall : SDNode<"ARMISD::tSECALL", SDT_ARMcall,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                          SDNPVariadic]>;
@@ -396,9 +397,6 @@ def tPICADD : TIt<(outs GPR:$dst), (ins GPR:$lhs, pclabel:$cp), IIC_iALUr, "",
 }
 
 // ADD <Rd>, sp, #<imm8>
-// FIXME: This should not be marked as having side effects, and it should be
-// rematerializable. Clearing the side effect bit causes miscompilations,
-// probably because the instruction can be moved around.
 def tADDrSPi : T1pI<(outs tGPR:$dst), (ins GPRsp:$sp, t_imm0_1020s4:$imm),
                     IIC_iALUi, "add", "\t$dst, $sp, $imm", []>,
                T1Encoding<{1,0,1,0,1,?}>, Sched<[WriteALU]> {
@@ -408,6 +406,7 @@ def tADDrSPi : T1pI<(outs tGPR:$dst), (ins GPRsp:$sp, t_imm0_1020s4:$imm),
   let Inst{10-8} = dst;
   let Inst{7-0}  = imm;
   let DecoderMethod = "DecodeThumbAddSpecialReg";
+  let hasSideEffects = 0;
 }
 
 // Thumb1 frame lowering is rather fragile, we hope to be able to use
@@ -426,6 +425,7 @@ def tADDspi : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, t_imm0_508s4:$imm),
   bits<7> imm;
   let Inst{6-0} = imm;
   let DecoderMethod = "DecodeThumbAddSPImm";
+  let hasSideEffects = 0;
 }
 
 // SUB sp, sp, #<imm7>
@@ -437,6 +437,7 @@ def tSUBspi : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, t_imm0_508s4:$imm),
   bits<7> imm;
   let Inst{6-0} = imm;
   let DecoderMethod = "DecodeThumbAddSPImm";
+  let hasSideEffects = 0;
 }
 
 def : tInstSubst<"add${p} sp, $imm",
@@ -460,6 +461,7 @@ def tADDrSP : T1pI<(outs GPR:$Rdn), (ins GPRsp:$sp, GPR:$Rn), IIC_iALUr,
   let Inst{6-3} = 0b1101;
   let Inst{2-0} = Rdn{2-0};
   let DecoderMethod = "DecodeThumbAddSPReg";
+  let hasSideEffects = 0;
 }
 
 // ADD sp, <Rm>
@@ -472,6 +474,7 @@ def tADDspr : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, GPR:$Rm), IIC_iALUr,
   let Inst{6-3} = Rm;
   let Inst{2-0} = 0b101;
   let DecoderMethod = "DecodeThumbAddSPReg";
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -479,10 +482,11 @@ def tADDspr : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, GPR:$Rm), IIC_iALUr,
 //
 
 // Indirect branches
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, hasSideEffects = 0 in {
   def tBX : TI<(outs), (ins GPR:$Rm, pred:$p), IIC_Br, "bx${p}\t$Rm", []>,
             T1Special<{1,1,0,?}>, Sched<[WriteBr]> {
     // A6.2.3 & A8.6.25
+    bits<0> p;
     bits<4> Rm;
     let Inst{6-3} = Rm;
     let Inst{2-0} = 0b000;
@@ -491,6 +495,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
   def tBXNS : TI<(outs), (ins GPR:$Rm, pred:$p), IIC_Br, "bxns${p}\t$Rm", []>,
               Requires<[IsThumb, Has8MSecExt]>,
               T1Special<{1,1,0,?}>, Sched<[WriteBr]> {
+    bits<0> p;
     bits<4> Rm;
     let Inst{6-3} = Rm;
     let Inst{2-0} = 0b100;
@@ -523,6 +528,7 @@ let isCall = 1,
                   "bl${p}\t$func",
                   [(ARMcall tglobaladdr:$func)]>,
              Requires<[IsThumb]>, Sched<[WriteBrL]> {
+    bits<0> p;
     bits<24> func;
     let Inst{26} = func{23};
     let Inst{25-16} = func{20-11};
@@ -536,6 +542,7 @@ let isCall = 1,
                  (outs), (ins pred:$p, thumb_blx_target:$func), IIC_Br,
                    "blx${p}\t$func", []>,
               Requires<[IsThumb, HasV5T, IsNotMClass]>, Sched<[WriteBrL]> {
+    bits<0> p;
     bits<24> func;
     let Inst{26} = func{23};
     let Inst{25-16} = func{20-11};
@@ -550,6 +557,7 @@ let isCall = 1,
                   "blx${p}\t$func", []>,
               Requires<[IsThumb, HasV5T]>,
               T1Special<{1,1,1,?}>, Sched<[WriteBrL]> { // A6.2.3 & A8.6.24;
+    bits<0> p;
     bits<4> func;
     let Inst{6-3} = func;
     let Inst{2-0} = 0b000;
@@ -565,6 +573,7 @@ let isCall = 1,
                    "blxns${p}\t$func", []>,
                 Requires<[IsThumb, Has8MSecExt]>,
                 T1Special<{1,1,1,?}>, Sched<[WriteBrL]> {
+    bits<0> p;
     bits<4> func;
     let Inst{6-3} = func;
     let Inst{2-0} = 0b100;
@@ -626,7 +635,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 
 // FIXME: should be able to write a pattern for ARMBrcond, but can't use
 // a two-value operand where a dag node expects two operands. :(
-let isBranch = 1, isTerminator = 1 in
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
   def tBcc : T1I<(outs), (ins thumb_bcc_target:$target, pred:$p), IIC_Br,
                  "b${p}\t$target",
                  [/*(ARMbrcond bb:$target, imm:$cc)*/]>,
@@ -824,6 +833,7 @@ let hasSideEffects = 0 in {
 let mayLoad = 1, hasExtraDefRegAllocReq = 1, variadicOpsAreDefs = 1 in
 def tLDMIA : T1I<(outs), (ins tGPR:$Rn, pred:$p, reglist:$regs, variable_ops),
         IIC_iLoad_m, "ldm${p}\t$Rn, $regs", []>, T1Encoding<{1,1,0,0,1,?}> {
+  bits<0> p;
   bits<3> Rn;
   bits<8> regs;
   let Inst{10-8} = Rn;
@@ -854,6 +864,7 @@ def tSTMIA_UPD : Thumb1I<(outs tGPR:$wb),
                          AddrModeNone, 2, IIC_iStore_mu,
                          "stm${p}\t$Rn!, $regs", "$Rn = $wb", []>,
                      T1Encoding<{1,1,0,0,0,?}> {
+  bits<0> p;
   bits<3> Rn;
   bits<8> regs;
   let Inst{10-8} = Rn;
@@ -872,6 +883,7 @@ def tPOP : T1I<(outs), (ins pred:$p, reglist:$regs, variable_ops),
                IIC_iPop,
                "pop${p}\t$regs", []>,
            T1Misc<{1,1,0,?,?,?,?}>, Sched<[WriteLd]> {
+  bits<0> p;
   bits<16> regs;
   let Inst{8}   = regs{15};
   let Inst{7-0} = regs{7-0};
@@ -882,6 +894,7 @@ def tPUSH : T1I<(outs), (ins pred:$p, reglist:$regs, variable_ops),
                 IIC_iStore_m,
                 "push${p}\t$regs", []>,
             T1Misc<{0,1,0,?,?,?,?}>, Sched<[WriteST]> {
+  bits<0> p;
   bits<16> regs;
   let Inst{8}   = regs{14};
   let Inst{7-0} = regs{7-0};
@@ -962,7 +975,7 @@ class T1sItGenEncodeImm<bits<5> opA, dag oops, dag iops, InstrItinClass itin,
   let Inst{7-0}  = imm8;
 }
 
-let isAdd = 1 in {
+let isAdd = 1, hasSideEffects = 0 in {
   // Add with carry register
   let isCommutable = 1, Uses = [CPSR] in
   def tADC :                      // A8.6.2
@@ -1119,7 +1132,7 @@ def tCMNz :                     // A8.6.33
 } // isCompare = 1, Defs = [CPSR]
 
 // CMP immediate
-let isCompare = 1, Defs = [CPSR] in {
+let isCompare = 1, Defs = [CPSR], hasSideEffects = 0 in {
 def tCMPi8 : T1pI<(outs), (ins tGPR:$Rn, imm0_255:$imm8), IIC_iCMPi,
                   "cmp", "\t$Rn, $imm8",
                   [(set CPSR, (ARMcmp tGPR:$Rn, imm0_255:$imm8))]>,
@@ -1209,8 +1222,9 @@ def tMOVi8 : T1sI<(outs tGPR:$Rd), (ins imm0_255_expr:$imm8), IIC_iMOVi,
 }
 // Because we have an explicit tMOVSr below, we need an alias to handle
 // the immediate "movs" form here. Blech.
-def : tInstAlias <"movs $Rdn, $imm8",
-                 (tMOVi8 tGPR:$Rdn, CPSR, imm0_255_expr:$imm8, 14, zero_reg)>;
+def : tInstAlias<"movs $Rdn, $imm8",
+                 (tMOVi8 tGPR:$Rdn, (s_cc_out CPSR),
+                         imm0_255_expr:$imm8, (pred 14, zero_reg))>;
 
 // A7-73: MOV(2) - mov setting flag.
 
@@ -1307,7 +1321,7 @@ def tRSB :                      // A8.6.141
                [(set tGPR:$Rd, (ineg tGPR:$Rn))]>, Sched<[WriteALU]>;
 
 // Subtract with carry register
-let Uses = [CPSR] in
+let Uses = [CPSR], hasSideEffects = 0 in
 def tSBC :                      // A8.6.151
   T1sItDPEncode<0b0110, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                 IIC_iALUr,
@@ -1483,6 +1497,7 @@ def tADR : T1I<(outs tGPR:$Rd), (ins t_adrlabel:$addr, pred:$p),
   let Inst{10-8} = Rd;
   let Inst{7-0} = addr;
   let DecoderMethod = "DecodeThumbAddSpecialReg";
+  let hasSideEffects = 0;
 }
 
 let hasSideEffects = 0, isReMaterializable = 1 in
@@ -1593,13 +1608,17 @@ def tLDRLIT_ga_pcrel : PseudoInst<(outs tGPR:$dst), (ins i32imm:$addr),
                                   IIC_iLoadiALU,
                                   [(set tGPR:$dst,
                                         (ARMWrapperPIC tglobaladdr:$addr))]>,
-                       Requires<[IsThumb, DontUseMovtInPic]>;
+                       Requires<[IsThumb, DontUseMovtInPic]> {
+  let Size = 8;  // 2 instructions + constant.
+}
 
 def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
                                 IIC_iLoad_i,
                                 [(set tGPR:$dst,
                                       (ARMWrapper tglobaladdr:$src))]>,
-                     Requires<[IsThumb, DontUseMovt, DontGenExecuteOnly]>;
+                     Requires<[IsThumb, DontUseMovt, DontGenExecuteOnly]> {
+  let Size = 6;  // 1 instruction + constant.
+}
 
 // 32-bit immediate using mov/add with the 4 :lower0_7: to :upper8_15:
 // relocations.
@@ -1663,7 +1682,7 @@ def : T1Pat<(extloadi16 t_addrmode_rr:$addr),  (tLDRHr t_addrmode_rr:$addr)>;
 // post-inc LDR -> LDM r0!, {r1}. The way operands are layed out in LDMs is
 // different to how ISel expects them for a post-inc load, so use a pseudo
 // and expand it just after ISel.
-let usesCustomInserter = 1, mayLoad =1,
+let usesCustomInserter = 1, mayLoad = 1, hasSideEffects = 0,
     Constraints = "$Rn = $Rn_wb,@earlyclobber $Rn_wb" in
  def tLDR_postidx: tPseudoInst<(outs tGPR:$Rt, tGPR:$Rn_wb),
                                (ins tGPR:$Rn, pred:$p),
@@ -1764,7 +1783,8 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 // In Thumb1, "nop" is encoded as a "mov r8, r8". Technically, the bf00
 // encoding is available on ARMv6K, but we don't differentiate that finely.
-def : InstAlias<"nop", (tMOVr R8, R8, 14, zero_reg), 0>, Requires<[IsThumb, IsThumb1Only]>;
+def : InstAlias<"nop", (tMOVr R8, R8, (pred 14, zero_reg)), 0>,
+      Requires<[IsThumb, IsThumb1Only]>;
 
 
 // "neg" is and alias for "rsb rd, rn, #0"
@@ -1781,6 +1801,7 @@ def : tInstAlias<"asr${s}${p} $Rdm, $imm",
              (tASRri tGPR:$Rdm, cc_out:$s, tGPR:$Rdm, imm_sr:$imm, pred:$p)>;
 
 // Pseudo instruction ldr Rt, =immediate
+let hasSideEffects = 0 in
 def tLDRConstPool
   : tAsmPseudo<"ldr${p} $Rt, $immediate",
                (ins tGPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;

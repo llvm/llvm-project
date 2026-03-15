@@ -1,8 +1,10 @@
+// clang-format off
 // RUN: %libomp-cxx-compile-and-run | FileCheck %s
 
 // disabled until fixed, see: https://github.com/llvm/llvm-project/pull/145625#issuecomment-3007625680
 // remove "needs-fix", after fixing the issue in the runtime
 // REQUIRES: ompt, needs-fix
+// clang-format on
 #include "callback.h"
 #include "omp_testsuite.h"
 
@@ -26,6 +28,7 @@ int main() {
   return get_exit_value();
 }
 
+// clang-format off
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_thread_begin:
 // CHECK-SAME: thread_type=ompt_thread_initial=1
@@ -41,3 +44,4 @@ int main() {
 // CHECK: 0: ompt_event_runtime_shutdown
 
 // CHECK: {{^}}After ompt_finalize_tool
+// clang-format on

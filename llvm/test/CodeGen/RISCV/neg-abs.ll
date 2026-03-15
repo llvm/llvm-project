@@ -8,9 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBB
 
-declare i32 @llvm.abs.i32(i32, i1 immarg)
-declare i64 @llvm.abs.i64(i64, i1 immarg)
-
 define i32 @neg_abs32(i32 %x) {
 ; RV32I-LABEL: neg_abs32:
 ; RV32I:       # %bb.0:
@@ -179,7 +176,7 @@ define i32 @neg_abs32_multiuse(i32 %x, ptr %y) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sraiw a2, a0, 31
 ; RV64I-NEXT:    xor a0, a0, a2
-; RV64I-NEXT:    subw a2, a0, a2
+; RV64I-NEXT:    sub a2, a0, a2
 ; RV64I-NEXT:    negw a0, a2
 ; RV64I-NEXT:    sw a2, 0(a1)
 ; RV64I-NEXT:    ret
@@ -208,14 +205,14 @@ define i64 @neg_abs64_multiuse(i64 %x, ptr %y) {
 ; RV32I-NEXT:    sub a1, a1, a3
 ; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:  .LBB5_2:
-; RV32I-NEXT:    snez a3, a0
-; RV32I-NEXT:    neg a4, a1
-; RV32I-NEXT:    sub a3, a4, a3
-; RV32I-NEXT:    neg a4, a0
+; RV32I-NEXT:    snez a4, a0
+; RV32I-NEXT:    neg a3, a0
+; RV32I-NEXT:    add a4, a1, a4
+; RV32I-NEXT:    neg a4, a4
 ; RV32I-NEXT:    sw a0, 0(a2)
 ; RV32I-NEXT:    sw a1, 4(a2)
-; RV32I-NEXT:    mv a0, a4
-; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:    mv a1, a4
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: neg_abs64_multiuse:
@@ -227,14 +224,14 @@ define i64 @neg_abs64_multiuse(i64 %x, ptr %y) {
 ; RV32ZBB-NEXT:    sub a1, a1, a3
 ; RV32ZBB-NEXT:    neg a0, a0
 ; RV32ZBB-NEXT:  .LBB5_2:
-; RV32ZBB-NEXT:    snez a3, a0
-; RV32ZBB-NEXT:    neg a4, a1
-; RV32ZBB-NEXT:    sub a3, a4, a3
-; RV32ZBB-NEXT:    neg a4, a0
+; RV32ZBB-NEXT:    snez a4, a0
+; RV32ZBB-NEXT:    neg a3, a0
+; RV32ZBB-NEXT:    add a4, a1, a4
+; RV32ZBB-NEXT:    neg a4, a4
 ; RV32ZBB-NEXT:    sw a0, 0(a2)
 ; RV32ZBB-NEXT:    sw a1, 4(a2)
-; RV32ZBB-NEXT:    mv a0, a4
-; RV32ZBB-NEXT:    mv a1, a3
+; RV32ZBB-NEXT:    mv a0, a3
+; RV32ZBB-NEXT:    mv a1, a4
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64I-LABEL: neg_abs64_multiuse:

@@ -62,7 +62,7 @@ public:
   static std::unique_ptr<WorkListMaintainer>
   create(Level Lvl, WorkListTy &WorkList, MachineRegisterInfo &MRI);
 
-  virtual ~WorkListMaintainer() = default;
+  ~WorkListMaintainer() override = default;
 
   void reportFullyCreatedInstrs() {
     LLVM_DEBUG({
@@ -95,7 +95,7 @@ public:
   WorkListMaintainerImpl(WorkListTy &WorkList, MachineRegisterInfo &MRI)
       : WorkList(WorkList), MRI(MRI) {}
 
-  virtual ~WorkListMaintainerImpl() = default;
+  ~WorkListMaintainerImpl() override = default;
 
   void reset() override {
     DeferList.clear();
@@ -221,7 +221,7 @@ Combiner::WorkListMaintainer::create(Level Lvl, WorkListTy &WorkList,
   llvm_unreachable("Illegal ObserverLevel");
 }
 
-Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,
+Combiner::Combiner(MachineFunction &MF, const CombinerInfo &CInfo,
                    const TargetPassConfig *TPC, GISelValueTracking *VT,
                    GISelCSEInfo *CSEInfo)
     : Builder(CSEInfo ? std::make_unique<CSEMIRBuilder>()

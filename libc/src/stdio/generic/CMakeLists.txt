@@ -218,7 +218,7 @@ add_generic_entrypoint_object(
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
-    libc.src.__support.File.platform_stderr
+    libc.src.stdio.stderr
 )
 
 add_generic_entrypoint_object(
@@ -244,7 +244,7 @@ add_generic_entrypoint_object(
     libc.src.errno.errno
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stdout
+    libc.src.stdio.stdout
 )
 
 add_generic_entrypoint_object(
@@ -393,7 +393,11 @@ add_generic_entrypoint_object(
 list(APPEND fprintf_deps
       libc.hdr.types.FILE
       libc.src.__support.arg_list
+      libc.src.__support.CPP.limits
+      libc.src.__support.libc_errno
       libc.src.stdio.printf_core.vfprintf_internal
+      libc.src.stdio.printf_core.core_structs
+      libc.src.stdio.printf_core.error_mapper
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -408,7 +412,7 @@ set(printf_deps ${fprintf_deps})
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
-      libc.src.__support.File.platform_stdout
+      libc.src.stdio.stdout
   )
 endif()
 
@@ -462,7 +466,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
   list(APPEND scanf_deps
       libc.src.__support.File.file
       libc.src.__support.File.platform_file
-      libc.src.__support.File.platform_stdin
+      libc.src.stdio.stdin
   )
 endif()
 
@@ -540,7 +544,7 @@ add_generic_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stdin
+    libc.src.stdio.stdin
 )
 
 add_generic_entrypoint_object(
@@ -552,7 +556,7 @@ add_generic_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stdout
+    libc.src.stdio.stdout
 )
 
 add_generic_entrypoint_object(
@@ -564,5 +568,5 @@ add_generic_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
-    libc.src.__support.File.platform_stderr
+    libc.src.stdio.stderr
 )

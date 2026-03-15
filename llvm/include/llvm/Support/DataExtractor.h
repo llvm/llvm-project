@@ -19,12 +19,8 @@ namespace llvm {
 /// An auxiliary type to facilitate extraction of 3-byte entities.
 struct Uint24 {
   uint8_t Bytes[3];
-  Uint24(uint8_t U) {
-    Bytes[0] = Bytes[1] = Bytes[2] = U;
-  }
-  Uint24(uint8_t U0, uint8_t U1, uint8_t U2) {
-    Bytes[0] = U0; Bytes[1] = U1; Bytes[2] = U2;
-  }
+  Uint24(uint8_t U) : Bytes{U, U, U} {}
+  Uint24(uint8_t U0, uint8_t U1, uint8_t U2) : Bytes{U0, U1, U2} {}
   uint32_t getAsUint32(bool IsLittleEndian) const {
     int LoIx = IsLittleEndian ? 0 : 2;
     return Bytes[LoIx] + (Bytes[1] << 8) + (Bytes[2-LoIx] << 16);
@@ -407,6 +403,18 @@ public:
     getU8(C, Dst.data(), Count);
   }
 
+  /// Extract a int8_t value from \a *OffsetPtr. In case of an extraction error,
+  /// or if error is already set, zero is returned and the offset is left
+  /// unmodified.
+  int8_t getS8(uint64_t *OffsetPtr, Error *Err = nullptr) const {
+    return static_cast<int8_t>(getU8(OffsetPtr, Err));
+  }
+
+  /// Extract a int8_t value from \a *OffsetPtr. In case of an extraction error,
+  /// or if the cursor is already in an error state, zero is returned and the
+  /// offset is left unmodified.
+  int8_t getS8(Cursor &C) const { return static_cast<int8_t>(getU8(C)); }
+
   //------------------------------------------------------------------
   /// Extract a uint16_t value from \a *offset_ptr.
   ///
@@ -461,6 +469,18 @@ public:
   ///     NULL otherise.
   LLVM_ABI uint16_t *getU16(uint64_t *offset_ptr, uint16_t *dst,
                             uint32_t count) const;
+
+  /// Extract a int16_t value from \a *OffsetPtr. In case of an extraction
+  /// error, or if error is already set, zero is returned and the offset is left
+  /// unmodified.
+  int16_t getS16(uint64_t *OffsetPtr, Error *Err = nullptr) const {
+    return static_cast<int16_t>(getU16(OffsetPtr, Err));
+  }
+
+  /// Extract a int16_t value from \a *OffsetPtr. In case of an extraction
+  /// error, or if the cursor is already in an error state, zero is returned and
+  /// the offset is left unmodified.
+  int16_t getS16(Cursor &C) const { return static_cast<int16_t>(getU16(C)); }
 
   /// Extract a 24-bit unsigned value from \a *offset_ptr and return it
   /// in a uint32_t.
@@ -543,6 +563,18 @@ public:
   LLVM_ABI uint32_t *getU32(uint64_t *offset_ptr, uint32_t *dst,
                             uint32_t count) const;
 
+  /// Extract a int32_t value from \a *OffsetPtr. In case of an extraction
+  /// error, or if error is already set, zero is returned and the offset is left
+  /// unmodified.
+  int32_t getS32(uint64_t *OffsetPtr, Error *Err = nullptr) const {
+    return static_cast<int32_t>(getU32(OffsetPtr, Err));
+  }
+
+  /// Extract a int32_t value from \a *OffsetPtr. In case of an extraction
+  /// error, or if the cursor is already in an error state, zero is returned and
+  /// the offset is left unmodified.
+  int32_t getS32(Cursor &C) const { return static_cast<int32_t>(getU32(C)); }
+
   /// Extract a uint64_t value from \a *offset_ptr.
   ///
   /// Extract a single uint64_t from the binary data at the offset
@@ -595,6 +627,18 @@ public:
   ///     NULL otherise.
   LLVM_ABI uint64_t *getU64(uint64_t *offset_ptr, uint64_t *dst,
                             uint32_t count) const;
+
+  /// Extract a int64_t value from \a *OffsetPtr. In case of an extraction
+  /// error, or if error is already set, zero is returned and the offset is left
+  /// unmodified.
+  int64_t getS64(uint64_t *OffsetPtr, Error *Err = nullptr) const {
+    return static_cast<int64_t>(getU64(OffsetPtr, Err));
+  }
+
+  /// Extract a int64_t value from \a *OffsetPtr. In case of an extraction
+  /// error, or if the cursor is already in an error state, zero is returned and
+  /// the offset is left unmodified.
+  int64_t getS64(Cursor &C) const { return static_cast<int64_t>(getU64(C)); }
 
   /// Extract a signed LEB128 value from \a *offset_ptr.
   ///

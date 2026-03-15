@@ -23,7 +23,6 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/StringLexer.h"
 #include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
@@ -59,18 +58,15 @@ class TypeMatcher {
     if (type.IsEmpty())
       return type;
 
-    std::string type_cstr(type.AsCString());
-    StringLexer type_lexer(type_cstr);
+    llvm::StringRef type_lexer(type.AsCString());
 
-    type_lexer.AdvanceIf("class ");
-    type_lexer.AdvanceIf("enum ");
-    type_lexer.AdvanceIf("struct ");
-    type_lexer.AdvanceIf("union ");
+    type_lexer.consume_front("class ");
+    type_lexer.consume_front("enum ");
+    type_lexer.consume_front("struct ");
+    type_lexer.consume_front("union ");
+    type_lexer = type_lexer.ltrim();
 
-    while (type_lexer.NextIf({' ', '\t', '\v', '\f'}).first)
-      ;
-
-    return ConstString(type_lexer.GetUnlexed());
+    return ConstString(type_lexer);
   }
 
 public:

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 -verify-machineinstrs <%s | FileCheck -enable-var-scope -check-prefixes=GCN,SICI,SI %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx700 -verify-machineinstrs <%s | FileCheck -enable-var-scope -check-prefixes=GCN,SICI,CI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 <%s | FileCheck -enable-var-scope -check-prefixes=GCN,SICI,SI %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx700 <%s | FileCheck -enable-var-scope -check-prefixes=GCN,SICI,CI %s
 
 ; Check that an addrspace(1) (const) load with various combinations of
 ; uniform, nonuniform and constant address components all load with an

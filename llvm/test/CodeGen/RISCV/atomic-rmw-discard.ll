@@ -197,7 +197,7 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    lw a5, 4(a0)
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB11_2
-; RV32-NEXT:  .LBB11_1: # %atomicrmw.start
+; RV32-NEXT:  .LBB11_1: # %select.end
 ; RV32-NEXT:    # in Loop: Header=BB11_2 Depth=1
 ; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
@@ -224,7 +224,7 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    bnez a0, .LBB11_1
-; RV32-NEXT:  .LBB11_5: # %atomicrmw.start
+; RV32-NEXT:  .LBB11_5: # %select.false
 ; RV32-NEXT:    # in Loop: Header=BB11_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
 ; RV32-NEXT:    mv a3, s0
@@ -273,7 +273,7 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    lw a5, 4(a0)
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB13_2
-; RV32-NEXT:  .LBB13_1: # %atomicrmw.start
+; RV32-NEXT:  .LBB13_1: # %select.end
 ; RV32-NEXT:    # in Loop: Header=BB13_2 Depth=1
 ; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
@@ -300,7 +300,7 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    bnez a0, .LBB13_1
-; RV32-NEXT:  .LBB13_5: # %atomicrmw.start
+; RV32-NEXT:  .LBB13_5: # %select.false
 ; RV32-NEXT:    # in Loop: Header=BB13_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
 ; RV32-NEXT:    mv a3, s0
@@ -349,7 +349,7 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    lw a5, 4(a0)
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB15_2
-; RV32-NEXT:  .LBB15_1: # %atomicrmw.start
+; RV32-NEXT:  .LBB15_1: # %select.end
 ; RV32-NEXT:    # in Loop: Header=BB15_2 Depth=1
 ; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
@@ -376,7 +376,7 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    beqz a0, .LBB15_1
-; RV32-NEXT:  .LBB15_5: # %atomicrmw.start
+; RV32-NEXT:  .LBB15_5: # %select.false
 ; RV32-NEXT:    # in Loop: Header=BB15_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
 ; RV32-NEXT:    mv a3, s0
@@ -425,7 +425,7 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    lw a5, 4(a0)
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB17_2
-; RV32-NEXT:  .LBB17_1: # %atomicrmw.start
+; RV32-NEXT:  .LBB17_1: # %select.end
 ; RV32-NEXT:    # in Loop: Header=BB17_2 Depth=1
 ; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
@@ -452,7 +452,7 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    beqz a0, .LBB17_1
-; RV32-NEXT:  .LBB17_5: # %atomicrmw.start
+; RV32-NEXT:  .LBB17_5: # %select.false
 ; RV32-NEXT:    # in Loop: Header=BB17_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
 ; RV32-NEXT:    mv a3, s0

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
-#include "src/__support/OSUtil/syscall.h"
 #include "src/fcntl/fcntl.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
@@ -18,7 +17,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <sys/syscall.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcShmTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

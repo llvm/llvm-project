@@ -19,7 +19,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ -lunwind'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 config.stdlib = 'apple-libc++'

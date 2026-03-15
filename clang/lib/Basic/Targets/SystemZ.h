@@ -46,6 +46,7 @@ static const unsigned ZOSAddressMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_push_constant
     0  // wasm_funcref
 };
 
@@ -84,18 +85,12 @@ public:
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
-      // Compared to Linux/ELF, the data layout differs only in some details:
-      // - name mangling is GOFF.
-      // - 32 bit pointers, either as default or special address space
-      resetDataLayout("E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-"
-                      "a:8:16-n32:64");
     } else {
       // Support _Float16.
       HasFloat16 = true;
       TLSSupported = true;
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
-                      "-v128:64-a:8:16-n32:64");
     }
+    resetDataLayout();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
 
     // True if the backend supports operations on the half LLVM IR type.
@@ -104,7 +99,7 @@ public:
     // -ffloat16-excess-precision=none is given, no conversions will be made
     // and instead the backend will promote each half operation to float
     // individually.
-    HasLegalHalfType = false;
+    HasFastHalfType = false;
 
     HasStrictFP = true;
   }
@@ -136,6 +131,12 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override {
     switch (Constraint[0]) {
+    case '@': // Flag output operand.
+      if (llvm::StringRef(Constraint) == "@cc") {
+        Constraint += 2;
+        return std::string("{@cc}");
+      }
+      break;
     case 'p': // Keep 'p' constraint.
       return std::string("p");
     case 'Z':

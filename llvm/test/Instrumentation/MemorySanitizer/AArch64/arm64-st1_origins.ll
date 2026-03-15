@@ -17,12 +17,12 @@ define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) nounwind sanitize_memor
 ;
 ; CHECK-LABEL: define void @st2_16b
 ; CHECK-SAME: (<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 32) to ptr), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 32), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor i64 [[TMP7]], 193514046488576
@@ -50,7 +50,7 @@ define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) nounwind sanitize_memor
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP12]], i32 7
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       23:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
@@ -67,14 +67,14 @@ define void @st3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %P) nounwind 
 ;
 ; CHECK-LABEL: define void @st3_16b
 ; CHECK-SAME: (<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 48) to ptr), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 48), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 32) to ptr), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 32), align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 193514046488576
@@ -113,7 +113,7 @@ define void @st3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %P) nounwind 
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP14]], i32 11
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP31]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP32:%.*]], label [[TMP33:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP32:%.*]], label [[TMP33:%.*]], !prof [[PROF1]]
 ; CHECK:       32:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
@@ -130,16 +130,16 @@ define void @st4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr
 ;
 ; CHECK-LABEL: define void @st4_16b
 ; CHECK-SAME: (<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], <16 x i8> [[D:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 64) to ptr), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 64), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 32) to ptr), align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = load <16 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 48) to ptr), align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 48) to ptr), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 32), align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load <16 x i8>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 48), align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 48), align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = xor i64 [[TMP11]], 193514046488576
@@ -189,7 +189,7 @@ define void @st4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr
 ; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i32, ptr [[TMP16]], i32 15
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP40]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP41:%.*]], label [[TMP42:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP41:%.*]], label [[TMP42:%.*]], !prof [[PROF1]]
 ; CHECK:       41:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable

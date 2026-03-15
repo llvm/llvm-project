@@ -66,9 +66,8 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r6, ne
 ; CHECK-NEXT:    strb r6, [r5]
 ; CHECK-NEXT:    add.w r2, r2, #792
-; CHECK-NEXT:    ldrb r6, [r3]
+; CHECK-NEXT:    ldrb r6, [r3], #2
 ; CHECK-NEXT:    adds r4, #8
-; CHECK-NEXT:    adds r3, #2
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r6, r1
@@ -101,8 +100,7 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r6, ne
 ; CHECK-NEXT:    adds r4, #8
 ; CHECK-NEXT:    strb r6, [r5]
-; CHECK-NEXT:    ldrb r6, [r3]
-; CHECK-NEXT:    adds r3, #2
+; CHECK-NEXT:    ldrb r6, [r3], #2
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r6, r1
@@ -134,8 +132,7 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r4, ne
 ; CHECK-NEXT:    add.w r11, r11, #8
 ; CHECK-NEXT:    strb r4, [r5]
-; CHECK-NEXT:    ldrb r4, [r3]
-; CHECK-NEXT:    adds r3, #2
+; CHECK-NEXT:    ldrb r4, [r3], #2
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r4, r1
@@ -355,8 +352,8 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #8
-; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    mov lr, r0
 ; CHECK-NEXT:    subs r0, #1
 ; CHECK-NEXT:    sbcs r0, r1, #0
@@ -375,7 +372,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    movw r2, #43691
 ; CHECK-NEXT:    adds r1, #2
 ; CHECK-NEXT:    movt r2, #43690
-; CHECK-NEXT:    ldr r6, [sp, #120]
+; CHECK-NEXT:    ldr r6, [sp, #128]
 ; CHECK-NEXT:    movw r8, :lower16:c
 ; CHECK-NEXT:    umull r1, r2, r1, r2
 ; CHECK-NEXT:    movt r8, :upper16:c
@@ -384,6 +381,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ implicit-def: $r5
 ; CHECK-NEXT:    @ implicit-def: $r11
 ; CHECK-NEXT:    mov.w r9, #12
+; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    add.w r1, r1, r2, lsr #1
 ; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
 ; CHECK-NEXT:    bic r3, r1, #3
@@ -394,7 +392,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    vdup.32 q6, r0
 ; CHECK-NEXT:    vadd.i32 q4, q0, r7
 ; CHECK-NEXT:    vdup.32 q7, r0
-; CHECK-NEXT:    strd r3, r7, [sp] @ 8-byte Folded Spill
+; CHECK-NEXT:    strd r3, r7, [sp, #4] @ 8-byte Folded Spill
 ; CHECK-NEXT:    b .LBB1_6
 ; CHECK-NEXT:  .LBB1_2: @ %for.body6.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
@@ -443,19 +441,21 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    bhi .LBB1_17
 ; CHECK-NEXT:  @ %bb.8: @ %for.body6.us.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1
-; CHECK-NEXT:    ldrd r2, r3, [sp, #112]
+; CHECK-NEXT:    ldrd r2, r3, [sp, #120]
 ; CHECK-NEXT:    movs r0, #32
 ; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r4, r6
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    mov r6, lr
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    mov lr, r6
+; CHECK-NEXT:    mov r6, r4
 ; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
+; CHECK-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    vdup.32 q0, r2
-; CHECK-NEXT:    ldr r6, [sp, #120]
+; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r0, r11
-; CHECK-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    b .LBB1_10
 ; CHECK-NEXT:  .LBB1_9: @ %for.cond.cleanup17.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_10 Depth=2
@@ -570,7 +570,7 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    b .LBB1_27
 ; CHECK-NEXT:  .LBB1_28: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #8
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}

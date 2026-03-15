@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/LoweringHelpers.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 mlir::DenseElementsAttr
@@ -143,4 +144,41 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
         constArr, dims, type, converter->convertType(type));
 
   return std::nullopt;
+}
+
+mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
+                          mlir::Type typ, const llvm::APInt &val) {
+  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
+}
+
+mlir::Value getConst(mlir::OpBuilder &bld, mlir::Location loc, mlir::Type typ,
+                     unsigned val) {
+  return mlir::LLVM::ConstantOp::create(bld, loc, typ, val);
+}
+
+mlir::Value createShL(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+  if (!rhs)
+    return lhs;
+  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::ShlOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+}
+
+mlir::Value createAShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+  if (!rhs)
+    return lhs;
+  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::AShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+}
+
+mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
+                      const llvm::APInt &rhs) {
+  mlir::Value rhsVal = getConstAPInt(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::AndOp::create(bld, lhs.getLoc(), lhs, rhsVal);
+}
+
+mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs) {
+  if (!rhs)
+    return lhs;
+  mlir::Value rhsVal = getConst(bld, lhs.getLoc(), lhs.getType(), rhs);
+  return mlir::LLVM::LShrOp::create(bld, lhs.getLoc(), lhs, rhsVal);
 }

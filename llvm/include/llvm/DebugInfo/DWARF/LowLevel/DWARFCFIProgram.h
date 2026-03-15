@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
-#define LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
+#ifndef LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFCFIPROGRAM_H
+#define LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFCFIPROGRAM_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -17,8 +17,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
-#include <map>
-#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -79,8 +77,8 @@ public:
   /// to EndOffset upon successful parsing, or indicates the offset
   /// where a problem occurred in case an error is returned.
   template <typename T>
-  LLVM_ABI Error parse(DWARFDataExtractorBase<T> &Data, uint64_t *Offset,
-                       uint64_t EndOffset) {
+  Error parse(DWARFDataExtractorBase<T> &Data, uint64_t *Offset,
+              uint64_t EndOffset) {
     // See DWARF standard v3, section 7.23
     const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
     const uint8_t DWARF_CFI_PRIMARY_OPERAND_MASK = 0x3f;
@@ -292,4 +290,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARF_DWARFCFIPROGRAM_H
+#endif // LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFCFIPROGRAM_H

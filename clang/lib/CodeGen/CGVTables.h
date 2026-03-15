@@ -122,6 +122,10 @@ public:
                          llvm::GlobalVariable::LinkageTypes Linkage,
                          const CXXRecordDecl *RD);
 
+  /// GetAddrOfVTable - Get the address of the VTable for the given record
+  /// decl.
+  llvm::GlobalVariable *GetAddrOfVTable(const CXXRecordDecl *RD);
+
   /// EmitThunks - Emit the associated thunks for the given global decl.
   void EmitThunks(GlobalDecl GD);
 

@@ -33,6 +33,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/Target/StackFrame.h"
@@ -96,7 +97,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
       for (uint32_t idx = comp_unit_info->first_symbol_index +
                           2; // Skip the N_SO and N_OSO
            idx < oso_end_idx; ++idx) {
-        Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
+        const Symbol *exe_symbol = exe_symtab->SymbolAtIndex(idx);
         if (exe_symbol) {
           if (!exe_symbol->IsDebug())
             continue;
@@ -116,9 +117,10 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
             // correctly to the new addresses in the main executable.
 
             // First we find the original symbol in the .o file's symbol table
-            Symbol *oso_fun_symbol = oso_symtab->FindFirstSymbolWithNameAndType(
-                exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
-                eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
+            const Symbol *oso_fun_symbol =
+                oso_symtab->FindFirstSymbolWithNameAndType(
+                    exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
+                    eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
             if (oso_fun_symbol) {
               // Add the inverse OSO file address to debug map entry mapping
               exe_symfile->AddOSOFileRange(
@@ -145,7 +147,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
 
             // Next we find the non-stab entry that corresponds to the N_GSYM
             // in the .o file
-            Symbol *oso_gsym_symbol =
+            const Symbol *oso_gsym_symbol =
                 oso_symtab->FindFirstSymbolWithNameAndType(
                     exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
                     eSymbolTypeData, Symtab::eDebugNo, Symtab::eVisibilityAny);
@@ -1267,9 +1269,10 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
-void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                           bool show_color) {
   ForEachSymbolFile("Dumping clang AST", [&](SymbolFileDWARF &oso_dwarf) {
-    oso_dwarf.DumpClangAST(s, filter);
+    oso_dwarf.DumpClangAST(s, filter, show_color);
     // The underlying assumption is that DumpClangAST(...) will obtain the
     // AST from the underlying TypeSystem and therefore we only need to do
     // this once and can stop after the first iteration hence we return true.
@@ -1278,7 +1281,8 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
-    lldb_private::StructuredData::Dictionary &d, bool errors_only) {
+    lldb_private::StructuredData::Dictionary &d, bool errors_only,
+    bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
@@ -1560,7 +1564,7 @@ Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
       const DebugMap::Entry *debug_map_entry =
           m_debug_map.FindEntryThatContains(pc_addr.GetFileAddress());
       if (debug_map_entry) {
-        Symbol *symbol =
+        const Symbol *symbol =
             symtab->SymbolAtIndex(debug_map_entry->data.GetExeSymbolIndex());
         if (symbol) {
           uint32_t oso_idx = 0;
@@ -1600,4 +1604,15 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
     oso_dwarf.GetCompileOptions(args);
     return IterationAction::Continue;
   });
+}
+
+llvm::Expected<SymbolContext>
+SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(FunctionCallLabel &label) {
+  const uint64_t oso_idx = GetOSOIndexFromUserID(label.symbol_id);
+  SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
+  if (!oso_dwarf)
+    return llvm::createStringErrorV(
+        "couldn't find symbol file for {0} in debug-map.", label);
+
+  return oso_dwarf->ResolveFunctionCallLabel(label);
 }

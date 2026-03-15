@@ -86,7 +86,8 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact);
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 #    if defined(__x86_64__) || defined(__mips__) || defined(__aarch64__) || \
         defined(__powerpc64__) || defined(__s390__) || defined(__i386__) || \
-        defined(__arm__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64
+        defined(__arm__) || defined(__hexagon__) || SANITIZER_RISCV64 ||    \
+        SANITIZER_LOONGARCH64
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr);
 #    endif
@@ -108,11 +109,11 @@ class ThreadLister {
     Incomplete,
     Ok,
   };
-  Result ListThreads(InternalMmapVector<tid_t> *threads);
-  const char *LoadStatus(tid_t tid);
+  Result ListThreads(InternalMmapVector<ThreadID> *threads);
+  const char *LoadStatus(ThreadID tid);
 
  private:
-  bool IsAlive(tid_t tid);
+  bool IsAlive(ThreadID tid);
 
   InternalScopedString task_path_;
   InternalScopedString status_path_;

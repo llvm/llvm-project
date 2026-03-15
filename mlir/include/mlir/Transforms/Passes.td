@@ -16,7 +16,7 @@
 include "mlir/Pass/PassBase.td"
 include "mlir/Rewrite/PassUtil.td"
 
-def Canonicalizer : Pass<"canonicalize"> {
+def CanonicalizerPass : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
     This pass performs various types of canonicalizations over a set of
@@ -27,8 +27,6 @@ def Canonicalizer : Pass<"canonicalize"> {
     pass. See [Operation Canonicalization](Canonicalization.md) for more
     details.
   }];
-  let constructor = "mlir::createCanonicalizerPass()";
-  let dependentDialects = ["ub::UBDialect"];
   let options = [
     Option<"topDownProcessingEnabled", "top-down", "bool",
            /*default=*/"true",
@@ -54,7 +52,7 @@ def Canonicalizer : Pass<"canonicalize"> {
   ] # RewritePassUtils.options;
 }
 
-def ControlFlowSink : Pass<"control-flow-sink"> {
+def ControlFlowSinkPass : Pass<"control-flow-sink"> {
   let summary = "Sink operations into conditional blocks";
   let description = [{
     This pass implements control-flow sink on operations that implement
@@ -72,13 +70,12 @@ def ControlFlowSink : Pass<"control-flow-sink"> {
     blocks: ops in unreachable blocks may prevent other operations from being
     sunk as they may contain uses of their results
   }];
-  let constructor = "::mlir::createControlFlowSinkPass()";
   let statistics = [
     Statistic<"numSunk", "num-sunk", "Number of operations sunk">,
   ];
 }
 
-def CSE : Pass<"cse"> {
+def CSEPass : Pass<"cse"> {
   let summary = "Eliminate common sub-expressions";
   let description = [{
     This pass implements a generalized algorithm for common sub-expression
@@ -87,14 +84,13 @@ def CSE : Pass<"cse"> {
     operations. See [Common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination)
     for more general details on this optimization.
   }];
-  let constructor = "mlir::createCSEPass()";
   let statistics = [
     Statistic<"numCSE", "num-cse'd", "Number of operations CSE'd">,
     Statistic<"numDCE", "num-dce'd", "Number of operations DCE'd">
   ];
 }
 
-def RemoveDeadValues : Pass<"remove-dead-values"> {
+def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
   let summary = "Remove dead values";
   let description = [{
     The goal of this pass is optimization (reducing runtime) by removing
@@ -247,8 +243,18 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     do = square_and_double_of_y(5)
     print(do)
     ```
+
+    Note: If `canonicalize` is set to "false", this pass does not remove any
+    block arguments / op results from ops that implement the
+    RegionBranchOpInterface. Instead, it just sets dead operands to
+    "ub.poison".
   }];
-  let constructor = "mlir::createRemoveDeadValuesPass()";
+
+  let options = [
+    Option<"canonicalize", "canonicalize", "bool", /*default=*/"true",
+           "Canonicalize region branch ops">,
+  ];
+  let dependentDialects = ["ub::UBDialect"];
 }
 
 def PrintIRPass : Pass<"print-ir"> {
@@ -257,25 +263,29 @@ def PrintIRPass : Pass<"print-ir"> {
     Print the entire IR on the debug stream. This is meant for debugging
     purposes to inspect the IR at a specific point in the pipeline.
   }];
-  let constructor = "mlir::createPrintIRPass()";
   let options = [
     Option<"label", "label", "std::string", /*default=*/"", "Label">,
   ];
 }
 
-def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
+def GenerateRuntimeVerificationPass : Pass<"generate-runtime-verification"> {
   let summary = "Generate additional runtime op verification checks";
   let description = [{
     This pass generates op-specific runtime checks using the
     `RuntimeVerifiableOpInterface`. It can be run for debugging purposes after
     passes that are suspected to introduce faulty IR.
   }];
-  let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+  let options = [
+    Option<"verboseLevel", "verbose-level", "unsigned", /*default=*/"1",
+           "Verbosity level for runtime verification messages: "
+           "0 = Minimum (only source location), "
+           "1 = Detailed (include full operation details, names, types, shapes, etc.)">
+  ];
 }
 
-def Inliner : Pass<"inline"> {
+
+def InlinerPass : Pass<"inline"> {
   let summary = "Inline function calls";
-  let constructor = "mlir::createInlinerPass()";
   let options = [
     Option<"defaultPipelineStr", "default-pipeline", "std::string",
            /*default=*/"\"canonicalize\"",
@@ -350,14 +360,12 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
   ];
 }
 
-def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
+def LoopInvariantCodeMotionPass : Pass<"loop-invariant-code-motion"> {
   let summary = "Hoist loop invariant instructions outside of the loop";
-  let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
-def LoopInvariantSubsetHoisting : Pass<"loop-invariant-subset-hoisting"> {
+def LoopInvariantSubsetHoistingPass : Pass<"loop-invariant-subset-hoisting"> {
   let summary = "Hoist loop invariant subset ops outside of the loop";
-  let constructor = "mlir::createLoopInvariantSubsetHoistingPass()";
 }
 
 def Mem2Reg : Pass<"mem2reg"> {
@@ -365,8 +373,8 @@ def Mem2Reg : Pass<"mem2reg"> {
   let description = [{
     This pass removes loads out of and stores into a memory slot, and turns
     them into direct uses of SSA values. This is done generically using the
-    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
-    `PromoteMemOpInterface` interfaces.
+    `PromotableAllocationOpInterface`, `PromotableOpInterface` and
+    `PromotableMemOpInterface` interfaces.
 
     This pass will attempt to compute which definitions of the content of
     the memory slot reach operations that use the memory slot pointer. It
@@ -394,16 +402,15 @@ def Mem2Reg : Pass<"mem2reg"> {
   ];
 }
 
-def PrintOpStats : Pass<"print-op-stats"> {
+def PrintOpStatsPass : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
-  let constructor = "mlir::createPrintOpStatsPass()";
   let options = [
     Option<"printAsJSON", "json", "bool", /*default=*/"false",
            "print the stats as JSON">
   ];
 }
 
-def SCCP : Pass<"sccp"> {
+def SCCPPass : Pass<"sccp"> {
   let summary = "Sparse Conditional Constant Propagation";
   let description = [{
     This pass implements a general algorithm for sparse conditional constant
@@ -414,7 +421,6 @@ def SCCP : Pass<"sccp"> {
     This implementation is based on the algorithm described by Wegman and Zadeck
     in [“Constant Propagation with Conditional Branches”](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
   }];
-  let constructor = "mlir::createSCCPPass()";
 }
 
 def SROA : Pass<"sroa"> {
@@ -453,16 +459,15 @@ def SROA : Pass<"sroa"> {
   ];
 }
 
-def StripDebugInfo : Pass<"strip-debuginfo"> {
+def StripDebugInfoPass : Pass<"strip-debuginfo"> {
   let summary = "Strip debug info from all operations";
   let description = [{
     This pass strips the IR of any location information, by replacing all
     operation locations with [`unknown`](Dialects/Builtin.md/#unknownloc).
   }];
-  let constructor = "mlir::createStripDebugInfoPass()";
 }
 
-def SymbolDCE : Pass<"symbol-dce"> {
+def SymbolDCEPass : Pass<"symbol-dce"> {
   let summary = "Eliminate dead symbols";
   let description = [{
     This pass deletes all symbols that are found to be unreachable. This is done
@@ -502,14 +507,12 @@ def SymbolDCE : Pass<"symbol-dce"> {
     See [Symbols and SymbolTables](SymbolsAndSymbolTables.md) for more
     information on `Symbols`.
   }];
-  let constructor = "mlir::createSymbolDCEPass()";
-
   let statistics = [
     Statistic<"numDCE", "num-dce'd", "Number of symbols DCE'd">,
   ];
 }
 
-def SymbolPrivatize : Pass<"symbol-privatize"> {
+def SymbolPrivatizePass : Pass<"symbol-privatize"> {
   let summary = "Mark symbols private";
   let description = [{
     This pass marks all top-level symbols of the operation run as `private`
@@ -519,10 +522,9 @@ def SymbolPrivatize : Pass<"symbol-privatize"> {
     ListOption<"exclude", "exclude", "std::string",
        "Comma separated list of symbols that should not be marked private">
   ];
-  let constructor = "mlir::createSymbolPrivatizePass()";
 }
 
-def ViewOpGraph : Pass<"view-op-graph"> {
+def ViewOpGraphPass : Pass<"view-op-graph"> {
   let summary = "Print Graphviz visualization of an operation";
   let description = [{
     This pass prints a Graphviz graph of a module.
@@ -549,10 +551,9 @@ def ViewOpGraph : Pass<"view-op-graph"> {
     Option<"printResultTypes", "print-result-types", "bool",
             /*default=*/"true", "Print result types of operations">
   ];
-  let constructor = "mlir::createPrintOpGraphPass()";
 }
 
-def TopologicalSort : Pass<"topological-sort"> {
+def TopologicalSortPass : Pass<"topological-sort"> {
   let summary = "Sort regions without SSA dominance in topological order";
   let description = [{
     Recursively sorts all nested regions without SSA dominance in topological
@@ -566,7 +567,6 @@ def TopologicalSort : Pass<"topological-sort"> {
     regions in a stable order.
   }];
 
-  let constructor = "mlir::createTopologicalSortPass()";
 }
 
 def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
@@ -584,6 +584,50 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
     Option<"maxIter", "max-iterations", "int", /*default=*/"10",
       "Maximum number of iterations if inner pipeline">,
   ];
+}
+
+def BubbleDownMemorySpaceCasts :
+    Pass<"bubble-down-memory-space-casts"> {
+  let summary = "Bubbles down memory-space cast operations.";
+  let description = [{
+    This pass tries to iteratively bubble down all possible memory-space cast
+    operations. It is important to note that the determination of which casts
+    are bubbled down is based on the interfaces
+    `MemorySpaceCastConsumerOpInterface`, and `MemorySpaceCastOpInterface`, and
+    not the pass. The pass only looks for operations implementing the
+    `MemorySpaceCastConsumerOpInterface` interface, and invoking the interface
+    methods to perform the bubbling down.
+
+    Example:
+
+    ```mlir
+    func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
+      %memspacecast = memref.memory_space_cast %arg0 : memref<4x4xf32, 1> to memref<4x4xf32>
+      %c0 = arith.constant 0 : index
+      %c4 = arith.constant 4 : index
+      %expanded = memref.expand_shape %memspacecast [[0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32> into memref<4x2x2xf32>
+      %collapsed = memref.collapse_shape %expanded [[0, 1, 2]] : memref<4x2x2xf32> into memref<16xf32>
+      %loaded = memref.load %collapsed[%c0] : memref<16xf32>
+      %added = arith.addf %loaded, %arg2 : f32
+      memref.store %added, %collapsed[%c0] : memref<16xf32>
+      %atomic_result = memref.atomic_rmw addf %arg2, %collapsed[%c4] : (f32, memref<16xf32>) -> f32
+      return %collapsed : memref<16xf32>
+    }
+    // mlir-opt --bubble-down-memory-space-casts
+    func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
+      %c4 = arith.constant 4 : index
+      %c0 = arith.constant 0 : index
+      %expand_shape = memref.expand_shape %arg0 [[0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32, 1> into memref<4x2x2xf32, 1>
+      %collapse_shape = memref.collapse_shape %expand_shape [[0, 1, 2]] : memref<4x2x2xf32, 1> into memref<16xf32, 1>
+      %memspacecast = memref.memory_space_cast %collapse_shape : memref<16xf32, 1> to memref<16xf32>
+      %0 = memref.load %collapse_shape[%c0] : memref<16xf32, 1>
+      %1 = arith.addf %0, %arg2 : f32
+      memref.store %1, %collapse_shape[%c0] : memref<16xf32, 1>
+      %2 = memref.atomic_rmw addf %arg2, %collapse_shape[%c4] : (f32, memref<16xf32, 1>) -> f32
+      return %memspacecast : memref<16xf32>
+    }
+    ```
+  }];
 }
 
 #endif // MLIR_TRANSFORMS_PASSES

@@ -593,29 +593,39 @@ public:
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
-      getOrCreateDataFragment();
+      getCurrentFragment();
     }
 
     emitDataMappingSymbol();
     MCELFStreamer::emitValueImpl(Value, Size, Loc);
   }
 
-  /// If a label is defined before the .type directive sets the label's type
-  /// then the label can't be recorded as thumb function when the label is
-  /// defined. We override emitSymbolAttribute() which is called as part of the
-  /// parsing of .type so that if the symbol has already been defined we can
-  /// record the label as Thumb. FIXME: there is a corner case where the state
-  /// is changed in between the label definition and the .type directive, this
-  /// is not expected to occur in practice and handling it would require the
-  /// backend to track IsThumb for every label.
+  /// Called to set any attribute on a symbol.
+  ///
+  /// If this function is called for the .type directive that marks the symbol
+  /// as a function, and the label has been defined already without being typed
+  /// as a function, then this is the first opportunity we have to mark the
+  /// label as Thumb rather than Arm (if we're in Thumb mode).
+  ///
+  /// FIXME: there is a corner case where the state is changed in between the
+  /// label definition and the .type directive. This is not expected to occur
+  /// in practice, and handling it would require the backend to track IsThumb
+  /// for every label.
+  ///
+  /// We do not mark the symbol as Thumb due to any attributes other than
+  /// setting its type to 'function', because there _are_ cases in practice
+  /// where an attribute directive such as .hidden can be widely separated from
+  /// the symbol definition. (For example, bug #180358: rustc targeting mostly
+  /// Thumb generates a top-level Arm function entirely in inline assembly, and
+  /// then uses an LLVM IR `declare` statement to mark it as hidden symbol
+  /// visibility, which causes LLVM to emit a `.hidden` directive after having
+  /// switched back to Thumb mode.)
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     bool Val = MCELFStreamer::emitSymbolAttribute(Symbol, Attribute);
 
-    if (!IsThumb)
-      return Val;
-
-    unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
-    if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
+    if (IsThumb &&
+        (Attribute == MCSA_ELF_TypeFunction ||
+         Attribute == MCSA_ELF_TypeIndFunction) &&
         Symbol->isDefined())
       getAssembler().setIsThumbFunc(Symbol);
 
@@ -638,7 +648,7 @@ private:
       Offset = 0;
     }
     bool hasInfo() { return F != nullptr; }
-    MCDataFragment *F = nullptr;
+    MCFragment *F = nullptr;
     uint64_t Offset = 0;
     ElfMappingSymbol State = EMS_None;
   };
@@ -650,11 +660,11 @@ private:
       // This is a tentative symbol, it won't really be emitted until it's
       // actually needed.
       ElfMappingSymbolInfo *EMS = LastEMSInfo.get();
-      auto *DF = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
-      if (!DF)
+      auto *DF = getCurrentFragment();
+      if (DF->getKind() != MCFragment::FT_Data)
         return;
       EMS->F = DF;
-      EMS->Offset = DF->getContents().size();
+      EMS->Offset = DF->getFixedSize();
       LastEMSInfo->State = EMS_Data;
       return;
     }
@@ -679,15 +689,17 @@ private:
   }
 
   void EmitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
 
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
   }
 
-  void emitMappingSymbol(StringRef Name, MCDataFragment &F, uint64_t Offset) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+  void emitMappingSymbol(StringRef Name, MCFragment &F, uint64_t Offset) {
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabelAtPos(Symbol, SMLoc(), F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
@@ -707,8 +719,6 @@ private:
                          SectionKind Kind, const MCSymbol &Fn);
   void SwitchToExTabSection(const MCSymbol &FnStart);
   void SwitchToExIdxSection(const MCSymbol &FnStart);
-
-  void EmitFixup(const MCExpr *Expr, MCFixupKind Kind);
 
   bool IsThumb;
   bool IsAndroid;
@@ -895,6 +905,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
+  case ARM::ArchKind::ARMV9_7A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -1090,14 +1101,14 @@ void ARMTargetELFStreamer::emitLabel(MCSymbol *Symbol) {
     return;
 
   Streamer.getAssembler().registerSymbol(*Symbol);
-  unsigned Type = cast<MCSymbolELF>(Symbol)->getType();
+  unsigned Type = static_cast<MCSymbolELF *>(Symbol)->getType();
   if (Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)
     emitThumbFunc(Symbol);
 }
 
 void ARMTargetELFStreamer::annotateTLSDescriptorSequence(
-    const MCSymbolRefExpr *S) {
-  getStreamer().EmitFixup(S, FK_Data_4);
+    const MCSymbolRefExpr *Expr) {
+  getStreamer().addFixup(Expr, FK_Data_4);
 }
 
 void ARMTargetELFStreamer::emitCode16() { getStreamer().setIsThumb(true); }
@@ -1140,14 +1151,14 @@ void ARMTargetELFStreamer::finish() {
   MCContext &Ctx = getContext();
   auto &Asm = getStreamer().getAssembler();
   if (any_of(Asm, [](const MCSection &Sec) {
-        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;
+        return static_cast<const MCSectionELF &>(Sec).getFlags() &
+               ELF::SHF_ARM_PURECODE;
       })) {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     for (auto &F : *Text)
-      if (auto *DF = dyn_cast<MCDataFragment>(&F))
-        if (!DF->getContents().empty())
-          return;
+      if (F.getSize())
+        return;
     Text->setFlags(Text->getFlags() | ELF::SHF_ARM_PURECODE);
   }
 }
@@ -1205,11 +1216,6 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
   SwitchToEHSection(".ARM.exidx", ELF::SHT_ARM_EXIDX,
                     ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER,
                     SectionKind::getData(), FnStart);
-}
-
-void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
-  MCDataFragment *Frag = getOrCreateDataFragment();
-  Frag->addFixup(MCFixup::create(Frag->getContents().size(), Expr, Kind));
 }
 
 void ARMELFStreamer::EHReset() {
@@ -1291,14 +1297,11 @@ void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }
 // Add the R_ARM_NONE fixup at the same position
 void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
   const MCSymbol *PersonalitySym = getContext().getOrCreateSymbol(Name);
+  visitUsedSymbol(*PersonalitySym);
 
   const MCSymbolRefExpr *PersonalityRef =
       MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
-
-  visitUsedExpr(*PersonalityRef);
-  MCDataFragment *DF = getOrCreateDataFragment();
-  DF->addFixup(
-      MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
+  addFixup(PersonalityRef, FK_Data_4);
 }
 
 void ARMELFStreamer::FlushPendingOffset() {

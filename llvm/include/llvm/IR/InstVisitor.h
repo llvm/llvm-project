@@ -183,6 +183,7 @@ public:
   RetTy visitUIToFPInst(UIToFPInst &I)            { DELEGATE(CastInst);}
   RetTy visitSIToFPInst(SIToFPInst &I)            { DELEGATE(CastInst);}
   RetTy visitPtrToIntInst(PtrToIntInst &I)        { DELEGATE(CastInst);}
+  RetTy visitPtrToAddrInst(PtrToAddrInst &I)      { DELEGATE(CastInst);}
   RetTy visitIntToPtrInst(IntToPtrInst &I)        { DELEGATE(CastInst);}
   RetTy visitBitCastInst(BitCastInst &I)          { DELEGATE(CastInst);}
   RetTy visitAddrSpaceCastInst(AddrSpaceCastInst &I) { DELEGATE(CastInst);}
@@ -219,6 +220,12 @@ public:
   // intercepting them with dedicated a visitor callback.
   RetTy visitReturnInst(ReturnInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);
+  }
+  RetTy visitUncondBrInst(UncondBrInst &I) {
+    return static_cast<SubClass *>(this)->visitBranchInst(I);
+  }
+  RetTy visitCondBrInst(CondBrInst &I) {
+    return static_cast<SubClass *>(this)->visitBranchInst(I);
   }
   RetTy visitBranchInst(BranchInst &I) {
     return static_cast<SubClass *>(this)->visitTerminator(I);

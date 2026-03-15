@@ -53,13 +53,16 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   for (const MachineBasicBlock &block : F) {
     for (const MachineInstr &instr : block) {
       auto uniformity = InstrInfo.getInstructionUniformity(instr);
-      if (uniformity == InstructionUniformity::AlwaysUniform) {
-        addUniformOverride(instr);
-        continue;
-      }
 
-      if (uniformity == InstructionUniformity::NeverUniform) {
+      switch (uniformity) {
+      case InstructionUniformity::AlwaysUniform:
+        addUniformOverride(instr);
+        break;
+      case InstructionUniformity::NeverUniform:
         markDivergent(instr);
+        break;
+      case InstructionUniformity::Default:
+        break;
       }
     }
   }
@@ -207,9 +210,7 @@ MachineUniformityPrinterPass::run(MachineFunction &MF,
 char MachineUniformityAnalysisPass::ID = 0;
 
 MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineUniformityAnalysisPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineUniformityAnalysisPass, "machine-uniformity",
                       "Machine Uniformity Info Analysis", false, true)
@@ -245,10 +246,7 @@ void MachineUniformityAnalysisPass::print(raw_ostream &OS,
 char MachineUniformityInfoPrinterPass::ID = 0;
 
 MachineUniformityInfoPrinterPass::MachineUniformityInfoPrinterPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineUniformityInfoPrinterPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(MachineUniformityInfoPrinterPass,
                       "print-machine-uniformity",

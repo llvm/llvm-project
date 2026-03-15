@@ -17,19 +17,22 @@ The :option:`ContainersWithPushBack`, :option:`ContainersWithPush`, and
 types that support the ``push_back``, ``push``, and ``push_front`` operations
 respectively. The default values for these options are as follows:
 
-* :option:`ContainersWithPushBack`: ``std::vector``, ``std::deque``, and ``std::list``.
-* :option:`ContainersWithPush`: ``std::stack``, ``std::queue``, and ``std::priority_queue``.
-* :option:`ContainersWithPushFront`: ``std::forward_list``, ``std::list``, and ``std::deque``.
+* :option:`ContainersWithPushBack`: ``std::vector``, ``std::deque``,
+  and ``std::list``.
+* :option:`ContainersWithPush`: ``std::stack``, ``std::queue``,
+  and ``std::priority_queue``.
+* :option:`ContainersWithPushFront`: ``std::forward_list``,
+  ``std::list``, and ``std::deque``.
 
 This check also reports when an ``emplace``-like method is improperly used,
 for example using ``emplace_back`` while also calling a constructor. This
-creates a temporary that requires at best a move and at worst a copy. Almost all
-``emplace``-like functions in the STL are covered by this, with ``try_emplace``
-on ``std::map`` and ``std::unordered_map`` being the exception as it behaves
-slightly differently than all the others. More containers can be added with the
-:option:`EmplacyFunctions` option, so long as the container defines a
-``value_type`` type, and the ``emplace``-like functions construct a
-``value_type`` object.
+creates a temporary that requires at best a move and at worst a copy. Almost
+all ``emplace``-like functions in the STL are covered by this, with
+``try_emplace`` on ``std::map`` and ``std::unordered_map`` being the
+exception as it behaves slightly differently than all the others. More
+containers can be added with the :option:`EmplacyFunctions` option, so long
+as the container defines a ``value_type`` type, and the ``emplace``-like
+functions construct a ``value_type`` object.
 
 Before:
 

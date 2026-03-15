@@ -8,9 +8,8 @@
 
 #include <clc/math/clc_fma.h>
 #include <clc/math/math.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION fma
+#define __CLC_FUNCTION fma
 #define __CLC_BODY <clc/shared/ternary_def.inc>
 
 #include <clc/math/gentype.inc>

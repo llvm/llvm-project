@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-spill-sgpr-to-vgpr=1 < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
 
 ; Verify registers used for tracking exec mask changes when all
 ; registers are spilled at the end of the block. The SGPR spill
@@ -138,7 +138,7 @@ endif:
 define amdgpu_kernel void @divergent_loop(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, ptr addrspace(3) null
+  %load0 = load volatile i32, ptr addrspace(3) zeroinitializer
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %loop, label %end
 
@@ -252,7 +252,7 @@ end:
 define amdgpu_kernel void @divergent_if_else_endif(ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %load0 = load volatile i32, ptr addrspace(3) null
+  %load0 = load volatile i32, ptr addrspace(3) zeroinitializer
   %cmp0 = icmp eq i32 %tid, 0
   br i1 %cmp0, label %if, label %else
 

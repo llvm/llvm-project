@@ -32,8 +32,9 @@ public:
   struct SymbolAddrs {
     ExecutorAddr Allocator;
     ExecutorAddr Reserve;
-    ExecutorAddr Finalize;
-    ExecutorAddr Deallocate;
+    ExecutorAddr Initialize;
+    ExecutorAddr Deinitialize;
+    ExecutorAddr Release;
   };
 
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of

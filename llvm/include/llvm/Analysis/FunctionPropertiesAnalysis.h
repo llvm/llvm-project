@@ -34,18 +34,18 @@ class FunctionPropertiesInfo {
   void reIncludeBB(const BasicBlock &BB);
 
   ir2vec::Embedding FunctionEmbedding = ir2vec::Embedding(0.0);
-  std::optional<ir2vec::Vocab> IR2VecVocab;
+  const ir2vec::Vocabulary *IR2VecVocab = nullptr;
 
 public:
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(const Function &F, const DominatorTree &DT,
                             const LoopInfo &LI,
-                            const IR2VecVocabResult *VocabResult);
+                            const ir2vec::Vocabulary *Vocabulary);
 
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(Function &F, FunctionAnalysisManager &FAM);
 
-  bool operator==(const FunctionPropertiesInfo &FPI) const;
+  LLVM_ABI bool operator==(const FunctionPropertiesInfo &FPI) const;
 
   bool operator!=(const FunctionPropertiesInfo &FPI) const {
     return !(*this == FPI);
@@ -127,6 +127,11 @@ public:
   int64_t CriticalEdgeCount = 0;
   int64_t ControlFlowEdgeCount = 0;
   int64_t UnconditionalBranchCount = 0;
+  int64_t ConditionalBranchCount = 0;
+  int64_t BranchInstructionCount = 0;
+  int64_t BranchSuccessorCount = 0;
+  int64_t SwitchInstructionCount = 0;
+  int64_t SwitchSuccessorCount = 0;
 
   // Call related instructions
   int64_t IntrinsicCount = 0;
@@ -145,9 +150,7 @@ public:
     return FunctionEmbedding;
   }
 
-  const std::optional<ir2vec::Vocab> &getIR2VecVocab() const {
-    return IR2VecVocab;
-  }
+  const ir2vec::Vocabulary *getIR2VecVocab() const { return IR2VecVocab; }
 
   // Helper intended to be useful for unittests
   void setFunctionEmbeddingForTest(const ir2vec::Embedding &Embedding) {
@@ -179,6 +182,12 @@ public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
+};
+
+/// Statistics pass for the FunctionPropertiesAnalysis results.
+struct FunctionPropertiesStatisticsPass
+    : PassInfoMixin<FunctionPropertiesStatisticsPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

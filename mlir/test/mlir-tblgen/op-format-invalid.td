@@ -307,7 +307,7 @@ def DirectiveTypeZOperandInvalidI : TestFormat_Op<[{
 def LiteralInvalidA : TestFormat_Op<[{
   `a:`
 }]>;
-// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+*'
+// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+-*'
 def LiteralInvalidB : TestFormat_Op<[{
   `1`
 }]>;

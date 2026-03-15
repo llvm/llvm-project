@@ -31,7 +31,7 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -march=sm_61 -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=ARGS %s
 
-//      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
+//      ARGS: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" {{.*}} "-o" "[[PTX:.+]].s"
 // ARGS-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[CUBIN:.+]].o" "[[PTX]].s" "-c"
 // ARGS-NEXT: clang-nvlink-wrapper{{.*}}"-o" "a.out" "-arch" "sm_61"{{.*}}"[[CUBIN]].o"
 
@@ -44,7 +44,7 @@
 // RUN: %clang -target nvptx64-nvidia-cuda -save-temps -march=sm_61 -c -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OBJECT %s
 
-//      OBJECT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
+//      OBJECT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_61" {{.*}} "-o" "[[PTX:.+]].s"
 // OBJECT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_61" "--output-file" "[[OBJ:.+]].o" "[[PTX]].s" "-c"
 
 //
@@ -104,3 +104,11 @@
 // RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
 
 // STARTUP: clang-nvlink-wrapper{{.*}}"-lc" "-lm" "{{.*}}crt1.o"
+
+//
+// Test cuda path handling
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_52 --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=PATH %s
+
+// PATH: clang-nvlink-wrapper{{.*}}"--cuda-path={{.*}}/Inputs/CUDA/usr/local/cuda"

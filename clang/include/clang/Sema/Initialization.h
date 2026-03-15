@@ -91,6 +91,10 @@ public:
     /// or vector.
     EK_VectorElement,
 
+    /// The entity being initialized is an element of a matrix.
+    /// or matrix.
+    EK_MatrixElement,
+
     /// The entity being initialized is a field of block descriptor for
     /// the copied-in c++ object.
     EK_BlockElement,
@@ -156,11 +160,16 @@ private:
     /// Whether the entity being initialized may end up using the
     /// named return value optimization (NRVO).
     bool NRVO;
+
+    /// When Kind == EK_New, whether this is initializing an array of runtime
+    /// size (which needs an array filler).
+    bool VariableLengthArrayNew;
   };
 
   struct VD {
-    /// The VarDecl, FieldDecl, or BindingDecl being initialized.
-    ValueDecl *VariableOrMember;
+    /// The VarDecl, FieldDecl, TemplateParmDecl, or BindingDecl being
+    /// initialized.
+    NamedDecl *VariableOrMember;
 
     /// When Kind == EK_Member, whether this is an implicit member
     /// initialization in a copy or move constructor. These can perform array
@@ -204,8 +213,8 @@ private:
     /// virtual base.
     llvm::PointerIntPair<const CXXBaseSpecifier *, 1> Base;
 
-    /// When Kind == EK_ArrayElement, EK_VectorElement, or
-    /// EK_ComplexElement, the index of the array or vector element being
+    /// When Kind == EK_ArrayElement, EK_VectorElement, EK_MatrixElement,
+    /// or EK_ComplexElement, the index of the array or vector element being
     /// initialized.
     unsigned Index;
 
@@ -222,11 +231,12 @@ private:
   /// function, throwing an object, performing an explicit cast, or
   /// initializing a parameter for which there is no declaration.
   InitializedEntity(EntityKind Kind, SourceLocation Loc, QualType Type,
-                    bool NRVO = false)
+                    bool NRVO = false, bool VariableLengthArrayNew = false)
       : Kind(Kind), Type(Type) {
     new (&LocAndNRVO) LN;
     LocAndNRVO.Location = Loc;
     LocAndNRVO.NRVO = NRVO;
+    LocAndNRVO.VariableLengthArrayNew = VariableLengthArrayNew;
   }
 
   /// Create the initialization entity for a member subobject.
@@ -291,8 +301,8 @@ public:
   }
 
   /// Create the initialization entity for a template parameter.
-  static InitializedEntity
-  InitializeTemplateParameter(QualType T, NonTypeTemplateParmDecl *Param) {
+  static InitializedEntity InitializeTemplateParameter(QualType T,
+                                                       NamedDecl *Param) {
     InitializedEntity Entity;
     Entity.Kind = EK_TemplateParameter;
     Entity.Type = T;
@@ -330,8 +340,10 @@ public:
   }
 
   /// Create the initialization entity for an object allocated via new.
-  static InitializedEntity InitializeNew(SourceLocation NewLoc, QualType Type) {
-    return InitializedEntity(EK_New, NewLoc, Type);
+  static InitializedEntity InitializeNew(SourceLocation NewLoc, QualType Type,
+                                         bool VariableLengthArrayNew) {
+    return InitializedEntity(EK_New, NewLoc, Type, /*NRVO=*/false,
+                             VariableLengthArrayNew);
   }
 
   /// Create the initialization entity for a temporary.
@@ -501,8 +513,7 @@ public:
 
   /// Determine whether this is an array new with an unknown bound.
   bool isVariableLengthArrayNew() const {
-    return getKind() == EK_New && isa_and_nonnull<IncompleteArrayType>(
-                                      getType()->getAsArrayTypeUnsafe());
+    return getKind() == EK_New && LocAndNRVO.VariableLengthArrayNew;
   }
 
   /// Is this the implicit initialization of a member of a class from
@@ -535,7 +546,7 @@ public:
   /// element's index.
   unsigned getElementIndex() const {
     assert(getKind() == EK_ArrayElement || getKind() == EK_VectorElement ||
-           getKind() == EK_ComplexElement);
+           getKind() == EK_MatrixElement || getKind() == EK_ComplexElement);
     return Index;
   }
 
@@ -543,7 +554,7 @@ public:
   /// element, sets the element index.
   void setElementIndex(unsigned Index) {
     assert(getKind() == EK_ArrayElement || getKind() == EK_VectorElement ||
-           getKind() == EK_ComplexElement);
+           getKind() == EK_MatrixElement || getKind() == EK_ComplexElement);
     this->Index = Index;
   }
 
@@ -1125,6 +1136,9 @@ public:
 
     // A designated initializer was provided for a non-aggregate type.
     FK_DesignatedInitForNonAggregate,
+
+    /// HLSL intialization list flattening failed.
+    FK_HLSLInitListFlatteningFailed,
   };
 
 private:

@@ -1459,14 +1459,29 @@ class Fixture : public internal::Benchmark {
 // ------------------------------------------------------
 // Macro to register benchmarks
 
+// clang-format off
+#if defined(__clang__)
+#define BENCHMARK_DISABLE_COUNTER_WARNING                        \
+  _Pragma("GCC diagnostic push")                                 \
+  _Pragma("GCC diagnostic ignored \"-Wunknown-warning-option\"") \
+  _Pragma("GCC diagnostic ignored \"-Wc2y-extensions\"")
+#define BENCHMARK_RESTORE_COUNTER_WARNING _Pragma("GCC diagnostic pop")
+#else
+#define BENCHMARK_DISABLE_COUNTER_WARNING
+#define BENCHMARK_RESTORE_COUNTER_WARNING
+#endif
+// clang-format on
+
 // Check that __COUNTER__ is defined and that __COUNTER__ increases by 1
 // every time it is expanded. X + 1 == X + 0 is used in case X is defined to be
 // empty. If X is empty the expression becomes (+1 == +0).
+BENCHMARK_DISABLE_COUNTER_WARNING
 #if defined(__COUNTER__) && (__COUNTER__ + 1 == __COUNTER__ + 0)
 #define BENCHMARK_PRIVATE_UNIQUE_ID __COUNTER__
 #else
 #define BENCHMARK_PRIVATE_UNIQUE_ID __LINE__
 #endif
+BENCHMARK_RESTORE_COUNTER_WARNING
 
 // Helpers for generating unique variable names
 #ifdef BENCHMARK_HAS_CXX11
@@ -1485,8 +1500,9 @@ class Fixture : public internal::Benchmark {
   BaseClass##_##Method##_Benchmark
 
 #define BENCHMARK_PRIVATE_DECLARE(n)                                 \
+  BENCHMARK_DISABLE_COUNTER_WARNING                                  \
   static ::benchmark::internal::Benchmark* BENCHMARK_PRIVATE_NAME(n) \
-      BENCHMARK_UNUSED
+      BENCHMARK_RESTORE_COUNTER_WARNING BENCHMARK_UNUSED
 
 #ifdef BENCHMARK_HAS_CXX11
 #define BENCHMARK(...)                                               \

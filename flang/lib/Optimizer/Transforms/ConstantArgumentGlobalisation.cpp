@@ -111,11 +111,11 @@ public:
             builder.insert(cln);
             mlir::Value val =
                 builder.createConvert(loc, varTy, cln->getResult(0));
-            builder.create<fir::HasValueOp>(loc, val);
+            fir::HasValueOp::create(builder, loc, val);
           },
           builder.createInternalLinkage());
-      mlir::Value addr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
-                                                       global.getSymbol());
+      mlir::Value addr = fir::AddrOfOp::create(
+          builder, loc, global.resultType(), global.getSymbol());
       newOperands.push_back(addr);
       needUpdate = true;
     }
@@ -125,11 +125,11 @@ public:
       llvm::SmallVector<mlir::Type> newResultTypes;
       newResultTypes.append(callOp.getResultTypes().begin(),
                             callOp.getResultTypes().end());
-      fir::CallOp newOp = builder.create<fir::CallOp>(
-          loc,
-          callOp.getCallee().has_value() ? callOp.getCallee().value()
-                                         : mlir::SymbolRefAttr{},
-          newResultTypes, newOperands);
+      fir::CallOp newOp = fir::CallOp::create(builder, loc,
+                                              callOp.getCallee().has_value()
+                                                  ? callOp.getCallee().value()
+                                                  : mlir::SymbolRefAttr{},
+                                              newResultTypes, newOperands);
       // Copy all the attributes from the old to new op.
       newOp->setAttrs(callOp->getAttrs());
       rewriter.replaceOp(callOp, newOp);

@@ -14,6 +14,7 @@
 #define POLLY_SUPPORT_IRHELPER_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
@@ -37,7 +38,7 @@ class Scop;
 class ScopStmt;
 
 /// Same as llvm/Analysis/ScalarEvolutionExpressions.h
-using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, const llvm::SCEV *>;
+using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, llvm::SCEVUse>;
 
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {
@@ -357,14 +358,6 @@ namespace polly {
 /// @param RI RegionInfo to be updated.
 void simplifyRegion(llvm::Region *R, llvm::DominatorTree *DT,
                     llvm::LoopInfo *LI, llvm::RegionInfo *RI);
-
-/// Split the entry block of a function to store the newly inserted
-///        allocations outside of all Scops.
-///
-/// @param EntryBlock The entry block of the current function.
-/// @param P          The pass that currently running.
-///
-void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
 
 /// Split the entry block of a function to store the newly inserted
 ///        allocations outside of all Scops.

@@ -25,7 +25,7 @@ using namespace dwarf;
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  PLTRelativeSpecifier = AArch64::S_PLT;
+  PLTPCRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
@@ -36,7 +36,7 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
   // present.
   if (TM.getMCSubtargetInfo()->hasFeature(AArch64::FeatureExecuteOnly)) {
-    auto *Text = cast<MCSectionELF>(TextSection);
+    auto *Text = static_cast<MCSectionELF *>(TextSection);
     Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }
 }
@@ -59,11 +59,12 @@ void AArch64_ELFTargetObjectFile::emitPersonalityValueImpl(
 const MCExpr *AArch64_ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  int64_t FinalOffset = Offset + MV.getConstant();
-  const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, AArch64::S_GOTPCREL, getContext());
-  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
-  return MCBinaryExpr::createAdd(Res, Off, getContext());
+  auto &Ctx = getContext();
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
+  if (int64_t FinalOffset = Offset + MV.getConstant())
+    Res = MCBinaryExpr::createAdd(Res, MCConstantExpr::create(FinalOffset, Ctx),
+                                  Ctx);
+  return MCSpecifierExpr::create(Res, AArch64::S_GOTPCREL, Ctx);
 }
 
 AArch64_MachoTargetObjectFile::AArch64_MachoTargetObjectFile() {

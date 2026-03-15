@@ -2323,51 +2323,51 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_F_F_W vfncvt.f.f.w	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_ROD_F_F_W vfncvt.rod.f.f.w	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
 # CHECK-NEXT:  1      228   228.00                       228   VLEN1024X300SiFive7VA1[1,229],VLEN1024X300SiFive7VA1OrVA2[1,229],VLEN1024X300SiFive7VCQ VFDIV_VV vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      228   228.00                       228   VLEN1024X300SiFive7VA1[1,229],VLEN1024X300SiFive7VA1OrVA2[1,229],VLEN1024X300SiFive7VCQ VFDIV_VF vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  1      228   228.00                       228   VLEN1024X300SiFive7VA1[1,229],VLEN1024X300SiFive7VA1OrVA2[1,229],VLEN1024X300SiFive7VCQ VFRDIV_VF vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMACC_VV     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMACC_VF     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMACC_VV    vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMACC_VF    vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMSAC_VV     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMSAC_VF     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMSAC_VV    vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMSAC_VF    vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMADD_VV     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMADD_VF     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMADD_VV    vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMADD_VF    vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMSUB_VV     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFMSUB_VF     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMSUB_VV    vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     1.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFNMSUB_VF    vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMACC_VV vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMACC_VF vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMACC_VV vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMACC_VF vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSAC_VV vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSAC_VF vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSAC_VV vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSAC_VF vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMADD_VV vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMADD_VF vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMADD_VV vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMADD_VF vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSUB_VV vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSUB_VF vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSUB_VV vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSUB_VF vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  1      228   228.00                       228   VLEN1024X300SiFive7VA1[1,229],VLEN1024X300SiFive7VA1OrVA2[1,229],VLEN1024X300SiFive7VCQ VFSQRT_V vfsqrt.v	v8, v24
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFRSQRT7_V vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFREC7_V vfrec7.v	v8, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
+# CHECK-NEXT:  1      19    16.00                        19    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFCVT_XU_F_V vfcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFCVT_X_F_V vfcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFCVT_RTZ_XU_F_V vfcvt.rtz.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFCVT_RTZ_X_F_V vfcvt.rtz.x.f.v	v8, v16
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
-# CHECK-NEXT:  1      16    16.00                        16    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
+# CHECK-NEXT:  1      23    16.00                        23    VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFWCVT_XU_F_V vfwcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFWCVT_X_F_V vfwcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1[1,3],VLEN1024X300SiFive7VA1OrVA2[1,3],VLEN1024X300SiFive7VCQ VFWCVT_RTZ_XU_F_V vfwcvt.rtz.xu.f.v	v8, v16
@@ -2384,51 +2384,51 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_F_F_W vfncvt.f.f.w	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_ROD_F_F_W vfncvt.rod.f.f.w	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
 # CHECK-NEXT:  1      456   456.00                       456   VLEN1024X300SiFive7VA1[1,457],VLEN1024X300SiFive7VA1OrVA2[1,457],VLEN1024X300SiFive7VCQ VFDIV_VV vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      456   456.00                       456   VLEN1024X300SiFive7VA1[1,457],VLEN1024X300SiFive7VA1OrVA2[1,457],VLEN1024X300SiFive7VCQ VFDIV_VF vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  1      456   456.00                       456   VLEN1024X300SiFive7VA1[1,457],VLEN1024X300SiFive7VA1OrVA2[1,457],VLEN1024X300SiFive7VCQ VFRDIV_VF vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMACC_VV     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMACC_VF     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMACC_VV    vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMACC_VF    vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMSAC_VV     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMSAC_VF     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMSAC_VV    vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMSAC_VF    vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMADD_VV     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMADD_VF     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMADD_VV    vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMADD_VF    vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMSUB_VV     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFMSUB_VF     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMSUB_VV    vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     2.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFNMSUB_VF    vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMACC_VV vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMACC_VF vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMACC_VV vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMACC_VF vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMSAC_VV vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMSAC_VF vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMSAC_VV vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMSAC_VF vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMADD_VV vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMADD_VF vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMADD_VV vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMADD_VF vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMSUB_VV vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMSUB_VF vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMSUB_VV vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFNMSUB_VF vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  1      456   456.00                       456   VLEN1024X300SiFive7VA1[1,457],VLEN1024X300SiFive7VA1OrVA2[1,457],VLEN1024X300SiFive7VCQ VFSQRT_V vfsqrt.v	v8, v24
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFRSQRT7_V vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFREC7_V vfrec7.v	v8, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
+# CHECK-NEXT:  1      35    32.00                        35    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFCVT_XU_F_V vfcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFCVT_X_F_V vfcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFCVT_RTZ_XU_F_V vfcvt.rtz.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFCVT_RTZ_X_F_V vfcvt.rtz.x.f.v	v8, v16
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
-# CHECK-NEXT:  1      32    32.00                        32    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
+# CHECK-NEXT:  1      39    32.00                        39    VLEN1024X300SiFive7VA1[1,33],VLEN1024X300SiFive7VA1OrVA2[1,33],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFWCVT_XU_F_V vfwcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFWCVT_X_F_V vfwcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1[1,5],VLEN1024X300SiFive7VA1OrVA2[1,5],VLEN1024X300SiFive7VCQ VFWCVT_RTZ_XU_F_V vfwcvt.rtz.xu.f.v	v8, v16
@@ -2445,51 +2445,51 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_F_F_W vfncvt.f.f.w	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_ROD_F_F_W vfncvt.rod.f.f.w	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
 # CHECK-NEXT:  1      912   912.00                       912   VLEN1024X300SiFive7VA1[1,913],VLEN1024X300SiFive7VA1OrVA2[1,913],VLEN1024X300SiFive7VCQ VFDIV_VV vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      912   912.00                       912   VLEN1024X300SiFive7VA1[1,913],VLEN1024X300SiFive7VA1OrVA2[1,913],VLEN1024X300SiFive7VCQ VFDIV_VF vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  1      912   912.00                       912   VLEN1024X300SiFive7VA1[1,913],VLEN1024X300SiFive7VA1OrVA2[1,913],VLEN1024X300SiFive7VCQ VFRDIV_VF vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMACC_VV     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMACC_VF     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMACC_VV    vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMACC_VF    vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMSAC_VV     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMSAC_VF     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMSAC_VV    vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMSAC_VF    vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMADD_VV     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMADD_VF     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMADD_VV    vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMADD_VF    vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMSUB_VV     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFMSUB_VF     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMSUB_VV    vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     4.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFNMSUB_VF    vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMACC_VV vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMACC_VF vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMACC_VV vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMACC_VF vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMSAC_VV vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMSAC_VF vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMSAC_VV vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMSAC_VF vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMADD_VV vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMADD_VF vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMADD_VV vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMADD_VF vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMSUB_VV vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMSUB_VF vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMSUB_VV vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFNMSUB_VF vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  1      912   912.00                       912   VLEN1024X300SiFive7VA1[1,913],VLEN1024X300SiFive7VA1OrVA2[1,913],VLEN1024X300SiFive7VCQ VFSQRT_V vfsqrt.v	v8, v24
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFRSQRT7_V vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFREC7_V vfrec7.v	v8, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
+# CHECK-NEXT:  1      67    64.00                        67    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFCVT_XU_F_V vfcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFCVT_X_F_V vfcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFCVT_RTZ_XU_F_V vfcvt.rtz.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFCVT_RTZ_X_F_V vfcvt.rtz.x.f.v	v8, v16
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
-# CHECK-NEXT:  1      64    64.00                        64    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
+# CHECK-NEXT:  1      71    64.00                        71    VLEN1024X300SiFive7VA1[1,65],VLEN1024X300SiFive7VA1OrVA2[1,65],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFWCVT_XU_F_V vfwcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFWCVT_X_F_V vfwcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFWCVT_RTZ_XU_F_V vfwcvt.rtz.xu.f.v	v8, v16
@@ -2506,51 +2506,51 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_F_F_W vfncvt.f.f.w	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNCVT_ROD_F_F_W vfncvt.rod.f.f.w	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN1024X300SiFive7PipeA,VLEN1024X300SiFive7PipeAB VSETVLI            vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFADD_VV vfadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFADD_VF vfadd.vf	v8, v16, fs0
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSUB_VV vfsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSUB_VF vfsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFRSUB_VF vfrsub.vf	v8, v16, fs0
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMUL_VV vfmul.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMUL_VF vfmul.vf	v8, v16, fs0
 # CHECK-NEXT:  1      1824  1824.00                      1824  VLEN1024X300SiFive7VA1[1,1825],VLEN1024X300SiFive7VA1OrVA2[1,1825],VLEN1024X300SiFive7VCQ VFDIV_VV vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1824  1824.00                      1824  VLEN1024X300SiFive7VA1[1,1825],VLEN1024X300SiFive7VA1OrVA2[1,1825],VLEN1024X300SiFive7VCQ VFDIV_VF vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  1      1824  1824.00                      1824  VLEN1024X300SiFive7VA1[1,1825],VLEN1024X300SiFive7VA1OrVA2[1,1825],VLEN1024X300SiFive7VCQ VFRDIV_VF vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMACC_VV    vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMACC_VF    vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMACC_VV   vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMACC_VF   vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSAC_VV    vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSAC_VF    vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSAC_VV   vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSAC_VF   vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMADD_VV    vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMADD_VF    vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMADD_VV   vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMADD_VF   vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSUB_VV    vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFMSUB_VF    vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSUB_VV   vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFNMSUB_VF   vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMACC_VV vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMACC_VF vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMACC_VV vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMACC_VF vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMSAC_VV vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMSAC_VF vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMSAC_VV vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMSAC_VF vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMADD_VV vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMADD_VF vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMADD_VV vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMADD_VF vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMSUB_VV vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMSUB_VF vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMSUB_VV vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFNMSUB_VF vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  1      1824  1824.00                      1824  VLEN1024X300SiFive7VA1[1,1825],VLEN1024X300SiFive7VA1OrVA2[1,1825],VLEN1024X300SiFive7VCQ VFSQRT_V vfsqrt.v	v8, v24
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFRSQRT7_V vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFREC7_V vfrec7.v	v8, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMIN_VV vfmin.vv	v8, v16, v24
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMIN_VF vfmin.vf	v8, v16, fs0
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMAX_VV vfmax.vv	v8, v16, v24
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFMAX_VF vfmax.vf	v8, v16, fs0
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJ_VV vfsgnj.vv	v8, v16, v24
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJ_VF vfsgnj.vf	v8, v16, fs0
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJN_VV vfsgnjn.vv	v8, v16, v24
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJN_VF vfsgnjn.vf	v8, v16, fs0
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJX_VV vfsgnjx.vv	v8, v16, v24
+# CHECK-NEXT:  1      131   128.00                       131   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFSGNJX_VF vfsgnjx.vf	v8, v16, fs0
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_XU_F_V vfcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_X_F_V vfcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_RTZ_XU_F_V vfcvt.rtz.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     16.00                        8     VLEN1024X300SiFive7VA1[1,17],VLEN1024X300SiFive7VA1OrVA2[1,17],VLEN1024X300SiFive7VCQ VFCVT_RTZ_X_F_V vfcvt.rtz.x.f.v	v8, v16
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
-# CHECK-NEXT:  1      128   128.00                       128   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFCVT_F_XU_V vfcvt.f.xu.v	v8, v16
+# CHECK-NEXT:  1      135   128.00                       135   VLEN1024X300SiFive7VA1[1,129],VLEN1024X300SiFive7VA1OrVA2[1,129],VLEN1024X300SiFive7VCQ VFCVT_F_X_V vfcvt.f.x.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFWCVT_XU_F_V vfwcvt.xu.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFWCVT_X_F_V vfwcvt.x.f.v	v8, v16
 # CHECK-NEXT:  1      8     8.00                         8     VLEN1024X300SiFive7VA1[1,9],VLEN1024X300SiFive7VA1OrVA2[1,9],VLEN1024X300SiFive7VCQ VFWCVT_RTZ_XU_F_V vfwcvt.rtz.xu.f.v	v8, v16
@@ -3255,7 +3255,7 @@ vfncvt.rod.f.f.w v8, v16
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]
-# CHECK-NEXT:  -      -     32.00   -     58006.00 2446.00 1558.00  -   -
+# CHECK-NEXT:  -      -     32.00   -     61638.00 2174.00 1558.00  -   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    Instructions:
@@ -3941,22 +3941,22 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  -      -      -      -     229.00  -     1.00    -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     229.00  -     1.00    -      -     vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  -      -      -      -     229.00  -     1.00    -      -     vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     1.50   1.50   1.00    -      -     vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  -      -      -      -     229.00  -     1.00    -      -     vfsqrt.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     3.00    -     1.00    -      -     vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     3.00    -     1.00    -      -     vfrec7.v	v8, v24
@@ -4002,22 +4002,22 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  -      -      -      -     457.00  -     1.00    -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     457.00  -     1.00    -      -     vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  -      -      -      -     457.00  -     1.00    -      -     vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     2.50   2.50   1.00    -      -     vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     33.00   -     1.00    -      -     vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  -      -      -      -     457.00  -     1.00    -      -     vfsqrt.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     5.00    -     1.00    -      -     vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     5.00    -     1.00    -      -     vfrec7.v	v8, v24
@@ -4063,22 +4063,22 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  -      -      -      -     913.00  -     1.00    -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     913.00  -     1.00    -      -     vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  -      -      -      -     913.00  -     1.00    -      -     vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     4.50   4.50   1.00    -      -     vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     65.00   -     1.00    -      -     vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  -      -      -      -     913.00  -     1.00    -      -     vfsqrt.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     9.00    -     1.00    -      -     vfrec7.v	v8, v24
@@ -4124,22 +4124,22 @@ vfncvt.rod.f.f.w v8, v16
 # CHECK-NEXT:  -      -      -      -     1825.00  -    1.00    -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1825.00  -    1.00    -      -     vfdiv.vf	v8, v16, fs0
 # CHECK-NEXT:  -      -      -      -     1825.00  -    1.00    -      -     vfrdiv.vf	v8, v16, fs0
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmacc.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmacc.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmsac.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmsac.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmadd.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmadd.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfmsub.vf	v8, fs0, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmsub.vv	v8, v16, v24
-# CHECK-NEXT:  -      -      -      -     8.50   8.50   1.00    -      -     vfnmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmacc.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmacc.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmsac.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmsac.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmadd.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfmsub.vf	v8, fs0, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     129.00  -     1.00    -      -     vfnmsub.vf	v8, fs0, v24
 # CHECK-NEXT:  -      -      -      -     1825.00  -    1.00    -      -     vfsqrt.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfrsqrt7.v	v8, v24
 # CHECK-NEXT:  -      -      -      -     17.00   -     1.00    -      -     vfrec7.v	v8, v24

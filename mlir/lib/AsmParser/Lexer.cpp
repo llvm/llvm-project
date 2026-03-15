@@ -37,6 +37,18 @@ Lexer::Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context,
              AsmParserCodeCompleteContext *codeCompleteContext)
     : sourceMgr(sourceMgr), context(context), codeCompleteLoc(nullptr) {
   auto bufferID = sourceMgr.getMainFileID();
+
+  // Check to see if the main buffer contains the last buffer, and if so the
+  // last buffer should be used as main file for parsing.
+  if (sourceMgr.getNumBuffers() > 1) {
+    unsigned lastFileID = sourceMgr.getNumBuffers();
+    const llvm::MemoryBuffer *main = sourceMgr.getMemoryBuffer(bufferID);
+    const llvm::MemoryBuffer *last = sourceMgr.getMemoryBuffer(lastFileID);
+    if (main->getBufferStart() <= last->getBufferStart() &&
+        main->getBufferEnd() >= last->getBufferEnd()) {
+      bufferID = lastFileID;
+    }
+  }
   curBuffer = sourceMgr.getMemoryBuffer(bufferID)->getBuffer();
   curPtr = curBuffer.begin();
 
@@ -71,12 +83,16 @@ Token Lexer::emitError(const char *loc, const Twine &message) {
 }
 
 Token Lexer::lexToken() {
+  const char *curBufferEnd = curBuffer.end();
   while (true) {
     const char *tokStart = curPtr;
 
     // Check to see if the current token is at the code completion location.
     if (tokStart == codeCompleteLoc)
       return formToken(Token::code_complete, tokStart);
+
+    if (tokStart == curBufferEnd)
+      return formToken(Token::eof, tokStart);
 
     // Lex the next token.
     switch (*curPtr++) {
@@ -102,7 +118,7 @@ Token Lexer::lexToken() {
     case 0:
       // This may either be a nul character in the source file or may be the EOF
       // marker that llvm::MemoryBuffer guarantees will be there.
-      if (curPtr - 1 == curBuffer.end())
+      if (curPtr - 1 == curBufferEnd)
         return formToken(Token::eof, tokStart);
       continue;
 
@@ -259,7 +275,11 @@ void Lexer::skipComment() {
   assert(*curPtr == '/');
   ++curPtr;
 
+  const char *curBufferEnd = curBuffer.end();
   while (true) {
+    if (curPtr == curBufferEnd)
+      return;
+
     switch (*curPtr++) {
     case '\n':
     case '\r':
@@ -267,7 +287,7 @@ void Lexer::skipComment() {
       return;
     case 0:
       // If this is the end of the buffer, end the comment.
-      if (curPtr - 1 == curBuffer.end()) {
+      if (curPtr - 1 == curBufferEnd) {
         --curPtr;
         return;
       }
@@ -405,6 +425,7 @@ Token Lexer::lexPrefixedIdentifier(const char *tokStart) {
 Token Lexer::lexString(const char *tokStart) {
   assert(curPtr[-1] == '"');
 
+  const char *curBufferEnd = curBuffer.end();
   while (true) {
     // Check to see if there is a code completion location within the string. In
     // these cases we generate a completion location and place the currently
@@ -419,7 +440,7 @@ Token Lexer::lexString(const char *tokStart) {
     case 0:
       // If this is a random nul character in the middle of a string, just
       // include it.  If it is the end of file, then it is an error.
-      if (curPtr - 1 != curBuffer.end())
+      if (curPtr - 1 != curBufferEnd)
         continue;
       [[fallthrough]];
     case '\n':

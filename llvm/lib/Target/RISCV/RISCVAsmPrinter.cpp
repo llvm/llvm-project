@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVBaseInfo.h"
+#include "MCTargetDesc/RISCVELFStreamer.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
@@ -126,7 +127,7 @@ private:
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr *MI);
   void emitSled(const MachineInstr *MI, SledKind Kind);
 
-  bool lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+  void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
 }
 
@@ -272,18 +273,19 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
-// If the target supports Zihintntl and the instruction has a nontemporal
-// MachineMemOperand, emit an NTLH hint instruction before it.
+// If the instruction has a nontemporal MachineMemOperand, emit an NTL hint
+// instruction before it. NTL hints are always safe to emit since they use
+// HINT encodings that are guaranteed not to trap
+// (riscv-non-isa/riscv-elf-psabi-doc#474).
 void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
-  if (!STI->hasStdExtZihintntl())
+  if (!STI->getInstrInfo()->requiresNTLHint(*MI))
     return;
 
-  if (MI->memoperands_empty())
-    return;
+  assert(!MI->memoperands_empty());
 
   MachineMemOperand *MMO = *(MI->memoperands_begin());
-  if (!MMO->isNonTemporal())
-    return;
+
+  assert(MMO->isNonTemporal());
 
   unsigned NontemporalMode = 0;
   if (MMO->getFlags() & MONontemporalBit0)
@@ -293,7 +295,7 @@ void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
 
   MCInst Hint;
   if (STI->hasStdExtZca())
-    Hint.setOpcode(RISCV::C_ADD_HINT);
+    Hint.setOpcode(RISCV::C_ADD);
   else
     Hint.setOpcode(RISCV::ADD);
 
@@ -305,8 +307,7 @@ void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
 }
 
 void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  RISCV_MC::verifyInstructionPredicates(MI->getOpcode(),
-                                        getSubtargetInfo().getFeatureBits());
+  RISCV_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
   emitNTLHint(MI);
 
@@ -330,12 +331,17 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::STATEPOINT:
     return LowerSTATEPOINT(*OutStreamer, SM, *MI);
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
-    // patchable-function-entry is handled in lowerToMCInst
-    // Therefore, we break out of the switch statement if we encounter it here.
     const Function &F = MI->getParent()->getParent()->getFunction();
-    if (F.hasFnAttribute("patchable-function-entry"))
-      break;
-
+    if (F.hasFnAttribute("patchable-function-entry")) {
+      unsigned Num;
+      [[maybe_unused]] bool Result =
+          F.getFnAttribute("patchable-function-entry")
+              .getValueAsString()
+              .getAsInteger(10, Num);
+      assert(!Result && "Enforced by the verifier");
+      emitNops(Num);
+      return;
+    }
     LowerPATCHABLE_FUNCTION_ENTER(MI);
     return;
   }
@@ -348,8 +354,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   MCInst OutInst;
-  if (!lowerToMCInst(MI, OutInst))
-    EmitToStreamer(*OutStreamer, OutInst);
+  lowerToMCInst(MI, OutInst);
+  EmitToStreamer(*OutStreamer, OutInst);
 }
 
 bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -517,12 +523,9 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
   // Assuming we're using JAL to jump to .tmpN, then we only need
   // (68 - 4)/2 = 32 NOPs for RV64 and (44 - 4)/2 = 20 for RV32. However, there
   // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
-  const uint8_t NoopsInSledCount =
-      MI->getParent()->getParent()->getSubtarget<RISCVSubtarget>().is64Bit()
-          ? 33
-          : 21;
+  const uint8_t NoopsInSledCount = STI->is64Bit() ? 33 : 21;
 
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), STI);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
@@ -547,6 +550,8 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
 }
 
 void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
+  assert(OutStreamer->getTargetStreamer() &&
+         "target streamer is uninitialized");
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (const MDString *ModuleTargetABI =
@@ -615,6 +620,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVAsmPrinter() {
   RegisterAsmPrinter<RISCVAsmPrinter> X(getTheRISCV32Target());
   RegisterAsmPrinter<RISCVAsmPrinter> Y(getTheRISCV64Target());
+  RegisterAsmPrinter<RISCVAsmPrinter> A(getTheRISCV32beTarget());
+  RegisterAsmPrinter<RISCVAsmPrinter> B(getTheRISCV64beTarget());
 }
 
 void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -632,7 +639,7 @@ void RISCVAsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
   auto Res = MCSymbolRefExpr::create(Sym, OutContext);
-  auto Expr = MCSpecifierExpr::create(Res, ELF::R_RISCV_CALL_PLT, OutContext);
+  auto Expr = MCSpecifierExpr::create(Res, RISCV::S_CALL_PLT, OutContext);
 
   EmitToStreamer(*OutStreamer, MCInstBuilder(RISCV::PseudoCALL).addExpr(Expr));
 }
@@ -743,8 +750,8 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
   const MCSymbolRefExpr *HwasanTagMismatchV2Ref =
       MCSymbolRefExpr::create(HwasanTagMismatchV2Sym, OutContext);
-  auto Expr = MCSpecifierExpr::create(HwasanTagMismatchV2Ref,
-                                      ELF::R_RISCV_CALL_PLT, OutContext);
+  auto Expr = MCSpecifierExpr::create(HwasanTagMismatchV2Ref, RISCV::S_CALL_PLT,
+                                      OutContext);
 
   for (auto &P : HwasanMemaccessSymbols) {
     unsigned Reg = std::get<0>(P.first);
@@ -948,10 +955,11 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
+  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    RISCVTargetStreamer &RTS =
-        static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+    RISCVTargetELFStreamer &RTS = static_cast<RISCVTargetELFStreamer &>(
+        *OutStreamer->getTargetStreamer());
     RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
   }
 }
@@ -968,7 +976,7 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = RISCV::S_None;
     break;
   case RISCVII::MO_CALL:
-    Kind = ELF::R_RISCV_CALL_PLT;
+    Kind = RISCV::S_CALL_PLT;
     break;
   case RISCVII::MO_LO:
     Kind = RISCV::S_LO;
@@ -980,10 +988,10 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = RISCV::S_PCREL_LO;
     break;
   case RISCVII::MO_PCREL_HI:
-    Kind = ELF::R_RISCV_PCREL_HI20;
+    Kind = RISCV::S_PCREL_HI;
     break;
   case RISCVII::MO_GOT_HI:
-    Kind = ELF::R_RISCV_GOT_HI20;
+    Kind = RISCV::S_GOT_HI;
     break;
   case RISCVII::MO_TPREL_LO:
     Kind = RISCV::S_TPREL_LO;
@@ -1070,7 +1078,8 @@ bool RISCVAsmPrinter::lowerOperand(const MachineOperand &MO,
 }
 
 static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
-                                            MCInst &OutMI) {
+                                            MCInst &OutMI,
+                                            const RISCVSubtarget *STI) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI->getOpcode());
   if (!RVV)
@@ -1078,14 +1087,8 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
 
   OutMI.setOpcode(RVV->BaseInstr);
 
-  const MachineBasicBlock *MBB = MI->getParent();
-  assert(MBB && "MI expected to be in a basic block");
-  const MachineFunction *MF = MBB->getParent();
-  assert(MF && "MBB expected to be in a machine function");
-
-  const RISCVSubtarget &Subtarget = MF->getSubtarget<RISCVSubtarget>();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const TargetInstrInfo *TII = STI->getInstrInfo();
+  const TargetRegisterInfo *TRI = STI->getRegisterInfo();
   assert(TRI && "TargetRegisterInfo expected");
 
   const MCInstrDesc &MCID = MI->getDesc();
@@ -1101,6 +1104,12 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   if (RISCVII::hasVLOp(TSFlags))
     --NumOps;
   if (RISCVII::hasRoundModeOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasTWidenOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasTMOp(TSFlags))
+    --NumOps;
+  if (RISCVII::hasTKOp(TSFlags))
     --NumOps;
 
   bool hasVLOutput = RISCVInstrInfo::isFaultOnlyFirstLoad(*MI);
@@ -1171,8 +1180,8 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   // V instructions. All V instructions are modeled as the masked version.
   const MCInstrDesc &OutMCID = TII->get(OutMI.getOpcode());
   if (OutMI.getNumOperands() < OutMCID.getNumOperands()) {
-    assert(OutMCID.operands()[OutMI.getNumOperands()].RegClass ==
-               RISCV::VMV0RegClassID &&
+    assert(OutMCID.operands()[OutMI.getNumOperands()].OperandType ==
+               RISCVOp::OPERAND_VMASK &&
            "Expected only mask operand to be missing");
     OutMI.addOperand(MCOperand::createReg(RISCV::NoRegister));
   }
@@ -1181,9 +1190,9 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   return true;
 }
 
-bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
-  if (lowerRISCVVMachineInstrToMCInst(MI, OutMI))
-    return false;
+void RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
+  if (lowerRISCVVMachineInstrToMCInst(MI, OutMI, STI))
+    return;
 
   OutMI.setOpcode(MI->getOpcode());
 
@@ -1192,23 +1201,6 @@ bool RISCVAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
     if (lowerOperand(MO, MCOp))
       OutMI.addOperand(MCOp);
   }
-
-  switch (OutMI.getOpcode()) {
-  case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
-    const Function &F = MI->getParent()->getParent()->getFunction();
-    if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return false;
-      emitNops(Num);
-      return true;
-    }
-    break;
-  }
-  }
-  return false;
 }
 
 void RISCVAsmPrinter::emitMachineConstantPoolValue(

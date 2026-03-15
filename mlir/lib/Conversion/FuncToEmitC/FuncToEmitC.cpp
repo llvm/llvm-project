@@ -99,8 +99,8 @@ public:
     }
 
     // Create the converted `emitc.func` op.
-    emitc::FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
-        funcOp.getLoc(), funcOp.getName(),
+    emitc::FuncOp newFuncOp = emitc::FuncOp::create(
+        rewriter, funcOp.getLoc(), funcOp.getName(),
         FunctionType::get(rewriter.getContext(),
                           signatureConverter.getConvertedTypes(),
                           resultType ? TypeRange(resultType) : TypeRange()));

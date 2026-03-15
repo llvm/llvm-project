@@ -40,5 +40,5 @@ void fir::runtime::genExecuteCommandLine(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, command, wait, exitstat, cmdstat, cmdmsg,
       sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+  fir::CallOp::create(builder, loc, runtimeFunc, args);
 }

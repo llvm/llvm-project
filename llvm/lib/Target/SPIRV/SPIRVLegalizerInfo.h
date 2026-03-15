@@ -29,7 +29,15 @@ class SPIRVLegalizerInfo : public LegalizerInfo {
 public:
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
                       LostDebugLocObserver &LocObserver) const override;
+  bool legalizeIntrinsic(LegalizerHelper &Helper,
+                         MachineInstr &MI) const override;
+
   SPIRVLegalizerInfo(const SPIRVSubtarget &ST);
+
+private:
+  bool legalizeIsFPClass(LegalizerHelper &Helper, MachineInstr &MI,
+                         LostDebugLocObserver &LocObserver) const;
+  bool legalizeBitcast(LegalizerHelper &Helper, MachineInstr &MI) const;
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVMACHINELEGALIZER_H

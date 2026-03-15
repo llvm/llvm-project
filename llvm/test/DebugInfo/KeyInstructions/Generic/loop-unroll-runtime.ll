@@ -5,7 +5,7 @@
 ;; Check atoms are remapped for runtime unrolling.
 
 ; CHECK: for.body.epil:
-; CHECK-NEXT: store i64 %indvars.iv.unr, ptr %p, align 4, !dbg [[G2R1:!.*]]
+; CHECK-NEXT: store i64 %indvars.iv.epil.init, ptr %p, align 4, !dbg [[G2R1:!.*]]
 
 ; CHECK: for.body.epil.1:
 ; CHECK-NEXT: store i64 %indvars.iv.next.epil, ptr %p, align 4, !dbg [[G3R1:!.*]]

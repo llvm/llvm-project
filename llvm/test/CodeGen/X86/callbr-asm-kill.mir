@@ -6,12 +6,14 @@
 # subsequent use of [[MOV64rm]] in the INLINEASM_BR instruction which should be
 # killed instead.
 --- |
+  ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
 
   declare void @foo(ptr)
 
+  ; Function Attrs: nounwind
   define void @test1(ptr %arg, ptr %mem) #0 {
   entry:
     br label %loop
@@ -55,17 +57,18 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY killed $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed $rdi
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.loop (ir-block-address-taken %ir-block.loop, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY2]]
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s64) from %ir.mem)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-NEXT:   $rdi = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   $rdi = COPY killed [[COPY3]]
   ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @foo, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY [[MOV64rm]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[MOV64rm]]
   ; CHECK-NEXT:   INLINEASM_BR &"", 9 /* sideeffect mayload attdialect */, 262190 /* mem:m */, killed [[MOV64rm]], 1, $noreg, 0, $noreg, 13 /* imm */, blockaddress(@test1, %ir-block.loop)
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}

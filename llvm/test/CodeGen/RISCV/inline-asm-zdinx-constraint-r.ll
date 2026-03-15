@@ -66,8 +66,7 @@ define double @constraint_double_abi_name(double %a) nounwind {
 ; RV32FINX-NEXT:    #APP
 ; RV32FINX-NEXT:    fadd.d t1, a0, s0
 ; RV32FINX-NEXT:    #NO_APP
-; RV32FINX-NEXT:    mv a0, t1
-; RV32FINX-NEXT:    mv a1, t2
+; RV32FINX-NEXT:    fmv.d a0, t1
 ; RV32FINX-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32FINX-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32FINX-NEXT:    addi sp, sp, 16

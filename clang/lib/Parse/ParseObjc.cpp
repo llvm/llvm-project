@@ -43,7 +43,7 @@ void Parser::MaybeSkipAttributes(tok::ObjCKeywordKind Kind) {
 Parser::DeclGroupPtrTy
 Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
                               ParsedAttributes &DeclSpecAttrs) {
-  DeclAttrs.takeAllFrom(DeclSpecAttrs);
+  DeclAttrs.takeAllPrependingFrom(DeclSpecAttrs);
 
   SourceLocation AtLoc = ConsumeToken(); // the "@"
 
@@ -1065,8 +1065,8 @@ void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
 
 /// Take all the decl attributes out of the given list and add
 /// them to the given attribute set.
-static void takeDeclAttributes(ParsedAttributesView &attrs,
-                               ParsedAttributesView &from) {
+static void takeDeclAttributesAppend(ParsedAttributesView &attrs,
+                                     ParsedAttributesView &from) {
   for (auto &AL : llvm::reverse(from)) {
     if (!AL.isUsedAsTypeAttr()) {
       from.remove(&AL);
@@ -1088,10 +1088,10 @@ static void takeDeclAttributes(ParsedAttributes &attrs,
   attrs.getPool().takeAllFrom(D.getDeclSpec().getAttributePool());
 
   // Now actually move the attributes over.
-  takeDeclAttributes(attrs, D.getMutableDeclSpec().getAttributes());
-  takeDeclAttributes(attrs, D.getAttributes());
+  takeDeclAttributesAppend(attrs, D.getMutableDeclSpec().getAttributes());
+  takeDeclAttributesAppend(attrs, D.getAttributes());
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i)
-    takeDeclAttributes(attrs, D.getTypeObject(i).getAttrs());
+    takeDeclAttributesAppend(attrs, D.getTypeObject(i).getAttrs());
 }
 
 ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
@@ -3295,9 +3295,9 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   assert(Tok.isOneOf(tok::l_brace, tok::kw_try, tok::colon) &&
          "Inline objective-c method not starting with '{' or 'try' or ':'");
   // Enter a scope for the method or c-function body.
-  ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
-                                 Scope::FnScope | Scope::DeclScope |
-                                 Scope::CompoundStmtScope);
+  ParseScope BodyScope(
+      this, (parseMethod ? Scope::ObjCMethodScope : Scope::NoScope) |
+                Scope::FnScope | Scope::DeclScope | Scope::CompoundStmtScope);
   Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   // Tell the actions module that we have entered a method or c-function definition

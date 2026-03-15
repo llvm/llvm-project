@@ -10,7 +10,6 @@
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
@@ -615,7 +614,7 @@ LogicalResult TextualPipeline::addToPipeline(
   // it's preferrable to just error out if implicit nesting would be required.
   OpPassManager::Nesting nesting = pm.getNesting();
   pm.setNesting(OpPassManager::Nesting::Explicit);
-  auto restore = llvm::make_scope_exit([&]() { pm.setNesting(nesting); });
+  llvm::scope_exit restore([&]() { pm.setNesting(nesting); });
 
   return addToPipeline(pipeline, pm, errorHandler);
 }
@@ -1023,7 +1022,9 @@ LogicalResult PassPipelineCLParser::addToPipeline(
   for (auto &passIt : impl->passList) {
     if (failed(passIt.registryEntry->addToPipeline(pm, passIt.options,
                                                    errorHandler)))
-      return failure();
+      return errorHandler("failed to add `" +
+                          passIt.registryEntry->getPassArgument() +
+                          "` with options `" + passIt.options + "`");
   }
   return success();
 }

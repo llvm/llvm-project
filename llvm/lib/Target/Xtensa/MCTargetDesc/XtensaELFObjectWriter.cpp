@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -45,10 +46,12 @@ XtensaObjectWriter::~XtensaObjectWriter() {}
 unsigned XtensaObjectWriter::getRelocType(const MCFixup &Fixup,
                                           const MCValue &Target,
                                           bool IsPCRel) const {
+  uint8_t Specifier = Target.getSpecifier();
 
   switch ((unsigned)Fixup.getKind()) {
   case FK_Data_4:
-    return ELF::R_XTENSA_32;
+    return Specifier == Xtensa::S_TPOFF ? ELF::R_XTENSA_TLS_TPOFF
+                                        : ELF::R_XTENSA_32;
   default:
     return ELF::R_XTENSA_SLOT0_OP;
   }

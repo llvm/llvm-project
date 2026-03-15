@@ -509,11 +509,10 @@ struct IRInstructionMapper {
       : InstDataAllocator(IDA), IDLAllocator(IDLA) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == static_cast<unsigned>(-1) &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-               static_cast<unsigned>(-2) &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
+                  static_cast<unsigned>(-1));
+    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
+                  static_cast<unsigned>(-2));
 
     IDL = new (IDLAllocator->Allocate())
         IRInstructionDataList();

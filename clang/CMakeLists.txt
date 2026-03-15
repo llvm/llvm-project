@@ -80,6 +80,12 @@ if(CLANG_BUILT_STANDALONE)
   include(GetErrcMessages)
   include(LLVMDistributionSupport)
 
+  if(CMAKE_CROSSCOMPILING)
+    set(LLVM_USE_HOST_TOOLS ON)
+    include(CrossCompile)
+    llvm_create_cross_target(Clang NATIVE "" Release)
+  endif()
+
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   set(BUG_REPORT_URL "${LLVM_PACKAGE_BUGREPORT}" CACHE STRING
     "Default URL where bug reports are to be submitted.")
@@ -221,6 +227,44 @@ if(GCC_INSTALL_PREFIX AND NOT USE_DEPRECATED_GCC_INSTALL_PREFIX)
     "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"
     "to specify the default --gcc-install-dir= or --gcc-triple=. --gcc-toolchain= is discouraged. "
     "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
+endif()
+
+cmake_dependent_option(CLANG_USE_XCSELECT "Use libxcselect to find the macOS SDK." OFF "APPLE" OFF)
+
+if(CLANG_USE_XCSELECT)
+  if(DEFAULT_SYSROOT)
+    message(FATAL_ERROR "Setting DEFAULT_SYSROOT is incompatible with CLANG_USE_XCSELECT.")
+  endif()
+
+  check_include_file(xcselect.h CLANG_HAVE_XCSELECT_H)
+  if(NOT CLANG_HAVE_XCSELECT_H)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but xcselect.h was not found.")
+  endif()
+
+  include(CheckSymbolExists)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES xcselect)
+  check_symbol_exists(xcselect_host_sdk_path xcselect.h CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+  list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES xcselect)
+
+  if(NOT CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but either libxcselect is not available "
+      "or it is missing xcselect_host_sdk_path.")
+  endif()
+
+  set(XCSELECT_VALID_POLICIES LATEST MATCHING_ONLY MATCHING_PREFERRED)
+  set(CLANG_XCSELECT_HOST_SDK_POLICY "LATEST" CACHE STRING
+    "Policy to use for xcselect. One of: ${XCSELECT_VALID_POLICIES}")
+  set_property(CACHE CLANG_XCSELECT_HOST_SDK_POLICY PROPERTY STRINGS ${XCSELECT_VALID_POLICIES})
+  string(TOUPPER ${CLANG_XCSELECT_HOST_SDK_POLICY} CLANG_XCSELECT_HOST_SDK_POLICY)
+  list(JOIN XCSELECT_VALID_POLICIES "|" XCSELECT_POLICY_REGEX)
+
+  if(NOT CLANG_XCSELECT_HOST_SDK_POLICY MATCHES "^XCSELECT_HOST_SDK_POLICY_(${XCSELECT_POLICY_REGEX})$")
+    if(NOT CLANG_XCSELECT_HOST_SDK_POLICY IN_LIST XCSELECT_VALID_POLICIES)
+      message(FATAL_ERROR
+        "CLANG_XCSELECT_HOST_SDK_POLICY (${CLANG_XCSELECT_HOST_SDK_POLICY}) must be one of: ${XCSELECT_VALID_POLICIES}")
+    endif()
+    set(CLANG_XCSELECT_HOST_SDK_POLICY "XCSELECT_HOST_SDK_POLICY_${CLANG_XCSELECT_HOST_SDK_POLICY}")
+  endif()
 endif()
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
@@ -639,6 +683,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       # variable, and have LLVM's CMake append the envar to the archiver calls.
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
+      set(${CLANG_STAGE}_LIBTOOL -DCMAKE_LIBTOOL=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-libtool-darwin)
     elseif(MSVC)
       add_dependencies(clang-bootstrap-deps llvm-lib)
       set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
@@ -748,11 +793,22 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps llvm-profdata)
     set(PGO_OPT -DLLVM_PROFDATA=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profdata)
+    string(TOUPPER "${BOOTSTRAP_LLVM_BUILD_INSTRUMENTED}" BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
+    if (BOOTSTRAP_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps llvm-profgen)
+      list(APPEND PGO_OPT -DLLVM_PROFGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profgen)
+    endif()
   endif()
 
   if(LLVM_BUILD_INSTRUMENTED)
-    add_dependencies(clang-bootstrap-deps generate-profdata)
-    set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
+    if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps generate-sprofdata)
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+    else()
+      add_dependencies(clang-bootstrap-deps generate-profdata)
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
       CMAKE_CXX_COMPILER
@@ -828,6 +884,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 ${${CLANG_STAGE}_RANLIB}
                 ${${CLANG_STAGE}_OBJCOPY}
                 ${${CLANG_STAGE}_STRIP}
+                ${${CLANG_STAGE}_LIBTOOL}
     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
                                    --config ${build_configuration}
                                    ${build_tool_args}

@@ -10,7 +10,10 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
+#include <stddef.h>
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <stdio.h>
+#endif
 
 // Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
 // including instr_prof_interface.h so the interface functions are
@@ -200,7 +203,9 @@ int __llvm_profile_write_file(void);
  * copying the old profile file to new profile file and this function is usually
  * used when the proess doesn't have permission to open file.
  */
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 int __llvm_profile_set_file_object(FILE *File, int EnableMerge);
+#endif
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);

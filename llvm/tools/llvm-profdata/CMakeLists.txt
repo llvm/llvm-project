@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   ProfileData
   Support
+  SupportHTTP
   )
 
 add_llvm_tool(llvm-profdata
@@ -10,9 +11,6 @@ add_llvm_tool(llvm-profdata
 
   DEPENDS
   intrinsics_gen
-  GENERATE_DRIVER
   )
 
-if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
-  target_link_libraries(llvm-profdata PRIVATE LLVMDebuginfod)
-endif()
+target_link_libraries(llvm-profdata PRIVATE LLVMDebuginfod)

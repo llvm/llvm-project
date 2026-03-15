@@ -36,6 +36,7 @@ static_library("DWARF") {
     "DWARFTypeUnit.cpp",
     "DWARFUnit.cpp",
     "DWARFUnitIndex.cpp",
+    "DWARFUnwindTablePrinter.cpp",
     "DWARFVerifier.cpp",
   ]
 }

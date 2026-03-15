@@ -411,8 +411,8 @@ private:
   std::optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
 
   // Computes estimated weights for all blocks in \p F.
-  void computeEestimateBlockWeight(const Function &F, DominatorTree *DT,
-                                   PostDominatorTree *PDT);
+  void estimateBlockWeights(const Function &F, DominatorTree *DT,
+                            PostDominatorTree *PDT);
 
   /// Based on computed weights by \p computeEstimatedBlockWeight set
   /// probabilities on branches.

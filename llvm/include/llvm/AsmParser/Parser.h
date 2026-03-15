@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 #include <optional>
@@ -62,7 +63,8 @@ parseAssemblyFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 ///              parsing.
 LLVM_ABI std::unique_ptr<Module>
 parseAssemblyString(StringRef AsmString, SMDiagnostic &Err,
-                    LLVMContext &Context, SlotMapping *Slots = nullptr);
+                    LLVMContext &Context, SlotMapping *Slots = nullptr,
+                    AsmParserContext *ParserContext = nullptr);
 
 /// Holds the Module and ModuleSummaryIndex returned by the interfaces
 /// that parse both.
@@ -128,9 +130,9 @@ parseSummaryIndexAssemblyString(StringRef AsmString, SMDiagnostic &Err);
 LLVM_ABI std::unique_ptr<Module> parseAssembly(
     MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
-      return std::nullopt;
-    });
+    DataLayoutCallbackTy DataLayoutCallback =
+        [](StringRef, StringRef) { return std::nullopt; },
+    AsmParserContext *ParserContext = nullptr);
 
 /// Parse LLVM Assembly including the summary index from a MemoryBuffer.
 ///
@@ -169,9 +171,9 @@ parseSummaryIndexAssembly(MemoryBufferRef F, SMDiagnostic &Err);
 LLVM_ABI bool parseAssemblyInto(
     MemoryBufferRef F, Module *M, ModuleSummaryIndex *Index, SMDiagnostic &Err,
     SlotMapping *Slots = nullptr,
-    DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
-      return std::nullopt;
-    });
+    DataLayoutCallbackTy DataLayoutCallback =
+        [](StringRef, StringRef) { return std::nullopt; },
+    AsmParserContext *ParserContext = nullptr);
 
 /// Parse a type and a constant value in the given string.
 ///

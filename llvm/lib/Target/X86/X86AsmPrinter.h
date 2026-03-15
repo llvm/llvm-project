@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 // Implemented in X86MCInstLower.cpp
 namespace {
@@ -36,6 +37,7 @@ private:
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
   bool IndCSPrefix = false;
   bool EnableImportCallOptimization = false;
+  bool SplitChainedAtEndOfBlock = false;
 
   enum ImportCallKind : unsigned {
     IMAGE_RETPOLINE_AMD64_IMPORT_BR = 0x02,
@@ -151,6 +153,7 @@ private:
                                     MCSymbol *LazyPointer) override;
 
   void emitCallInstruction(const llvm::MCInst &MCI);
+  void maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI);
 
   // Emits a label to mark the next instruction as being relevant to Import Call
   // Optimization.
@@ -170,6 +173,10 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 
@@ -193,6 +200,46 @@ public:
   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
+
+  std::function<ProfileSummaryInfo *(Module &)> GetPSI;
+  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
+};
+
+class X86AsmPrinterBeginPass : public PassInfoMixin<X86AsmPrinterBeginPass> {
+public:
+  X86AsmPrinterBeginPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
+      : TM(TM), CreateStreamer(CreateStreamer) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateStreamer;
+};
+
+class X86AsmPrinterPass : public PassInfoMixin<X86AsmPrinterPass> {
+public:
+  X86AsmPrinterPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
+      : TM(TM), CreateStreamer(CreateStreamer) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateStreamer;
+};
+
+class X86AsmPrinterEndPass : public PassInfoMixin<X86AsmPrinterEndPass> {
+public:
+  X86AsmPrinterEndPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
+      : TM(TM), CreateStreamer(CreateStreamer) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateStreamer;
 };
 
 } // end namespace llvm

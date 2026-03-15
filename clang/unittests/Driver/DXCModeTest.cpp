@@ -15,6 +15,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -55,17 +56,15 @@ static void validateTargetProfile(
 }
 
 TEST(DxcModeTest, TargetProfileValidation) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagConsumer);
 
   validateTargetProfile("-Tvs_6_0", "dxilv1.0--shadermodel6.0-vertex",
                         InMemoryFileSystem, Diags);
@@ -87,7 +86,7 @@ TEST(DxcModeTest, TargetProfileValidation) {
                         InMemoryFileSystem, Diags);
   validateTargetProfile("-Tcs_6_8", "dxilv1.8--shadermodel6.8-compute",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tlib_6_x", "dxilv1.8--shadermodel6.15-library",
+  validateTargetProfile("-Tlib_6_x", "dxilv1.9--shadermodel6.15-library",
                         InMemoryFileSystem, Diags);
 
   // Invalid tests.
@@ -105,17 +104,15 @@ TEST(DxcModeTest, TargetProfileValidation) {
 }
 
 TEST(DxcModeTest, ValidatorVersionValidation) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, DiagConsumer);
   Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
       {"clang", "--driver-mode=dxc", "-Tlib_6_7", "foo.hlsl"}));
@@ -135,8 +132,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None)};
   EXPECT_NE(TranslatedArgs, nullptr);
   if (TranslatedArgs) {
-    auto *A = TranslatedArgs->getLastArg(
-        clang::driver::options::OPT_dxil_validator_version);
+    auto *A =
+        TranslatedArgs->getLastArg(clang::options::OPT_dxil_validator_version);
     EXPECT_NE(A, nullptr);
     if (A) {
       EXPECT_STREQ(A->getValue(), "1.1");
@@ -210,8 +207,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
 }
 
 TEST(DxcModeTest, DefaultEntry) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));

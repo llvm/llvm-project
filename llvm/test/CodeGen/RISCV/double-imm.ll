@@ -47,8 +47,9 @@ define double @double_imm_op(double %a) nounwind {
 ;
 ; CHECK64D-LABEL: double_imm_op:
 ; CHECK64D:       # %bb.0:
-; CHECK64D-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK64D-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; CHECK64D-NEXT:    li a0, 1023
+; CHECK64D-NEXT:    slli a0, a0, 52
+; CHECK64D-NEXT:    fmv.d.x fa5, a0
 ; CHECK64D-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK64D-NEXT:    ret
 ;
@@ -152,8 +153,7 @@ define dso_local double @negzero_sel(i16 noundef %a, double noundef %d) nounwind
 ; CHECKRV32ZDINX-NEXT:    mv a3, a2
 ; CHECKRV32ZDINX-NEXT:    mv a2, a1
 ; CHECKRV32ZDINX-NEXT:  .LBB4_3: # %entry
-; CHECKRV32ZDINX-NEXT:    mv a0, a2
-; CHECKRV32ZDINX-NEXT:    mv a1, a3
+; CHECKRV32ZDINX-NEXT:    fmv.d a0, a2
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: negzero_sel:

@@ -644,6 +644,35 @@ import M;
   EXPECT_EQ(CDB.getGlobalScanningCount(), 1u);
 }
 
+TEST_F(PrerequisiteModulesTests, PrebuiltModuleFileTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+  )cpp");
+
+  CDB.addFile("U.cpp", R"cpp(
+import M;
+  )cpp");
+
+  // Use ModulesBuilder to produce the prebuilt module file.
+  ModulesBuilder Builder(CDB);
+  auto ModuleInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("U.cpp"), FS);
+  HeaderSearchOptions HS(TestDir);
+  ModuleInfo->adjustHeaderSearchOptions(HS);
+
+  CDB.ExtraClangFlags.push_back("-fmodule-file=M=" +
+                                HS.PrebuiltModuleFiles["M"]);
+  ModulesBuilder Builder2(CDB);
+  auto ModuleInfo2 =
+      Builder2.buildPrerequisiteModulesFor(getFullPath("U.cpp"), FS);
+  HeaderSearchOptions HS2(TestDir);
+  ModuleInfo2->adjustHeaderSearchOptions(HS2);
+
+  EXPECT_EQ(HS.PrebuiltModuleFiles, HS2.PrebuiltModuleFiles);
+}
+
 } // namespace
 } // namespace clang::clangd
 

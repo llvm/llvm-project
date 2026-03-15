@@ -50,7 +50,7 @@ test LLVM have been ported to a plethora of platforms.
 What API do I use to store a value to one of the virtual registers in LLVM IR's SSA representation?
 ---------------------------------------------------------------------------------------------------
 
-In short: you can't. It's actually kind of a silly question once you grok
+In short: you can't. It's actually kind of a silly question once you understand
 what's going on. Basically, in code like:
 
 .. code-block:: llvm
@@ -80,7 +80,7 @@ What source languages are supported?
 
 LLVM currently has full support for C and C++ source languages through
 `Clang <https://clang.llvm.org/>`_. Many other language frontends have
-been written using LLVM, and an incomplete list is available at
+been written using LLVM; an incomplete list is available at
 `projects with LLVM <https://llvm.org/ProjectsWithLLVM/>`_.
 
 
@@ -91,12 +91,12 @@ LLVM intermediate representation (IR) format. Assuming you want to write your
 language's compiler in the language itself (rather than C++), there are 3
 major ways to tackle generating LLVM IR from a front-end:
 
-1. **Call into the LLVM libraries code using your language's FFI (foreign
+1. **Call into the LLVM libraries using your language's FFI (foreign
    function interface).**
 
   * *for:* best tracks changes to the LLVM IR, .ll syntax, and .bc format
 
-  * *for:* enables running LLVM optimization passes without a emit/parse
+  * *for:* enables running LLVM optimization passes without an emit/parse
     overhead
 
   * *for:* adapts well to a JIT context
@@ -128,10 +128,10 @@ most common hurdle with calling C from managed code is interfacing with the
 garbage collector. The C interface was designed to require very little memory
 management, and so is straightforward in this regard.
 
-What support is there for a higher level source language constructs for building a compiler?
+What support is there for a higher-level source language constructs for building a compiler?
 --------------------------------------------------------------------------------------------
 Currently, there isn't much. LLVM supports an intermediate representation
-which is useful for code representation but will not support the high level
+which is useful for code representation but will not support the high-level
 (abstract syntax tree) representation needed by most compilers. There are no
 facilities for lexical nor semantic analysis.
 
@@ -215,7 +215,7 @@ for it.
 
 Why does instcombine + simplifycfg turn a call to a function with a mismatched calling convention into "unreachable"? Why not make the verifier reject it?
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
-This is a common problem run into by authors of front-ends that are using
+This is a common problem encountered by authors of front-ends that are using
 custom calling conventions: you need to make sure to set the right calling
 convention on both the function and on each call to the function.  For
 example, this code:
@@ -274,7 +274,7 @@ Here's an example:
    }
 
 In this example, "test" always passes ``@foo``/``false`` into ``bar``, which
-ensures that it is dynamically called with the right calling conv (thus, the
+ensures that it is dynamically called with the right calling convention (thus, the
 code is perfectly well defined).  If you run this through the inliner, you
 get this (the explicit "or" is there so that the inliner doesn't dead code
 eliminate a bunch of stuff):

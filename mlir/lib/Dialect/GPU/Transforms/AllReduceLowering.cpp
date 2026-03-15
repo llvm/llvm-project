@@ -20,8 +20,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
@@ -115,7 +113,7 @@ struct GpuAllReduceRewriter {
       Value index = create<arith::IndexCastOp>(indexType, subgroupId);
       create<memref::StoreOp>(subgroupReduce, buffer, index);
     });
-    create<gpu::BarrierOp>();
+    create<gpu::BarrierOp>(buffer);
 
     // Compute number of active subgroups.
     Value biasedBlockSize =
@@ -137,7 +135,7 @@ struct GpuAllReduceRewriter {
     });
 
     // Synchronize workgroup and load result from workgroup memory.
-    create<gpu::BarrierOp>();
+    create<gpu::BarrierOp>(buffer);
     Value result = create<memref::LoadOp>(valueType, buffer, zero);
 
     rewriter.replaceOp(reduceOp, result);
@@ -147,7 +145,7 @@ private:
   // Shortcut to create an op from rewriter using loc as the first argument.
   template <typename T, typename... Args>
   T create(Args... args) {
-    return rewriter.create<T>(loc, std::forward<Args>(args)...);
+    return T::create(rewriter, loc, std::forward<Args>(args)...);
   }
 
   // Creates dimension op of type T, with the result casted to int32.

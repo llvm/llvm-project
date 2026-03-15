@@ -35,6 +35,7 @@ add_header_library(
     core_structs.h
   DEPENDS
     .scanf_config
+    libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.bitset
     libc.src.__support.FPUtil.fp_bits
@@ -97,6 +98,7 @@ add_header_library(
   DEPENDS
     .reader
     .core_structs
+    libc.include.inttypes
     libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.CPP.bitset

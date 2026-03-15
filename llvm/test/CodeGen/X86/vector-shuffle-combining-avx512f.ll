@@ -22,6 +22,9 @@ declare <16 x float> @llvm.x86.avx512.mask.vpermi2var.ps.512(<16 x float>, <16 x
 declare <8 x i64> @llvm.x86.avx512.mask.vpermi2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
+declare <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+declare <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+
 define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
 ; CHECK-LABEL: combine_permvar_8f64_identity:
 ; CHECK:       # %bb.0:
@@ -1030,4 +1033,87 @@ define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double
   %v1 = tail call noundef <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a1, <4 x i64> %m1)
   %res = shufflevector <4 x double> %v0, <4 x double> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x double> %res
+}
+
+define <16 x float> @combine_vexpandps_of_broadcast(float %x, <16 x float> %y, i16 %m) {
+; X86-LABEL: combine_vexpandps_of_broadcast:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-AVX512F-LABEL: combine_vexpandps_of_broadcast:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    kmovw %edi, %k1
+; X64-AVX512F-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
+; X64-AVX512F-NEXT:    vmovaps %zmm1, %zmm0
+; X64-AVX512F-NEXT:    retq
+;
+; X64-AVX512BW-LABEL: combine_vexpandps_of_broadcast:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    kmovd %edi, %k1
+; X64-AVX512BW-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
+; X64-AVX512BW-NEXT:    vmovaps %zmm1, %zmm0
+; X64-AVX512BW-NEXT:    retq
+  %xx = insertelement <16 x float> poison, float %x, i32 0
+  %vx = shufflevector <16 x float> %xx, <16 x float> poison, <16 x i32> zeroinitializer
+  %vm = bitcast i16 %m to <16 x i1>
+  %res = call <16 x float> @llvm.x86.avx512.mask.expand.v16f32(<16 x float> %vx, <16 x float> %y, <16 x i1> %vm)
+  ret <16 x float> %res
+}
+
+; shift elements up by one
+define <16 x i32> @combine_vexpandd_as_valignd(<16 x i32>  %x) {
+; CHECK-LABEL: combine_vexpandd_as_valignd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    valignd {{.*#+}} zmm0 = zmm1[15],zmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret <16 x i32> %res
+}
+
+; zero upper half of vector
+define <16 x i32> @combine_vcompressd_as_vmov(<16 x i32> %x) {
+; CHECK-LABEL: combine_vcompressd_as_vmov:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32> %x, <16 x i32> zeroinitializer, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+  ret <16 x i32> %res
+}
+
+define <8 x i64> @PR179008(ptr %p0) {
+; X86-AVX512F-LABEL: PR179008:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    movb $31, %cl
+; X86-AVX512F-NEXT:    kmovw %ecx, %k1
+; X86-AVX512F-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1} {z}
+; X86-AVX512F-NEXT:    retl
+;
+; X86-AVX512BW-LABEL: PR179008:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512BW-NEXT:    movb $31, %cl
+; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
+; X86-AVX512BW-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1} {z}
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512F-LABEL: PR179008:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    movb $31, %al
+; X64-AVX512F-NEXT:    kmovw %eax, %k1
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
+; X64-AVX512F-NEXT:    retq
+;
+; X64-AVX512BW-LABEL: PR179008:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    movb $31, %al
+; X64-AVX512BW-NEXT:    kmovd %eax, %k1
+; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
+; X64-AVX512BW-NEXT:    retq
+  %load = load <8 x i64>, ptr %p0, align 1
+  %shuf = shufflevector <8 x i64> %load, <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
+  ret <8 x i64> %shuf
 }

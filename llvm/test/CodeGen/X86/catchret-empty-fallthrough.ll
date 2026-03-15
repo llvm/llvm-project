@@ -48,6 +48,6 @@ return:                                           ; preds = %catch, %entry
 ; CHECK-NEXT: .long   (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT: .long   .Ltmp0@IMGREL
-; CHECK-NEXT: .long   .Ltmp1@IMGREL+1
+; CHECK-NEXT: .long   .Ltmp1@IMGREL
 ; CHECK-NEXT: .long   1
 ; CHECK-NEXT: .long   .LBB0_[[catch]]@IMGREL

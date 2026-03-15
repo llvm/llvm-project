@@ -28,6 +28,7 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFTypeUnit.cpp
   DWARFUnitIndex.cpp
   DWARFUnit.cpp
+  DWARFUnwindTablePrinter.cpp
   DWARFVerifier.cpp
 
   ADDITIONAL_HEADER_DIRS

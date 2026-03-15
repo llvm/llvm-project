@@ -59,13 +59,10 @@ class BssSection;
 class GdbIndexSection;
 class GotPltSection;
 class GotSection;
-class IBTPltSection;
 class IgotPltSection;
 class InputSection;
 class IpltSection;
 class MipsGotSection;
-class MipsRldMapSection;
-class PPC32Got2Section;
 class PPC64LongBranchTargetSection;
 class PltSection;
 class RelocationBaseSection;
@@ -275,6 +272,11 @@ struct Config {
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;
+  llvm::StringRef dtltoDistributor;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+  llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
@@ -354,7 +356,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
-  bool printGcSections;
+  llvm::StringRef printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
   std::optional<uint64_t> randomizeSectionPadding;
@@ -400,6 +402,7 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
+  bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
   bool zNoBtCfi;
@@ -480,11 +483,6 @@ struct Config {
   // if that's true.)
   bool isMips64EL;
 
-  // True if we need to set the DF_STATIC_TLS flag to an output file, which
-  // works as a hint to the dynamic loader that the shared object contains code
-  // compiled with the initial-exec TLS model.
-  bool hasTlsIe = false;
-
   // Holds set of ELF header flags for the target.
   uint32_t eflags = 0;
 
@@ -564,6 +562,7 @@ struct UndefinedDiag {
 // a partition.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
@@ -579,13 +578,13 @@ struct InStruct {
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;
   std::unique_ptr<SyntheticSection> mipsReginfo;
-  std::unique_ptr<MipsRldMapSection> mipsRldMap;
+  std::unique_ptr<SyntheticSection> mipsRldMap;
   std::unique_ptr<SyntheticSection> partEnd;
   std::unique_ptr<SyntheticSection> partIndex;
   std::unique_ptr<PltSection> plt;
   std::unique_ptr<IpltSection> iplt;
-  std::unique_ptr<PPC32Got2Section> ppc32Got2;
-  std::unique_ptr<IBTPltSection> ibtPlt;
+  std::unique_ptr<SyntheticSection> ppc32Got2;
+  std::unique_ptr<SyntheticSection> ibtPlt;
   std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;
@@ -661,6 +660,9 @@ struct Ctx : CommonLinkerContext {
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
   SmallVector<Symbol *, 0> synthesizedSymbols;
+  // ifunc resolver symbol clones for IRELATIVE. Linker relaxation adjusts
+  // these.
+  SmallVector<Defined *, 0> irelativeSyms;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
@@ -696,6 +698,8 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // Dummy Undefined for relocations without a symbol.
+  Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
   bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.

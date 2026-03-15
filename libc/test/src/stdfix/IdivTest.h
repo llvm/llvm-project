@@ -71,7 +71,7 @@ public:
   }
 };
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 #define LIST_IDIV_TESTS(Name, T, XType, func)                                  \
   using LlvmLibcIdiv##Name##Test = IdivTest<T, XType>;                         \
   TEST_F(LlvmLibcIdiv##Name##Test, InvalidNumbers) {                           \
@@ -88,4 +88,4 @@ public:
     testSpecialNumbers(&func);                                                 \
   }                                                                            \
   static_assert(true, "Require semicolon.")
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

@@ -99,6 +99,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -1229,7 +1230,7 @@ struct InformationCache {
           });
   }
 
-  ~InformationCache() {
+  virtual ~InformationCache() {
     // The FunctionInfo objects are allocated via a BumpPtrAllocator, we call
     // the destructor manually.
     for (auto &It : FuncInfoMap)
@@ -1354,6 +1355,8 @@ struct InformationCache {
 
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
+
+  virtual unsigned getMaxAddrSpace() const { return ~0U; }
 
 private:
   struct FunctionInfo {
@@ -3322,7 +3325,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
-  virtual ~AbstractAttribute() = default;
+  ~AbstractAttribute() override = default;
 
   /// Compile time access to the IR attribute kind.
   static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
@@ -5336,6 +5339,19 @@ struct AAPotentialConstantValues
     return nullptr;
   }
 
+  /// Return the minimum trailing zeros of potential constants
+  unsigned getAssumedMinTrailingZeros() const {
+    if (!isValidState() || getAssumedSet().empty())
+      return 0;
+    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth() + 1;
+    for (const APInt &It : getAssumedSet()) {
+      if (It.countTrailingZeros() < TrailingZeros)
+        TrailingZeros = It.countTrailingZeros();
+    }
+    if (TrailingZeros > getAssumedSet().begin()->getBitWidth())
+      return 0;
+    return TrailingZeros;
+  }
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPotentialConstantValues"; }
 
@@ -5453,15 +5469,7 @@ struct AANoFPClass
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    Type *Ty = IRP.getAssociatedType();
-    do {
-      if (Ty->isFPOrFPVectorTy())
-        return IRAttribute::isValidIRPositionForInit(A, IRP);
-      if (!Ty->isArrayTy())
-        break;
-      Ty = Ty->getArrayElementType();
-    } while (true);
-    return false;
+    return AttributeFuncs::isNoFPClassCompatibleType(IRP.getAssociatedType());
   }
 
   /// Return the underlying assumed nofpclass.
@@ -5585,7 +5593,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
-  virtual ~AttributorCallGraph() = default;
+  ~AttributorCallGraph() override = default;
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());
@@ -6335,6 +6343,47 @@ struct AAUnderlyingObjects : AbstractAttribute {
                           AA::ValueScope Scope = AA::Interprocedural) const = 0;
 };
 
+/// An abstract interface for identifying pointers from which loads can be
+/// marked invariant.
+struct AAInvariantLoadPointer : public AbstractAttribute {
+  AAInvariantLoadPointer(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPointerTy())
+      return false;
+
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  LLVM_ABI static AAInvariantLoadPointer &
+  createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Return true if the pointer's contents are known to remain invariant.
+  virtual bool isKnownInvariant() const = 0;
+  virtual bool isKnownLocallyInvariant() const = 0;
+
+  /// Return true if the pointer's contents are assumed to remain invariant.
+  virtual bool isAssumedInvariant() const = 0;
+  virtual bool isAssumedLocallyInvariant() const = 0;
+
+  /// See AbstractAttribute::getName().
+  StringRef getName() const override { return "AAInvariantLoadPointer"; }
+
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAInvariantLoadPointer
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address).
+  LLVM_ABI static const char ID;
+};
+
 /// An abstract interface for address space information.
 struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   AAAddressSpace(const IRPosition &IRP, Attributor &A)
@@ -6379,6 +6428,47 @@ protected:
   static const uint32_t InvalidAddressSpace = ~0U;
 };
 
+/// An abstract interface for potential address space information.
+struct AANoAliasAddrSpace
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  using RangeMap = IntervalMap<unsigned, bool>;
+  AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A)
+      : Base(IRP), Map(Allocator) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  LLVM_ABI static AANoAliasAddrSpace &createForPosition(const IRPosition &IRP,
+                                                        Attributor &A);
+  /// See AbstractAttribute::getName()
+  StringRef getName() const override { return "AANoAliasAddrSpace"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAssumptionInfo
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  LLVM_ABI static const char ID;
+
+protected:
+  RangeMap::Allocator Allocator;
+  RangeMap Map;
+};
+
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   AAAllocationInfo(const IRPosition &IRP, Attributor &A)
       : StateWrapper<BooleanState, AbstractAttribute>(IRP) {}
@@ -6409,7 +6499,7 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   }
 
   constexpr static const std::optional<TypeSize> HasNoAllocationSize =
-      std::optional<TypeSize>(TypeSize(-1, true));
+      std::make_optional<TypeSize>(-1, true);
 
   LLVM_ABI static const char ID;
 };
@@ -6495,7 +6585,7 @@ struct AAIndirectCallInfo
 };
 
 /// An abstract Attribute for specializing "dynamic" components of
-/// "denormal-fp-math" and "denormal-fp-math-f32" to a known denormal mode.
+/// denormal_fpenv to a known denormal mode.
 struct AADenormalFPMath
     : public StateWrapper<DenormalFPMathState, AbstractAttribute> {
   using Base = StateWrapper<DenormalFPMathState, AbstractAttribute>;
@@ -6527,7 +6617,11 @@ enum AttributorRunOption {
   NONE = 0,
   MODULE = 1 << 0,
   CGSCC = 1 << 1,
-  ALL = MODULE | CGSCC
+  MODULE_LIGHT = 1 << 2,
+  CGSCC_LIGHT = 1 << 3,
+
+  FULL = MODULE | CGSCC,
+  LIGHT = MODULE_LIGHT | CGSCC_LIGHT
 };
 
 namespace AA {

@@ -240,8 +240,7 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t FirstByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t FirstByte = Annotations.consume_front();
 
     if ((FirstByte & 0x80) == 0x00)
       return FirstByte;
@@ -249,8 +248,7 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t SecondByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t SecondByte = Annotations.consume_front();
 
     if ((FirstByte & 0xC0) == 0x80)
       return ((FirstByte & 0x3F) << 8) | SecondByte;
@@ -258,14 +256,12 @@ private:
     if (Annotations.empty())
       return -1;
 
-    uint8_t ThirdByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t ThirdByte = Annotations.consume_front();
 
     if (Annotations.empty())
       return -1;
 
-    uint8_t FourthByte = Annotations.front();
-    Annotations = Annotations.drop_front();
+    uint8_t FourthByte = Annotations.consume_front();
 
     if ((FirstByte & 0xE0) == 0xC0)
       return ((FirstByte & 0x1F) << 24) | (SecondByte << 16) |
@@ -419,7 +415,7 @@ public:
         RecordOffset(RecordOffset) {}
 
   TypeIndex Index;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -947,7 +943,27 @@ public:
 
   uint32_t Offset = 0;
   TypeIndex Type;
-  RegisterId Register;
+  RegisterId Register = RegisterId::NONE;
+  StringRef Name;
+
+  uint32_t RecordOffset = 0;
+};
+
+/// S_REGREL32_INDIR
+///
+/// \p Name is located at `*($Register + Offset) + OffsetInUDT` with type
+/// \p Type.
+class RegRelativeIndirSym : public SymbolRecord {
+public:
+  explicit RegRelativeIndirSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  explicit RegRelativeIndirSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::RegRelativeIndirSym),
+        RecordOffset(RecordOffset) {}
+
+  uint32_t Offset = 0;
+  TypeIndex Type;
+  uint32_t OffsetInUdt = 0;
+  RegisterId Register = RegisterId::NONE;
   StringRef Name;
 
   uint32_t RecordOffset = 0;

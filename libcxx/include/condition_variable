@@ -206,14 +206,14 @@ public:
 #    if _LIBCPP_STD_VER >= 20
 
   template <class _Lock, class _Predicate>
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait(_Lock& __lock, stop_token __stoken, _Predicate __pred);
+  _LIBCPP_HIDE_FROM_ABI bool wait(_Lock& __lock, stop_token __stoken, _Predicate __pred);
 
   template <class _Lock, class _Clock, class _Duration, class _Predicate>
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool wait_until(
+  _LIBCPP_HIDE_FROM_ABI bool wait_until(
       _Lock& __lock, stop_token __stoken, const chrono::time_point<_Clock, _Duration>& __abs_time, _Predicate __pred);
 
   template <class _Lock, class _Rep, class _Period, class _Predicate>
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool
+  _LIBCPP_HIDE_FROM_ABI bool
   wait_for(_Lock& __lock, stop_token __stoken, const chrono::duration<_Rep, _Period>& __rel_time, _Predicate __pred);
 
 #    endif // _LIBCPP_STD_VER >= 20

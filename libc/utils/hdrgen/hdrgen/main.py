@@ -18,7 +18,9 @@ from hdrgen.yaml_to_classes import load_yaml_file, fill_public_api
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate header files from YAML")
+    parser = argparse.ArgumentParser(
+        description="Generate header files from YAML", fromfile_prefix_chars="@"
+    )
     parser.add_argument(
         "yaml_file",
         help="Path to the YAML file containing header specification",
@@ -46,6 +48,12 @@ def main():
     parser.add_argument(
         "--write-if-changed",
         help="Write the output file only if its contents have changed",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--proxy",
+        help="Generate a libc/hdr proxy header of a public header",
         action="store_true",
         default=False,
     )
@@ -105,6 +113,7 @@ def main():
                 return 2
             header.merge(merge_from_header)
 
+        assert header.name, f"`header: name.h` line is required in {yaml_file}"
         return header
 
     if args.json:
@@ -115,9 +124,12 @@ def main():
     else:
         [yaml_file] = args.yaml_file
         header = load_header(yaml_file)
-        # The header_template path is relative to the containing YAML file.
-        template = header.template(yaml_file.parent, files_read)
-        contents = fill_public_api(header.public_api(), template)
+        if args.proxy:
+            contents = header.proxy_contents()
+        else:
+            # The header_template path is relative to the containing YAML file.
+            template = header.template(yaml_file.parent, files_read)
+            contents = fill_public_api(header.public_api(), template)
 
     write_depfile()
 

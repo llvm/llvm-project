@@ -7,15 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/exp2m1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcExp2m1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -38,9 +44,8 @@ TEST_F(LlvmLibcExp2m1fTest, TrickyInputs) {
   };
 
   for (float x : INPUTS) {
-    libc_errno = 0;
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2m1, x,
-                                   LIBC_NAMESPACE::exp2m1f(x), 0.5);
+                                   LIBC_NAMESPACE::exp2m1f(x), TOLERANCE + 0.5);
   }
 }
 

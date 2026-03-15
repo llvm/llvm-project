@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <flang/Optimizer/Analysis/AliasAnalysis.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
@@ -37,6 +38,7 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
 #include <mlir/IR/Visitors.h>
+#include <mlir/Interfaces/LoopLikeInterface.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 
@@ -135,9 +137,123 @@ static bool mustParallelizeOp(Operation *op) {
       .wasInterrupted();
 }
 
+// Determines if a memory reference is thread-local in an OpenMP context.
+//
+// This is a best-effort analysis. We cannot definitively determine if code
+// is inside a parallel region when it's in a function called from that
+// region. However, we can identify common patterns of thread-local memory:
+//
+// 1. Memory allocated via fir.alloca inside the enclosing omp.parallel region
+// 2. Memory that comes from OpenMP clause block arguments that create
+//    thread-local storage (private, firstprivate, lastprivate, reduction,
+//    linear clauses)
+//
+// Returns true if the memory reference appears to be thread-local and thus
+// safe to parallelize (each thread should access its own copy).
+static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
+  // Use AliasAnalysis to trace through declares, converts, reboxes, etc.
+  // to find the underlying source of the memory reference.
+  fir::AliasAnalysis aliasAnalysis;
+  fir::AliasAnalysis::Source source = aliasAnalysis.getSource(mem);
+
+  // Check if the source is a Value (not a global symbol).
+  mlir::Value sourceValue =
+      llvm::dyn_cast_if_present<mlir::Value>(source.origin.u);
+  if (!sourceValue)
+    return false;
+
+  // Case 1: Memory allocated by fir.alloca inside the enclosing parallel
+  // region is thread-private (each thread gets its own stack allocation).
+  // Note: fir.allocmem is NOT thread-local even inside omp.parallel.
+  if (source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
+    if (auto alloca = sourceValue.getDefiningOp<fir::AllocaOp>()) {
+      if (auto parallelOp = alloca->getParentOfType<omp::ParallelOp>()) {
+        if (op->getParentOfType<omp::ParallelOp>() == parallelOp)
+          return true;
+      }
+    }
+    // When the alias analysis encounters an hlfir.declare/fir.declare on a
+    // private clause block argument, it marks the SourceKind as Allocate and
+    // sets the source value to the declare op result (not the block arg).
+    // Trace through the declare to check if the underlying Memref is a
+    // private block argument.
+    Value declMemref;
+    if (auto hlfirDecl = sourceValue.getDefiningOp<hlfir::DeclareOp>())
+      declMemref = hlfirDecl.getMemref();
+    else if (auto firDecl = sourceValue.getDefiningOp<fir::DeclareOp>())
+      declMemref = firDecl.getMemref();
+    if (declMemref) {
+      if (auto blockArg = llvm::dyn_cast<BlockArgument>(declMemref)) {
+        Operation *parentOp = blockArg.getOwner()->getParentOp();
+        if (auto argIface =
+                llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
+          if (llvm::is_contained(argIface.getPrivateBlockArgs(), blockArg))
+            return true;
+        }
+      }
+    }
+  }
+
+  // Case 2: Memory from OpenMP clause block arguments that create thread-local
+  // storage. These clauses create private copies for each thread:
+  // - private: uninitialized thread-local copy
+  // - firstprivate: thread-local copy initialized from original
+  // - lastprivate: thread-local copy, value copied back after construct
+  // - reduction: thread-local copy for reduction operations
+  // - linear: thread-local copy with linear modification
+  //
+  // Check if the source value is a block argument of an OpenMP operation
+  // that implements BlockArgOpenMPOpInterface.
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(sourceValue)) {
+    Operation *parentOp = blockArg.getOwner()->getParentOp();
+    if (auto argIface =
+            llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
+      // Check if this block argument corresponds to a privatizing clause.
+      // Private, reduction, and in_reduction clauses create thread-local
+      // memory.
+      auto isInBlockArgs = [&](auto blockArgs) {
+        return llvm::is_contained(blockArgs, blockArg);
+      };
+
+      if (isInBlockArgs(argIface.getPrivateBlockArgs()))
+        return true;
+      if (isInBlockArgs(argIface.getReductionBlockArgs()))
+        return true;
+      if (isInBlockArgs(argIface.getInReductionBlockArgs()))
+        return true;
+      if (isInBlockArgs(argIface.getTaskReductionBlockArgs()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 static bool isSafeToParallelize(Operation *op) {
-  return isa<hlfir::DeclareOp>(op) || isa<fir::DeclareOp>(op) ||
-         isMemoryEffectFree(op);
+  if (isa<hlfir::DeclareOp>(op) || isa<fir::DeclareOp>(op) ||
+      isMemoryEffectFree(op))
+    return true;
+
+  // Thread-local variables allocated in the OpenMP parallel region or coming
+  // from privatizing clauses are private to each thread and thus safe (and
+  // sometimes required) to parallelize. If the compiler wraps such load/stores
+  // in an omp.single block, only one thread updates its local copy, while
+  // all other threads read uninitialized data (see issue #143330).
+  // Use MemoryEffectOpInterface to check all memory effects generically.
+  // This also handles hlfir.assign which is present when the pass runs before
+  // HLFIR lowering.
+  if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
+    SmallVector<MemoryEffects::EffectInstance> effects;
+    memEffects.getEffects(effects);
+    if (!effects.empty() &&
+        llvm::all_of(effects, [&](const MemoryEffects::EffectInstance &effect) {
+          Value val = effect.getValue();
+          return val && isOpenMPThreadLocalMemory(op, val);
+        }))
+      return true;
+  }
+
+  return false;
 }
 
 /// Simple shallow copies suffice for our purposes in this pass, so we implement
@@ -160,17 +276,17 @@ static mlir::func::FuncOp createCopyFunc(mlir::Location loc, mlir::Type varType,
   llvm::SmallVector<mlir::Type> argsTy = {varType, varType};
   auto funcType = mlir::FunctionType::get(builder.getContext(), argsTy, {});
   mlir::func::FuncOp funcOp =
-      modBuilder.create<mlir::func::FuncOp>(loc, copyFuncName, funcType);
+      mlir::func::FuncOp::create(modBuilder, loc, copyFuncName, funcType);
   funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
   fir::factory::setInternalLinkage(funcOp);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
 
-  Value loaded = builder.create<fir::LoadOp>(loc, funcOp.getArgument(1));
-  builder.create<fir::StoreOp>(loc, loaded, funcOp.getArgument(0));
+  Value loaded = fir::LoadOp::create(builder, loc, funcOp.getArgument(1));
+  fir::StoreOp::create(builder, loc, loaded, funcOp.getArgument(0));
 
-  builder.create<mlir::func::ReturnOp>(loc);
+  mlir::func::ReturnOp::create(builder, loc);
   return funcOp;
 }
 
@@ -234,9 +350,9 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     if (auto reloaded = rootMapping.lookupOrNull(v))
       return nullptr;
     Type ty = v.getType();
-    Value alloc = allocaBuilder.create<fir::AllocaOp>(loc, ty);
-    singleBuilder.create<fir::StoreOp>(loc, singleMapping.lookup(v), alloc);
-    Value reloaded = parallelBuilder.create<fir::LoadOp>(loc, ty, alloc);
+    Value alloc = fir::AllocaOp::create(allocaBuilder, loc, ty);
+    fir::StoreOp::create(singleBuilder, loc, singleMapping.lookup(v), alloc);
+    Value reloaded = fir::LoadOp::create(parallelBuilder, loc, ty, alloc);
     rootMapping.map(v, reloaded);
     return alloc;
   };
@@ -293,7 +409,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         allParallelized = false;
       }
     }
-    singleBuilder.create<omp::TerminatorOp>(loc);
+    omp::TerminatorOp::create(singleBuilder, loc);
     return {allParallelized, copyPrivate};
   };
 
@@ -335,6 +451,13 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
 
     for (auto [i, opOrSingle] : llvm::enumerate(regions)) {
       bool isLast = i + 1 == regions.size();
+      // Make sure shared runtime calls are synchronized: disable `nowait`
+      // insertion, and rely on the implicit barrier at the end of the
+      // omp.workshare block. This applies to any loop-like operation
+      // (fir.do_loop, fir.iterate_while, fir.do_concurrent.loop, etc.)
+      // because iterations could overlap if nowait is used.
+      if (isa<LoopLikeOpInterface>(block.getParentOp()))
+        isLast = false;
       if (std::holds_alternative<SingleRegion>(opOrSingle)) {
         OpBuilder singleBuilder(sourceRegion.getContext());
         Block *singleBlock = new Block();
@@ -370,7 +493,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
                 SymbolRefAttr::get(funcOp));
           }
           omp::SingleOp singleOp =
-              rootBuilder.create<omp::SingleOp>(loc, singleOperands);
+              omp::SingleOp::create(rootBuilder, loc, singleOperands);
           singleOp.getRegion().push_back(singleBlock);
           targetRegion.front().getOperations().splice(
               singleOp->getIterator(), allocaBlock->getOperations());
@@ -386,7 +509,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           if (isLast)
             wsloopOperands.nowait = rootBuilder.getUnitAttr();
           auto wsloop =
-              rootBuilder.create<mlir::omp::WsloopOp>(loc, wsloopOperands);
+              mlir::omp::WsloopOp::create(rootBuilder, loc, wsloopOperands);
           auto clonedWslw = cast<omp::WorkshareLoopWrapperOp>(
               rootBuilder.clone(*wslw, rootMapping));
           wsloop.getRegion().takeBody(clonedWslw.getRegion());
@@ -465,9 +588,9 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     // it because our `parallelizeRegion` function works on regions and not
     // blocks.
     omp::WorkshareOp newOp =
-        rootBuilder.create<omp::WorkshareOp>(loc, omp::WorkshareOperands());
+        omp::WorkshareOp::create(rootBuilder, loc, omp::WorkshareOperands());
     if (!wsOp.getNowait())
-      rootBuilder.create<omp::BarrierOp>(loc);
+      omp::BarrierOp::create(rootBuilder, loc);
 
     parallelizeRegion(wsOp.getRegion(), newOp.getRegion(), rootMapping, loc,
                       di);
@@ -505,7 +628,7 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
 
     omp::SingleOperands operands;
     operands.nowait = wsOp.getNowaitAttr();
-    omp::SingleOp newOp = rootBuilder.create<omp::SingleOp>(loc, operands);
+    omp::SingleOp newOp = omp::SingleOp::create(rootBuilder, loc, operands);
 
     newOp.getRegion().getBlocks().splice(newOp.getRegion().getBlocks().begin(),
                                          wsOp.getRegion().getBlocks());

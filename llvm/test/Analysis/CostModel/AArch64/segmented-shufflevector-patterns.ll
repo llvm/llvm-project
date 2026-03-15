@@ -49,5 +49,53 @@ define void @dup_within_each_segment_512b() #1 {
   ret void
 }
 
+define void @dup_whole_segment_256b() #0 {
+; CHECK-LABEL: 'dup_whole_segment_256b'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_b = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_h = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_512b_d = shufflevector <8 x double> poison, <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_s_with_poison = shufflevector <8 x float> poison, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 3, i32 poison, i32 1, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %dup_seg_b = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                                                                             i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %dup_seg_h = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                               i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %dup_seg_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3,
+                                                                            i32 0, i32 1, i32 2, i32 3>
+  %dup_seg_d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %dup_seg_512b_d = shufflevector <8 x double> poison, <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1,
+                                                                                       i32 0, i32 1, i32 0, i32 1>
+  %dup_seg_s_with_poison = shufflevector <8 x float> poison, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 3,
+                                                                                            i32 poison, i32 1, i32 2, i32 3>
+  ret void
+}
+
+define void @dup_whole_segment_512b() #1 {
+; CHECK-LABEL: 'dup_whole_segment_512b'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_b = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_h = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_512b_d = shufflevector <8 x double> poison, <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %dup_seg_s_with_poison = shufflevector <8 x float> poison, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 3, i32 poison, i32 1, i32 2, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %dup_seg_b = shufflevector <32 x i8> poison, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                                                                             i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %dup_seg_h = shufflevector <16 x i16> poison, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                                                                               i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %dup_seg_s = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3,
+                                                                            i32 0, i32 1, i32 2, i32 3>
+  %dup_seg_d = shufflevector <4 x i64> poison, <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %dup_seg_512b_d = shufflevector <8 x double> poison, <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 1,
+                                                                                       i32 0, i32 1, i32 0, i32 1>
+  %dup_seg_s_with_poison = shufflevector <8 x float> poison, <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 3,
+                                                                                            i32 poison, i32 1, i32 2, i32 3>
+  ret void
+}
+
 attributes #0 = { noinline vscale_range(2,2) }
 attributes #1 = { noinline vscale_range(4,4) }

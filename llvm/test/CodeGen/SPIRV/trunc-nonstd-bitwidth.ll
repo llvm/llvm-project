@@ -1,23 +1,17 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOEXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_arbitrary_precision_integers -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOEXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_INTEL_arbitrary_precision_integers -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
 
 ; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
 ; XFAIL: expensive_checks
 
 ; CHECK-DAG: OpName %[[#Struct:]] "struct"
-; CHECK-DAG: OpName %[[#Arg:]] "arg"
-; CHECK-DAG: OpName %[[#QArg:]] "qarg"
-; CHECK-DAG: OpName %[[#R:]] "r"
-; CHECK-DAG: OpName %[[#Q:]] "q"
-; CHECK-DAG: OpName %[[#Tr:]] "tr"
-; CHECK-DAG: OpName %[[#Tq:]] "tq"
 ; CHECK-DAG: %[[#Struct]] = OpTypeStruct %[[#]] %[[#]] %[[#]]
 ; CHECK-DAG: %[[#PtrStruct:]] = OpTypePointer CrossWorkgroup %[[#Struct]]
 ; CHECK-EXT-DAG: %[[#Int40:]] = OpTypeInt 40 0
@@ -26,19 +20,21 @@
 ; CHECK-DAG: %[[#PtrInt40:]] = OpTypePointer CrossWorkgroup %[[#Int40]]
 
 ; CHECK: OpFunction
-
-; CHECK-EXT: %[[#Tr]] = OpUConvert %[[#Int40]] %[[#R]]
+; CHECK: %[[#Arg:]] = OpFunctionParameter
+; CHECK-EXT: %[[#Tr:]] = OpUConvert %[[#Int40]] %[[#R:]]
 ; CHECK-EXT: %[[#Store:]] = OpInBoundsPtrAccessChain %[[#PtrStruct]] %[[#Arg]] %[[#]]
 ; CHECK-EXT: %[[#StoreAsInt40:]] = OpBitcast %[[#PtrInt40]] %[[#Store]]
 ; CHECK-EXT: OpStore %[[#StoreAsInt40]] %[[#Tr]]
 
 ; CHECK-NOEXT: %[[#Store:]] = OpInBoundsPtrAccessChain %[[#PtrStruct]] %[[#Arg]] %[[#]]
 ; CHECK-NOEXT: %[[#StoreAsInt40:]] = OpBitcast %[[#PtrInt40]] %[[#Store]]
-; CHECK-NOEXT: OpStore %[[#StoreAsInt40]] %[[#R]]
+; CHECK-NOEXT: OpStore %[[#StoreAsInt40]] %[[#R:]]
 
 ; CHECK: OpFunction
 
-; CHECK-EXT: %[[#Tq]] = OpUConvert %[[#Int40]] %[[#Q]]
+; CHECK: %[[#QArg:]] = OpFunctionParameter
+; CHECK: %[[#Q:]] = OpFunctionParameter
+; CHECK-EXT: %[[#Tq:]] = OpUConvert %[[#Int40]] %[[#Q]]
 ; CHECK-EXT: OpStore %[[#QArg]] %[[#Tq]]
 
 ; CHECK-NOEXT: OpStore %[[#QArg]] %[[#Q]]

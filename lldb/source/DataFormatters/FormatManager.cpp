@@ -72,6 +72,7 @@ static constexpr FormatInfo g_format_infos[] = {
     {eFormatInstruction, 'i', "instruction"},
     {eFormatVoid, 'v', "void"},
     {eFormatUnicode8, 'u', "unicode8"},
+    {eFormatFloat128, '\0', "float128"},
 };
 
 static_assert((sizeof(g_format_infos) / sizeof(g_format_infos[0])) ==
@@ -422,9 +423,8 @@ FormatManager::GetCategory(ConstString category_name, bool can_create) {
   if (!can_create)
     return lldb::TypeCategoryImplSP();
 
-  m_categories_map.Add(
-      category_name,
-      lldb::TypeCategoryImplSP(new TypeCategoryImpl(this, category_name)));
+  m_categories_map.Add(category_name,
+                       std::make_shared<TypeCategoryImpl>(this, category_name));
   return GetCategory(category_name);
 }
 
@@ -458,11 +458,11 @@ lldb::Format FormatManager::GetSingleItemFormat(lldb::Format vector_format) {
 
 bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   TargetSP target_sp = valobj.GetTargetSP();
-  // if settings say no oneline whatsoever
+  // If settings say no oneline whatsoever then don't oneline.
   if (target_sp && !target_sp->GetDebugger().GetAutoOneLineSummaries())
-    return false; // then don't oneline
+    return false;
 
-  // if this object has a summary, then ask the summary
+  // If this object has a summary, then ask the summary.
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
@@ -474,12 +474,12 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
     llvm::consumeError(num_children.takeError());
     return true;
   }
-  // no children, no party
+  // No children, no party.
   if (*num_children == 0)
     return false;
 
-  // ask the type if it has any opinion about this eLazyBoolCalculate == no
-  // opinion; other values should be self explanatory
+  // Ask the type if it has any opinion about this:
+  //   eLazyBoolCalculate == no opinion
   CompilerType compiler_type(valobj.GetCompilerType());
   if (compiler_type.IsValid()) {
     switch (compiler_type.ShouldPrintAsOneLiner(&valobj)) {
@@ -497,66 +497,66 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   for (size_t idx = 0; idx < *num_children; idx++) {
     bool is_synth_val = false;
     ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
-    // something is wrong here - bail out
+    // Something is wrong here - bail out.
     if (!child_sp)
       return false;
 
-    // also ask the child's type if it has any opinion
+    // Also ask the child's type if it has any opinion.
     CompilerType child_compiler_type(child_sp->GetCompilerType());
     if (child_compiler_type.IsValid()) {
       switch (child_compiler_type.ShouldPrintAsOneLiner(child_sp.get())) {
       case eLazyBoolYes:
-      // an opinion of yes is only binding for the child, so keep going
+      // An opinion of yes is only binding for the child, so keep going,
       case eLazyBoolCalculate:
         break;
       case eLazyBoolNo:
-        // but if the child says no, then it's a veto on the whole thing
+        // but if the child says no, then it's a veto on the whole thing.
         return false;
       }
     }
 
-    // if we decided to define synthetic children for a type, we probably care
-    // enough to show them, but avoid nesting children in children
+    // If we decided to define synthetic children for a type, we probably care
+    // enough to show them, but avoid nesting children in children.
     if (child_sp->GetSyntheticChildren().get() != nullptr) {
       ValueObjectSP synth_sp(child_sp->GetSyntheticValue());
-      // wait.. wat? just get out of here..
+      // Bail out if there was an error.
       if (!synth_sp)
         return false;
-      // but if we only have them to provide a value, keep going
+      // If we only have them to provide a value, keep going.
       if (!synth_sp->MightHaveChildren() &&
           synth_sp->DoesProvideSyntheticValue())
         is_synth_val = true;
-      else
+      // If there are synthetic children, the user probably wants to see them.
+      else if (synth_sp->MightHaveChildren())
         return false;
     }
 
     total_children_name_len += child_sp->GetName().GetLength();
 
     // 50 itself is a "randomly" chosen number - the idea is that
-    // overly long structs should not get this treatment
+    // overly long structs should not get this treatment.
     // FIXME: maybe make this a user-tweakable setting?
     if (total_children_name_len > 50)
       return false;
 
-    // if a summary is there..
+    // If a summary is there,
     if (child_sp->GetSummaryFormat()) {
-      // and it wants children, then bail out
+      // and it wants children, then bail out.
       if (child_sp->GetSummaryFormat()->DoesPrintChildren(child_sp.get()))
         return false;
     }
 
-    // if this child has children..
+    // If this child has children,
     if (child_sp->HasChildren()) {
-      // ...and no summary...
-      // (if it had a summary and the summary wanted children, we would have
-      // bailed out anyway
-      //  so this only makes us bail out if this has no summary and we would
-      //  then print children)
-      if (!child_sp->GetSummaryFormat() && !is_synth_val) // but again only do
-                                                          // that if not a
-                                                          // synthetic valued
-                                                          // child
-        return false;                                     // then bail out
+      // and no summary, bail out.
+      //
+      // Note that if it had a summary and the summary wanted
+      // children, we would have bailed out anyway so this only makes
+      // us bail out if this has no summary and we would then print
+      // children.
+      if (!child_sp->GetSummaryFormat() && !is_synth_val)
+        // But again only do that if not a synthetic valued child.
+        return false;
     }
   }
   return true;
@@ -720,7 +720,7 @@ void FormatManager::LoadSystemFormatters() {
   TypeSummaryImpl::Flags string_flags;
   string_flags.SetCascades(true)
       .SetSkipPointers(true)
-      .SetSkipReferences(false)
+      .SetSkipReferences(true)
       .SetDontShowChildren(true)
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)

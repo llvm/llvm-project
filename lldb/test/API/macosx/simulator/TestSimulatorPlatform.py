@@ -7,6 +7,7 @@ import json
 
 class TestSimulatorPlatformLaunching(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def check_load_commands(self, expected_load_command):
         """sanity check the built binary for the expected number of load commands"""

@@ -46,11 +46,7 @@ namespace llvm {
       return !(*this != VT);
     }
     bool operator!=(EVT VT) const {
-      if (V.SimpleTy != VT.V.SimpleTy)
-        return true;
-      if (V.SimpleTy == MVT::INVALID_SIMPLE_VALUE_TYPE)
-        return LLVMTy != VT.LLVMTy;
-      return false;
+      return V.SimpleTy != VT.V.SimpleTy || LLVMTy != VT.LLVMTy;
     }
 
     /// Returns the EVT that represents a floating-point type with the given
@@ -99,20 +95,32 @@ namespace llvm {
 
     /// Return a VT for a vector type whose attributes match ourselves
     /// with the exception of the element type that is chosen by the caller.
-    EVT changeVectorElementType(EVT EltVT) const {
-      if (isSimple()) {
-        assert(EltVT.isSimple() &&
-               "Can't change simple vector VT to have extended element VT");
-        return getSimpleVT().changeVectorElementType(EltVT.getSimpleVT());
+    EVT changeVectorElementType(LLVMContext &Context, EVT EltVT) const {
+      if (isSimple() && EltVT.isSimple()) {
+        MVT M = MVT::getVectorVT(EltVT.getSimpleVT(), getVectorElementCount());
+        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
+          return M;
       }
-      return changeExtendedVectorElementType(EltVT);
+      return getVectorVT(Context, EltVT, getVectorElementCount());
+    }
+
+    /// Return a VT for a vector type whose attributes match ourselves
+    /// with the exception of the element count that is chosen by the caller.
+    EVT changeVectorElementCount(LLVMContext &Context, ElementCount EC) const {
+      assert(isVector() && "Not a vector EVT!");
+      if (isSimple()) {
+        MVT M = getSimpleVT().changeVectorElementCount(EC);
+        if (M != MVT::INVALID_SIMPLE_VALUE_TYPE)
+          return M;
+      }
+      return getVectorVT(Context, getVectorElementType(), EC);
     }
 
     /// Return a VT for a type whose attributes match ourselves with the
     /// exception of the element type that is chosen by the caller.
-    EVT changeElementType(EVT EltVT) const {
+    EVT changeElementType(LLVMContext &Context, EVT EltVT) const {
       EltVT = EltVT.getScalarType();
-      return isVector() ? changeVectorElementType(EltVT) : EltVT;
+      return isVector() ? changeVectorElementType(Context, EltVT) : EltVT;
     }
 
     /// Return the type converted to an equivalently sized integer or vector
@@ -228,6 +236,11 @@ namespace llvm {
       return isSimple() ? V.is2048BitVector() : isExtended2048BitVector();
     }
 
+    /// Return true if this is a capability type.
+    bool isCheriCapability() const {
+      return isSimple() ? V.isCheriCapability() : false;
+    }
+
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
       return (V == MVT::iAny || V == MVT::fAny || V == MVT::vAny ||
@@ -332,7 +345,7 @@ namespace llvm {
       assert(isVector() && "Invalid vector type!");
 
       if (isScalableVector())
-        llvm::reportInvalidSizeRequest(
+        llvm::reportFatalInternalError(
             "Possible incorrect use of EVT::getVectorNumElements() for "
             "scalable vector. Scalable flag may be dropped, use "
             "EVT::getVectorElementCount() instead");

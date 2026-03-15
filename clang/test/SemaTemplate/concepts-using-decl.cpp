@@ -176,3 +176,24 @@ void func() {
   f.foo<10, 10>(); // expected-error {{no matching member function for call to 'foo'}}
 }
 } // namespace heads_without_concepts.
+
+namespace GH146614 {
+
+template <typename T>
+struct base {
+    template <typename A>
+    void foo(A x)
+        requires (requires{x;})
+    {}
+};
+
+
+struct child : base<int> {
+  using base<int>::foo;
+  template <typename A>
+  void foo(A x)
+      requires (false)
+  {}
+};
+
+}

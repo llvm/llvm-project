@@ -7,19 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/nanosleep.h"
+#include "hdr/stdint_proxy.h" // For int64_t.
 #include "hdr/time_macros.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <stdint.h>      // For int64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, nanosleep,
-                   (const struct timespec *req, struct timespec *rem)) {
+LLVM_LIBC_FUNCTION(int, nanosleep, (const timespec *req, timespec *rem)) {
 #if SYS_nanosleep
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_nanosleep, req, rem);
 #elif defined(SYS_clock_nanosleep_time64)

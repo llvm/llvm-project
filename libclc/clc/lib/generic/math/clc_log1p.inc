@@ -56,7 +56,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_log1p(__CLC_GENTYPE x) {
   __CLC_GENTYPE f = mf > 24.0f ? fg24 : fl24;
 
   indx = indx >> 16;
-  __CLC_GENTYPE r = f * USE_TABLE(log_inv_tbl, __CLC_CONVERT_INTN(indx));
+  __CLC_GENTYPE r = f * __CLC_USE_TABLE(log_inv_tbl, __CLC_CONVERT_INTN(indx));
 
   // 1/3, 1/2
   __CLC_GENTYPE poly =
@@ -65,8 +65,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_log1p(__CLC_GENTYPE x) {
   const __CLC_GENTYPE LOG2_HEAD = 0x1.62e000p-1f;  // 0.693115234
   const __CLC_GENTYPE LOG2_TAIL = 0x1.0bfbe8p-15f; // 0.0000319461833
 
-  __CLC_GENTYPE tv0 = USE_TABLE(loge_tbl_lo, __CLC_AS_INTN(indx));
-  __CLC_GENTYPE tv1 = USE_TABLE(loge_tbl_hi, __CLC_AS_INTN(indx));
+  __CLC_GENTYPE tv0 = __CLC_USE_TABLE(loge_tbl_lo, __CLC_AS_INTN(indx));
+  __CLC_GENTYPE tv1 = __CLC_USE_TABLE(loge_tbl_hi, __CLC_AS_INTN(indx));
   __CLC_GENTYPE z1 = __clc_mad(mf, LOG2_HEAD, tv0);
   __CLC_GENTYPE z2 = __clc_mad(mf, LOG2_TAIL, -poly) + tv1;
   __CLC_GENTYPE z = z1 + z2;
@@ -108,8 +108,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_log1p(__CLC_GENTYPE x) {
   f2 = __CLC_CONVERT_LONGN(xexp <= -2 || (xexp >= MANTLENGTH_DP64 + 8)) ? f2temp
                                                                         : f2;
 
-  __CLC_GENTYPE z1 = USE_TABLE(ln_tbl_lo, j);
-  __CLC_GENTYPE q = USE_TABLE(ln_tbl_hi, j);
+  __CLC_GENTYPE z1 = __CLC_USE_TABLE(ln_tbl_lo, j);
+  __CLC_GENTYPE q = __CLC_USE_TABLE(ln_tbl_hi, j);
 
   __CLC_GENTYPE u = MATH_DIVIDE(f2, __clc_fma(0.5, f2, f1));
   __CLC_GENTYPE v = u * u;

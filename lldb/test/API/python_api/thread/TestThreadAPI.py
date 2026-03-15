@@ -138,6 +138,11 @@ class ThreadAPITestCase(TestBase):
             "breakpoint 1.1", thread.GetStopDescription(len("breakpoint 1.1") + 100)
         )
 
+        # Test the stream variation
+        stream = lldb.SBStream()
+        self.assertTrue(thread.GetStopDescription(stream))
+        self.assertEqual("breakpoint 1.1", stream.GetData())
+
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
         exe = self.getBuildArtifact(exe_name)

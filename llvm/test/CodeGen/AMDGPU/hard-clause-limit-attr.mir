@@ -18,7 +18,7 @@ body: |
     ; GFX11-LABEL: name: long_clause_32
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit-def $vgpr5, implicit-def $vgpr5_lo16, implicit-def $vgpr5_hi16, implicit-def $vgpr6, implicit-def $vgpr6_lo16, implicit-def $vgpr6_hi16, implicit-def $vgpr7, implicit-def $vgpr7_lo16, implicit-def $vgpr7_hi16, implicit-def $vgpr8, implicit-def $vgpr8_lo16, implicit-def $vgpr8_hi16, implicit-def $vgpr9, implicit-def $vgpr9_lo16, implicit-def $vgpr9_hi16, implicit-def $vgpr10, implicit-def $vgpr10_lo16, implicit-def $vgpr10_hi16, implicit-def $vgpr11, implicit-def $vgpr11_lo16, implicit-def $vgpr11_hi16, implicit-def $vgpr12, implicit-def $vgpr12_lo16, implicit-def $vgpr12_hi16, implicit-def $vgpr13, implicit-def $vgpr13_lo16, implicit-def $vgpr13_hi16, implicit-def $vgpr14, implicit-def $vgpr14_lo16, implicit-def $vgpr14_hi16, implicit-def $vgpr15, implicit-def $vgpr15_lo16, implicit-def $vgpr15_hi16, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit-def $vgpr17, implicit-def $vgpr17_lo16, implicit-def $vgpr17_hi16, implicit-def $vgpr18, implicit-def $vgpr18_lo16, implicit-def $vgpr18_hi16, implicit-def $vgpr19, implicit-def $vgpr19_lo16, implicit-def $vgpr19_hi16, implicit-def $vgpr20, implicit-def $vgpr20_lo16, implicit-def $vgpr20_hi16, implicit-def $vgpr21, implicit-def $vgpr21_lo16, implicit-def $vgpr21_hi16, implicit-def $vgpr22, implicit-def $vgpr22_lo16, implicit-def $vgpr22_hi16, implicit-def $vgpr23, implicit-def $vgpr23_lo16, implicit-def $vgpr23_hi16, implicit-def $vgpr24, implicit-def $vgpr24_lo16, implicit-def $vgpr24_hi16, implicit-def $vgpr25, implicit-def $vgpr25_lo16, implicit-def $vgpr25_hi16, implicit-def $vgpr26, implicit-def $vgpr26_lo16, implicit-def $vgpr26_hi16, implicit-def $vgpr27, implicit-def $vgpr27_lo16, implicit-def $vgpr27_hi16, implicit-def $vgpr28, implicit-def $vgpr28_lo16, implicit-def $vgpr28_hi16, implicit-def $vgpr29, implicit-def $vgpr29_lo16, implicit-def $vgpr29_hi16, implicit-def $vgpr30, implicit-def $vgpr30_lo16, implicit-def $vgpr30_hi16, implicit-def $vgpr31, implicit-def $vgpr31_lo16, implicit-def $vgpr31_hi16, implicit-def $vgpr32, implicit-def $vgpr32_lo16, implicit-def $vgpr32_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; GFX11-NEXT:   S_CLAUSE 31
     ; GFX11-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 8, 0, 0, implicit $exec
@@ -96,7 +96,7 @@ body: |
     ; GFX11-LABEL: name: long_clause_7
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit-def $vgpr5, implicit-def $vgpr5_lo16, implicit-def $vgpr5_hi16, implicit-def $vgpr6, implicit-def $vgpr6_lo16, implicit-def $vgpr6_hi16, implicit-def $vgpr7, implicit-def $vgpr7_lo16, implicit-def $vgpr7_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; GFX11-NEXT:   S_CLAUSE 6
     ; GFX11-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 8, 0, 0, implicit $exec
@@ -106,7 +106,7 @@ body: |
     ; GFX11-NEXT:   $vgpr6 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 24, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr7 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 28, 0, 0, implicit $exec
     ; GFX11-NEXT: }
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr8, implicit-def $vgpr8_lo16, implicit-def $vgpr8_hi16, implicit-def $vgpr9, implicit-def $vgpr9_lo16, implicit-def $vgpr9_hi16, implicit-def $vgpr10, implicit-def $vgpr10_lo16, implicit-def $vgpr10_hi16, implicit-def $vgpr11, implicit-def $vgpr11_lo16, implicit-def $vgpr11_hi16, implicit-def $vgpr12, implicit-def $vgpr12_lo16, implicit-def $vgpr12_hi16, implicit-def $vgpr13, implicit-def $vgpr13_lo16, implicit-def $vgpr13_hi16, implicit-def $vgpr14, implicit-def $vgpr14_lo16, implicit-def $vgpr14_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr8, implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; GFX11-NEXT:   S_CLAUSE 6
     ; GFX11-NEXT:   $vgpr8 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 32, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr9 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 36, 0, 0, implicit $exec
@@ -116,7 +116,7 @@ body: |
     ; GFX11-NEXT:   $vgpr13 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 52, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr14 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 56, 0, 0, implicit $exec
     ; GFX11-NEXT: }
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr15, implicit-def $vgpr15_lo16, implicit-def $vgpr15_hi16, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit-def $vgpr17, implicit-def $vgpr17_lo16, implicit-def $vgpr17_hi16, implicit-def $vgpr18, implicit-def $vgpr18_lo16, implicit-def $vgpr18_hi16, implicit-def $vgpr19, implicit-def $vgpr19_lo16, implicit-def $vgpr19_hi16, implicit-def $vgpr20, implicit-def $vgpr20_lo16, implicit-def $vgpr20_hi16, implicit-def $vgpr21, implicit-def $vgpr21_lo16, implicit-def $vgpr21_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr15, implicit-def $vgpr16, implicit-def $vgpr17, implicit-def $vgpr18, implicit-def $vgpr19, implicit-def $vgpr20, implicit-def $vgpr21, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; GFX11-NEXT:   S_CLAUSE 6
     ; GFX11-NEXT:   $vgpr15 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 60, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr16 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 64, 0, 0, implicit $exec
@@ -126,7 +126,7 @@ body: |
     ; GFX11-NEXT:   $vgpr20 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 80, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr21 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 84, 0, 0, implicit $exec
     ; GFX11-NEXT: }
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr22, implicit-def $vgpr22_lo16, implicit-def $vgpr22_hi16, implicit-def $vgpr23, implicit-def $vgpr23_lo16, implicit-def $vgpr23_hi16, implicit-def $vgpr24, implicit-def $vgpr24_lo16, implicit-def $vgpr24_hi16, implicit-def $vgpr25, implicit-def $vgpr25_lo16, implicit-def $vgpr25_hi16, implicit-def $vgpr26, implicit-def $vgpr26_lo16, implicit-def $vgpr26_hi16, implicit-def $vgpr27, implicit-def $vgpr27_lo16, implicit-def $vgpr27_hi16, implicit-def $vgpr28, implicit-def $vgpr28_lo16, implicit-def $vgpr28_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr22, implicit-def $vgpr23, implicit-def $vgpr24, implicit-def $vgpr25, implicit-def $vgpr26, implicit-def $vgpr27, implicit-def $vgpr28, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; GFX11-NEXT:   S_CLAUSE 6
     ; GFX11-NEXT:   $vgpr22 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 88, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr23 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 92, 0, 0, implicit $exec
@@ -136,7 +136,7 @@ body: |
     ; GFX11-NEXT:   $vgpr27 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 108, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr28 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 112, 0, 0, implicit $exec
     ; GFX11-NEXT: }
-    ; GFX11-NEXT: BUNDLE implicit-def $vgpr29, implicit-def $vgpr29_lo16, implicit-def $vgpr29_hi16, implicit-def $vgpr30, implicit-def $vgpr30_lo16, implicit-def $vgpr30_hi16, implicit-def $vgpr31, implicit-def $vgpr31_lo16, implicit-def $vgpr31_hi16, implicit-def $vgpr32, implicit-def $vgpr32_lo16, implicit-def $vgpr32_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr29, implicit-def $vgpr30, implicit-def $vgpr31, implicit-def $vgpr32, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; GFX11-NEXT:   S_CLAUSE 3
     ; GFX11-NEXT:   $vgpr29 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 116, 0, 0, implicit $exec
     ; GFX11-NEXT:   $vgpr30 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 120, 0, 0, implicit $exec

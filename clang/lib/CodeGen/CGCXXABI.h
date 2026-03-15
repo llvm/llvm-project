@@ -294,14 +294,22 @@ public:
                                              Address Value,
                                              QualType SrcRecordTy) = 0;
 
+  struct ExactDynamicCastInfo {
+    bool RequiresCastToPrimaryBase;
+    CharUnits Offset;
+  };
+
+  virtual std::optional<ExactDynamicCastInfo>
+  getExactDynamicCastInfo(QualType SrcRecordTy, QualType DestTy,
+                          QualType DestRecordTy) = 0;
+
   /// Emit a dynamic_cast from SrcRecordTy to DestRecordTy. The cast fails if
   /// the dynamic type of Value is not exactly DestRecordTy.
-  virtual llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address Value,
-                                            QualType SrcRecordTy,
-                                            QualType DestTy,
-                                            QualType DestRecordTy,
-                                            llvm::BasicBlock *CastSuccess,
-                                            llvm::BasicBlock *CastFail) = 0;
+  virtual llvm::Value *emitExactDynamicCast(
+      CodeGenFunction &CGF, Address Value, QualType SrcRecordTy,
+      QualType DestTy, QualType DestRecordTy,
+      const ExactDynamicCastInfo &CastInfo, llvm::BasicBlock *CastSuccess,
+      llvm::BasicBlock *CastFail) = 0;
 
   virtual bool EmitBadCastCall(CodeGenFunction &CGF) = 0;
 
@@ -574,6 +582,12 @@ public:
                                const CXXDeleteExpr *expr,
                                QualType ElementType, llvm::Value *&NumElements,
                                llvm::Value *&AllocPtr, CharUnits &CookieSize);
+
+  /// Reads the array cookie associated with the given pointer,
+  /// that should have one.
+  void ReadArrayCookie(CodeGenFunction &CGF, Address Ptr, QualType ElementType,
+                       llvm::Value *&NumElements, llvm::Value *&AllocPtr,
+                       CharUnits &CookieSize);
 
   /// Return whether the given global decl needs a VTT parameter.
   virtual bool NeedsVTTParameter(GlobalDecl GD);

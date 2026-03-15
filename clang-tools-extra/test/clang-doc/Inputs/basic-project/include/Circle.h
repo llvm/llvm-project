@@ -26,6 +26,10 @@ public:
     /**
      * @brief Calculates the perimeter of the circle.
      *
+     * @code
+     * Circle circle(5.0);
+     * double perimeter = circle.perimeter();
+     * @endcode
      * @return double The perimeter of the circle.
      */
     double perimeter() const override;

@@ -59,9 +59,9 @@ if (LLVM_TREE_AVAILABLE)
     set(_host_executable_suffix ${CMAKE_EXECUTABLE_SUFFIX})
   endif()
   set(COMPILER_RT_TEST_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang${_host_executable_suffix})
   set(COMPILER_RT_TEST_CXX_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang++${_host_executable_suffix})
 else()
     # Take output dir and install path from the user.
   set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
@@ -225,8 +225,7 @@ macro(test_targets)
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
       test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
-                       "-flto" "-fconvergent-functions"
-                       "-Xclang -mcode-object-version=none")
+                       "-flto" "-Xclang -mcode-object-version=none")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
       test_target_arch(hexagon "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "loongarch64")
@@ -270,8 +269,7 @@ macro(test_targets)
         test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
       endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
-      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto"
-                       "-fconvergent-functions" "-c")
+      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto" "-c")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")

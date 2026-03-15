@@ -12,6 +12,7 @@
 
 #include "NVPTXInstrInfo.h"
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -24,7 +25,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void NVPTXInstrInfo::anchor() {}
 
-NVPTXInstrInfo::NVPTXInstrInfo() : RegInfo() {}
+NVPTXInstrInfo::NVPTXInstrInfo(const NVPTXSubtarget &STI)
+    : NVPTXGenInstrInfo(STI, RegInfo), RegInfo() {}
 
 void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
@@ -35,23 +37,23 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
 
-  if (RegInfo.getRegSizeInBits(*DestRC) != RegInfo.getRegSizeInBits(*SrcRC))
+  if (DestRC != SrcRC)
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::B1RegClass) {
-    Op = NVPTX::IMOV1r;
-  } else if (DestRC == &NVPTX::B16RegClass) {
-    Op = NVPTX::MOV16r;
-  } else if (DestRC == &NVPTX::B32RegClass) {
-    Op = NVPTX::IMOV32r;
-  } else if (DestRC == &NVPTX::B64RegClass) {
-    Op = NVPTX::IMOV64r;
-  } else if (DestRC == &NVPTX::B128RegClass) {
-    Op = NVPTX::IMOV128r;
-  } else {
+  if (DestRC == &NVPTX::B1RegClass)
+    Op = NVPTX::MOV_B1_r;
+  else if (DestRC == &NVPTX::B16RegClass)
+    Op = NVPTX::MOV_B16_r;
+  else if (DestRC == &NVPTX::B32RegClass)
+    Op = NVPTX::MOV_B32_r;
+  else if (DestRC == &NVPTX::B64RegClass)
+    Op = NVPTX::MOV_B64_r;
+  else if (DestRC == &NVPTX::B128RegClass)
+    Op = NVPTX::MOV_B128_r;
+  else
     llvm_unreachable("Bad register copy");
-  }
+
   BuildMI(MBB, I, DL, get(Op), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }

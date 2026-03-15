@@ -1319,6 +1319,27 @@ namespace GH139160{
   B result = (B){10, get_value(make_struct())}; // expected-error {{initializer element is not a compile-time constant}} 
                                                 // expected-error@-1 {{call to consteval function 'GH139160::get_value' is not a constant expression}}
                                                 // expected-note@-2  {{non-constexpr function 'make_struct' cannot be used in a constant expression}}
-};
+}  // namespace GH139160
 
+namespace GH118187 {
 
+template <typename T> int t() {
+  return []<typename U>() consteval {
+    return [](U v) { return v; }(123);
+  }.template operator()<int>();
+}
+
+int v = t<int>();
+}  // namespace GH118187
+
+namespace GH156579 {
+template <class>
+auto f{[] (auto...) {
+    if constexpr ([] (auto) { return true; }(0))
+        return 0;
+}};
+
+void g() {
+    f<int>();
+}
+}  // namespace GH156579

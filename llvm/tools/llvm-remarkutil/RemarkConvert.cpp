@@ -80,8 +80,8 @@ static Error tryReserializeYAML2Bitstream(
   if (!MaybeOF)
     return MaybeOF.takeError();
   auto OF = std::move(*MaybeOF);
-  auto MaybeSerializer = createRemarkSerializer(
-      OutputFormat, SerializerMode::Standalone, OF->os(), std::move(StrTab));
+  auto MaybeSerializer =
+      createRemarkSerializer(OutputFormat, OF->os(), std::move(StrTab));
   if (!MaybeSerializer)
     return MaybeSerializer.takeError();
   auto Serializer = std::move(*MaybeSerializer);
@@ -110,8 +110,7 @@ static Error tryBitstream2YAML() {
   if (!MaybeOF)
     return MaybeOF.takeError();
   auto OF = std::move(*MaybeOF);
-  auto MaybeSerializer = createRemarkSerializer(
-      OutputFormat, SerializerMode::Standalone, OF->os());
+  auto MaybeSerializer = createRemarkSerializer(OutputFormat, OF->os());
   if (!MaybeSerializer)
     return MaybeSerializer.takeError();
 

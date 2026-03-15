@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   AffineParallelize.cpp
   AffineScalarReplacement.cpp
   DecomposeAffineOps.cpp
+  FoldMemRefAliasOps.cpp
   LoopCoalescing.cpp
   LoopFusion.cpp
   LoopTiling.cpp
@@ -34,6 +35,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRArithDialect
   MLIRIR
   MLIRMemRefDialect
+  MLIRMemRefUtils
   MLIRPass
   MLIRSCFUtils
   MLIRSideEffectInterfaces

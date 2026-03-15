@@ -47,7 +47,7 @@ class LLVM_ABI DefaultSchedulerStrategy : public SchedulerStrategy {
 
 public:
   DefaultSchedulerStrategy() = default;
-  virtual ~DefaultSchedulerStrategy();
+  ~DefaultSchedulerStrategy() override;
 
   bool compare(const InstRef &Lhs, const InstRef &Rhs) const override {
     int LhsRank = computeRank(Lhs);

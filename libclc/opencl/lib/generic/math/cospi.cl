@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_cospi.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION cospi
+#define __CLC_FUNCTION cospi
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

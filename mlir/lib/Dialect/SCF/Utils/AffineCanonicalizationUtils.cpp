@@ -20,9 +20,7 @@
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "mlir-scf-affine-utils"
 

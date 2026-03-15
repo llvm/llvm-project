@@ -6,15 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace memref {
@@ -51,15 +48,15 @@ public:
       Value size;
       // Load dynamic sizes from the shape input, use constants for static dims.
       if (op.getType().isDynamicDim(i)) {
-        Value index = rewriter.create<arith::ConstantIndexOp>(loc, i);
-        size = rewriter.create<memref::LoadOp>(loc, op.getShape(), index);
+        Value index = arith::ConstantIndexOp::create(rewriter, loc, i);
+        size = memref::LoadOp::create(rewriter, loc, op.getShape(), index);
         if (!isa<IndexType>(size.getType()))
-          size = rewriter.create<arith::IndexCastOp>(
-              loc, rewriter.getIndexType(), size);
+          size = arith::IndexCastOp::create(rewriter, loc,
+                                            rewriter.getIndexType(), size);
         sizes[i] = size;
       } else {
         auto sizeAttr = rewriter.getIndexAttr(op.getType().getDimSize(i));
-        size = rewriter.create<arith::ConstantOp>(loc, sizeAttr);
+        size = arith::ConstantOp::create(rewriter, loc, sizeAttr);
         sizes[i] = sizeAttr;
       }
       if (stride)
@@ -69,10 +66,11 @@ public:
 
       if (i > 0) {
         if (stride) {
-          stride = rewriter.create<arith::MulIOp>(loc, stride, size);
+          stride = arith::MulIOp::create(rewriter, loc, stride, size);
         } else if (op.getType().isDynamicDim(i)) {
-          stride = rewriter.create<arith::MulIOp>(
-              loc, rewriter.create<arith::ConstantIndexOp>(loc, staticStride),
+          stride = arith::MulIOp::create(
+              rewriter, loc,
+              arith::ConstantIndexOp::create(rewriter, loc, staticStride),
               size);
         } else {
           staticStride *= op.getType().getDimSize(i);

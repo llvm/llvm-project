@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +21,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
+#include <utility>
 
 namespace llvm {
 class RecordKeeper;
@@ -36,46 +39,26 @@ std::string strfmt(const char *fmt, Parameters &&...parameters) {
   return llvm::formatv(fmt, std::forward<Parameters>(parameters)...).str();
 }
 
-// Simple RAII helper for defining ifdef-undef-endif scopes.
-class IfDefScope {
+// A helper RAII class to emit nested namespaces for a dialect.
+class DialectNamespaceEmitter {
 public:
-  IfDefScope(llvm::StringRef name, llvm::raw_ostream &os)
-      : name(name.str()), os(os) {
-    os << "#ifdef " << name << "\n"
-       << "#undef " << name << "\n\n";
-  }
-  ~IfDefScope() { os << "\n#endif  // " << name << "\n\n"; }
-
-private:
-  std::string name;
-  llvm::raw_ostream &os;
-};
-
-// A helper RAII class to emit nested namespaces for this op.
-class NamespaceEmitter {
-public:
-  NamespaceEmitter(raw_ostream &os, const Dialect &dialect) : os(os) {
+  DialectNamespaceEmitter(raw_ostream &os, const Dialect &dialect) {
     if (!dialect)
       return;
-    emitNamespaceStarts(os, dialect.getCppNamespace());
-  }
-  NamespaceEmitter(raw_ostream &os, StringRef cppNamespace) : os(os) {
-    emitNamespaceStarts(os, cppNamespace);
-  }
-
-  ~NamespaceEmitter() {
-    for (StringRef ns : llvm::reverse(namespaces))
-      os << "} // namespace " << ns << "\n";
+    nsEmitter.emplace(os, dialect.getCppNamespace());
   }
 
 private:
-  void emitNamespaceStarts(raw_ostream &os, StringRef cppNamespace) {
-    llvm::SplitString(cppNamespace, namespaces, "::");
-    for (StringRef ns : namespaces)
-      os << "namespace " << ns << " {\n";
-  }
-  raw_ostream &os;
-  SmallVector<StringRef, 2> namespaces;
+  std::optional<llvm::NamespaceEmitter> nsEmitter;
+};
+
+/// This class represents how an error stream string being constructed will be
+/// consumed.
+enum class ErrorStreamType {
+  // Inside a string that's streamed into an InflightDiagnostic.
+  InString,
+  // Inside a string inside an OpError.
+  InsideOpError,
 };
 
 /// This class deduplicates shared operation verification code by emitting
@@ -114,7 +97,7 @@ public:
   ///
   /// Constraints that do not meet the restriction that they can only reference
   /// `$_self` and `$_op` are not uniqued.
-  void emitOpConstraints(ArrayRef<const llvm::Record *> opDefs);
+  void emitOpConstraints();
 
   /// Unique all compatible type and attribute constraints from a pattern file
   /// and emit them at the top of the generated file.
@@ -218,7 +201,8 @@ private:
 
   /// A generic function to emit constraints
   void emitConstraints(const ConstraintMap &constraints, StringRef selfName,
-                       const char *codeTemplate);
+                       const char *codeTemplate,
+                       ErrorStreamType errorStreamType);
 
   /// Assign a unique name to a unique constraint.
   std::string getUniqueName(StringRef kind, unsigned index);
@@ -268,6 +252,18 @@ std::string stringify(T &&t) {
   return detail::stringifier<std::remove_reference_t<std::remove_const_t<T>>>::
       apply(std::forward<T>(t));
 }
+
+/// Helper to generate a C++ streaming error message from a given message.
+/// Message can contain '{{...}}' placeholders that are substituted with
+/// C-expressions via tgfmt. It would effectively convert:
+///   "failed to verify {{foo}}"
+/// into:
+///   "failed to verify " << bar
+/// where bar is the result of evaluating 'tgfmt("foo", &ctx)' at compile
+/// time.
+std::string buildErrorStreamingString(
+    StringRef message, const FmtContext &ctx,
+    ErrorStreamType errorStreamType = ErrorStreamType::InString);
 
 } // namespace tblgen
 } // namespace mlir

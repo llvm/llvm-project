@@ -26,8 +26,8 @@ module {
       // CHECK: %[[T1:.*]] = linalg.fill {{.*}} outs(%[[T0]]
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elemwise_unary ins(%[[T1]]
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%[[T1]]
+      %7 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -76,8 +76,8 @@ module {
       %4 = affine.min #map2(%arg3)[%arg0]
       %5 = tensor.extract_slice %o[%3] [%4] [1] : tensor<64xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elemwise_unary ins(%[[INIT_TENSOR]]
-      %7 = linalg.elemwise_unary ins(%0 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.exp ins(%[[INIT_TENSOR]]
+      %7 = linalg.exp ins(%0 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<64xf32>
       }
@@ -177,8 +177,8 @@ module {
       // CHECK: %[[T1:.*]] = linalg.fill {{.*}} outs(%[[T0]]
       %6 = tensor.extract_slice %arg1[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elemwise_unary {{.*}} outs(%[[T1]]
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.exp {{.*}} outs(%[[T1]]
+      %7 = linalg.exp ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -228,8 +228,8 @@ module {
       // CHECK: %[[T2:.*]] = linalg.fill {{.*}} outs(%[[T1]]
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T3:.*]] = linalg.elemwise_unary ins(%[[T2]] : tensor<?xf32>) outs(%[[T0]] : tensor<?xf32>)
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T3:.*]] = linalg.exp ins(%[[T2]] : tensor<?xf32>) outs(%[[T0]] : tensor<?xf32>)
+      %7 = linalg.exp ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -253,6 +253,40 @@ module {
 
 // -----
 
+#map = affine_map<(d0) -> (d0 * 2)>
+#map1 = affine_map<(d0) -> (d0 * 4)>
+module {
+  // CHECK-LABEL: func.func @fuse_tileable_op_no_dps
+  func.func @fuse_tileable_op_no_dps(%arg0: tensor<4x4x4xf32>, %arg1: tensor<4x4x4xf32>) -> tensor<4x4x4xf32> {
+    %0 = "test.tiling_no_dps_op"(%arg0, %arg1) : (tensor<4x4x4xf32>, tensor<4x4x4xf32>) -> tensor<4x4x4xf32>
+    %1 = tensor.empty() : tensor<4x4x4xf32>
+    // CHECK: scf.forall
+    %2 = scf.forall (%arg2, %arg3, %arg4) in (4, 2, 1) shared_outs(%arg5 = %1) -> (tensor<4x4x4xf32>) {
+      %3 = affine.apply #map(%arg3)
+      %4 = affine.apply #map1(%arg4)
+      // CHECK: "test.tiling_no_dps_op"
+      // CHECK: "test.unregistered_op"
+      %extracted_slice = tensor.extract_slice %0[%arg2, %3, %4] [1, 2, 4] [1, 1, 1] : tensor<4x4x4xf32> to tensor<1x2x4xf32>
+      %5 = "test.unregistered_op"(%extracted_slice, %extracted_slice) : (tensor<1x2x4xf32>, tensor<1x2x4xf32>) -> tensor<1x2x4xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %5 into %arg5[%arg2, %3, %4] [1, 2, 4] [1, 1, 1] : tensor<1x2x4xf32> into tensor<4x4x4xf32>
+      }
+    }
+    return %2 : tensor<4x4x4xf32>
+  }
+
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+      %op = transform.structured.match ops{["test.tiling_no_dps_op"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      %forall = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      %fused, %new_containing = transform.structured.fuse_into_containing_op %op into %forall : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}
+
+// -----
+
 module {
   // CHECK-LABEL: func.func @fuse_tileable_op_through_bbarg_inout_nested
   //  CHECK-SAME:   %[[ARG0:[0-9a-z]+]]: tensor<?x?x?xf32>
@@ -261,7 +295,7 @@ module {
     %c2 = arith.constant 2 : index
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
-    %0 = linalg.elemwise_unary {fun = #linalg.unary_fn<abs>} ins(%arg0 : tensor<?x?x?xf32>) outs(%arg1 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+    %0 = linalg.elementwise kind=#linalg.elementwise_kind<abs> ins(%arg0 : tensor<?x?x?xf32>) outs(%arg1 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
     %dim = tensor.dim %arg1, %c0 : tensor<?x?x?xf32>
     %dim_0 = tensor.dim %arg1, %c1 : tensor<?x?x?xf32>
     %dim_1 = tensor.dim %arg1, %c2 : tensor<?x?x?xf32>
@@ -272,12 +306,12 @@ module {
       %2 = scf.for %arg4 = %c0 to %dim_0 step %c1 iter_args(%arg5 = %arg3) -> (tensor<?x?x?xf32>) {
         %3 = scf.for %arg6 = %c0 to %dim_1 step %c1 iter_args(%arg7 = %arg5) -> (tensor<?x?x?xf32>) {
           // CHECK:  %[[EX1:.*]] = tensor.extract_slice %[[BBARG2]]{{.*}}: tensor<?x?x?xf32> to tensor<1x1x1xf32>
-          // CHECK:  linalg.elemwise_unary {fun = #linalg.unary_fn<abs>} ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX1]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
+          // CHECK:  linalg.elementwise kind=#linalg.elementwise_kind<abs> ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX1]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
           // CHECK:  %[[EX2:.*]] = tensor.extract_slice %[[BBARG2]]{{.*}} : tensor<?x?x?xf32> to tensor<1x1x1xf32>
-          // CHECK:  linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX2]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
+          // CHECK:  linalg.elementwise kind=#linalg.elementwise_kind<exp> ins({{.*}} : tensor<1x1x1xf32>) outs(%[[EX2]] : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
           %extracted_slice = tensor.extract_slice %0[%arg2, %arg4, %arg6] [1, 1, 1] [1, 1, 1] : tensor<?x?x?xf32> to tensor<1x1x1xf32>
           %extracted_slice_2 = tensor.extract_slice %arg7[%arg2, %arg4, %arg6] [1, 1, 1] [1, 1, 1] : tensor<?x?x?xf32> to tensor<1x1x1xf32>
-          %4 = linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins(%extracted_slice : tensor<1x1x1xf32>) outs(%extracted_slice_2 : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
+          %4 = linalg.elementwise kind=#linalg.elementwise_kind<exp> ins(%extracted_slice : tensor<1x1x1xf32>) outs(%extracted_slice_2 : tensor<1x1x1xf32>) -> tensor<1x1x1xf32>
           %inserted_slice = tensor.insert_slice %4 into %arg7[%arg2, %arg4, %arg6] [1, 1, 1] [1, 1, 1] : tensor<1x1x1xf32> into tensor<?x?x?xf32>
           scf.yield %inserted_slice : tensor<?x?x?xf32>
         }
@@ -290,7 +324,7 @@ module {
 
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-      %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      %0 = transform.structured.match ops{["linalg.elementwise"]} in %arg0 : (!transform.any_op) -> !transform.any_op
       %1 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.any_op
       %2:2 = transform.split_handle %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       %3:3 = transform.split_handle %1 : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
@@ -340,8 +374,8 @@ module {
       // CHECK: %[[T1:.*]]:2 = linalg.generic {{.*}} ins(%[[T0]]
       %6 = tensor.extract_slice %0#0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      // CHECK: %[[T2:.*]] = linalg.elemwise_unary ins(%[[T1]]#0
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      // CHECK: %[[T2:.*]] = linalg.exp ins(%[[T1]]#0
+      %7 = linalg.exp ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -376,8 +410,8 @@ module {
       %2 = tensor.extract_slice %0[%i][1][1] : tensor<2xf32> to tensor<1xf32>
       %3 = tensor.extract_slice %arg1[%i][1][1] : tensor<2xf32> to tensor<1xf32>
       // CHECK: %[[FUSED:.+]] = linalg.fill
-      // CHECK: elemwise_unary ins(%[[FUSED]]
-      %4 = linalg.elemwise_unary ins(%2 : tensor<1xf32>) outs(%3 : tensor<1xf32>) -> tensor<1xf32>
+      // CHECK: exp ins(%[[FUSED]]
+      %4 = linalg.exp ins(%2 : tensor<1xf32>) outs(%3 : tensor<1xf32>) -> tensor<1xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %4 into %arg1[%i][1][1] : tensor<1xf32> into tensor<2xf32>
       }
@@ -446,7 +480,7 @@ module {
       // CHECK: %[[T1:.*]]:2 = linalg.generic {{.*}}
       %6 = tensor.extract_slice %0#0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      %7 = linalg.exp ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T1]]#0 into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -515,7 +549,7 @@ module {
       // CHECK: %[[T1:.*]] = linalg.generic {{.*}}
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      %7 = linalg.exp ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T1]] into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -582,7 +616,7 @@ module {
       // CHECK: %[[T1:.*]] = linalg.generic {{.*}}
       %6 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      %7 = linalg.exp ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T1]] into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -658,7 +692,7 @@ module {
       // CHECK: %[[T2:.*]] = linalg.generic {{.*}}
       %7 = tensor.extract_slice %1[%4] [%5] [1] : tensor<?xf32> to tensor<?xf32>
 
-      %8 = linalg.elemwise_unary ins(%7 : tensor<?xf32>) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
+      %8 = linalg.exp ins(%7 : tensor<?xf32>) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         // CHECK: tensor.parallel_insert_slice %[[T2]] into %[[ARG7]][%[[I0]]] [%[[I1]]] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %8 into %o[%2] [%5] [1] : tensor<?xf32> into tensor<?xf32>

@@ -1,18 +1,14 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
+! Check for implicit data transfer of managed variable
+
 subroutine testr2(N1,N2)
   real(4), managed :: ai4(N1,N2)
   real(4), allocatable :: bRefi4(:)
 
   integer :: i1, i2
 
-  do i2 = 1, N2
-    do i1 = 1, N1
-      ai4(i1,i2) = i1 + N1*(i2-1)
-    enddo
-  enddo
-
-  allocate(bRefi4 (N1))
+  allocate(bRefi4(N1))
   do i1 = 1, N1
     bRefi4(i1) = (ai4(i1,1)+ai4(i1,N2))*N2/2
   enddo
@@ -20,8 +16,8 @@ subroutine testr2(N1,N2)
 
 end subroutine
 
-!CHECK-LABEL: func.func @_QPtestr2
-!CHECK: %[[ALLOC:.*]] = cuf.alloc !fir.array<?x?xf32>, %{{.*}}, %{{.*}} : index, index {bindc_name = "ai4", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} -> !fir.ref<!fir.array<?x?xf32>>
-!CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-!CHECK: %[[DEST:.*]] = hlfir.designate %[[DECLARE]]#0 (%{{.*}}, %{{.*}}) : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
-!CHECK: cuf.data_transfer %{{.*}}#0 to %[[DEST]] {transfer_kind = #cuf.cuda_transfer<host_device>} : !fir.ref<f32>, !fir.ref<f32>
+! CHECK-LABEL: func.func @_QPtestr2
+! CHECK:  %[[MANAGED:.*]]:2 = hlfir.declare %22(%23) {data_attr = #cuf.cuda<managed>, uniq_name = "_QFtestr2Eai4"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?x?xf32>, %16, %21 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x?xf32>>, !fir.heap<!fir.array<?x?xf32>>)
+! CHECK: cuf.data_transfer %[[MANAGED]]#1 to %[[TMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>

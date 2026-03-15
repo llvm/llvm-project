@@ -46,17 +46,17 @@ define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-NEXT:    s_mov_b64 exec, 0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0
+; GFX900-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX900-NEXT:  .LBB0_5: ; %bb6
 ; GFX900-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_cvt_pkrtz_f16_f32 v1, 0, v1
 ; GFX900-NEXT:    v_cvt_pkrtz_f16_f32 v0, v2, v0
-; GFX900-NEXT:    exp mrt0 off, off, off, off compr
+; GFX900-NEXT:    exp mrt0, off, off, off, off compr
 ; GFX900-NEXT:    s_endpgm
 ; GFX900-NEXT:  .LBB0_6:
 ; GFX900-NEXT:    s_mov_b64 exec, 0
-; GFX900-NEXT:    exp null off, off, off, off done vm
+; GFX900-NEXT:    exp null, off, off, off, off done vm
 ; GFX900-NEXT:    s_endpgm
 bb:
   %i = fcmp olt float %arg, 0.000000e+00
@@ -75,7 +75,7 @@ bb5:
 bb6:
   %i7 = phi float [ 0.000000e+00, %bb5 ], [ %i3, %bb1 ]
   %i8 = phi float [ 0.000000e+00, %bb5 ], [ 1.000000e+00, %bb1 ]
-  %i9 = phi float [ undef, %bb5 ], [ %i4, %bb1 ]
+  %i9 = phi float [ poison, %bb5 ], [ %i4, %bb1 ]
   %i10 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float 0.000000e+00, float %i7)
   %i11 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %i8, float %i9)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> %i10, <2 x half> %i11, i1 false, i1 false)

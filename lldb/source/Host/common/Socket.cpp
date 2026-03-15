@@ -313,8 +313,7 @@ Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
-  // TODO: On Windows, use WSAEventSelect
-  return m_socket;
+  return (IOObject::WaitableHandle)m_socket;
 }
 
 Status Socket::Read(void *buf, size_t &num_bytes) {
@@ -501,13 +500,13 @@ Socket::GetProtocolAndMode(llvm::StringRef scheme) {
   return llvm::StringSwitch<std::optional<ProtocolModePair>>(scheme)
       .Case("listen", ProtocolModePair{SocketProtocol::ProtocolTcp,
                                        SocketMode::ModeAccept})
-      .Cases("accept", "unix-accept",
+      .Cases({"accept", "unix-accept"},
              ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
                               SocketMode::ModeAccept})
       .Case("unix-abstract-accept",
             ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
                              SocketMode::ModeAccept})
-      .Cases("connect", "tcp-connect",
+      .Cases({"connect", "tcp-connect", "connection"},
              ProtocolModePair{SocketProtocol::ProtocolTcp,
                               SocketMode::ModeConnect})
       .Case("udp", ProtocolModePair{SocketProtocol::ProtocolTcp,

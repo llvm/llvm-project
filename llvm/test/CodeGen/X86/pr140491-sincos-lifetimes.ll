@@ -51,20 +51,20 @@ entry:
   %sincos = tail call { float, float } @llvm.sincos.f32(float %in)
   %sin = extractvalue { float, float } %sincos, 0
   %cos = extractvalue { float, float } %sincos, 1
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %computed)
+  call void @llvm.lifetime.start.p0(ptr nonnull %computed)
   store float %cos, ptr %computed, align 4
   call void @use_ptr(ptr nonnull %computed)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %computed)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %computed1)
+  call void @llvm.lifetime.end.p0(ptr nonnull %computed)
+  call void @llvm.lifetime.start.p0(ptr nonnull %computed1)
   %fneg_sin = fneg float %sin
   store float %fneg_sin, ptr %computed1, align 4
   call void @use_ptr(ptr nonnull %computed1)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %computed1)
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %computed3)
+  call void @llvm.lifetime.end.p0(ptr nonnull %computed1)
+  call void @llvm.lifetime.start.p0(ptr nonnull %computed3)
   %fneg_cos = fneg float %cos
   store float %fneg_cos, ptr %computed3, align 4
   call void @use_ptr(ptr nonnull %computed3)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %computed3)
+  call void @llvm.lifetime.end.p0(ptr nonnull %computed3)
   ret i32 0
 }
 

@@ -7,22 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/expm1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcExpm1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1f(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -40,7 +44,6 @@ TEST_F(LlvmLibcExpm1fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExpm1fTest, Overflow) {
-  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::expm1f(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -55,7 +58,6 @@ TEST_F(LlvmLibcExpm1fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExpm1fTest, Underflow) {
-  libc_errno = 0;
   EXPECT_FP_EQ(-1.0f, LIBC_NAMESPACE::expm1f(FPBits(0xff7fffffU).get_val()));
 
   float x = FPBits(0xc2cffff8U).get_val();
@@ -70,7 +72,6 @@ TEST_F(LlvmLibcExpm1fTest, Underflow) {
 TEST_F(LlvmLibcExpm1fTest, Borderline) {
   float x;
 
-  libc_errno = 0;
   x = FPBits(0x42affff8U).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                  LIBC_NAMESPACE::expm1f(x), 0.5);
@@ -98,7 +99,7 @@ TEST_F(LlvmLibcExpm1fTest, Borderline) {
 
   x = FPBits(0x3e35bec5U).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
-                                 LIBC_NAMESPACE::expm1f(x), 0.5);
+                                 LIBC_NAMESPACE::expm1f(x), TOLERANCE + 0.5);
   EXPECT_MATH_ERRNO(0);
 
   x = FPBits(0x942ed494U).get_val();
@@ -108,7 +109,7 @@ TEST_F(LlvmLibcExpm1fTest, Borderline) {
 
   x = FPBits(0xbdc1c6cbU).get_val();
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
-                                 LIBC_NAMESPACE::expm1f(x), 0.5);
+                                 LIBC_NAMESPACE::expm1f(x), TOLERANCE + 0.5);
   EXPECT_MATH_ERRNO(0);
 }
 

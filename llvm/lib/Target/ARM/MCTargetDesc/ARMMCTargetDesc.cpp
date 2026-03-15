@@ -152,12 +152,6 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
     ARMArchFeature += "+thumb-mode,+v4t";
   }
 
-  if (TT.isOSNaCl()) {
-    if (!ARMArchFeature.empty())
-      ARMArchFeature += ",";
-    ARMArchFeature += "+nacl-trap";
-  }
-
   if (TT.isOSWindows()) {
     if (!ARMArchFeature.empty())
       ARMArchFeature += ",";
@@ -604,7 +598,7 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
     break;
   }
 
-  // Eveluate the address depending on the addressing mode
+  // Evaluate the address depending on the addressing mode
   unsigned AddrMode = (TSFlags & ARMII::AddrModeMask);
   switch (AddrMode) {
   default:

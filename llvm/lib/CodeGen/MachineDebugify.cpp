@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -63,24 +62,9 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
   // which cover a wide range of lines can help stress the debug info passes:
   // if we can't do that, fall back to using the local variable which precedes
   // all the others.
-  Function *DbgValF = M.getFunction("llvm.dbg.value");
-  DbgValueInst *EarliestDVI = nullptr;
   DbgVariableRecord *EarliestDVR = nullptr;
   DenseMap<unsigned, DILocalVariable *> Line2Var;
   DIExpression *Expr = nullptr;
-  if (DbgValF) {
-    for (const Use &U : DbgValF->uses()) {
-      auto *DVI = dyn_cast<DbgValueInst>(U.getUser());
-      if (!DVI || DVI->getFunction() != &F)
-        continue;
-      unsigned Line = DVI->getDebugLoc().getLine();
-      assert(Line != 0 && "debugify should not insert line 0 locations");
-      Line2Var[Line] = DVI->getVariable();
-      if (!EarliestDVI || Line < EarliestDVI->getDebugLoc().getLine())
-        EarliestDVI = DVI;
-      Expr = DVI->getExpression();
-    }
-  }
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
@@ -102,7 +86,7 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
   // Do this by introducing debug uses of each register definition. If that is
   // not possible (e.g. we have a phi or a meta instruction), emit a constant.
   uint64_t NextImm = 0;
-  SmallSet<DILocalVariable *, 16> VarSet;
+  SmallPtrSet<DILocalVariable *, 16> VarSet;
   const MCInstrDesc &DbgValDesc = TII.get(TargetOpcode::DBG_VALUE);
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator FirstNonPHIIt = MBB.getFirstNonPHI();
@@ -125,8 +109,7 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       unsigned Line = MI.getDebugLoc().getLine();
       auto It = Line2Var.find(Line);
       if (It == Line2Var.end()) {
-        Line = EarliestDVI ? EarliestDVI->getDebugLoc().getLine()
-                           : EarliestDVR->getDebugLoc().getLine();
+        Line = EarliestDVR->getDebugLoc().getLine();
         It = Line2Var.find(Line);
         assert(It != Line2Var.end());
       }

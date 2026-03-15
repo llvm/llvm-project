@@ -9,7 +9,6 @@
 #ifndef FORTRAN_LOWER_INTRINSICCALL_H
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
-#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
@@ -19,9 +18,17 @@
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
+
+namespace Fortran {
+namespace lower {
+// TODO: remove the usage of AbstractConverter to avoid making IntrinsicCall.cpp
+// depend upon Lower/Evaluate and use a data structure to pass options to
+// IntrinsicLibrary.
+class AbstractConverter;
+} // namespace lower
+} // namespace Fortran
 
 namespace fir {
 
@@ -48,49 +55,6 @@ genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
-
-/// Enums used to templatize and share lowering of MIN and MAX.
-enum class Extremum { Min, Max };
-
-// There are different ways to deal with NaNs in MIN and MAX.
-// Known existing behaviors are listed below and can be selected for
-// f18 MIN/MAX implementation.
-enum class ExtremumBehavior {
-  // Note: the Signaling/quiet aspect of NaNs in the behaviors below are
-  // not described because there is no way to control/observe such aspect in
-  // MLIR/LLVM yet. The IEEE behaviors come with requirements regarding this
-  // aspect that are therefore currently not enforced. In the descriptions
-  // below, NaNs can be signaling or quite. Returned NaNs may be signaling
-  // if one of the input NaN was signaling but it cannot be guaranteed either.
-  // Existing compilers using an IEEE behavior (gfortran) also do not fulfill
-  // signaling/quiet requirements.
-  IeeeMinMaximumNumber,
-  // IEEE minimumNumber/maximumNumber behavior (754-2019, section 9.6):
-  // If one of the argument is and number and the other is NaN, return the
-  // number. If both arguements are NaN, return NaN.
-  // Compilers: gfortran.
-  IeeeMinMaximum,
-  // IEEE minimum/maximum behavior (754-2019, section 9.6):
-  // If one of the argument is NaN, return NaN.
-  MinMaxss,
-  // x86 minss/maxss behavior:
-  // If the second argument is a number and the other is NaN, return the number.
-  // In all other cases where at least one operand is NaN, return NaN.
-  // Compilers: xlf (only for MAX), ifort, pgfortran -nollvm, and nagfor.
-  PgfortranLlvm,
-  // "Opposite of" x86 minss/maxss behavior:
-  // If the first argument is a number and the other is NaN, return the
-  // number.
-  // In all other cases where at least one operand is NaN, return NaN.
-  // Compilers: xlf (only for MIN), and pgfortran (with llvm).
-  IeeeMinMaxNum
-  // IEEE minNum/maxNum behavior (754-2008, section 5.3.1):
-  // TODO: Not implemented.
-  // It is the only behavior where the signaling/quiet aspect of a NaN argument
-  // impacts if the result should be NaN or the argument that is a number.
-  // LLVM/MLIR do not provide ways to observe this aspect, so it is not
-  // possible to implement it without some target dependent runtime.
-};
 
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
@@ -174,6 +138,7 @@ struct IntrinsicLibrary {
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAcosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAcospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
                                 mlir::Value, mlir::Value)>
   fir::ExtendedValue genAdjustRtCall(mlir::Type,
@@ -186,23 +151,10 @@ struct IntrinsicLibrary {
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicCas(mlir::Type,
-                                  llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtomicDec(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicExch(mlir::Type,
-                                   llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genAtomicInc(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicMax(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicMin(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genAtomicSub(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  fir::ExtendedValue genAtomicXor(mlir::Type,
-                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAsinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtand(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -227,9 +179,6 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  template <const char *fctName, int extent>
-  fir::ExtendedValue genCUDALDXXFunc(mlir::Type,
-                                     llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCAssociatedCFunPtr(mlir::Type,
                                            llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCAssociatedCPtr(mlir::Type,
@@ -239,14 +188,21 @@ struct IntrinsicLibrary {
                             llvm::ArrayRef<mlir::Value> args);
   void genCFPointer(llvm::ArrayRef<fir::ExtendedValue>);
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCFStrPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genClock64(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCPtrCompare(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoMax(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoMin(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoSum(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genCospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genDsecnds(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
@@ -261,9 +217,12 @@ struct IntrinsicLibrary {
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genExtendsTypeOf(mlir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
-  template <Extremum, ExtremumBehavior>
+  template <bool isMax>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genFCString(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genFlush(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
   void genFree(mlir::ArrayRef<fir::ExtendedValue> args);
@@ -280,6 +239,7 @@ struct IntrinsicLibrary {
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genGetGID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genGetTeam(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genGetUID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genHostnm(std::optional<mlir::Type> resultType,
@@ -338,6 +298,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIparity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genIrand(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genIsContiguous(mlir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
   template <Fortran::runtime::io::Iostat value>
@@ -354,8 +316,6 @@ struct IntrinsicLibrary {
   mlir::Value genMalloc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <typename Shift>
   mlir::Value genMask(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genMatchAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genMatchAnySync(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMatmulTranspose(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
@@ -376,6 +336,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genNorm2(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genNumImages(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genParity(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genPerror(llvm::ArrayRef<fir::ExtendedValue>);
@@ -385,6 +347,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPutenv(std::optional<mlir::Type>,
                                llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRand(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
@@ -397,10 +361,13 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
                            llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genRtc(mlir::Type resultType, llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSameTypeAs(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSecnds(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genSecond(std::optional<mlir::Type>,
                                mlir::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSelectedCharKind(mlir::Type,
@@ -415,8 +382,10 @@ struct IntrinsicLibrary {
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
+  void genShowDescriptor(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSind(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genSinpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSizeOf(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
@@ -427,35 +396,28 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSignalSubroutine(llvm::ArrayRef<fir::ExtendedValue>);
   void genSleep(llvm::ArrayRef<fir::ExtendedValue>);
-  void genSyncThreads(llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genSyncThreadsAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsCount(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genSyncThreadsOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  void genSyncWarp(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSystem(std::optional<mlir::Type>,
                                mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genTanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genTeamNumber(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genTokenize(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTranspose(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genThisThreadBlock(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genThisWarp(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFenceBlock(llvm::ArrayRef<fir::ExtendedValue>);
-  void genThreadFenceSystem(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genThisImage(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnlink(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  template <mlir::NVVM::VoteSyncKind kind>
-  mlir::Value genVoteSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that

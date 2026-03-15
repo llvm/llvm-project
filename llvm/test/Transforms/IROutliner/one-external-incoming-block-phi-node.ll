@@ -33,10 +33,10 @@ block_6:
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B_CE_LOC:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[B_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[B_CE_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[B_CE_LOC]], i32 0)
 ; CHECK-NEXT:    [[B_CE_RELOAD:%.*]] = load i32, ptr [[B_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[B_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[B_CE_LOC]])
 ; CHECK-NEXT:    br label [[BLOCK_3:%.*]]
 ; CHECK:       block_3:
 ; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[B_CE_RELOAD]], [[ENTRY:%.*]] ]

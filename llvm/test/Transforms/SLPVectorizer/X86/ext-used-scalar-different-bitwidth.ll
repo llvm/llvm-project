@@ -8,15 +8,16 @@ define i32 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 152, ptr @f, align 4
 ; CHECK-NEXT:    [[AGG_TMP_SROA_0_0_COPYLOAD_I:%.*]] = load i32, ptr @f, align 4
-; CHECK-NEXT:    [[ADD_I_I:%.*]] = shl i32 [[AGG_TMP_SROA_0_0_COPYLOAD_I]], 24
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 poison, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080>, i32 [[ADD_I_I]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> <i32 poison, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080, i32 83886080>, i32 [[AGG_TMP_SROA_0_0_COPYLOAD_I]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <8 x i32> [[TMP3]], <i32 24, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> <i32 83886080, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i32> [[TMP1]], splat (i32 24)
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <8 x i32> [[TMP2]], <i32 66440127, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <2 x i32> <i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <2 x i32> [[TMP7]], <i32 33554431, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v2i1(<8 x i1> <i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <2 x i1> [[TMP8]], i64 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i1> <i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i1> [[TMP14]], <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <8 x i1> [[TMP9]], <8 x i32> zeroinitializer, <8 x i32> <i32 6, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl <8 x i32> [[TMP5]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i32> [[TMP13]] to <8 x i8>

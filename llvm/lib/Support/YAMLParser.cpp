@@ -59,7 +59,7 @@ using EncodingInfo = std::pair<UnicodeEncodingForm, unsigned>;
 ///          and how long the byte order mark is if one exists.
 static EncodingInfo getUnicodeEncoding(StringRef Input) {
   if (Input.empty())
-    return std::make_pair(UEF_Unknown, 0);
+    return {UEF_Unknown, 0};
 
   switch (uint8_t(Input[0])) {
   case 0x00:
@@ -67,44 +67,44 @@ static EncodingInfo getUnicodeEncoding(StringRef Input) {
       if (  Input[1] == 0
          && uint8_t(Input[2]) == 0xFE
          && uint8_t(Input[3]) == 0xFF)
-        return std::make_pair(UEF_UTF32_BE, 4);
+        return {UEF_UTF32_BE, 4};
       if (Input[1] == 0 && Input[2] == 0 && Input[3] != 0)
-        return std::make_pair(UEF_UTF32_BE, 0);
+        return {UEF_UTF32_BE, 0};
     }
 
     if (Input.size() >= 2 && Input[1] != 0)
-      return std::make_pair(UEF_UTF16_BE, 0);
-    return std::make_pair(UEF_Unknown, 0);
+      return {UEF_UTF16_BE, 0};
+    return {UEF_Unknown, 0};
   case 0xFF:
     if (  Input.size() >= 4
        && uint8_t(Input[1]) == 0xFE
        && Input[2] == 0
        && Input[3] == 0)
-      return std::make_pair(UEF_UTF32_LE, 4);
+      return {UEF_UTF32_LE, 4};
 
     if (Input.size() >= 2 && uint8_t(Input[1]) == 0xFE)
-      return std::make_pair(UEF_UTF16_LE, 2);
-    return std::make_pair(UEF_Unknown, 0);
+      return {UEF_UTF16_LE, 2};
+    return {UEF_Unknown, 0};
   case 0xFE:
     if (Input.size() >= 2 && uint8_t(Input[1]) == 0xFF)
-      return std::make_pair(UEF_UTF16_BE, 2);
-    return std::make_pair(UEF_Unknown, 0);
+      return {UEF_UTF16_BE, 2};
+    return {UEF_Unknown, 0};
   case 0xEF:
     if (  Input.size() >= 3
        && uint8_t(Input[1]) == 0xBB
        && uint8_t(Input[2]) == 0xBF)
-      return std::make_pair(UEF_UTF8, 3);
-    return std::make_pair(UEF_Unknown, 0);
+      return {UEF_UTF8, 3};
+    return {UEF_Unknown, 0};
   }
 
   // It could still be utf-32 or utf-16.
   if (Input.size() >= 4 && Input[1] == 0 && Input[2] == 0 && Input[3] == 0)
-    return std::make_pair(UEF_UTF32_LE, 0);
+    return {UEF_UTF32_LE, 0};
 
   if (Input.size() >= 2 && Input[1] == 0)
-    return std::make_pair(UEF_UTF16_LE, 0);
+    return {UEF_UTF16_LE, 0};
 
-  return std::make_pair(UEF_UTF8, 0);
+  return {UEF_UTF8, 0};
 }
 
 /// Pin the vtables to this file.
@@ -199,7 +199,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   // 1 byte: [0x00, 0x7f]
   // Bit pattern: 0xxxxxxx
   if (Position < End && (*Position & 0x80) == 0) {
-    return std::make_pair(*Position, 1);
+    return {*Position, 1};
   }
   // 2 bytes: [0x80, 0x7ff]
   // Bit pattern: 110xxxxx 10xxxxxx
@@ -208,7 +208,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
     uint32_t codepoint = ((*Position & 0x1F) << 6) |
                           (*(Position + 1) & 0x3F);
     if (codepoint >= 0x80)
-      return std::make_pair(codepoint, 2);
+      return {codepoint, 2};
   }
   // 3 bytes: [0x8000, 0xffff]
   // Bit pattern: 1110xxxx 10xxxxxx 10xxxxxx
@@ -222,7 +222,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
     // they are high / low surrogate halves used by UTF-16.
     if (codepoint >= 0x800 &&
         (codepoint < 0xD800 || codepoint > 0xDFFF))
-      return std::make_pair(codepoint, 3);
+      return {codepoint, 3};
   }
   // 4 bytes: [0x10000, 0x10FFFF]
   // Bit pattern: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
@@ -235,9 +235,9 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
                          ((*(Position + 2) & 0x3F) << 6) |
                           (*(Position + 3) & 0x3F);
     if (codepoint >= 0x10000 && codepoint <= 0x10FFFF)
-      return std::make_pair(codepoint, 4);
+      return {codepoint, 4};
   }
-  return std::make_pair(0, 0);
+  return {0, 0};
 }
 
 namespace llvm {

@@ -40,6 +40,9 @@ struct DisableLIRP {
 
   /// When true, Wcslen is disabled.
   static bool Wcslen;
+
+  /// When true, HashRecognize is disabled.
+  static bool HashRecognize;
 };
 
 /// Performs Loop Idiom Recognize Pass.

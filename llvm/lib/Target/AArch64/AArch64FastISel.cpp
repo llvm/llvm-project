@@ -16,10 +16,10 @@
 #include "AArch64CallingConvention.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -81,10 +81,7 @@ namespace {
 class AArch64FastISel final : public FastISel {
   class Address {
   public:
-    using BaseKind = enum {
-      RegBase,
-      FrameIndexBase
-    };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -214,7 +211,7 @@ private:
                          bool WantResult = true);
 
   // Emit functions.
-  bool emitCompareAndBranch(const BranchInst *BI);
+  bool emitCompareAndBranch(const CondBrInst *BI);
   bool emitCmp(const Value *LHS, const Value *RHS, bool IsZExt);
   bool emitICmp(MVT RetVT, const Value *LHS, const Value *RHS, bool IsZExt);
   bool emitICmp_ri(MVT RetVT, Register LHSReg, uint64_t Imm);
@@ -267,7 +264,7 @@ private:
 private:
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC) const;
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
-                       unsigned &NumBytes);
+                       SmallVectorImpl<Type *> &OrigTys, unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, unsigned NumBytes);
 
 public:
@@ -277,8 +274,10 @@ public:
   Register fastMaterializeFloatZero(const ConstantFP *CF) override;
 
   explicit AArch64FastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                           const TargetLibraryInfo *LibInfo,
+                           const LibcallLoweringInfo *libcallLowering)
+      : FastISel(FuncInfo, LibInfo, libcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<AArch64Subtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -485,7 +484,6 @@ Register AArch64FastISel::materializeGV(const GlobalValue *GV) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::SUBREG_TO_REG))
         .addDef(Result64)
-        .addImm(0)
         .addReg(ResultReg, RegState::Kill)
         .addImm(AArch64::sub_32);
     return Result64;
@@ -1874,7 +1872,6 @@ Register AArch64FastISel::emitLoad(MVT VT, MVT RetVT, Address Addr,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addImm(0)
         .addReg(ResultReg, getKillRegState(true))
         .addImm(AArch64::sub_32);
     ResultReg = Reg64;
@@ -2254,7 +2251,7 @@ static AArch64CC::CondCode getCompareCC(CmpInst::Predicate Pred) {
 }
 
 /// Try to emit a combined compare-and-branch instruction.
-bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
+bool AArch64FastISel::emitCompareAndBranch(const CondBrInst *BI) {
   // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z instructions
   // will not be produced, as they are conditional branch instructions that do
   // not set flags.
@@ -2380,12 +2377,7 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
 }
 
 bool AArch64FastISel::selectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
-  if (BI->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.getMBB(BI->getSuccessor(0));
-    fastEmitBranch(MSucc, BI->getDebugLoc());
-    return true;
-  }
+  const CondBrInst *BI = cast<CondBrInst>(I);
 
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
@@ -3011,11 +3003,13 @@ bool AArch64FastISel::fastLowerArguments() {
 
 bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
                                       SmallVectorImpl<MVT> &OutVTs,
+                                      SmallVectorImpl<Type *> &OrigTys,
                                       unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, OrigTys,
+                             CCAssignFnForCall(CC));
 
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
@@ -3194,6 +3188,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Set up the argument vectors.
   SmallVector<MVT, 16> OutVTs;
+  SmallVector<Type *, 16> OrigTys;
   OutVTs.reserve(CLI.OutVals.size());
 
   for (auto *Val : CLI.OutVals) {
@@ -3207,6 +3202,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       return false;
 
     OutVTs.push_back(VT);
+    OrigTys.push_back(Val->getType());
   }
 
   Address Addr;
@@ -3222,7 +3218,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Handle the arguments now that we've gotten them.
   unsigned NumBytes;
-  if (!processCallArgs(CLI, OutVTs, NumBytes))
+  if (!processCallArgs(CLI, OutVTs, OrigTys, NumBytes))
     return false;
 
   const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
@@ -3574,17 +3570,19 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Args.reserve(II->arg_size());
 
     // Populate the argument list.
-    for (auto &Arg : II->args()) {
-      ArgListEntry Entry;
-      Entry.Val = Arg;
-      Entry.Ty = Arg->getType();
-      Args.push_back(Entry);
-    }
+    for (auto &Arg : II->args())
+      Args.emplace_back(Arg);
 
     CallLoweringInfo CLI;
     MCContext &Ctx = MF->getContext();
-    CLI.setCallee(DL, Ctx, TLI.getLibcallCallingConv(LC), II->getType(),
-                  TLI.getLibcallName(LC), std::move(Args));
+
+    RTLIB::LibcallImpl LCImpl = LibcallLowering->getLibcallImpl(LC);
+    if (LCImpl == RTLIB::Unsupported)
+      return false;
+
+    CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+    StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+    CLI.setCallee(DL, Ctx, CC, II->getType(), FuncName, std::move(Args));
     if (!lowerCallTo(CLI))
       return false;
     updateValueMap(II, CLI.ResultReg);
@@ -4026,7 +4024,6 @@ Register AArch64FastISel::emiti1Ext(Register SrcReg, MVT DestVT, bool IsZExt) {
       Register Reg64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
               TII.get(AArch64::SUBREG_TO_REG), Reg64)
-          .addImm(0)
           .addReg(ResultReg)
           .addImm(AArch64::sub_32);
       ResultReg = Reg64;
@@ -4173,7 +4170,6 @@ Register AArch64FastISel::emitLSL_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4290,7 +4286,6 @@ Register AArch64FastISel::emitLSR_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4396,7 +4391,6 @@ Register AArch64FastISel::emitASR_ri(MVT RetVT, MVT SrcVT, Register Op0,
     Register TmpReg = MRI.createVirtualRegister(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), TmpReg)
-        .addImm(0)
         .addReg(Op0)
         .addImm(AArch64::sub_32);
     Op0 = TmpReg;
@@ -4454,7 +4448,6 @@ Register AArch64FastISel::emitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     Register Src64 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Src64)
-        .addImm(0)
         .addReg(SrcReg)
         .addImm(AArch64::sub_32);
     SrcReg = Src64;
@@ -4551,7 +4544,6 @@ bool AArch64FastISel::optimizeIntExtLoad(const Instruction *I, MVT RetVT,
     Register Reg64 = createResultReg(&AArch64::GPR64RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(AArch64::SUBREG_TO_REG), Reg64)
-        .addImm(0)
         .addReg(Reg, getKillRegState(true))
         .addImm(AArch64::sub_32);
     Reg = Reg64;
@@ -4594,7 +4586,6 @@ bool AArch64FastISel::selectIntExt(const Instruction *I) {
         Register ResultReg = createResultReg(&AArch64::GPR64RegClass);
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(AArch64::SUBREG_TO_REG), ResultReg)
-            .addImm(0)
             .addReg(SrcReg)
             .addImm(AArch64::sub_32);
         SrcReg = ResultReg;
@@ -4854,33 +4845,24 @@ bool AArch64FastISel::selectFRem(const Instruction *I) {
   if (!isTypeLegal(I->getType(), RetVT))
     return false;
 
-  RTLIB::Libcall LC;
-  switch (RetVT.SimpleTy) {
-  default:
+  RTLIB::LibcallImpl LCImpl =
+      LibcallLowering->getLibcallImpl(RTLIB::getREM(RetVT));
+  if (LCImpl == RTLIB::Unsupported)
     return false;
-  case MVT::f32:
-    LC = RTLIB::REM_F32;
-    break;
-  case MVT::f64:
-    LC = RTLIB::REM_F64;
-    break;
-  }
 
   ArgListTy Args;
   Args.reserve(I->getNumOperands());
 
   // Populate the argument list.
-  for (auto &Arg : I->operands()) {
-    ArgListEntry Entry;
-    Entry.Val = Arg;
-    Entry.Ty = Arg->getType();
-    Args.push_back(Entry);
-  }
+  for (auto &Arg : I->operands())
+    Args.emplace_back(Arg);
 
   CallLoweringInfo CLI;
   MCContext &Ctx = MF->getContext();
-  CLI.setCallee(DL, Ctx, TLI.getLibcallCallingConv(LC), I->getType(),
-                TLI.getLibcallName(LC), std::move(Args));
+  CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+  StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+
+  CLI.setCallee(DL, Ctx, CC, I->getType(), FuncName, std::move(Args));
   if (!lowerCallTo(CLI))
     return false;
   updateValueMap(I, CLI.ResultReg);
@@ -5141,7 +5123,7 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
   case Instruction::Or:
   case Instruction::Xor:
     return selectLogicalOp(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return selectBranch(I);
   case Instruction::IndirectBr:
     return selectIndirectBr(I);
@@ -5196,7 +5178,8 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
 }
 
 FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                        const TargetLibraryInfo *LibInfo) {
+                                  const TargetLibraryInfo *LibInfo,
+                                  const LibcallLoweringInfo *LibcallLowering) {
 
   SMEAttrs CallerAttrs =
       FuncInfo.MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
@@ -5205,5 +5188,5 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
       CallerAttrs.hasStreamingCompatibleInterface() ||
       CallerAttrs.hasAgnosticZAInterface())
     return nullptr;
-  return new AArch64FastISel(FuncInfo, LibInfo);
+  return new AArch64FastISel(FuncInfo, LibInfo, LibcallLowering);
 }

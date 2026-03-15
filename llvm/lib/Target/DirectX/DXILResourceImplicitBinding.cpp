@@ -111,8 +111,7 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
          RegSlotOp,                /* register slot */
          IB.Call->getOperand(2),   /* size */
          IB.Call->getOperand(3),   /* index */
-         IB.Call->getOperand(4),   /* non-uniform flag */
-         IB.Call->getOperand(5)}); /* name */
+         IB.Call->getOperand(4)}); /* name */
     IB.Call->replaceAllUsesWith(NewCall);
     IB.Call->eraseFromParent();
     Changed = true;
