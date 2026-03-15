@@ -146,9 +146,7 @@ inline succ_iterator succ_begin(Instruction *I) {
 inline const_succ_iterator succ_begin(const Instruction *I) {
   return I->successors().begin();
 }
-inline succ_iterator succ_end(Instruction *I) {
-  return I->successors().end();
-}
+inline succ_iterator succ_end(Instruction *I) { return I->successors().end(); }
 inline const_succ_iterator succ_end(const Instruction *I) {
   return I->successors().end();
 }
@@ -158,9 +156,7 @@ inline bool succ_empty(const Instruction *I) {
 inline unsigned succ_size(const Instruction *I) {
   return std::distance(succ_begin(I), succ_end(I));
 }
-inline succ_range successors(Instruction *I) {
-  return I->successors();
-}
+inline succ_range successors(Instruction *I) { return I->successors(); }
 inline const_succ_range successors(const Instruction *I) {
   return I->successors();
 }
