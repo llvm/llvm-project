@@ -27,12 +27,14 @@
 int main(int, char**) {
 #if !defined(__ANDROID__) || (defined(__ANDROID__) && __ANDROID_API__ >= 26)
   auto check_env = []() {
-#  if defined(__ANDROID__)
-    constexpr std::text_encoding::id expected_id = std::text_encoding::UTF8;
-#  elif defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
+#  if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
     constexpr std::text_encoding::id expected_id = std::text_encoding::ASCII;
+#  elif defined(__ANDROID__)
+    constexpr std::text_encoding::id expected_id = std::text_encoding::UTF8;
 #  elif defined(_WIN32)
     constexpr std::text_encoding::id expected_id = std::text_encoding::windows1252;
+#  elif defined(_AIX)
+    constexpr std::text_encoding::id expected_id = std::text_encoding::ISOLatin1;
 #  else
     constexpr std::text_encoding::id expected_id = std::text_encoding::unknown;
 #  endif
