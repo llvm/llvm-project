@@ -111,7 +111,7 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
                                 POLY_COEFFS[5], POLY_COEFFS[6], POLY_COEFFS[7]);
   };
 
- // Case 1: |x| <= 0.5 - Direct polynomial evaluation
+  // Case 1: |x| <= 0.5 - Direct polynomial evaluation
   if (LIBC_LIKELY(x_abs <= 0.5)) {
 
     if (LIBC_UNLIKELY(xbits.is_zero()))
