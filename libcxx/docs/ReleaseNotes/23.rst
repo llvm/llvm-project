@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 
 - P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+- P3008R6: Atomic floating-point min/max (`Github <https://github.com/llvm/llvm-project/issues/148168>`__)
 
 Improvements and New Features
 -----------------------------
