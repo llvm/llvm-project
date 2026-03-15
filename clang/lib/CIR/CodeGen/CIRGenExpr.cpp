@@ -218,7 +218,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
   // Unary &
   if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
-    // TODO(cir): maybe we should use cir.unary for pointers here instead.
+    // TODO(cir): maybe we should use a CIR unary op for pointers here instead.
     if (uo->getOpcode() == UO_AddrOf) {
       LValue lv = emitLValue(uo->getSubExpr());
       if (baseInfo)
@@ -1063,17 +1063,14 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_PreInc:
   case UO_PreDec: {
-    cir::UnaryOpKind kind =
-        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
     LValue lv = emitLValue(e->getSubExpr());
 
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
 
-    if (e->getType()->isAnyComplexType()) {
-      emitComplexPrePostIncDec(e, lv, kind, /*isPre=*/true);
-    } else {
-      emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
-    }
+    if (e->getType()->isAnyComplexType())
+      emitComplexPrePostIncDec(e, lv);
+    else
+      emitScalarPrePostIncDec(e, lv);
 
     return lv;
   }

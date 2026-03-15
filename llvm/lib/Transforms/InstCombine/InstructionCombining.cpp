@@ -6145,11 +6145,11 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
 
 void InstCombiner::computeBackEdges() {
   // Collect backedges.
-  SmallPtrSet<BasicBlock *, 16> Visited;
+  SmallVector<bool> Visited(F.getMaxBlockNumber());
   for (BasicBlock *BB : RPOT) {
-    Visited.insert(BB);
+    Visited[BB->getNumber()] = true;
     for (BasicBlock *Succ : successors(BB))
-      if (Visited.contains(Succ))
+      if (Visited[Succ->getNumber()])
         BackEdges.insert({BB, Succ});
   }
   ComputedBackEdges = true;

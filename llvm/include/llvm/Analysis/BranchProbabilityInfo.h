@@ -123,8 +123,7 @@ public:
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
       : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
-        LastF(Arg.LastF),
-        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {
+        LastF(Arg.LastF) {
     for (auto &Handle : Handles)
       Handle.setBPI(this);
   }
@@ -136,7 +135,6 @@ public:
     releaseMemory();
     Handles = std::move(RHS.Handles);
     Probs = std::move(RHS.Probs);
-    EstimatedBlockWeight = std::move(RHS.EstimatedBlockWeight);
     for (auto &Handle : Handles)
       Handle.setBPI(this);
     return *this;
@@ -182,7 +180,6 @@ public:
                                              const BasicBlock *Src,
                                              const BasicBlock *Dst) const;
 
-public:
   /// Set the raw probabilities for all edges from the given block.
   ///
   /// This allows a pass to explicitly set edge probabilities for a block. It
@@ -213,69 +210,6 @@ public:
   /// Forget analysis results for the given basic block.
   LLVM_ABI void eraseBlock(const BasicBlock *BB);
 
-  // Data structure to track SCCs for handling irreducible loops.
-  class SccInfo {
-    // Enum of types to classify basic blocks in SCC. Basic block belonging to
-    // SCC is 'Inner' until it is either 'Header' or 'Exiting'. Note that a
-    // basic block can be 'Header' and 'Exiting' at the same time.
-    enum SccBlockType {
-      Inner = 0x0,
-      Header = 0x1,
-      Exiting = 0x2,
-    };
-    // Map of basic blocks to SCC IDs they belong to. If basic block doesn't
-    // belong to any SCC it is not in the map.
-    using SccMap = DenseMap<const BasicBlock *, int>;
-    // Each basic block in SCC is attributed with one or several types from
-    // SccBlockType. Map value has uint32_t type (instead of SccBlockType)
-    // since basic block may be for example "Header" and "Exiting" at the same
-    // time and we need to be able to keep more than one value from
-    // SccBlockType.
-    using SccBlockTypeMap = DenseMap<const BasicBlock *, uint32_t>;
-    // Vector containing classification of basic blocks for all  SCCs where i'th
-    // vector element corresponds to SCC with ID equal to i.
-    using SccBlockTypeMaps = std::vector<SccBlockTypeMap>;
-
-    SccMap SccNums;
-    SccBlockTypeMaps SccBlocks;
-
-  public:
-    LLVM_ABI explicit SccInfo(const Function &F);
-
-    /// If \p BB belongs to some SCC then ID of that SCC is returned, otherwise
-    /// -1 is returned. If \p BB belongs to more than one SCC at the same time
-    /// result is undefined.
-    LLVM_ABI int getSCCNum(const BasicBlock *BB) const;
-    /// Returns true if \p BB is a 'header' block in SCC with \p SccNum ID,
-    /// false otherwise.
-    bool isSCCHeader(const BasicBlock *BB, int SccNum) const {
-      return getSccBlockType(BB, SccNum) & Header;
-    }
-    /// Returns true if \p BB is an 'exiting' block in SCC with \p SccNum ID,
-    /// false otherwise.
-    bool isSCCExitingBlock(const BasicBlock *BB, int SccNum) const {
-      return getSccBlockType(BB, SccNum) & Exiting;
-    }
-    /// Fills in \p Enters vector with all such blocks that don't belong to
-    /// SCC with \p SccNum ID but there is an edge to a block belonging to the
-    /// SCC.
-    LLVM_ABI void
-    getSccEnterBlocks(int SccNum, SmallVectorImpl<BasicBlock *> &Enters) const;
-    /// Fills in \p Exits vector with all such blocks that don't belong to
-    /// SCC with \p SccNum ID but there is an edge from a block belonging to the
-    /// SCC.
-    LLVM_ABI void getSccExitBlocks(int SccNum,
-                                   SmallVectorImpl<BasicBlock *> &Exits) const;
-
-  private:
-    /// Returns \p BB's type according to classification given by SccBlockType
-    /// enum. Please note that \p BB must belong to SSC with \p SccNum ID.
-    LLVM_ABI uint32_t getSccBlockType(const BasicBlock *BB, int SccNum) const;
-    /// Calculates \p BB's type and stores it in internal data structures for
-    /// future use. Please note that \p BB must belong to SSC with \p SccNum ID.
-    void calculateSccBlockType(const BasicBlock *BB, int SccNum);
-  };
-
 private:
   // We need to store CallbackVH's in order to correctly handle basic block
   // removal.
@@ -294,35 +228,6 @@ private:
         : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
   };
 
-  /// Pair of Loop and SCC ID number. Used to unify handling of normal and
-  /// SCC based loop representations.
-  using LoopData = std::pair<Loop *, int>;
-  /// Helper class to keep basic block along with its loop data information.
-  class LoopBlock {
-  public:
-    LLVM_ABI explicit LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
-                                const SccInfo &SccI);
-
-    const BasicBlock *getBlock() const { return BB; }
-    BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
-    LoopData getLoopData() const { return LD; }
-    Loop *getLoop() const { return LD.first; }
-    int getSccNum() const { return LD.second; }
-
-    bool belongsToLoop() const { return getLoop() || getSccNum() != -1; }
-    bool belongsToSameLoop(const LoopBlock &LB) const {
-      return (LB.getLoop() && getLoop() == LB.getLoop()) ||
-             (LB.getSccNum() != -1 && getSccNum() == LB.getSccNum());
-    }
-
-  private:
-    const BasicBlock *const BB = nullptr;
-    LoopData LD = {nullptr, -1};
-  };
-
-  // Pair of LoopBlocks representing an edge from first to second block.
-  using LoopEdge = std::pair<const LoopBlock &, const LoopBlock &>;
-
   DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value*>> Handles;
 
   // Since we allow duplicate edges from one basic block to another, we use
@@ -333,94 +238,6 @@ private:
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;
-
-  const LoopInfo *LI = nullptr;
-
-  /// Keeps information about all SCCs in a function.
-  std::unique_ptr<const SccInfo> SccI;
-
-  /// Keeps mapping of a basic block to its estimated weight.
-  SmallDenseMap<const BasicBlock *, uint32_t> EstimatedBlockWeight;
-
-  /// Keeps mapping of a loop to estimated weight to enter the loop.
-  SmallDenseMap<LoopData, uint32_t> EstimatedLoopWeight;
-
-  /// Helper to construct LoopBlock for \p BB.
-  LoopBlock getLoopBlock(const BasicBlock *BB) const {
-    return LoopBlock(BB, *LI, *SccI);
-  }
-
-  /// Returns true if destination block belongs to some loop and source block is
-  /// either doesn't belong to any loop or belongs to a loop which is not inner
-  /// relative to the destination block.
-  bool isLoopEnteringEdge(const LoopEdge &Edge) const;
-  /// Returns true if source block belongs to some loop and destination block is
-  /// either doesn't belong to any loop or belongs to a loop which is not inner
-  /// relative to the source block.
-  bool isLoopExitingEdge(const LoopEdge &Edge) const;
-  /// Returns true if \p Edge is either enters to or exits from some loop, false
-  /// in all other cases.
-  bool isLoopEnteringExitingEdge(const LoopEdge &Edge) const;
-  /// Returns true if source and destination blocks belongs to the same loop and
-  /// destination block is loop header.
-  bool isLoopBackEdge(const LoopEdge &Edge) const;
-  // Fills in \p Enters vector with all "enter" blocks to a loop \LB belongs to.
-  void getLoopEnterBlocks(const LoopBlock &LB,
-                          SmallVectorImpl<BasicBlock *> &Enters) const;
-  // Fills in \p Exits vector with all "exit" blocks from a loop \LB belongs to.
-  void getLoopExitBlocks(const LoopBlock &LB,
-                         SmallVectorImpl<BasicBlock *> &Exits) const;
-
-  /// Returns estimated weight for \p BB. std::nullopt if \p BB has no estimated
-  /// weight.
-  std::optional<uint32_t> getEstimatedBlockWeight(const BasicBlock *BB) const;
-
-  /// Returns estimated weight to enter \p L. In other words it is weight of
-  /// loop's header block not scaled by trip count. Returns std::nullopt if \p L
-  /// has no no estimated weight.
-  std::optional<uint32_t> getEstimatedLoopWeight(const LoopData &L) const;
-
-  /// Return estimated weight for \p Edge. Returns std::nullopt if estimated
-  /// weight is unknown.
-  std::optional<uint32_t> getEstimatedEdgeWeight(const LoopEdge &Edge) const;
-
-  /// Iterates over all edges leading from \p SrcBB to \p Successors and
-  /// returns maximum of all estimated weights. If at least one edge has unknown
-  /// estimated weight std::nullopt is returned.
-  template <class IterT>
-  std::optional<uint32_t>
-  getMaxEstimatedEdgeWeight(const LoopBlock &SrcBB,
-                            iterator_range<IterT> Successors) const;
-
-  /// If \p LoopBB has no estimated weight then set it to \p BBWeight and
-  /// return true. Otherwise \p BB's weight remains unchanged and false is
-  /// returned. In addition all blocks/loops that might need their weight to be
-  /// re-estimated are put into BlockWorkList/LoopWorkList.
-  bool updateEstimatedBlockWeight(LoopBlock &LoopBB, uint32_t BBWeight,
-                                  SmallVectorImpl<BasicBlock *> &BlockWorkList,
-                                  SmallVectorImpl<LoopBlock> &LoopWorkList);
-
-  /// Starting from \p LoopBB (including \p LoopBB itself) propagate \p BBWeight
-  /// up the domination tree.
-  void propagateEstimatedBlockWeight(const LoopBlock &LoopBB, DominatorTree *DT,
-                                     PostDominatorTree *PDT, uint32_t BBWeight,
-                                     SmallVectorImpl<BasicBlock *> &WorkList,
-                                     SmallVectorImpl<LoopBlock> &LoopWorkList);
-
-  /// Returns block's weight encoded in the IR.
-  std::optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
-
-  // Computes estimated weights for all blocks in \p F.
-  void estimateBlockWeights(const Function &F, DominatorTree *DT,
-                            PostDominatorTree *PDT);
-
-  /// Based on computed weights by \p computeEstimatedBlockWeight set
-  /// probabilities on branches.
-  bool calcEstimatedHeuristics(const BasicBlock *BB);
-  bool calcMetadataWeights(const BasicBlock *BB);
-  bool calcPointerHeuristics(const BasicBlock *BB);
-  bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
-  bool calcFloatingPointHeuristics(const BasicBlock *BB);
 };
 
 /// Analysis pass which computes \c BranchProbabilityInfo.

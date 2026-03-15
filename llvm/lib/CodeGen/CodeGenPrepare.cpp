@@ -313,8 +313,8 @@ class CodeGenPrepare {
   const BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
   LoopInfo *LI = nullptr;
-  std::unique_ptr<BlockFrequencyInfo> BFI;
-  std::unique_ptr<BranchProbabilityInfo> BPI;
+  BlockFrequencyInfo *BFI;
+  BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI = nullptr;
 
   /// As we scan instructions optimizing them, this is the next instruction
@@ -384,8 +384,6 @@ public:
     InsertedInsts.clear();
     PromotedInsts.clear();
     FreshBBs.clear();
-    BPI.reset();
-    BFI.reset();
   }
 
   bool run(Function &F, FunctionAnalysisManager &AM);
@@ -498,6 +496,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<BranchProbabilityInfoWrapperPass>();
+    AU.addRequired<BlockFrequencyInfoWrapperPass>();
     AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   }
 };
@@ -518,8 +518,8 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   CGP.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   CGP.TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   CGP.LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  CGP.BPI.reset(new BranchProbabilityInfo(F, *CGP.LI));
-  CGP.BFI.reset(new BlockFrequencyInfo(F, *CGP.BPI, *CGP.LI));
+  CGP.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+  CGP.BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
   CGP.PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   auto BBSPRWP =
       getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
@@ -565,8 +565,8 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   TLInfo = &AM.getResult<TargetLibraryAnalysis>(F);
   TTI = &AM.getResult<TargetIRAnalysis>(F);
   LI = &AM.getResult<LoopAnalysis>(F);
-  BPI.reset(new BranchProbabilityInfo(F, *LI));
-  BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
+  BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
+  BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   BBSectionsProfileReader =
@@ -611,7 +611,7 @@ bool CodeGenPrepare::_run(Function &F) {
       // bypassSlowDivision may create new BBs, but we don't want to reapply the
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
-      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
+      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
         EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
       BB = Next;
     }
@@ -2694,7 +2694,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
   // ensure that we can fold all uses of a potential addressing computation
   // into their uses.  TODO: generalize this to work over profiling data
   if (CI->hasFnAttr(Attribute::Cold) &&
-      !llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
+      !llvm::shouldOptimizeForSize(BB, PSI, BFI))
     for (auto &Arg : CI->args()) {
       if (!Arg->getType()->isPointerTy())
         continue;
@@ -5893,7 +5893,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
         V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *LI, getDTFn,
         *TRI, InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
-        BFI.get());
+        BFI);
 
     GetElementPtrInst *GEP = LargeOffsetGEP.first;
     if (GEP && !NewGEPBases.count(GEP)) {
@@ -7734,7 +7734,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
 
   if (TLI->isSelectSupported(SelectKind) &&
       (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) ||
-       llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI.get())))
+       llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI)))
     return false;
 
   // The DominatorTree needs to be rebuilt by any consumers after this

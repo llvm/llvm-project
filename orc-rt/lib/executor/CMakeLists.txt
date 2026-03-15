@@ -2,8 +2,8 @@ set(files
   AllocAction.cpp
   Error.cpp
   QueueingTaskDispatcher.cpp
-  ResourceManager.cpp
   RTTI.cpp
+  Service.cpp
   Session.cpp
   SimpleNativeMemoryMap.cpp
   TaskDispatcher.cpp

@@ -35,40 +35,49 @@ static cl::opt<unsigned> DefaultMaxBBsToExplore(
 void llvm::FindFunctionBackedges(const Function &F,
      SmallVectorImpl<std::pair<const BasicBlock*,const BasicBlock*> > &Result) {
   const BasicBlock *BB = &F.getEntryBlock();
-  if (succ_empty(BB))
-    return;
 
-  SmallPtrSet<const BasicBlock*, 8> Visited;
-  SmallVector<std::pair<const BasicBlock *, const_succ_iterator>, 8> VisitStack;
-  SmallPtrSet<const BasicBlock*, 8> InStack;
+  // In the DFS traversal, we maintain three states: unvisited, visited in the
+  // past, and visited and currently in the DFS stack. If we have an edge to a
+  // block in the stack, we have found a backedge.
+  enum VisitState : uint8_t { Unvisited = 0, Visited = 1, InStack = 2 };
+  SmallVector<VisitState> BlockState(F.getMaxBlockNumber(), Unvisited);
+  struct StackEntry {
+    const BasicBlock *BB;
+    const_succ_iterator SuccIt;
+    const_succ_iterator SuccEnd;
 
-  Visited.insert(BB);
-  VisitStack.push_back(std::make_pair(BB, succ_begin(BB)));
-  InStack.insert(BB);
+    StackEntry(const BasicBlock *BB)
+        : BB(BB), SuccIt(nullptr), SuccEnd(nullptr) {
+      auto Succs = successors(BB);
+      SuccIt = Succs.begin();
+      SuccEnd = Succs.end();
+    }
+  };
+  SmallVector<StackEntry, 8> VisitStack;
+
+  BlockState[BB->getNumber()] = InStack;
+  VisitStack.emplace_back(BB);
   do {
-    std::pair<const BasicBlock *, const_succ_iterator> &Top = VisitStack.back();
-    const BasicBlock *ParentBB = Top.first;
-    const_succ_iterator &I = Top.second;
-
+    StackEntry &Top = VisitStack.back();
     bool FoundNew = false;
-    while (I != succ_end(ParentBB)) {
-      BB = *I++;
-      if (Visited.insert(BB).second) {
+    while (Top.SuccIt != Top.SuccEnd) {
+      BB = *Top.SuccIt++;
+      if (BlockState[BB->getNumber()] == Unvisited) {
+        // Unvisited successor => go down one level.
+        BlockState[BB->getNumber()] = InStack;
+        VisitStack.emplace_back(BB);
         FoundNew = true;
         break;
       }
-      // Successor is in VisitStack, it's a back edge.
-      if (InStack.count(BB))
-        Result.push_back(std::make_pair(ParentBB, BB));
+      // Successor in VisitStack => backedge.
+      if (BlockState[BB->getNumber()] == InStack)
+        Result.emplace_back(Top.BB, BB);
     }
 
-    if (FoundNew) {
-      // Go down one level if there is a unvisited successor.
-      InStack.insert(BB);
-      VisitStack.push_back(std::make_pair(BB, succ_begin(BB)));
-    } else {
-      // Go up one level.
-      InStack.erase(VisitStack.pop_back_val().first);
+    // Go up one level.
+    if (!FoundNew) {
+      BlockState[Top.BB->getNumber()] = Visited;
+      VisitStack.pop_back();
     }
   } while (!VisitStack.empty());
 }

@@ -14227,14 +14227,18 @@ static SDValue lowerV4F32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                    Zeroable, Subtarget, DAG))
       return V;
 
-  if (Subtarget.hasSSE41() && !isSingleSHUFPSMask(Mask)) {
-    // Use INSERTPS if we can complete the shuffle efficiently.
-    if (SDValue V = lowerShuffleAsInsertPS(DL, V1, V2, Mask, Zeroable, DAG))
-      return V;
+  if (Subtarget.hasSSE41()) {
+    bool MatchesShufPS = isSingleSHUFPSMask(Mask);
 
-    if (SDValue BlendPerm =
-            lowerShuffleAsBlendAndPermute(DL, MVT::v4f32, V1, V2, Mask, DAG))
-      return BlendPerm;
+    // Use INSERTPS if we can complete the shuffle efficiently.
+    if (!MatchesShufPS || Zeroable == 0x3 || Zeroable == 0xC)
+      if (SDValue V = lowerShuffleAsInsertPS(DL, V1, V2, Mask, Zeroable, DAG))
+        return V;
+
+    if (!MatchesShufPS)
+      if (SDValue BlendPerm =
+              lowerShuffleAsBlendAndPermute(DL, MVT::v4f32, V1, V2, Mask, DAG))
+        return BlendPerm;
   }
 
   // Use low/high mov instructions. These are only valid in SSE1 because
@@ -45823,6 +45827,14 @@ bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,
   case X86ISD::VBROADCAST_LOAD:
     UndefElts = APInt::getZero(NumElts);
     return true;
+  case X86ISD::VSHL:
+  case X86ISD::VSRA:
+  case X86ISD::VSRL:
+  case X86ISD::VSHLI:
+  case X86ISD::VSRAI:
+  case X86ISD::VSRLI:
+    return DAG.isSplatValue(Op.getOperand(0), DemandedElts, UndefElts,
+                            Depth + 1);
   }
 
   return TargetLowering::isSplatValueForTargetNode(Op, DemandedElts, UndefElts,
@@ -60050,6 +60062,33 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(Ctx);
           return DAG.getNode(ISD::TRUNCATE, DL, VT,
                              ConcatSubOperand(NewSrcVT, Ops, 0));
+        }
+      }
+      break;
+    case X86ISD::VTRUNCS:
+    case X86ISD::VTRUNCUS:
+      if (!IsSplat && NumOps == 2 && VT.is512BitVector() &&
+          Subtarget.useBWIRegs()) {
+        MVT SrcVT = Ops[0].getOperand(0).getSimpleValueType();
+        if (SrcVT.is512BitVector() &&
+            SrcVT == Ops[1].getOperand(0).getSimpleValueType() &&
+            SrcVT.getScalarSizeInBits() <= 32 &&
+            (VT.getScalarSizeInBits() * 2 == SrcVT.getScalarSizeInBits())) {
+          using namespace SDPatternMatch;
+          SDValue N0 = Ops[0].getOperand(0), N1 = Ops[1].getOperand(0);
+          if (Opcode == X86ISD::VTRUNCS ||
+              (sd_match(N0, m_SMaxLike(m_Value(N0), m_Zero())) &&
+               sd_match(N1, m_SMaxLike(m_Value(N1), m_Zero())))) {
+            N0 = DAG.getBitcast(MVT::v8i64, N0);
+            N1 = DAG.getBitcast(MVT::v8i64, N1);
+            SDValue LHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
+                                               {0, 1, 4, 5, 8, 9, 12, 13});
+            SDValue RHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
+                                               {2, 3, 6, 7, 10, 11, 14, 15});
+            return DAG.getNode(
+                Opcode == X86ISD::VTRUNCS ? X86ISD::PACKSS : X86ISD::PACKUS, DL,
+                VT, DAG.getBitcast(SrcVT, LHS), DAG.getBitcast(SrcVT, RHS));
+          }
         }
       }
       break;

@@ -664,7 +664,7 @@ void VPBlockBase::print(raw_ostream &O) const {
 }
 
 void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
-  if (getSuccessors().empty()) {
+  if (!hasSuccessors()) {
     O << Indent << "No successors\n";
   } else {
     O << Indent << "Successor(s): ";

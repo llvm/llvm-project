@@ -27,7 +27,7 @@
 // LLVM-LABEL: @test_vnegd_s64
 // CIR-LABEL: @vnegd_s64
 int64_t test_vnegd_s64(int64_t a) {
-// CIR: cir.unary(minus, {{.*}}) : !s64
+// CIR: cir.minus {{.*}} : !s64i
 
 // LLVM-SAME: i64 {{.*}} [[A:%.*]])
 // LLVM:          [[VNEGD_I:%.*]] = sub i64 0, [[A]]

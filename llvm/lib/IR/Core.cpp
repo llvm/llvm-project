@@ -3486,7 +3486,7 @@ LLVMValueRef LLVMBuildRet(LLVMBuilderRef B, LLVMValueRef V) {
 
 LLVMValueRef LLVMBuildAggregateRet(LLVMBuilderRef B, LLVMValueRef *RetVals,
                                    unsigned N) {
-  return wrap(unwrap(B)->CreateAggregateRet(unwrap(RetVals), N));
+  return wrap(unwrap(B)->CreateAggregateRet({unwrap(RetVals), N}));
 }
 
 LLVMValueRef LLVMBuildBr(LLVMBuilderRef B, LLVMBasicBlockRef Dest) {

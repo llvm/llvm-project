@@ -1673,7 +1673,8 @@ TEST_F(FormatTestCSharp, EmptyShortBlock) {
 TEST_F(FormatTestCSharp, ShortFunctions) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
   Style.NamespaceIndentation = FormatStyle::NI_All;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  Style.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle::setEmptyAndInline();
   verifyFormat("interface Interface {\n"
                "  void f() { return; }\n"
                "};",

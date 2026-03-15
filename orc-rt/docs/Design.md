@@ -21,8 +21,8 @@ process.
 ### Session
 
 The Session object is the root object for a JIT'd program. It owns the
-ResourceManager instances that manage resources supporting JIT'd code (e.g.
-JIT'd memory, unwind info registrations, dynamic library handles, etc.).
+Service instances that manage services and resources supporting JIT'd code
+(e.g. JIT'd memory, unwind info registrations, dynamic library handles, etc.).
 
 The Session object must be constructed prior to adding any JIT'd code, and must
 outlive execution of any JIT'd code.
@@ -50,16 +50,17 @@ ControllerAccess objects may be detached before the session ends, at which point
 JIT'd code may continue executing, but will receive no further calls from the
 controller and can make no further calls to the controller.
 
-### ResourceManager
+### Service
 
-`ResourceManager` is an interface for classes that manage resources that support
-a JIT'd program, for example memory or loaded dylib handles. It provides two
-operations: `detach` and `shutdown`. The `shutdown` operation will be called at
-`Session` destruction time. The `detach` operation may be called if the
-controller detaches: since this means that no further requests for resource
-allocation or release will occur prior to the end of the Session
-ResourceManagers may implement this operation to abandon any fine-grained
-tracking or pre-reserved resources (e.g. address space).
+`Service` is an interface for classes that provide services to the Session.
+E.g. memory managers, or dynamic library loaders.
+
+The `Service` interface provides two operations: `detach` and `shutdown`. The
+`shutdown` operation will be called at `Session` destruction time. The `detach`
+operation will be called if the controller detaches. Since this means that no
+further requests for service will be made by the controller, Services may
+implement this operation to abandon any fine-grained book-keeping that is
+needed to provide ongoing services to the controller.
 
 ### TaskDispatcher
 

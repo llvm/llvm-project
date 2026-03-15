@@ -16,7 +16,6 @@ from mlir.dialects.transform import (
 )
 
 
-@ext.register_dialect
 class MyTransform(ext.Dialect, name="my_transform"):
     pass
 
@@ -26,7 +25,7 @@ def run(emit_schedule):
     with ir.Context() as ctx, ir.Location.unknown():
         payload = emit_payload()
 
-        MyTransform.load(register=False, reload=True)
+        MyTransform.load(reload=True)
 
         GetNamedAttributeOp.attach_interface_impls(ctx)
         PrintParamOp.attach_interface_impls(ctx)
@@ -86,7 +85,6 @@ class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
 
 # Demonstration of a TransformOpInterface-implementing op that gets named attributes
 # from target ops and produces them as param handles.
-@ext.register_operation(MyTransform)
 class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
     target: ext.Operand[transform.AnyOpType]
     attr_name: ir.StringAttr
@@ -120,7 +118,6 @@ class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
             return False
 
 
-@ext.register_operation(MyTransform)
 class PrintParamOp(MyTransform.Operation, name="print_param"):
     target: ext.Operand[transform.AnyParamType]
     name: ir.StringAttr
@@ -150,7 +147,6 @@ class PrintParamOp(MyTransform.Operation, name="print_param"):
 
 
 # Syntax for an op with one op handle operand and one op handle result.
-@ext.register_operation(MyTransform)
 class OneOpInOneOpOut(MyTransform.Operation, name="one_op_in_one_op_out"):
     target: ext.Operand[transform.AnyOpType]
     res: ext.Result[transform.AnyOpType[()]]
@@ -273,7 +269,6 @@ def OneOpInOneOpOutTransformOpInterfaceRewriterImpl():
     return schedule
 
 
-@ext.register_operation(MyTransform)
 class OpValParamInParamOpValOut(
     MyTransform.Operation, name="op_val_param_in_param_op_val_out"
 ):
@@ -378,7 +373,6 @@ def OpValParamInParamOpValOutTransformOpInterface():
     return schedule
 
 
-@ext.register_operation(MyTransform)
 class OpsParamsInValuesParamOut(
     MyTransform.Operation, name="ops_params_in_values_param_out"
 ):

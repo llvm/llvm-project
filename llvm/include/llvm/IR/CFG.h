@@ -135,124 +135,22 @@ inline const_pred_range predecessors(const BasicBlock *BB) {
 // Instruction and BasicBlock succ_iterator helpers
 //===----------------------------------------------------------------------===//
 
-template <class InstructionT, class BlockT>
-class SuccIterator
-    : public iterator_facade_base<SuccIterator<InstructionT, BlockT>,
-                                  std::random_access_iterator_tag, BlockT, int,
-                                  BlockT *, BlockT *> {
-public:
-  using value_type = BlockT *;
-  using difference_type = std::ptrdiff_t;
-  using pointer = BlockT *;
-  using reference = BlockT *;
-
-private:
-  InstructionT *Inst;
-  int Idx;
-  using Self = SuccIterator<InstructionT, BlockT>;
-
-  inline bool index_is_valid(int Idx) {
-    // Note that we specially support the index of zero being valid even in the
-    // face of a null instruction.
-    return Idx >= 0 && (Idx == 0 || Idx <= (int)Inst->getNumSuccessors());
-  }
-
-  /// Proxy object to allow write access in operator[]
-  class SuccessorProxy {
-    Self It;
-
-  public:
-    explicit SuccessorProxy(const Self &It) : It(It) {}
-
-    SuccessorProxy(const SuccessorProxy &) = default;
-
-    SuccessorProxy &operator=(SuccessorProxy RHS) {
-      *this = reference(RHS);
-      return *this;
-    }
-
-    SuccessorProxy &operator=(reference RHS) {
-      It.Inst->setSuccessor(It.Idx, RHS);
-      return *this;
-    }
-
-    operator reference() const { return *It; }
-  };
-
-public:
-  // begin iterator
-  explicit inline SuccIterator(InstructionT *Inst) : Inst(Inst), Idx(0) {}
-  // end iterator
-  inline SuccIterator(InstructionT *Inst, bool) : Inst(Inst) {
-    if (Inst)
-      Idx = Inst->getNumSuccessors();
-    else
-      // Inst == NULL happens, if a basic block is not fully constructed and
-      // consequently getTerminator() returns NULL. In this case we construct
-      // a SuccIterator which describes a basic block that has zero
-      // successors.
-      // Defining SuccIterator for incomplete and malformed CFGs is especially
-      // useful for debugging.
-      Idx = 0;
-  }
-
-  /// This is used to interface between code that wants to
-  /// operate on terminator instructions directly.
-  int getSuccessorIndex() const { return Idx; }
-
-  inline bool operator==(const Self &x) const { return Idx == x.Idx; }
-
-  inline BlockT *operator*() const { return Inst->getSuccessor(Idx); }
-
-  // We use the basic block pointer directly for operator->.
-  inline BlockT *operator->() const { return operator*(); }
-
-  inline bool operator<(const Self &RHS) const {
-    assert(Inst == RHS.Inst && "Cannot compare iterators of different blocks!");
-    return Idx < RHS.Idx;
-  }
-
-  int operator-(const Self &RHS) const {
-    assert(Inst == RHS.Inst && "Cannot compare iterators of different blocks!");
-    return Idx - RHS.Idx;
-  }
-
-  inline Self &operator+=(int RHS) {
-    int NewIdx = Idx + RHS;
-    assert(index_is_valid(NewIdx) && "Iterator index out of bound");
-    Idx = NewIdx;
-    return *this;
-  }
-
-  inline Self &operator-=(int RHS) { return operator+=(-RHS); }
-
-  // Specially implement the [] operation using a proxy object to support
-  // assignment.
-  inline SuccessorProxy operator[](int Offset) {
-    Self TmpIt = *this;
-    TmpIt += Offset;
-    return SuccessorProxy(TmpIt);
-  }
-
-  /// Get the source BlockT of this iterator.
-  inline BlockT *getSource() {
-    assert(Inst && "Source not available, if basic block was malformed");
-    return Inst->getParent();
-  }
-};
-
-using succ_iterator = SuccIterator<Instruction, BasicBlock>;
-using const_succ_iterator = SuccIterator<const Instruction, const BasicBlock>;
+using succ_iterator = Instruction::succ_iterator;
+using const_succ_iterator = Instruction::const_succ_iterator;
 using succ_range = iterator_range<succ_iterator>;
 using const_succ_range = iterator_range<const_succ_iterator>;
 
-inline succ_iterator succ_begin(Instruction *I) { return succ_iterator(I); }
-inline const_succ_iterator succ_begin(const Instruction *I) {
-  return const_succ_iterator(I);
+inline succ_iterator succ_begin(Instruction *I) {
+  return I ? I->successors().begin() : succ_iterator(nullptr);
 }
-inline succ_iterator succ_end(Instruction *I) { return succ_iterator(I, true); }
+inline const_succ_iterator succ_begin(const Instruction *I) {
+  return I ? I->successors().begin() : const_succ_iterator(nullptr);
+}
+inline succ_iterator succ_end(Instruction *I) {
+  return I ? I->successors().end() : succ_iterator(nullptr);
+}
 inline const_succ_iterator succ_end(const Instruction *I) {
-  return const_succ_iterator(I, true);
+  return I ? I->successors().end() : const_succ_iterator(nullptr);
 }
 inline bool succ_empty(const Instruction *I) {
   return succ_begin(I) == succ_end(I);
@@ -268,16 +166,16 @@ inline const_succ_range successors(const Instruction *I) {
 }
 
 inline succ_iterator succ_begin(BasicBlock *BB) {
-  return succ_iterator(BB->getTerminator());
+  return succ_begin(BB->getTerminator());
 }
 inline const_succ_iterator succ_begin(const BasicBlock *BB) {
-  return const_succ_iterator(BB->getTerminator());
+  return succ_begin(BB->getTerminator());
 }
 inline succ_iterator succ_end(BasicBlock *BB) {
-  return succ_iterator(BB->getTerminator(), true);
+  return succ_end(BB->getTerminator());
 }
 inline const_succ_iterator succ_end(const BasicBlock *BB) {
-  return const_succ_iterator(BB->getTerminator(), true);
+  return succ_end(BB->getTerminator());
 }
 inline bool succ_empty(const BasicBlock *BB) {
   return succ_begin(BB) == succ_end(BB);

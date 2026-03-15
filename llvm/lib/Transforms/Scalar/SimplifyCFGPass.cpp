@@ -380,9 +380,13 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
     DT = &AM.getResult<DominatorTreeAnalysis>(F);
   if (!simplifyFunctionCFG(F, TTI, DT, Options))
     return PreservedAnalyses::all();
+  // If we removed some blocks, update block numbers to keep dense numbering.
+  F.renumberBlocks();
   PreservedAnalyses PA;
-  if (RequireAndPreserveDomTree)
+  if (RequireAndPreserveDomTree) {
+    DT->updateBlockNumbers();
     PA.preserve<DominatorTreeAnalysis>();
+  }
   return PA;
 }
 

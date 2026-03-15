@@ -68,7 +68,7 @@ labelD:
 // CIR:      ^bb1:
 // CIR:        cir.label "labelD"
 // CIR:        [[LOAD:%.*]] = cir.load align(4) [[COND:%.*]] : !cir.ptr<!s32i>, !s32i
-// CIR:        [[INC:%.*]] = cir.unary(inc, %3) nsw : !s32i, !s32i
+// CIR:        [[INC:%.*]] = cir.inc nsw %3 : !s32i
 // CIR:        cir.store align(4) [[INC]], [[COND]] : !s32i, !cir.ptr<!s32i>
 // CIR:      }
 // CIR:    cir.return

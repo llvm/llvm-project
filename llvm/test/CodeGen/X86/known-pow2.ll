@@ -164,7 +164,6 @@ define i1 @pow2_srl(i32 %x, i32 %y) {
 define i32 @pow2_srl_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_srl_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [1048576,4294967295,4294967295,0]
@@ -173,7 +172,7 @@ define i32 @pow2_srl_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,1,1,1,4,5,6,7]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm4
 ; CHECK-NEXT:    psrld %xmm0, %xmm4
-; CHECK-NEXT:    movd %xmm4, %ecx
+; CHECK-NEXT:    movd %xmm4, %eax
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,1,4,5,6,7]
@@ -181,9 +180,8 @@ define i32 @pow2_srl_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,3],xmm2[0,3]
 ; CHECK-NEXT:    movaps %xmm4, (%rsi)
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %ecx
-; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq
   %yy = and <4 x i32> %y, splat (i32 7)
   %d = lshr <4 x i32> <i32 1048576, i32 -1, i32 -1, i32 0>, %yy

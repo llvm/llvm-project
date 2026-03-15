@@ -1808,9 +1808,9 @@ define void @truncstore_v2i64_v2i32(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[2,3]
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX1-NEXT:    vmaskmovps %xmm0, %xmm1, (%rdi)
 ; AVX1-NEXT:    retq
@@ -1819,9 +1819,9 @@ define void @truncstore_v2i64_v2i32(<2 x i64> %x, ptr %p, <2 x i64> %mask) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpxor %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[2,3]
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,2],zero,zero
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX2-NEXT:    vpmaskmovd %xmm0, %xmm1, (%rdi)
 ; AVX2-NEXT:    retq
