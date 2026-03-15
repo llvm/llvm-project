@@ -40,7 +40,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
       // callbacks, then call shutdownNext below (outside the lock).
       SI = std::make_unique<ShutdownInfo>();
       SI->OnCompletes.push_back(std::move(OnShutdownComplete));
-      std::swap(SI->ResourceMgrs, ResourceMgrs);
+      std::swap(SI->Services, Services);
     }
   }
 
@@ -53,7 +53,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   // OnShutdownComplete is _not_ set (i.e. was moved into the list of pending
   // handlers), and we didn't return under the lock above, so we must be
   // responsible for the shutdown. Call shutdownNext.
-  shutdownNext(Error::success());
+  shutdownNext();
 }
 
 void Session::waitForShutdown() {
@@ -61,12 +61,6 @@ void Session::waitForShutdown() {
   auto F = P.get_future();
   shutdown([P = std::move(P)]() mutable { P.set_value(); });
   F.get();
-}
-
-void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
-  std::scoped_lock<std::mutex> Lock(M);
-  assert(!SI && "addResourceManager called after shutdown");
-  ResourceMgrs.push_back(std::move(RM));
 }
 
 void Session::setController(std::shared_ptr<ControllerAccess> CA) {
@@ -84,17 +78,14 @@ void Session::detachFromController() {
   }
 }
 
-void Session::shutdownNext(Error Err) {
-  if (Err)
-    reportError(std::move(Err));
-
-  if (SI->ResourceMgrs.empty())
+void Session::shutdownNext() {
+  if (SI->Services.empty())
     return shutdownComplete();
 
-  // Get the next ResourceManager to shut down.
-  auto NextRM = std::move(SI->ResourceMgrs.back());
-  SI->ResourceMgrs.pop_back();
-  NextRM->onShutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+  // Get the next Service to shut down.
+  auto NextSrv = std::move(SI->Services.back());
+  SI->Services.pop_back();
+  NextSrv->onShutdown([this]() { shutdownNext(); });
 }
 
 void Session::shutdownComplete() {

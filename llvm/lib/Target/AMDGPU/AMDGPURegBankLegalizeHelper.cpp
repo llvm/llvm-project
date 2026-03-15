@@ -1197,6 +1197,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprV4S32:
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
+  case VgprV8S32:
+    return LLT::fixed_vector(8, 32);
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
@@ -1357,6 +1359,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S64:
   case VgprV3S32:
   case VgprV4S32:
+  case VgprV8S32:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1416,7 +1419,8 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV2S32:
     case VgprV2S64:
     case VgprV3S32:
-    case VgprV4S32: {
+    case VgprV4S32:
+    case VgprV8S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -1599,7 +1603,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV2S32:
     case VgprV2S64:
     case VgprV3S32:
-    case VgprV4S32: {
+    case VgprV4S32:
+    case VgprV8S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
