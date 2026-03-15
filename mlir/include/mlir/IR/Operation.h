@@ -923,7 +923,7 @@ public:
     return ((int)propertiesStorageSize) * 8;
   }
 
-  /// Return a geeric (but typed) reference to the property type storage.
+  /// Return a generic (but typed) reference to the property type storage.
   PropertyRef getPropertiesStorage() {
     if (propertiesStorageSize)
       return PropertyRef(name.getOpPropertiesTypeID(),
