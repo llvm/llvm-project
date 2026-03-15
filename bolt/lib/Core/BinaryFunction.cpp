@@ -147,6 +147,11 @@ static cl::opt<bool> TrapOnAVX512(
     cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
+  // PLT stubs are disassembled for BTI binaries, therefore they should be
+  // printed.
+  if (Function.getBinaryContext().usesBTI() && Function.isPLTFunction())
+    return true;
+
   if (Function.isIgnored())
     return false;
 
@@ -1903,7 +1908,7 @@ bool BinaryFunction::scanExternalRefs() {
 }
 
 bool BinaryFunction::validateInternalBranches() {
-  if (!isSimple() || TrapsOnEntry)
+  if (!hasInstructions() || !isSimple() || TrapsOnEntry)
     return true;
 
   for (const auto &KV : Labels) {
@@ -3251,6 +3256,30 @@ void BinaryFunction::clearDisasmState() {
   clearList(TakenBranches);
 }
 
+void BinaryFunction::resetState() {
+  clearDisasmState();
+
+  // Clear CFG state too.
+  if (hasCFG()) {
+    releaseCFG();
+
+    for (BinaryBasicBlock *BB : BasicBlocks)
+      delete BB;
+    clearList(BasicBlocks);
+
+    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
+      delete BB;
+    clearList(DeletedBasicBlocks);
+
+    Layout.clear();
+  }
+
+  IsSimple = false;
+  IsIgnored = true;
+
+  CurrentState = State::Empty;
+}
+
 void BinaryFunction::setTrapOnEntry() {
   clearDisasmState();
 
@@ -3285,24 +3314,7 @@ void BinaryFunction::setIgnored() {
   if (CurrentState == State::Empty)
     return;
 
-  clearDisasmState();
-
-  // Clear CFG state too.
-  if (hasCFG()) {
-    releaseCFG();
-
-    for (BinaryBasicBlock *BB : BasicBlocks)
-      delete BB;
-    clearList(BasicBlocks);
-
-    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
-      delete BB;
-    clearList(DeletedBasicBlocks);
-
-    Layout.clear();
-  }
-
-  CurrentState = State::Empty;
+  resetState();
 
   // Fix external references in the original function body.
   if (BC.HasRelocations) {
@@ -3873,8 +3885,9 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   return nullptr;
 }
 
-uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
-  if (!isMultiEntry())
+std::optional<uint64_t>
+BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
+  if (!isMultiEntry() || !Symbol)
     return 0;
 
   for (const MCSymbol *FunctionSymbol : getSymbols())
@@ -3900,8 +3913,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-
-  llvm_unreachable("symbol not found");
+  return std::nullopt;
 }
 
 bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
@@ -4619,8 +4631,10 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
 
   // Check if the address is associated with an instruction that is tracked
   // by address translation.
-  if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
-    return *OutputAddress;
+  if (BC.hasIOAddressMap()) {
+    if (auto OutputAddress = BC.getIOAddressMap().lookup(Address))
+      return *OutputAddress;
+  }
 
   // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
   //        intact. Instead we can use pseudo instructions and/or annotations.

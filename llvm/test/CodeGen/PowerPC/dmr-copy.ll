@@ -223,21 +223,21 @@ define void @foo(ptr noundef readonly captures(none) %p1, ptr noundef readonly c
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = tail call <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
+  %0 = tail call <1024 x i1> @llvm.ppc.dmsetdmrz()
   %1 = load <1024 x i1>, ptr %p1, align 128
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1> %0, <1024 x i1> %1)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxor(<1024 x i1> %0, <1024 x i1> %1)
   %3 = load <1024 x i1>, ptr %p2, align 128
-  %4 = tail call <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1> %0, <1024 x i1> %3)
-  %5 = tail call <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1> %2)
+  %4 = tail call <1024 x i1> @llvm.ppc.dmxor(<1024 x i1> %0, <1024 x i1> %3)
+  %5 = tail call <1024 x i1> @llvm.ppc.dmmr(<1024 x i1> %2)
   store <1024 x i1> %5, ptr %res1, align 128
-  %6 = tail call <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1> %4)
+  %6 = tail call <1024 x i1> @llvm.ppc.dmmr(<1024 x i1> %4)
   store <1024 x i1> %6, ptr %res2, align 128
   ret void
 }
 
-declare <1024 x i1> @llvm.ppc.mma.dmsetdmrz()
-declare <1024 x i1> @llvm.ppc.mma.dmxor(<1024 x i1>, <1024 x i1>)
-declare <1024 x i1> @llvm.ppc.mma.dmmr(<1024 x i1>)
+declare <1024 x i1> @llvm.ppc.dmsetdmrz()
+declare <1024 x i1> @llvm.ppc.dmxor(<1024 x i1>, <1024 x i1>)
+declare <1024 x i1> @llvm.ppc.dmmr(<1024 x i1>)
 declare <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4(<256 x i1>, <16 x i8>)
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="future" "target-features"="+64bit,+allow-unaligned-fp-access,+altivec,+bpermd,+cmpb,+crbits,+crypto,+direct-move,+extdiv,+fast-MFLR,+fcpsgn,+fpcvt,+fprnd,+fpu,+fre,+fres,+frsqrte,+frsqrtes,+fsqrt,+fuse-add-logical,+fuse-arith-add,+fuse-logical,+fuse-logical-add,+fuse-sha3,+fuse-store,+fusion,+hard-float,+icbt,+isa-future-instructions,+isa-v206-instructions,+isa-v207-instructions,+isa-v30-instructions,+isa-v31-instructions,+isel,+ldbrx,+lfiwax,+mfocrf,+mma,+paired-vector-memops,+partword-atomics,+pcrelative-memops,+popcntd,+power10-vector,+power8-altivec,+power8-vector,+power9-altivec,+power9-vector,+ppc-postra-sched,+ppc-prera-sched,+predictable-select-expensive,+prefix-instrs,+quadword-atomics,+recipprec,+stfiwx,+two-const-nr,+vsx" }

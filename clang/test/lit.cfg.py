@@ -89,7 +89,26 @@ config.substitutions.append(("%target_triple", config.target_triple))
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 
+sed_cmd = (
+    "/opt/freeware/bin/sed" if "system-aix" in config.available_features else "sed"
+)
 
+# Filtering command for testing SARIF output against reference output.
+config.substitutions.append(
+    (
+        "%normalize_sarif",
+        f"{sed_cmd} -r '%s;%s;%s;%s'"
+        % (
+            # Replace version strings that are likely to change.
+            r's/"version": "2.1.0"/"version": "[SARIF version]"/',
+            r's/"version": ".*[0-9]+\.[0-9]+\.[0-9]+.*"/"version": "[clang version]"/',
+            # Strip directories from file URIs
+            r's/"file:(\/+)([^"\/]+\/)*([^"]+)"/"file:\1[...]\/\3"/',
+            # Set "length" to -1
+            r's/"length": [[:digit:]]+/"length": -1/',
+        ),
+    )
+)
 # For each occurrence of a clang tool name, replace it with the full path to
 # the build directory holding that tool.  We explicitly specify the directories
 # to search to ensure that we get the tools just built and not some random
@@ -103,6 +122,7 @@ tools = [
     "clang-diff",
     "clang-format",
     "clang-repl",
+    "llvm-objdump",
     "llvm-offload-binary",
     "clang-tblgen",
     "clang-scan-deps",
@@ -122,6 +142,8 @@ tools = [
         command=FindTool("clang-extdef-mapping"),
         unresolved="ignore",
     ),
+    "clang-ssaf-linker",
+    "clang-ssaf-format",
 ]
 
 if config.clang_examples:
@@ -223,8 +245,6 @@ if config.clang_staticanalyzer:
         config.available_features.add("z3")
         if config.clang_staticanalyzer_z3_mock:
             config.available_features.add("z3-mock")
-    else:
-        config.available_features.add("no-z3")
 
     check_analyzer_fixit_path = os.path.join(
         config.test_source_root, "Analysis", "check-analyzer-fixit.py"
@@ -406,6 +426,27 @@ if config.clang_vendor_uti:
 if config.have_llvm_driver:
     config.available_features.add("llvm-driver")
 
+if config.clang_enable_cir:
+    config.available_features.add("cir-enabled")
+
+if config.use_xcselect:
+    config.available_features.add("xcselect")
+
+# Tests that rely on chmod to restrict file permissions (e.g. write-permission
+# checks) are unreliable when run as root, since root bypasses file permissions.
+def user_is_root():
+    # os.getuid() is not available on all platforms
+    try:
+        if os.getuid() == 0:
+            return True
+    except:
+        pass
+
+    return False
+
+
+if not user_is_root():
+    config.available_features.add("non-root-user")
 
 # Some tests perform deep recursion, which requires a larger pthread stack size
 # than the relatively low default of 192 KiB for 64-bit processes on AIX. The

@@ -11,9 +11,11 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -769,10 +771,17 @@ bool BranchRelaxation::relaxBranchInstructions() {
 PreservedAnalyses
 BranchRelaxationPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  if (!BranchRelaxation().run(MF))
-    return PreservedAnalyses::all();
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (BranchRelaxation().run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 bool BranchRelaxation::run(MachineFunction &mf) {

@@ -30,7 +30,7 @@ typedef double v4f64 __attribute__((vector_size(32), aligned(32)));
 typedef double v4f64_d __attribute__((vector_size(32), aligned(8)));
 
 // CHECK-LABEL: define dso_local void @xvsll_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -40,7 +40,7 @@ typedef double v4f64_d __attribute__((vector_size(32), aligned(8)));
 //
 v32i8 xvsll_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsll_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsll_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -50,7 +50,7 @@ v32i8 xvsll_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsll_b(_1, _2); }
 //
 v16i16 xvsll_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsll_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsll_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -60,7 +60,7 @@ v16i16 xvsll_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsll_h(_1, _2); }
 //
 v8i32 xvsll_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsll_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsll_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -70,7 +70,7 @@ v8i32 xvsll_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsll_w(_1, _2); }
 //
 v4i64 xvsll_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsll_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslli_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvslli.b(<32 x i8> [[_1]], i32 1)
@@ -79,7 +79,7 @@ v4i64 xvsll_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsll_d(_1, _2); }
 //
 v32i8 xvslli_b(v32i8 _1) { return __builtin_lasx_xvslli_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslli_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvslli.h(<16 x i16> [[_1]], i32 1)
@@ -88,7 +88,7 @@ v32i8 xvslli_b(v32i8 _1) { return __builtin_lasx_xvslli_b(_1, 1); }
 //
 v16i16 xvslli_h(v16i16 _1) { return __builtin_lasx_xvslli_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslli_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvslli.w(<8 x i32> [[_1]], i32 1)
@@ -97,7 +97,7 @@ v16i16 xvslli_h(v16i16 _1) { return __builtin_lasx_xvslli_h(_1, 1); }
 //
 v8i32 xvslli_w(v8i32 _1) { return __builtin_lasx_xvslli_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslli_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvslli.d(<4 x i64> [[_1]], i32 1)
@@ -106,7 +106,7 @@ v8i32 xvslli_w(v8i32 _1) { return __builtin_lasx_xvslli_w(_1, 1); }
 //
 v4i64 xvslli_d(v4i64 _1) { return __builtin_lasx_xvslli_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsra_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -116,7 +116,7 @@ v4i64 xvslli_d(v4i64 _1) { return __builtin_lasx_xvslli_d(_1, 1); }
 //
 v32i8 xvsra_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsra_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsra_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -126,7 +126,7 @@ v32i8 xvsra_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsra_b(_1, _2); }
 //
 v16i16 xvsra_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsra_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsra_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -136,7 +136,7 @@ v16i16 xvsra_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsra_h(_1, _2); }
 //
 v8i32 xvsra_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsra_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsra_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -146,7 +146,7 @@ v8i32 xvsra_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsra_w(_1, _2); }
 //
 v4i64 xvsra_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsra_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrai_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsrai.b(<32 x i8> [[_1]], i32 1)
@@ -155,7 +155,7 @@ v4i64 xvsra_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsra_d(_1, _2); }
 //
 v32i8 xvsrai_b(v32i8 _1) { return __builtin_lasx_xvsrai_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrai_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsrai.h(<16 x i16> [[_1]], i32 1)
@@ -164,7 +164,7 @@ v32i8 xvsrai_b(v32i8 _1) { return __builtin_lasx_xvsrai_b(_1, 1); }
 //
 v16i16 xvsrai_h(v16i16 _1) { return __builtin_lasx_xvsrai_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrai_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsrai.w(<8 x i32> [[_1]], i32 1)
@@ -173,7 +173,7 @@ v16i16 xvsrai_h(v16i16 _1) { return __builtin_lasx_xvsrai_h(_1, 1); }
 //
 v8i32 xvsrai_w(v8i32 _1) { return __builtin_lasx_xvsrai_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrai_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsrai.d(<4 x i64> [[_1]], i32 1)
@@ -182,7 +182,7 @@ v8i32 xvsrai_w(v8i32 _1) { return __builtin_lasx_xvsrai_w(_1, 1); }
 //
 v4i64 xvsrai_d(v4i64 _1) { return __builtin_lasx_xvsrai_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrar_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -192,7 +192,7 @@ v4i64 xvsrai_d(v4i64 _1) { return __builtin_lasx_xvsrai_d(_1, 1); }
 //
 v32i8 xvsrar_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrar_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrar_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -202,7 +202,7 @@ v32i8 xvsrar_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrar_b(_1, _2); }
 //
 v16i16 xvsrar_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrar_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrar_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -212,7 +212,7 @@ v16i16 xvsrar_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrar_h(_1, _2); 
 //
 v8i32 xvsrar_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrar_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrar_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -222,7 +222,7 @@ v8i32 xvsrar_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrar_w(_1, _2); }
 //
 v4i64 xvsrar_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrar_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrari_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsrari.b(<32 x i8> [[_1]], i32 1)
@@ -231,7 +231,7 @@ v4i64 xvsrar_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrar_d(_1, _2); }
 //
 v32i8 xvsrari_b(v32i8 _1) { return __builtin_lasx_xvsrari_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrari_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsrari.h(<16 x i16> [[_1]], i32 1)
@@ -240,7 +240,7 @@ v32i8 xvsrari_b(v32i8 _1) { return __builtin_lasx_xvsrari_b(_1, 1); }
 //
 v16i16 xvsrari_h(v16i16 _1) { return __builtin_lasx_xvsrari_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrari_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsrari.w(<8 x i32> [[_1]], i32 1)
@@ -249,7 +249,7 @@ v16i16 xvsrari_h(v16i16 _1) { return __builtin_lasx_xvsrari_h(_1, 1); }
 //
 v8i32 xvsrari_w(v8i32 _1) { return __builtin_lasx_xvsrari_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrari_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsrari.d(<4 x i64> [[_1]], i32 1)
@@ -258,7 +258,7 @@ v8i32 xvsrari_w(v8i32 _1) { return __builtin_lasx_xvsrari_w(_1, 1); }
 //
 v4i64 xvsrari_d(v4i64 _1) { return __builtin_lasx_xvsrari_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrl_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -268,7 +268,7 @@ v4i64 xvsrari_d(v4i64 _1) { return __builtin_lasx_xvsrari_d(_1, 1); }
 //
 v32i8 xvsrl_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrl_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrl_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -278,7 +278,7 @@ v32i8 xvsrl_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrl_b(_1, _2); }
 //
 v16i16 xvsrl_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrl_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrl_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -288,7 +288,7 @@ v16i16 xvsrl_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrl_h(_1, _2); }
 //
 v8i32 xvsrl_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrl_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrl_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -298,7 +298,7 @@ v8i32 xvsrl_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrl_w(_1, _2); }
 //
 v4i64 xvsrl_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrl_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrli_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsrli.b(<32 x i8> [[_1]], i32 1)
@@ -307,7 +307,7 @@ v4i64 xvsrl_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrl_d(_1, _2); }
 //
 v32i8 xvsrli_b(v32i8 _1) { return __builtin_lasx_xvsrli_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrli_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsrli.h(<16 x i16> [[_1]], i32 1)
@@ -316,7 +316,7 @@ v32i8 xvsrli_b(v32i8 _1) { return __builtin_lasx_xvsrli_b(_1, 1); }
 //
 v16i16 xvsrli_h(v16i16 _1) { return __builtin_lasx_xvsrli_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrli_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsrli.w(<8 x i32> [[_1]], i32 1)
@@ -325,7 +325,7 @@ v16i16 xvsrli_h(v16i16 _1) { return __builtin_lasx_xvsrli_h(_1, 1); }
 //
 v8i32 xvsrli_w(v8i32 _1) { return __builtin_lasx_xvsrli_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrli_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsrli.d(<4 x i64> [[_1]], i32 1)
@@ -334,7 +334,7 @@ v8i32 xvsrli_w(v8i32 _1) { return __builtin_lasx_xvsrli_w(_1, 1); }
 //
 v4i64 xvsrli_d(v4i64 _1) { return __builtin_lasx_xvsrli_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlr_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -344,7 +344,7 @@ v4i64 xvsrli_d(v4i64 _1) { return __builtin_lasx_xvsrli_d(_1, 1); }
 //
 v32i8 xvsrlr_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrlr_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlr_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -354,7 +354,7 @@ v32i8 xvsrlr_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrlr_b(_1, _2); }
 //
 v16i16 xvsrlr_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlr_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlr_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -364,7 +364,7 @@ v16i16 xvsrlr_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlr_h(_1, _2); 
 //
 v8i32 xvsrlr_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlr_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlr_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -374,7 +374,7 @@ v8i32 xvsrlr_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlr_w(_1, _2); }
 //
 v4i64 xvsrlr_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlr_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlri_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsrlri.b(<32 x i8> [[_1]], i32 1)
@@ -383,7 +383,7 @@ v4i64 xvsrlr_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlr_d(_1, _2); }
 //
 v32i8 xvsrlri_b(v32i8 _1) { return __builtin_lasx_xvsrlri_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlri_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsrlri.h(<16 x i16> [[_1]], i32 1)
@@ -392,7 +392,7 @@ v32i8 xvsrlri_b(v32i8 _1) { return __builtin_lasx_xvsrlri_b(_1, 1); }
 //
 v16i16 xvsrlri_h(v16i16 _1) { return __builtin_lasx_xvsrlri_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlri_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsrlri.w(<8 x i32> [[_1]], i32 1)
@@ -401,7 +401,7 @@ v16i16 xvsrlri_h(v16i16 _1) { return __builtin_lasx_xvsrlri_h(_1, 1); }
 //
 v8i32 xvsrlri_w(v8i32 _1) { return __builtin_lasx_xvsrlri_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlri_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsrlri.d(<4 x i64> [[_1]], i32 1)
@@ -410,7 +410,7 @@ v8i32 xvsrlri_w(v8i32 _1) { return __builtin_lasx_xvsrlri_w(_1, 1); }
 //
 v4i64 xvsrlri_d(v4i64 _1) { return __builtin_lasx_xvsrlri_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitclr_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -420,7 +420,7 @@ v4i64 xvsrlri_d(v4i64 _1) { return __builtin_lasx_xvsrlri_d(_1, 1); }
 //
 v32u8 xvbitclr_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitclr_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitclr_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -430,7 +430,7 @@ v32u8 xvbitclr_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitclr_b(_1, _2);
 //
 v16u16 xvbitclr_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvbitclr_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitclr_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -440,7 +440,7 @@ v16u16 xvbitclr_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvbitclr_h(_1, _
 //
 v8u32 xvbitclr_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvbitclr_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitclr_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -450,7 +450,7 @@ v8u32 xvbitclr_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvbitclr_w(_1, _2);
 //
 v4u64 xvbitclr_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvbitclr_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitclri_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvbitclri.b(<32 x i8> [[_1]], i32 1)
@@ -459,7 +459,7 @@ v4u64 xvbitclr_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvbitclr_d(_1, _2);
 //
 v32u8 xvbitclri_b(v32u8 _1) { return __builtin_lasx_xvbitclri_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitclri_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvbitclri.h(<16 x i16> [[_1]], i32 1)
@@ -468,7 +468,7 @@ v32u8 xvbitclri_b(v32u8 _1) { return __builtin_lasx_xvbitclri_b(_1, 1); }
 //
 v16u16 xvbitclri_h(v16u16 _1) { return __builtin_lasx_xvbitclri_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitclri_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvbitclri.w(<8 x i32> [[_1]], i32 1)
@@ -477,7 +477,7 @@ v16u16 xvbitclri_h(v16u16 _1) { return __builtin_lasx_xvbitclri_h(_1, 1); }
 //
 v8u32 xvbitclri_w(v8u32 _1) { return __builtin_lasx_xvbitclri_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitclri_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvbitclri.d(<4 x i64> [[_1]], i32 1)
@@ -486,7 +486,7 @@ v8u32 xvbitclri_w(v8u32 _1) { return __builtin_lasx_xvbitclri_w(_1, 1); }
 //
 v4u64 xvbitclri_d(v4u64 _1) { return __builtin_lasx_xvbitclri_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitset_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -496,7 +496,7 @@ v4u64 xvbitclri_d(v4u64 _1) { return __builtin_lasx_xvbitclri_d(_1, 1); }
 //
 v32u8 xvbitset_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitset_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitset_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -506,7 +506,7 @@ v32u8 xvbitset_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitset_b(_1, _2);
 //
 v16u16 xvbitset_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvbitset_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitset_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -516,7 +516,7 @@ v16u16 xvbitset_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvbitset_h(_1, _
 //
 v8u32 xvbitset_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvbitset_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitset_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -526,7 +526,7 @@ v8u32 xvbitset_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvbitset_w(_1, _2);
 //
 v4u64 xvbitset_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvbitset_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitseti_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvbitseti.b(<32 x i8> [[_1]], i32 1)
@@ -535,7 +535,7 @@ v4u64 xvbitset_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvbitset_d(_1, _2);
 //
 v32u8 xvbitseti_b(v32u8 _1) { return __builtin_lasx_xvbitseti_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitseti_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvbitseti.h(<16 x i16> [[_1]], i32 1)
@@ -544,7 +544,7 @@ v32u8 xvbitseti_b(v32u8 _1) { return __builtin_lasx_xvbitseti_b(_1, 1); }
 //
 v16u16 xvbitseti_h(v16u16 _1) { return __builtin_lasx_xvbitseti_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitseti_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvbitseti.w(<8 x i32> [[_1]], i32 1)
@@ -553,7 +553,7 @@ v16u16 xvbitseti_h(v16u16 _1) { return __builtin_lasx_xvbitseti_h(_1, 1); }
 //
 v8u32 xvbitseti_w(v8u32 _1) { return __builtin_lasx_xvbitseti_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitseti_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvbitseti.d(<4 x i64> [[_1]], i32 1)
@@ -562,7 +562,7 @@ v8u32 xvbitseti_w(v8u32 _1) { return __builtin_lasx_xvbitseti_w(_1, 1); }
 //
 v4u64 xvbitseti_d(v4u64 _1) { return __builtin_lasx_xvbitseti_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitrev_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -572,7 +572,7 @@ v4u64 xvbitseti_d(v4u64 _1) { return __builtin_lasx_xvbitseti_d(_1, 1); }
 //
 v32u8 xvbitrev_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitrev_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitrev_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -582,7 +582,7 @@ v32u8 xvbitrev_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitrev_b(_1, _2);
 //
 v16u16 xvbitrev_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvbitrev_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitrev_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -592,7 +592,7 @@ v16u16 xvbitrev_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvbitrev_h(_1, _
 //
 v8u32 xvbitrev_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvbitrev_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitrev_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -602,7 +602,7 @@ v8u32 xvbitrev_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvbitrev_w(_1, _2);
 //
 v4u64 xvbitrev_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvbitrev_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvbitrevi_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvbitrevi.b(<32 x i8> [[_1]], i32 1)
@@ -611,7 +611,7 @@ v4u64 xvbitrev_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvbitrev_d(_1, _2);
 //
 v32u8 xvbitrevi_b(v32u8 _1) { return __builtin_lasx_xvbitrevi_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitrevi_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvbitrevi.h(<16 x i16> [[_1]], i32 1)
@@ -620,7 +620,7 @@ v32u8 xvbitrevi_b(v32u8 _1) { return __builtin_lasx_xvbitrevi_b(_1, 1); }
 //
 v16u16 xvbitrevi_h(v16u16 _1) { return __builtin_lasx_xvbitrevi_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitrevi_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvbitrevi.w(<8 x i32> [[_1]], i32 1)
@@ -629,7 +629,7 @@ v16u16 xvbitrevi_h(v16u16 _1) { return __builtin_lasx_xvbitrevi_h(_1, 1); }
 //
 v8u32 xvbitrevi_w(v8u32 _1) { return __builtin_lasx_xvbitrevi_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitrevi_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvbitrevi.d(<4 x i64> [[_1]], i32 1)
@@ -638,7 +638,7 @@ v8u32 xvbitrevi_w(v8u32 _1) { return __builtin_lasx_xvbitrevi_w(_1, 1); }
 //
 v4u64 xvbitrevi_d(v4u64 _1) { return __builtin_lasx_xvbitrevi_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvadd_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -648,7 +648,7 @@ v4u64 xvbitrevi_d(v4u64 _1) { return __builtin_lasx_xvbitrevi_d(_1, 1); }
 //
 v32i8 xvadd_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvadd_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadd_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -658,7 +658,7 @@ v32i8 xvadd_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvadd_b(_1, _2); }
 //
 v16i16 xvadd_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvadd_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadd_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -668,7 +668,7 @@ v16i16 xvadd_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvadd_h(_1, _2); }
 //
 v8i32 xvadd_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvadd_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -678,7 +678,7 @@ v8i32 xvadd_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvadd_w(_1, _2); }
 //
 v4i64 xvadd_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvadd_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddi_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvaddi.bu(<32 x i8> [[_1]], i32 1)
@@ -687,7 +687,7 @@ v4i64 xvadd_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvadd_d(_1, _2); }
 //
 v32i8 xvaddi_bu(v32i8 _1) { return __builtin_lasx_xvaddi_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvaddi_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvaddi.hu(<16 x i16> [[_1]], i32 1)
@@ -696,7 +696,7 @@ v32i8 xvaddi_bu(v32i8 _1) { return __builtin_lasx_xvaddi_bu(_1, 1); }
 //
 v16i16 xvaddi_hu(v16i16 _1) { return __builtin_lasx_xvaddi_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvaddi_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvaddi.wu(<8 x i32> [[_1]], i32 1)
@@ -705,7 +705,7 @@ v16i16 xvaddi_hu(v16i16 _1) { return __builtin_lasx_xvaddi_hu(_1, 1); }
 //
 v8i32 xvaddi_wu(v8i32 _1) { return __builtin_lasx_xvaddi_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvaddi_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvaddi.du(<4 x i64> [[_1]], i32 1)
@@ -714,7 +714,7 @@ v8i32 xvaddi_wu(v8i32 _1) { return __builtin_lasx_xvaddi_wu(_1, 1); }
 //
 v4i64 xvaddi_du(v4i64 _1) { return __builtin_lasx_xvaddi_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsub_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -724,7 +724,7 @@ v4i64 xvaddi_du(v4i64 _1) { return __builtin_lasx_xvaddi_du(_1, 1); }
 //
 v32i8 xvsub_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsub_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsub_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -734,7 +734,7 @@ v32i8 xvsub_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsub_b(_1, _2); }
 //
 v16i16 xvsub_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsub_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsub_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -744,7 +744,7 @@ v16i16 xvsub_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsub_h(_1, _2); }
 //
 v8i32 xvsub_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsub_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsub_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -754,7 +754,7 @@ v8i32 xvsub_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsub_w(_1, _2); }
 //
 v4i64 xvsub_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsub_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubi_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsubi.bu(<32 x i8> [[_1]], i32 1)
@@ -763,7 +763,7 @@ v4i64 xvsub_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsub_d(_1, _2); }
 //
 v32i8 xvsubi_bu(v32i8 _1) { return __builtin_lasx_xvsubi_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsubi_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsubi.hu(<16 x i16> [[_1]], i32 1)
@@ -772,7 +772,7 @@ v32i8 xvsubi_bu(v32i8 _1) { return __builtin_lasx_xvsubi_bu(_1, 1); }
 //
 v16i16 xvsubi_hu(v16i16 _1) { return __builtin_lasx_xvsubi_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsubi_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsubi.wu(<8 x i32> [[_1]], i32 1)
@@ -781,7 +781,7 @@ v16i16 xvsubi_hu(v16i16 _1) { return __builtin_lasx_xvsubi_hu(_1, 1); }
 //
 v8i32 xvsubi_wu(v8i32 _1) { return __builtin_lasx_xvsubi_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsubi_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsubi.du(<4 x i64> [[_1]], i32 1)
@@ -790,7 +790,7 @@ v8i32 xvsubi_wu(v8i32 _1) { return __builtin_lasx_xvsubi_wu(_1, 1); }
 //
 v4i64 xvsubi_du(v4i64 _1) { return __builtin_lasx_xvsubi_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmax_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -800,7 +800,7 @@ v4i64 xvsubi_du(v4i64 _1) { return __builtin_lasx_xvsubi_du(_1, 1); }
 //
 v32i8 xvmax_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmax_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmax_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -810,7 +810,7 @@ v32i8 xvmax_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmax_b(_1, _2); }
 //
 v16i16 xvmax_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmax_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmax_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -820,7 +820,7 @@ v16i16 xvmax_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmax_h(_1, _2); }
 //
 v8i32 xvmax_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmax_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmax_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -830,7 +830,7 @@ v8i32 xvmax_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmax_w(_1, _2); }
 //
 v4i64 xvmax_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmax_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmaxi_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmaxi.b(<32 x i8> [[_1]], i32 1)
@@ -839,7 +839,7 @@ v4i64 xvmax_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmax_d(_1, _2); }
 //
 v32i8 xvmaxi_b(v32i8 _1) { return __builtin_lasx_xvmaxi_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmaxi_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvmaxi.h(<16 x i16> [[_1]], i32 1)
@@ -848,7 +848,7 @@ v32i8 xvmaxi_b(v32i8 _1) { return __builtin_lasx_xvmaxi_b(_1, 1); }
 //
 v16i16 xvmaxi_h(v16i16 _1) { return __builtin_lasx_xvmaxi_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmaxi_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvmaxi.w(<8 x i32> [[_1]], i32 1)
@@ -857,7 +857,7 @@ v16i16 xvmaxi_h(v16i16 _1) { return __builtin_lasx_xvmaxi_h(_1, 1); }
 //
 v8i32 xvmaxi_w(v8i32 _1) { return __builtin_lasx_xvmaxi_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmaxi_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvmaxi.d(<4 x i64> [[_1]], i32 1)
@@ -866,7 +866,7 @@ v8i32 xvmaxi_w(v8i32 _1) { return __builtin_lasx_xvmaxi_w(_1, 1); }
 //
 v4i64 xvmaxi_d(v4i64 _1) { return __builtin_lasx_xvmaxi_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmax_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -876,7 +876,7 @@ v4i64 xvmaxi_d(v4i64 _1) { return __builtin_lasx_xvmaxi_d(_1, 1); }
 //
 v32u8 xvmax_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmax_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmax_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -886,7 +886,7 @@ v32u8 xvmax_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmax_bu(_1, _2); }
 //
 v16u16 xvmax_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmax_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmax_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -896,7 +896,7 @@ v16u16 xvmax_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmax_hu(_1, _2); 
 //
 v8u32 xvmax_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmax_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmax_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -906,7 +906,7 @@ v8u32 xvmax_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmax_wu(_1, _2); }
 //
 v4u64 xvmax_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmax_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmaxi_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmaxi.bu(<32 x i8> [[_1]], i32 1)
@@ -915,7 +915,7 @@ v4u64 xvmax_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmax_du(_1, _2); }
 //
 v32u8 xvmaxi_bu(v32u8 _1) { return __builtin_lasx_xvmaxi_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmaxi_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvmaxi.hu(<16 x i16> [[_1]], i32 1)
@@ -924,7 +924,7 @@ v32u8 xvmaxi_bu(v32u8 _1) { return __builtin_lasx_xvmaxi_bu(_1, 1); }
 //
 v16u16 xvmaxi_hu(v16u16 _1) { return __builtin_lasx_xvmaxi_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmaxi_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvmaxi.wu(<8 x i32> [[_1]], i32 1)
@@ -933,7 +933,7 @@ v16u16 xvmaxi_hu(v16u16 _1) { return __builtin_lasx_xvmaxi_hu(_1, 1); }
 //
 v8u32 xvmaxi_wu(v8u32 _1) { return __builtin_lasx_xvmaxi_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmaxi_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvmaxi.du(<4 x i64> [[_1]], i32 1)
@@ -942,7 +942,7 @@ v8u32 xvmaxi_wu(v8u32 _1) { return __builtin_lasx_xvmaxi_wu(_1, 1); }
 //
 v4u64 xvmaxi_du(v4u64 _1) { return __builtin_lasx_xvmaxi_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmin_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -952,7 +952,7 @@ v4u64 xvmaxi_du(v4u64 _1) { return __builtin_lasx_xvmaxi_du(_1, 1); }
 //
 v32i8 xvmin_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmin_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmin_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -962,7 +962,7 @@ v32i8 xvmin_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmin_b(_1, _2); }
 //
 v16i16 xvmin_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmin_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmin_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -972,7 +972,7 @@ v16i16 xvmin_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmin_h(_1, _2); }
 //
 v8i32 xvmin_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmin_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmin_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -982,7 +982,7 @@ v8i32 xvmin_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmin_w(_1, _2); }
 //
 v4i64 xvmin_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmin_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmini_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmini.b(<32 x i8> [[_1]], i32 1)
@@ -991,7 +991,7 @@ v4i64 xvmin_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmin_d(_1, _2); }
 //
 v32i8 xvmini_b(v32i8 _1) { return __builtin_lasx_xvmini_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmini_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvmini.h(<16 x i16> [[_1]], i32 1)
@@ -1000,7 +1000,7 @@ v32i8 xvmini_b(v32i8 _1) { return __builtin_lasx_xvmini_b(_1, 1); }
 //
 v16i16 xvmini_h(v16i16 _1) { return __builtin_lasx_xvmini_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmini_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvmini.w(<8 x i32> [[_1]], i32 1)
@@ -1009,7 +1009,7 @@ v16i16 xvmini_h(v16i16 _1) { return __builtin_lasx_xvmini_h(_1, 1); }
 //
 v8i32 xvmini_w(v8i32 _1) { return __builtin_lasx_xvmini_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmini_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvmini.d(<4 x i64> [[_1]], i32 1)
@@ -1018,7 +1018,7 @@ v8i32 xvmini_w(v8i32 _1) { return __builtin_lasx_xvmini_w(_1, 1); }
 //
 v4i64 xvmini_d(v4i64 _1) { return __builtin_lasx_xvmini_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmin_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1028,7 +1028,7 @@ v4i64 xvmini_d(v4i64 _1) { return __builtin_lasx_xvmini_d(_1, 1); }
 //
 v32u8 xvmin_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmin_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmin_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1038,7 +1038,7 @@ v32u8 xvmin_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmin_bu(_1, _2); }
 //
 v16u16 xvmin_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmin_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmin_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1048,7 +1048,7 @@ v16u16 xvmin_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmin_hu(_1, _2); 
 //
 v8u32 xvmin_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmin_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmin_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1058,7 +1058,7 @@ v8u32 xvmin_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmin_wu(_1, _2); }
 //
 v4u64 xvmin_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmin_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmini_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmini.bu(<32 x i8> [[_1]], i32 1)
@@ -1067,7 +1067,7 @@ v4u64 xvmin_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmin_du(_1, _2); }
 //
 v32u8 xvmini_bu(v32u8 _1) { return __builtin_lasx_xvmini_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmini_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvmini.hu(<16 x i16> [[_1]], i32 1)
@@ -1076,7 +1076,7 @@ v32u8 xvmini_bu(v32u8 _1) { return __builtin_lasx_xvmini_bu(_1, 1); }
 //
 v16u16 xvmini_hu(v16u16 _1) { return __builtin_lasx_xvmini_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmini_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvmini.wu(<8 x i32> [[_1]], i32 1)
@@ -1085,7 +1085,7 @@ v16u16 xvmini_hu(v16u16 _1) { return __builtin_lasx_xvmini_hu(_1, 1); }
 //
 v8u32 xvmini_wu(v8u32 _1) { return __builtin_lasx_xvmini_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvmini_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvmini.du(<4 x i64> [[_1]], i32 1)
@@ -1094,7 +1094,7 @@ v8u32 xvmini_wu(v8u32 _1) { return __builtin_lasx_xvmini_wu(_1, 1); }
 //
 v4u64 xvmini_du(v4u64 _1) { return __builtin_lasx_xvmini_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvseq_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1104,7 +1104,7 @@ v4u64 xvmini_du(v4u64 _1) { return __builtin_lasx_xvmini_du(_1, 1); }
 //
 v32i8 xvseq_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvseq_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvseq_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1114,7 +1114,7 @@ v32i8 xvseq_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvseq_b(_1, _2); }
 //
 v16i16 xvseq_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvseq_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvseq_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1124,7 +1124,7 @@ v16i16 xvseq_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvseq_h(_1, _2); }
 //
 v8i32 xvseq_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvseq_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvseq_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1134,7 +1134,7 @@ v8i32 xvseq_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvseq_w(_1, _2); }
 //
 v4i64 xvseq_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvseq_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvseqi_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvseqi.b(<32 x i8> [[_1]], i32 1)
@@ -1143,7 +1143,7 @@ v4i64 xvseq_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvseq_d(_1, _2); }
 //
 v32i8 xvseqi_b(v32i8 _1) { return __builtin_lasx_xvseqi_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvseqi_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvseqi.h(<16 x i16> [[_1]], i32 1)
@@ -1152,7 +1152,7 @@ v32i8 xvseqi_b(v32i8 _1) { return __builtin_lasx_xvseqi_b(_1, 1); }
 //
 v16i16 xvseqi_h(v16i16 _1) { return __builtin_lasx_xvseqi_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvseqi_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvseqi.w(<8 x i32> [[_1]], i32 1)
@@ -1161,7 +1161,7 @@ v16i16 xvseqi_h(v16i16 _1) { return __builtin_lasx_xvseqi_h(_1, 1); }
 //
 v8i32 xvseqi_w(v8i32 _1) { return __builtin_lasx_xvseqi_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvseqi_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvseqi.d(<4 x i64> [[_1]], i32 1)
@@ -1170,7 +1170,7 @@ v8i32 xvseqi_w(v8i32 _1) { return __builtin_lasx_xvseqi_w(_1, 1); }
 //
 v4i64 xvseqi_d(v4i64 _1) { return __builtin_lasx_xvseqi_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslt_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1180,7 +1180,7 @@ v4i64 xvseqi_d(v4i64 _1) { return __builtin_lasx_xvseqi_d(_1, 1); }
 //
 v32i8 xvslt_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvslt_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslt_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1190,7 +1190,7 @@ v32i8 xvslt_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvslt_b(_1, _2); }
 //
 v16i16 xvslt_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvslt_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslt_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1200,7 +1200,7 @@ v16i16 xvslt_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvslt_h(_1, _2); }
 //
 v8i32 xvslt_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvslt_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslt_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1210,7 +1210,7 @@ v8i32 xvslt_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvslt_w(_1, _2); }
 //
 v4i64 xvslt_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvslt_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslti_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvslti.b(<32 x i8> [[_1]], i32 1)
@@ -1219,7 +1219,7 @@ v4i64 xvslt_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvslt_d(_1, _2); }
 //
 v32i8 xvslti_b(v32i8 _1) { return __builtin_lasx_xvslti_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslti_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvslti.h(<16 x i16> [[_1]], i32 1)
@@ -1228,7 +1228,7 @@ v32i8 xvslti_b(v32i8 _1) { return __builtin_lasx_xvslti_b(_1, 1); }
 //
 v16i16 xvslti_h(v16i16 _1) { return __builtin_lasx_xvslti_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslti_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvslti.w(<8 x i32> [[_1]], i32 1)
@@ -1237,7 +1237,7 @@ v16i16 xvslti_h(v16i16 _1) { return __builtin_lasx_xvslti_h(_1, 1); }
 //
 v8i32 xvslti_w(v8i32 _1) { return __builtin_lasx_xvslti_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslti_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvslti.d(<4 x i64> [[_1]], i32 1)
@@ -1246,7 +1246,7 @@ v8i32 xvslti_w(v8i32 _1) { return __builtin_lasx_xvslti_w(_1, 1); }
 //
 v4i64 xvslti_d(v4i64 _1) { return __builtin_lasx_xvslti_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslt_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1256,7 +1256,7 @@ v4i64 xvslti_d(v4i64 _1) { return __builtin_lasx_xvslti_d(_1, 1); }
 //
 v32i8 xvslt_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvslt_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslt_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1266,7 +1266,7 @@ v32i8 xvslt_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvslt_bu(_1, _2); }
 //
 v16i16 xvslt_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvslt_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslt_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1276,7 +1276,7 @@ v16i16 xvslt_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvslt_hu(_1, _2); 
 //
 v8i32 xvslt_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvslt_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslt_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1286,7 +1286,7 @@ v8i32 xvslt_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvslt_wu(_1, _2); }
 //
 v4i64 xvslt_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvslt_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslti_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvslti.bu(<32 x i8> [[_1]], i32 1)
@@ -1295,7 +1295,7 @@ v4i64 xvslt_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvslt_du(_1, _2); }
 //
 v32i8 xvslti_bu(v32u8 _1) { return __builtin_lasx_xvslti_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslti_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvslti.hu(<16 x i16> [[_1]], i32 1)
@@ -1304,7 +1304,7 @@ v32i8 xvslti_bu(v32u8 _1) { return __builtin_lasx_xvslti_bu(_1, 1); }
 //
 v16i16 xvslti_hu(v16u16 _1) { return __builtin_lasx_xvslti_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslti_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvslti.wu(<8 x i32> [[_1]], i32 1)
@@ -1313,7 +1313,7 @@ v16i16 xvslti_hu(v16u16 _1) { return __builtin_lasx_xvslti_hu(_1, 1); }
 //
 v8i32 xvslti_wu(v8u32 _1) { return __builtin_lasx_xvslti_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslti_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvslti.du(<4 x i64> [[_1]], i32 1)
@@ -1322,7 +1322,7 @@ v8i32 xvslti_wu(v8u32 _1) { return __builtin_lasx_xvslti_wu(_1, 1); }
 //
 v4i64 xvslti_du(v4u64 _1) { return __builtin_lasx_xvslti_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsle_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1332,7 +1332,7 @@ v4i64 xvslti_du(v4u64 _1) { return __builtin_lasx_xvslti_du(_1, 1); }
 //
 v32i8 xvsle_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsle_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsle_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1342,7 +1342,7 @@ v32i8 xvsle_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsle_b(_1, _2); }
 //
 v16i16 xvsle_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsle_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsle_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1352,7 +1352,7 @@ v16i16 xvsle_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsle_h(_1, _2); }
 //
 v8i32 xvsle_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsle_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsle_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1362,7 +1362,7 @@ v8i32 xvsle_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsle_w(_1, _2); }
 //
 v4i64 xvsle_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsle_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslei_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvslei.b(<32 x i8> [[_1]], i32 1)
@@ -1371,7 +1371,7 @@ v4i64 xvsle_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsle_d(_1, _2); }
 //
 v32i8 xvslei_b(v32i8 _1) { return __builtin_lasx_xvslei_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslei_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvslei.h(<16 x i16> [[_1]], i32 1)
@@ -1380,7 +1380,7 @@ v32i8 xvslei_b(v32i8 _1) { return __builtin_lasx_xvslei_b(_1, 1); }
 //
 v16i16 xvslei_h(v16i16 _1) { return __builtin_lasx_xvslei_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslei_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvslei.w(<8 x i32> [[_1]], i32 1)
@@ -1389,7 +1389,7 @@ v16i16 xvslei_h(v16i16 _1) { return __builtin_lasx_xvslei_h(_1, 1); }
 //
 v8i32 xvslei_w(v8i32 _1) { return __builtin_lasx_xvslei_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslei_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvslei.d(<4 x i64> [[_1]], i32 1)
@@ -1398,7 +1398,7 @@ v8i32 xvslei_w(v8i32 _1) { return __builtin_lasx_xvslei_w(_1, 1); }
 //
 v4i64 xvslei_d(v4i64 _1) { return __builtin_lasx_xvslei_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsle_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1408,7 +1408,7 @@ v4i64 xvslei_d(v4i64 _1) { return __builtin_lasx_xvslei_d(_1, 1); }
 //
 v32i8 xvsle_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsle_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsle_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1418,7 +1418,7 @@ v32i8 xvsle_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsle_bu(_1, _2); }
 //
 v16i16 xvsle_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsle_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsle_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1428,7 +1428,7 @@ v16i16 xvsle_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsle_hu(_1, _2); 
 //
 v8i32 xvsle_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsle_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsle_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1438,7 +1438,7 @@ v8i32 xvsle_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsle_wu(_1, _2); }
 //
 v4i64 xvsle_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsle_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvslei_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvslei.bu(<32 x i8> [[_1]], i32 1)
@@ -1447,7 +1447,7 @@ v4i64 xvsle_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsle_du(_1, _2); }
 //
 v32i8 xvslei_bu(v32u8 _1) { return __builtin_lasx_xvslei_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslei_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvslei.hu(<16 x i16> [[_1]], i32 1)
@@ -1456,7 +1456,7 @@ v32i8 xvslei_bu(v32u8 _1) { return __builtin_lasx_xvslei_bu(_1, 1); }
 //
 v16i16 xvslei_hu(v16u16 _1) { return __builtin_lasx_xvslei_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslei_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvslei.wu(<8 x i32> [[_1]], i32 1)
@@ -1465,7 +1465,7 @@ v16i16 xvslei_hu(v16u16 _1) { return __builtin_lasx_xvslei_hu(_1, 1); }
 //
 v8i32 xvslei_wu(v8u32 _1) { return __builtin_lasx_xvslei_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvslei_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvslei.du(<4 x i64> [[_1]], i32 1)
@@ -1474,7 +1474,7 @@ v8i32 xvslei_wu(v8u32 _1) { return __builtin_lasx_xvslei_wu(_1, 1); }
 //
 v4i64 xvslei_du(v4u64 _1) { return __builtin_lasx_xvslei_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsat.b(<32 x i8> [[_1]], i32 1)
@@ -1483,7 +1483,7 @@ v4i64 xvslei_du(v4u64 _1) { return __builtin_lasx_xvslei_du(_1, 1); }
 //
 v32i8 xvsat_b(v32i8 _1) { return __builtin_lasx_xvsat_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsat.h(<16 x i16> [[_1]], i32 1)
@@ -1492,7 +1492,7 @@ v32i8 xvsat_b(v32i8 _1) { return __builtin_lasx_xvsat_b(_1, 1); }
 //
 v16i16 xvsat_h(v16i16 _1) { return __builtin_lasx_xvsat_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsat.w(<8 x i32> [[_1]], i32 1)
@@ -1501,7 +1501,7 @@ v16i16 xvsat_h(v16i16 _1) { return __builtin_lasx_xvsat_h(_1, 1); }
 //
 v8i32 xvsat_w(v8i32 _1) { return __builtin_lasx_xvsat_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsat.d(<4 x i64> [[_1]], i32 1)
@@ -1510,7 +1510,7 @@ v8i32 xvsat_w(v8i32 _1) { return __builtin_lasx_xvsat_w(_1, 1); }
 //
 v4i64 xvsat_d(v4i64 _1) { return __builtin_lasx_xvsat_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvsat.bu(<32 x i8> [[_1]], i32 1)
@@ -1519,7 +1519,7 @@ v4i64 xvsat_d(v4i64 _1) { return __builtin_lasx_xvsat_d(_1, 1); }
 //
 v32u8 xvsat_bu(v32u8 _1) { return __builtin_lasx_xvsat_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsat.hu(<16 x i16> [[_1]], i32 1)
@@ -1528,7 +1528,7 @@ v32u8 xvsat_bu(v32u8 _1) { return __builtin_lasx_xvsat_bu(_1, 1); }
 //
 v16u16 xvsat_hu(v16u16 _1) { return __builtin_lasx_xvsat_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsat.wu(<8 x i32> [[_1]], i32 1)
@@ -1537,7 +1537,7 @@ v16u16 xvsat_hu(v16u16 _1) { return __builtin_lasx_xvsat_hu(_1, 1); }
 //
 v8u32 xvsat_wu(v8u32 _1) { return __builtin_lasx_xvsat_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsat_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsat.du(<4 x i64> [[_1]], i32 1)
@@ -1546,7 +1546,7 @@ v8u32 xvsat_wu(v8u32 _1) { return __builtin_lasx_xvsat_wu(_1, 1); }
 //
 v4u64 xvsat_du(v4u64 _1) { return __builtin_lasx_xvsat_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvadda_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1556,7 +1556,7 @@ v4u64 xvsat_du(v4u64 _1) { return __builtin_lasx_xvsat_du(_1, 1); }
 //
 v32i8 xvadda_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvadda_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadda_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1566,7 +1566,7 @@ v32i8 xvadda_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvadda_b(_1, _2); }
 //
 v16i16 xvadda_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvadda_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadda_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1576,7 +1576,7 @@ v16i16 xvadda_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvadda_h(_1, _2); 
 //
 v8i32 xvadda_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvadda_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadda_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1586,7 +1586,7 @@ v8i32 xvadda_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvadda_w(_1, _2); }
 //
 v4i64 xvadda_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvadda_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1596,7 +1596,7 @@ v4i64 xvadda_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvadda_d(_1, _2); }
 //
 v32i8 xvsadd_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsadd_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1606,7 +1606,7 @@ v32i8 xvsadd_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsadd_b(_1, _2); }
 //
 v16i16 xvsadd_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsadd_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1616,7 +1616,7 @@ v16i16 xvsadd_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsadd_h(_1, _2); 
 //
 v8i32 xvsadd_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsadd_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1626,7 +1626,7 @@ v8i32 xvsadd_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsadd_w(_1, _2); }
 //
 v4i64 xvsadd_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsadd_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1636,7 +1636,7 @@ v4i64 xvsadd_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsadd_d(_1, _2); }
 //
 v32u8 xvsadd_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsadd_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1646,7 +1646,7 @@ v32u8 xvsadd_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsadd_bu(_1, _2); }
 //
 v16u16 xvsadd_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsadd_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1656,7 +1656,7 @@ v16u16 xvsadd_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsadd_hu(_1, _2)
 //
 v8u32 xvsadd_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsadd_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsadd_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1666,7 +1666,7 @@ v8u32 xvsadd_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsadd_wu(_1, _2); }
 //
 v4u64 xvsadd_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsadd_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1676,7 +1676,7 @@ v4u64 xvsadd_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsadd_du(_1, _2); }
 //
 v32i8 xvavg_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvavg_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1686,7 +1686,7 @@ v32i8 xvavg_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvavg_b(_1, _2); }
 //
 v16i16 xvavg_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvavg_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1696,7 +1696,7 @@ v16i16 xvavg_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvavg_h(_1, _2); }
 //
 v8i32 xvavg_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvavg_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1706,7 +1706,7 @@ v8i32 xvavg_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvavg_w(_1, _2); }
 //
 v4i64 xvavg_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvavg_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1716,7 +1716,7 @@ v4i64 xvavg_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvavg_d(_1, _2); }
 //
 v32u8 xvavg_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvavg_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1726,7 +1726,7 @@ v32u8 xvavg_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvavg_bu(_1, _2); }
 //
 v16u16 xvavg_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvavg_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1736,7 +1736,7 @@ v16u16 xvavg_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvavg_hu(_1, _2); 
 //
 v8u32 xvavg_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvavg_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavg_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1746,7 +1746,7 @@ v8u32 xvavg_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvavg_wu(_1, _2); }
 //
 v4u64 xvavg_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvavg_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1756,7 +1756,7 @@ v4u64 xvavg_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvavg_du(_1, _2); }
 //
 v32i8 xvavgr_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvavgr_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1766,7 +1766,7 @@ v32i8 xvavgr_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvavgr_b(_1, _2); }
 //
 v16i16 xvavgr_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvavgr_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1776,7 +1776,7 @@ v16i16 xvavgr_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvavgr_h(_1, _2); 
 //
 v8i32 xvavgr_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvavgr_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1786,7 +1786,7 @@ v8i32 xvavgr_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvavgr_w(_1, _2); }
 //
 v4i64 xvavgr_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvavgr_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1796,7 +1796,7 @@ v4i64 xvavgr_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvavgr_d(_1, _2); }
 //
 v32u8 xvavgr_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvavgr_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1806,7 +1806,7 @@ v32u8 xvavgr_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvavgr_bu(_1, _2); }
 //
 v16u16 xvavgr_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvavgr_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1816,7 +1816,7 @@ v16u16 xvavgr_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvavgr_hu(_1, _2)
 //
 v8u32 xvavgr_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvavgr_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvavgr_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1826,7 +1826,7 @@ v8u32 xvavgr_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvavgr_wu(_1, _2); }
 //
 v4u64 xvavgr_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvavgr_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1836,7 +1836,7 @@ v4u64 xvavgr_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvavgr_du(_1, _2); }
 //
 v32i8 xvssub_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssub_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1846,7 +1846,7 @@ v32i8 xvssub_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssub_b(_1, _2); }
 //
 v16i16 xvssub_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssub_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1856,7 +1856,7 @@ v16i16 xvssub_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssub_h(_1, _2); 
 //
 v8i32 xvssub_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssub_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1866,7 +1866,7 @@ v8i32 xvssub_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssub_w(_1, _2); }
 //
 v4i64 xvssub_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssub_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1876,7 +1876,7 @@ v4i64 xvssub_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssub_d(_1, _2); }
 //
 v32u8 xvssub_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvssub_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1886,7 +1886,7 @@ v32u8 xvssub_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvssub_bu(_1, _2); }
 //
 v16u16 xvssub_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssub_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1896,7 +1896,7 @@ v16u16 xvssub_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssub_hu(_1, _2)
 //
 v8u32 xvssub_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssub_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssub_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1906,7 +1906,7 @@ v8u32 xvssub_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssub_wu(_1, _2); }
 //
 v4u64 xvssub_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssub_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1916,7 +1916,7 @@ v4u64 xvssub_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssub_du(_1, _2); }
 //
 v32i8 xvabsd_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvabsd_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1926,7 +1926,7 @@ v32i8 xvabsd_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvabsd_b(_1, _2); }
 //
 v16i16 xvabsd_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvabsd_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1936,7 +1936,7 @@ v16i16 xvabsd_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvabsd_h(_1, _2); 
 //
 v8i32 xvabsd_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvabsd_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1946,7 +1946,7 @@ v8i32 xvabsd_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvabsd_w(_1, _2); }
 //
 v4i64 xvabsd_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvabsd_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1956,7 +1956,7 @@ v4i64 xvabsd_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvabsd_d(_1, _2); }
 //
 v32u8 xvabsd_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvabsd_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1966,7 +1966,7 @@ v32u8 xvabsd_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvabsd_bu(_1, _2); }
 //
 v16u16 xvabsd_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvabsd_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1976,7 +1976,7 @@ v16u16 xvabsd_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvabsd_hu(_1, _2)
 //
 v8u32 xvabsd_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvabsd_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvabsd_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1986,7 +1986,7 @@ v8u32 xvabsd_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvabsd_wu(_1, _2); }
 //
 v4u64 xvabsd_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvabsd_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmul_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -1996,7 +1996,7 @@ v4u64 xvabsd_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvabsd_du(_1, _2); }
 //
 v32i8 xvmul_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmul_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmul_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2006,7 +2006,7 @@ v32i8 xvmul_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmul_b(_1, _2); }
 //
 v16i16 xvmul_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmul_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmul_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2016,7 +2016,7 @@ v16i16 xvmul_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmul_h(_1, _2); }
 //
 v8i32 xvmul_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmul_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmul_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2026,7 +2026,7 @@ v8i32 xvmul_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmul_w(_1, _2); }
 //
 v4i64 xvmul_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmul_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmadd_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2037,7 +2037,7 @@ v4i64 xvmul_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmul_d(_1, _2); }
 //
 v32i8 xvmadd_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvmadd_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmadd_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2048,7 +2048,7 @@ v32i8 xvmadd_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvmadd_b(_1
 //
 v16i16 xvmadd_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvmadd_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmadd_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2059,7 +2059,7 @@ v16i16 xvmadd_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvmadd_
 //
 v8i32 xvmadd_w(v8i32 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmadd_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmadd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2070,7 +2070,7 @@ v8i32 xvmadd_w(v8i32 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmadd_w(_1
 //
 v4i64 xvmadd_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmadd_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmsub_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2081,7 +2081,7 @@ v4i64 xvmadd_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmadd_d(_1
 //
 v32i8 xvmsub_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvmsub_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmsub_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2092,7 +2092,7 @@ v32i8 xvmsub_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvmsub_b(_1
 //
 v16i16 xvmsub_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvmsub_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmsub_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2103,7 +2103,7 @@ v16i16 xvmsub_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvmsub_
 //
 v8i32 xvmsub_w(v8i32 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmsub_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmsub_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2114,7 +2114,7 @@ v8i32 xvmsub_w(v8i32 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmsub_w(_1
 //
 v4i64 xvmsub_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmsub_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvdiv_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2124,7 +2124,7 @@ v4i64 xvmsub_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmsub_d(_1
 //
 v32i8 xvdiv_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvdiv_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2134,7 +2134,7 @@ v32i8 xvdiv_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvdiv_b(_1, _2); }
 //
 v16i16 xvdiv_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvdiv_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2144,7 +2144,7 @@ v16i16 xvdiv_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvdiv_h(_1, _2); }
 //
 v8i32 xvdiv_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvdiv_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2154,7 +2154,7 @@ v8i32 xvdiv_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvdiv_w(_1, _2); }
 //
 v4i64 xvdiv_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvdiv_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2164,7 +2164,7 @@ v4i64 xvdiv_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvdiv_d(_1, _2); }
 //
 v32u8 xvdiv_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvdiv_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2174,7 +2174,7 @@ v32u8 xvdiv_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvdiv_bu(_1, _2); }
 //
 v16u16 xvdiv_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvdiv_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2184,7 +2184,7 @@ v16u16 xvdiv_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvdiv_hu(_1, _2); 
 //
 v8u32 xvdiv_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvdiv_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvdiv_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2194,7 +2194,7 @@ v8u32 xvdiv_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvdiv_wu(_1, _2); }
 //
 v4u64 xvdiv_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvdiv_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2204,7 +2204,7 @@ v4u64 xvdiv_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvdiv_du(_1, _2); }
 //
 v16i16 xvhaddw_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvhaddw_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2214,7 +2214,7 @@ v16i16 xvhaddw_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvhaddw_h_b(_1, _
 //
 v8i32 xvhaddw_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvhaddw_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2224,7 +2224,7 @@ v8i32 xvhaddw_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvhaddw_w_h(_1, 
 //
 v4i64 xvhaddw_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvhaddw_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_hu_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2234,7 +2234,7 @@ v4i64 xvhaddw_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvhaddw_d_w(_1, _2
 //
 v16u16 xvhaddw_hu_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvhaddw_hu_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_wu_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2244,7 +2244,7 @@ v16u16 xvhaddw_hu_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvhaddw_hu_bu(_
 //
 v8u32 xvhaddw_wu_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvhaddw_wu_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_du_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2254,7 +2254,7 @@ v8u32 xvhaddw_wu_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvhaddw_wu_hu(
 //
 v4u64 xvhaddw_du_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvhaddw_du_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2264,7 +2264,7 @@ v4u64 xvhaddw_du_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvhaddw_du_wu(_1
 //
 v16i16 xvhsubw_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvhsubw_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2274,7 +2274,7 @@ v16i16 xvhsubw_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvhsubw_h_b(_1, _
 //
 v8i32 xvhsubw_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvhsubw_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2284,7 +2284,7 @@ v8i32 xvhsubw_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvhsubw_w_h(_1, 
 //
 v4i64 xvhsubw_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvhsubw_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_hu_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2294,7 +2294,7 @@ v4i64 xvhsubw_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvhsubw_d_w(_1, _2
 //
 v16i16 xvhsubw_hu_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvhsubw_hu_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_wu_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2304,7 +2304,7 @@ v16i16 xvhsubw_hu_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvhsubw_hu_bu(_
 //
 v8i32 xvhsubw_wu_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvhsubw_wu_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_du_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2314,7 +2314,7 @@ v8i32 xvhsubw_wu_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvhsubw_wu_hu(
 //
 v4i64 xvhsubw_du_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvhsubw_du_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2324,7 +2324,7 @@ v4i64 xvhsubw_du_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvhsubw_du_wu(_1
 //
 v32i8 xvmod_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmod_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2334,7 +2334,7 @@ v32i8 xvmod_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmod_b(_1, _2); }
 //
 v16i16 xvmod_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmod_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2344,7 +2344,7 @@ v16i16 xvmod_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmod_h(_1, _2); }
 //
 v8i32 xvmod_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmod_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2354,7 +2354,7 @@ v8i32 xvmod_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmod_w(_1, _2); }
 //
 v4i64 xvmod_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmod_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2364,7 +2364,7 @@ v4i64 xvmod_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmod_d(_1, _2); }
 //
 v32u8 xvmod_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmod_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2374,7 +2374,7 @@ v32u8 xvmod_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmod_bu(_1, _2); }
 //
 v16u16 xvmod_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmod_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2384,7 +2384,7 @@ v16u16 xvmod_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmod_hu(_1, _2); 
 //
 v8u32 xvmod_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmod_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmod_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2394,7 +2394,7 @@ v8u32 xvmod_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmod_wu(_1, _2); }
 //
 v4u64 xvmod_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmod_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvrepl128vei_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvrepl128vei.b(<32 x i8> [[_1]], i32 1)
@@ -2403,7 +2403,7 @@ v4u64 xvmod_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmod_du(_1, _2); }
 //
 v32i8 xvrepl128vei_b(v32i8 _1) { return __builtin_lasx_xvrepl128vei_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvrepl128vei_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvrepl128vei.h(<16 x i16> [[_1]], i32 1)
@@ -2412,7 +2412,7 @@ v32i8 xvrepl128vei_b(v32i8 _1) { return __builtin_lasx_xvrepl128vei_b(_1, 1); }
 //
 v16i16 xvrepl128vei_h(v16i16 _1) { return __builtin_lasx_xvrepl128vei_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvrepl128vei_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvrepl128vei.w(<8 x i32> [[_1]], i32 1)
@@ -2421,7 +2421,7 @@ v16i16 xvrepl128vei_h(v16i16 _1) { return __builtin_lasx_xvrepl128vei_h(_1, 1); 
 //
 v8i32 xvrepl128vei_w(v8i32 _1) { return __builtin_lasx_xvrepl128vei_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvrepl128vei_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvrepl128vei.d(<4 x i64> [[_1]], i32 1)
@@ -2430,7 +2430,7 @@ v8i32 xvrepl128vei_w(v8i32 _1) { return __builtin_lasx_xvrepl128vei_w(_1, 1); }
 //
 v4i64 xvrepl128vei_d(v4i64 _1) { return __builtin_lasx_xvrepl128vei_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvpickev_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2440,7 +2440,7 @@ v4i64 xvrepl128vei_d(v4i64 _1) { return __builtin_lasx_xvrepl128vei_d(_1, 1); }
 //
 v32i8 xvpickev_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpickev_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickev_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2450,7 +2450,7 @@ v32i8 xvpickev_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpickev_b(_1, _2);
 //
 v16i16 xvpickev_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpickev_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickev_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2460,7 +2460,7 @@ v16i16 xvpickev_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpickev_h(_1, _
 //
 v8i32 xvpickev_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpickev_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickev_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2470,7 +2470,7 @@ v8i32 xvpickev_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpickev_w(_1, _2);
 //
 v4i64 xvpickev_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpickev_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickod_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2480,7 +2480,7 @@ v4i64 xvpickev_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpickev_d(_1, _2);
 //
 v32i8 xvpickod_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpickod_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickod_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2490,7 +2490,7 @@ v32i8 xvpickod_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpickod_b(_1, _2);
 //
 v16i16 xvpickod_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpickod_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickod_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2500,7 +2500,7 @@ v16i16 xvpickod_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpickod_h(_1, _
 //
 v8i32 xvpickod_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpickod_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickod_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2510,7 +2510,7 @@ v8i32 xvpickod_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpickod_w(_1, _2);
 //
 v4i64 xvpickod_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpickod_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvh_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2520,7 +2520,7 @@ v4i64 xvpickod_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpickod_d(_1, _2);
 //
 v32i8 xvilvh_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvilvh_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvh_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2530,7 +2530,7 @@ v32i8 xvilvh_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvilvh_b(_1, _2); }
 //
 v16i16 xvilvh_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvilvh_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvh_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2540,7 +2540,7 @@ v16i16 xvilvh_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvilvh_h(_1, _2); 
 //
 v8i32 xvilvh_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvilvh_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvh_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2550,7 +2550,7 @@ v8i32 xvilvh_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvilvh_w(_1, _2); }
 //
 v4i64 xvilvh_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvilvh_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvl_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2560,7 +2560,7 @@ v4i64 xvilvh_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvilvh_d(_1, _2); }
 //
 v32i8 xvilvl_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvilvl_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvl_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2570,7 +2570,7 @@ v32i8 xvilvl_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvilvl_b(_1, _2); }
 //
 v16i16 xvilvl_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvilvl_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvl_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2580,7 +2580,7 @@ v16i16 xvilvl_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvilvl_h(_1, _2); 
 //
 v8i32 xvilvl_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvilvl_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvilvl_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2590,7 +2590,7 @@ v8i32 xvilvl_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvilvl_w(_1, _2); }
 //
 v4i64 xvilvl_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvilvl_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackev_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2600,7 +2600,7 @@ v4i64 xvilvl_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvilvl_d(_1, _2); }
 //
 v32i8 xvpackev_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpackev_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackev_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2610,7 +2610,7 @@ v32i8 xvpackev_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpackev_b(_1, _2);
 //
 v16i16 xvpackev_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpackev_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackev_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2620,7 +2620,7 @@ v16i16 xvpackev_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpackev_h(_1, _
 //
 v8i32 xvpackev_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpackev_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackev_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2630,7 +2630,7 @@ v8i32 xvpackev_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpackev_w(_1, _2);
 //
 v4i64 xvpackev_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpackev_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackod_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2640,7 +2640,7 @@ v4i64 xvpackev_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpackev_d(_1, _2);
 //
 v32i8 xvpackod_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpackod_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackod_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2650,7 +2650,7 @@ v32i8 xvpackod_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpackod_b(_1, _2);
 //
 v16i16 xvpackod_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpackod_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackod_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2660,7 +2660,7 @@ v16i16 xvpackod_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvpackod_h(_1, _
 //
 v8i32 xvpackod_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpackod_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpackod_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2670,7 +2670,7 @@ v8i32 xvpackod_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpackod_w(_1, _2);
 //
 v4i64 xvpackod_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpackod_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvshuf_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2681,7 +2681,7 @@ v4i64 xvpackod_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvpackod_d(_1, _2);
 //
 v32i8 xvshuf_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvshuf_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvshuf_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2692,7 +2692,7 @@ v32i8 xvshuf_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvshuf_b(_1
 //
 v16i16 xvshuf_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvshuf_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvshuf_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2703,7 +2703,7 @@ v16i16 xvshuf_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvshuf_
 //
 v8i32 xvshuf_w(v8i32 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvshuf_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvshuf_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2714,7 +2714,7 @@ v8i32 xvshuf_w(v8i32 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvshuf_w(_1
 //
 v4i64 xvshuf_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvshuf_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvand_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2724,7 +2724,7 @@ v4i64 xvshuf_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvshuf_d(_1
 //
 v32u8 xvand_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvand_v(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvandi_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvandi.b(<32 x i8> [[_1]], i32 1)
@@ -2733,7 +2733,7 @@ v32u8 xvand_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvand_v(_1, _2); }
 //
 v32u8 xvandi_b(v32u8 _1) { return __builtin_lasx_xvandi_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvor_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2743,7 +2743,7 @@ v32u8 xvandi_b(v32u8 _1) { return __builtin_lasx_xvandi_b(_1, 1); }
 //
 v32u8 xvor_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvor_v(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvori_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvori.b(<32 x i8> [[_1]], i32 1)
@@ -2752,7 +2752,7 @@ v32u8 xvor_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvor_v(_1, _2); }
 //
 v32u8 xvori_b(v32u8 _1) { return __builtin_lasx_xvori_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvnor_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2762,7 +2762,7 @@ v32u8 xvori_b(v32u8 _1) { return __builtin_lasx_xvori_b(_1, 1); }
 //
 v32u8 xvnor_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvnor_v(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvnori_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvnori.b(<32 x i8> [[_1]], i32 1)
@@ -2771,7 +2771,7 @@ v32u8 xvnor_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvnor_v(_1, _2); }
 //
 v32u8 xvnori_b(v32u8 _1) { return __builtin_lasx_xvnori_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvxor_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2781,7 +2781,7 @@ v32u8 xvnori_b(v32u8 _1) { return __builtin_lasx_xvnori_b(_1, 1); }
 //
 v32u8 xvxor_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvxor_v(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvxori_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvxori.b(<32 x i8> [[_1]], i32 1)
@@ -2790,7 +2790,7 @@ v32u8 xvxor_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvxor_v(_1, _2); }
 //
 v32u8 xvxori_b(v32u8 _1) { return __builtin_lasx_xvxori_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbitsel_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2801,7 +2801,7 @@ v32u8 xvxori_b(v32u8 _1) { return __builtin_lasx_xvxori_b(_1, 1); }
 //
 v32u8 xvbitsel_v(v32u8 _1, v32u8 _2, v32u8 _3) { return __builtin_lasx_xvbitsel_v(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvbitseli_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2811,7 +2811,7 @@ v32u8 xvbitsel_v(v32u8 _1, v32u8 _2, v32u8 _3) { return __builtin_lasx_xvbitsel_
 //
 v32u8 xvbitseli_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitseli_b(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvshuf4i_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvshuf4i.b(<32 x i8> [[_1]], i32 1)
@@ -2820,7 +2820,7 @@ v32u8 xvbitseli_b(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvbitseli_b(_1, _2
 //
 v32i8 xvshuf4i_b(v32i8 _1) { return __builtin_lasx_xvshuf4i_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvshuf4i_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvshuf4i.h(<16 x i16> [[_1]], i32 1)
@@ -2829,7 +2829,7 @@ v32i8 xvshuf4i_b(v32i8 _1) { return __builtin_lasx_xvshuf4i_b(_1, 1); }
 //
 v16i16 xvshuf4i_h(v16i16 _1) { return __builtin_lasx_xvshuf4i_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvshuf4i_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvshuf4i.w(<8 x i32> [[_1]], i32 1)
@@ -2871,7 +2871,7 @@ v8i32 xvreplgr2vr_w(int _1) { return __builtin_lasx_xvreplgr2vr_w(_1); }
 //
 v4i64 xvreplgr2vr_d(int _1) { return __builtin_lasx_xvreplgr2vr_d(_1); }
 // CHECK-LABEL: define dso_local void @xvpcnt_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvpcnt.b(<32 x i8> [[_1]])
@@ -2880,7 +2880,7 @@ v4i64 xvreplgr2vr_d(int _1) { return __builtin_lasx_xvreplgr2vr_d(_1); }
 //
 v32i8 xvpcnt_b(v32i8 _1) { return __builtin_lasx_xvpcnt_b(_1); }
 // CHECK-LABEL: define dso_local void @xvpcnt_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvpcnt.h(<16 x i16> [[_1]])
@@ -2889,7 +2889,7 @@ v32i8 xvpcnt_b(v32i8 _1) { return __builtin_lasx_xvpcnt_b(_1); }
 //
 v16i16 xvpcnt_h(v16i16 _1) { return __builtin_lasx_xvpcnt_h(_1); }
 // CHECK-LABEL: define dso_local void @xvpcnt_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvpcnt.w(<8 x i32> [[_1]])
@@ -2898,7 +2898,7 @@ v16i16 xvpcnt_h(v16i16 _1) { return __builtin_lasx_xvpcnt_h(_1); }
 //
 v8i32 xvpcnt_w(v8i32 _1) { return __builtin_lasx_xvpcnt_w(_1); }
 // CHECK-LABEL: define dso_local void @xvpcnt_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvpcnt.d(<4 x i64> [[_1]])
@@ -2907,7 +2907,7 @@ v8i32 xvpcnt_w(v8i32 _1) { return __builtin_lasx_xvpcnt_w(_1); }
 //
 v4i64 xvpcnt_d(v4i64 _1) { return __builtin_lasx_xvpcnt_d(_1); }
 // CHECK-LABEL: define dso_local void @xvclo_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvclo.b(<32 x i8> [[_1]])
@@ -2916,7 +2916,7 @@ v4i64 xvpcnt_d(v4i64 _1) { return __builtin_lasx_xvpcnt_d(_1); }
 //
 v32i8 xvclo_b(v32i8 _1) { return __builtin_lasx_xvclo_b(_1); }
 // CHECK-LABEL: define dso_local void @xvclo_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvclo.h(<16 x i16> [[_1]])
@@ -2925,7 +2925,7 @@ v32i8 xvclo_b(v32i8 _1) { return __builtin_lasx_xvclo_b(_1); }
 //
 v16i16 xvclo_h(v16i16 _1) { return __builtin_lasx_xvclo_h(_1); }
 // CHECK-LABEL: define dso_local void @xvclo_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvclo.w(<8 x i32> [[_1]])
@@ -2934,7 +2934,7 @@ v16i16 xvclo_h(v16i16 _1) { return __builtin_lasx_xvclo_h(_1); }
 //
 v8i32 xvclo_w(v8i32 _1) { return __builtin_lasx_xvclo_w(_1); }
 // CHECK-LABEL: define dso_local void @xvclo_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvclo.d(<4 x i64> [[_1]])
@@ -2943,7 +2943,7 @@ v8i32 xvclo_w(v8i32 _1) { return __builtin_lasx_xvclo_w(_1); }
 //
 v4i64 xvclo_d(v4i64 _1) { return __builtin_lasx_xvclo_d(_1); }
 // CHECK-LABEL: define dso_local void @xvclz_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvclz.b(<32 x i8> [[_1]])
@@ -2952,7 +2952,7 @@ v4i64 xvclo_d(v4i64 _1) { return __builtin_lasx_xvclo_d(_1); }
 //
 v32i8 xvclz_b(v32i8 _1) { return __builtin_lasx_xvclz_b(_1); }
 // CHECK-LABEL: define dso_local void @xvclz_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvclz.h(<16 x i16> [[_1]])
@@ -2961,7 +2961,7 @@ v32i8 xvclz_b(v32i8 _1) { return __builtin_lasx_xvclz_b(_1); }
 //
 v16i16 xvclz_h(v16i16 _1) { return __builtin_lasx_xvclz_h(_1); }
 // CHECK-LABEL: define dso_local void @xvclz_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvclz.w(<8 x i32> [[_1]])
@@ -2970,7 +2970,7 @@ v16i16 xvclz_h(v16i16 _1) { return __builtin_lasx_xvclz_h(_1); }
 //
 v8i32 xvclz_w(v8i32 _1) { return __builtin_lasx_xvclz_w(_1); }
 // CHECK-LABEL: define dso_local void @xvclz_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvclz.d(<4 x i64> [[_1]])
@@ -2979,7 +2979,7 @@ v8i32 xvclz_w(v8i32 _1) { return __builtin_lasx_xvclz_w(_1); }
 //
 v4i64 xvclz_d(v4i64 _1) { return __builtin_lasx_xvclz_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfadd_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2989,7 +2989,7 @@ v4i64 xvclz_d(v4i64 _1) { return __builtin_lasx_xvclz_d(_1); }
 //
 v8f32 xvfadd_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfadd_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfadd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -2999,7 +2999,7 @@ v8f32 xvfadd_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfadd_s(_1, _2); }
 //
 v4f64 xvfadd_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfadd_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfsub_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3009,7 +3009,7 @@ v4f64 xvfadd_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfadd_d(_1, _2); }
 //
 v8f32 xvfsub_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfsub_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfsub_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3019,7 +3019,7 @@ v8f32 xvfsub_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfsub_s(_1, _2); }
 //
 v4f64 xvfsub_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfsub_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmul_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3029,7 +3029,7 @@ v4f64 xvfsub_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfsub_d(_1, _2); }
 //
 v8f32 xvfmul_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmul_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmul_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3039,7 +3039,7 @@ v8f32 xvfmul_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmul_s(_1, _2); }
 //
 v4f64 xvfmul_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmul_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfdiv_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3049,7 +3049,7 @@ v4f64 xvfmul_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmul_d(_1, _2); }
 //
 v8f32 xvfdiv_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfdiv_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfdiv_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3059,7 +3059,7 @@ v8f32 xvfdiv_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfdiv_s(_1, _2); }
 //
 v4f64 xvfdiv_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfdiv_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcvt_h_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3069,7 +3069,7 @@ v4f64 xvfdiv_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfdiv_d(_1, _2); }
 //
 v16i16 xvfcvt_h_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcvt_h_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcvt_s_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3079,7 +3079,7 @@ v16i16 xvfcvt_h_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcvt_h_s(_1, _2)
 //
 v8f32 xvfcvt_s_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcvt_s_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmin_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3089,7 +3089,7 @@ v8f32 xvfcvt_s_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcvt_s_d(_1, _2);
 //
 v8f32 xvfmin_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmin_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmin_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3099,7 +3099,7 @@ v8f32 xvfmin_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmin_s(_1, _2); }
 //
 v4f64 xvfmin_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmin_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmina_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3109,7 +3109,7 @@ v4f64 xvfmin_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmin_d(_1, _2); }
 //
 v8f32 xvfmina_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmina_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmina_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3119,7 +3119,7 @@ v8f32 xvfmina_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmina_s(_1, _2); }
 //
 v4f64 xvfmina_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmina_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmax_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3129,7 +3129,7 @@ v4f64 xvfmina_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmina_d(_1, _2); }
 //
 v8f32 xvfmax_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmax_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmax_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3139,7 +3139,7 @@ v8f32 xvfmax_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmax_s(_1, _2); }
 //
 v4f64 xvfmax_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmax_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmaxa_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3149,7 +3149,7 @@ v4f64 xvfmax_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmax_d(_1, _2); }
 //
 v8f32 xvfmaxa_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmaxa_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmaxa_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3159,7 +3159,7 @@ v8f32 xvfmaxa_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfmaxa_s(_1, _2); }
 //
 v4f64 xvfmaxa_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmaxa_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfclass_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvfclass.s(<8 x float> [[_1]])
@@ -3168,7 +3168,7 @@ v4f64 xvfmaxa_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfmaxa_d(_1, _2); }
 //
 v8i32 xvfclass_s(v8f32 _1) { return __builtin_lasx_xvfclass_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfclass_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvfclass.d(<4 x double> [[_1]])
@@ -3177,7 +3177,7 @@ v8i32 xvfclass_s(v8f32 _1) { return __builtin_lasx_xvfclass_s(_1); }
 //
 v4i64 xvfclass_d(v4f64 _1) { return __builtin_lasx_xvfclass_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfsqrt_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfsqrt.s(<8 x float> [[_1]])
@@ -3186,7 +3186,7 @@ v4i64 xvfclass_d(v4f64 _1) { return __builtin_lasx_xvfclass_d(_1); }
 //
 v8f32 xvfsqrt_s(v8f32 _1) { return __builtin_lasx_xvfsqrt_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfsqrt_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfsqrt.d(<4 x double> [[_1]])
@@ -3195,7 +3195,7 @@ v8f32 xvfsqrt_s(v8f32 _1) { return __builtin_lasx_xvfsqrt_s(_1); }
 //
 v4f64 xvfsqrt_d(v4f64 _1) { return __builtin_lasx_xvfsqrt_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrecip_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrecip.s(<8 x float> [[_1]])
@@ -3204,7 +3204,7 @@ v4f64 xvfsqrt_d(v4f64 _1) { return __builtin_lasx_xvfsqrt_d(_1); }
 //
 v8f32 xvfrecip_s(v8f32 _1) { return __builtin_lasx_xvfrecip_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrecip_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrecip.d(<4 x double> [[_1]])
@@ -3213,7 +3213,7 @@ v8f32 xvfrecip_s(v8f32 _1) { return __builtin_lasx_xvfrecip_s(_1); }
 //
 v4f64 xvfrecip_d(v4f64 _1) { return __builtin_lasx_xvfrecip_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrint_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrint.s(<8 x float> [[_1]])
@@ -3222,7 +3222,7 @@ v4f64 xvfrecip_d(v4f64 _1) { return __builtin_lasx_xvfrecip_d(_1); }
 //
 v8f32 xvfrint_s(v8f32 _1) { return __builtin_lasx_xvfrint_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrint_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrint.d(<4 x double> [[_1]])
@@ -3231,7 +3231,7 @@ v8f32 xvfrint_s(v8f32 _1) { return __builtin_lasx_xvfrint_s(_1); }
 //
 v4f64 xvfrint_d(v4f64 _1) { return __builtin_lasx_xvfrint_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrsqrt_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrsqrt.s(<8 x float> [[_1]])
@@ -3240,7 +3240,7 @@ v4f64 xvfrint_d(v4f64 _1) { return __builtin_lasx_xvfrint_d(_1); }
 //
 v8f32 xvfrsqrt_s(v8f32 _1) { return __builtin_lasx_xvfrsqrt_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrsqrt_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrsqrt.d(<4 x double> [[_1]])
@@ -3249,7 +3249,7 @@ v8f32 xvfrsqrt_s(v8f32 _1) { return __builtin_lasx_xvfrsqrt_s(_1); }
 //
 v4f64 xvfrsqrt_d(v4f64 _1) { return __builtin_lasx_xvfrsqrt_d(_1); }
 // CHECK-LABEL: define dso_local void @xvflogb_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvflogb.s(<8 x float> [[_1]])
@@ -3258,7 +3258,7 @@ v4f64 xvfrsqrt_d(v4f64 _1) { return __builtin_lasx_xvfrsqrt_d(_1); }
 //
 v8f32 xvflogb_s(v8f32 _1) { return __builtin_lasx_xvflogb_s(_1); }
 // CHECK-LABEL: define dso_local void @xvflogb_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvflogb.d(<4 x double> [[_1]])
@@ -3267,7 +3267,7 @@ v8f32 xvflogb_s(v8f32 _1) { return __builtin_lasx_xvflogb_s(_1); }
 //
 v4f64 xvflogb_d(v4f64 _1) { return __builtin_lasx_xvflogb_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfcvth_s_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfcvth.s.h(<16 x i16> [[_1]])
@@ -3276,7 +3276,7 @@ v4f64 xvflogb_d(v4f64 _1) { return __builtin_lasx_xvflogb_d(_1); }
 //
 v8f32 xvfcvth_s_h(v16i16 _1) { return __builtin_lasx_xvfcvth_s_h(_1); }
 // CHECK-LABEL: define dso_local void @xvfcvth_d_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfcvth.d.s(<8 x float> [[_1]])
@@ -3285,7 +3285,7 @@ v8f32 xvfcvth_s_h(v16i16 _1) { return __builtin_lasx_xvfcvth_s_h(_1); }
 //
 v4f64 xvfcvth_d_s(v8f32 _1) { return __builtin_lasx_xvfcvth_d_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfcvtl_s_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfcvtl.s.h(<16 x i16> [[_1]])
@@ -3294,7 +3294,7 @@ v4f64 xvfcvth_d_s(v8f32 _1) { return __builtin_lasx_xvfcvth_d_s(_1); }
 //
 v8f32 xvfcvtl_s_h(v16i16 _1) { return __builtin_lasx_xvfcvtl_s_h(_1); }
 // CHECK-LABEL: define dso_local void @xvfcvtl_d_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfcvtl.d.s(<8 x float> [[_1]])
@@ -3303,7 +3303,7 @@ v8f32 xvfcvtl_s_h(v16i16 _1) { return __builtin_lasx_xvfcvtl_s_h(_1); }
 //
 v4f64 xvfcvtl_d_s(v8f32 _1) { return __builtin_lasx_xvfcvtl_d_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftint_w_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftint.w.s(<8 x float> [[_1]])
@@ -3312,7 +3312,7 @@ v4f64 xvfcvtl_d_s(v8f32 _1) { return __builtin_lasx_xvfcvtl_d_s(_1); }
 //
 v8i32 xvftint_w_s(v8f32 _1) { return __builtin_lasx_xvftint_w_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftint_l_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftint.l.d(<4 x double> [[_1]])
@@ -3321,7 +3321,7 @@ v8i32 xvftint_w_s(v8f32 _1) { return __builtin_lasx_xvftint_w_s(_1); }
 //
 v4i64 xvftint_l_d(v4f64 _1) { return __builtin_lasx_xvftint_l_d(_1); }
 // CHECK-LABEL: define dso_local void @xvftint_wu_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftint.wu.s(<8 x float> [[_1]])
@@ -3330,7 +3330,7 @@ v4i64 xvftint_l_d(v4f64 _1) { return __builtin_lasx_xvftint_l_d(_1); }
 //
 v8u32 xvftint_wu_s(v8f32 _1) { return __builtin_lasx_xvftint_wu_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftint_lu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftint.lu.d(<4 x double> [[_1]])
@@ -3339,7 +3339,7 @@ v8u32 xvftint_wu_s(v8f32 _1) { return __builtin_lasx_xvftint_wu_s(_1); }
 //
 v4u64 xvftint_lu_d(v4f64 _1) { return __builtin_lasx_xvftint_lu_d(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrz_w_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftintrz.w.s(<8 x float> [[_1]])
@@ -3348,7 +3348,7 @@ v4u64 xvftint_lu_d(v4f64 _1) { return __builtin_lasx_xvftint_lu_d(_1); }
 //
 v8i32 xvftintrz_w_s(v8f32 _1) { return __builtin_lasx_xvftintrz_w_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrz_l_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrz.l.d(<4 x double> [[_1]])
@@ -3357,7 +3357,7 @@ v8i32 xvftintrz_w_s(v8f32 _1) { return __builtin_lasx_xvftintrz_w_s(_1); }
 //
 v4i64 xvftintrz_l_d(v4f64 _1) { return __builtin_lasx_xvftintrz_l_d(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrz_wu_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftintrz.wu.s(<8 x float> [[_1]])
@@ -3366,7 +3366,7 @@ v4i64 xvftintrz_l_d(v4f64 _1) { return __builtin_lasx_xvftintrz_l_d(_1); }
 //
 v8u32 xvftintrz_wu_s(v8f32 _1) { return __builtin_lasx_xvftintrz_wu_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrz_lu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrz.lu.d(<4 x double> [[_1]])
@@ -3375,7 +3375,7 @@ v8u32 xvftintrz_wu_s(v8f32 _1) { return __builtin_lasx_xvftintrz_wu_s(_1); }
 //
 v4u64 xvftintrz_lu_d(v4f64 _1) { return __builtin_lasx_xvftintrz_lu_d(_1); }
 // CHECK-LABEL: define dso_local void @xvffint_s_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvffint.s.w(<8 x i32> [[_1]])
@@ -3384,7 +3384,7 @@ v4u64 xvftintrz_lu_d(v4f64 _1) { return __builtin_lasx_xvftintrz_lu_d(_1); }
 //
 v8f32 xvffint_s_w(v8i32 _1) { return __builtin_lasx_xvffint_s_w(_1); }
 // CHECK-LABEL: define dso_local void @xvffint_d_l(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvffint.d.l(<4 x i64> [[_1]])
@@ -3393,7 +3393,7 @@ v8f32 xvffint_s_w(v8i32 _1) { return __builtin_lasx_xvffint_s_w(_1); }
 //
 v4f64 xvffint_d_l(v4i64 _1) { return __builtin_lasx_xvffint_d_l(_1); }
 // CHECK-LABEL: define dso_local void @xvffint_s_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvffint.s.wu(<8 x i32> [[_1]])
@@ -3402,7 +3402,7 @@ v4f64 xvffint_d_l(v4i64 _1) { return __builtin_lasx_xvffint_d_l(_1); }
 //
 v8f32 xvffint_s_wu(v8u32 _1) { return __builtin_lasx_xvffint_s_wu(_1); }
 // CHECK-LABEL: define dso_local void @xvffint_d_lu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvffint.d.lu(<4 x i64> [[_1]])
@@ -3411,7 +3411,7 @@ v8f32 xvffint_s_wu(v8u32 _1) { return __builtin_lasx_xvffint_s_wu(_1); }
 //
 v4f64 xvffint_d_lu(v4u64 _1) { return __builtin_lasx_xvffint_d_lu(_1); }
 // CHECK-LABEL: define dso_local void @xvreplve_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvreplve.b(<32 x i8> [[_1]], i32 [[_2]])
@@ -3420,7 +3420,7 @@ v4f64 xvffint_d_lu(v4u64 _1) { return __builtin_lasx_xvffint_d_lu(_1); }
 //
 v32i8 xvreplve_b(v32i8 _1, int _2) { return __builtin_lasx_xvreplve_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvreplve_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvreplve.h(<16 x i16> [[_1]], i32 [[_2]])
@@ -3429,7 +3429,7 @@ v32i8 xvreplve_b(v32i8 _1, int _2) { return __builtin_lasx_xvreplve_b(_1, _2); }
 //
 v16i16 xvreplve_h(v16i16 _1, int _2) { return __builtin_lasx_xvreplve_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvreplve_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvreplve.w(<8 x i32> [[_1]], i32 [[_2]])
@@ -3438,7 +3438,7 @@ v16i16 xvreplve_h(v16i16 _1, int _2) { return __builtin_lasx_xvreplve_h(_1, _2);
 //
 v8i32 xvreplve_w(v8i32 _1, int _2) { return __builtin_lasx_xvreplve_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvreplve_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i32 noundef signext [[_2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvreplve.d(<4 x i64> [[_1]], i32 [[_2]])
@@ -3447,7 +3447,7 @@ v8i32 xvreplve_w(v8i32 _1, int _2) { return __builtin_lasx_xvreplve_w(_1, _2); }
 //
 v4i64 xvreplve_d(v4i64 _1, int _2) { return __builtin_lasx_xvreplve_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpermi_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3457,7 +3457,7 @@ v4i64 xvreplve_d(v4i64 _1, int _2) { return __builtin_lasx_xvreplve_d(_1, _2); }
 //
 v8i32 xvpermi_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpermi_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvandn_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3467,7 +3467,7 @@ v8i32 xvpermi_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvpermi_w(_1, _2, 1)
 //
 v32u8 xvandn_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvandn_v(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvneg_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvneg.b(<32 x i8> [[_1]])
@@ -3476,7 +3476,7 @@ v32u8 xvandn_v(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvandn_v(_1, _2); }
 //
 v32i8 xvneg_b(v32i8 _1) { return __builtin_lasx_xvneg_b(_1); }
 // CHECK-LABEL: define dso_local void @xvneg_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvneg.h(<16 x i16> [[_1]])
@@ -3485,7 +3485,7 @@ v32i8 xvneg_b(v32i8 _1) { return __builtin_lasx_xvneg_b(_1); }
 //
 v16i16 xvneg_h(v16i16 _1) { return __builtin_lasx_xvneg_h(_1); }
 // CHECK-LABEL: define dso_local void @xvneg_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvneg.w(<8 x i32> [[_1]])
@@ -3494,7 +3494,7 @@ v16i16 xvneg_h(v16i16 _1) { return __builtin_lasx_xvneg_h(_1); }
 //
 v8i32 xvneg_w(v8i32 _1) { return __builtin_lasx_xvneg_w(_1); }
 // CHECK-LABEL: define dso_local void @xvneg_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvneg.d(<4 x i64> [[_1]])
@@ -3503,7 +3503,7 @@ v8i32 xvneg_w(v8i32 _1) { return __builtin_lasx_xvneg_w(_1); }
 //
 v4i64 xvneg_d(v4i64 _1) { return __builtin_lasx_xvneg_d(_1); }
 // CHECK-LABEL: define dso_local void @xvmuh_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3513,7 +3513,7 @@ v4i64 xvneg_d(v4i64 _1) { return __builtin_lasx_xvneg_d(_1); }
 //
 v32i8 xvmuh_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmuh_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3523,7 +3523,7 @@ v32i8 xvmuh_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmuh_b(_1, _2); }
 //
 v16i16 xvmuh_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmuh_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3533,7 +3533,7 @@ v16i16 xvmuh_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmuh_h(_1, _2); }
 //
 v8i32 xvmuh_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmuh_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3543,7 +3543,7 @@ v8i32 xvmuh_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmuh_w(_1, _2); }
 //
 v4i64 xvmuh_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmuh_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3553,7 +3553,7 @@ v4i64 xvmuh_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmuh_d(_1, _2); }
 //
 v32u8 xvmuh_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmuh_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3563,7 +3563,7 @@ v32u8 xvmuh_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmuh_bu(_1, _2); }
 //
 v16u16 xvmuh_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmuh_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3573,7 +3573,7 @@ v16u16 xvmuh_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmuh_hu(_1, _2); 
 //
 v8u32 xvmuh_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmuh_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmuh_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3583,7 +3583,7 @@ v8u32 xvmuh_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmuh_wu(_1, _2); }
 //
 v4u64 xvmuh_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmuh_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsllwil_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsllwil.h.b(<32 x i8> [[_1]], i32 1)
@@ -3592,7 +3592,7 @@ v4u64 xvmuh_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmuh_du(_1, _2); }
 //
 v16i16 xvsllwil_h_b(v32i8 _1) { return __builtin_lasx_xvsllwil_h_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsllwil_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsllwil.w.h(<16 x i16> [[_1]], i32 1)
@@ -3601,7 +3601,7 @@ v16i16 xvsllwil_h_b(v32i8 _1) { return __builtin_lasx_xvsllwil_h_b(_1, 1); }
 //
 v8i32 xvsllwil_w_h(v16i16 _1) { return __builtin_lasx_xvsllwil_w_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsllwil_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsllwil.d.w(<8 x i32> [[_1]], i32 1)
@@ -3610,7 +3610,7 @@ v8i32 xvsllwil_w_h(v16i16 _1) { return __builtin_lasx_xvsllwil_w_h(_1, 1); }
 //
 v4i64 xvsllwil_d_w(v8i32 _1) { return __builtin_lasx_xvsllwil_d_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsllwil_hu_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvsllwil.hu.bu(<32 x i8> [[_1]], i32 1)
@@ -3619,7 +3619,7 @@ v4i64 xvsllwil_d_w(v8i32 _1) { return __builtin_lasx_xvsllwil_d_w(_1, 1); }
 //
 v16u16 xvsllwil_hu_bu(v32u8 _1) { return __builtin_lasx_xvsllwil_hu_bu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsllwil_wu_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvsllwil.wu.hu(<16 x i16> [[_1]], i32 1)
@@ -3628,7 +3628,7 @@ v16u16 xvsllwil_hu_bu(v32u8 _1) { return __builtin_lasx_xvsllwil_hu_bu(_1, 1); }
 //
 v8u32 xvsllwil_wu_hu(v16u16 _1) { return __builtin_lasx_xvsllwil_wu_hu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsllwil_du_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvsllwil.du.wu(<8 x i32> [[_1]], i32 1)
@@ -3637,7 +3637,7 @@ v8u32 xvsllwil_wu_hu(v16u16 _1) { return __builtin_lasx_xvsllwil_wu_hu(_1, 1); }
 //
 v4u64 xvsllwil_du_wu(v8u32 _1) { return __builtin_lasx_xvsllwil_du_wu(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvsran_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3647,7 +3647,7 @@ v4u64 xvsllwil_du_wu(v8u32 _1) { return __builtin_lasx_xvsllwil_du_wu(_1, 1); }
 //
 v32i8 xvsran_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsran_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsran_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3657,7 +3657,7 @@ v32i8 xvsran_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsran_b_h(_1, _2
 //
 v16i16 xvsran_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsran_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsran_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3667,7 +3667,7 @@ v16i16 xvsran_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsran_h_w(_1, _2)
 //
 v8i32 xvsran_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsran_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssran_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3677,7 +3677,7 @@ v8i32 xvsran_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsran_w_d(_1, _2);
 //
 v32i8 xvssran_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssran_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssran_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3687,7 +3687,7 @@ v32i8 xvssran_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssran_b_h(_1, 
 //
 v16i16 xvssran_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssran_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssran_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3697,7 +3697,7 @@ v16i16 xvssran_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssran_h_w(_1, _
 //
 v8i32 xvssran_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssran_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssran_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3707,7 +3707,7 @@ v8i32 xvssran_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssran_w_d(_1, _2
 //
 v32u8 xvssran_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssran_bu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssran_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3717,7 +3717,7 @@ v32u8 xvssran_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssran_bu_h(_1
 //
 v16u16 xvssran_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssran_hu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssran_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3727,7 +3727,7 @@ v16u16 xvssran_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssran_hu_w(_1,
 //
 v8u32 xvssran_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssran_wu_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrarn_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3737,7 +3737,7 @@ v8u32 xvssran_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssran_wu_d(_1, 
 //
 v32i8 xvsrarn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrarn_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrarn_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3747,7 +3747,7 @@ v32i8 xvsrarn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrarn_b_h(_1, 
 //
 v16i16 xvsrarn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrarn_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrarn_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3757,7 +3757,7 @@ v16i16 xvsrarn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrarn_h_w(_1, _
 //
 v8i32 xvsrarn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrarn_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrarn_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3767,7 +3767,7 @@ v8i32 xvsrarn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrarn_w_d(_1, _2
 //
 v32i8 xvssrarn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrarn_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrarn_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3777,7 +3777,7 @@ v32i8 xvssrarn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrarn_b_h(_1
 //
 v16i16 xvssrarn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrarn_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrarn_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3787,7 +3787,7 @@ v16i16 xvssrarn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrarn_h_w(_1,
 //
 v8i32 xvssrarn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrarn_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrarn_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3797,7 +3797,7 @@ v8i32 xvssrarn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrarn_w_d(_1, 
 //
 v32u8 xvssrarn_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssrarn_bu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrarn_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3807,7 +3807,7 @@ v32u8 xvssrarn_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssrarn_bu_h(
 //
 v16u16 xvssrarn_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssrarn_hu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrarn_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3817,7 +3817,7 @@ v16u16 xvssrarn_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssrarn_hu_w(_
 //
 v8u32 xvssrarn_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssrarn_wu_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrln_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3827,7 +3827,7 @@ v8u32 xvssrarn_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssrarn_wu_d(_1
 //
 v32i8 xvsrln_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrln_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrln_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3837,7 +3837,7 @@ v32i8 xvsrln_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrln_b_h(_1, _2
 //
 v16i16 xvsrln_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrln_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrln_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3847,7 +3847,7 @@ v16i16 xvsrln_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrln_h_w(_1, _2)
 //
 v8i32 xvsrln_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrln_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrln_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3857,7 +3857,7 @@ v8i32 xvsrln_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrln_w_d(_1, _2);
 //
 v32u8 xvssrln_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssrln_bu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrln_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3867,7 +3867,7 @@ v32u8 xvssrln_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssrln_bu_h(_1
 //
 v16u16 xvssrln_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssrln_hu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrln_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3877,7 +3877,7 @@ v16u16 xvssrln_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssrln_hu_w(_1,
 //
 v8u32 xvssrln_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssrln_wu_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlrn_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3887,7 +3887,7 @@ v8u32 xvssrln_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssrln_wu_d(_1, 
 //
 v32i8 xvsrlrn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlrn_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlrn_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3897,7 +3897,7 @@ v32i8 xvsrlrn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlrn_b_h(_1, 
 //
 v16i16 xvsrlrn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlrn_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsrlrn_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3907,7 +3907,7 @@ v16i16 xvsrlrn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlrn_h_w(_1, _
 //
 v8i32 xvsrlrn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlrn_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrlrn_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3917,7 +3917,7 @@ v8i32 xvsrlrn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlrn_w_d(_1, _2
 //
 v32u8 xvssrlrn_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssrlrn_bu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrlrn_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3927,7 +3927,7 @@ v32u8 xvssrlrn_bu_h(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvssrlrn_bu_h(
 //
 v16u16 xvssrlrn_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssrlrn_hu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrlrn_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3937,7 +3937,7 @@ v16u16 xvssrlrn_hu_w(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvssrlrn_hu_w(_
 //
 v8u32 xvssrlrn_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssrlrn_wu_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfrstpi_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3947,7 +3947,7 @@ v8u32 xvssrlrn_wu_d(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvssrlrn_wu_d(_1
 //
 v32i8 xvfrstpi_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvfrstpi_b(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvfrstpi_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3957,7 +3957,7 @@ v32i8 xvfrstpi_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvfrstpi_b(_1, _2, 
 //
 v16i16 xvfrstpi_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvfrstpi_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvfrstp_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3968,7 +3968,7 @@ v16i16 xvfrstpi_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvfrstpi_h(_1, _
 //
 v32i8 xvfrstp_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvfrstp_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfrstp_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3979,7 +3979,7 @@ v32i8 xvfrstp_b(v32i8 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvfrstp_b(
 //
 v16i16 xvfrstp_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvfrstp_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvshuf4i_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -3989,7 +3989,7 @@ v16i16 xvfrstp_h(v16i16 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvfrst
 //
 v4i64 xvshuf4i_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvshuf4i_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvbsrl_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvbsrl.v(<32 x i8> [[_1]], i32 1)
@@ -3998,7 +3998,7 @@ v4i64 xvshuf4i_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvshuf4i_d(_1, _2, 
 //
 v32i8 xvbsrl_v(v32i8 _1) { return __builtin_lasx_xvbsrl_v(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvbsll_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvbsll.v(<32 x i8> [[_1]], i32 1)
@@ -4007,7 +4007,7 @@ v32i8 xvbsrl_v(v32i8 _1) { return __builtin_lasx_xvbsrl_v(_1, 1); }
 //
 v32i8 xvbsll_v(v32i8 _1) { return __builtin_lasx_xvbsll_v(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvextrins_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4017,7 +4017,7 @@ v32i8 xvbsll_v(v32i8 _1) { return __builtin_lasx_xvbsll_v(_1, 1); }
 //
 v32i8 xvextrins_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvextrins_b(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvextrins_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4027,7 +4027,7 @@ v32i8 xvextrins_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvextrins_b(_1, _2
 //
 v16i16 xvextrins_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvextrins_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvextrins_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4037,7 +4037,7 @@ v16i16 xvextrins_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvextrins_h(_1,
 //
 v8i32 xvextrins_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvextrins_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvextrins_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4047,7 +4047,7 @@ v8i32 xvextrins_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvextrins_w(_1, _2
 //
 v4i64 xvextrins_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvextrins_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvmskltz_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmskltz.b(<32 x i8> [[_1]])
@@ -4056,7 +4056,7 @@ v4i64 xvextrins_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvextrins_d(_1, _2
 //
 v32i8 xvmskltz_b(v32i8 _1) { return __builtin_lasx_xvmskltz_b(_1); }
 // CHECK-LABEL: define dso_local void @xvmskltz_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvmskltz.h(<16 x i16> [[_1]])
@@ -4065,7 +4065,7 @@ v32i8 xvmskltz_b(v32i8 _1) { return __builtin_lasx_xvmskltz_b(_1); }
 //
 v16i16 xvmskltz_h(v16i16 _1) { return __builtin_lasx_xvmskltz_h(_1); }
 // CHECK-LABEL: define dso_local void @xvmskltz_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvmskltz.w(<8 x i32> [[_1]])
@@ -4074,7 +4074,7 @@ v16i16 xvmskltz_h(v16i16 _1) { return __builtin_lasx_xvmskltz_h(_1); }
 //
 v8i32 xvmskltz_w(v8i32 _1) { return __builtin_lasx_xvmskltz_w(_1); }
 // CHECK-LABEL: define dso_local void @xvmskltz_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvmskltz.d(<4 x i64> [[_1]])
@@ -4083,7 +4083,7 @@ v8i32 xvmskltz_w(v8i32 _1) { return __builtin_lasx_xvmskltz_w(_1); }
 //
 v4i64 xvmskltz_d(v4i64 _1) { return __builtin_lasx_xvmskltz_d(_1); }
 // CHECK-LABEL: define dso_local void @xvsigncov_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4093,7 +4093,7 @@ v4i64 xvmskltz_d(v4i64 _1) { return __builtin_lasx_xvmskltz_d(_1); }
 //
 v32i8 xvsigncov_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsigncov_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsigncov_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4103,7 +4103,7 @@ v32i8 xvsigncov_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsigncov_b(_1, _2
 //
 v16i16 xvsigncov_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsigncov_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsigncov_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4113,7 +4113,7 @@ v16i16 xvsigncov_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsigncov_h(_1,
 //
 v8i32 xvsigncov_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsigncov_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsigncov_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4123,7 +4123,7 @@ v8i32 xvsigncov_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsigncov_w(_1, _2
 //
 v4i64 xvsigncov_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsigncov_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfmadd_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4134,7 +4134,7 @@ v4i64 xvsigncov_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsigncov_d(_1, _2
 //
 v8f32 xvfmadd_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfmadd_s(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfmadd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4145,7 +4145,7 @@ v8f32 xvfmadd_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfmadd_s(
 //
 v4f64 xvfmadd_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfmadd_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfmsub_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4156,7 +4156,7 @@ v4f64 xvfmadd_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfmadd_d(
 //
 v8f32 xvfmsub_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfmsub_s(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfmsub_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4167,7 +4167,7 @@ v8f32 xvfmsub_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfmsub_s(
 //
 v4f64 xvfmsub_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfmsub_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfnmadd_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4178,7 +4178,7 @@ v4f64 xvfmsub_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfmsub_d(
 //
 v8f32 xvfnmadd_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfnmadd_s(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfnmadd_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4189,7 +4189,7 @@ v8f32 xvfnmadd_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfnmadd_
 //
 v4f64 xvfnmadd_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfnmadd_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfnmsub_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4200,7 +4200,7 @@ v4f64 xvfnmadd_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfnmadd_
 //
 v8f32 xvfnmsub_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfnmsub_s(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvfnmsub_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4211,7 +4211,7 @@ v8f32 xvfnmsub_s(v8f32 _1, v8f32 _2, v8f32 _3) { return __builtin_lasx_xvfnmsub_
 //
 v4f64 xvfnmsub_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfnmsub_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvftintrne_w_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftintrne.w.s(<8 x float> [[_1]])
@@ -4220,7 +4220,7 @@ v4f64 xvfnmsub_d(v4f64 _1, v4f64 _2, v4f64 _3) { return __builtin_lasx_xvfnmsub_
 //
 v8i32 xvftintrne_w_s(v8f32 _1) { return __builtin_lasx_xvftintrne_w_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrne_l_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrne.l.d(<4 x double> [[_1]])
@@ -4229,7 +4229,7 @@ v8i32 xvftintrne_w_s(v8f32 _1) { return __builtin_lasx_xvftintrne_w_s(_1); }
 //
 v4i64 xvftintrne_l_d(v4f64 _1) { return __builtin_lasx_xvftintrne_l_d(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrp_w_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftintrp.w.s(<8 x float> [[_1]])
@@ -4238,7 +4238,7 @@ v4i64 xvftintrne_l_d(v4f64 _1) { return __builtin_lasx_xvftintrne_l_d(_1); }
 //
 v8i32 xvftintrp_w_s(v8f32 _1) { return __builtin_lasx_xvftintrp_w_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrp_l_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrp.l.d(<4 x double> [[_1]])
@@ -4247,7 +4247,7 @@ v8i32 xvftintrp_w_s(v8f32 _1) { return __builtin_lasx_xvftintrp_w_s(_1); }
 //
 v4i64 xvftintrp_l_d(v4f64 _1) { return __builtin_lasx_xvftintrp_l_d(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrm_w_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvftintrm.w.s(<8 x float> [[_1]])
@@ -4256,7 +4256,7 @@ v4i64 xvftintrp_l_d(v4f64 _1) { return __builtin_lasx_xvftintrp_l_d(_1); }
 //
 v8i32 xvftintrm_w_s(v8f32 _1) { return __builtin_lasx_xvftintrm_w_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrm_l_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrm.l.d(<4 x double> [[_1]])
@@ -4265,7 +4265,7 @@ v8i32 xvftintrm_w_s(v8f32 _1) { return __builtin_lasx_xvftintrm_w_s(_1); }
 //
 v4i64 xvftintrm_l_d(v4f64 _1) { return __builtin_lasx_xvftintrm_l_d(_1); }
 // CHECK-LABEL: define dso_local void @xvftint_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4275,7 +4275,7 @@ v4i64 xvftintrm_l_d(v4f64 _1) { return __builtin_lasx_xvftintrm_l_d(_1); }
 //
 v8i32 xvftint_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftint_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvffint_s_l(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4285,7 +4285,7 @@ v8i32 xvftint_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftint_w_d(_1, _2
 //
 v8f32 xvffint_s_l(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvffint_s_l(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvftintrz_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4295,7 +4295,7 @@ v8f32 xvffint_s_l(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvffint_s_l(_1, _2
 //
 v8i32 xvftintrz_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrz_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvftintrp_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4305,7 +4305,7 @@ v8i32 xvftintrz_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrz_w_d(_1
 //
 v8i32 xvftintrp_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrp_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvftintrm_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4315,7 +4315,7 @@ v8i32 xvftintrp_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrp_w_d(_1
 //
 v8i32 xvftintrm_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrm_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvftintrne_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4325,7 +4325,7 @@ v8i32 xvftintrm_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrm_w_d(_1
 //
 v8i32 xvftintrne_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrne_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvftinth_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftinth.l.s(<8 x float> [[_1]])
@@ -4334,7 +4334,7 @@ v8i32 xvftintrne_w_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvftintrne_w_d(
 //
 v4i64 xvftinth_l_s(v8f32 _1) { return __builtin_lasx_xvftinth_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintl_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintl.l.s(<8 x float> [[_1]])
@@ -4343,7 +4343,7 @@ v4i64 xvftinth_l_s(v8f32 _1) { return __builtin_lasx_xvftinth_l_s(_1); }
 //
 v4i64 xvftintl_l_s(v8f32 _1) { return __builtin_lasx_xvftintl_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvffinth_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvffinth.d.w(<8 x i32> [[_1]])
@@ -4352,7 +4352,7 @@ v4i64 xvftintl_l_s(v8f32 _1) { return __builtin_lasx_xvftintl_l_s(_1); }
 //
 v4f64 xvffinth_d_w(v8i32 _1) { return __builtin_lasx_xvffinth_d_w(_1); }
 // CHECK-LABEL: define dso_local void @xvffintl_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvffintl.d.w(<8 x i32> [[_1]])
@@ -4361,7 +4361,7 @@ v4f64 xvffinth_d_w(v8i32 _1) { return __builtin_lasx_xvffinth_d_w(_1); }
 //
 v4f64 xvffintl_d_w(v8i32 _1) { return __builtin_lasx_xvffintl_d_w(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrzh_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrzh.l.s(<8 x float> [[_1]])
@@ -4370,7 +4370,7 @@ v4f64 xvffintl_d_w(v8i32 _1) { return __builtin_lasx_xvffintl_d_w(_1); }
 //
 v4i64 xvftintrzh_l_s(v8f32 _1) { return __builtin_lasx_xvftintrzh_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrzl_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrzl.l.s(<8 x float> [[_1]])
@@ -4379,7 +4379,7 @@ v4i64 xvftintrzh_l_s(v8f32 _1) { return __builtin_lasx_xvftintrzh_l_s(_1); }
 //
 v4i64 xvftintrzl_l_s(v8f32 _1) { return __builtin_lasx_xvftintrzl_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrph_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrph.l.s(<8 x float> [[_1]])
@@ -4388,7 +4388,7 @@ v4i64 xvftintrzl_l_s(v8f32 _1) { return __builtin_lasx_xvftintrzl_l_s(_1); }
 //
 v4i64 xvftintrph_l_s(v8f32 _1) { return __builtin_lasx_xvftintrph_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrpl_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrpl.l.s(<8 x float> [[_1]])
@@ -4397,7 +4397,7 @@ v4i64 xvftintrph_l_s(v8f32 _1) { return __builtin_lasx_xvftintrph_l_s(_1); }
 //
 v4i64 xvftintrpl_l_s(v8f32 _1) { return __builtin_lasx_xvftintrpl_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrmh_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrmh.l.s(<8 x float> [[_1]])
@@ -4406,7 +4406,7 @@ v4i64 xvftintrpl_l_s(v8f32 _1) { return __builtin_lasx_xvftintrpl_l_s(_1); }
 //
 v4i64 xvftintrmh_l_s(v8f32 _1) { return __builtin_lasx_xvftintrmh_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrml_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrml.l.s(<8 x float> [[_1]])
@@ -4415,7 +4415,7 @@ v4i64 xvftintrmh_l_s(v8f32 _1) { return __builtin_lasx_xvftintrmh_l_s(_1); }
 //
 v4i64 xvftintrml_l_s(v8f32 _1) { return __builtin_lasx_xvftintrml_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrneh_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrneh.l.s(<8 x float> [[_1]])
@@ -4424,7 +4424,7 @@ v4i64 xvftintrml_l_s(v8f32 _1) { return __builtin_lasx_xvftintrml_l_s(_1); }
 //
 v4i64 xvftintrneh_l_s(v8f32 _1) { return __builtin_lasx_xvftintrneh_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvftintrnel_l_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvftintrnel.l.s(<8 x float> [[_1]])
@@ -4433,7 +4433,7 @@ v4i64 xvftintrneh_l_s(v8f32 _1) { return __builtin_lasx_xvftintrneh_l_s(_1); }
 //
 v4i64 xvftintrnel_l_s(v8f32 _1) { return __builtin_lasx_xvftintrnel_l_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrne_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrintrne.s(<8 x float> [[_1]])
@@ -4442,7 +4442,7 @@ v4i64 xvftintrnel_l_s(v8f32 _1) { return __builtin_lasx_xvftintrnel_l_s(_1); }
 //
 v8i32 xvfrintrne_s(v8f32 _1) { return __builtin_lasx_xvfrintrne_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrne_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrintrne.d(<4 x double> [[_1]])
@@ -4451,7 +4451,7 @@ v8i32 xvfrintrne_s(v8f32 _1) { return __builtin_lasx_xvfrintrne_s(_1); }
 //
 v4i64 xvfrintrne_d(v4f64 _1) { return __builtin_lasx_xvfrintrne_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrz_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrintrz.s(<8 x float> [[_1]])
@@ -4460,7 +4460,7 @@ v4i64 xvfrintrne_d(v4f64 _1) { return __builtin_lasx_xvfrintrne_d(_1); }
 //
 v8i32 xvfrintrz_s(v8f32 _1) { return __builtin_lasx_xvfrintrz_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrz_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrintrz.d(<4 x double> [[_1]])
@@ -4469,7 +4469,7 @@ v8i32 xvfrintrz_s(v8f32 _1) { return __builtin_lasx_xvfrintrz_s(_1); }
 //
 v4i64 xvfrintrz_d(v4f64 _1) { return __builtin_lasx_xvfrintrz_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrp_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrintrp.s(<8 x float> [[_1]])
@@ -4478,7 +4478,7 @@ v4i64 xvfrintrz_d(v4f64 _1) { return __builtin_lasx_xvfrintrz_d(_1); }
 //
 v8i32 xvfrintrp_s(v8f32 _1) { return __builtin_lasx_xvfrintrp_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrp_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrintrp.d(<4 x double> [[_1]])
@@ -4487,7 +4487,7 @@ v8i32 xvfrintrp_s(v8f32 _1) { return __builtin_lasx_xvfrintrp_s(_1); }
 //
 v4i64 xvfrintrp_d(v4f64 _1) { return __builtin_lasx_xvfrintrp_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrm_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrintrm.s(<8 x float> [[_1]])
@@ -4496,7 +4496,7 @@ v4i64 xvfrintrp_d(v4f64 _1) { return __builtin_lasx_xvfrintrp_d(_1); }
 //
 v8i32 xvfrintrm_s(v8f32 _1) { return __builtin_lasx_xvfrintrm_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrintrm_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrintrm.d(<4 x double> [[_1]])
@@ -4513,7 +4513,7 @@ v4i64 xvfrintrm_d(v4f64 _1) { return __builtin_lasx_xvfrintrm_d(_1); }
 //
 v32i8 xvld(void *_1) { return __builtin_lasx_xvld(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvst(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    tail call void @llvm.loongarch.lasx.xvst(<32 x i8> [[_1]], ptr [[_2]], i32 1)
@@ -4521,7 +4521,7 @@ v32i8 xvld(void *_1) { return __builtin_lasx_xvld(_1, 1); }
 //
 void xvst(v32i8 _1, void *_2) { return __builtin_lasx_xvst(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvstelm_b(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    tail call void @llvm.loongarch.lasx.xvstelm.b(<32 x i8> [[_1]], ptr [[_2]], i32 1, i32 1)
@@ -4529,7 +4529,7 @@ void xvst(v32i8 _1, void *_2) { return __builtin_lasx_xvst(_1, _2, 1); }
 //
 void xvstelm_b(v32i8 _1, void * _2) { return __builtin_lasx_xvstelm_b(_1, _2, 1, 1); }
 // CHECK-LABEL: define dso_local void @xvstelm_h(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    tail call void @llvm.loongarch.lasx.xvstelm.h(<16 x i16> [[_1]], ptr [[_2]], i32 2, i32 1)
@@ -4537,7 +4537,7 @@ void xvstelm_b(v32i8 _1, void * _2) { return __builtin_lasx_xvstelm_b(_1, _2, 1,
 //
 void xvstelm_h(v16i16 _1, void * _2) { return __builtin_lasx_xvstelm_h(_1, _2, 2, 1); }
 // CHECK-LABEL: define dso_local void @xvstelm_w(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    tail call void @llvm.loongarch.lasx.xvstelm.w(<8 x i32> [[_1]], ptr [[_2]], i32 4, i32 1)
@@ -4545,7 +4545,7 @@ void xvstelm_h(v16i16 _1, void * _2) { return __builtin_lasx_xvstelm_h(_1, _2, 2
 //
 void xvstelm_w(v8i32 _1, void * _2) { return __builtin_lasx_xvstelm_w(_1, _2, 4, 1); }
 // CHECK-LABEL: define dso_local void @xvstelm_d(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    tail call void @llvm.loongarch.lasx.xvstelm.d(<4 x i64> [[_1]], ptr [[_2]], i32 8, i32 1)
@@ -4553,7 +4553,7 @@ void xvstelm_w(v8i32 _1, void * _2) { return __builtin_lasx_xvstelm_w(_1, _2, 4,
 //
 void xvstelm_d(v4i64 _1, void * _2) { return __builtin_lasx_xvstelm_d(_1, _2, 8, 1); }
 // CHECK-LABEL: define dso_local void @xvinsve0_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4563,7 +4563,7 @@ void xvstelm_d(v4i64 _1, void * _2) { return __builtin_lasx_xvstelm_d(_1, _2, 8,
 //
 v8i32 xvinsve0_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvinsve0_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvinsve0_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4573,7 +4573,7 @@ v8i32 xvinsve0_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvinsve0_w(_1, _2, 
 //
 v4i64 xvinsve0_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvinsve0_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvpickve_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvpickve.w(<8 x i32> [[_1]], i32 1)
@@ -4582,7 +4582,7 @@ v4i64 xvinsve0_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvinsve0_d(_1, _2, 
 //
 v8i32 xvpickve_w(v8i32 _1) { return __builtin_lasx_xvpickve_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvpickve_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvpickve.d(<4 x i64> [[_1]], i32 1)
@@ -4591,7 +4591,7 @@ v8i32 xvpickve_w(v8i32 _1) { return __builtin_lasx_xvpickve_w(_1, 1); }
 //
 v4i64 xvpickve_d(v4i64 _1) { return __builtin_lasx_xvpickve_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrn_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4601,7 +4601,7 @@ v4i64 xvpickve_d(v4i64 _1) { return __builtin_lasx_xvpickve_d(_1, 1); }
 //
 v32i8 xvssrlrn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrlrn_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrlrn_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4611,7 +4611,7 @@ v32i8 xvssrlrn_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrlrn_b_h(_1
 //
 v16i16 xvssrlrn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrlrn_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrlrn_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4621,7 +4621,7 @@ v16i16 xvssrlrn_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrlrn_h_w(_1,
 //
 v8i32 xvssrlrn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrlrn_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrln_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4631,7 +4631,7 @@ v8i32 xvssrlrn_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrlrn_w_d(_1, 
 //
 v32i8 xvssrln_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrln_b_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrln_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4641,7 +4641,7 @@ v32i8 xvssrln_b_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrln_b_h(_1, 
 //
 v16i16 xvssrln_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrln_h_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvssrln_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4651,7 +4651,7 @@ v16i16 xvssrln_h_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrln_h_w(_1, _
 //
 v8i32 xvssrln_w_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrln_w_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvorn_v(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4677,7 +4677,7 @@ v4i64 xvldi() { return __builtin_lasx_xvldi(1); }
 //
 v32i8 xvldx(void *_1) { return __builtin_lasx_xvldx(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvstx(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef [[_2:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    tail call void @llvm.loongarch.lasx.xvstx(<32 x i8> [[_1]], ptr [[_2]], i64 1)
@@ -4685,7 +4685,7 @@ v32i8 xvldx(void *_1) { return __builtin_lasx_xvldx(_1, 1); }
 //
 void xvstx(v32i8 _1, void *_2) { return __builtin_lasx_xvstx(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvextl_qu_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvextl.qu.du(<4 x i64> [[_1]])
@@ -4694,7 +4694,7 @@ void xvstx(v32i8 _1, void *_2) { return __builtin_lasx_xvstx(_1, _2, 1); }
 //
 v4u64 xvextl_qu_du(v4u64 _1) { return __builtin_lasx_xvextl_qu_du(_1); }
 // CHECK-LABEL: define dso_local void @xvinsgr2vr_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvinsgr2vr.w(<8 x i32> [[_1]], i32 1, i32 1)
@@ -4703,7 +4703,7 @@ v4u64 xvextl_qu_du(v4u64 _1) { return __builtin_lasx_xvextl_qu_du(_1); }
 //
 v8i32 xvinsgr2vr_w(v8i32 _1) { return __builtin_lasx_xvinsgr2vr_w(_1, 1, 1); }
 // CHECK-LABEL: define dso_local void @xvinsgr2vr_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvinsgr2vr.d(<4 x i64> [[_1]], i64 1, i32 1)
@@ -4712,7 +4712,7 @@ v8i32 xvinsgr2vr_w(v8i32 _1) { return __builtin_lasx_xvinsgr2vr_w(_1, 1, 1); }
 //
 v4i64 xvinsgr2vr_d(v4i64 _1) { return __builtin_lasx_xvinsgr2vr_d(_1, 1, 1); }
 // CHECK-LABEL: define dso_local void @xvreplve0_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvreplve0.b(<32 x i8> [[_1]])
@@ -4721,7 +4721,7 @@ v4i64 xvinsgr2vr_d(v4i64 _1) { return __builtin_lasx_xvinsgr2vr_d(_1, 1, 1); }
 //
 v32i8 xvreplve0_b(v32i8 _1) { return __builtin_lasx_xvreplve0_b(_1); }
 // CHECK-LABEL: define dso_local void @xvreplve0_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvreplve0.h(<16 x i16> [[_1]])
@@ -4730,7 +4730,7 @@ v32i8 xvreplve0_b(v32i8 _1) { return __builtin_lasx_xvreplve0_b(_1); }
 //
 v16i16 xvreplve0_h(v16i16 _1) { return __builtin_lasx_xvreplve0_h(_1); }
 // CHECK-LABEL: define dso_local void @xvreplve0_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvreplve0.w(<8 x i32> [[_1]])
@@ -4739,7 +4739,7 @@ v16i16 xvreplve0_h(v16i16 _1) { return __builtin_lasx_xvreplve0_h(_1); }
 //
 v8i32 xvreplve0_w(v8i32 _1) { return __builtin_lasx_xvreplve0_w(_1); }
 // CHECK-LABEL: define dso_local void @xvreplve0_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvreplve0.d(<4 x i64> [[_1]])
@@ -4748,7 +4748,7 @@ v8i32 xvreplve0_w(v8i32 _1) { return __builtin_lasx_xvreplve0_w(_1); }
 //
 v4i64 xvreplve0_d(v4i64 _1) { return __builtin_lasx_xvreplve0_d(_1); }
 // CHECK-LABEL: define dso_local void @xvreplve0_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvreplve0.q(<32 x i8> [[_1]])
@@ -4757,7 +4757,7 @@ v4i64 xvreplve0_d(v4i64 _1) { return __builtin_lasx_xvreplve0_d(_1); }
 //
 v32i8 xvreplve0_q(v32i8 _1) { return __builtin_lasx_xvreplve0_q(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.vext2xv.h.b(<32 x i8> [[_1]])
@@ -4766,7 +4766,7 @@ v32i8 xvreplve0_q(v32i8 _1) { return __builtin_lasx_xvreplve0_q(_1); }
 //
 v16i16 vext2xv_h_b(v32i8 _1) { return __builtin_lasx_vext2xv_h_b(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.vext2xv.w.h(<16 x i16> [[_1]])
@@ -4775,7 +4775,7 @@ v16i16 vext2xv_h_b(v32i8 _1) { return __builtin_lasx_vext2xv_h_b(_1); }
 //
 v8i32 vext2xv_w_h(v16i16 _1) { return __builtin_lasx_vext2xv_w_h(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.vext2xv.d.w(<8 x i32> [[_1]])
@@ -4784,7 +4784,7 @@ v8i32 vext2xv_w_h(v16i16 _1) { return __builtin_lasx_vext2xv_w_h(_1); }
 //
 v4i64 vext2xv_d_w(v8i32 _1) { return __builtin_lasx_vext2xv_d_w(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_w_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.vext2xv.w.b(<32 x i8> [[_1]])
@@ -4793,7 +4793,7 @@ v4i64 vext2xv_d_w(v8i32 _1) { return __builtin_lasx_vext2xv_d_w(_1); }
 //
 v8i32 vext2xv_w_b(v32i8 _1) { return __builtin_lasx_vext2xv_w_b(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_d_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.vext2xv.d.h(<16 x i16> [[_1]])
@@ -4802,7 +4802,7 @@ v8i32 vext2xv_w_b(v32i8 _1) { return __builtin_lasx_vext2xv_w_b(_1); }
 //
 v4i64 vext2xv_d_h(v16i16 _1) { return __builtin_lasx_vext2xv_d_h(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_d_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.vext2xv.d.b(<32 x i8> [[_1]])
@@ -4811,7 +4811,7 @@ v4i64 vext2xv_d_h(v16i16 _1) { return __builtin_lasx_vext2xv_d_h(_1); }
 //
 v4i64 vext2xv_d_b(v32i8 _1) { return __builtin_lasx_vext2xv_d_b(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_hu_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.vext2xv.hu.bu(<32 x i8> [[_1]])
@@ -4820,7 +4820,7 @@ v4i64 vext2xv_d_b(v32i8 _1) { return __builtin_lasx_vext2xv_d_b(_1); }
 //
 v16i16 vext2xv_hu_bu(v32i8 _1) { return __builtin_lasx_vext2xv_hu_bu(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_wu_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.vext2xv.wu.hu(<16 x i16> [[_1]])
@@ -4829,7 +4829,7 @@ v16i16 vext2xv_hu_bu(v32i8 _1) { return __builtin_lasx_vext2xv_hu_bu(_1); }
 //
 v8i32 vext2xv_wu_hu(v16i16 _1) { return __builtin_lasx_vext2xv_wu_hu(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_du_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.vext2xv.du.wu(<8 x i32> [[_1]])
@@ -4838,7 +4838,7 @@ v8i32 vext2xv_wu_hu(v16i16 _1) { return __builtin_lasx_vext2xv_wu_hu(_1); }
 //
 v4i64 vext2xv_du_wu(v8i32 _1) { return __builtin_lasx_vext2xv_du_wu(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_wu_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.vext2xv.wu.bu(<32 x i8> [[_1]])
@@ -4847,7 +4847,7 @@ v4i64 vext2xv_du_wu(v8i32 _1) { return __builtin_lasx_vext2xv_du_wu(_1); }
 //
 v8i32 vext2xv_wu_bu(v32i8 _1) { return __builtin_lasx_vext2xv_wu_bu(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_du_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.vext2xv.du.hu(<16 x i16> [[_1]])
@@ -4856,7 +4856,7 @@ v8i32 vext2xv_wu_bu(v32i8 _1) { return __builtin_lasx_vext2xv_wu_bu(_1); }
 //
 v4i64 vext2xv_du_hu(v16i16 _1) { return __builtin_lasx_vext2xv_du_hu(_1); }
 // CHECK-LABEL: define dso_local void @vext2xv_du_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.vext2xv.du.bu(<32 x i8> [[_1]])
@@ -4865,7 +4865,7 @@ v4i64 vext2xv_du_hu(v16i16 _1) { return __builtin_lasx_vext2xv_du_hu(_1); }
 //
 v4i64 vext2xv_du_bu(v32i8 _1) { return __builtin_lasx_vext2xv_du_bu(_1); }
 // CHECK-LABEL: define dso_local void @xvpermi_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4875,7 +4875,7 @@ v4i64 vext2xv_du_bu(v32i8 _1) { return __builtin_lasx_vext2xv_du_bu(_1); }
 //
 v32i8 xvpermi_q(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpermi_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvpermi_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvpermi.d(<4 x i64> [[_1]], i32 1)
@@ -4884,7 +4884,7 @@ v32i8 xvpermi_q(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvpermi_q(_1, _2, 1)
 //
 v4i64 xvpermi_d(v4i64 _1) { return __builtin_lasx_xvpermi_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvperm_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4926,7 +4926,7 @@ v8i32 xvldrepl_w(void *_1) { return __builtin_lasx_xvldrepl_w(_1, 4); }
 //
 v4i64 xvldrepl_d(void *_1) { return __builtin_lasx_xvldrepl_d(_1, 8); }
 // CHECK-LABEL: define dso_local signext i32 @xvpickve2gr_w(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xvpickve2gr.w(<8 x i32> [[_1]], i32 1)
@@ -4934,7 +4934,7 @@ v4i64 xvldrepl_d(void *_1) { return __builtin_lasx_xvldrepl_d(_1, 8); }
 //
 int xvpickve2gr_w(v8i32 _1) { return __builtin_lasx_xvpickve2gr_w(_1, 1); }
 // CHECK-LABEL: define dso_local signext i32 @xvpickve2gr_wu(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xvpickve2gr.wu(<8 x i32> [[_1]], i32 1)
@@ -4942,7 +4942,7 @@ int xvpickve2gr_w(v8i32 _1) { return __builtin_lasx_xvpickve2gr_w(_1, 1); }
 //
 unsigned int xvpickve2gr_wu(v8i32 _1) { return __builtin_lasx_xvpickve2gr_wu(_1, 1); }
 // CHECK-LABEL: define dso_local i64 @xvpickve2gr_d(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.lasx.xvpickve2gr.d(<4 x i64> [[_1]], i32 1)
@@ -4950,7 +4950,7 @@ unsigned int xvpickve2gr_wu(v8i32 _1) { return __builtin_lasx_xvpickve2gr_wu(_1,
 //
 long xvpickve2gr_d(v4i64 _1) { return __builtin_lasx_xvpickve2gr_d(_1, 1); }
 // CHECK-LABEL: define dso_local i64 @xvpickve2gr_du(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.loongarch.lasx.xvpickve2gr.du(<4 x i64> [[_1]], i32 1)
@@ -4958,7 +4958,7 @@ long xvpickve2gr_d(v4i64 _1) { return __builtin_lasx_xvpickve2gr_d(_1, 1); }
 //
 unsigned long int xvpickve2gr_du(v4i64 _1) { return __builtin_lasx_xvpickve2gr_du(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvaddwev_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4968,7 +4968,7 @@ unsigned long int xvpickve2gr_du(v4i64 _1) { return __builtin_lasx_xvpickve2gr_d
 //
 v4i64 xvaddwev_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvaddwev_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4978,7 +4978,7 @@ v4i64 xvaddwev_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvaddwev_q_d(_1, 
 //
 v4i64 xvaddwev_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvaddwev_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4988,7 +4988,7 @@ v4i64 xvaddwev_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvaddwev_d_w(_1, 
 //
 v8i32 xvaddwev_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvaddwev_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -4998,7 +4998,7 @@ v8i32 xvaddwev_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvaddwev_w_h(_1
 //
 v16i16 xvaddwev_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvaddwev_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5008,7 +5008,7 @@ v16i16 xvaddwev_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvaddwev_h_b(_1,
 //
 v4i64 xvaddwev_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvaddwev_q_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5018,7 +5018,7 @@ v4i64 xvaddwev_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvaddwev_q_du(_1
 //
 v4i64 xvaddwev_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvaddwev_d_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5028,7 +5028,7 @@ v4i64 xvaddwev_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvaddwev_d_wu(_1
 //
 v8i32 xvaddwev_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvaddwev_w_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5038,7 +5038,7 @@ v8i32 xvaddwev_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvaddwev_w_hu(
 //
 v16i16 xvaddwev_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvaddwev_h_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5048,7 +5048,7 @@ v16i16 xvaddwev_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvaddwev_h_bu(_
 //
 v4i64 xvsubwev_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsubwev_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5058,7 +5058,7 @@ v4i64 xvsubwev_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsubwev_q_d(_1, 
 //
 v4i64 xvsubwev_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsubwev_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5068,7 +5068,7 @@ v4i64 xvsubwev_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsubwev_d_w(_1, 
 //
 v8i32 xvsubwev_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsubwev_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5078,7 +5078,7 @@ v8i32 xvsubwev_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsubwev_w_h(_1
 //
 v16i16 xvsubwev_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsubwev_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5088,7 +5088,7 @@ v16i16 xvsubwev_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsubwev_h_b(_1,
 //
 v4i64 xvsubwev_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsubwev_q_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5098,7 +5098,7 @@ v4i64 xvsubwev_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsubwev_q_du(_1
 //
 v4i64 xvsubwev_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsubwev_d_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5108,7 +5108,7 @@ v4i64 xvsubwev_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsubwev_d_wu(_1
 //
 v8i32 xvsubwev_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsubwev_w_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwev_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5118,7 +5118,7 @@ v8i32 xvsubwev_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsubwev_w_hu(
 //
 v16i16 xvsubwev_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsubwev_h_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5128,7 +5128,7 @@ v16i16 xvsubwev_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsubwev_h_bu(_
 //
 v4i64 xvmulwev_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmulwev_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5138,7 +5138,7 @@ v4i64 xvmulwev_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmulwev_q_d(_1, 
 //
 v4i64 xvmulwev_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmulwev_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5148,7 +5148,7 @@ v4i64 xvmulwev_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmulwev_d_w(_1, 
 //
 v8i32 xvmulwev_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmulwev_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5158,7 +5158,7 @@ v8i32 xvmulwev_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmulwev_w_h(_1
 //
 v16i16 xvmulwev_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmulwev_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5168,7 +5168,7 @@ v16i16 xvmulwev_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmulwev_h_b(_1,
 //
 v4i64 xvmulwev_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmulwev_q_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5178,7 +5178,7 @@ v4i64 xvmulwev_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmulwev_q_du(_1
 //
 v4i64 xvmulwev_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmulwev_d_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5188,7 +5188,7 @@ v4i64 xvmulwev_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmulwev_d_wu(_1
 //
 v8i32 xvmulwev_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmulwev_w_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5198,7 +5198,7 @@ v8i32 xvmulwev_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmulwev_w_hu(
 //
 v16i16 xvmulwev_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmulwev_h_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5208,7 +5208,7 @@ v16i16 xvmulwev_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmulwev_h_bu(_
 //
 v4i64 xvaddwod_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvaddwod_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5218,7 +5218,7 @@ v4i64 xvaddwod_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvaddwod_q_d(_1, 
 //
 v4i64 xvaddwod_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvaddwod_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5228,7 +5228,7 @@ v4i64 xvaddwod_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvaddwod_d_w(_1, 
 //
 v8i32 xvaddwod_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvaddwod_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5238,7 +5238,7 @@ v8i32 xvaddwod_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvaddwod_w_h(_1
 //
 v16i16 xvaddwod_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvaddwod_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5248,7 +5248,7 @@ v16i16 xvaddwod_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvaddwod_h_b(_1,
 //
 v4i64 xvaddwod_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvaddwod_q_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5258,7 +5258,7 @@ v4i64 xvaddwod_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvaddwod_q_du(_1
 //
 v4i64 xvaddwod_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvaddwod_d_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5268,7 +5268,7 @@ v4i64 xvaddwod_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvaddwod_d_wu(_1
 //
 v8i32 xvaddwod_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvaddwod_w_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5278,7 +5278,7 @@ v8i32 xvaddwod_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvaddwod_w_hu(
 //
 v16i16 xvaddwod_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvaddwod_h_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5288,7 +5288,7 @@ v16i16 xvaddwod_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvaddwod_h_bu(_
 //
 v4i64 xvsubwod_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsubwod_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5298,7 +5298,7 @@ v4i64 xvsubwod_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsubwod_q_d(_1, 
 //
 v4i64 xvsubwod_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsubwod_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5308,7 +5308,7 @@ v4i64 xvsubwod_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsubwod_d_w(_1, 
 //
 v8i32 xvsubwod_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsubwod_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5318,7 +5318,7 @@ v8i32 xvsubwod_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsubwod_w_h(_1
 //
 v16i16 xvsubwod_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsubwod_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5328,7 +5328,7 @@ v16i16 xvsubwod_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsubwod_h_b(_1,
 //
 v4i64 xvsubwod_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsubwod_q_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5338,7 +5338,7 @@ v4i64 xvsubwod_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvsubwod_q_du(_1
 //
 v4i64 xvsubwod_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsubwod_d_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5348,7 +5348,7 @@ v4i64 xvsubwod_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvsubwod_d_wu(_1
 //
 v8i32 xvsubwod_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsubwod_w_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsubwod_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5358,7 +5358,7 @@ v8i32 xvsubwod_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvsubwod_w_hu(
 //
 v16i16 xvsubwod_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsubwod_h_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5368,7 +5368,7 @@ v16i16 xvsubwod_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvsubwod_h_bu(_
 //
 v4i64 xvmulwod_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmulwod_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5378,7 +5378,7 @@ v4i64 xvmulwod_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvmulwod_q_d(_1, 
 //
 v4i64 xvmulwod_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmulwod_d_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5388,7 +5388,7 @@ v4i64 xvmulwod_d_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvmulwod_d_w(_1, 
 //
 v8i32 xvmulwod_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmulwod_w_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5398,7 +5398,7 @@ v8i32 xvmulwod_w_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvmulwod_w_h(_1
 //
 v16i16 xvmulwod_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmulwod_h_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5408,7 +5408,7 @@ v16i16 xvmulwod_h_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvmulwod_h_b(_1,
 //
 v4i64 xvmulwod_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmulwod_q_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5418,7 +5418,7 @@ v4i64 xvmulwod_q_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvmulwod_q_du(_1
 //
 v4i64 xvmulwod_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmulwod_d_wu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5428,7 +5428,7 @@ v4i64 xvmulwod_d_wu(v8u32 _1, v8u32 _2) { return __builtin_lasx_xvmulwod_d_wu(_1
 //
 v8i32 xvmulwod_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmulwod_w_hu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5438,7 +5438,7 @@ v8i32 xvmulwod_w_hu(v16u16 _1, v16u16 _2) { return __builtin_lasx_xvmulwod_w_hu(
 //
 v16i16 xvmulwod_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmulwod_h_bu(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_d_wu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5448,7 +5448,7 @@ v16i16 xvmulwod_h_bu(v32u8 _1, v32u8 _2) { return __builtin_lasx_xvmulwod_h_bu(_
 //
 v4i64 xvaddwev_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvaddwev_d_wu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_w_hu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5458,7 +5458,7 @@ v4i64 xvaddwev_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvaddwev_d_wu_
 //
 v8i32 xvaddwev_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvaddwev_w_hu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_h_bu_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5468,7 +5468,7 @@ v8i32 xvaddwev_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvaddwev_w_h
 //
 v16i16 xvaddwev_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvaddwev_h_bu_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_d_wu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5478,7 +5478,7 @@ v16i16 xvaddwev_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvaddwev_h_bu
 //
 v4i64 xvmulwev_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvmulwev_d_wu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_w_hu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5488,7 +5488,7 @@ v4i64 xvmulwev_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvmulwev_d_wu_
 //
 v8i32 xvmulwev_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvmulwev_w_hu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_h_bu_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5498,7 +5498,7 @@ v8i32 xvmulwev_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvmulwev_w_h
 //
 v16i16 xvmulwev_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvmulwev_h_bu_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_d_wu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5508,7 +5508,7 @@ v16i16 xvmulwev_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvmulwev_h_bu
 //
 v4i64 xvaddwod_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvaddwod_d_wu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_w_hu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5518,7 +5518,7 @@ v4i64 xvaddwod_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvaddwod_d_wu_
 //
 v8i32 xvaddwod_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvaddwod_w_hu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_h_bu_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5528,7 +5528,7 @@ v8i32 xvaddwod_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvaddwod_w_h
 //
 v16i16 xvaddwod_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvaddwod_h_bu_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_d_wu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5538,7 +5538,7 @@ v16i16 xvaddwod_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvaddwod_h_bu
 //
 v4i64 xvmulwod_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvmulwod_d_wu_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_w_hu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5548,7 +5548,7 @@ v4i64 xvmulwod_d_wu_w(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvmulwod_d_wu_
 //
 v8i32 xvmulwod_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvmulwod_w_hu_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_h_bu_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5558,7 +5558,7 @@ v8i32 xvmulwod_w_hu_h(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvmulwod_w_h
 //
 v16i16 xvmulwod_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvmulwod_h_bu_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5568,7 +5568,7 @@ v16i16 xvmulwod_h_bu_b(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvmulwod_h_bu
 //
 v4i64 xvhaddw_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvhaddw_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhaddw_qu_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5578,7 +5578,7 @@ v4i64 xvhaddw_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvhaddw_q_d(_1, _2
 //
 v4u64 xvhaddw_qu_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvhaddw_qu_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5588,7 +5588,7 @@ v4u64 xvhaddw_qu_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvhaddw_qu_du(_1
 //
 v4i64 xvhsubw_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvhsubw_q_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvhsubw_qu_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5598,7 +5598,7 @@ v4i64 xvhsubw_q_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvhsubw_q_d(_1, _2
 //
 v4u64 xvhsubw_qu_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvhsubw_qu_du(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5609,7 +5609,7 @@ v4u64 xvhsubw_qu_du(v4u64 _1, v4u64 _2) { return __builtin_lasx_xvhsubw_qu_du(_1
 //
 v4i64 xvmaddwev_q_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmaddwev_q_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5620,7 +5620,7 @@ v4i64 xvmaddwev_q_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmadd
 //
 v4i64 xvmaddwev_d_w(v4i64 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmaddwev_d_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5631,7 +5631,7 @@ v4i64 xvmaddwev_d_w(v4i64 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmadd
 //
 v8i32 xvmaddwev_w_h(v8i32 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvmaddwev_w_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5642,7 +5642,7 @@ v8i32 xvmaddwev_w_h(v8i32 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvma
 //
 v16i16 xvmaddwev_h_b(v16i16 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvmaddwev_h_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5653,7 +5653,7 @@ v16i16 xvmaddwev_h_b(v16i16 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvma
 //
 v4u64 xvmaddwev_q_du(v4u64 _1, v4u64 _2, v4u64 _3) { return __builtin_lasx_xvmaddwev_q_du(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5664,7 +5664,7 @@ v4u64 xvmaddwev_q_du(v4u64 _1, v4u64 _2, v4u64 _3) { return __builtin_lasx_xvmad
 //
 v4u64 xvmaddwev_d_wu(v4u64 _1, v8u32 _2, v8u32 _3) { return __builtin_lasx_xvmaddwev_d_wu(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5675,7 +5675,7 @@ v4u64 xvmaddwev_d_wu(v4u64 _1, v8u32 _2, v8u32 _3) { return __builtin_lasx_xvmad
 //
 v8u32 xvmaddwev_w_hu(v8u32 _1, v16u16 _2, v16u16 _3) { return __builtin_lasx_xvmaddwev_w_hu(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5686,7 +5686,7 @@ v8u32 xvmaddwev_w_hu(v8u32 _1, v16u16 _2, v16u16 _3) { return __builtin_lasx_xvm
 //
 v16u16 xvmaddwev_h_bu(v16u16 _1, v32u8 _2, v32u8 _3) { return __builtin_lasx_xvmaddwev_h_bu(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5697,7 +5697,7 @@ v16u16 xvmaddwev_h_bu(v16u16 _1, v32u8 _2, v32u8 _3) { return __builtin_lasx_xvm
 //
 v4i64 xvmaddwod_q_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmaddwod_q_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5708,7 +5708,7 @@ v4i64 xvmaddwod_q_d(v4i64 _1, v4i64 _2, v4i64 _3) { return __builtin_lasx_xvmadd
 //
 v4i64 xvmaddwod_d_w(v4i64 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmaddwod_d_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5719,7 +5719,7 @@ v4i64 xvmaddwod_d_w(v4i64 _1, v8i32 _2, v8i32 _3) { return __builtin_lasx_xvmadd
 //
 v8i32 xvmaddwod_w_h(v8i32 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvmaddwod_w_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5730,7 +5730,7 @@ v8i32 xvmaddwod_w_h(v8i32 _1, v16i16 _2, v16i16 _3) { return __builtin_lasx_xvma
 //
 v16i16 xvmaddwod_h_b(v16i16 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvmaddwod_h_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_q_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5741,7 +5741,7 @@ v16i16 xvmaddwod_h_b(v16i16 _1, v32i8 _2, v32i8 _3) { return __builtin_lasx_xvma
 //
 v4u64 xvmaddwod_q_du(v4u64 _1, v4u64 _2, v4u64 _3) { return __builtin_lasx_xvmaddwod_q_du(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_d_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5752,7 +5752,7 @@ v4u64 xvmaddwod_q_du(v4u64 _1, v4u64 _2, v4u64 _3) { return __builtin_lasx_xvmad
 //
 v4u64 xvmaddwod_d_wu(v4u64 _1, v8u32 _2, v8u32 _3) { return __builtin_lasx_xvmaddwod_d_wu(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_w_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5763,7 +5763,7 @@ v4u64 xvmaddwod_d_wu(v4u64 _1, v8u32 _2, v8u32 _3) { return __builtin_lasx_xvmad
 //
 v8u32 xvmaddwod_w_hu(v8u32 _1, v16u16 _2, v16u16 _3) { return __builtin_lasx_xvmaddwod_w_hu(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_h_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5774,7 +5774,7 @@ v8u32 xvmaddwod_w_hu(v8u32 _1, v16u16 _2, v16u16 _3) { return __builtin_lasx_xvm
 //
 v16u16 xvmaddwod_h_bu(v16u16 _1, v32u8 _2, v32u8 _3) { return __builtin_lasx_xvmaddwod_h_bu(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_q_du_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5785,7 +5785,7 @@ v16u16 xvmaddwod_h_bu(v16u16 _1, v32u8 _2, v32u8 _3) { return __builtin_lasx_xvm
 //
 v4i64 xvmaddwev_q_du_d(v4i64 _1, v4u64 _2, v4i64 _3) { return __builtin_lasx_xvmaddwev_q_du_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_d_wu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5796,7 +5796,7 @@ v4i64 xvmaddwev_q_du_d(v4i64 _1, v4u64 _2, v4i64 _3) { return __builtin_lasx_xvm
 //
 v4i64 xvmaddwev_d_wu_w(v4i64 _1, v8u32 _2, v8i32 _3) { return __builtin_lasx_xvmaddwev_d_wu_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_w_hu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5807,7 +5807,7 @@ v4i64 xvmaddwev_d_wu_w(v4i64 _1, v8u32 _2, v8i32 _3) { return __builtin_lasx_xvm
 //
 v8i32 xvmaddwev_w_hu_h(v8i32 _1, v16u16 _2, v16i16 _3) { return __builtin_lasx_xvmaddwev_w_hu_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwev_h_bu_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5818,7 +5818,7 @@ v8i32 xvmaddwev_w_hu_h(v8i32 _1, v16u16 _2, v16i16 _3) { return __builtin_lasx_x
 //
 v16i16 xvmaddwev_h_bu_b(v16i16 _1, v32u8 _2, v32i8 _3) { return __builtin_lasx_xvmaddwev_h_bu_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_q_du_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5829,7 +5829,7 @@ v16i16 xvmaddwev_h_bu_b(v16i16 _1, v32u8 _2, v32i8 _3) { return __builtin_lasx_x
 //
 v4i64 xvmaddwod_q_du_d(v4i64 _1, v4u64 _2, v4i64 _3) { return __builtin_lasx_xvmaddwod_q_du_d(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_d_wu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5840,7 +5840,7 @@ v4i64 xvmaddwod_q_du_d(v4i64 _1, v4u64 _2, v4i64 _3) { return __builtin_lasx_xvm
 //
 v4i64 xvmaddwod_d_wu_w(v4i64 _1, v8u32 _2, v8i32 _3) { return __builtin_lasx_xvmaddwod_d_wu_w(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_w_hu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5851,7 +5851,7 @@ v4i64 xvmaddwod_d_wu_w(v4i64 _1, v8u32 _2, v8i32 _3) { return __builtin_lasx_xvm
 //
 v8i32 xvmaddwod_w_hu_h(v8i32 _1, v16u16 _2, v16i16 _3) { return __builtin_lasx_xvmaddwod_w_hu_h(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvmaddwod_h_bu_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP2:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5862,7 +5862,7 @@ v8i32 xvmaddwod_w_hu_h(v8i32 _1, v16u16 _2, v16i16 _3) { return __builtin_lasx_x
 //
 v16i16 xvmaddwod_h_bu_b(v16i16 _1, v32u8 _2, v32i8 _3) { return __builtin_lasx_xvmaddwod_h_bu_b(_1, _2, _3); }
 // CHECK-LABEL: define dso_local void @xvrotr_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5872,7 +5872,7 @@ v16i16 xvmaddwod_h_bu_b(v16i16 _1, v32u8 _2, v32i8 _3) { return __builtin_lasx_x
 //
 v32i8 xvrotr_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvrotr_b(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvrotr_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5882,7 +5882,7 @@ v32i8 xvrotr_b(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvrotr_b(_1, _2); }
 //
 v16i16 xvrotr_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvrotr_h(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvrotr_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5892,7 +5892,7 @@ v16i16 xvrotr_h(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvrotr_h(_1, _2); 
 //
 v8i32 xvrotr_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvrotr_w(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvrotr_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5902,7 +5902,7 @@ v8i32 xvrotr_w(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvrotr_w(_1, _2); }
 //
 v4i64 xvrotr_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvrotr_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvadd_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5912,7 +5912,7 @@ v4i64 xvrotr_d(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvrotr_d(_1, _2); }
 //
 v4i64 xvadd_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvadd_q(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvsub_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5922,7 +5922,7 @@ v4i64 xvadd_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvadd_q(_1, _2); }
 //
 v4i64 xvsub_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsub_q(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwev_q_du_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5932,7 +5932,7 @@ v4i64 xvsub_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsub_q(_1, _2); }
 //
 v4i64 xvaddwev_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvaddwev_q_du_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvaddwod_q_du_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5942,7 +5942,7 @@ v4i64 xvaddwev_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvaddwev_q_du_
 //
 v4i64 xvaddwod_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvaddwod_q_du_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwev_q_du_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5952,7 +5952,7 @@ v4i64 xvaddwod_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvaddwod_q_du_
 //
 v4i64 xvmulwev_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvmulwev_q_du_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmulwod_q_du_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -5962,7 +5962,7 @@ v4i64 xvmulwev_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvmulwev_q_du_
 //
 v4i64 xvmulwod_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvmulwod_q_du_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvmskgez_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmskgez.b(<32 x i8> [[_1]])
@@ -5971,7 +5971,7 @@ v4i64 xvmulwod_q_du_d(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvmulwod_q_du_
 //
 v32i8 xvmskgez_b(v32i8 _1) { return __builtin_lasx_xvmskgez_b(_1); }
 // CHECK-LABEL: define dso_local void @xvmsknz_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvmsknz.b(<32 x i8> [[_1]])
@@ -5980,7 +5980,7 @@ v32i8 xvmskgez_b(v32i8 _1) { return __builtin_lasx_xvmskgez_b(_1); }
 //
 v32i8 xvmsknz_b(v32i8 _1) { return __builtin_lasx_xvmsknz_b(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_h_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvexth.h.b(<32 x i8> [[_1]])
@@ -5989,7 +5989,7 @@ v32i8 xvmsknz_b(v32i8 _1) { return __builtin_lasx_xvmsknz_b(_1); }
 //
 v16i16 xvexth_h_b(v32i8 _1) { return __builtin_lasx_xvexth_h_b(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_w_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvexth.w.h(<16 x i16> [[_1]])
@@ -5998,7 +5998,7 @@ v16i16 xvexth_h_b(v32i8 _1) { return __builtin_lasx_xvexth_h_b(_1); }
 //
 v8i32 xvexth_w_h(v16i16 _1) { return __builtin_lasx_xvexth_w_h(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_d_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvexth.d.w(<8 x i32> [[_1]])
@@ -6007,7 +6007,7 @@ v8i32 xvexth_w_h(v16i16 _1) { return __builtin_lasx_xvexth_w_h(_1); }
 //
 v4i64 xvexth_d_w(v8i32 _1) { return __builtin_lasx_xvexth_d_w(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvexth.q.d(<4 x i64> [[_1]])
@@ -6016,7 +6016,7 @@ v4i64 xvexth_d_w(v8i32 _1) { return __builtin_lasx_xvexth_d_w(_1); }
 //
 v4i64 xvexth_q_d(v4i64 _1) { return __builtin_lasx_xvexth_q_d(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_hu_bu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvexth.hu.bu(<32 x i8> [[_1]])
@@ -6025,7 +6025,7 @@ v4i64 xvexth_q_d(v4i64 _1) { return __builtin_lasx_xvexth_q_d(_1); }
 //
 v16u16 xvexth_hu_bu(v32u8 _1) { return __builtin_lasx_xvexth_hu_bu(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_wu_hu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvexth.wu.hu(<16 x i16> [[_1]])
@@ -6034,7 +6034,7 @@ v16u16 xvexth_hu_bu(v32u8 _1) { return __builtin_lasx_xvexth_hu_bu(_1); }
 //
 v8u32 xvexth_wu_hu(v16u16 _1) { return __builtin_lasx_xvexth_wu_hu(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_du_wu(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvexth.du.wu(<8 x i32> [[_1]])
@@ -6043,7 +6043,7 @@ v8u32 xvexth_wu_hu(v16u16 _1) { return __builtin_lasx_xvexth_wu_hu(_1); }
 //
 v4u64 xvexth_du_wu(v8u32 _1) { return __builtin_lasx_xvexth_du_wu(_1); }
 // CHECK-LABEL: define dso_local void @xvexth_qu_du(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvexth.qu.du(<4 x i64> [[_1]])
@@ -6052,7 +6052,7 @@ v4u64 xvexth_du_wu(v8u32 _1) { return __builtin_lasx_xvexth_du_wu(_1); }
 //
 v4u64 xvexth_qu_du(v4u64 _1) { return __builtin_lasx_xvexth_qu_du(_1); }
 // CHECK-LABEL: define dso_local void @xvrotri_b(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <32 x i8> @llvm.loongarch.lasx.xvrotri.b(<32 x i8> [[_1]], i32 1)
@@ -6061,7 +6061,7 @@ v4u64 xvexth_qu_du(v4u64 _1) { return __builtin_lasx_xvexth_qu_du(_1); }
 //
 v32i8 xvrotri_b(v32i8 _1) { return __builtin_lasx_xvrotri_b(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvrotri_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i16> @llvm.loongarch.lasx.xvrotri.h(<16 x i16> [[_1]], i32 1)
@@ -6070,7 +6070,7 @@ v32i8 xvrotri_b(v32i8 _1) { return __builtin_lasx_xvrotri_b(_1, 1); }
 //
 v16i16 xvrotri_h(v16i16 _1) { return __builtin_lasx_xvrotri_h(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvrotri_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i32> @llvm.loongarch.lasx.xvrotri.w(<8 x i32> [[_1]], i32 1)
@@ -6079,7 +6079,7 @@ v16i16 xvrotri_h(v16i16 _1) { return __builtin_lasx_xvrotri_h(_1, 1); }
 //
 v8i32 xvrotri_w(v8i32 _1) { return __builtin_lasx_xvrotri_w(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvrotri_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvrotri.d(<4 x i64> [[_1]], i32 1)
@@ -6088,7 +6088,7 @@ v8i32 xvrotri_w(v8i32 _1) { return __builtin_lasx_xvrotri_w(_1, 1); }
 //
 v4i64 xvrotri_d(v4i64 _1) { return __builtin_lasx_xvrotri_d(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvextl_q_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i64> @llvm.loongarch.lasx.xvextl.q.d(<4 x i64> [[_1]])
@@ -6097,7 +6097,7 @@ v4i64 xvrotri_d(v4i64 _1) { return __builtin_lasx_xvrotri_d(_1, 1); }
 //
 v4i64 xvextl_q_d(v4i64 _1) { return __builtin_lasx_xvextl_q_d(_1); }
 // CHECK-LABEL: define dso_local void @xvsrlni_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6107,7 +6107,7 @@ v4i64 xvextl_q_d(v4i64 _1) { return __builtin_lasx_xvextl_q_d(_1); }
 //
 v32i8 xvsrlni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrlni_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlni_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6117,7 +6117,7 @@ v32i8 xvsrlni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrlni_b_h(_1, _2
 //
 v16i16 xvsrlni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlni_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlni_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6127,7 +6127,7 @@ v16i16 xvsrlni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlni_h_w(_1,
 //
 v8i32 xvsrlni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlni_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlni_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6137,7 +6137,7 @@ v8i32 xvsrlni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlni_w_d(_1, _2
 //
 v4i64 xvsrlni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlni_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlrni_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6147,7 +6147,7 @@ v4i64 xvsrlni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlni_d_q(_1, _2
 //
 v32i8 xvsrlrni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrlrni_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlrni_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6157,7 +6157,7 @@ v32i8 xvsrlrni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrlrni_b_h(_1, 
 //
 v16i16 xvsrlrni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlrni_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlrni_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6167,7 +6167,7 @@ v16i16 xvsrlrni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrlrni_h_w(_
 //
 v8i32 xvsrlrni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlrni_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrlrni_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6177,7 +6177,7 @@ v8i32 xvsrlrni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrlrni_w_d(_1, 
 //
 v4i64 xvsrlrni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlrni_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6187,7 +6187,7 @@ v4i64 xvsrlrni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrlrni_d_q(_1, 
 //
 v32i8 xvssrlni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrlni_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6197,7 +6197,7 @@ v32i8 xvssrlni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrlni_b_h(_1, 
 //
 v16i16 xvssrlni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrlni_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6207,7 +6207,7 @@ v16i16 xvssrlni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrlni_h_w(_
 //
 v8i32 xvssrlni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrlni_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6217,7 +6217,7 @@ v8i32 xvssrlni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrlni_w_d(_1, 
 //
 v4i64 xvssrlni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrlni_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6227,7 +6227,7 @@ v4i64 xvssrlni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrlni_d_q(_1, 
 //
 v32u8 xvssrlni_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrlni_bu_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6237,7 +6237,7 @@ v32u8 xvssrlni_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrlni_bu_h(_1
 //
 v16u16 xvssrlni_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrlni_hu_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6247,7 +6247,7 @@ v16u16 xvssrlni_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrlni_hu_w
 //
 v8u32 xvssrlni_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrlni_wu_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlni_du_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6257,7 +6257,7 @@ v8u32 xvssrlni_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrlni_wu_d(_1
 //
 v4u64 xvssrlni_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrlni_du_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6267,7 +6267,7 @@ v4u64 xvssrlni_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrlni_du_q(_1
 //
 v32i8 xvssrlrni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrlrni_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6277,7 +6277,7 @@ v32i8 xvssrlrni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrlrni_b_h(_1
 //
 v16i16 xvssrlrni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrlrni_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6287,7 +6287,7 @@ v16i16 xvssrlrni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrlrni_h_w
 //
 v8i32 xvssrlrni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrlrni_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6297,7 +6297,7 @@ v8i32 xvssrlrni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrlrni_w_d(_1
 //
 v4i64 xvssrlrni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrlrni_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6307,7 +6307,7 @@ v4i64 xvssrlrni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrlrni_d_q(_1
 //
 v32u8 xvssrlrni_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrlrni_bu_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6317,7 +6317,7 @@ v32u8 xvssrlrni_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrlrni_bu_h(
 //
 v16u16 xvssrlrni_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrlrni_hu_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6327,7 +6327,7 @@ v16u16 xvssrlrni_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrlrni_hu
 //
 v8u32 xvssrlrni_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrlrni_wu_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrlrni_du_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6337,7 +6337,7 @@ v8u32 xvssrlrni_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrlrni_wu_d(
 //
 v4u64 xvssrlrni_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrlrni_du_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrani_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6347,7 +6347,7 @@ v4u64 xvssrlrni_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrlrni_du_q(
 //
 v32i8 xvsrani_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrani_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrani_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6357,7 +6357,7 @@ v32i8 xvsrani_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrani_b_h(_1, _2
 //
 v16i16 xvsrani_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrani_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrani_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6367,7 +6367,7 @@ v16i16 xvsrani_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrani_h_w(_1,
 //
 v8i32 xvsrani_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrani_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrani_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6377,7 +6377,7 @@ v8i32 xvsrani_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrani_w_d(_1, _2
 //
 v4i64 xvsrani_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrani_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrarni_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6387,7 +6387,7 @@ v4i64 xvsrani_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrani_d_q(_1, _2
 //
 v32i8 xvsrarni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrarni_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrarni_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6397,7 +6397,7 @@ v32i8 xvsrarni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvsrarni_b_h(_1, 
 //
 v16i16 xvsrarni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrarni_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrarni_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6407,7 +6407,7 @@ v16i16 xvsrarni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvsrarni_h_w(_
 //
 v8i32 xvsrarni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrarni_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvsrarni_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6417,7 +6417,7 @@ v8i32 xvsrarni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvsrarni_w_d(_1, 
 //
 v4i64 xvsrarni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrarni_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6427,7 +6427,7 @@ v4i64 xvsrarni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvsrarni_d_q(_1, 
 //
 v32i8 xvssrani_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrani_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6437,7 +6437,7 @@ v32i8 xvssrani_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrani_b_h(_1, 
 //
 v16i16 xvssrani_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrani_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6447,7 +6447,7 @@ v16i16 xvssrani_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrani_h_w(_
 //
 v8i32 xvssrani_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrani_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6457,7 +6457,7 @@ v8i32 xvssrani_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrani_w_d(_1, 
 //
 v4i64 xvssrani_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrani_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6467,7 +6467,7 @@ v4i64 xvssrani_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrani_d_q(_1, 
 //
 v32u8 xvssrani_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrani_bu_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6477,7 +6477,7 @@ v32u8 xvssrani_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrani_bu_h(_1
 //
 v16u16 xvssrani_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrani_hu_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6487,7 +6487,7 @@ v16u16 xvssrani_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrani_hu_w
 //
 v8u32 xvssrani_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrani_wu_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrani_du_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6497,7 +6497,7 @@ v8u32 xvssrani_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrani_wu_d(_1
 //
 v4u64 xvssrani_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrani_du_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_b_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6507,7 +6507,7 @@ v4u64 xvssrani_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrani_du_q(_1
 //
 v32i8 xvssrarni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrarni_b_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_h_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6517,7 +6517,7 @@ v32i8 xvssrarni_b_h(v32i8 _1, v32i8 _2) { return __builtin_lasx_xvssrarni_b_h(_1
 //
 v16i16 xvssrarni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrarni_h_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_w_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6527,7 +6527,7 @@ v16i16 xvssrarni_h_w(v16i16 _1, v16i16 _2) { return __builtin_lasx_xvssrarni_h_w
 //
 v8i32 xvssrarni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrarni_w_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_d_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6537,7 +6537,7 @@ v8i32 xvssrarni_w_d(v8i32 _1, v8i32 _2) { return __builtin_lasx_xvssrarni_w_d(_1
 //
 v4i64 xvssrarni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrarni_d_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_bu_h(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<32 x i8>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <32 x i8>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6547,7 +6547,7 @@ v4i64 xvssrarni_d_q(v4i64 _1, v4i64 _2) { return __builtin_lasx_xvssrarni_d_q(_1
 //
 v32u8 xvssrarni_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrarni_bu_h(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_hu_w(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<16 x i16>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <16 x i16>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6557,7 +6557,7 @@ v32u8 xvssrarni_bu_h(v32u8 _1, v32i8 _2) { return __builtin_lasx_xvssrarni_bu_h(
 //
 v16u16 xvssrarni_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrarni_hu_w(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_wu_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x i32>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6567,7 +6567,7 @@ v16u16 xvssrarni_hu_w(v16u16 _1, v16i16 _2) { return __builtin_lasx_xvssrarni_hu
 //
 v8u32 xvssrarni_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrarni_wu_d(_1, _2, 1); }
 // CHECK-LABEL: define dso_local void @xvssrarni_du_q(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6577,7 +6577,7 @@ v8u32 xvssrarni_wu_d(v8u32 _1, v8i32 _2) { return __builtin_lasx_xvssrarni_wu_d(
 //
 v4u64 xvssrarni_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrarni_du_q(_1, _2, 1); }
 // CHECK-LABEL: define dso_local signext i32 @xbnz_b(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbnz.b(<32 x i8> [[_1]])
@@ -6585,7 +6585,7 @@ v4u64 xvssrarni_du_q(v4u64 _1, v4i64 _2) { return __builtin_lasx_xvssrarni_du_q(
 //
 int xbnz_b(v32u8 _1) { return __builtin_lasx_xbnz_b(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbnz_d(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbnz.d(<4 x i64> [[_1]])
@@ -6593,7 +6593,7 @@ int xbnz_b(v32u8 _1) { return __builtin_lasx_xbnz_b(_1); }
 //
 int xbnz_d(v4u64 _1) { return __builtin_lasx_xbnz_d(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbnz_h(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbnz.h(<16 x i16> [[_1]])
@@ -6601,7 +6601,7 @@ int xbnz_d(v4u64 _1) { return __builtin_lasx_xbnz_d(_1); }
 //
 int xbnz_h(v16u16 _1) { return __builtin_lasx_xbnz_h(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbnz_v(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbnz.v(<32 x i8> [[_1]])
@@ -6609,7 +6609,7 @@ int xbnz_h(v16u16 _1) { return __builtin_lasx_xbnz_h(_1); }
 //
 int xbnz_v(v32u8 _1) { return __builtin_lasx_xbnz_v(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbnz_w(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbnz.w(<8 x i32> [[_1]])
@@ -6617,7 +6617,7 @@ int xbnz_v(v32u8 _1) { return __builtin_lasx_xbnz_v(_1); }
 //
 int xbnz_w(v8u32 _1) { return __builtin_lasx_xbnz_w(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbz_b(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbz.b(<32 x i8> [[_1]])
@@ -6625,7 +6625,7 @@ int xbnz_w(v8u32 _1) { return __builtin_lasx_xbnz_w(_1); }
 //
 int xbz_b(v32u8 _1) { return __builtin_lasx_xbz_b(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbz_d(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbz.d(<4 x i64> [[_1]])
@@ -6633,7 +6633,7 @@ int xbz_b(v32u8 _1) { return __builtin_lasx_xbz_b(_1); }
 //
 int xbz_d(v4u64 _1) { return __builtin_lasx_xbz_d(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbz_h(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <16 x i16>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbz.h(<16 x i16> [[_1]])
@@ -6641,7 +6641,7 @@ int xbz_d(v4u64 _1) { return __builtin_lasx_xbz_d(_1); }
 //
 int xbz_h(v16u16 _1) { return __builtin_lasx_xbz_h(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbz_v(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <32 x i8>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbz.v(<32 x i8> [[_1]])
@@ -6649,7 +6649,7 @@ int xbz_h(v16u16 _1) { return __builtin_lasx_xbz_h(_1); }
 //
 int xbz_v(v32u8 _1) { return __builtin_lasx_xbz_v(_1); }
 // CHECK-LABEL: define dso_local signext i32 @xbz_w(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x i32>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.loongarch.lasx.xbz.w(<8 x i32> [[_1]])
@@ -6657,7 +6657,7 @@ int xbz_v(v32u8 _1) { return __builtin_lasx_xbz_v(_1); }
 //
 int xbz_w(v8u32 _1) { return __builtin_lasx_xbz_w(_1); }
 // CHECK-LABEL: define dso_local void @xvfcmp_caf_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6667,7 +6667,7 @@ int xbz_w(v8u32 _1) { return __builtin_lasx_xbz_w(_1); }
 //
 v4i64 xvfcmp_caf_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_caf_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_caf_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6677,7 +6677,7 @@ v4i64 xvfcmp_caf_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_caf_d(_1, 
 //
 v8i32 xvfcmp_caf_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_caf_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_ceq_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6687,7 +6687,7 @@ v8i32 xvfcmp_caf_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_caf_s(_1, 
 //
 v4i64 xvfcmp_ceq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_ceq_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_ceq_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6697,7 +6697,7 @@ v4i64 xvfcmp_ceq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_ceq_d(_1, 
 //
 v8i32 xvfcmp_ceq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_ceq_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cle_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6707,7 +6707,7 @@ v8i32 xvfcmp_ceq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_ceq_s(_1, 
 //
 v4i64 xvfcmp_cle_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cle_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cle_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6717,7 +6717,7 @@ v4i64 xvfcmp_cle_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cle_d(_1, 
 //
 v8i32 xvfcmp_cle_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cle_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_clt_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6727,7 +6727,7 @@ v8i32 xvfcmp_cle_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cle_s(_1, 
 //
 v4i64 xvfcmp_clt_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_clt_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_clt_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6737,7 +6737,7 @@ v4i64 xvfcmp_clt_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_clt_d(_1, 
 //
 v8i32 xvfcmp_clt_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_clt_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cne_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6747,7 +6747,7 @@ v8i32 xvfcmp_clt_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_clt_s(_1, 
 //
 v4i64 xvfcmp_cne_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cne_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cne_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6757,7 +6757,7 @@ v4i64 xvfcmp_cne_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cne_d(_1, 
 //
 v8i32 xvfcmp_cne_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cne_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cor_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6767,7 +6767,7 @@ v8i32 xvfcmp_cne_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cne_s(_1, 
 //
 v4i64 xvfcmp_cor_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cor_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cor_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6777,7 +6777,7 @@ v4i64 xvfcmp_cor_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cor_d(_1, 
 //
 v8i32 xvfcmp_cor_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cor_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cueq_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6787,7 +6787,7 @@ v8i32 xvfcmp_cor_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cor_s(_1, 
 //
 v4i64 xvfcmp_cueq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cueq_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cueq_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6797,7 +6797,7 @@ v4i64 xvfcmp_cueq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cueq_d(_1
 //
 v8i32 xvfcmp_cueq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cueq_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cule_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6807,7 +6807,7 @@ v8i32 xvfcmp_cueq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cueq_s(_1
 //
 v4i64 xvfcmp_cule_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cule_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cule_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6817,7 +6817,7 @@ v4i64 xvfcmp_cule_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cule_d(_1
 //
 v8i32 xvfcmp_cule_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cule_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cult_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6827,7 +6827,7 @@ v8i32 xvfcmp_cule_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cule_s(_1
 //
 v4i64 xvfcmp_cult_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cult_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cult_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6837,7 +6837,7 @@ v4i64 xvfcmp_cult_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cult_d(_1
 //
 v8i32 xvfcmp_cult_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cult_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cun_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6847,7 +6847,7 @@ v8i32 xvfcmp_cult_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cult_s(_1
 //
 v4i64 xvfcmp_cun_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cun_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cune_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6857,7 +6857,7 @@ v4i64 xvfcmp_cun_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cun_d(_1, 
 //
 v4i64 xvfcmp_cune_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cune_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cune_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6867,7 +6867,7 @@ v4i64 xvfcmp_cune_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_cune_d(_1
 //
 v8i32 xvfcmp_cune_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cune_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_cun_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6877,7 +6877,7 @@ v8i32 xvfcmp_cune_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cune_s(_1
 //
 v8i32 xvfcmp_cun_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cun_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_saf_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6887,7 +6887,7 @@ v8i32 xvfcmp_cun_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_cun_s(_1, 
 //
 v4i64 xvfcmp_saf_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_saf_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_saf_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6897,7 +6897,7 @@ v4i64 xvfcmp_saf_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_saf_d(_1, 
 //
 v8i32 xvfcmp_saf_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_saf_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_seq_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6907,7 +6907,7 @@ v8i32 xvfcmp_saf_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_saf_s(_1, 
 //
 v4i64 xvfcmp_seq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_seq_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_seq_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6917,7 +6917,7 @@ v4i64 xvfcmp_seq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_seq_d(_1, 
 //
 v8i32 xvfcmp_seq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_seq_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sle_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6927,7 +6927,7 @@ v8i32 xvfcmp_seq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_seq_s(_1, 
 //
 v4i64 xvfcmp_sle_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sle_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sle_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6937,7 +6937,7 @@ v4i64 xvfcmp_sle_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sle_d(_1, 
 //
 v8i32 xvfcmp_sle_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sle_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_slt_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6947,7 +6947,7 @@ v8i32 xvfcmp_sle_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sle_s(_1, 
 //
 v4i64 xvfcmp_slt_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_slt_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_slt_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6957,7 +6957,7 @@ v4i64 xvfcmp_slt_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_slt_d(_1, 
 //
 v8i32 xvfcmp_slt_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_slt_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sne_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6967,7 +6967,7 @@ v8i32 xvfcmp_slt_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_slt_s(_1, 
 //
 v4i64 xvfcmp_sne_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sne_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sne_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6977,7 +6977,7 @@ v4i64 xvfcmp_sne_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sne_d(_1, 
 //
 v8i32 xvfcmp_sne_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sne_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sor_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6987,7 +6987,7 @@ v8i32 xvfcmp_sne_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sne_s(_1, 
 //
 v4i64 xvfcmp_sor_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sor_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sor_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -6997,7 +6997,7 @@ v4i64 xvfcmp_sor_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sor_d(_1, 
 //
 v8i32 xvfcmp_sor_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sor_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sueq_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7007,7 +7007,7 @@ v8i32 xvfcmp_sor_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sor_s(_1, 
 //
 v4i64 xvfcmp_sueq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sueq_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sueq_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7017,7 +7017,7 @@ v4i64 xvfcmp_sueq_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sueq_d(_1
 //
 v8i32 xvfcmp_sueq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sueq_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sule_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7027,7 +7027,7 @@ v8i32 xvfcmp_sueq_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sueq_s(_1
 //
 v4i64 xvfcmp_sule_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sule_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sule_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7037,7 +7037,7 @@ v4i64 xvfcmp_sule_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sule_d(_1
 //
 v8i32 xvfcmp_sule_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sule_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sult_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7047,7 +7047,7 @@ v8i32 xvfcmp_sule_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sule_s(_1
 //
 v4i64 xvfcmp_sult_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sult_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sult_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7057,7 +7057,7 @@ v4i64 xvfcmp_sult_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sult_d(_1
 //
 v8i32 xvfcmp_sult_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sult_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sun_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7067,7 +7067,7 @@ v8i32 xvfcmp_sult_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sult_s(_1
 //
 v4i64 xvfcmp_sun_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sun_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sune_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <4 x double>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7077,7 +7077,7 @@ v4i64 xvfcmp_sun_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sun_d(_1, 
 //
 v4i64 xvfcmp_sune_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sune_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sune_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7087,7 +7087,7 @@ v4i64 xvfcmp_sune_d(v4f64 _1, v4f64 _2) { return __builtin_lasx_xvfcmp_sune_d(_1
 //
 v8i32 xvfcmp_sune_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sune_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvfcmp_sun_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x i32>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[_2:%.*]] = load <8 x float>, ptr [[TMP1]], align 32, !tbaa [[CHAR_TBAA6]]
@@ -7097,7 +7097,7 @@ v8i32 xvfcmp_sune_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sune_s(_1
 //
 v8i32 xvfcmp_sun_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sun_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @xvpickve_d_f(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvpickve.d.f(<4 x double> [[_1]], i32 1)
@@ -7106,7 +7106,7 @@ v8i32 xvfcmp_sun_s(v8f32 _1, v8f32 _2) { return __builtin_lasx_xvfcmp_sun_s(_1, 
 //
 v4f64 xvpickve_d_f(v4f64 _1) { return __builtin_lasx_xvpickve_d_f(_1, 1); }
 // CHECK-LABEL: define dso_local void @xvpickve_w_f(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvpickve.w.f(<8 x float> [[_1]], i32 1)
@@ -7204,7 +7204,7 @@ v4f64 concat_128_d(v2f64 _1, v2f64 _2) { return __builtin_lasx_concat_128_d(_1, 
 //
 v4i64 concat_128(v2i64 _1, v2i64 _2) { return __builtin_lasx_concat_128(_1, _2); }
 // CHECK-LABEL: define dso_local i128 @extract_128_lo_s(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.loongarch.lasx.extract.128.lo.s(<8 x float> [[_1]])
@@ -7213,7 +7213,7 @@ v4i64 concat_128(v2i64 _1, v2i64 _2) { return __builtin_lasx_concat_128(_1, _2);
 //
 v4f32 extract_128_lo_s(v8f32 _1) { return __builtin_lasx_extract_128_lo_s(_1); }
 // CHECK-LABEL: define dso_local i128 @extract_128_lo_d(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.loongarch.lasx.extract.128.lo.d(<4 x double> [[_1]])
@@ -7222,7 +7222,7 @@ v4f32 extract_128_lo_s(v8f32 _1) { return __builtin_lasx_extract_128_lo_s(_1); }
 //
 v2f64 extract_128_lo_d(v4f64 _1) { return __builtin_lasx_extract_128_lo_d(_1); }
 // CHECK-LABEL: define dso_local i128 @extract_128_lo(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.loongarch.lasx.extract.128.lo(<4 x i64> [[_1]])
@@ -7231,7 +7231,7 @@ v2f64 extract_128_lo_d(v4f64 _1) { return __builtin_lasx_extract_128_lo_d(_1); }
 //
 v2i64 extract_128_lo(v4i64 _1) { return __builtin_lasx_extract_128_lo(_1); }
 // CHECK-LABEL: define dso_local i128 @extract_128_hi_s(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.loongarch.lasx.extract.128.hi.s(<8 x float> [[_1]])
@@ -7240,7 +7240,7 @@ v2i64 extract_128_lo(v4i64 _1) { return __builtin_lasx_extract_128_lo(_1); }
 //
 v4f32 extract_128_hi_s(v8f32 _1) { return __builtin_lasx_extract_128_hi_s(_1); }
 // CHECK-LABEL: define dso_local i128 @extract_128_hi_d(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.loongarch.lasx.extract.128.hi.d(<4 x double> [[_1]])
@@ -7249,7 +7249,7 @@ v4f32 extract_128_hi_s(v8f32 _1) { return __builtin_lasx_extract_128_hi_s(_1); }
 //
 v2f64 extract_128_hi_d(v4f64 _1) { return __builtin_lasx_extract_128_hi_d(_1); }
 // CHECK-LABEL: define dso_local i128 @extract_128_hi(
-// CHECK-SAME: ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// CHECK-SAME: ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.loongarch.lasx.extract.128.hi(<4 x i64> [[_1]])
@@ -7258,7 +7258,7 @@ v2f64 extract_128_hi_d(v4f64 _1) { return __builtin_lasx_extract_128_hi_d(_1); }
 //
 v2i64 extract_128_hi(v4i64 _1) { return __builtin_lasx_extract_128_hi(_1); }
 // CHECK-LABEL: define dso_local void @insert_128_lo_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[_2_COERCE]] to <4 x float>
@@ -7268,7 +7268,7 @@ v2i64 extract_128_hi(v4i64 _1) { return __builtin_lasx_extract_128_hi(_1); }
 //
 v8f32 insert_128_lo_s(v8f32 _1, v4f32 _2) { return __builtin_lasx_insert_128_lo_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @insert_128_lo_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[_2_COERCE]] to <2 x double>
@@ -7278,7 +7278,7 @@ v8f32 insert_128_lo_s(v8f32 _1, v4f32 _2) { return __builtin_lasx_insert_128_lo_
 //
 v4f64 insert_128_lo_d(v4f64 _1, v2f64 _2) { return __builtin_lasx_insert_128_lo_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @insert_128_lo(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[_2_COERCE]] to <2 x i64>
@@ -7288,7 +7288,7 @@ v4f64 insert_128_lo_d(v4f64 _1, v2f64 _2) { return __builtin_lasx_insert_128_lo_
 //
 v4i64 insert_128_lo(v4i64 _1, v2i64 _2) { return __builtin_lasx_insert_128_lo(_1, _2); }
 // CHECK-LABEL: define dso_local void @insert_128_hi_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[_2_COERCE]] to <4 x float>
@@ -7298,7 +7298,7 @@ v4i64 insert_128_lo(v4i64 _1, v2i64 _2) { return __builtin_lasx_insert_128_lo(_1
 //
 v8f32 insert_128_hi_s(v8f32 _1, v4f32 _2) { return __builtin_lasx_insert_128_hi_s(_1, _2); }
 // CHECK-LABEL: define dso_local void @insert_128_hi_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[_2_COERCE]] to <2 x double>
@@ -7308,7 +7308,7 @@ v8f32 insert_128_hi_s(v8f32 _1, v4f32 _2) { return __builtin_lasx_insert_128_hi_
 //
 v4f64 insert_128_hi_d(v4f64 _1, v2f64 _2) { return __builtin_lasx_insert_128_hi_d(_1, _2); }
 // CHECK-LABEL: define dso_local void @insert_128_hi(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x i64>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]], i128 noundef [[_2_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x i64>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[_2_COERCE]] to <2 x i64>

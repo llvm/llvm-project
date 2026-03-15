@@ -75,6 +75,13 @@ constexpr bool test() {
     });
     assert(opt == j);
   }
+
+  {
+    int i = 2;
+    const std::optional<int&> opt;
+    assert(opt.or_else([&] { return std::optional<int&>{i}; }) == i);
+  }
+
   {
     int i = 2;
     std::optional<int&> opt;
@@ -87,6 +94,16 @@ constexpr bool test() {
     });
     assert(opt == j);
   }
+
+  {
+    int i                         = 2;
+    const std::optional<int&> opt = i;
+    assert(std::move(opt).or_else([] {
+      assert(false);
+      return std::optional<int&>{};
+    }) == i);
+  }
+
 #endif
 
   return true;

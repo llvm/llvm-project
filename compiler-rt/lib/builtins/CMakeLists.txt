@@ -336,13 +336,16 @@ if (NOT MSVC)
     )
   endif()
 
-  if (NOT ANDROID)
+  if(NOT ANDROID AND (NOT WIN32 OR MINGW))
     set(x86_64_SOURCES
       ${x86_64_SOURCES}
       ${x86_80_BIT_SOURCES}
       x86_64/floatdixf.c
     )
-    if (NOT WIN32)
+
+    # TODO(compnerd) floatundixf.S currently implements the SysV calling
+    # convention, this must be ported to the Windows ABI.
+    if(NOT WIN32)
       set(x86_64_SOURCES
         ${x86_64_SOURCES}
         x86_64/floatundixf.S
@@ -380,7 +383,6 @@ if (NOT MSVC)
   if (NOT ANDROID)
     set(i386_SOURCES
       ${i386_SOURCES}
-      ${x86_80_BIT_SOURCES}
       i386/floatdixf.S
       i386/floatundixf.S
     )
@@ -392,6 +394,12 @@ if (NOT MSVC)
       i386/chkstk.S
       i386/chkstk2.S
     )
+  endif()
+
+  if(NOT ANDROID AND NOT (WIN32 AND NOT MINGW))
+    set(i386_SOURCES
+      ${i386_SOURCES}
+      ${x86_80_BIT_SOURCES})
   endif()
 else () # MSVC
   # Use C versions of functions when building on MSVC
@@ -516,6 +524,10 @@ set(arm_EABI_RT_SOURCES
   arm/aeabi_ldivmod.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S
+  arm/aeabi_uread4.S
+  arm/aeabi_uread8.S
+  arm/aeabi_uwrite4.S
+  arm/aeabi_uwrite8.S
 )
 
 set(arm_EABI_CLIB_SOURCES
@@ -660,7 +672,7 @@ if (COMPILER_RT_HAS_AARCH64_SME)
   elseif (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR)
     list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-assert.c)
     if(COMPILER_RT_HAS_ARM_UNALIGNED AND COMPILER_RT_HAS_ARM_FP)
-      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S)
+      list(APPEND aarch64_SOURCES aarch64/sme-libc-opt-memset-memchr.S aarch64/sme-libc-opt-memcpy-memmove.S aarch64/sme-libc-opt-memcpy-memmove-sve.S)
     elseif(COMPILER_RT_HAS_ARM_UNALIGNED)
       list(APPEND aarch64_SOURCES aarch64/sme-libc-memset-memchr.c aarch64/sme-libc-opt-memcpy-memmove.S)
       message(WARNING "AArch64 SME ABI assembly-optimized memset/memchr disabled: target does not have hardware floating-point support.")
@@ -839,6 +851,16 @@ if (NOT OS_NAME MATCHES "AIX")
     ${powerpc64_SOURCES}
   )
 endif()
+if (OS_NAME MATCHES "AIX")
+  set(powerpc_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc_SOURCES}
+  )
+  set(powerpc64_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc64_SOURCES}
+  )
+endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
@@ -868,8 +890,6 @@ set(s390x_SOURCES
 
 
 set(wasm_SOURCES
-  wasm/__c_longjmp.S
-  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
@@ -935,8 +955,6 @@ else ()
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
-    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
-                   -fconvergent-functions BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
     if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")

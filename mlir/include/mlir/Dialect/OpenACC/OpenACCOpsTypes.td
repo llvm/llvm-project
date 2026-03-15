@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// =============================================================================
+//===----------------------------------------------------------------------===//
 //
 // Defines MLIR OpenACC operation types.
 //
@@ -30,6 +30,14 @@ def OpenACC_DeclareTokenType : OpenACC_Type<"DeclareToken", "declare_token"> {
     `acc.declare_token` is a type returned by a `declare_enter` operation and
     can be passed to a `declare_exit` operation to represent an implicit
     data region.
+  }];
+}
+
+def OpenACC_ParWidthType : OpenACC_Type<"ParWidth", "par_width"> {
+  let summary = "parallel width token type";
+  let description = [{
+    Represents a type that is consumed by a compute region in order to
+    capture its parallelism dimensions arguments.
   }];
 }
 

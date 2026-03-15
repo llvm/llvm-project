@@ -145,7 +145,7 @@ public:
   ///     The equivalent symbol list - any equivalent symbols found are appended
   ///     to this list.
   ///
-  virtual void FindEquivalentSymbols(Symbol *original_symbol,
+  virtual void FindEquivalentSymbols(const Symbol *original_symbol,
                                      ModuleList &module_list,
                                      SymbolContextList &equivalent_symbols) {}
 
@@ -310,16 +310,23 @@ public:
   ///     private shared cache.
   ///     If this information cannot be fetched, eLazyBoolCalculate.
   ///
+  /// \param[out] shared_cache_path
+  ///     A FileSpec representing the shared cache path being run
+  ///     in the inferior process.
+  ///
   /// \return
   ///     Returns false if this DynamicLoader cannot gather information
   ///     about the shared cache / has no concept of a shared cache.
-  virtual bool GetSharedCacheInformation(lldb::addr_t &base_address, UUID &uuid,
-                                         LazyBool &using_shared_cache,
-                                         LazyBool &private_shared_cache) {
+  virtual bool
+  GetSharedCacheInformation(lldb::addr_t &base_address, UUID &uuid,
+                            LazyBool &using_shared_cache,
+                            LazyBool &private_shared_cache,
+                            lldb_private::FileSpec &shared_cache_path) {
     base_address = LLDB_INVALID_ADDRESS;
     uuid.Clear();
     using_shared_cache = eLazyBoolCalculate;
     private_shared_cache = eLazyBoolCalculate;
+    shared_cache_path.Clear();
     return false;
   }
 

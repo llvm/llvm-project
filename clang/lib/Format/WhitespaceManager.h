@@ -234,7 +234,7 @@ private:
   /// Align consecutive bitfields over all \c Changes.
   void alignConsecutiveBitFields();
 
-  /// Align consecutive colon. For bitfields, TableGen DAGArgs and defintions.
+  /// Align consecutive colon. For bitfields, TableGen DAGArgs and definitions.
   void
   alignConsecutiveColons(const FormatStyle::AlignConsecutiveStyle &AlignStyle,
                          TokenType Type);
@@ -356,6 +356,8 @@ private:
 
   /// Link the Cell pointers in the list of Cells.
   static CellDescriptions linkCells(CellDescriptions &&CellDesc);
+
+  void setChangeSpaces(unsigned Start, unsigned Spaces);
 
   /// Fill \c Replaces with the replacements for all effective changes.
   void generateChanges();

@@ -222,14 +222,14 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
                    Error::success());
 }
 
-void SimpleNativeMemoryMap::detach(ResourceManager::OnCompleteFn OnComplete) {
+void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
   OnComplete(Error::success());
 }
 
-void SimpleNativeMemoryMap::shutdown(ResourceManager::OnCompleteFn OnComplete) {
-  // TODO: Establish a clear order to run dealloca actions across slabs,
+void SimpleNativeMemoryMap::onShutdown(Service::OnCompleteFn OnComplete) {
+  // TODO: Establish a clear order to run deallocate actions across slabs,
   // object boundaries.
 
   // Collect slab base addresses for removal.
@@ -301,8 +301,8 @@ void SimpleNativeMemoryMap::deinitializeNext(
       NextAddr);
 }
 
-void SimpleNativeMemoryMap::shutdownNext(
-    ResourceManager::OnCompleteFn OnComplete, std::vector<void *> Bases) {
+void SimpleNativeMemoryMap::shutdownNext(Service::OnCompleteFn OnComplete,
+                                         std::vector<void *> Bases) {
   if (Bases.empty())
     return OnComplete(Error::success());
 

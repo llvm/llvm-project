@@ -13,7 +13,7 @@ body:             |
     ; CHECK-LABEL: name: issue155902
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 %stack.1
     ; CHECK-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
-    ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR [[V_MOV_B]], %stack.1, 8, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR [[V_MOV_B]], [[S_MOV_B32_]], 8, 0, implicit $exec, implicit $flat_scr
     ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR [[V_MOV_B]], [[S_MOV_B32_]], 0, 0, implicit $exec, implicit $flat_scr
     ; CHECK-NEXT: [[V_MOV_B1:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 900, implicit $exec
     ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed [[V_MOV_B1]], [[S_MOV_B32_]], 16, 0, implicit $exec, implicit $flat_scr

@@ -104,7 +104,7 @@ gpu.module @kernels {
     // CHECK: ^bb20:
     // CHECK:   cf.br ^bb21
     // CHECK: ^bb21:
-    // CHECK:   gpu.barrier
+    // CHECK:   gpu.barrier memfence [#gpu.address_space<workgroup>]
     // CHECK:   [[VAL_72:%.*]] = arith.addi [[VAL_28]], [[VAL_2]] : i32
     // CHECK:   [[VAL_73:%.*]] = arith.divsi [[VAL_72]], [[VAL_5]] : i32
     // CHECK:   [[VAL_74:%.*]] = arith.cmpi slt, [[VAL_27]], [[VAL_73]] : i32
@@ -174,7 +174,7 @@ gpu.module @kernels {
     // CHECK: ^bb41:
     // CHECK:   cf.br ^bb42
     // CHECK: ^bb42:
-    // CHECK:   gpu.barrier
+    // CHECK:   gpu.barrier memfence [#gpu.address_space<workgroup>]
     %sum = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
     gpu.return
   }

@@ -1037,10 +1037,11 @@ entry:
 define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-SD-LABEL: extract_v4i32_phi:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, #1 // =0x1
 ; CHECK-SD-NEXT:    dup v1.2s, w0
-; CHECK-SD-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-SD-NEXT:    movi v0.2s, #16
-; CHECK-SD-NEXT:    ldr d2, [x8, :lo12:.LCPI41_0]
+; CHECK-SD-NEXT:    movk x8, #2, lsl #32
+; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v2.2s
 ; CHECK-SD-NEXT:  .LBB41_1: // %loop
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1

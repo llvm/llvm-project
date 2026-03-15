@@ -40,6 +40,7 @@ class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
 class OpenACCClause;
+struct StructuralEquivalenceContext;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {
@@ -111,6 +112,9 @@ public:
   Attr *clone(ASTContext &C) const;
 
   bool isLateParsed() const { return IsLateParsed; }
+
+  bool isEquivalent(const Attr &Other,
+                    StructuralEquivalenceContext &Context) const;
 
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
@@ -271,8 +275,12 @@ public:
 /// A single parameter index whose accessors require each use to make explicit
 /// the parameter index encoding needed.
 class ParamIdx {
+public:
+  constexpr static unsigned IdxBitWidth = 30;
+
+private:
   // Idx is exposed only via accessors that specify specific encodings.
-  unsigned Idx : 30;
+  unsigned Idx : IdxBitWidth;
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasThis : 1;
   LLVM_PREFERRED_TYPE(bool)

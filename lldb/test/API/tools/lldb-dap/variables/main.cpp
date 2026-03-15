@@ -5,6 +5,7 @@ struct PointType {
   int y;
   int buffer[BUFFER_SIZE];
 };
+#include <cstdio>
 #include <vector>
 int g_global = 123;
 static int s_global = 234;
@@ -16,6 +17,9 @@ int main(int argc, char const *argv[]) {
   PointType pt = {11, 22, {0}};
   for (int i = 0; i < BUFFER_SIZE; ++i)
     pt.buffer[i] = i;
+  const char *valid_str = "𐌶𐌰L𐌾𐍈 C𐍈𐌼𐌴𐍃";
+  const char *malformed_str = "lone trailing \x81\x82 bytes";
+  printf("print malformed utf8 %s %s\n", valid_str, malformed_str);
   int x = s_global - g_global - pt.y; // breakpoint 1
   {
     int x = 42;

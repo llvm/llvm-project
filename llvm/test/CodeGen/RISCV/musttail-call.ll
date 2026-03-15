@@ -9,12 +9,13 @@
 ; RUN: not --crash llc -mtriple riscv64-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s
 
-%struct.A = type { i32 }
+declare void @callee_musttail()
 
-declare void @callee_musttail(ptr sret(%struct.A) %a)
-define void @caller_musttail(ptr sret(%struct.A) %a) {
+define void @caller_musttail() #0 {
 ; CHECK: LLVM ERROR: failed to perform tail call elimination on a call site marked musttail
 entry:
-  musttail call void @callee_musttail(ptr sret(%struct.A) %a)
+  musttail call void @callee_musttail()
   ret void
 }
+
+attributes #0 = { "interrupt"="machine" }

@@ -820,8 +820,8 @@ void AArch64ConditionalCompares::updateDomTree(
     MachineDomTreeNode *Node = DomTree->getNode(RemovedMBB);
     assert(Node != HeadNode && "Cannot erase the head node");
     assert(Node->getIDom() == HeadNode && "CmpBB should be dominated by Head");
-    while (Node->getNumChildren())
-      DomTree->changeImmediateDominator(Node->back(), HeadNode);
+    while (!Node->isLeaf())
+      DomTree->changeImmediateDominator(*Node->begin(), HeadNode);
     DomTree->eraseNode(RemovedMBB);
   }
 }

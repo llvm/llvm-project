@@ -122,6 +122,19 @@ const Scope *FindOpenACCConstructContaining(const Scope *scope) {
                : nullptr;
 }
 
+bool HasOpenACCRoutineDirective(const Scope *scope) {
+  if (!scope) {
+    return false;
+  }
+  const Scope &progUnit{GetProgramUnitContaining(*scope)};
+  if (const Symbol *symbol{progUnit.symbol()}) {
+    if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
+      return !subpDetails->openACCRoutineInfos().empty();
+    }
+  }
+  return false;
+}
+
 // 7.5.2.4 "same derived type" test -- rely on IsTkCompatibleWith() and its
 // infrastructure to detect and handle comparisons on distinct (but "same")
 // sequence/bind(C) derived types
@@ -344,18 +357,6 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
     }
   }
   return symbol;
-}
-
-const Symbol &GetCrayPointer(const Symbol &crayPointee) {
-  const Symbol *found{nullptr};
-  const Symbol &ultimate{crayPointee.GetUltimate()};
-  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
-    if (pointee == ultimate.name()) {
-      found = &pointer.get();
-      break;
-    }
-  }
-  return DEREF(found);
 }
 
 bool ExprHasTypeCategory(
@@ -953,13 +954,13 @@ public:
     return false;
   }
   bool operator()(const parser::CallStmt &stmt) {
+    const auto &call{std::get<parser::Call>(stmt.t)};
     const auto &procedureDesignator{
-        std::get<parser::ProcedureDesignator>(stmt.call.t)};
+        std::get<parser::ProcedureDesignator>(call.t)};
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       // TODO: also ensure that the procedure is, in fact, an intrinsic
       if (name->source == "move_alloc") {
-        const auto &args{
-            std::get<std::list<parser::ActualArgSpec>>(stmt.call.t)};
+        const auto &args{std::get<std::list<parser::ActualArgSpec>>(call.t)};
         if (!args.empty()) {
           const parser::ActualArg &actualArg{
               std::get<parser::ActualArg>(args.front().t)};

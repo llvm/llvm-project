@@ -19,7 +19,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
-#include "mlir/Dialect/X86Vector/Transforms.h"
+#include "mlir/Dialect/X86/Transforms.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -923,10 +923,15 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp linalgOp);
 
-/// Create a namedOp from the given GenericOp and replace the GenericOp.
-/// Currently we can specialize only trivial linalg copy operations.
-FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
-                                        GenericOp genericOp);
+struct GenericOpSpecializationOptions {
+  // Specialize generics to category ops (default: named ops).
+  bool emitCategoryOps = false;
+};
+
+/// Replace the given GenericOp with a namedOp or categoryOp.
+FailureOr<LinalgOp>
+specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                    const GenericOpSpecializationOptions &options = {});
 
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is either the original subview size when 'useOriginalSubviewSize' is
@@ -1360,9 +1365,10 @@ struct LowerUnPackOpResult {
   linalg::TransposeOp transposeOp;
   tensor::CollapseShapeOp collapseShapeOp;
   tensor::ExtractSliceOp extractSliceOp;
+  linalg::CopyOp copyOp;
 };
 
-/// Rewrite pack as empty + transpose + reshape + extract_slice.
+/// Rewrite pack as empty + transpose + reshape + extract_slice + copy.
 FailureOr<LowerUnPackOpResult>
 lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
             bool lowerUnpadLikeWithExtractSlice = true);
@@ -1641,16 +1647,16 @@ FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
 //===----------------------------------------------------------------------===//
 
 /// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
-/// convolution ops.
+/// convolution ops. Works with both named ops and equivalent generic ops.
 template <typename Conv2DOp, typename Conv1DOp>
 struct DownscaleSizeOneWindowed2DConvolution final
-    : public OpRewritePattern<Conv2DOp> {
-  using OpRewritePattern<Conv2DOp>::OpRewritePattern;
+    : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
+  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
                                                PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(Conv2DOp convOp,
+  LogicalResult matchAndRewrite(LinalgOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
@@ -1664,29 +1670,28 @@ extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
 /// Rewrites 2-D depthwise convolution ops with size-1 (w, kw) or (h, kh)
 /// dimensions into 1-D depthwise convolution ops.
 struct DownscaleDepthwiseConv2DNhwcHwcOp final
-    : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
+    : public OpInterfaceRewritePattern<LinalgOp> {
   DownscaleDepthwiseConv2DNhwcHwcOp(MLIRContext *context,
                                     PatternBenefit benefit = 1)
-      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit) {}
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
 
   FailureOr<DepthwiseConv1DNwcWcOp>
-  returningMatchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
-                           PatternRewriter &rewriter) const;
+  returningMatchAndRewrite(LinalgOp convOp, PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
+  LogicalResult matchAndRewrite(LinalgOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
 };
 
-struct DownscaleConv2DOp final : public OpRewritePattern<Conv2DOp> {
+struct DownscaleConv2DOp final : public OpInterfaceRewritePattern<LinalgOp> {
   DownscaleConv2DOp(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpRewritePattern<Conv2DOp>(context, benefit) {}
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
 
-  FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
+  FailureOr<Conv1DOp> returningMatchAndRewrite(LinalgOp convOp,
                                                PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(Conv2DOp convOp,
+  LogicalResult matchAndRewrite(LinalgOp convOp,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
@@ -1718,17 +1723,24 @@ struct LinalgGeneralizationPattern
 };
 
 struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LinalgSpecializationPattern(
+      MLIRContext *context, const GenericOpSpecializationOptions &options = {},
+      PatternBenefit benefit = 1)
+      : OpRewritePattern<GenericOp>(context, benefit), options(options) {}
 
   FailureOr<GenericOp>
   returningMatchAndRewrite(GenericOp op, PatternRewriter &rewriter) const {
-    return specializeGenericOp(rewriter, op);
+    return specializeGenericOp(rewriter, op, options);
   }
 
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(op, rewriter);
   }
+
+private:
+  GenericOpSpecializationOptions options;
 };
 
 /// Vectorization pattern for memref::CopyOp.
@@ -1929,7 +1941,6 @@ private:
 /// Canonicalization patterns relevant to apply after tiling patterns. These
 /// are applied automatically by the tiling pass but need to be applied
 /// manually when tiling is called programmatically.
-RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
 /// Linalg generalization patterns
@@ -1939,13 +1950,14 @@ void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns to convert linalg.generic ops to named
-/// ops where possible. A linalg.generic can represent wide range and complex
-/// computations for which equivalent linalg named op may not exist e.g.
-/// linalg.generic that takes a tensor and computes a polynomial such as:
+/// or category ops where possible. A linalg.generic can represent wide range
+/// and complex computations for which equivalent linalg named op may not exist
+/// e.g. linalg.generic that takes a tensor and computes a polynomial such as:
 ///     p(x) = an*x^n + ... + a1x + a0
 /// There is no equivalent named op to convert to. Many such cases exist.
 void populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns,
+    const GenericOpSpecializationOptions &options = {});
 
 /// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
 /// to equivalent `linalg.elementwise`.

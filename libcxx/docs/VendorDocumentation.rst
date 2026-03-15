@@ -341,6 +341,22 @@ The following options allow building libc++ for a different ABI version.
   This option generate and installs a linker script as ``libc++.so`` which
   links the correct ABI library.
 
+.. option:: LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION:STRING
+
+  **Default**: ``2``
+
+  This option configures the oldest version of the libc++ headers that the built
+  library has to be compatible with. See the
+  :ref:`minimum header version documentation<MinimumHeaderVersion>` for details.
+
+.. option:: LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION:STRING
+
+  **Default**: ``2``
+
+  This is the same as ``LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION`` documented
+  above, but for libc++abi. The two options should be set to the same value if
+  libc++abi is used.
+
 .. option:: LIBCXXABI_USE_LLVM_UNWINDER:BOOL
 
   **Default**: ``ON``
@@ -643,3 +659,18 @@ if it is unavailable on the deployment target.
 Note that this mechanism is disabled by default in the "upstream" libc++. Availability annotations are only meaningful
 when shipping libc++ inside a platform (i.e. as a system library), and so vendors that want them should turn those
 annotations on at CMake configuration time.
+
+.. _MinimumHeaderVersion:
+
+Minimum Header Version
+======================
+
+In libc++ we add new functions and remove the use of other functions in the built library on a regular basis. To avoid
+breaking programs, we keep old functions in the built library as documented in our
+:ref:`header support policy<HeaderSupportPolicy>`. However, there are platforms where some of these functions could
+never be referenced, because that platform never provided headers which referenced these functions. To reduce the size
+of the built library on these platforms, libc++ provides the notion of a minimum header version. The minimum header
+version describes the earliest version of the libc++ headers that can be used in a program linking against the library
+currently being built. Functions which have never been referenced in headers since the minimum header version are
+removed from the library. The minimum header version can be set with the CMake variables
+``LIBCXX_AVAILABILITY_MINIMUM_HEADER_VERSION`` and ``LIBCXXABI_AVAILABILITY_MINIMUM_HEADER_VERSION``.

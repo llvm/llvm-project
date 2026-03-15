@@ -11,8 +11,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
-#if LLDB_ENABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "../lldb-python.h"
 
@@ -154,4 +152,30 @@ std::optional<std::string> ScriptedFramePythonInterface::GetRegisterContext() {
   return obj->GetAsString()->GetValue().str();
 }
 
-#endif
+lldb::ValueObjectListSP ScriptedFramePythonInterface::GetVariables() {
+  Status error;
+  auto vals = Dispatch<lldb::ValueObjectListSP>("get_variables", error);
+
+  if (error.Fail()) {
+    return ErrorWithMessage<lldb::ValueObjectListSP>(LLVM_PRETTY_FUNCTION,
+                                                     error.AsCString(), error);
+  }
+
+  return vals;
+}
+
+lldb::ValueObjectSP
+ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
+    llvm::StringRef expr, uint32_t options, Status &status) {
+  Status dispatch_error;
+  auto val = Dispatch<lldb::ValueObjectSP>("get_value_for_variable_expression",
+                                           dispatch_error, expr.data(), options,
+                                           status);
+
+  if (dispatch_error.Fail()) {
+    return ErrorWithMessage<lldb::ValueObjectSP>(
+        LLVM_PRETTY_FUNCTION, dispatch_error.AsCString(), dispatch_error);
+  }
+
+  return val;
+}

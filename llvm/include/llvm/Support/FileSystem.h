@@ -794,7 +794,7 @@ enum OpenFlags : unsigned {
 ///
 /// Example: clang-%%-%%-%%-%%-%%.s => clang-a0-b1-c2-d3-e4.s
 ///
-/// @param Model Name to base unique path off of.
+/// @param Model Name to base unique path off of. Must contain at least one '%'.
 /// @param ResultPath Set to the file's path.
 /// @param MakeAbsolute Whether to use the system temp directory.
 LLVM_ABI void createUniquePath(const Twine &Model,
@@ -1310,6 +1310,7 @@ private:
 
   LLVM_ABI void unmapImpl();
   LLVM_ABI void dontNeedImpl();
+  LLVM_ABI void willNeedImpl();
 
   LLVM_ABI std::error_code init(sys::fs::file_t FD, uint64_t Offset,
                                 mapmode Mode);
@@ -1341,6 +1342,7 @@ public:
     copyFrom(mapped_file_region());
   }
   void dontNeed() { dontNeedImpl(); }
+  void willNeed() { willNeedImpl(); }
 
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;

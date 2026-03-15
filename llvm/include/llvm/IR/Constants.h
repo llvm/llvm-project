@@ -914,7 +914,7 @@ class BlockAddress final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return a BlockAddress for the specified function and basic block.
   LLVM_ABI static BlockAddress *get(Function *F, BasicBlock *BB);
@@ -967,7 +967,7 @@ class DSOLocalEquivalent final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return a DSOLocalEquivalent for the specified global value.
   LLVM_ABI static DSOLocalEquivalent *get(GlobalValue *GV);
@@ -1306,6 +1306,16 @@ public:
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
+  /// Create a getelementptr i8, ptr, offset constant expression.
+  static Constant *
+  getPtrAdd(Constant *Ptr, Constant *Offset,
+            GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+            std::optional<ConstantRange> InRange = std::nullopt,
+            Type *OnlyIfReduced = nullptr) {
+    return getGetElementPtr(Type::getInt8Ty(Ptr->getContext()), Ptr, Offset, NW,
+                            InRange, OnlyIfReduced);
+  }
+
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
@@ -1322,6 +1332,11 @@ public:
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,
                                             ArrayRef<Value *> IdxList) {
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
+  }
+
+  /// Create a getelementptr inbounds i8, ptr, offset constant expression.
+  static Constant *getInBoundsPtrAdd(Constant *Ptr, Constant *Offset) {
+    return getPtrAdd(Ptr, Offset, GEPNoWrapFlags::inBounds());
   }
 
   LLVM_ABI static Constant *getExtractElement(Constant *Vec, Constant *Idx,

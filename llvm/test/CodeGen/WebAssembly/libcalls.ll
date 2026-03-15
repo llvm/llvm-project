@@ -32,71 +32,77 @@ define fp128 @fp128libcalls(fp128 %x, fp128 %y, i32 %z) {
 ; CHECK-LABEL: fp128libcalls:
 ; CHECK:         .functype fp128libcalls (i32, i64, i64, i64, i64, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    global.get $push18=, __stack_pointer
-; CHECK-NEXT:    i32.const $push19=, 144
-; CHECK-NEXT:    i32.sub $push39=, $pop18, $pop19
-; CHECK-NEXT:    local.tee $push38=, $6=, $pop39
-; CHECK-NEXT:    global.set __stack_pointer, $pop38
-; CHECK-NEXT:    i32.const $push36=, 128
+; CHECK-NEXT:    global.get $push20=, __stack_pointer
+; CHECK-NEXT:    i32.const $push21=, 160
+; CHECK-NEXT:    i32.sub $push43=, $pop20, $pop21
+; CHECK-NEXT:    local.tee $push42=, $6=, $pop43
+; CHECK-NEXT:    global.set __stack_pointer, $pop42
+; CHECK-NEXT:    i32.const $push40=, 144
+; CHECK-NEXT:    i32.add $push41=, $6, $pop40
+; CHECK-NEXT:    call __addtf3, $pop41, $1, $2, $3, $4
+; CHECK-NEXT:    i32.const $push38=, 128
+; CHECK-NEXT:    i32.add $push39=, $6, $pop38
+; CHECK-NEXT:    i64.load $push1=, 144($6)
+; CHECK-NEXT:    i64.load $push0=, 152($6)
+; CHECK-NEXT:    call __multf3, $pop39, $pop1, $pop0, $3, $4
+; CHECK-NEXT:    i32.const $push36=, 112
 ; CHECK-NEXT:    i32.add $push37=, $6, $pop36
-; CHECK-NEXT:    call __addtf3, $pop37, $1, $2, $3, $4
-; CHECK-NEXT:    i32.const $push34=, 112
+; CHECK-NEXT:    i64.load $push3=, 128($6)
+; CHECK-NEXT:    i64.load $push2=, 136($6)
+; CHECK-NEXT:    call __divtf3, $pop37, $pop3, $pop2, $3, $4
+; CHECK-NEXT:    i32.const $push34=, 96
 ; CHECK-NEXT:    i32.add $push35=, $6, $pop34
-; CHECK-NEXT:    i64.load $push1=, 128($6)
-; CHECK-NEXT:    i64.load $push0=, 136($6)
-; CHECK-NEXT:    call __multf3, $pop35, $pop1, $pop0, $3, $4
-; CHECK-NEXT:    i32.const $push32=, 96
+; CHECK-NEXT:    i64.load $push5=, 112($6)
+; CHECK-NEXT:    i64.load $push4=, 120($6)
+; CHECK-NEXT:    call fmodl, $pop35, $pop5, $pop4, $3, $4
+; CHECK-NEXT:    i32.const $push32=, 80
 ; CHECK-NEXT:    i32.add $push33=, $6, $pop32
-; CHECK-NEXT:    i64.load $push3=, 112($6)
-; CHECK-NEXT:    i64.load $push2=, 120($6)
-; CHECK-NEXT:    call __divtf3, $pop33, $pop3, $pop2, $3, $4
-; CHECK-NEXT:    i32.const $push30=, 80
+; CHECK-NEXT:    i64.load $push7=, 96($6)
+; CHECK-NEXT:    i64.load $push6=, 104($6)
+; CHECK-NEXT:    call sqrtl, $pop33, $pop7, $pop6
+; CHECK-NEXT:    i32.const $push30=, 64
 ; CHECK-NEXT:    i32.add $push31=, $6, $pop30
-; CHECK-NEXT:    i64.load $push5=, 96($6)
-; CHECK-NEXT:    i64.load $push4=, 104($6)
-; CHECK-NEXT:    call sqrtl, $pop31, $pop5, $pop4
-; CHECK-NEXT:    i32.const $push28=, 64
+; CHECK-NEXT:    i64.load $push9=, 80($6)
+; CHECK-NEXT:    i64.load $push8=, 88($6)
+; CHECK-NEXT:    call floorl, $pop31, $pop9, $pop8
+; CHECK-NEXT:    i32.const $push28=, 48
 ; CHECK-NEXT:    i32.add $push29=, $6, $pop28
-; CHECK-NEXT:    i64.load $push7=, 80($6)
-; CHECK-NEXT:    i64.load $push6=, 88($6)
-; CHECK-NEXT:    call floorl, $pop29, $pop7, $pop6
-; CHECK-NEXT:    i32.const $push26=, 48
+; CHECK-NEXT:    i64.load $push11=, 64($6)
+; CHECK-NEXT:    i64.load $push10=, 72($6)
+; CHECK-NEXT:    call powl, $pop29, $pop11, $pop10, $3, $4
+; CHECK-NEXT:    i32.const $push26=, 32
 ; CHECK-NEXT:    i32.add $push27=, $6, $pop26
-; CHECK-NEXT:    i64.load $push9=, 64($6)
-; CHECK-NEXT:    i64.load $push8=, 72($6)
-; CHECK-NEXT:    call powl, $pop27, $pop9, $pop8, $3, $4
-; CHECK-NEXT:    i32.const $push24=, 32
+; CHECK-NEXT:    i64.load $push13=, 48($6)
+; CHECK-NEXT:    i64.load $push12=, 56($6)
+; CHECK-NEXT:    call __powitf2, $pop27, $pop13, $pop12, $5
+; CHECK-NEXT:    i32.const $push24=, 16
 ; CHECK-NEXT:    i32.add $push25=, $6, $pop24
-; CHECK-NEXT:    i64.load $push11=, 48($6)
-; CHECK-NEXT:    i64.load $push10=, 56($6)
-; CHECK-NEXT:    call __powitf2, $pop25, $pop11, $pop10, $5
-; CHECK-NEXT:    i32.const $push22=, 16
+; CHECK-NEXT:    i64.load $push15=, 32($6)
+; CHECK-NEXT:    i64.load $push14=, 40($6)
+; CHECK-NEXT:    call truncl, $pop25, $pop15, $pop14
+; CHECK-NEXT:    i64.load $push17=, 16($6)
+; CHECK-NEXT:    i64.load $push16=, 24($6)
+; CHECK-NEXT:    call nearbyintl, $6, $pop17, $pop16
+; CHECK-NEXT:    i64.load $push18=, 8($6)
+; CHECK-NEXT:    i64.store 8($0), $pop18
+; CHECK-NEXT:    i64.load $push19=, 0($6)
+; CHECK-NEXT:    i64.store 0($0), $pop19
+; CHECK-NEXT:    i32.const $push22=, 160
 ; CHECK-NEXT:    i32.add $push23=, $6, $pop22
-; CHECK-NEXT:    i64.load $push13=, 32($6)
-; CHECK-NEXT:    i64.load $push12=, 40($6)
-; CHECK-NEXT:    call truncl, $pop23, $pop13, $pop12
-; CHECK-NEXT:    i64.load $push15=, 16($6)
-; CHECK-NEXT:    i64.load $push14=, 24($6)
-; CHECK-NEXT:    call nearbyintl, $6, $pop15, $pop14
-; CHECK-NEXT:    i64.load $push16=, 8($6)
-; CHECK-NEXT:    i64.store 8($0), $pop16
-; CHECK-NEXT:    i64.load $push17=, 0($6)
-; CHECK-NEXT:    i64.store 0($0), $pop17
-; CHECK-NEXT:    i32.const $push20=, 144
-; CHECK-NEXT:    i32.add $push21=, $6, $pop20
-; CHECK-NEXT:    global.set __stack_pointer, $pop21
+; CHECK-NEXT:    global.set __stack_pointer, $pop23
 ; CHECK-NEXT:    return
   %a = fadd fp128 %x, %y
   %b = fmul fp128 %a, %y
   %c = fdiv fp128 %b, %y
+  %d = frem fp128 %c, %y
   ; libm calls
-  %d = call fp128 @llvm.sqrt.f128(fp128 %c)
-  %e = call fp128 @llvm.floor.f128(fp128 %d)
-  %f = call fp128 @llvm.pow.f128(fp128 %e, fp128 %y)
-  %g = call fp128 @llvm.powi.f128.i32(fp128 %f, i32 %z)
-  %h = call fp128 @llvm.trunc.f128(fp128 %g)
-  %i = call fp128 @llvm.nearbyint.f128(fp128 %h)
-  ret fp128 %i
+  %e = call fp128 @llvm.sqrt.f128(fp128 %d)
+  %f = call fp128 @llvm.floor.f128(fp128 %e)
+  %g = call fp128 @llvm.pow.f128(fp128 %f, fp128 %y)
+  %h = call fp128 @llvm.powi.f128.i32(fp128 %g, i32 %z)
+  %i = call fp128 @llvm.trunc.f128(fp128 %h)
+  %j = call fp128 @llvm.nearbyint.f128(fp128 %i)
+  ret fp128 %j
 }
 
 define i128 @i128libcalls(i128 %x, i128 %y) {
@@ -141,9 +147,9 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get $push12=, __stack_pointer
 ; CHECK-NEXT:    i32.const $push13=, 16
-; CHECK-NEXT:    i32.sub $push21=, $pop12, $pop13
-; CHECK-NEXT:    local.tee $push20=, $3=, $pop21
-; CHECK-NEXT:    global.set __stack_pointer, $pop20
+; CHECK-NEXT:    i32.sub $push23=, $pop12, $pop13
+; CHECK-NEXT:    local.tee $push22=, $3=, $pop23
+; CHECK-NEXT:    global.set __stack_pointer, $pop22
 ; CHECK-NEXT:    call $push0=, tan, $0
 ; CHECK-NEXT:    call $push1=, cos, $pop0
 ; CHECK-NEXT:    call $push2=, log10, $pop1
@@ -152,9 +158,11 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK-NEXT:    call $push5=, log, $pop4
 ; CHECK-NEXT:    call $push6=, exp, $pop5
 ; CHECK-NEXT:    call $push7=, exp10, $pop6
-; CHECK-NEXT:    call $push8=, cbrt, $pop7
-; CHECK-NEXT:    call $push9=, lround, $pop8
-; CHECK-NEXT:    call $push10=, ldexp, $0, $pop9
+; CHECK-NEXT:    call $push21=, cbrt, $pop7
+; CHECK-NEXT:    local.tee $push20=, $1=, $pop21
+; CHECK-NEXT:    call $push8=, lround, $pop20
+; CHECK-NEXT:    call $push9=, ldexp, $0, $pop8
+; CHECK-NEXT:    call $push10=, fmod, $pop9, $1
 ; CHECK-NEXT:    i32.const $push18=, 4
 ; CHECK-NEXT:    i32.add $push19=, $3, $pop18
 ; CHECK-NEXT:    call $0=, frexp, $pop10, $pop19
@@ -180,7 +188,8 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
  %h = call fast double @llvm.pow.f64(double %g, double 0x3FD5555555555555)
  %i = call i32 @llvm.lround(double %h)
  %j = call double @llvm.ldexp.f64.i32(double %x, i32 %i);
- %result = call {double, i32} @llvm.frexp.f64.i32(double %j)
+ %l = frem double %j, %h;
+ %result = call {double, i32} @llvm.frexp.f64.i32(double %l)
  %result.0 = extractvalue { double, i32 } %result, 0
  %result.1 = extractvalue { double, i32 } %result, 1
  %resultModf = call {double, double} @llvm.modf.f64(double %result.0)

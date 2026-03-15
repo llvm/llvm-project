@@ -136,6 +136,8 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_map",
       "unordered_multiset",
       "unordered_multimap",
+      "flat_map",
+      "flat_set",
   };
 
   static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
@@ -189,6 +191,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multiset",
       "unordered_multimap",
       "variant",
+      "flat_map",
+      "flat_set",
   };
   static const llvm::StringSet<> StdPointers{
       "basic_string_view",
@@ -1325,6 +1329,66 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
                            MSFunctionNoBuiltins.end());
   if (!MSFunctionNoBuiltins.empty())
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
+}
+
+NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                                 SourceLocation NameLoc,
+                                                 Scope *curScope) {
+  LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
+  LookupName(Result, curScope);
+  if (!getLangOpts().CPlusPlus)
+    return Result.getAsSingle<NamedDecl>();
+  for (NamedDecl *D : Result) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      if (FD->isExternC())
+        return D;
+    if (isa<VarDecl>(D))
+      return D;
+  }
+  return nullptr;
+}
+
+void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                             Scope *curScope) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(NameLoc, diag::err_pragma_expected_file_scope) << "export";
+    return;
+  }
+
+  PendingPragmaInfo Info;
+  Info.NameLoc = NameLoc;
+  Info.Used = false;
+
+  NamedDecl *PrevDecl =
+      lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
+  if (!PrevDecl) {
+    PendingExportedNames[IdentId] = Info;
+    return;
+  }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!FD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (FD->hasBody()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!VD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (VD->hasDefinition() == VarDecl::Definition) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  }
+  mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
+                      VisibilityAttr::Default);
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

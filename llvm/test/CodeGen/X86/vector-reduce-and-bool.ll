@@ -1240,8 +1240,7 @@ define i8 @icmp0_v8i1(<8 x i8>) nounwind {
 ; AVX512VL-LABEL: icmp0_v8i1:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmovb2m %xmm0, %k0
-; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX512VL-NEXT:    testb %al, %al
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    retq
@@ -1907,8 +1906,7 @@ define i8 @icmp1_v8i1(<8 x i8>) nounwind {
 ; AVX512VL-LABEL: icmp1_v8i1:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmovb2m %xmm0, %k0
-; AVX512VL-NEXT:    kmovd %k0, %eax
+; AVX512VL-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX512VL-NEXT:    cmpb $-1, %al
 ; AVX512VL-NEXT:    sete %al
 ; AVX512VL-NEXT:    retq

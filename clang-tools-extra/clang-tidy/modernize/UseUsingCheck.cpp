@@ -17,14 +17,16 @@
 #include <string>
 
 using namespace clang::ast_matchers;
-namespace {
-
-AST_MATCHER(clang::LinkageSpecDecl, isExternCLinkage) {
-  return Node.getLanguage() == clang::LinkageSpecLanguageIDs::C;
-}
-} // namespace
 
 namespace clang::tidy::modernize {
+
+namespace {
+
+AST_MATCHER(LinkageSpecDecl, isExternCLinkage) {
+  return Node.getLanguage() == LinkageSpecLanguageIDs::C;
+}
+
+} // namespace
 
 static constexpr StringRef ExternCDeclName = "extern-c-decl";
 static constexpr StringRef ParentDeclName = "parent-decl";
@@ -140,10 +142,26 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     // without the identifier.
     if (TypeRange.fullyContains(MatchedDecl->getLocation())) {
       FunctionPointerCase = true;
-      const auto RangeLeftOfIdentifier = CharSourceRange::getCharRange(
-          TypeRange.getBegin(), MatchedDecl->getLocation());
+      SourceLocation StartLoc = MatchedDecl->getLocation();
+      SourceLocation EndLoc = MatchedDecl->getLocation();
+
+      while (true) {
+        const std::optional<Token> Prev =
+            utils::lexer::getPreviousToken(StartLoc, SM, LO);
+        const std::optional<Token> Next =
+            utils::lexer::findNextTokenSkippingComments(EndLoc, SM, LO);
+        if (!Prev || Prev->isNot(tok::l_paren) || !Next ||
+            Next->isNot(tok::r_paren))
+          break;
+
+        StartLoc = Prev->getLocation();
+        EndLoc = Next->getLocation();
+      }
+
+      const auto RangeLeftOfIdentifier =
+          CharSourceRange::getCharRange(TypeRange.getBegin(), StartLoc);
       const auto RangeRightOfIdentifier = CharSourceRange::getCharRange(
-          Lexer::getLocForEndOfToken(MatchedDecl->getLocation(), 0, SM, LO),
+          Lexer::getLocForEndOfToken(EndLoc, 0, SM, LO),
           Lexer::getLocForEndOfToken(TypeRange.getEnd(), 0, SM, LO));
       const std::string VerbatimType =
           (Lexer::getSourceText(RangeLeftOfIdentifier, SM, LO) +

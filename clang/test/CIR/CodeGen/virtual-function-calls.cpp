@@ -31,7 +31,7 @@ A::A() {}
 // CIR:    cir.store{{.*}} align(8) %[[VPTR]], %[[THIS_VPTR_PTR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:    cir.return
 
-// LLVM: define{{.*}} void @_ZN1AC2Ev(ptr %[[ARG0:.*]])
+// LLVM: define{{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
@@ -60,16 +60,16 @@ void f1(A *a) {
 // CIR:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR:   %[[FN_PTR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>
 // CIR:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_PTR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>
-// CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A>, !s8i) -> ()
+// CIR:   cir.call %[[FN_PTR]](%[[A]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_A>, !s8i)>>, !cir.ptr<!rec_A> {{.*}}, !s8i {{.*}}) -> ()
 
-// LLVM: define{{.*}} void @_Z2f1P1A(ptr %[[ARG0:.*]])
+// LLVM: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[A_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[A_ADDR]]
 // LLVM:   %[[A:.*]] = load ptr, ptr %[[A_ADDR]]
 // LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[A]]
 // LLVM:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i32 0
 // LLVM:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
-// LLVM:   call void %[[FN_PTR]](ptr %[[A]], i8 99)
+// LLVM:   call void %[[FN_PTR]](ptr {{.*}} %[[A]], i8 {{.*}} 99)
 
 // OGCG: define{{.*}} void @_Z2f1P1A(ptr {{.*}} %[[ARG0:.*]])
 // OGCG:   %[[A_ADDR:.*]] = alloca ptr
@@ -79,3 +79,50 @@ void f1(A *a) {
 // OGCG:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i64 0
 // OGCG:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
 // OGCG:   call void %[[FN_PTR]](ptr {{.*}} %[[A]], i8 {{.*}} 99)
+
+struct B {
+  ~B();
+  virtual void f(char);
+};
+
+void call_virtual_fn_in_cleanup_scope() {
+  B b;
+  b.f('c');
+}
+
+// CIR: cir.func {{.*}} @_Z32call_virtual_fn_in_cleanup_scopev()
+// CIR:   %[[B:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["b", init]
+// CIR:   cir.call @_ZN1BC2Ev(%[[B]])
+// CIR:   cir.cleanup.scope {
+// CIR:    %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
+// CIR:    %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[B]] : !cir.ptr<!rec_B> -> !cir.ptr<!cir.vptr>
+// CIR:    %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
+// CIR:    %[[FN_PTR_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>
+// CIR:    %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_ADDR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>
+// CIR:    cir.call %[[FN_PTR]](%[[B]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>, !cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
+// CIR:    cir.yield
+// CIR:   } cleanup  normal {
+// CIR:    cir.call @_ZN1BD1Ev(%[[B]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
+// CIR:    cir.yield
+// CIR:   }
+
+// LLVM: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
+// LLVM:   %[[B:.*]] = alloca %struct.B
+// LLVM:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
+// LLVM:   br label %[[CLEANUP_SCOPE:.*]]
+// LLVM: [[CLEANUP_SCOPE]]:
+// LLVM:    %[[B_VPTR:.*]] = load ptr, ptr %[[B]]
+// LLVM:    %[[FN_PTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[B_VPTR]], i32 0
+// LLVM:    %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_ADDR]]
+// LLVM:    call void %[[FN_PTR]](ptr {{.*}} %[[B]], i8 noundef 99)
+// LLVM:    br label %[[NORMAL_CLEANUP:.*]]
+// LLVM: [[NORMAL_CLEANUP]]:
+// LLVM:    call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
+
+// Note: OGCG devirtualizes the call. We don't do that yet in CIR.
+// OGCG: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
+// OGCG:   %[[B:.*]] = alloca %struct.B, align 8
+// OGCG:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
+// OGCG:   call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
+// OGCG:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
+  

@@ -88,6 +88,7 @@ PROXY_TEMPLATE = """\
 #ifdef LIBC_FULL_BUILD
 
 {include_lines}
+{macro_lines}
 
 #else // Overlay mode
 

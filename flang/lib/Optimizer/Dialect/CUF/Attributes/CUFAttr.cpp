@@ -52,4 +52,18 @@ bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
   return false;
 }
 
+bool isDeviceDataAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Device ||
+         attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Constant ||
+         attr == cuf::DataAttribute::Shared ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+bool hasDeviceDataAttr(mlir::Operation *op) {
+  if (auto dataAttr = getDataAttr(op))
+    return isDeviceDataAttribute(dataAttr.getValue());
+  return false;
+}
+
 } // namespace cuf

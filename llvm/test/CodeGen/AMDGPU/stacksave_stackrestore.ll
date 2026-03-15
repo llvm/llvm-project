@@ -422,7 +422,7 @@ define void @func_stackrestore_null() {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
-  call void @llvm.stackrestore.p5(ptr addrspace(5) null)
+  call void @llvm.stackrestore.p5(ptr addrspace(5) zeroinitializer)
   ret void
 }
 

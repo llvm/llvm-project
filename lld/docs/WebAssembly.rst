@@ -259,8 +259,8 @@ Missing features
 
 - Merging of data section similar to ``SHF_MERGE`` in the ELF world is not
   supported.
-- No support for creating shared libraries.  The spec for shared libraries in
-  WebAssembly is still in flux:
+- Dynamic linking support is still experimental.  The spec for this is not
+  yet finalized:
   https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
 
 .. _linking: https://github.com/WebAssembly/tool-conventions/blob/main/Linking.md

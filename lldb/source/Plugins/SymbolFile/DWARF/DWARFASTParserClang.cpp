@@ -56,15 +56,6 @@
 #include <optional>
 #include <vector>
 
-//#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
-
-#ifdef ENABLE_DEBUG_PRINTF
-#include <cstdio>
-#define DEBUG_PRINTF(fmt, ...) printf(fmt, __VA_ARGS__)
-#else
-#define DEBUG_PRINTF(fmt, ...)
-#endif
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
@@ -433,11 +424,6 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       abstract_origin = form_value;
       break;
 
-    case DW_AT_accessibility:
-      accessibility =
-          DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
-      break;
-
     case DW_AT_artificial:
       is_artificial = form_value.Boolean();
       break;
@@ -796,10 +782,6 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
       }
     }
   }
-
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\") type => 0x%8.8lx\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr,
-               encoding_uid.Reference());
 
   switch (tag) {
   default:
@@ -1279,17 +1261,11 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     return {true, nullptr};
 
   const bool is_attr_used = false;
-  // Neither GCC 4.2 nor clang++ currently set a valid
-  // accessibility in the DWARF for C++ methods...
-  // Default to public for now...
-  const auto accessibility =
-      attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
 
   clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
       class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
-      MakeLLDBFuncAsmLabel(die), clang_type, accessibility, attrs.is_virtual,
-      is_static, attrs.is_inline, attrs.is_explicit, is_attr_used,
-      attrs.is_artificial);
+      MakeLLDBFuncAsmLabel(die), clang_type, attrs.is_virtual, is_static,
+      attrs.is_inline, attrs.is_explicit, is_attr_used, attrs.is_artificial);
 
   if (cxx_method_decl) {
     LinkDeclContextToDIE(cxx_method_decl, die);
@@ -1324,9 +1300,6 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
 
   bool is_variadic = false;
   bool has_template_params = false;
-
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr);
 
   CompilerType return_clang_type;
   Type *func_type = nullptr;
@@ -1498,9 +1471,6 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
                                     const ParsedDWARFTypeAttributes &attrs) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr);
-
   DWARFDIE type_die = attrs.type.Reference();
   Type *element_type = dwarf->ResolveTypeUID(type_die, true);
 
@@ -1576,10 +1546,21 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
   return nullptr;
 }
 
+static AccessType GetDefaultAccessibility(const DWARFDIE &die) {
+  switch (die.Tag()) {
+  case DW_TAG_union_type:
+  case DW_TAG_structure_type:
+    return eAccessPublic;
+  case DW_TAG_class_type:
+    return eAccessPrivate;
+  default:
+    return eAccessNone;
+  }
+}
+
 void DWARFASTParserClang::ParseInheritance(
     const DWARFDIE &die, const DWARFDIE &parent_die,
-    const CompilerType class_clang_type, const AccessType default_accessibility,
-    const lldb::ModuleSP &module_sp,
+    const CompilerType class_clang_type, const lldb::ModuleSP &module_sp,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     ClangASTImporter::LayoutInfo &layout_info) {
   auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
@@ -1592,7 +1573,7 @@ void DWARFASTParserClang::ParseInheritance(
     return;
 
   DWARFFormValue encoding_form;
-  AccessType accessibility = default_accessibility;
+  AccessType accessibility = GetDefaultAccessibility(parent_die);
   bool is_virtual = false;
   bool is_base_of_class = true;
   off_t member_byte_offset = 0;
@@ -1610,12 +1591,10 @@ void DWARFASTParserClang::ParseInheritance(
                 ExtractDataMemberLocation(die, form_value, module_sp))
           member_byte_offset = *maybe_offset;
         break;
-
       case DW_AT_accessibility:
         accessibility =
             DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
         break;
-
       case DW_AT_virtuality:
         is_virtual = form_value.Boolean();
         break;
@@ -1641,6 +1620,12 @@ void DWARFASTParserClang::ParseInheritance(
 
   CompilerType base_class_clang_type = base_class_type->GetFullCompilerType();
   assert(base_class_clang_type);
+
+  // Make sure all base classes refer to complete types and not forward
+  // declarations. If we don't do this, clang will crash with an
+  // assertion in the call to clang_type.TransferBaseClasses()
+  TypeSystemClang::RequireCompleteType(base_class_clang_type);
+
   if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type)) {
     ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
     return;
@@ -1762,10 +1747,9 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   unique_typename = ConstString(qualified_name);
 }
 
-TypeSP
-DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
-                                           const DWARFDIE &die,
-                                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
+    const SymbolContext &sc, const DWARFDIE &die,
+    const ParsedDWARFTypeAttributes &attrs) {
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1812,22 +1796,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
   }
 
-  DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
-               DW_TAG_value_to_name(tag), type_name_cstr);
-
-  int tag_decl_kind = -1;
-  AccessType default_accessibility = eAccessNone;
-  if (tag == DW_TAG_structure_type) {
-    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Struct);
-    default_accessibility = eAccessPublic;
-  } else if (tag == DW_TAG_union_type) {
-    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Union);
-    default_accessibility = eAccessPublic;
-  } else if (tag == DW_TAG_class_type) {
-    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Class);
-    default_accessibility = eAccessPrivate;
-  }
-
   if ((attrs.class_language == eLanguageTypeObjC ||
        attrs.class_language == eLanguageTypeObjC_plus_plus) &&
       !attrs.is_complete_objc_class) {
@@ -1870,23 +1838,22 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       return type_sp;
   }
 
-  assert(tag_decl_kind != -1);
-  UNUSED_IF_ASSERT_DISABLED(tag_decl_kind);
+  int tag_decl_kind = -1;
+  if (tag == DW_TAG_structure_type)
+    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Struct);
+  else if (tag == DW_TAG_union_type)
+    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Union);
+  else if (tag == DW_TAG_class_type)
+    tag_decl_kind = llvm::to_underlying(clang::TagTypeKind::Class);
+  else
+    assert(false && "Unexpected tag kind.");
+
   clang::DeclContext *containing_decl_ctx =
       GetClangDeclContextContainingDIE(die, nullptr);
 
   PrepareContextToReceiveMembers(m_ast, GetClangASTImporter(),
                                  containing_decl_ctx, die,
                                  attrs.name.GetCString());
-
-  if (attrs.accessibility == eAccessNone && containing_decl_ctx) {
-    // Check the decl context that contains this class/struct/union. If
-    // it is a class we must give it an accessibility.
-    const clang::Decl::Kind containing_decl_kind =
-        containing_decl_ctx->getDeclKind();
-    if (DeclKindIsCXXClass(containing_decl_kind))
-      attrs.accessibility = default_accessibility;
-  }
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
@@ -1897,7 +1864,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
     clang::ClassTemplateDecl *class_template_decl =
         m_ast.ParseClassTemplateDecl(
-            containing_decl_ctx, GetOwningClangModule(die), attrs.accessibility,
+            containing_decl_ctx, GetOwningClangModule(die),
             attrs.name.GetCString(), tag_decl_kind, template_param_infos);
     if (!class_template_decl) {
       if (log) {
@@ -1935,9 +1902,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   if (!clang_type) {
     clang_type = m_ast.CreateRecordType(
-        containing_decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, metadata,
-        attrs.exports_symbols);
+        containing_decl_ctx, GetOwningClangModule(die), attrs.name.GetCString(),
+        tag_decl_kind, attrs.class_language, metadata, attrs.exports_symbols);
   }
 
   TypeSP type_sp = dwarf->MakeType(
@@ -2057,10 +2023,9 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
   if (is_integral)
     return clang::APValue(apint);
 
-  bool is_complex;
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (!clang_type.IsFloatingPointType(is_complex))
+  if (!clang_type.IsRealFloatingPointType())
     return std::nullopt;
 
   return clang::APValue(llvm::APFloat(
@@ -2208,7 +2173,6 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
 
 bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              const CompilerType &clang_type) {
-  const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
 
   ClangASTImporter::LayoutInfo layout_info;
@@ -2223,23 +2187,13 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   if (!clang_type.IsBeingDefined())
     TypeSystemClang::StartTagDeclarationDefinition(clang_type);
 
-  AccessType default_accessibility = eAccessNone;
-  if (tag == DW_TAG_structure_type) {
-    default_accessibility = eAccessPublic;
-  } else if (tag == DW_TAG_union_type) {
-    default_accessibility = eAccessPublic;
-  } else if (tag == DW_TAG_class_type) {
-    default_accessibility = eAccessPrivate;
-  }
-
   std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
   // Parse members and base classes first
   std::vector<DWARFDIE> member_function_dies;
 
   DelayedPropertyList delayed_properties;
   ParseChildMembers(die, clang_type, bases, member_function_dies,
-                    contained_type_dies, delayed_properties,
-                    default_accessibility, layout_info);
+                    contained_type_dies, delayed_properties, layout_info);
 
   // Now parse any methods if there were any...
   for (const DWARFDIE &die : member_function_dies)
@@ -2270,19 +2224,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     return {};
   }
 
-  if (!bases.empty()) {
-    // Make sure all base classes refer to complete types and not forward
-    // declarations. If we don't do this, clang will crash with an
-    // assertion in the call to clang_type.TransferBaseClasses()
-    for (const auto &base_class : bases) {
-      clang::TypeSourceInfo *type_source_info = base_class->getTypeSourceInfo();
-      if (type_source_info)
-        TypeSystemClang::RequireCompleteType(
-            m_ast.GetType(type_source_info->getType()));
-    }
-
+  if (!bases.empty())
     m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(), std::move(bases));
-  }
 
   m_ast.AddMethodOverridesForCXXRecordType(clang_type.GetOpaqueQualType());
   TypeSystemClang::BuildIndirectFields(clang_type);
@@ -2765,10 +2708,6 @@ DWARFASTParserClang::MemberAttributes::MemberAttributes(
           member_byte_offset = *maybe_offset;
         break;
 
-      case DW_AT_accessibility:
-        accessibility =
-            DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
-        break;
       case DW_AT_artificial:
         is_artificial = form_value.Boolean();
         break;
@@ -2964,12 +2903,9 @@ void DWARFASTParserClang::CreateStaticMemberVariable(
   if (!var_type)
     return;
 
-  auto accessibility =
-      attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
-
   CompilerType ct = var_type->GetForwardCompilerType();
-  clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(
-      class_clang_type, attrs.name, ct, accessibility);
+  clang::VarDecl *v = TypeSystemClang::AddVariableToRecordType(class_clang_type,
+                                                               attrs.name, ct);
   if (!v) {
     LLDB_LOG(log, "Failed to add variable to the record type");
     return;
@@ -2995,7 +2931,6 @@ void DWARFASTParserClang::CreateStaticMemberVariable(
 void DWARFASTParserClang::ParseSingleMember(
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
-    lldb::AccessType default_accessibility,
     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
     FieldInfo &last_field_info) {
   // This function can only parse DW_TAG_member.
@@ -3045,10 +2980,6 @@ void DWARFASTParserClang::ParseSingleMember(
 
   const uint64_t character_width = 8;
   CompilerType member_clang_type = member_type->GetLayoutCompilerType();
-
-  const auto accessibility = attrs.accessibility == eAccessNone
-                                 ? default_accessibility
-                                 : attrs.accessibility;
 
   uint64_t field_bit_offset = (attrs.member_byte_offset == UINT32_MAX
                                    ? 0
@@ -3153,8 +3084,7 @@ void DWARFASTParserClang::ParseSingleMember(
   TypeSystemClang::RequireCompleteType(member_clang_type);
 
   clang::FieldDecl *field_decl = TypeSystemClang::AddFieldToRecordType(
-      class_clang_type, attrs.name, member_clang_type, accessibility,
-      attrs.bit_size);
+      class_clang_type, attrs.name, member_clang_type, attrs.bit_size);
 
   m_ast.SetMetadataAsUserID(field_decl, die.GetID());
 
@@ -3168,7 +3098,6 @@ bool DWARFASTParserClang::ParseChildMembers(
     std::vector<DWARFDIE> &member_function_dies,
     std::vector<DWARFDIE> &contained_type_dies,
     DelayedPropertyList &delayed_properties,
-    const AccessType default_accessibility,
     ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
     return false;
@@ -3190,8 +3119,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 
     case DW_TAG_variant_part:
       if (die.GetCU()->GetDWARFLanguageType() == eLanguageTypeRust) {
-        ParseRustVariantPart(die, parent_die, class_clang_type,
-                             default_accessibility, layout_info);
+        ParseRustVariantPart(die, parent_die, class_clang_type, layout_info);
       }
       break;
 
@@ -3200,8 +3128,8 @@ bool DWARFASTParserClang::ParseChildMembers(
       CreateStaticMemberVariable(die, attrs, class_clang_type);
     } break;
     case DW_TAG_member:
-      ParseSingleMember(die, parent_die, class_clang_type,
-                        default_accessibility, layout_info, last_field_info);
+      ParseSingleMember(die, parent_die, class_clang_type, layout_info,
+                        last_field_info);
       break;
 
     case DW_TAG_subprogram:
@@ -3210,8 +3138,8 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     case DW_TAG_inheritance:
-      ParseInheritance(die, parent_die, class_clang_type, default_accessibility,
-                       module_sp, base_classes, layout_info);
+      ParseInheritance(die, parent_die, class_clang_type, module_sp,
+                       base_classes, layout_info);
       break;
 
     default:
@@ -3846,7 +3774,7 @@ void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
       TypeSystemClang::AddFieldToRecordType(
           class_clang_type, llvm::StringRef(),
           m_ast.GetBuiltinTypeForEncodingAndBitSize(eEncodingSint, word_width),
-          lldb::AccessType::eAccessPublic, unnamed_bit_size);
+          unnamed_bit_size);
 
   class_layout_info.field_offsets.insert(
       std::make_pair(unnamed_bitfield_decl, unnamed_bit_offset));
@@ -3855,7 +3783,6 @@ void DWARFASTParserClang::AddUnnamedBitfieldToRecordTypeIfNeeded(
 void DWARFASTParserClang::ParseRustVariantPart(
     DWARFDIE &die, const DWARFDIE &parent_die,
     const CompilerType &class_clang_type,
-    const lldb::AccessType default_accesibility,
     ClangASTImporter::LayoutInfo &layout_info) {
   assert(die.Tag() == llvm::dwarf::DW_TAG_variant_part);
   assert(SymbolFileDWARF::GetLanguage(*die.GetCU()) ==
@@ -3871,7 +3798,7 @@ void DWARFASTParserClang::ParseRustVariantPart(
   auto decl_context = m_ast.GetDeclContextForType(class_clang_type);
 
   auto inner_holder = m_ast.CreateRecordType(
-      decl_context, OptionalClangModuleID(), lldb::eAccessPublic,
+      decl_context, OptionalClangModuleID(),
       std::string(
           llvm::formatv("{0}$Inner", class_clang_type.GetTypeName(false))),
       llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeRust);
@@ -3886,7 +3813,6 @@ void DWARFASTParserClang::ParseRustVariantPart(
 
     auto field_type = m_ast.CreateRecordType(
         m_ast.GetDeclContextForType(inner_holder), OptionalClangModuleID(),
-        lldb::eAccessPublic,
         std::string(llvm::formatv("{0}$Variant", member.GetName())),
         llvm::to_underlying(clang::TagTypeKind::Struct),
         lldb::eLanguageTypeRust);
@@ -3895,17 +3821,16 @@ void DWARFASTParserClang::ParseRustVariantPart(
     auto offset = member.byte_offset;
 
     if (has_discriminant) {
-      m_ast.AddFieldToRecordType(
-          field_type, "$discr$", discriminant_type->GetFullCompilerType(),
-          lldb::eAccessPublic, variants.discriminant().byte_offset);
+      m_ast.AddFieldToRecordType(field_type, "$discr$",
+                                 discriminant_type->GetFullCompilerType(),
+                                 variants.discriminant().byte_offset);
       offset +=
           llvm::expectedToOptional(discriminant_type->GetByteSize(nullptr))
               .value_or(0);
     }
 
     m_ast.AddFieldToRecordType(field_type, "value",
-                               member_type->GetFullCompilerType(),
-                               lldb::eAccessPublic, offset * 8);
+                               member_type->GetFullCompilerType(), offset * 8);
 
     m_ast.CompleteTagDeclarationDefinition(field_type);
 
@@ -3913,16 +3838,14 @@ void DWARFASTParserClang::ParseRustVariantPart(
                     ? llvm::formatv("$variant${0}", member.discr_value.value())
                     : std::string("$variant$");
 
-    auto variant_decl =
-        m_ast.AddFieldToRecordType(inner_holder, llvm::StringRef(name),
-                                   field_type, default_accesibility, 0);
+    auto variant_decl = m_ast.AddFieldToRecordType(
+        inner_holder, llvm::StringRef(name), field_type, 0);
 
     layout_info.field_offsets.insert({variant_decl, 0});
   }
 
-  auto inner_field = m_ast.AddFieldToRecordType(class_clang_type,
-                                                llvm::StringRef("$variants$"),
-                                                inner_holder, eAccessPublic, 0);
+  auto inner_field = m_ast.AddFieldToRecordType(
+      class_clang_type, llvm::StringRef("$variants$"), inner_holder, 0);
 
   m_ast.CompleteTagDeclarationDefinition(inner_holder);
 

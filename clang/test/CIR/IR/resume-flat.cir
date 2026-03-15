@@ -6,8 +6,8 @@
 module {
 
 cir.func private @flattened_resume() {
-  %exception_addr = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exception", init]
-  %type_id_addr = cir.alloca !u32i, !cir.ptr<!u32i>, ["type_id", init]
+  %exception_addr = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["exception", init] {alignment = 8 : i64}
+  %type_id_addr = cir.alloca !u32i, !cir.ptr<!u32i>, ["type_id", init] {alignment = 4 : i64}
   %exception = cir.load %exception_addr : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   %type_id = cir.load %type_id_addr : !cir.ptr<!u32i>, !u32i
   cir.resume.flat %exception, %type_id

@@ -78,14 +78,28 @@ llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
   %0 = llvm.mlir.undef : !llvm.array<4 x !llvm.array<4 x f32>>
 
-  // CHECK: insertvalue
-  // CHECK: insertvalue
+  // CHECK-NOT: insertvalue
   // CHECK: extractvalue
   %1 = llvm.insertvalue %f0, %0[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
   %2 = llvm.insertvalue %arr, %1[0] : !llvm.array<4 x !llvm.array<4 x f32>>
   %3 = llvm.extractvalue %2[0, 0] : !llvm.array<4 x !llvm.array<4 x f32>>
 
   llvm.return %3 : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_nested_extractvalue
+// CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32)
+// CHECK-NOT: insertvalue
+// CHECK-NOT: extractvalue
+// CHECK: llvm.return %[[arg1]] : i32
+llvm.func @fold_nested_extractvalue(%arg1: i32, %arg2: i32) -> i32 {
+  %0 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %1 = llvm.insertvalue %arg1, %0[0, 0] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %2 = llvm.insertvalue %arg2, %1[0, 1] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  %3 = llvm.extractvalue %2[0, 0] : !llvm.struct<(struct<(i32, i32)>, i32)>
+  llvm.return %3 : i32
 }
 
 // -----
@@ -103,10 +117,10 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 // -----
 // CHECK-LABEL: fold_extract_extractvalue
 llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)>) -> !llvm.ptr<1> {
-  // CHECK: llvm.extractvalue %{{.*}}[1, 0] 
+  // CHECK: llvm.extractvalue %{{.*}}[1, 0]
   // CHECK-NOT: extractvalue
-  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
-  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
+  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)>
+  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>>
   llvm.return %b : !llvm.ptr<1>
 }
 

@@ -493,8 +493,8 @@ static bool isFreeEltLoad(const Value *Op) {
 
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -1181,11 +1181,9 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
                                    Op1Info, Op2Info);
 }
 
-InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
-                                                   const Value *Op1) const {
+InstructionCost SystemZTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
     if (Op1 != nullptr && isFreeEltLoad(Op1))
@@ -1208,7 +1206,7 @@ InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 }
 
 // Check if a load may be folded as a memory operand in its user.

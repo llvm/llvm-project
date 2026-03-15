@@ -347,7 +347,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
   } else {
     // We don't want these pseudo instructions encoded. They are
-    // placeholder terminator instructions and should only be printed as
+    // placeholder instructions and should only be printed as
     // comments.
     if (MI->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
       if (isVerbose())
@@ -358,6 +358,20 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MI->getOpcode() == AMDGPU::WAVE_BARRIER) {
       if (isVerbose())
         OutStreamer->emitRawComment(" wave barrier");
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::ASYNCMARK) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" asyncmark");
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::WAIT_ASYNCMARK) {
+      if (isVerbose()) {
+        OutStreamer->emitRawComment(" wait_asyncmark(" +
+                                    Twine(MI->getOperand(0).getImm()) + ")");
+      }
       return;
     }
 
@@ -422,11 +436,19 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
                              MF->getInfo<SIMachineFunctionInfo>(),
                              *OutStreamer);
 
-    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
-      unsigned V = MI->getOperand(0).getImm() & 0xff;
-      OutStreamer->AddComment(
-          " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
-          " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
+    if (isVerbose() && (MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB ||
+                        (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
+                         STI.has1024AddressableVGPRs()))) {
+      std::optional<unsigned> V;
+      if (MI->getOpcode() == AMDGPU::S_SETREG_IMM32_B32)
+        V = AMDGPU::convertSetRegImmToVgprMSBs(*MI,
+                                               STI.hasSetregVGPRMSBFixup());
+      else
+        V = MI->getOperand(0).getImm() & 0xff;
+      if (V.has_value())
+        OutStreamer->AddComment(
+            " msbs: dst=" + Twine(*V >> 6) + " src0=" + Twine(*V & 3) +
+            " src1=" + Twine((*V >> 2) & 3) + " src2=" + Twine((*V >> 4) & 3));
     }
 
     MCInst TmpInst;

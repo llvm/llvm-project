@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes='pseudo-probe,cgscc(coro-split),coro-cleanup,always-inline' -mtriple=x86_64 -pass-remarks=inline -S -o %t.ll
 ; RUN: llc -mtriple=x86_64 -stop-after=pseudo-probe-inserter < %t.ll --filetype=asm -o - | FileCheck -check-prefix=MIR %s
 
