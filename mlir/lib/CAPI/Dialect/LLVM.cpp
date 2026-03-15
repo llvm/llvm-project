@@ -558,9 +558,8 @@ MlirStringRef mlirLLVMMDStringAttrGetValue(MlirAttribute attr) {
 }
 
 MlirAttribute mlirLLVMMDConstantAttrGet(MlirContext ctx,
-                                        MlirAttribute integerAttr) {
-  return wrap(
-      MDConstantAttr::get(unwrap(ctx), cast<IntegerAttr>(unwrap(integerAttr))));
+                                        MlirAttribute valueAttr) {
+  return wrap(MDConstantAttr::get(unwrap(ctx), unwrap(valueAttr)));
 }
 
 bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr) {

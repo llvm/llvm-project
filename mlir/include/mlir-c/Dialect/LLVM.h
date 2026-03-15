@@ -489,9 +489,9 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDStringAttrGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirLLVMMDStringAttrGetValue(MlirAttribute attr);
 
-/// Creates an LLVM MDConstantAttr wrapping an integer attribute.
+/// Creates an LLVM MDConstantAttr wrapping an attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
-mlirLLVMMDConstantAttrGet(MlirContext ctx, MlirAttribute integerAttr);
+mlirLLVMMDConstantAttrGet(MlirContext ctx, MlirAttribute valueAttr);
 
 /// Returns `true` if the attribute is an LLVM MDConstantAttr.
 MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr);
@@ -499,7 +499,7 @@ MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr);
 /// Returns the TypeID of MDConstantAttr.
 MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void);
 
-/// Returns the integer attribute value of an LLVM MDConstantAttr.
+/// Returns the attribute value of an LLVM MDConstantAttr.
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMMDConstantAttrGetValue(MlirAttribute attr);
 

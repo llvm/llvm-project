@@ -17,7 +17,6 @@ def mlir_constant(value, *, loc=None, ip=None) -> Value:
 
 
 def md_const(val, *, width=32, context=None):
-    """Create an MDConstantIntAttr wrapping an i<width> integer constant."""
     if not isinstance(val, int):
         raise NotImplementedError(
             f"{val=} not supported; only integers currently supported."
@@ -27,5 +26,4 @@ def md_const(val, *, width=32, context=None):
 
 
 def md_str(s, *, context=None):
-    """Create an MDStringAttr wrapping a string."""
     return MDStringAttr.get(s, context=context)

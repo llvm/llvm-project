@@ -1712,7 +1712,7 @@ def LLVM_MDStringAttr : LLVM_Attr<"MDString", "md_string"> {
 def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
   let summary = "LLVM constant-as-metadata";
   let description = [{
-    Wraps an integer constant as an LLVM metadata node, corresponding to
+    Wraps an attribute as an LLVM metadata node, corresponding to
     `llvm::ConstantAsMetadata` wrapping a `llvm::Constant*` in LLVM IR.
     Currently, only integers/IntegerAttrs supported.
 

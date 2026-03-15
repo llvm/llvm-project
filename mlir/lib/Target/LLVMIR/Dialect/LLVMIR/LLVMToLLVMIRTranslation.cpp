@@ -430,7 +430,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     builder.setFastMathFlags(getFastmathFlags(fmf));
 
 #include "mlir/Dialect/LLVMIR/LLVMConversions.inc"
-
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc"
 
   // Emit function calls.  If the "callee" attribute is present, this is a
