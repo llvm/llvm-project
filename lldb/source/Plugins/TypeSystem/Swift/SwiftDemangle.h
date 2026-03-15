@@ -25,6 +25,50 @@ namespace swift_demangle {
 using NodePointer = swift::Demangle::NodePointer;
 using Node = swift::Demangle::Node;
 
+/// Helper class to conveniently construct demangle tree hierarchies.
+class NodeBuilder {
+  using NodePointer = swift::Demangle::NodePointer;
+  using Kind = swift::Demangle::Node::Kind;
+
+  swift::Demangle::Demangler &m_dem;
+
+public:
+  NodeBuilder(swift::Demangle::Demangler &dem) : m_dem(dem) {}
+  NodePointer Node(Kind kind, StringRef text) {
+    return m_dem.createNode(kind, text);
+  }
+  NodePointer NodeWithIndex(Kind kind, swift::Demangle::Node::IndexType index) {
+    return m_dem.createNode(kind, index);
+  }
+  NodePointer Node(Kind kind, NodePointer child0 = nullptr,
+                   NodePointer child1 = nullptr, NodePointer child2 = nullptr,
+                   NodePointer child3 = nullptr) {
+    NodePointer node = m_dem.createNode(kind);
+
+    if (child0)
+      node->addChild(child0, m_dem);
+    if (child1)
+      node->addChild(child1, m_dem);
+    if (child2)
+      node->addChild(child2, m_dem);
+    if (child3)
+      node->addChild(child3, m_dem);
+    return node;
+  }
+  NodePointer GlobalTypeMangling(NodePointer type) {
+    assert(type && type->getKind() == Node::Kind::Type);
+    return Node(Node::Kind::Global, Node(Node::Kind::TypeMangling, type));
+  }
+  NodePointer GlobalType(NodePointer type) {
+    assert(type && type->getKind() != Node::Kind::Type &&
+           type->getKind() != Node::Kind::TypeMangling &&
+           type->getKind() != Node::Kind::Global);
+    return GlobalTypeMangling(Node(Node::Kind::Type, type));
+  }
+
+  std::string Mangle(NodePointer node) { return mangleNode(node).result(); }
+};
+
 /// Returns the first child of `node` whose kind is in `kinds`.
 inline NodePointer GetFirstChildOfKind(NodePointer node,
                                        llvm::ArrayRef<Node::Kind> kinds) {
@@ -237,6 +281,36 @@ inline bool ContainsError(StringRef mangled_name) {
       return true;
     return false;
   });
+}
+
+/// Determine whether this is one of the scalar types in the standard library.
+inline bool IsScalar(swift::Demangle::NodePointer node) {
+  if (node->getKind() != Node::Kind::Structure)
+    return false;
+  if (node->getNumChildren() != 2)
+    return false;
+  NodePointer module = node->getChild(0);
+  NodePointer ident = node->getChild(1);
+  if (module && module->hasText() && module->getText() == swift::STDLIB_NAME)
+    if (ident && ident->hasText() &&
+        (ident->getText().starts_with("Int") ||
+         ident->getText().starts_with("UInt")))
+      return true;
+  return false;
+}
+
+/// Determine whether this is one of the float types in the standard library.
+inline bool IsFloat(swift::Demangle::NodePointer node) {
+  if (node->getKind() != Node::Kind::Structure)
+    return false;
+  if (node->getNumChildren() != 2)
+    return false;
+  NodePointer module = node->getChild(0);
+  NodePointer ident = node->getChild(1);
+  if (module && module->hasText() && module->getText() == swift::STDLIB_NAME)
+    if (ident && ident->hasText() && ident->getText().starts_with("Float"))
+      return true;
+  return false;
 }
 
 } // namespace swift_demangle

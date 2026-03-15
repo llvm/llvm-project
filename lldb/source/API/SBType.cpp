@@ -188,7 +188,7 @@ bool SBType::IsReferenceType() {
   CompilerType type = m_opaque_sp->GetCompilerType(true); 
   uint32_t flags = type.GetTypeInfo();
   if (flags & eTypeIsSwift)
-    return flags & eTypeHasValue;
+    return (flags & eTypeIsClass) && !(flags & eTypeIsScalar);
 
   // END SWIFT
 
