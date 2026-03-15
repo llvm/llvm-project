@@ -733,7 +733,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortBlockStyle> {
 
 template <> struct MappingTraits<FormatStyle::ShortFunctionStyle> {
   static void enumInput(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::ShortFunctionStyle({}));
+    IO.enumCase(Value, "None", FormatStyle::ShortFunctionStyle());
     IO.enumCase(Value, "Empty",
                 FormatStyle::ShortFunctionStyle::setEmptyOnly());
     IO.enumCase(Value, "Inline",
@@ -744,7 +744,7 @@ template <> struct MappingTraits<FormatStyle::ShortFunctionStyle> {
 
     // For backward compatibility.
     IO.enumCase(Value, "true", FormatStyle::ShortFunctionStyle::setAll());
-    IO.enumCase(Value, "false", FormatStyle::ShortFunctionStyle({}));
+    IO.enumCase(Value, "false", FormatStyle::ShortFunctionStyle());
   }
 
   static void mapping(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
@@ -2273,7 +2273,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.BraceWrapping.BeforeWhile = false;
   Style.PenaltyReturnTypeOnItsOwnLine = 1000;
   Style.AllowShortEnumsOnASingleLine = false;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle({});
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortCaseLabelsOnASingleLine = false;
   Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   Style.AllowShortLoopsOnASingleLine = false;
