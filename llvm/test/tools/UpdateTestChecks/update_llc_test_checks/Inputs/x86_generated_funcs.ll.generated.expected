@@ -74,21 +74,21 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    movl $0, -8(%rbp)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    je .LBB0_3
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movl $1, -4(%rbp)
 ; CHECK-NEXT:    cmpl $0, -8(%rbp)
 ; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  .LBB0_5:
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    movl $1, -4(%rbp)
-; CHECK-NEXT:    jmp .LBB0_6
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    jmp .LBB0_5
+; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    cmpl $0, -8(%rbp)
-; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
-; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $20, %rsp
 ; CHECK-NEXT:    popq %rbp

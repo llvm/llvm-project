@@ -29,7 +29,7 @@
 define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main
 ; CHECK:       %42 = OpFunction %2 None %3 ; -- Begin function main
-; CHECK-NEXT:    %56 = OpLabel
+; CHECK-NEXT:    %1 = OpLabel
 ; CHECK-NEXT:    %43 = OpVariable %27 Function %37
 ; CHECK-NEXT:    %44 = OpVariable %26 Function %38
 ; CHECK-NEXT:    %45 = OpCopyObject %19 %39

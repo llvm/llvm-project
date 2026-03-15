@@ -5,7 +5,7 @@
 define spir_kernel void @_Z6kernelPi() addrspace(4) {
 ; CHECK-LABEL: _Z6kernelPi
 ; CHECK:       %12 = OpFunction %3 None %4 ; -- Begin function _Z6kernelPi
-; CHECK-NEXT:    %17 = OpLabel
+; CHECK-NEXT:    %2 = OpLabel
 ; CHECK-NEXT:    %13 = OpBitcast %6 %11
 ; CHECK-NEXT:    %14 = OpInBoundsPtrAccessChain %6 %13 %10
 ; CHECK-NEXT:    %15 = OpConvertPtrToU %5 %14
