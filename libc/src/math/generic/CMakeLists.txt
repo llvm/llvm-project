@@ -5125,11 +5125,7 @@ add_entrypoint_object(
     bf16divf128.cpp
   HDRS
     ../bf16divf128.h
-  COMPILE_OPTIONS
-    -O3
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
     libc.src.__support.math.bf16divf128
 )
 

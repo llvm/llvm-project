@@ -5,21 +5,29 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_BF16DIVF128_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_BF16DIVF128_H
+
+#ifndef LLVM_LIBC_SRC__SUPPORT_MATH_BF16DIVF128_H
+#define LLVM_LIBC_SRC__SUPPORT_MATH_BF16DIVF128_H
+
+#include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
 
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/generic/div.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr bfloat16 bf16divf128(float128 x, float128 y) {
+LIBC_INLINE bfloat16 bf16divf128(float128 x, float128 y) {
   return fputil::generic::div<bfloat16>(x, y);
 }
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_BF16DIVF128_H
+#endif // LIBC_TYPES_HAS_FLOAT128
+
+#endif // LLVM_LIBC_SRC__SUPPORT_MATH_BF16DIVF128_H
