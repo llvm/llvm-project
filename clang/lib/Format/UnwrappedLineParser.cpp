@@ -2543,7 +2543,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       }
     }
     // For BeforeHashWithCode enum bodies: whenever readToken just processed a
-    // PP directive and returned the first post-PP token (AtEndOfPPLine=true),
+    // PP directive and returned the first post-PP token (AtEndOfPPLine == true),
     // flush the accumulated pre-PP body tokens as their own UnwrappedLine.
     // This gives each PP-separated segment its own line so the BWHCCodeLine
     // level-boost in addUnwrappedLine can apply the correct indentation.
