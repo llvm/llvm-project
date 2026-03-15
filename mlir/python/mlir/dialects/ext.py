@@ -229,6 +229,15 @@ class ResultDef(FieldDef):
                 f"type of variadic or optional result '{self.name}' cannot be inferred"
             )
 
+    def process_type(self, type_):
+        if type_:
+            return type_
+
+        if self.infer_type:
+            return self.infer_type()
+
+        return None
+
 
 @dataclass
 class AttributeDef(FieldDef):
@@ -436,10 +445,7 @@ class Operation(ir.OpView):
             args = bound.arguments
 
             _operands = [args[operand.name] for operand in operands]
-            _results = [
-                result.infer_type() if result.infer_type else args[result.name]
-                for result in results
-            ]
+            _results = [result.process_type(args[result.name]) for result in results]
             _attributes = dict(
                 (attr.name, args[attr.name])
                 for attr in attrs
