@@ -106,10 +106,7 @@ function(explicit_llvm_config executable)
   get_target_property(t ${executable} TYPE)
   if(t STREQUAL "STATIC_LIBRARY")
     target_link_libraries(${executable} INTERFACE ${LIBRARIES})
-  elseif(t STREQUAL "EXECUTABLE" OR
-         t STREQUAL "SHARED_LIBRARY" OR
-         t STREQUAL "MODULE_LIBRARY" OR
-         t STREQUAL "OBJECT_LIBRARY")
+  elseif(t STREQUAL "EXECUTABLE" OR t STREQUAL "SHARED_LIBRARY" OR t STREQUAL "MODULE_LIBRARY")
     target_link_libraries(${executable} PRIVATE ${LIBRARIES})
   else()
     # Use plain form for legacy user.
