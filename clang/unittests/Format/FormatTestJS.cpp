@@ -1161,7 +1161,7 @@ TEST_F(FormatTestJS, InliningFunctionLiterals) {
                "}",
                Style);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle({});
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   verifyFormat("var func = function() {\n"
                "  return 1;\n"
                "};",
@@ -1188,35 +1188,6 @@ TEST_F(FormatTestJS, InliningFunctionLiterals) {
   verifyFormat("var func = function() {\n"
                "  return 1;\n"
                "};",
-               Style);
-}
-
-TEST_F(FormatTestJS, InliningFunctionLiteralsNew) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle({});
-  Style.AllowShortFunctionsOnASingleLine.Other = true;
-  verifyFormat("var func = function() { return 1; };", Style);
-  verifyFormat("var func = doSomething(function() {\n"
-               "  return 1;\n"
-               "});",
-               Style);
-  verifyFormat("var outer = function() {\n"
-               "  var inner = function() {\n"
-               "    return 1;\n"
-               "  }\n"
-               "};",
-               Style);
-  verifyFormat("function outer1(a, b) {\n"
-               "  function inner1(a, b) {\n"
-               "    return a;\n"
-               "  }\n"
-               "}",
-               Style);
-
-  verifyFormat("function outer1(a, b) {\n"
-               "  function inner1_empty(a, b) {\n"
-               "  }\n"
-               "}",
                Style);
 }
 
