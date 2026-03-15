@@ -1565,7 +1565,7 @@ unsigned UnwrappedLineFormatter::format(
         bool LastLine = TheLine.First->is(tok::eof);
         formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines, Indent,
                          LastLine ? LastStartColumn : NextStartColumn + Indent,
-                         0);
+                         /*PPNestingLevel=*/0);
       }
 
       NextLine = Joiner.getNextMergedLine(DryRun, IndentTracker);
