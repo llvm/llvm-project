@@ -1221,14 +1221,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   uint32_t NumBytes = MFI.getStackSize();
   uint32_t RoundedSize = NumBytes;
 
-<<<<<<< HEAD
   const bool NeedsFrameMoves = needsFrameMoves(MF);
 
   if (NeedsFrameMoves)
     emitPrologueEntryCFI(MBB, MBBI, DL);
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   // Chain functions never return, so there's no need to save and restore the FP
   // or BP.
   bool SavesStackRegs = !FuncInfo->isChainFunction();
@@ -1239,14 +1236,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   Register FramePtrRegScratchCopy;
   if (!HasFP && !hasFP(MF)) {
     // Emit the CSR spill stores with SP base register.
-<<<<<<< HEAD
     emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits,
                        StackPtrReg,
                        FramePtrRegScratchCopy, NeedsFrameMoves);
-=======
-    emitCSRSpillStores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
-                       FramePtrRegScratchCopy);
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   } else if (SavesStackRegs) {
     // CSR spill stores will use FP as base register.
     Register SGPRForFPSaveRestoreCopy =
@@ -1663,7 +1655,6 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
     MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
-<<<<<<< HEAD
   if (TRI->isCFISavedRegsSpillEnabled()) {
     Register Exec = TRI->getExec();
     assert(!MFI->hasPrologEpilogSGPRSpillEntry(Exec) &&
@@ -1676,8 +1667,6 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
                                    /*IncludeScratchCopy=*/false);
   }
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   // Chain functions don't return to the caller, so they don't need to preserve
   // the FP and BP.
   if (MFI->isChainFunction())

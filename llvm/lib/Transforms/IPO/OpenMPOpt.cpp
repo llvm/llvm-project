@@ -1258,16 +1258,10 @@ private:
       // avoid overriding binding settings, and without explicit cancellation.
       OpenMPIRBuilder::InsertPointTy AfterIP =
           cantFail(OMPInfoCache.OMPBuilder.createParallel(
-<<<<<<< HEAD
               Loc, AllocaIP, /* DeallocIPs */ {}, BodyGenCB, PrivCB, FiniCB,
               nullptr, nullptr, OMP_PROC_BIND_default,
               /* IsCancellable */ false));
       UncondBrInst::Create(AfterBB, AfterIP.getBlock());
-=======
-              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-              OMP_PROC_BIND_default, /* IsCancellable */ false));
-      BranchInst::Create(AfterBB, AfterIP.getBlock());
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);

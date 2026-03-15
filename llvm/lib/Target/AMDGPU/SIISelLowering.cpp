@@ -10698,7 +10698,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   SDLoc DL(Op);
 
   switch (IntrID) {
-<<<<<<< HEAD
   // Multicast Load Bug Workaround for GFX1250 A0.
   // Do not upstream, remove with B0 available.
   case Intrinsic::amdgcn_cluster_load_b32:
@@ -10708,8 +10707,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       InitializeM0ToZero(Op, DAG, DL);
     return SDValue();
   } // End Multicast Load Bug Workaround for GFX1250 A0.
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -11475,7 +11472,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(1);
 
   switch (IntrinsicID) {
-<<<<<<< HEAD
   // Multicast Load Bug Workaround for GFX1250 A0.
   // Do not upstream, remove with B0 available.
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
@@ -11486,8 +11482,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       InitializeM0ToZero(Op, DAG, DL);
     return SDValue();
   } // End Multicast Load Bug Workaround for GFX1250 A0.
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   case Intrinsic::amdgcn_exp_compr: {
     if (!Subtarget->hasCompressedExport()) {
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(

@@ -377,7 +377,6 @@ define amdgpu_kernel void @simple_read2_f32_volatile_1(ptr addrspace(1) %out) #0
 
 ; Can't fold since not correctly aligned.
 define amdgpu_kernel void @unaligned_read2_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: unaligned_read2_f32:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -408,7 +407,6 @@ define amdgpu_kernel void @unaligned_read2_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1250-A0-NEXT:    v_add_f32_e32 v1, v2, v1
 ; GFX1250-A0-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: unaligned_read2_f32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -423,7 +421,6 @@ define amdgpu_kernel void @unaligned_read2_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1250-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %x.i
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 1
@@ -464,7 +461,6 @@ define amdgpu_kernel void @unaligned_offset_read2_f32(ptr addrspace(1) %out, ptr
 }
 
 define amdgpu_kernel void @misaligned_2_simple_read2_f32(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: misaligned_2_simple_read2_f32:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -495,7 +491,6 @@ define amdgpu_kernel void @misaligned_2_simple_read2_f32(ptr addrspace(1) %out, 
 ; GFX1250-A0-NEXT:    v_add_f32_e32 v1, v2, v1
 ; GFX1250-A0-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: misaligned_2_simple_read2_f32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -510,7 +505,6 @@ define amdgpu_kernel void @misaligned_2_simple_read2_f32(ptr addrspace(1) %out, 
 ; GFX1250-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds float, ptr addrspace(3) %lds, i32 %x.i
   %val0 = load float, ptr addrspace(3) %arrayidx0, align 2
@@ -607,7 +601,6 @@ define amdgpu_kernel void @simple_read2_f64_too_far(ptr addrspace(1) %out) #0 {
 
 ; Alignment only 4
 define amdgpu_kernel void @misaligned_read2_f64(ptr addrspace(1) %out, ptr addrspace(3) %lds) #0 {
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: misaligned_read2_f64:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -641,7 +634,6 @@ define amdgpu_kernel void @misaligned_read2_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-A0-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-A0-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: misaligned_read2_f64:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -658,7 +650,6 @@ define amdgpu_kernel void @misaligned_read2_f64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX1250-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %arrayidx0 = getelementptr inbounds double, ptr addrspace(3) %lds, i32 %x.i
   %val0 = load double, ptr addrspace(3) %arrayidx0, align 4
@@ -758,7 +749,6 @@ define amdgpu_kernel void @load_misaligned64_constant_large_offsets(ptr addrspac
 @sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] poison, align 4
 
 define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, i32 %lda, i32 %ldb) #0 {
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: sgemm_inner_loop_read2_sequence:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -848,7 +838,6 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, 
 ; GFX1250-A0-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-A0-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: sgemm_inner_loop_read2_sequence:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -894,7 +883,6 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, 
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
   %y.i = tail call i32 @llvm.amdgcn.workitem.id.y() #1
   %arrayidx44 = getelementptr inbounds [264 x float], ptr addrspace(3) @sgemm.lA, i32 0, i32 %x.i
@@ -939,7 +927,6 @@ define amdgpu_kernel void @sgemm_inner_loop_read2_sequence(ptr addrspace(1) %C, 
 }
 
 define amdgpu_kernel void @misaligned_read2_v2i32(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: misaligned_read2_v2i32:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -961,7 +948,6 @@ define amdgpu_kernel void @misaligned_read2_v2i32(ptr addrspace(1) %out, ptr add
 ; GFX1250-A0-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-A0-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: misaligned_read2_v2i32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -972,14 +958,12 @@ define amdgpu_kernel void @misaligned_read2_v2i32(ptr addrspace(1) %out, ptr add
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %load = load <2 x i32>, ptr addrspace(3) %in, align 4
   store <2 x i32> %load, ptr addrspace(1) %out, align 8
   ret void
 }
 
 define amdgpu_kernel void @misaligned_read2_i64(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: misaligned_read2_i64:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1001,7 +985,6 @@ define amdgpu_kernel void @misaligned_read2_i64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-A0-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-A0-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: misaligned_read2_i64:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1012,14 +995,12 @@ define amdgpu_kernel void @misaligned_read2_i64(ptr addrspace(1) %out, ptr addrs
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %load = load i64, ptr addrspace(3) %in, align 4
   store i64 %load, ptr addrspace(1) %out, align 8
   ret void
 }
 
 define amdgpu_kernel void @ds_read_diff_base_interleaving(
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: ds_read_diff_base_interleaving:
 ; GFX1250-B0:       ; %bb.0: ; %bb
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1079,7 +1060,6 @@ define amdgpu_kernel void @ds_read_diff_base_interleaving(
 ; GFX1250-A0-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-A0-NEXT:    global_store_b32 v2, v0, s[0:1] offset:40
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: ds_read_diff_base_interleaving:
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1109,7 +1089,6 @@ define amdgpu_kernel void @ds_read_diff_base_interleaving(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1] offset:40
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   ptr addrspace(1) nocapture %arg,
   ptr addrspace(3) %arg1,
   ptr addrspace(3) %arg2,

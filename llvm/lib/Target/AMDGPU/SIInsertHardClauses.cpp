@@ -237,13 +237,9 @@ public:
               // We also lie about the Offset and OffsetIsScalable parameters,
               // as they aren't used in the SIInstrInfo implementation.
               !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
-<<<<<<< HEAD
                                         2, 2))) ||
             (CI.Length && ST->hasGFX1250A0() &&
              incompatibleScope(MI, *CI.Last, SII))) {
-=======
-                                        2, 2)))) {
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();

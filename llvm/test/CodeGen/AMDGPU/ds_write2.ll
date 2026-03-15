@@ -826,7 +826,6 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; GFX9-NEXT:    ds_write2_b32 v2, v0, v1 offset0:14 offset1:15
 ; GFX9-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: misaligned_simple_write2_one_val_f64:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -858,7 +857,6 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; GFX1250-A0-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset1:1
 ; GFX1250-A0-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:14 offset1:15
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: misaligned_simple_write2_one_val_f64:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -874,7 +872,6 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(ptr addrspace(1)
 ; GFX1250-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset1:1
 ; GFX1250-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:14 offset1:15
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr double, ptr addrspace(1) %in, i32 %x.i
   %val = load double, ptr addrspace(1) %in.gep, align 8
@@ -1220,7 +1217,6 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
 ; GFX9-NEXT:    ds_write2_b32 v0, v3, v4 offset0:64 offset1:65
 ; GFX9-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: write2_sgemm_sequence:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1285,7 +1281,6 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
 ; GFX1250-A0-NEXT:    ds_store_2addr_b32 v0, v2, v3 offset0:32 offset1:33
 ; GFX1250-A0-NEXT:    ds_store_2addr_b32 v0, v2, v3 offset0:64 offset1:65
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: write2_sgemm_sequence:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1318,7 +1313,6 @@ define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, 
 ; GFX1250-NEXT:    ds_store_2addr_b32 v0, v2, v3 offset0:32 offset1:33
 ; GFX1250-NEXT:    ds_store_2addr_b32 v0, v2, v3 offset0:64 offset1:65
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workgroup.id.x() #1
   %y.i = tail call i32 @llvm.amdgcn.workitem.id.y() #1
   %val = load float, ptr addrspace(1) %in
@@ -1404,7 +1398,6 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
 ; GFX9-UNALIGNED-NEXT:    ds_write2_b32 v0, v3, v4 offset1:1
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
 ;
-<<<<<<< HEAD
 ; GFX1250-B0-LABEL: simple_write2_v4f32_superreg_align4:
 ; GFX1250-B0:       ; %bb.0:
 ; GFX1250-B0-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1440,7 +1433,6 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
 ; GFX1250-A0-NEXT:    ds_store_2addr_b32 v0, v1, v2 offset0:2 offset1:3
 ; GFX1250-A0-NEXT:    ds_store_2addr_b32 v0, v3, v4 offset1:1
 ; GFX1250-A0-NEXT:    s_endpgm
-=======
 ; GFX1250-LABEL: simple_write2_v4f32_superreg_align4:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
@@ -1458,7 +1450,6 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
 ; GFX1250-NEXT:    ds_store_2addr_b32 v0, v1, v2 offset0:2 offset1:3
 ; GFX1250-NEXT:    ds_store_2addr_b32 v0, v3, v4 offset1:1
 ; GFX1250-NEXT:    s_endpgm
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %in
   %val0 = load <4 x float>, ptr addrspace(1) %in.gep, align 4

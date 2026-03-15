@@ -923,7 +923,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
-<<<<<<< HEAD
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
         PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
@@ -934,8 +933,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
       });
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   PB.registerPipelineParsingCallback(
       [this](StringRef Name, CGSCCPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement> Pipeline) {

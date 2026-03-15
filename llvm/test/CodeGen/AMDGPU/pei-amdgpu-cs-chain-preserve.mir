@@ -36,7 +36,6 @@ body:             |
     ; GCN-LABEL: name: preserve_active_lanes_above_args
     ; GCN: liveins: $sgpr0, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
-<<<<<<< HEAD
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
@@ -147,9 +146,7 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr105
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr10, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr10, 32, $exec_lo, 32, 0
-=======
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr10, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
     ; GCN-NEXT: renamable $vgpr10 = V_MOV_B32_e32 10, implicit $exec
     ; GCN-NEXT: $vgpr8 = COPY killed renamable $vgpr10
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
@@ -184,10 +181,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr10, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-<<<<<<< HEAD
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr10, 0
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7
     ; GCN-NEXT: $vgpr10 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr10
@@ -262,10 +256,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr1 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr9, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-<<<<<<< HEAD
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr9, 0
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: S_NOP 0, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit-def $vgpr5, implicit-def $vgpr6, implicit-def $vgpr7
     ; GCN-NEXT: $vgpr8 = SI_SPILL_S32_TO_VGPR $sgpr35, 0, killed $vgpr8

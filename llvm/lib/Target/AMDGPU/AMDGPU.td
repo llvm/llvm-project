@@ -2694,15 +2694,12 @@ def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximum
 
 def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
-<<<<<<< HEAD
 def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX1250B0))>;
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(any_of (not FeatureGFX1250Insts), (not FeatureGFX1250B0))>;
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 

@@ -779,11 +779,8 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
   const DbgValueLoc *DVal = &Single.getValueLoc();
-<<<<<<< HEAD
   const DIExpression *Expr = Single.getExpr();
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   if (!Single.getExpr())
     DD->addTargetVariableAttributes(*this, VariableDie, std::nullopt,
                                     DwarfDebug::VariableLocationKind::Register);
@@ -826,9 +823,9 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
         return Entry.isLocation() && !Entry.getLoc().getReg();
       }))
     return;
-  const DIExpression *Expr = Single.getExpr();
   assert(Expr && "Variadic Debug Value must have an Expression.");
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   DwarfExpr.addFragmentOffset(Expr);
   DIExpressionCursor Cursor(Expr);

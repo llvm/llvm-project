@@ -283,7 +283,6 @@ machineFunctionInfo:
   frameOffsetReg: '$sgpr33'
 body:             |
   bb.0:
-<<<<<<< HEAD
     ; GFX900-LABEL: name: spill_v32_undef
     ; GFX900: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -298,10 +297,8 @@ body:             |
     ; GFX12: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: S_NOP 0, implicit undef $vgpr0
-=======
     ; CHECK-LABEL: name: spill_v32_undef
     ; CHECK: S_NOP 0, implicit undef $vgpr0
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
     SI_SPILL_V32_SAVE undef $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     S_NOP 0, implicit undef $vgpr0
 ...
@@ -317,7 +314,6 @@ machineFunctionInfo:
   frameOffsetReg: '$sgpr33'
 body:             |
   bb.0:
-<<<<<<< HEAD
     ; GFX900-LABEL: name: spill_v64_undef
     ; GFX900: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -332,10 +328,8 @@ body:             |
     ; GFX12: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: S_NOP 0, implicit undef $vgpr0_vgpr1
-=======
     ; CHECK-LABEL: name: spill_v64_undef
     ; CHECK: S_NOP 0, implicit undef $vgpr0_vgpr1
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
     SI_SPILL_V64_SAVE undef $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
     S_NOP 0, implicit undef $vgpr0_vgpr1
 ...

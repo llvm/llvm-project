@@ -41,10 +41,7 @@ body:             |
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr8, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr8, 0
     ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr9, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
-<<<<<<< HEAD
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION offset $vgpr9, 128
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
     ; GCN-NEXT: $exec_lo = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p0) from got, addrspace 4)

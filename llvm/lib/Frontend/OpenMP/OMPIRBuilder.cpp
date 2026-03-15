@@ -1575,11 +1575,11 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
-    const LocationDescription &Loc, InsertPointTy OuterAllocaIP,
-    BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
-    FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
-    omp::ProcBindKind ProcBind, bool IsCancellable) {
-  assert(!isConflictIP(Loc.IP, OuterAllocaIP) && "IPs must not be ambiguous");
+    const LocationDescription &Loc, InsertPointTy OuterAllocIP,
+    ArrayRef<InsertPointTy> OuterDeallocIPs, BodyGenCallbackTy BodyGenCB,
+    PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB, Value *IfCondition,
+    Value *NumThreads, omp::ProcBindKind ProcBind, bool IsCancellable) {
+  assert(!isConflictIP(Loc.IP, OuterAllocIP) && "IPs must not be ambiguous");
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -1621,7 +1621,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   // Save the outer alloca block because the insertion iterator may get
   // invalidated and we still need this later.
-  BasicBlock *OuterAllocaBlock = OuterAllocaIP.getBlock();
+  BasicBlock *OuterAllocaBlock = OuterAllocIP.getBlock();
 
   // Vector to remember instructions we used only during the modeling but which
   // we want to delete at the end.
@@ -1689,7 +1689,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   AllocaInst *PrivTIDAddr =
       Builder.CreateAlloca(Int32, nullptr, "tid.addr.local");
-  Instruction *PrivTID = Builder.CreateLoad(Int32, PrivTIDAddr, "tid");
+  Value *PrivTIDAddrAcast = Builder.CreatePointerBitCastOrAddrSpaceCast(
+      PrivTIDAddr, Builder.getPtrTy(), PrivTIDAddr->getName() + ".acast");
+  Instruction *PrivTID = Builder.CreateLoad(Int32, PrivTIDAddrAcast, "tid");
 
   // Add some fake uses for OpenMP provided arguments.
   ToBeDeleted.push_back(Builder.CreateLoad(Int32, TIDAddr, "tid.addr.use"));
@@ -1717,38 +1719,50 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   // Let the caller create the body.
   assert(BodyGenCB && "Expected body generation callback!");
   InsertPointTy CodeGenIP(PRegBodyBB, PRegBodyBB->begin());
-  if (Error Err = BodyGenCB(InnerAllocaIP, CodeGenIP))
+  InsertPointTy DeallocIP(PRegExitBB, PRegExitBB->begin());
+  if (Error Err = BodyGenCB(InnerAllocaIP, CodeGenIP, DeallocIP))
     return Err;
 
   LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
 
-  OutlineInfo OI;
+  // If OuterFn is a Generic kernel, we need to use device shared memory to
+  // allocate argument structures. Otherwise, we use stack allocations as usual.
+  bool UsesDeviceSharedMemory =
+      Config.isTargetDevice() && isGenericKernel(*OuterFn);
+  std::unique_ptr<OutlineInfo> OI =
+      UsesDeviceSharedMemory
+          ? std::make_unique<DeviceSharedMemOutlineInfo>(*this)
+          : std::make_unique<OutlineInfo>();
+
   if (Config.isTargetDevice()) {
     // Generate OpenMP target specific runtime call
-    OI.PostOutlineCB = [=, ToBeDeletedVec =
+    OI->PostOutlineCB = [=, ToBeDeletedVec =
                                std::move(ToBeDeleted)](Function &OutlinedFn) {
       targetParallelCallback(this, OutlinedFn, OuterFn, OuterAllocaBlock, Ident,
-                             IfCondition, NumThreads, PrivTID, PrivTIDAddr,
+                             IfCondition, NumThreads, PrivTID, PrivTIDAddrAcast,
                              ThreadID, ToBeDeletedVec);
     };
-    OI.FixUpNonEntryAllocas = true;
+    OI->FixUpNonEntryAllocas = true;
   } else {
     // Generate OpenMP host runtime call
-    OI.PostOutlineCB = [=, ToBeDeletedVec =
-                               std::move(ToBeDeleted)](Function &OutlinedFn) {
+    OI->PostOutlineCB = [=, ToBeDeletedVec =
+                                std::move(ToBeDeleted)](Function &OutlinedFn) {
       hostParallelCallback(this, OutlinedFn, OuterFn, Ident, IfCondition,
-                           PrivTID, PrivTIDAddr, ToBeDeletedVec);
+                           PrivTID, PrivTIDAddrAcast, ToBeDeletedVec);
     };
-    OI.FixUpNonEntryAllocas = true;
+    OI->FixUpNonEntryAllocas = true;
   }
 
-  OI.OuterAllocaBB = OuterAllocaBlock;
-  OI.EntryBB = PRegEntryBB;
-  OI.ExitBB = PRegExitBB;
+  OI->OuterAllocBB = OuterAllocaBlock;
+  OI->EntryBB = PRegEntryBB;
+  OI->ExitBB = PRegExitBB;
+  OI->OuterDeallocBBs.reserve(OuterDeallocIPs.size());
+  for (InsertPointTy DeallocIP : OuterDeallocIPs)
+    OI->OuterDeallocBBs.push_back(DeallocIP.getBlock());
 
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
-  OI.collectBlocks(ParallelRegionBlockSet, Blocks);
+  OI->collectBlocks(ParallelRegionBlockSet, Blocks);
 
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
@@ -1759,6 +1773,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                           /* AllowVarArgs */ true,
                           /* AllowAlloca */ true,
                           /* AllocationBlock */ OuterAllocaBlock,
+                          /* DeallocationBlocks */ {},
                           /* Suffix */ ".omp_par", ArgsInZeroAddressSpace);
 
   // Find inputs to, outputs from the code region.
@@ -1783,7 +1798,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   auto PrivHelper = [&](Value &V) -> Error {
     if (&V == TIDAddr || &V == ZeroAddr) {
-      OI.ExcludeArgsFromAggregate.push_back(&V);
+      OI->ExcludeArgsFromAggregate.push_back(&V);
       return Error::success();
     }
 
@@ -1804,9 +1819,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       IRBuilder<>::InsertPointGuard Guard(Builder);
       LLVM_DEBUG(llvm::dbgs() << "Forwarding input as pointer: " << V << "\n");
 
-      Builder.restoreIP(OuterAllocaIP);
-      Value *Ptr =
-          Builder.CreateAlloca(V.getType(), nullptr, V.getName() + ".reloaded");
+      Builder.restoreIP(OuterAllocIP);
+      Value *Ptr;
+      if (UsesDeviceSharedMemory) {
+        // Use device shared memory instead, if needed.
+        Ptr = createOMPAllocShared(OuterAllocIP, V.getType(),
+                                   V.getName() + ".reloaded");
+        for (InsertPointTy DeallocIP : OuterDeallocIPs)
+          createOMPFreeShared(DeallocIP, Ptr, V.getType());
+      } else {
+        Ptr = Builder.CreateAlloca(V.getType(), nullptr,
+                                   V.getName() + ".reloaded");
+      }
 
       // Store to stack at end of the block that currently branches to the entry
       // block of the to-be-outlined region.
@@ -1856,7 +1880,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   // Reset the outer alloca insertion point to the entry of the relevant block
   // in case it was invalidated.
-  OuterAllocaIP = IRBuilder<>::InsertPoint(
+  OuterAllocIP = IRBuilder<>::InsertPoint(
       OuterAllocaBlock, OuterAllocaBlock->getFirstInsertionPt());
 
   for (Value *Input : Inputs) {

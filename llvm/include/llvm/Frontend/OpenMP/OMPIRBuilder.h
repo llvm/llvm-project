@@ -793,10 +793,10 @@ public:
   ///
   /// \returns The insertion position *after* the parallel.
   LLVM_ABI InsertPointOrErrorTy createParallel(
-      const LocationDescription &Loc, InsertPointTy AllocaIP,
-      BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
-      FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
-      omp::ProcBindKind ProcBind, bool IsCancellable);
+      const LocationDescription &Loc, InsertPointTy AllocIP,
+      ArrayRef<InsertPointTy> DeallocIPs, BodyGenCallbackTy BodyGenCB,
+      PrivatizeCallbackTy PrivCB, FinalizeCallbackTy FiniCB, Value *IfCondition,
+      Value *NumThreads, omp::ProcBindKind ProcBind, bool IsCancellable);
 
   /// Generator for the control flow structure of an OpenMP canonical loop.
   ///
