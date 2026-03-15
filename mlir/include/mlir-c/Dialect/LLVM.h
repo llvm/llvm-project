@@ -456,6 +456,71 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDIImportedEntityAttrGetName(void);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule);
 
+//===----------------------------------------------------------------------===//
+// Metadata Attributes
+//===----------------------------------------------------------------------===//
+
+/// Creates an LLVM MDStringAttr.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDStringAttrGet(MlirContext ctx,
+                                                         MlirStringRef value);
+
+/// Returns `true` if the attribute is an LLVM MDStringAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDStringAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDStringAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDStringAttrGetTypeID(void);
+
+/// Returns the string value of an LLVM MDStringAttr.
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirLLVMMDStringAttrGetValue(MlirAttribute attr);
+
+/// Creates an LLVM MDConstantAttr wrapping an integer attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDConstantAttrGet(MlirContext ctx, MlirAttribute integerAttr);
+
+/// Returns `true` if the attribute is an LLVM MDConstantAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDConstantAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void);
+
+/// Returns the integer attribute value of an LLVM MDConstantAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDConstantAttrGetValue(MlirAttribute attr);
+
+/// Creates an LLVM MDFuncAttr referencing a function symbol.
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx,
+                                                       MlirAttribute name);
+
+/// Returns `true` if the attribute is an LLVM MDFuncAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDFuncAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void);
+
+/// Returns the symbol name of an LLVM MDFuncAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDFuncAttrGetName(MlirAttribute attr);
+
+/// Creates an LLVM MDNodeAttr (metadata tuple).
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,
+                      MlirAttribute const *operands);
+
+/// Returns `true` if the attribute is an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDNodeAttr(MlirAttribute attr);
+
+/// Returns the TypeID of MDNodeAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDNodeAttrGetTypeID(void);
+
+/// Returns the number of operands in an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED intptr_t
+mlirLLVMMDNodeAttrGetNumOperands(MlirAttribute attr);
+
+/// Returns the operand at the given index of an LLVM MDNodeAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDNodeAttrGetOperand(MlirAttribute attr, intptr_t index);
+
 #ifdef __cplusplus
 }
 #endif

@@ -92,7 +92,7 @@ intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
 MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
   assert(pos >= 0 && "pos in array must be positive");
   return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type))
-                  .getParamType(static_cast<unsigned>(pos)));
+      .getParamType(static_cast<unsigned>(pos)));
 }
 
 MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
@@ -179,7 +179,7 @@ MlirLogicalResult mlirLLVMStructTypeSetBody(MlirType structType,
   SmallVector<Type> fields;
   return wrap(
       cast<LLVM::LLVMStructType>(unwrap(structType))
-          .setBody(unwrapList(nFieldTypes, fieldTypes, fields), isPacked));
+      .setBody(unwrapList(nFieldTypes, fieldTypes, fields), isPacked));
 }
 
 MlirAttribute mlirLLVMDIExpressionElemAttrGet(MlirContext ctx,
@@ -522,4 +522,88 @@ MlirAttribute mlirLLVMDIAnnotationAttrGet(MlirContext ctx, MlirAttribute name,
 
 MlirStringRef mlirLLVMDIAnnotationAttrGetName(void) {
   return wrap(DIAnnotationAttr::name);
+}
+
+//===----------------------------------------------------------------------===//
+// Metadata Attributes
+//===----------------------------------------------------------------------===//
+
+MlirAttribute mlirLLVMMDStringAttrGet(MlirContext ctx, MlirStringRef value) {
+  return wrap(
+      MDStringAttr::get(unwrap(ctx),
+                        StringAttr::get(unwrap(ctx), unwrap(value))));
+}
+
+bool mlirLLVMAttrIsAMDStringAttr(MlirAttribute attr) {
+  return isa<MDStringAttr>(unwrap(attr));
+}
+
+MlirTypeID mlirLLVMMDStringAttrGetTypeID(void) {
+  return wrap(MDStringAttr::getTypeID());
+}
+
+MlirStringRef mlirLLVMMDStringAttrGetValue(MlirAttribute attr) {
+  return wrap(cast<MDStringAttr>(unwrap(attr)).getValue().getValue());
+}
+
+MlirAttribute mlirLLVMMDConstantAttrGet(MlirContext ctx,
+                                        MlirAttribute integerAttr) {
+  return wrap(MDConstantAttr::get(unwrap(ctx),
+                                  cast<IntegerAttr>(unwrap(integerAttr))));
+}
+
+bool mlirLLVMAttrIsAMDConstantAttr(MlirAttribute attr) {
+  return isa<MDConstantAttr>(unwrap(attr));
+}
+
+MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void) {
+  return wrap(MDConstantAttr::getTypeID());
+}
+
+MlirAttribute mlirLLVMMDConstantAttrGetValue(MlirAttribute attr) {
+  return wrap((Attribute)cast<MDConstantAttr>(unwrap(attr)).getValue());
+}
+
+MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx, MlirAttribute name) {
+  return wrap(
+      MDFuncAttr::get(unwrap(ctx), cast<FlatSymbolRefAttr>(unwrap(name))));
+}
+
+bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr) {
+  return isa<MDFuncAttr>(unwrap(attr));
+}
+
+MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void) {
+  return wrap(MDFuncAttr::getTypeID());
+}
+
+MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr) {
+  return wrap((Attribute)cast<MDFuncAttr>(unwrap(attr)).getName());
+}
+
+MlirAttribute mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,
+                                    MlirAttribute const *operands) {
+  SmallVector<Attribute> attrStorage;
+  attrStorage.reserve(nOperands);
+  return wrap(MDNodeAttr::get(
+      unwrap(ctx),
+      ArrayAttr::get(unwrap(ctx),
+                     unwrapList(nOperands, operands, attrStorage))));
+}
+
+bool mlirLLVMAttrIsAMDNodeAttr(MlirAttribute attr) {
+  return isa<MDNodeAttr>(unwrap(attr));
+}
+
+MlirTypeID mlirLLVMMDNodeAttrGetTypeID(void) {
+  return wrap(MDNodeAttr::getTypeID());
+}
+
+intptr_t mlirLLVMMDNodeAttrGetNumOperands(MlirAttribute attr) {
+  return cast<MDNodeAttr>(unwrap(attr)).getOperands().size();
+}
+
+MlirAttribute mlirLLVMMDNodeAttrGetOperand(MlirAttribute attr,
+                                           intptr_t index) {
+  return wrap(cast<MDNodeAttr>(unwrap(attr)).getOperands()[index]);
 }

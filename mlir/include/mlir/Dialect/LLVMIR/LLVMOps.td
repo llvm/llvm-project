@@ -2576,4 +2576,44 @@ def LLVM_ModuleFlagsOp
   let hasVerifier = 1;
 }
 
+//===--------------------------------------------------------------------===//
+// NamedMetadataOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_NamedMetadataOp
+    : LLVM_Op<"named_metadata"> {
+  let summary = "Module-level named metadata";
+  let description = [{
+    Represents an LLVM named metadata node (`llvm::NamedMDNode`). Named
+    metadata nodes are module-level metadata that associate a name string
+    with a list of metadata nodes. Each operand must be an `#llvm.md_node`.
+
+    Example:
+    ```mlir
+    llvm.named_metadata "foo.version" [
+      #llvm.md_node<[#llvm.md_const<2 : i32>, #llvm.md_const<9 : i32>,
+                      #llvm.md_const<0 : i32>]>
+    ]
+    llvm.named_metadata "foo.kernel" [
+      #llvm.md_node<[
+        #llvm.md_func<@my_kernel>,
+        #llvm.md_node<[]>,
+        #llvm.md_node<[
+          #llvm.md_node<[#llvm.md_const<0 : i32>,
+                          #llvm.md_string<"foo.buffer">]>
+        ]>
+      ]>
+    ]
+    ```
+  }];
+  let arguments = (ins StrAttr:$metadata_name, ArrayAttr:$nodes);
+  let assemblyFormat = [{
+    $metadata_name $nodes attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertNamedMetadataOp($metadata_name, $nodes, builder, moduleTranslation);
+  }];
+}
+
 #endif // LLVMIR_OPS
