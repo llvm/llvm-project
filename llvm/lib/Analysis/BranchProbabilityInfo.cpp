@@ -1412,6 +1412,11 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   // allocEdges can reallocate and must be called first.
   MutableArrayRef<BranchProbability> DstP = allocEdges(Dst);
   ArrayRef<BranchProbability> SrcP = getEdges(Src);
+  if (SrcP.empty()) {
+    // Nothing to copy from, erase again.
+    eraseBlock(Dst);
+    return;
+  }
   for (unsigned i = 0; i != DstP.size(); ++i) {
     DstP[i] = SrcP[i];
     LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << i
