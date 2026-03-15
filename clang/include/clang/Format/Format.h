@@ -3356,14 +3356,16 @@ struct FormatStyle {
     /// Indents directives before the hash with the current code indentation
     /// level.
     /// \code
-    ///    if (foo)
-    ///    {
-    ///      #if FOO
-    ///        #if BAR
-    ///          #include <foo>
-    ///        #endif
-    ///      #endif
-    ///    }
+    ///   enum class Feature {
+    ///     none,
+    ///     #if PLATFORM_FULL
+    ///       wifi,
+    ///       #ifdef HAS_BLE
+    ///         ble,
+    ///       #endif
+    ///     #endif
+    ///     basic
+    ///   };
     /// \endcode
     PPDIS_BeforeHashWithCode,
     /// Leaves indentation of directives as-is.
