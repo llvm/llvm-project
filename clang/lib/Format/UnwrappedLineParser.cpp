@@ -1237,6 +1237,18 @@ void UnwrappedLineParser::parsePPUnknown() {
     nextToken();
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)
     Line->Level += PPBranchLevel + 1;
+  // For BeforeHashWithCode, PP directives inside unreachable branches must
+  // not be emitted: in multi-pass formatting the surrounding C++ braces may
+  // have been skipped (PP_Unreachable code is not parsed), leaving
+  // Line->Level too low.  The resulting incorrect replacement would conflict
+  // with the correct one produced by the reachable pass, causing an
+  // "overlapping replacement" error and an empty output.  Simply discard the
+  // accumulated tokens so the reachable pass wins.
+  if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+      !PPStack.empty() && PPStack.back().Kind == PP_Unreachable) {
+    Line->Tokens.clear();
+    return;
+  }
   addUnwrappedLine();
 }
 
@@ -2524,11 +2536,30 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
         parseChildBlock();
       }
     }
+    // For BeforeHashWithCode enum bodies: whenever readToken just processed a
+    // PP directive and returned the first post-PP token (AtEndOfPPLine=true),
+    // flush the accumulated pre-PP body tokens as their own UnwrappedLine.
+    // This gives each PP-separated segment its own line so the BWHCCodeLine
+    // level-boost in addUnwrappedLine can apply the correct indentation.
+    if (IsEnum && !IsAngleBracket &&
+        Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+        Style.AllowShortEnumsOnASingleLine && AtEndOfPPLine &&
+        !Line->Tokens.empty()) {
+      addUnwrappedLine();
+    }
     if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
       if (IsEnum) {
         FormatTok->setBlockKind(BK_Block);
-        if (!Style.AllowShortEnumsOnASingleLine)
+        if (!Style.AllowShortEnumsOnASingleLine) {
           addUnwrappedLine();
+        } else if (Style.IndentPPDirectives ==
+                       FormatStyle::PPDIS_BeforeHashWithCode &&
+                   !Line->Tokens.empty()) {
+          // For BeforeHashWithCode, flush any remaining enum body tokens
+          // before the closing brace so they get their own UnwrappedLine
+          // with the correct indentation level.
+          addUnwrappedLine();
+        }
       }
       nextToken();
       return !HasError;
@@ -3885,10 +3916,20 @@ bool UnwrappedLineParser::parseEnum() {
   if (!Style.AllowShortEnumsOnASingleLine) {
     addUnwrappedLine();
     Line->Level += 1;
+  } else if (Style.IndentPPDirectives ==
+             FormatStyle::PPDIS_BeforeHashWithCode) {
+    // For BeforeHashWithCode, flush the enum declaration as its own
+    // UnwrappedLine (like AllowShortEnumsOnASingleLine=false does) so that
+    // body tokens start in a fresh line.  Each PP-separated segment of the
+    // body can then be emitted at its correct indentation via BWHCCodeLine.
+    addUnwrappedLine();
+    ++Line->Level;
   }
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine)
     Line->Level -= 1;
+  else if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode)
+    --Line->Level;
   if (HasError) {
     if (FormatTok->is(tok::semi))
       nextToken();
@@ -4950,6 +4991,9 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // If there is an unfinished unwrapped line, we flush the preprocessor
       // directives only after that unwrapped line was finished later.
       bool SwitchToPreprocessorLines = !Line->Tokens.empty();
+      // Save CurrentLines before ScopedLineState may switch it to
+      // PreprocessorDirectives, so we can detect child-block contexts later.
+      const auto *OrigCurrentLines = CurrentLines;
       ScopedLineState BlockState(*this, SwitchToPreprocessorLines);
       // For BeforeHashWithCode, the PP directive is indented at the surrounding
       // code level. Apply LevelDifference to get the correct code context level
@@ -4960,16 +5004,33 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
                 static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
                "LevelDifference makes Line->Level negative");
         Line->Level += LevelDifference;
+        // When this PP directive is being deferred to PreprocessorDirectives
+        // (SwitchToPreprocessorLines=true), it may be encountered at a deeper
+        // C++ brace nesting than the opening PP directive of the same
+        // conditional block. This happens inside child-block contexts (e.g.
+        // lambda bodies): the opening #if is processed by readToken() before
+        // parseChildBlock()'s ScopedLineState adds +1 to Line->Level, while
+        // the closing #endif is processed after, giving it a Level one higher
+        // than the #if. Detect child-block context by checking OrigCurrentLines
+        // (saved before ScopedLineState may switch CurrentLines): inside a
+        // child block it points to the parent's token children list rather than
+        // the top-level Lines vector. Use the level recorded for the first
+        // deferred directive (the opening #if) so that all directives of the
+        // same conditional block share the same C++ level.
+        if (SwitchToPreprocessorLines && !PreprocessorDirectives.empty() &&
+            OrigCurrentLines != &Lines) {
+          Line->Level = PreprocessorDirectives.front().Level;
+        }
       } else {
         assert((LevelDifference >= 0 ||
                 static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
-              "LevelDifference makes Line->Level negative");
+               "LevelDifference makes Line->Level negative");
         Line->Level += LevelDifference;
         // Comments stored before the preprocessor directive need to be output
         // before the preprocessor directive, at the same level as the
         // preprocessor directive, as we consider them to apply to the
         // directive.
-       if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
+        if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHash &&
             PPBranchLevel > 0) {
           Line->Level += PPBranchLevel;
         }

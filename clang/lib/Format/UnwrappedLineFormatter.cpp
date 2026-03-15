@@ -68,10 +68,12 @@ public:
                    ? (Line.Level - Line.PPLevel) * Style.IndentWidth +
                          AdditionalIndent
                    : Line.First->OriginalColumn;
-    } else if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
+    } else if (Style.IndentPPDirectives ==
+                   FormatStyle::PPDIS_BeforeHashWithCode &&
                Line.InPPDirective && !Line.InMacroBody) {
       // For BeforeHashWithCode, PP directives are indented at the surrounding
-      // code level, using the same indentation as regular code (not PPIndentWidth).
+      // code level, using the same indentation as regular code (not
+      // PPIndentWidth).
       Indent = getIndent(Line.Level);
       Indent += AdditionalIndent;
     } else if (Style.IndentPPDirectives != FormatStyle::PPDIS_None &&
