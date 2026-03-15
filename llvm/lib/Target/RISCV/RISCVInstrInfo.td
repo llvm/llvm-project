@@ -827,7 +827,7 @@ def SLTIU : ALU_ri<0b011, "sltiu">;
 // Defining pseudo commands
 let isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def SLTI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$imm), []>;
-  def SLTUI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$imm), []>;
+  def SLTIU : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$imm), []>;
 }
 
 // Now set less than immediate instruction
@@ -1763,10 +1763,10 @@ def : Pat<(riscv_add_lo GPR:$src, tglobaltlsaddr:$lo),
 
 /// Setcc
 
-def : PatGprGpr<setlt, SLT>;
-def : PatGprSimm12<setlt, SLTI>;
-def : PatGprGpr<setult, SLTU>;
-def : PatGprSimm12<setult, SLTIU>;
+def : PatGprGpr<setlt,  SLTH>;
+def : PatGprSimm12<setlt,  SLTHI>;
+def : PatGprGpr<setult, SLTH>;
+def : PatGprSimm12<setult, SLTHI>;
 
 // RISC-V doesn't have general instructions for integer setne/seteq, but we can
 // check for equality with 0. These ComplexPatterns rewrite the setne/seteq into

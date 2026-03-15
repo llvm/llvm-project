@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// This pass rewrites Arithmetic instructions to their tagged version
+// This pass rewrites instructions to their tagged version
 //
 //===---------------------------------------------------------------------===//
 
@@ -72,7 +72,7 @@ bool RISCVTagged::runOnMachineFunction(MachineFunction &MF) {
         MadeChange = true;
         break;
       case RISCV::SLTI:
-      case RISCV::SLTUI:
+      case RISCV::SLTIU:
         MI.setDesc(TII->get(RISCV::SLTHI));
         MadeChange = true;
         break;
