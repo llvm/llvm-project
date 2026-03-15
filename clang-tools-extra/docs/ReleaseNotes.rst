@@ -313,8 +313,8 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-length
-  <clang-tidy/checks/readability/readability-identifier-length>` check by adding
-  a new option to silence warnings for short-lived variables, based on distance
+  <clang-tidy/checks/readability/identifier-length>` check by adding a new
+  option to silence warnings for short-lived variables, based on distance
   between declaration and last use.
 
 - Improved :doc:`readability-non-const-parameter
