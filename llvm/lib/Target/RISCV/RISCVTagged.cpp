@@ -71,6 +71,11 @@ bool RISCVTagged::runOnMachineFunction(MachineFunction &MF) {
         MI.setDesc(TII->get(RISCV::SLTH));
         MadeChange = true;
         break;
+      case RISCV::SLTI:
+      case RISCV::SLTUI:
+        MI.setDesc(TII->get(RISCV::SLTHI));
+        MadeChange = true;
+        break;
       default:
         break;
       }

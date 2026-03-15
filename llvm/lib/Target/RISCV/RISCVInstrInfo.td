@@ -818,9 +818,21 @@ def SW : Store_rri<0b010, "sw">, Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def ADDI  : ALU_ri<0b000, "addi">;
 
-let IsSignExtendingOpW = 1 in {
+// Old implementation
+/* let IsSignExtendingOpW = 1 in {
 def SLTI  : ALU_ri<0b010, "slti">;
 def SLTIU : ALU_ri<0b011, "sltiu">;
+} */
+
+// Defining pseudo commands
+let isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def SLTI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$imm), []>;
+  def SLTUI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$imm), []>;
+}
+
+// Now set less than immediate instruction
+let IsSignExtendingOpW = 1 in {
+  def SLTHI  : ALU_ri<0b010, "slti">;
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
