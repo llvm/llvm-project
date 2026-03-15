@@ -24,12 +24,12 @@ namespace clang::tidy::performance {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasAccessibleNonTrivialMoveAssignment) {
-  const auto *ND = Node.getDefinition();
+  const CXXRecordDecl *ND = Node.getDefinition();
   if (!ND)
     return false;
   if (!ND->hasNonTrivialMoveAssignment())
     return false;
-  for (const auto *CM : ND->methods())
+  for (const CXXMethodDecl *CM : ND->methods())
     if (CM->isMoveAssignmentOperator())
       return !CM->isDeleted() && CM->getAccess() == AS_public;
   llvm_unreachable("Move Assignment Operator Not Found");
