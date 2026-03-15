@@ -49,12 +49,12 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              raw_ostream &O) {
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
-
+                                          
   if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
     // Look up the bitwidth of this int type register from
     // IntTypeBitwidths map.
-    unsigned IntTypeRegId = getIDFromRegister(MI->getOperand(1).getReg().id());
-    auto IntTypeRegIt = IntTypeBitwidths.find(IntTypeRegId);
+    MCRegister IntTypeReg = MI->getOperand(1).getReg();
+    auto IntTypeRegIt = IntTypeBitwidths.find(IntTypeReg);
     if (IntTypeRegIt == IntTypeBitwidths.end()) {
       llvm_unreachable("Int type register used before defined in OpTypeInt");
     }
@@ -117,9 +117,9 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 }
 
 void SPIRVInstPrinter::recordIntType(const MCInst *MI) {
-  unsigned IntTypeRegId = getIDFromRegister(MI->getOperand(0).getReg().id());
+  MCRegister IntTypeReg = MI->getOperand(0).getReg();
   unsigned Bitwidth = MI->getOperand(1).getImm();
-  IntTypeBitwidths[IntTypeRegId] = Bitwidth;
+  IntTypeBitwidths[IntTypeReg] = Bitwidth;
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
