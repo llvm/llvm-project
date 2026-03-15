@@ -54294,6 +54294,20 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   EVT VT = StoredVal.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
+  // Pattern: store(trunc(load v4i16) to v4i8)
+  if (!St->isTruncatingStore() && VT == MVT::v4i8 && Subtarget.hasAVX512() &&
+      StoredVal.getOpcode() == ISD::TRUNCATE &&
+      StoredVal.getOperand(0).getValueType() == MVT::v4i16 &&
+      StoredVal.hasOneUse() && TLI.isTruncStoreLegal(MVT::v4i32, MVT::v4i8)) {
+
+    SDValue Src = StoredVal.getOperand(0);
+    if (ISD::isNormalLoad(Src.getNode()) && Src.hasOneUse()) {
+      SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v4i32, Src);
+      return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                               MVT::v4i8, St->getMemOperand());
+    }
+  }
+
   // Convert a store of vXi1 into a store of iX and a bitcast.
   if (!Subtarget.hasAVX512() && VT == StVT && VT.isVector() &&
       VT.getVectorElementType() == MVT::i1) {
