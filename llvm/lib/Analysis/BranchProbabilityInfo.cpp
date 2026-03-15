@@ -1301,15 +1301,21 @@ BranchProbabilityInfo::allocEdges(const BasicBlock *BB) {
   return MutableArrayRef(&Probs[EdgeStart], NumSuccs);
 }
 
-const BranchProbability *
+ArrayRef<BranchProbability>
 BranchProbabilityInfo::getEdges(const BasicBlock *BB) const {
   assert(BB->getParent() == LastF);
   assert(BlockNumberEpoch == LastF->getBlockNumberEpoch());
   if (EdgeStarts.size() <= BB->getNumber())
-    return nullptr;
-  if (unsigned EdgeStart = EdgeStarts[BB->getNumber()])
-    return &Probs[EdgeStart - 1]; // 0 = no edges.
-  return nullptr;
+    return {};
+  if (unsigned EdgeStart = EdgeStarts[BB->getNumber()]) {
+    const BranchProbability *Start = &Probs[EdgeStart - 1]; // 0 = no edges.
+    size_t Count = SIZE_MAX; // Avoid querying num successors in release builds.
+#ifndef NDEBUG
+    Count = succ_size(BB);
+#endif
+    return ArrayRef(Start, Count);
+  }
+  return {};
 }
 
 bool BranchProbabilityInfo::invalidate(Function &, const PreservedAnalyses &PA,
@@ -1346,7 +1352,7 @@ isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           unsigned IndexInSuccessors) const {
-  if (const BranchProbability *P = getEdges(Src))
+  if (ArrayRef<BranchProbability> P = getEdges(Src); !P.empty())
     return P[IndexInSuccessors];
   return {1, static_cast<uint32_t>(succ_size(Src))};
 }
@@ -1362,8 +1368,8 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const BasicBlock *Dst) const {
-  const BranchProbability *P = getEdges(Src);
-  if (!P)
+  ArrayRef<BranchProbability> P = getEdges(Src);
+  if (P.empty())
     return BranchProbability(llvm::count(successors(Src), Dst), succ_size(Src));
 
   auto Prob = BranchProbability::getZero();
@@ -1378,11 +1384,6 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 void BranchProbabilityInfo::setEdgeProbability(
     const BasicBlock *Src, const SmallVectorImpl<BranchProbability> &Probs) {
   assert(Src->getTerminator()->getNumSuccessors() == Probs.size());
-  if (Probs.empty()) {
-    eraseBlock(Src);
-    return;
-  }
-
   MutableArrayRef<BranchProbability> P = allocEdges(Src);
   uint64_t TotalNumerator = 0;
   for (unsigned SuccIdx = 0; SuccIdx < Probs.size(); ++SuccIdx) {
@@ -1398,6 +1399,8 @@ void BranchProbabilityInfo::setEdgeProbability(
   // Instead, every single probability in Probs must be as accurate as possible.
   // This results in error 1/denominator at most, thus the total absolute error
   // should be within Probs.size / BranchProbability::getDenominator.
+  if (P.empty())
+    return; // If we store no probabilities, TotalNumerator is zero.
   assert(TotalNumerator <= BranchProbability::getDenominator() + Probs.size());
   assert(TotalNumerator >= BranchProbability::getDenominator() - Probs.size());
   (void)TotalNumerator;
@@ -1408,11 +1411,7 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
   assert(succ_size(Src) == succ_size(Dst));
   // allocEdges can reallocate and must be called first.
   MutableArrayRef<BranchProbability> DstP = allocEdges(Dst);
-  const BranchProbability *SrcP = getEdges(Src);
-  if (!SrcP) {
-    eraseBlock(Dst);
-    return;
-  }
+  ArrayRef<BranchProbability> SrcP = getEdges(Src);
   for (unsigned i = 0; i != DstP.size(); ++i) {
     DstP[i] = SrcP[i];
     LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << i
@@ -1422,8 +1421,12 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
 
 void BranchProbabilityInfo::swapSuccEdgesProbabilities(const BasicBlock *Src) {
   assert(Src->getTerminator()->getNumSuccessors() == 2);
-  if (BranchProbability *P = const_cast<BranchProbability *>(getEdges(Src)))
-    std::swap(P[0], P[1]);
+  ArrayRef<BranchProbability> P = getEdges(Src);
+  if (P.empty())
+    return;
+  MutableArrayRef<BranchProbability> MP(
+      const_cast<BranchProbability *>(P.data()), P.size());
+  std::swap(MP[0], MP[1]);
 }
 
 raw_ostream &

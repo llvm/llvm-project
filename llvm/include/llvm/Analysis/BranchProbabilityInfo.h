@@ -187,7 +187,7 @@ public:
 
 private:
   MutableArrayRef<BranchProbability> allocEdges(const BasicBlock *BB);
-  const BranchProbability *getEdges(const BasicBlock *BB) const;
+  ArrayRef<BranchProbability> getEdges(const BasicBlock *BB) const;
 
   // Storage for branch probabilities.
   SmallVector<BranchProbability> Probs;
