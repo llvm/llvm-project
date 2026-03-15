@@ -949,8 +949,8 @@ static bool isIIFE(const UnwrappedLine &Line,
 
 static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
                                    const FormatToken &InitialToken,
-                                   const bool IsEmptyBlock,
-                                   const bool IsJavaRecord) {
+                                   bool IsEmptyBlock,
+                                   bool IsJavaRecord = false) {
   if (IsJavaRecord)
     return Style.BraceWrapping.AfterClass;
 
@@ -3211,8 +3211,7 @@ void UnwrappedLineParser::parseNamespace() {
     FormatTok->setFinalizedType(TT_NamespaceLBrace);
 
     if (ShouldBreakBeforeBrace(Style, InitialToken,
-                               Tokens->peekNextToken()->is(tok::r_brace),
-                               /*IsJavaRecord=*/false)) {
+                               Tokens->peekNextToken()->is(tok::r_brace))) {
       addUnwrappedLine();
     }
 
@@ -3869,8 +3868,7 @@ bool UnwrappedLineParser::parseEnum() {
 
   if (!Style.AllowShortEnumsOnASingleLine &&
       ShouldBreakBeforeBrace(Style, InitialToken,
-                             Tokens->peekNextToken()->is(tok::r_brace),
-                             /*IsJavaRecord=*/false)) {
+                             Tokens->peekNextToken()->is(tok::r_brace))) {
     addUnwrappedLine();
   }
   // Parse enum body.
