@@ -6,8 +6,6 @@
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 
-// XFAIL: *
-
 #include <vecintrin.h>
 
 volatile vector signed char vsc;

@@ -35,16 +35,16 @@ void foo1(void) {
                                : parallel) otherwise()
   bar();
 #pragma omp metadirective when(implementation = {vendor(score(0)  \
-                                                        : amd)}, \
+                                                        : llvm)}, \
                                device = {kind(cpu)}               \
                                : parallel) otherwise(target teams)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)}                                 \
-                               : target teams) when(implementation = {vendor(amd)} \
+                               : target teams) when(implementation = {vendor(llvm)} \
                                                     : parallel) otherwise()
   bar();
 #pragma omp metadirective otherwise(target) when(implementation = {vendor(score(5)  \
-                                                                        : amd)}, \
+                                                                        : llvm)}, \
                                                device = {kind(cpu, host)}         \
                                                : parallel)
   bar();
@@ -162,16 +162,16 @@ void foo2(void) {
                                : parallel) default()
   bar();
 #pragma omp metadirective when(implementation = {vendor(score(0)  \
-                                                        : amd)}, \
+                                                        : llvm)}, \
                                device = {kind(cpu)}               \
                                : parallel) default(target teams)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)}                                 \
-                               : target teams) when(implementation = {vendor(amd)} \
+                               : target teams) when(implementation = {vendor(llvm)} \
                                                     : parallel) default()
   bar();
 #pragma omp metadirective default(target) when(implementation = {vendor(score(5)  \
-                                                                        : amd)}, \
+                                                                        : llvm)}, \
                                                device = {kind(cpu, host)}         \
                                                : parallel)
   bar();

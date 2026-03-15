@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * task-two.c -- Archer testcase
  */

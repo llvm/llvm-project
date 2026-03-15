@@ -639,8 +639,7 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
 
   // Check if 2 shard ops are chained. If not there is no need for resharding
   // as the source and target shared the same sharding.
-  ShardOp srcShardOp =
-      dyn_cast_or_null<ShardOp>(shardOp.getSrc().getDefiningOp());
+  ShardOp srcShardOp = shardOp.getSrc().getDefiningOp<ShardOp>();
   if (!srcShardOp) {
     tgtPartitionValue = partitionMap.lookup(shardOp.getSrc());
   } else {

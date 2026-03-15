@@ -32,7 +32,7 @@ subroutine linear_step
     !$omp do linear(x:4)
     !CHECK: %[[LOAD:.*]] = fir.load %[[X]]#0 : !fir.ref<i32>
     !CHECK: %[[const:.*]] = arith.constant 2 : i32
-    !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32
+    !CHECK: %[[RESULT:.*]] = arith.addi %[[LOAD]], %[[const]] : i32   
     do i = 1, 10
         y = x + 2
     end do

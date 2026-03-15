@@ -14,7 +14,6 @@
 // RUN: grep '\-fexceptions' spirv-flags.txt
 // RUN: grep '\-fcolor-diagnostics' spirv-flags.txt
 // RUN: grep '\-O3' spirv-flags.txt
-// RUN: grep '\-mcode-object-version=5' spirv-flags.txt
 
 // RUN: rm spirv-flags.txt
 

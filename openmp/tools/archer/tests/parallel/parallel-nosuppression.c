@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 // RUN: %libarcher-compile-and-run-nosuppression | FileCheck %s
 // REQUIRES: tsan
 #include <omp.h>

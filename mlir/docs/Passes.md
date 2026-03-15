@@ -76,10 +76,6 @@ This document describes the available MLIR passes and their contracts.
 
 [include "MemRefPasses.md"]
 
-## 'omp' Dialect Passes
-
-[include "OpenMPPasses.md"]
-
 ## 'shard' Dialect Passes
 
 [include "ShardPasses.md"]

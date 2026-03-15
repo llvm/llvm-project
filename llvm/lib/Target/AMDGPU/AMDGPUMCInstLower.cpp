@@ -319,11 +319,6 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  case TargetOpcode::DBG_VALUE:
-    llvm_unreachable("Should be handled target independently");
-  }
-
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());
@@ -347,9 +342,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
     while (I != MBB->instr_end() && I->isInsideBundle()) {
-      bool HandledByEmitDbgComment = I->isDebugInstr() && emitDebugComment(&*I);
-      if(!HandledByEmitDbgComment)
-        emitInstruction(&*I);
+      emitInstruction(&*I);
       ++I;
     }
   } else {

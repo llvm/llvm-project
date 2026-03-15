@@ -13,8 +13,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
-// causes windows build ambiguity
-//using namespace llvm;
+using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::ELF;

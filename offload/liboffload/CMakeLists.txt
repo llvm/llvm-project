@@ -18,8 +18,8 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
     target_link_libraries(LLVMOffload PRIVATE omptarget.rtl.${plugin})
 endforeach()
 
-if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-    target_link_libraries(LLVMOffload PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+if(LLVM_HAVE_LINK_VERSION_SCRIPT)
+  target_link_libraries(LLVMOffload PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 endif()
 
 target_include_directories(LLVMOffload PUBLIC
@@ -39,18 +39,10 @@ target_compile_definitions(LLVMOffload PRIVATE
   DEBUG_PREFIX="Liboffload"
 )
 
-# Don't override an externally defined RPATH
-if(NOT DEFINED CMAKE_INSTALL_RPATH)
-  set_target_properties(LLVMOffload PROPERTIES
-                        POSITION_INDEPENDENT_CODE ON
-                        INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib"
-                        BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-else()
-  set_target_properties(LLVMOffload PROPERTIES
-                        POSITION_INDEPENDENT_CODE ON
-                        INSTALL_RPATH ${CMAKE_INSTALL_RPATH}
-                        BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-endif()
+set_target_properties(LLVMOffload PROPERTIES
+                      POSITION_INDEPENDENT_CODE ON
+                      INSTALL_RPATH "$ORIGIN"
+                      BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS LLVMOffload LIBRARY COMPONENT LLVMOffload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)

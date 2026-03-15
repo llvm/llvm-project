@@ -51,11 +51,7 @@ template <typename ValueTy> class StringMapEntryStorage;
 class Type;
 
 enum LLVMConstants : uint32_t {
-  // Current debug info version number.
-  DEBUG_METADATA_VERSION = 3,
-  // Debug info version number used for DWARF extensions for
-  // heterogeneous debugging.
-  DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF = 4
+  DEBUG_METADATA_VERSION = 3 // Current debug info version number.
 };
 
 /// Magic number in the value profile metadata showing a target has been

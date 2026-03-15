@@ -1,6 +1,7 @@
 ## Test that --offloading with a fatbin works correctly
 
 # REQUIRES: target={{x86_64-.*-linux.*}}
+# REQUIRES: amdgpu-registered-target
 # RUN: yaml2obj %s -o %t.elf
 # RUN: llvm-objdump --offloading %t.elf 
 # RUN: llvm-objdump -d %t.elf.0.hipv4-amdgcn-amd-amdhsa--gfx908 | FileCheck %s 

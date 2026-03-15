@@ -45,8 +45,7 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
 #if defined(RT_DEVICE_COMPILATION)
   std::printf("\nfatal Fortran runtime error");
   if (sourceFileName_) {
-    // commenting out temporarily to avoid ICE seen with amd-staging
-    // std::printf("(%s", sourceFileName_);
+    std::printf("(%s", sourceFileName_);
     if (sourceLine_) {
       std::printf(":%d", sourceLine_);
     }

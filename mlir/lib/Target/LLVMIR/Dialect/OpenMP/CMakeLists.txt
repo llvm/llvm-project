@@ -8,7 +8,6 @@ add_mlir_translation_library(MLIROpenMPToLLVMIRTranslation
   MLIRIR
   MLIRLLVMDialect
   MLIROpenMPDialect
-  MLIROpenMPUtils
   MLIRSupport
   MLIRTargetLLVMIRExport
   MLIRTransformUtils

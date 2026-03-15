@@ -2597,9 +2597,7 @@ def NotUseRealTrue16Insts : True16PredicateClass<"!Subtarget->useRealTrue16Insts
   AssemblerPredicate<(not (all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts))>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
                                               "!Subtarget->useRealTrue16Insts()">,
-  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-  // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
-  // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
 def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
                                                 "!Subtarget->d16PreservesUnusedBits()">;
@@ -2696,12 +2694,15 @@ def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximum
 
 def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
+<<<<<<< HEAD
 def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX1250B0))>;
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
  AssemblerPredicate<(any_of (not FeatureGFX1250Insts), (not FeatureGFX1250B0))>;
 
+=======
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 

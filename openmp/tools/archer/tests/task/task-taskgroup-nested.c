@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * task-taskgroup-nested.c -- Archer testcase
  */

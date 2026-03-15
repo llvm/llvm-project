@@ -1,7 +1,7 @@
 # Keep track if we have all dependencies.
 set(ENABLE_CHECK_TARGETS TRUE)
 
-if (TARGET "FileCheck")
+if (TARGET FileCheck)
   set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
 else()
   message(STATUS "Cannot find 'FileCheck'.")

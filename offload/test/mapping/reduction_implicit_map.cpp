@@ -2,10 +2,6 @@
 // https://github.com/llvm/llvm-project/issues/182119
 // UNSUPPORTED: intelgpu
 
-// amdgcn does not have printf definition
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
-
 #include <stdio.h>
 
 void sum(int *input, int size, int *output) {

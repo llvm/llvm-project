@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fsafe-buffer-usage-suggestions -verify %s
+
 namespace std {
   class type_info { };
 }

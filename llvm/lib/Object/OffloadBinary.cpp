@@ -16,24 +16,18 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/Timer.h"
 
 using namespace llvm;
 using namespace llvm::object;
 
 namespace {
 
-static llvm::TimerGroup
-    OffloadBundlerTimerGroup("Offload Bundler Timer Group",
-                             "Timer group for offload bundler");
 /// A MemoryBuffer that shares ownership of the underlying memory.
 /// This allows multiple OffloadBinary instances to share the same buffer.
 class SharedMemoryBuffer : public MemoryBuffer {

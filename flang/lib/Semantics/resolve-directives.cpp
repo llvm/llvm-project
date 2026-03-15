@@ -2649,15 +2649,15 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
   // as it overrides the implicit Firstprivatization of scalars OpenMP rule.
   if (!defaultMap.empty()) {
     if (llvm::is_contained(
-            defaultMap, parser::OmpVariableCategory::Value::Scalar) &&
-        defaultMap[parser::OmpVariableCategory::Value::Scalar] !=
+            defaultMap, parser::OmpVariableCategory::Value::All) &&
+        defaultMap[parser::OmpVariableCategory::Value::All] !=
             parser::OmpDefaultmapClause::ImplicitBehavior::Firstprivate) {
       return false;
     }
 
     if (llvm::is_contained(
-            defaultMap, parser::OmpVariableCategory::Value::All) &&
-        defaultMap[parser::OmpVariableCategory::Value::All] !=
+            defaultMap, parser::OmpVariableCategory::Value::Scalar) &&
+        defaultMap[parser::OmpVariableCategory::Value::Scalar] !=
             parser::OmpDefaultmapClause::ImplicitBehavior::Firstprivate) {
       return false;
     }
@@ -2870,8 +2870,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       dsa = {dirContext.defaultDSA};
       makeSymbol(dsa);
       PRINT_IMPLICIT_RULE("1) default");
-    } else if (!targetDir && parallelDir/*(!enableDelayedPrivatizationStaging && parallelDir) ||
-        (enableDelayedPrivatizationStaging && !targetDir && parallelDir)*/) {
+    } else if (parallelDir) {
       // 2) parallel -> shared
       dsa = {Symbol::Flag::OmpShared};
       makeSymbol(dsa);
@@ -2885,7 +2884,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       // 4) not mapped target variable  -> firstprivate
       //    - i.e. implicit, but meets OpenMP specification rules for
       //    firstprivate "promotion"
-      if (/*enableDelayedPrivatizationStaging && */
+      if (enableDelayedPrivatizationStaging &&
           IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
               dataSharingAttributeFlags, dataMappingAttributeFlags,
               dirContext.defaultMap)) {

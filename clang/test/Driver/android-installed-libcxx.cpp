@@ -1,6 +1,5 @@
 // Check that we only find libc++ in the installation directory when it contains
 // an Android-specific include directory.
-// XFAIL: *
 
 // RUN: mkdir -p %t1/bin
 // RUN: mkdir -p %t1/include/c++/v1

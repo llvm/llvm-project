@@ -99,9 +99,7 @@ typedef enum {
 typedef enum {
   HSA_SYSTEM_INFO_VERSION_MAJOR = 0,
   HSA_SYSTEM_INFO_VERSION_MINOR = 1,
-  HSA_AMD_SYSTEM_INFO_SVM_SUPPORTED = 0x201;
-}
-hsa_system_info_t;
+} hsa_system_info_t;
 
 typedef enum {
   HSA_AGENT_FEATURE_KERNEL_DISPATCH = 1,

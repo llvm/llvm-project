@@ -103,6 +103,7 @@ int main()
 // CHECK1: @.offload_sizes.1 = private unnamed_addr constant [2 x i64] [i64 8000, i64 0]
 // CHECK1: @.offload_maptypes.2 = private unnamed_addr constant [2 x i64] [i64 547, i64 288]
 //.
+<<<<<<< HEAD
 // CHECK2: @.offload_sizes = private unnamed_addr constant [6 x i64] [i64 4, i64 4, i64 4, i64 0, i64 4, i64 0]
 // CHECK2: @.offload_maptypes = private unnamed_addr constant [6 x i64] [i64 800, i64 547, i64 32768, i64 33, i64 32768, i64 288]
 // CHECK2: @.offload_sizes.1 = private unnamed_addr constant [6 x i64] [i64 4, i64 12, i64 4, i64 0, i64 4, i64 0]
@@ -111,6 +112,16 @@ int main()
 // CHECK2: @.offload_maptypes.4 = private unnamed_addr constant [3 x i64] [i64 800, i64 547, i64 288]
 // CHECK2: @.offload_sizes.5 = private unnamed_addr constant [3 x i64] [i64 4, i64 4, i64 0]
 // CHECK2: @.offload_maptypes.6 = private unnamed_addr constant [3 x i64] [i64 800, i64 547, i64 288]
+=======
+// CHECK2: @.offload_sizes = private unnamed_addr constant [5 x i64] [i64 4, i64 4, i64 4, i64 0, i64 4]
+// CHECK2: @.offload_maptypes = private unnamed_addr constant [5 x i64] [i64 800, i64 547, i64 16384, i64 33, i64 16384]
+// CHECK2: @.offload_sizes.1 = private unnamed_addr constant [5 x i64] [i64 4, i64 12, i64 4, i64 0, i64 4]
+// CHECK2: @.offload_maptypes.2 = private unnamed_addr constant [5 x i64] [i64 800, i64 547, i64 16384, i64 33, i64 16384]
+// CHECK2: @.offload_sizes.3 = private unnamed_addr constant [2 x i64] [i64 4, i64 8]
+// CHECK2: @.offload_maptypes.4 = private unnamed_addr constant [2 x i64] [i64 800, i64 547]
+// CHECK2: @.offload_sizes.5 = private unnamed_addr constant [2 x i64] [i64 4, i64 4]
+// CHECK2: @.offload_maptypes.6 = private unnamed_addr constant [2 x i64] [i64 800, i64 547]
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 //.
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l32
 // CHECK-SAME: (ptr noundef [[E:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {

@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp  -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! OpenMP Version 4.5
 ! Various checks with the ordered construct
 

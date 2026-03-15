@@ -24,6 +24,12 @@ TEST(DWARFLinker, PathTest) {
                 "/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.4.sdk"),
             DEVELOPER_DIR);
   EXPECT_EQ(guessDeveloperDir(DEVELOPER_DIR "/SDKs/MacOSX.sdk"), DEVELOPER_DIR);
+  EXPECT_TRUE(
+      isInToolchainDir("/Library/Developer/Toolchains/"
+                       "swift-DEVELOPMENT-SNAPSHOT-2024-05-15-a.xctoolchain/"
+                       "usr/lib/swift/macosx/_StringProcessing.swiftmodule/"
+                       "arm64-apple-macos.private.swiftinterface"));
+  EXPECT_FALSE(isInToolchainDir("/Foo/not-an.xctoolchain/Bar/Baz"));
 }
 
 } // anonymous namespace

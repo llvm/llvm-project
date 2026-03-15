@@ -1,4 +1,3 @@
-#include "DLSymService.h"
 #include <Python.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -8,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern void *ompd_library;
 
 struct _ompd_aspace_cont {
   int id;
@@ -810,7 +810,7 @@ PyObject *test_ompd_initialize(PyObject *self, PyObject *noargs) {
 
   printf("Test: With Correct Arguments.\n");
   ompd_rc_t (*my_ompd_init)(ompd_word_t version, ompd_callbacks_t *) =
-      get_dlsym_for_name("ompd_initialize");
+      dlsym(ompd_library, "ompd_initialize");
   rc = my_ompd_init(version, &table);
   if (rc != ompd_rc_ok) {
     printf("Failed, with return code = %d\n", rc);

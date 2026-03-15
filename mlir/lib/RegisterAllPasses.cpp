@@ -79,7 +79,6 @@ void mlir::registerAllPasses() {
   LLVM::registerTargetLLVMIRTransformsPasses();
   math::registerMathPasses();
   memref::registerMemRefPasses();
-  omp::registerOpenMPPasses();
   shard::registerShardPasses();
   ml_program::registerMLProgramPasses();
   omp::registerOpenMPPasses();

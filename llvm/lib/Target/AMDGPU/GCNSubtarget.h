@@ -974,6 +974,7 @@ public:
     return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
+<<<<<<< HEAD
   bool hasGFX1250A0() const {
     return getGeneration() == GFX12 && HasGFX1250Insts && !HasGFX1250B0;
   }
@@ -983,6 +984,8 @@ public:
   // payload size.
   bool hasUnalignedDS2Bug() const { return hasGFX1250A0(); }
 
+=======
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   /// \returns true if the subtarget requires a wait for xcnt before VMEM
   /// accesses that must never be repeated in the event of a page fault/re-try.
   /// Atomic stores/rmw and all volatile accesses fall under this criteria.

@@ -83,6 +83,11 @@ void threads_and_teams() {
 // CHECK:      "omp_target_num_teams"="1"
 // CHECK:      "omp_target_num_teams"="22"
 // CHECK:      "omp_target_num_teams"="33"
+// CHECK:      "omp_target_num_teams"="44"
 
 // CHECK:      "omp_target_thread_limit"="22"
 
+// CHECK:      "omp_target_thread_limit"="11"
+
+// CHECK:      "omp_target_num_teams"="33"
+// CHECK-SAME: "omp_target_thread_limit"="22"

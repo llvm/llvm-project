@@ -18,7 +18,6 @@
 #include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
-#include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
@@ -413,10 +412,13 @@ static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
   return s[-1] > 127 && s[1] > 127;
 }
 
-ErrorGenericBase::ErrorGenericBase(u32 tid, uptr addr, bool is_write_,
-                                   uptr access_size_)
+ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
+                           bool is_write_, uptr access_size_)
     : ErrorBase(tid),
       addr_description(addr, access_size_, /*shouldLockThreadRegistry=*/false),
+      pc(pc_),
+      bp(bp_),
+      sp(sp_),
       access_size(access_size_),
       is_write(is_write_),
       shadow_val(0) {
@@ -510,13 +512,6 @@ ErrorGenericBase::ErrorGenericBase(u32 tid, uptr addr, bool is_write_,
     }
   }
 }
-
-ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
-                           bool is_write_, uptr access_size_)
-    : ErrorGenericBase(tid, addr, is_write_, access_size_),
-      pc(pc_),
-      bp(bp_),
-      sp(sp_) {}
 
 static void PrintContainerOverflowHint() {
   Printf(
@@ -677,6 +672,7 @@ void ErrorGeneric::Print() {
   CheckPoisonRecords(addr);
 }
 
+<<<<<<< HEAD
 ErrorNonSelfGeneric::ErrorNonSelfGeneric(uptr *callstack_, u32 n_callstack,
                                          uptr *addrs, u32 n_addrs,
                                          u64 *threadids, u32 n_threads,
@@ -853,4 +849,6 @@ void ErrorNonSelfAMDGPU::Print() {
   // print shadow memory region for single address
   PrintShadowMemoryForAddress(device_address[0]);
 }
+=======
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 }  // namespace __asan

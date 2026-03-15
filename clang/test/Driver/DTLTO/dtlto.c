@@ -1,5 +1,4 @@
 // REQUIRES: lld
-// REQUIRES: npsdb-stability
 
 /// Check DTLTO options are forwarded to the linker.
 

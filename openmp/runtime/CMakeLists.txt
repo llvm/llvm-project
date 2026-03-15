@@ -148,7 +148,7 @@ endif()
 # Turning this to FALSE aids parallel builds to not interfere with each other.
 # Currently, the testsuite module expects the just built OpenMP library to be located inside the exports/
 # directory.  TODO: have testsuite run under llvm-lit directly.  We can then get rid of copying to exports/
-set(LIBOMP_COPY_EXPORTS TRUE CACHE STRING
+set(LIBOMP_COPY_EXPORTS FALSE CACHE STRING
   "Should exports be copied into source exports/ directory?")
 
 # HWLOC-support
@@ -349,7 +349,7 @@ if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
 endif()
 set(LIBOMP_OMPT_SUPPORT ${OMPT_DEFAULT} CACHE BOOL
   "OMPT-support?")
-set(LIBOMP_OMPD_SUPPORT FALSE CACHE BOOL "OMPD-support?")
+
 set(LIBOMP_OMPT_DEBUG FALSE CACHE BOOL
   "Trace OMPT initialization?")
 set(LIBOMP_OMPT_OPTIONAL TRUE CACHE BOOL
@@ -378,15 +378,8 @@ endif()
 set(LIBOMP_OMPX_TASKGRAPH FALSE CACHE BOOL "OMPX-taskgraph (task record & replay)?")
 
 # Error check hwloc support after config-ix has run
-if(${LIBOMP_USE_HWLOC})
-  set(CMAKE_REQUIRED_INCLUDES ${LIBOMP_HWLOC_INSTALL_DIR}/include)
-  check_include_file(hwloc.h LIBOMP_HAVE_HWLOC_H)
-  set(CMAKE_REQUIRED_INCLUDES)
-  if(NOT LIBOMP_HAVE_HWLOC_H)
-    libomp_error_say("Hwloc requested but not available")
-  else()
-    include_directories(${LIBOMP_HWLOC_INSTALL_DIR}/include)
-  endif()
+if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
+  libomp_error_say("Hwloc requested but not available")
 endif()
 
 # Hierarchical scheduling support
@@ -428,7 +421,7 @@ add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(unittests)
 
-# make these variables available for tools
+# make these variables available for tools:
 set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
 set(LIBOMP_INCLUDE_DIR ${LIBOMP_INCLUDE_DIR} PARENT_SCOPE)
 set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)

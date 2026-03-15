@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * task-barrier.c -- Archer testcase
  */

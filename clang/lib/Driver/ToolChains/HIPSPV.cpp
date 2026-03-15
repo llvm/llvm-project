@@ -68,9 +68,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   StringRef Target =
       "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
-                                    Target, /*IsBitCodeSDL=*/true,
-                                    /*PostClangLink=*/false);
-
+                                    Target, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
 

@@ -125,9 +125,8 @@ bool ParseFrameDescription(const char *frame_descr,
 // immediately after printing error report.
 class ScopedInErrorReport {
  public:
-  explicit ScopedInErrorReport(bool fatal = false, bool nonself = false)
-      : halt_on_error_(fatal || flags()->halt_on_error),
-        nonself_report_(nonself) {
+  explicit ScopedInErrorReport(bool fatal = false)
+      : halt_on_error_(fatal || flags()->halt_on_error) {
     // Deadlock Prevention Between ASan and LSan
     //
     // Background:
@@ -172,10 +171,8 @@ class ScopedInErrorReport {
     ASAN_ON_ERROR();
     if (current_error_.IsValid()) current_error_.Print();
 
-    if (!nonself_report_)
-      // Make sure the current thread is announced.
-      DescribeThread(GetCurrentThread());
-
+    // Make sure the current thread is announced.
+    DescribeThread(GetCurrentThread());
     // We may want to grab this lock again when printing stats.
     asanThreadRegistry().Unlock();
     // Print memory stats.
@@ -241,9 +238,6 @@ class ScopedInErrorReport {
   // with the debugger and point it to an error description.
   static ErrorDescription current_error_;
   bool halt_on_error_;
-  // used to control logging specific information when non-self entity is
-  // reporting
-  bool nonself_report_;
 };
 
 ErrorDescription ScopedInErrorReport::current_error_(LINKER_INITIALIZED);
@@ -539,34 +533,6 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
   ErrorGeneric error(GetCurrentTidOrInvalid(), pc, bp, sp, addr, is_write,
                      access_size);
   in_report.ReportError(error);
-}
-
-void ReportNonselfError(uptr *nonself_callstack, u32 n_nonself_callstack,
-                        uptr *nonself_addrs, u32 n_nonself_addrs,
-                        u64 *nonself_tids, u32 n_nonself_tids, bool is_write,
-                        u32 access_size, bool is_abort,
-                        const char *nonself_name, s64 nonself_vma_adjust,
-                        int nonself_fd, u64 nonself_file_extent_size,
-                        u64 nonself_file_extent_start) {
-  ScopedInErrorReport in_report(is_abort, true);
-  // delegate to amdgpu error handler
-  if (!internal_strcmp(ErrorNonSelfAMDGPU::key, nonself_name)) {
-    ErrorNonSelfAMDGPU amdgpu_wavefront_error(
-        nonself_callstack, n_nonself_callstack, nonself_addrs, n_nonself_addrs,
-        nonself_tids, n_nonself_tids, (bool)is_write, access_size, nonself_fd,
-        nonself_vma_adjust, nonself_file_extent_start,
-        nonself_file_extent_size);
-    in_report.ReportError(amdgpu_wavefront_error);
-  }
-  // default fallback
-  else {
-    ErrorNonSelfGeneric error_val(
-        nonself_callstack, n_nonself_callstack, nonself_addrs, n_nonself_addrs,
-        nonself_tids, n_nonself_tids, (bool)is_write, access_size, nonself_fd,
-        nonself_vma_adjust, nonself_file_extent_start,
-        nonself_file_extent_size);
-    in_report.ReportError(error_val);
-  }
 }
 
 }  // namespace __asan

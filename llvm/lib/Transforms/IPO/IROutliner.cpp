@@ -295,7 +295,7 @@ void OutlinableRegion::splitCandidate() {
 
     if (NumPredsOutsideRegion > 1)
       return;
-
+    
     It++;
   }
 
@@ -303,7 +303,7 @@ void OutlinableRegion::splitCandidate() {
   // the BasicBlock, we ignore this region for now.
   if (isa<PHINode>(StartInst) && StartInst != &*StartBB->begin())
     return;
-
+  
   // If the region ends with a PHINode, but does not contain all of the phi node
   // instructions of the region, we ignore it for now.
   if (isa<PHINode>(BackInst) &&
@@ -1561,7 +1561,7 @@ static Value *
 getPassedArgumentAndAdjustArgumentLocation(const Argument *A,
                                            const OutlinableRegion &Region) {
   unsigned ArgNum = A->getArgNo();
-
+  
   // If it is a constant, we can look at our mapping from when we created
   // the outputs to figure out what the constant value is.
   if (auto It = Region.AggArgToConstant.find(ArgNum);
@@ -1633,8 +1633,8 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
                        const DenseMap<Value *, Value *> &OutputMappings,
                        DenseSet<PHINode *> &UsedPHIs) {
   OutlinableGroup &Group = *Region.Parent;
-
-
+  
+  
   // A list of the canonical numbering assigned to each incoming value, paired
   // with the incoming block for the PHINode passed into this function.
   SmallVector<std::pair<unsigned, BasicBlock *>> PNCanonNums;
@@ -1726,7 +1726,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
       NewPN->setIncomingValue(Idx, Val);
       continue;
     }
-
+    
     // Find the corresponding value in the overall function.
     IncomingVal = findOutputMapping(OutputMappings, IncomingVal);
     Value *Val = Region.findCorrespondingValueIn(*FirstRegion, IncomingVal);
@@ -1978,7 +1978,7 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
   for (std::pair<Value *, BasicBlock *> &VtoBB : BlocksToPrune) {
     RetValueForBB = VtoBB.first;
     NewBB = VtoBB.second;
-
+  
     // If there are no instructions, we remove it from the module, and also
     // mark the value for removal from the return value to output block mapping.
     if (NewBB->size() == 0) {
@@ -1986,7 +1986,7 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
       ToRemove.push_back(RetValueForBB);
       continue;
     }
-
+    
     // Mark that we could not remove all the blocks since they were not all
     // empty.
     AllRemoved = false;
@@ -1999,7 +1999,7 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
   // Mark the region as having the no output scheme.
   if (AllRemoved)
     Region.OutputBlockNum = -1;
-
+  
   return AllRemoved;
 }
 
@@ -2075,7 +2075,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
                                        Function *ParentFunc, Twine BaseName) {
   unsigned Idx = 0;
   std::vector<Value *> SortedKeys;
-
+  
   getSortedConstantKeys(SortedKeys, OldMap);
 
   for (Value *RetVal : SortedKeys) {
@@ -2790,7 +2790,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->Candidate->getBasicBlocks(BlocksInRegion, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
-                        false, nullptr, {}, "outlined");
+                        false, nullptr, "outlined");
       findAddInputsOutputs(M, *OS, NotSame);
       if (!OS->IgnoreRegion)
         OutlinedRegions.push_back(OS);
@@ -2901,7 +2901,7 @@ unsigned IROutliner::doOutline(Module &M) {
       OS->Candidate->getBasicBlocks(BlocksInRegion, BE);
       OS->CE = new (ExtractorAllocator.Allocate())
           CodeExtractor(BE, nullptr, false, nullptr, nullptr, nullptr, false,
-                        false, nullptr, {}, "outlined");
+                        false, nullptr, "outlined");
       bool FunctionOutlined = extractSection(*OS);
       if (FunctionOutlined) {
         unsigned StartIdx = OS->Candidate->getStartIdx();

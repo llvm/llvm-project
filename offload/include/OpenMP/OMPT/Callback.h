@@ -16,11 +16,33 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptCommonDefs.h"
+#include "omp-tools.h"
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
+
+#define FOREACH_OMPT_TARGET_CALLBACK(macro)                                    \
+  FOREACH_OMPT_DEVICE_EVENT(macro)                                             \
+  FOREACH_OMPT_NOEMI_EVENT(macro)                                              \
+  FOREACH_OMPT_EMI_EVENT(macro)
+
+#define performIfOmptInitialized(stmt)                                         \
+  do {                                                                         \
+    if (llvm::omp::target::ompt::Initialized) {                                \
+      stmt;                                                                    \
+    }                                                                          \
+  } while (0)
+
+#define performOmptCallback(CallbackName, ...)                                 \
+  do {                                                                         \
+    if (ompt_callback_##CallbackName##_fn)                                     \
+      ompt_callback_##CallbackName##_fn(__VA_ARGS__);                          \
+  } while (0)
+
+/// Function type def used for maintaining unique target region, target
+/// operations ids
+typedef uint64_t (*IdInterfaceTy)();
 
 namespace llvm {
 namespace omp {
@@ -76,6 +98,8 @@ extern bool Initialized;
 
 #pragma pop_macro("DEBUG_PREFIX")
 
+#else
+#define performIfOmptInitialized(stmt)
 #endif // OMPT_SUPPORT
 
 #endif // OFFLOAD_INCLUDE_OPENMP_OMPT_CALLBACK_H

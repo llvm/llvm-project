@@ -1,5 +1,4 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
 
 llvm.func @cancel_parallel() {
   omp.parallel {
@@ -139,7 +138,7 @@ llvm.func @cancel_sections_if(%cond : i1) {
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp.section.region:                               ; preds = %[[VAL_24]]
 // CHECK:         br i1 %[[VAL_26:.*]], label %[[VAL_27:.*]], label %[[VAL_28:.*]]
-// CHECK:       8:                                                ; preds = %[[VAL_25]]
+// CHECK:       9:                                                ; preds = %[[VAL_25]]
 // CHECK:         %[[VAL_29:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         %[[VAL_30:.*]] = call i32 @__kmpc_cancel(ptr @1, i32 %[[VAL_29]], i32 3)
 // CHECK:         %[[VAL_31:.*]] = icmp eq i32 %[[VAL_30]], 0

@@ -25,14 +25,12 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-lower-sgpr-spills"
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
-using MIVector  = SmallVector<MachineInstr*>;
 
 namespace {
 
@@ -66,10 +64,6 @@ public:
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
       DenseMap<Register, MachineBasicBlock::iterator> &LaneVGPRDomInstr);
   void determineRegsForWWMAllocation(MachineFunction &MF, BitVector &RegMask);
-  void updateDbgValueInst(MachineInstr &MI, const BitVector &SpillFIs);
-  void updateDbgValueInsts(MIVector &Insts, const BitVector &SpillFIs);
-  void updateDbgValueArg(MachineInstr &MI, uint32_t FIOpndIdx,
-                         const SIRegisterInfo::SpilledReg &vgpr);
 };
 
 class SILowerSGPRSpillsLegacy : public MachineFunctionPass {
@@ -106,26 +100,62 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
+static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
+                          const TargetRegisterInfo *TRI) {
+  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
+    if (MBB.isLiveIn(*R)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Insert spill code for the callee-saved registers used in the function.
-static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
-                           ArrayRef<CalleeSavedInfo> CSI,
-                           SlotIndexes *Indexes,
+static void insertCSRSaves(MachineBasicBlock &SaveBlock,
+                           ArrayRef<CalleeSavedInfo> CSI, SlotIndexes *Indexes,
                            LiveIntervals *LIS) {
-  const TargetFrameLowering *TFI = ST.getFrameLowering();
+  MachineFunction &MF = *SaveBlock.getParent();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *RI = ST.getRegisterInfo();
+
   MachineBasicBlock::iterator I = SaveBlock.begin();
-  MachineInstrSpan MIS(I, &SaveBlock);
-  bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI);
-  assert(Success && "spillCalleeSavedRegisters should always succeed");
-  (void)Success;
+  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, RI)) {
+    for (const CalleeSavedInfo &CS : CSI) {
+      // Insert the spill to the stack frame.
+      MCRegister Reg = CS.getReg();
 
-  // TFI doesn't update Indexes and LIS, so we have to do it separately.
-  if (Indexes)
-    Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+      MachineInstrSpan MIS(I, &SaveBlock);
+      const TargetRegisterClass *RC = RI->getMinimalPhysRegClass(
+          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
 
-  if (LIS)
-    for (const CalleeSavedInfo &CS : CSI)
-      LIS->removeAllRegUnitsForPhysReg(CS.getReg());
+      // If this value was already livein, we probably have a direct use of the
+      // incoming register value, so don't kill at the spill point. This happens
+      // since we pass some special inputs (workgroup IDs) in the callee saved
+      // range.
+      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, RI);
+      TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
+                              RC, Register());
+
+      if (Indexes) {
+        assert(std::distance(MIS.begin(), I) == 1);
+        MachineInstr &Inst = *std::prev(I);
+        Indexes->insertMachineInstrInMaps(Inst);
+      }
+
+      if (LIS)
+        LIS->removeAllRegUnitsForPhysReg(Reg);
+    }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
+  }
 }
 
 /// Insert restore code for the callee-saved registers used in the function.
@@ -237,19 +267,11 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
     std::vector<CalleeSavedInfo> CSI;
     const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
-    Register RetAddrReg = TRI->getReturnAddressReg(MF);
-    bool SpillRetAddrReg = false;
 
     for (unsigned I = 0; CSRegs[I]; ++I) {
       MCRegister Reg = CSRegs[I];
 
       if (SavedRegs.test(Reg)) {
-        if (Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub0) ||
-            Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub1)) {
-          SpillRetAddrReg = true;
-          continue;
-        }
-
         const TargetRegisterClass *RC =
           TRI->getMinimalPhysRegClass(Reg, MVT::i32);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
@@ -260,21 +282,9 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
       }
     }
 
-    // Return address uses a register pair. Add the super register to the
-    // CSI list so that it's easier to identify the entire spill and CFI
-    // can be emitted appropriately.
-    if (SpillRetAddrReg) {
-      const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(RetAddrReg, MVT::i64);
-      int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
-                                         TRI->getSpillAlign(*RC), true);
-      CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
-      CalleeSavedFIs.push_back(JunkFI);
-    }
-
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks)
-        insertCSRSaves(ST, *SaveBlock, CSI, Indexes, LIS);
+        insertCSRSaves(*SaveBlock, CSI, Indexes, LIS);
 
       // Add live ins to save blocks.
       assert(SaveBlocks.size() == 1 && "shrink wrapping not fully implemented");
@@ -297,7 +307,7 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
   // depth first order doesn't really help since the machine function can be in
   // the unstructured control flow post-SSA. For each virtual register, hence
   // finding the common dominator to get either the dominating spill or a block
-  // dominating all spills. Is there a better way to handle it?
+  // dominating all spills.
   SIMachineFunctionInfo *FuncInfo =
       MBB->getParent()->getInfo<SIMachineFunctionInfo>();
   ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills =
@@ -348,8 +358,9 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   BitVector NonWwmAllocMask(TRI->getNumRegs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  // FIXME: MaxNumVGPRsForWwmAllocation should be tuned in to have a balanced
-  // allocation between WWM values and other vector register operands.
+  // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
+  // to have a balanced allocation between WWM values and per-thread vector
+  // register operands.
   unsigned NumRegs = MaxNumVGPRsForWwmAllocation;
   NumRegs =
       std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
@@ -383,128 +394,6 @@ bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   return SILowerSGPRSpills(LIS, Indexes, MDT).run(MF);
-}
-
-// Replace an FI argument in DBG_VALUE or DBG_VALUE_LIST
-// with corresponding VGPR lane. The argument if identified by FIOpndIdx.
-void SILowerSGPRSpills::updateDbgValueArg(MachineInstr &MI,
-                                          uint32_t FIOpndIdx,
-                                          const SIRegisterInfo::SpilledReg &vgpr) {
-  const DIExpression *Expr = MI.getDebugExpression();
-  DIExprBuilder EBuilder(*Expr);
-  assert(Expr->holdsNewElements());
-
-  // Find corresponding DIOpArg in the DIExpression.
-  for (auto &&I = EBuilder.begin(); I != EBuilder.end(); ) {
-    if (auto *Arg = std::get_if<DIOp::Arg>(&*I++)) {
-      // We expect DIOpArg be followed by DIOpDeref
-      if (Arg->getIndex() == FIOpndIdx &&
-          I != EBuilder.end() && std::get_if<DIOp::Deref>(&*I)) {
-        // Change the type of DIOpArg and replace the following DIOpDeref
-        // with DIOpConstant + DIOpByteOfset.
-        IntegerType *TypeInt8  = IntegerType::get(Expr->getContext(), 8);
-        IntegerType *TypeInt32 = IntegerType::get(Expr->getContext(), 32);
-        Arg->setResultType(TypeInt32);
-        ConstantData *C = ConstantInt::get(TypeInt8, vgpr.Lane * 8, true);
-        EBuilder.insert(EBuilder.erase(I),
-                        {DIOp::Constant(C), DIOp::ByteOffset(TypeInt32)});
-        // Replace stack (frame index) argument of MI with VGPR
-        if (MI.isDebugValueList())
-          FIOpndIdx += 2;
-        MI.getOperand(FIOpndIdx).ChangeToRegister(vgpr.VGPR, false);
-        MI.getDebugExpressionOp().setMetadata(EBuilder.intoExpression());
-      }
-      else {
-        MI.eraseFromParent();
-      }
-    }
-  }
-}
-
-// Replace frame index in a DBG_VALUE or DBG_VALUE_LIST instruction with VGPR lane.
-void SILowerSGPRSpills::updateDbgValueInst(MachineInstr &MI,
-                                           const BitVector &SpillFIs) {
-  assert(MI.isDebugValue());
-  const MachineFunction *MF = MI.getParent()->getParent();
-  auto *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
-  const auto &FrInfo = MF->getFrameInfo();
-  ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills;
-
-  auto WasOpndSpilled = [&](const MachineOperand &Opnd, bool IsValueList) {
-    int FrObjIdx = (IsValueList ? Opnd.getIndex() : 0);
-    return (Opnd.isFI() && !FrInfo.isFixedObjectIndex(FrObjIdx) &&
-            SpillFIs[Opnd.getIndex()]);
-  };
-  
-  if (MI.getDebugExpression()->holdsOldElements()) {
-    // For old-style DIExpressions, just replace the frame index
-    // argument with empty register.
-    // FIXME: We should instead, update it with the
-    // correct register value. It should be worked out later.
-    auto &FIOpnd = MI.getOperand(MI.isDebugValueList() ? 2 : 0);
-    if (WasOpndSpilled(FIOpnd, true)) {
-      FIOpnd.ChangeToRegister(Register(), false /*isDef*/);
-    }
-  } else if (MI.isDebugValueList()) {
-    // Walk over DIOpArg nodes in the DIExpression and check
-    // if corresponding DBG_VALUE_LIST arguments have been spilled to VGPR lanes.
-    for (DIOp::Variant Elem : *MI.getDebugExpression()->getNewElementsRef()) {
-      if (auto *Arg = std::get_if<DIOp::Arg>(&Elem)) {
-        auto &FIOpnd = MI.getOperand(Arg->getIndex() + 2);
-        if (WasOpndSpilled(FIOpnd, true)) {
-          VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIOpnd.getIndex());
-          updateDbgValueArg(MI, Arg->getIndex(), VGPRSpills[0]);
-        }
-      }
-    }
-  } else {
-    assert(MI.isNonListDebugValue());
-    // Check if the 1st argument of DBG_VALUE is a frame index (FI)
-    // which have been spilled to a VGPR lane.
-    auto &FIOpnd = MI.getOperand(0);
-    if (WasOpndSpilled(FIOpnd, false)) {
-      VGPRSpills = FuncInfo->getSGPRSpillToVirtualVGPRLanes(FIOpnd.getIndex());
-      updateDbgValueArg(MI, 0, VGPRSpills[0]);
-    }
-  }
-}
-
-// Update DBG_VALUE and DBG_VALUE_LIST instructions so that they correctly
-// reflect performed stack to VGPR spills.
-// Examples:
-//  DBG_VALUE  %stack.8, 0, !"next", !DIExpression(DIOpArg(0, ptr addrspace(5)),
-//                                                 DIOpDeref(i32))
-//    --->
-//  DBG_VALUE  %249 : vgpr_32, 0, !"next", !DIExpression(DIOpArg(0, i32),
-//                                                       DIOpConstant(i8 40),
-//                                                       DIOpByteOffset(i32))
-//
-//
-//  DBG_VALUE_LIST !"next", !DIExpression(DIOpArg(0, ptr addrspace(5)),
-//                                        DIOpDeref(i32),
-//                                        DIOpArg(1, ptr addrspace(5)),
-//                                        DIOpDeref(i32),
-//                                        DIOpAdd()),
-//                 %stack.9, %stack.5
-//    --->
-//  DBG_VALUE_LIST !"next", !DIExpression(DIOpArg(0, i32),
-//                                        DIOpConstant(i8 40),
-//                                        DIOpByteOffset(i32),
-//                                        DIOpArg(1, ptr addrspace(5)),
-//                                        DIOpDeref(i32),
-//                                        DIOpAdd()),
-//                 %14 : vgpr_32, %stack.5
-//
-void SILowerSGPRSpills::updateDbgValueInsts(MIVector &Insts,
-                                            const BitVector &SpillFIs) {
-  for (MachineInstr *MI : Insts) {
-    if (MI->isDebugValue() &&
-        std::any_of(MI->operands_begin(), MI->operands_end(),
-                    [](auto &Opnd) { return Opnd.isFI(); })) {
-      updateDbgValueInst(*MI, SpillFIs);
-    }
-  }
-  Insts.clear();
 }
 
 bool SILowerSGPRSpills::run(MachineFunction &MF) {
@@ -550,15 +439,8 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     // To track the IMPLICIT_DEF insertion point for the lane vgprs.
     DenseMap<Register, MachineBasicBlock::iterator> LaneVGPRDomInstr;
 
-    // To gather DBG_VALUE and DBG_VALUE_LIST instructions.
-    MIVector DbgValInsts;
-
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
-
-        if (MI.isDebugValue())
-          DbgValInsts.push_back(&MI);
-
         if (!TII->isSGPRSpill(MI))
           continue;
 
@@ -637,18 +519,36 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       BitVector NonWwmRegMask(WwmRegMask);
       NonWwmRegMask.flip().clearBitsNotInMask(TRI->getAllVGPRRegMask());
 
-      // The complement set will be the registers for non-wwm vgpr allocation.
+      // The complement set will be the registers for non-wwm (per-thread) vgpr
+      // allocation.
       FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
     }
 
-    updateDbgValueInsts(DbgValInsts, SpillFIs);
+    for (MachineBasicBlock &MBB : MF) {
+      // FIXME: The dead frame indices are replaced with a null register from
+      // the debug value instructions. We should instead, update it with the
+      // correct register value. But not sure the register value alone is
+      // adequate to lower the DIExpression. It should be worked out later.
+      for (MachineInstr &MI : MBB) {
+        if (MI.isDebugValue()) {
+          uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
+          if (MI.getOperand(StackOperandIdx).isFI() &&
+              !MFI.isFixedObjectIndex(
+                  MI.getOperand(StackOperandIdx).getIndex()) &&
+              SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
+            MI.getOperand(StackOperandIdx)
+                .ChangeToRegister(Register(), false /*isDef*/);
+          }
+        }
+      }
+    }
 
     // All those frame indices which are dead by now should be removed from the
     // function frame. Otherwise, there is a side effect such as re-mapping of
     // free frame index ids by the later pass(es) like "stack slot coloring"
     // which in turn could mess-up with the book keeping of "frame index to VGPR
     // lane".
-    FuncInfo->removeDeadFrameIndices(MF, /*ResetSGPRSpillStackIDs*/ false);
+    FuncInfo->removeDeadFrameIndices(MFI, /*ResetSGPRSpillStackIDs*/ false);
 
     MadeChange = true;
   }

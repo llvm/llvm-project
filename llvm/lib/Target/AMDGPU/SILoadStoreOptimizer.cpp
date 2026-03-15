@@ -236,7 +236,7 @@ private:
   void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore,
                       const DebugLoc &DL, AMDGPU::OpName OpName,
-                      Register DestReg, MachineInstr *NewMI) const;
+                      Register DestReg) const;
   Register copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                            MachineBasicBlock::iterator InsertBefore,
                            const DebugLoc &DL, AMDGPU::OpName OpName) const;
@@ -1320,13 +1320,8 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   // correct for the new instruction.  This should return true, because
   // this function should only be called on CombineInfo objects that
   // have already been confirmed to be mergeable.
-  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE) {
-    if (STM->hasUnalignedDS2Bug() &&
-        (CI.I->memoperands_empty() ||
-         (*CI.I->memoperands_begin())->getAlign().value() < CI.Width * 4))
-      return nullptr;
+  if (CI.InstClass == DS_READ || CI.InstClass == DS_WRITE)
     offsetsCanBeCombined(CI, *STM, Paired, true);
-  }
 
   if (CI.InstClass == DS_WRITE) {
     // Both data operands must be AGPR or VGPR, so the data registers needs to
@@ -1377,9 +1372,8 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
 void SILoadStoreOptimizer::copyToDestRegs(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore, const DebugLoc &DL,
-    AMDGPU::OpName OpName, Register DestReg, MachineInstr *NewMI) const {
+    AMDGPU::OpName OpName, Register DestReg) const {
   MachineBasicBlock *MBB = CI.I->getParent();
-  MachineFunction *MF = MBB->getParent();
 
   auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
@@ -1400,17 +1394,6 @@ void SILoadStoreOptimizer::copyToDestRegs(
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest1)
       .addReg(DestReg, RegState::Kill, SubRegIdx1);
-
-  if (unsigned DINum = CI.I->peekDebugInstrNum()) {
-    unsigned NewDINum = NewMI->getDebugInstrNum();
-    MF->makeDebugValueSubstitution(std::make_pair(DINum, 0),
-                                   std::make_pair(NewDINum, 0), SubRegIdx0);
-  }
-  if (unsigned DINum = Paired.I->peekDebugInstrNum()) {
-    unsigned NewDINum = NewMI->getDebugInstrNum();
-    MF->makeDebugValueSubstitution(std::make_pair(DINum, 0),
-                                   std::make_pair(NewDINum, 0), SubRegIdx1);
-  }
 }
 
 // Return a register for the source of the merged store after copying the
@@ -1505,8 +1488,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
           .addImm(0)                                 // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
 
-  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg,
-                 Read2);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1632,7 +1614,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
 
   MachineInstr *New = MIB.addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg, New);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1666,7 +1648,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
   New.addImm(MergedOffset);
   New.addImm(CI.CPol).addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::sdst, DestReg, New);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::sdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1709,7 +1691,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg, New);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1762,7 +1744,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(0)            // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg, New);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1841,7 +1823,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
        .addImm(CI.CPol)
        .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg, New);
+  copyToDestRegs(CI, Paired, InsertBefore, DL, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();

@@ -1,11 +1,5 @@
 // clang-format off
 // RUN: %libomptarget-compilexx-generic -O3 && %libomptarget-run-generic
-
-// Hangs
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
-
 // RUN: %libomptarget-compilexx-generic -O3 -ffast-math && %libomptarget-run-generic
 // RUN: %libomptarget-compileoptxx-generic -O3 && %libomptarget-run-generic
 // RUN: %libomptarget-compileoptxx-generic -O3 -ffast-math && %libomptarget-run-generic

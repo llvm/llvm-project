@@ -24,7 +24,7 @@
 // O3: -O3
 // OFast: -Ofast
 
-// DefaultTFast-NOT: {{"-fopenmp-target-fast"}}
+// DefaultTFast-NOT: {{"-f(no-)?openmp-target-fast"}}
 
 // TState: "-fopenmp-assume-no-thread-state"
 // TState-NOT: "-fno-openmp-assume-no-thread-state"

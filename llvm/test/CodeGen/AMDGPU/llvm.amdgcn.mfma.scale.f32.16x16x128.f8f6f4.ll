@@ -881,9 +881,6 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GISEL-NEXT:    scratch_store_dword off, v24, s32 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
-; GISEL-NEXT:    v_writelane_b32 v24, s30, 0
-; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_writelane_b32 v24, s31, 1
 ; GISEL-NEXT:    s_mov_b32 s12, s0
 ; GISEL-NEXT:    s_mov_b32 s13, s1
 ; GISEL-NEXT:    s_mov_b32 s14, s2
@@ -892,6 +889,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[18:19]
+; GISEL-NEXT:    v_writelane_b32 v24, s30, 0
+; GISEL-NEXT:    v_writelane_b32 v24, s31, 1
 ; GISEL-NEXT:    v_readfirstlane_b32 s30, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s31, v1
 ; GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[20:21]
@@ -900,8 +899,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[24:25]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[26:27]
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[30:31]
-; GISEL-NEXT:    v_readlane_b32 s30, v24, 0
 ; GISEL-NEXT:    v_readlane_b32 s31, v24, 1
+; GISEL-NEXT:    v_readlane_b32 s30, v24, 0
 ; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[4:11], v[12:19], v[20:23], v2, v3 op_sel_hi:[0,0,0]
 ; GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GISEL-NEXT:    scratch_load_dword v24, off, s32 ; 4-byte Folded Reload

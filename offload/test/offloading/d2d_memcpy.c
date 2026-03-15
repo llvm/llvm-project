@@ -6,8 +6,6 @@
 // RUN: %fcheck-generic -allow-empty
 // XFAIL: intelgpu
 
-// UNSUPPORTED: amdgcn-amd-amdhsa
-
 #include <assert.h>
 #include <omp.h>
 #include <stdio.h>

@@ -376,9 +376,6 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
-
-      // For replacing registers used in the CFI instructions.
-      MF.replaceFrameInstRegister(Reg, NewReg);
     }
 
     // The generic `determineCalleeSaves` might have set the old register if it
@@ -559,8 +556,7 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 }
 
 bool SIMachineFunctionInfo::removeDeadFrameIndices(
-    MachineFunction &MF, bool ResetSGPRSpillStackIDs) {
-  MachineFrameInfo &MFI = MF.getFrameInfo();
+    MachineFrameInfo &MFI, bool ResetSGPRSpillStackIDs) {
   // Remove dead frame indices from function frame, however keep FP & BP since
   // spills for them haven't been inserted yet. And also make sure to remove the
   // frame indices from `SGPRSpillsToVirtualVGPRLanes` data structure,

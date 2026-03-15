@@ -191,11 +191,14 @@
 # libclang/Python bindings
 /clang/bindings/python @DeinAlptraum
 
+<<<<<<< HEAD
 # AMD-specific projects.
 /amd/comgr/ @lamb-j @chinmaydd
 /amd/device-libs/ @b-sumner @lamb-j
 /amd/hipcc/ @david-salinas @lamb-j
 
+=======
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 # AMDGPU assembler and disassembler
 /llvm-project/llvm/lib/Target/AMDGPU/AsmParser/AMDGPUAsmParser.cpp @jwanggit86 
 /llvm-project/llvm/lib/Target/AMDGPU/Disassembler/AMDGPUDisassembler.cpp @jwanggit86 
@@ -206,3 +209,11 @@
 
 # GlobalIsel
 /llvm/lib/Target/AMDGPU/AMDGPURegBankLegalize* @vangthao95
+<<<<<<< HEAD
+=======
+
+# AMD-specific projects.
+/amd/comgr/ @lamb-j @chinmaydd
+/amd/device-libs/ @b-sumner @lamb-j
+/amd/hipcc/ @david-salinas @lamb-j
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e

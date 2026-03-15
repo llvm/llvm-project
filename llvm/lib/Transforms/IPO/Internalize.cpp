@@ -232,8 +232,7 @@ bool InternalizePass::internalizeModule(Module &M) {
     AlwaysPreserved.insert("__stack_chk_guard");
 
   // Preserve the RPC interface for GPU host callbacks when internalizing.
-  if (M.getTargetTriple().isNVPTX() ||
-      M.getTargetTriple().isAMDGPU())
+  if (M.getTargetTriple().isNVPTX())
     AlwaysPreserved.insert("__llvm_rpc_client");
 
   // Mark all functions not in the api as internal.

@@ -579,6 +579,7 @@ body:             |
 
 ---
 # ALL-LABEL: name: sgpr_for_exec_copy
+# ALL: sgprForEXECCopy: '$sgpr2_sgpr3'
 name: sgpr_for_exec_copy
 machineFunctionInfo:
   sgprForEXECCopy: '$sgpr2_sgpr3'

@@ -2184,10 +2184,6 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
   DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
-unsigned PreRARematStage::getStageTargetOccupancy() const {
-  return TargetOcc ? *TargetOcc : MFI.getMinWavesPerEU();
-}
-
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
 
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
@@ -2737,6 +2733,10 @@ bool RewriteMFMAFormStage::rewrite(
   DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
 
   return true;
+}
+
+unsigned PreRARematStage::getStageTargetOccupancy() const {
+  return TargetOcc ? *TargetOcc : MFI.getMinWavesPerEU();
 }
 
 bool PreRARematStage::setObjective() {

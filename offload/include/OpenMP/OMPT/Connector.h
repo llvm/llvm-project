@@ -17,10 +17,6 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "Shared/Debug.h"
-#include "omp-tools.h"
-#include "omptarget.h"
-
 #include "llvm/Support/DynamicLibrary.h"
 
 #include <memory>

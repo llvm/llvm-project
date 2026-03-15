@@ -11,6 +11,9 @@
 CONSTATTR float
 MATH_MANGLE(cospi)(float x)
 {
+    if (!FINITE_ONLY_OPT())
+        x = BUILTIN_ISINF_F32(x) ? QNAN_F32 : x;
+
     float ax = BUILTIN_ABS_F32(x);
     struct redret r = MATH_PRIVATE(trigpired)(ax);
     struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
@@ -18,10 +21,6 @@ MATH_MANGLE(cospi)(float x)
 
     float c = (r.i & 1) != 0 ? sc.s : sc.c;
     c = r.i > 1 ? -c : c;
-
-    if (!FINITE_ONLY_OPT() && !BUILTIN_ISFINITE_F32(ax)) {
-        c = QNAN_F32;
-    }
 
     return c;
 }

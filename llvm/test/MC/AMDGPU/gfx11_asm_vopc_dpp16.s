@@ -9704,16 +9704,16 @@ v_cmp_tru_f16 vcc_lo, v1.l, v2.l row_share:0 row_mask:0xf bank_mask:0xf
 // W32: v_cmp_t_f16 vcc_lo, v1.l, v2.l row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x50,0x01,0xff]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_tru_f16 vcc_lo, v1, v2 row_share:15 row_mask:0x0 bank_mask:0x1
-// W32: v_cmp_t_f16 vcc_lo, v1, v2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x5f,0x01,0x01]
+v_cmp_tru_f16 vcc_lo, v1.l, v2.l row_share:15 row_mask:0x0 bank_mask:0x1
+// W32: v_cmp_t_f16 vcc_lo, v1.l, v2.l row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x5f,0x01,0x01]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_tru_f16 vcc_lo, v1, v2 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
-// W32: v_cmp_t_f16 vcc_lo, v1, v2 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x60,0x09,0x13]
+v_cmp_tru_f16 vcc_lo, v1.l, v2.l row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+// W32: v_cmp_t_f16 vcc_lo, v1.l, v2.l row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x60,0x09,0x13]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_tru_f16 vcc_lo, -|v127|, -|v127| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
-// W32: v_cmp_t_f16 vcc_lo, -|v127|, -|v127| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xfe,0x1e,0x7c,0x7f,0x6f,0xf5,0x30]
+v_cmp_tru_f16 vcc_lo, -|v127.l|, -|v127.l| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+// W32: v_cmp_t_f16 vcc_lo, -|v127.l|, -|v127.l| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xfe,0x1e,0x7c,0x7f,0x6f,0xf5,0x30]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_tru_f16 vcc, v1.l, v2.l quad_perm:[3,2,1,0]
@@ -9760,17 +9760,17 @@ v_cmp_tru_f16 vcc, v1.l, v2.l row_share:0 row_mask:0xf bank_mask:0xf
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cmp_t_f16 vcc, v1.l, v2.l row_share:0 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x50,0x01,0xff]
 
-v_cmp_tru_f16 vcc, v1, v2 row_share:15 row_mask:0x0 bank_mask:0x1
+v_cmp_tru_f16 vcc, v1.l, v2.l row_share:15 row_mask:0x0 bank_mask:0x1
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_t_f16 vcc, v1, v2 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x5f,0x01,0x01]
+// W64: v_cmp_t_f16 vcc, v1.l, v2.l row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x5f,0x01,0x01]
 
-v_cmp_tru_f16 vcc, v1, v2 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
+v_cmp_tru_f16 vcc, v1.l, v2.l row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_t_f16 vcc, v1, v2 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x60,0x09,0x13]
+// W64: v_cmp_t_f16 vcc, v1.l, v2.l row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 ; encoding: [0xfa,0x04,0x1e,0x7c,0x01,0x60,0x09,0x13]
 
-v_cmp_tru_f16 vcc, -|v127|, -|v127| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
+v_cmp_tru_f16 vcc, -|v127.l|, -|v127.l| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_t_f16 vcc, -|v127|, -|v127| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xfe,0x1e,0x7c,0x7f,0x6f,0xf5,0x30]
+// W64: v_cmp_t_f16 vcc, -|v127.l|, -|v127.l| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xfe,0x1e,0x7c,0x7f,0x6f,0xf5,0x30]
 
 v_cmp_tru_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0]
 // W32: v_cmp_t_f32 vcc_lo, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x04,0x3e,0x7c,0x01,0x1b,0x00,0xff]

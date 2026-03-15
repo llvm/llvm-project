@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * barrier.c -- Archer testcase
  */

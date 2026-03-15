@@ -3067,14 +3067,14 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX1250-NEXT:    s_cvt_f32_u32 s8, s7
 ; GFX1250-NEXT:    s_sub_nc_u64 s[10:11], 0, s[6:7]
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX1250-NEXT:    s_fmamk_f32 s4, s8, 0x4f800000, s4
+; GFX1250-NEXT:    s_fmac_f32 s4, s8, 0x4f800000
 ; GFX1250-NEXT:    v_s_rcp_f32 s4, s4
 ; GFX1250-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_mul_f32 s4, s4, 0x5f7ffffc
 ; GFX1250-NEXT:    s_mul_f32 s8, s4, 0x2f800000
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_trunc_f32 s8, s8
-; GFX1250-NEXT:    s_fmamk_f32 s4, s8, 0xcf800000, s4
+; GFX1250-NEXT:    s_fmac_f32 s4, s8, 0xcf800000
 ; GFX1250-NEXT:    s_cvt_u32_f32 s9, s8
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-NEXT:    s_cvt_u32_f32 s8, s4

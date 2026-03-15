@@ -37,6 +37,7 @@
 // CK29: [[SSB:%.+]]  = type { ptr, ptr }
 
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+<<<<<<< HEAD
 // CK29: [[SIZE00:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}, i64 0]
 // CK29: [[MTYPE00:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x8000]], i64 288]
 
@@ -47,6 +48,18 @@
 // CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK29: [[SIZE02:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}, i64 0]
 // CK29: [[MTYPE02:@.+]] = private {{.*}}constant [4 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x8000]], i64 288]
+=======
+// CK29: [[SIZE00:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}]
+// CK29: [[MTYPE00:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]]]
+
+// CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK29: [[SIZE01:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}]
+// CK29: [[MTYPE01:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]]]
+
+// CK29-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK29: [[SIZE02:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|16}}, i64 80, i64 {{4|8}}]
+// CK29: [[MTYPE02:@.+]] = private {{.*}}constant [3 x i64] [i64 [[#0x223]], i64 3, i64 [[#0x4000]]]
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 
 struct SSA{
   double *p;

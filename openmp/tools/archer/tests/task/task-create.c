@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * task-create.c -- Archer testcase
  */

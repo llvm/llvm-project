@@ -18,7 +18,8 @@ int main(int argc, char *argv[]) {
   amd_comgr_data_t DataSource;
   amd_comgr_data_set_t DataSetSource, DataSetSpirv;
   amd_comgr_action_info_t DataAction;
-  size_t Count;
+  const char *Options[] = {"-nogpuinc"};
+  size_t OptionsCount = sizeof(Options) / sizeof(Options[0]);
 
   if (argc != 3) {
     fprintf(stderr, "Usage: source-to-spirv file.hip file.spv\n");
@@ -36,14 +37,16 @@ int main(int argc, char *argv[]) {
 
   amd_comgr_(create_action_info(&DataAction));
   amd_comgr_(action_info_set_language(DataAction, AMD_COMGR_LANGUAGE_HIP));
+  amd_comgr_(action_info_set_option_list(DataAction, Options, OptionsCount));
 
   amd_comgr_(create_data_set(&DataSetSpirv));
-  amd_comgr_(do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV,
-                       DataAction, DataSetSource, DataSetSpirv));
+
+  amd_comgr_(do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_SPIRV, DataAction,
+                       DataSetSource, DataSetSpirv));
 
   amd_comgr_data_t DataSpirv;
-  amd_comgr_(action_data_get_data(DataSetSpirv, AMD_COMGR_DATA_KIND_SPIRV,
-                                  0, &DataSpirv));
+  amd_comgr_(action_data_get_data(DataSetSpirv, AMD_COMGR_DATA_KIND_SPIRV, 0,
+                                  &DataSpirv));
   dumpData(DataSpirv, argv[2]);
 
   amd_comgr_(release_data(DataSource));
@@ -52,4 +55,3 @@ int main(int argc, char *argv[]) {
   amd_comgr_(destroy_action_info(DataAction));
   free(BufSource);
 }
-

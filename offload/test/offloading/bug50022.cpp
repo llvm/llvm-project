@@ -2,9 +2,6 @@
 // RUN: %libomptarget-compileoptxx-and-run-generic
 // XFAIL: intelgpu
 
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newRTL
-
 #include <cassert>
 #include <iostream>
 #include <stdexcept>

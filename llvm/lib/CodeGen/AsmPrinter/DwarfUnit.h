@@ -30,8 +30,6 @@ class DwarfCompileUnit;
 class MCDwarfDwoLineTable;
 class MCSymbol;
 
-extern bool DisableDwarfLocations;
-
 //===----------------------------------------------------------------------===//
 /// This dwarf writer support class manages information associated with a
 /// source file.
@@ -332,9 +330,6 @@ public:
 
   /// Get context owner's DIE.
   DIE *createTypeDIE(const DICompositeType *Ty);
-
-  /// Adds the DW_AT_memory_space tag to a DIE
-  void addMemorySpaceAttribute(DIE &D, dwarf::MemorySpace MS);
 
   /// If this is a named finished type then include it in the list of types for
   /// the accelerator tables.

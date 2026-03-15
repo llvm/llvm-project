@@ -149,16 +149,13 @@ RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
 }
 } // namespace
 
-RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
-                                                      ReturnValueSlot ReturnValu) {
+RValue CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().isNVPTX());
   return EmitDevicePrintfCallExpr(
       E, this, GetVprintfDeclaration(CGM.getModule()), false);
 }
 
-RValue
-CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
-                                                ReturnValueSlot ReturnValue) {
+RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   assert(getTarget().getTriple().isAMDGCN() ||
          (getTarget().getTriple().isSPIRV() &&
           getTarget().getTriple().getVendor() == llvm::Triple::AMD));

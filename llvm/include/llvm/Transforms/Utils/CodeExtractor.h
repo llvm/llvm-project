@@ -17,15 +17,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
 
 namespace llvm {
 
 template <typename PtrType> class SmallPtrSetImpl;
-class AddrSpaceCastInst;
 class AllocaInst;
+class BasicBlock;
 class BlockFrequency;
 class BlockFrequencyInfo;
 class BranchProbabilityInfo;
@@ -95,23 +94,15 @@ class LLVM_ABI CodeExtractor {
   BranchProbabilityInfo *BPI;
   AssumptionCache *AC;
 
-  /// A block outside of the extraction set where any intermediate allocations
-  /// will be placed inside. If this is null, allocations will be placed in the
-  /// entry block of the function.
+  // A block outside of the extraction set where any intermediate allocations
+  // will be placed inside. If this is null, allocations will be placed in the
+  // entry block of the function.
   BasicBlock *AllocationBlock;
 
-  /// A set of blocks outside of the extraction set where deallocations for
-  /// intermediate allocations should be placed. Not used for automatically
-  /// deallocated memory (e.g. `alloca`), which is the default.
-  ///
-  /// If it is empty and needed, the end of the replacement basic block will be
-  /// used to place deallocations.
-  SmallVector<BasicBlock *> DeallocationBlocks;
-
-  /// If true, varargs functions can be extracted.
+  // If true, varargs functions can be extracted.
   bool AllowVarArgs;
 
-  /// Bits of intermediate state computed at various phases of extraction.
+  // Bits of intermediate state computed at various phases of extraction.
   SetVector<BasicBlock *> Blocks;
 
   /// Lists of blocks that are branched from the code region to be extracted,
@@ -132,13 +123,13 @@ class LLVM_ABI CodeExtractor {
   /// 1, etc.
   SmallVector<BasicBlock *> ExtractedFuncRetVals;
 
-  /// Suffix to use when creating extracted function (appended to the original
-  /// function name + "."). If empty, the default is to use the entry block
-  /// label, if non-empty, otherwise "extracted".
+  // Suffix to use when creating extracted function (appended to the original
+  // function name + "."). If empty, the default is to use the entry block
+  // label, if non-empty, otherwise "extracted".
   std::string Suffix;
 
-  /// If true, the outlined function has aggregate argument in zero address
-  /// space.
+  // If true, the outlined function has aggregate argument in zero address
+  // space.
   bool ArgsInZeroAddressSpace;
 
 public:
@@ -154,20 +145,15 @@ public:
   /// however code extractor won't validate whether extraction is legal. Any new
   /// allocations will be placed in the AllocationBlock, unless it is null, in
   /// which case it will be placed in the entry block of the function from which
-  /// the code is being extracted. Explicit deallocations for the aforementioned
-  /// allocations will be placed, if needed, in all blocks in DeallocationBlocks
-  /// or the end of the replacement block. If ArgsInZeroAddressSpace param is
-  /// set to true, then the aggregate param pointer of the outlined function is
+  /// the code is being extracted. If ArgsInZeroAddressSpace param is set to
+  /// true, then the aggregate param pointer of the outlined function is
   /// declared in zero address space.
   CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT = nullptr,
                 bool AggregateArgs = false, BlockFrequencyInfo *BFI = nullptr,
                 BranchProbabilityInfo *BPI = nullptr,
                 AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                 bool AllowAlloca = false, BasicBlock *AllocationBlock = nullptr,
-                ArrayRef<BasicBlock *> DeallocationBlocks = {},
                 std::string Suffix = "", bool ArgsInZeroAddressSpace = false);
-
-  virtual ~CodeExtractor() = default;
 
   /// Perform the extraction, returning the new function.
   ///
@@ -247,18 +233,6 @@ public:
   /// Exclude a value from aggregate argument passing when extracting a code
   /// region, passing it instead as a scalar.
   void excludeArgFromAggregate(Value *Arg);
-
-protected:
-  /// Allocate an intermediate variable at the specified point.
-  virtual Instruction *allocateVar(BasicBlock *BB, BasicBlock::iterator AllocIP,
-                                   Type *VarType, const Twine &Name = Twine(""),
-                                   AddrSpaceCastInst **CastedAlloc = nullptr);
-
-  /// Deallocate a previously-allocated intermediate variable at the specified
-  /// point.
-  virtual Instruction *deallocateVar(BasicBlock *BB,
-                                     BasicBlock::iterator DeallocIP, Value *Var,
-                                     Type *VarType);
 
 private:
   struct LifetimeMarkerInfo {

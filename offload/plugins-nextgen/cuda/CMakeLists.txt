@@ -2,8 +2,6 @@
 add_target_library(omptarget.rtl.cuda CUDA)
 
 target_sources(omptarget.rtl.cuda PRIVATE src/rtl.cpp)
-#workaround strange -O3 issue for cuda src.rtk,coo ASAN
-set_source_files_properties(src/rtl.cpp PROPERTIES COMPILE_FLAGS "-O0")
 
 find_package(CUDAToolkit QUIET)
 if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)

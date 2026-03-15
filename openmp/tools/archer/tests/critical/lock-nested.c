@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * lock-nested.c -- Archer testcase
  */

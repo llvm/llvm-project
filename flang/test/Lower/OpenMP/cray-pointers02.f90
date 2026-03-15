@@ -63,7 +63,7 @@ subroutine none_private()
         ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
         ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
         var(1) = var(1) + 2
-    print '(A24,I6)', 'none_private', var(1)
+        print '(A24,I6)', 'none_private', var(1)
     !$omp end parallel
     ! CHECK: return
 end subroutine

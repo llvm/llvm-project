@@ -104,10 +104,8 @@ Using Clang Tools
    ClangFormat
    ClangFormatStyleOptions
    ClangLinkerWrapper
-   ClangNvlinkWrapper
-   ClangOffloadWrapper
+   ClangNVLinkWrapper
    ClangOffloadBundler
-   ClangOffloadWrapper
    ClangRepl
    ClangSYCLLinker
 

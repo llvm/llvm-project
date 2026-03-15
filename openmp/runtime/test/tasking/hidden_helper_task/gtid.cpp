@@ -1,4 +1,3 @@
-// XFAIL: *
 // RUN: %libomp-cxx-compile-and-run
 // RUN: %libomp-cxx-compile && env OMP_NUM_THREADS=1 %libomp-run
 // REQUIRES: hidden-helper

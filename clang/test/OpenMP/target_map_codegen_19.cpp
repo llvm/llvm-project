@@ -46,8 +46,13 @@
 // CK20: [[MTYPE02:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 288]
 
 // CK20-LABEL: @.__omp_offloading_{{.*}}explicit_maps_references_and_function_args{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+<<<<<<< HEAD
 // CK20: [[SIZE03:@.+]] = private {{.*}}constant [3 x i64] [i64 12, i64 {{4|8}}, i64 0]
 // CK20: [[MTYPE03:@.+]] = private {{.*}}constant [3 x i64] [i64 34, i64 32768, i64 288]
+=======
+// CK20: [[SIZE03:@.+]] = private {{.*}}constant [2 x i64] [i64 12, i64 {{4|8}}]
+// CK20: [[MTYPE03:@.+]] = private {{.*}}constant [2 x i64] [i64 34, i64 16384]
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 
 // CK20-LABEL: explicit_maps_references_and_function_args{{.*}}(
 void explicit_maps_references_and_function_args (int a, float b, int (&c)[10], float *d){

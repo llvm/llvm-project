@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * lock.c -- Archer testcase
  */

@@ -67,10 +67,8 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
-#include "clang/Driver/Util.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
-#include "clang/Options/OptionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -890,7 +888,6 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
                 .Case("libomp", OMPRT_OMP)
                 .Case("libgomp", OMPRT_GOMP)
                 .Case("libiomp5", OMPRT_IOMP5)
-                .Case("libbolt", OMPRT_BOLT)
                 .Default(OMPRT_Unknown);
 
   if (RT == OMPRT_Unknown) {
@@ -3271,19 +3268,6 @@ class OffloadingActionBuilder final {
       ABRT_Ignore_Host,
     };
 
-    /// ID to identify each device compilation. For CUDA it is simply the
-    /// GPU arch string. For HIP it is either the GPU arch string or GPU
-    /// arch string plus feature strings delimited by a plus sign, e.g.
-    /// gfx906+xnack.
-    struct TargetID {
-      /// Target ID string which is persistent throughout the compilation.
-      const char *ID;
-      TargetID(OffloadArch Arch) { ID = OffloadArchToString(Arch); }
-      TargetID(const char *ID) : ID(ID) {}
-      operator const char *() { return ID; }
-      operator StringRef() { return StringRef(ID); }
-    };
-
   protected:
     /// Compilation associated with this builder.
     Compilation &C;
@@ -3364,6 +3348,19 @@ class OffloadingActionBuilder final {
     bool CompileDeviceOnly = false;
     bool EmitLLVM = false;
     bool EmitAsm = false;
+
+    /// ID to identify each device compilation. For CUDA it is simply the
+    /// GPU arch string. For HIP it is either the GPU arch string or GPU
+    /// arch string plus feature strings delimited by a plus sign, e.g.
+    /// gfx906+xnack.
+    struct TargetID {
+      /// Target ID string which is persistent throughout the compilation.
+      const char *ID;
+      TargetID(OffloadArch Arch) { ID = OffloadArchToString(Arch); }
+      TargetID(const char *ID) : ID(ID) {}
+      operator const char *() { return ID; }
+      operator StringRef() { return StringRef(ID); }
+    };
     /// List of GPU architectures to use in this compilation.
     SmallVector<TargetID, 4> GpuArchList;
 
@@ -4476,11 +4473,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     for (phases::ID Phase : PL) {
 
-#if FIXME
-      // We are done if this step is past what the user requested.
-      if (Phase > FinalPhase)
-        break;
-#endif
       // Add any offload action the host action depends on.
       if (!UseNewOffloadingDriver)
         Current = OffloadBuilder->addDeviceDependencesToHostAction(
@@ -5216,8 +5208,6 @@ Action *Driver::ConstructPhaseAction(
 
     return C.MakeAction<PrecompileJobAction>(Input, OutputTy);
   }
-  case phases::FortranFrontend:
-    llvm::report_fatal_error("fortranfrontend action invalid here.");
   case phases::Compile: {
     if (Args.hasArg(options::OPT_fsyntax_only))
       return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);
@@ -6178,23 +6168,17 @@ InputInfoList Driver::BuildJobsForActionNoCache(
                                  UI.DependentOffloadKind == Action::OFK_HIP,
                              OffloadingPrefix),
           BaseInput);
-      if (UI.DependentOffloadKind == Action::OFK_Host &&
-          llvm::sys::path::extension(InputInfos[0].getFilename()) == ".a")
-        CurI = InputInfos[0];
       // Save the unbundling result.
       UnbundlingResults.push_back(CurI);
 
       // Get the unique string identifier for this dependence and cache the
       // result.
       StringRef Arch;
-      if (TargetDeviceOffloadKind == Action::OFK_HIP ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP) {
+      if (TargetDeviceOffloadKind == Action::OFK_HIP) {
         if (UI.DependentOffloadKind == Action::OFK_Host)
           Arch = StringRef();
-        else if (TargetDeviceOffloadKind == Action::OFK_HIP)
+        else
           Arch = UI.DependentBoundArch;
-        else if (TargetDeviceOffloadKind == Action::OFK_OpenMP)
-          Arch = UI.DependentToolChain->getTargetID();
       } else
         Arch = BoundArch;
 
@@ -6203,9 +6187,6 @@ InputInfoList Driver::BuildJobsForActionNoCache(
           CurI};
     }
 
-    if (BoundArch == "gnu") {
-      BoundArch = StringRef("");
-    }
     // Now that we have all the results generated, select the one that should be
     // returned for the current depending action.
     std::pair<const Action *, std::string> ActionTC = {
@@ -6223,12 +6204,6 @@ InputInfoList Driver::BuildJobsForActionNoCache(
         /*CreatePrefixForHost=*/isa<OffloadPackagerJobAction>(A) ||
             !(A->getOffloadingHostActiveKinds() == Action::OFK_None ||
               AtTopLevel));
-    StringRef TargetIDStr = TC->getTargetID();
-    if (!TargetIDStr.empty() && BoundArch.empty()) {
-      BoundArch = TargetIDStr;
-      OffloadingPrefix.append("-").append(TargetIDStr.str());
-    }
-
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
@@ -6488,14 +6463,6 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
        !C.getArgs().hasArg(options::OPT__SLASH_Fo)) ||
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
-    size_t pos = Name.find_last_of(".");
-    StringRef PrefixName = Name.substr(0, pos);
-    SmallString<128> fname(PrefixName.str().c_str());
-    if (!BoundArch.empty()) {
-      fname += "-";
-      fname.append(BoundArch);
-    }
-    SmallString<128> TmpName;
     std::pair<StringRef, StringRef> Split = Name.split('.');
     const char *Suffix =
         types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
@@ -6589,11 +6556,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput =
         MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
   } else {
-    const char *Suffix = nullptr;
-    if (BaseName.ends_with(".a"))
-      Suffix = "a";
-    else
-      Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
     assert(Suffix && "All types used for output should have a suffix.");
 
     std::string::size_type End = std::string::npos;
@@ -6661,10 +6625,9 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     // Must share the same path to conflict.
     if (SameFile) {
       StringRef Name = llvm::sys::path::filename(BaseInput);
-      size_t pos = Name.find_last_of(".");
-      StringRef PrefixName = Name.substr(0, pos);
+      std::pair<StringRef, StringRef> Split = Name.split('.');
       std::string TmpName = GetTemporaryPath(
-          PrefixName,
+          Split.first,
           types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode()));
       return C.addTempFile(C.getArgs().MakeArgString(TmpName));
     }
@@ -7283,7 +7246,7 @@ Driver::getOptionVisibilityMask(bool UseDriverMode) const {
     return llvm::opt::Visibility(options::CLOption);
   if (IsDXCMode())
     return llvm::opt::Visibility(options::DXCOption);
-  if (IsFlangMode()) {
+  if (IsFlangMode())  {
     return llvm::opt::Visibility(options::FlangOption);
   }
   return llvm::opt::Visibility(options::ClangOption);
@@ -7535,4 +7498,3 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
       ++S;
   }
 }
-

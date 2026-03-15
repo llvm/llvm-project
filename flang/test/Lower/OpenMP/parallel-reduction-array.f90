@@ -2,7 +2,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
 
 ! RUN: bbc -emit-hlfir -fopenmp -fopenmp-is-target-device -fopenmp-is-gpu -o - %s 2>&1 | FileCheck %s --check-prefix=GPU
-! RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device -o - %s 2>&1 | FileCheck %s --check-prefix=GPU
+! RUN: %if amdgpu-registered-target %{ %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir -fopenmp -fopenmp-is-target-device -o - %s 2>&1 | \
+! RUN: FileCheck %s --check-prefix=GPU %}
 
 program reduce
 integer, dimension(3) :: i = 0

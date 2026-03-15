@@ -20,7 +20,6 @@ add_clang_library(clangTidyLLVMModule STATIC
   clangTidy
   clangTidyReadabilityModule
   clangTidyUtils
-  clangTransformer
 
   DEPENDS
   omp_gen

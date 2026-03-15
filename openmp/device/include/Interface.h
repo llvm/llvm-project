@@ -15,8 +15,6 @@
 #include "Shared/Environment.h"
 
 #include "DeviceTypes.h"
-#include "extra_allocators.h"
-
 
 /// External API
 ///
@@ -231,9 +229,6 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                            KernelLaunchEnvironmentTy *KernelLaunchEnvironment);
 
 void __kmpc_target_deinit();
-
-// Initializer for a specialized kernel. No finalizer is provided currently.
-void __kmpc_specialized_kernel_init();
 
 ///}
 

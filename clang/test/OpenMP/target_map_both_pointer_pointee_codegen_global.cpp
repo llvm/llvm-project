@@ -63,6 +63,7 @@ void f7() {
 }
 #endif
 //.
+<<<<<<< HEAD
 // CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x23]], i64 [[#0x120]]]
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 0]
@@ -73,10 +74,22 @@ void f7() {
 // CHECK: @.offload_maptypes.6 = private unnamed_addr constant [4 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x8000]], i64 [[#0x120]]]
 // CHECK: @.offload_sizes.7 = private unnamed_addr constant [4 x i64] [i64 8, i64 4, i64 8, i64 0]
 // CHECK: @.offload_maptypes.8 = private unnamed_addr constant [4 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x8000]], i64 [[#0x120]]]
+=======
+// CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x23]]]
+// CHECK: @.offload_sizes.1 = private unnamed_addr constant [2 x i64] [i64 4, i64 8]
+// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [2 x i64] [i64 [[#0x23]], i64 [[#0x4000]]]
+// CHECK: @.offload_sizes.3 = private unnamed_addr constant [3 x i64] [i64 8, i64 8, i64 8]
+// CHECK: @.offload_maptypes.4 = private unnamed_addr constant [3 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x4000]]]
+// CHECK: @.offload_sizes.5 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
+// CHECK: @.offload_maptypes.6 = private unnamed_addr constant [3 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x4000]]]
+// CHECK: @.offload_sizes.7 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
+// CHECK: @.offload_maptypes.8 = private unnamed_addr constant [3 x i64] [i64 [[#0x23]], i64 [[#0x3]], i64 [[#0x4000]]]
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 // CHECK: @.offload_sizes.9 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
-// CHECK: @.offload_maptypes.10 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x8000]]]
+// CHECK: @.offload_maptypes.10 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x4000]]]
 // CHECK: @.offload_sizes.11 = private unnamed_addr constant [3 x i64] [i64 8, i64 4, i64 8]
-// CHECK: @.offload_maptypes.12 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x8000]]]
+// CHECK: @.offload_maptypes.12 = private unnamed_addr constant [3 x i64] [i64 [[#0x3]], i64 [[#0x3]], i64 [[#0x4000]]]
 //.
 // CHECK-LABEL: define {{[^@]+}}@_Z2f1v
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {

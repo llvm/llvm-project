@@ -11,6 +11,7 @@
 
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/entry-names.h"
+<<<<<<< HEAD
 #if (not defined(__AMDGPU__) && not defined(__NVPTX__))
 #include <thread>
 #endif
@@ -21,6 +22,11 @@ struct EnvironmentDefaultList;
 std::thread::id RTNAME(GetMainThreadId)();
 #endif
 
+=======
+
+struct EnvironmentDefaultList;
+
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 FORTRAN_EXTERN_C_BEGIN
 void RTNAME(ProgramStart)(
     int, const char *[], const char *[], const struct EnvironmentDefaultList *);

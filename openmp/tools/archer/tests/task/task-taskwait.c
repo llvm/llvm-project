@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * task-taskwait.c -- Archer testcase
  */

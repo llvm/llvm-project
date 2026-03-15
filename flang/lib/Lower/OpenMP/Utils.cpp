@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <flang/Lower/OpenMP/Utils.h>
+#include "Utils.h"
 
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include <flang/Lower/AbstractConverter.h>
-#include <flang/Lower/ConvertExprToHLFIR.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
 #include <flang/Lower/OpenMP/Clauses.h>
@@ -36,8 +35,6 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
-#include <mlir/Analysis/TopologicalSortUtils.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
 
 #include <functional>
 #include <iterator>
@@ -458,13 +455,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
-        // We do not want to carry over the separation of descriptor and pointer
-        // mapping of any intermediate components we emit maps for as this can
-        // result in very odd differing behaviour when either ref_ptr/ptee is
-        // specified.
-        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
-        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
-        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -607,16 +597,13 @@ void insertChildMapInfoIntoParent(
       mapOp.setMembersIndexAttr(firOpBuilder.create2DI64ArrayAttr(
           indices.second.memberPlacementIndices));
     } else {
-      // NOTE: We do not assign default mapped parents a map type, as
-      // selecting a childs can result in the incorrect map type being
-      // applied to the parent and data being incorrectly moved to or
-      // from device.
-      mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
-
-      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
-        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
-            mlir::omp::ClauseMapFlags::present)
-          mapType |= mlir::omp::ClauseMapFlags::present;
+      // NOTE: We take the map type of the first child, this may not
+      // be the correct thing to do, however, we shall see. For the moment
+      // it allows this to work with enter and exit without causing MLIR
+      // verification issues. The more appropriate thing may be to take
+      // the "main" map type clause from the directive being used.
+      mlir::omp::ClauseMapFlags mapType =
+          indices.second.memberMap[0].getMapType();
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());

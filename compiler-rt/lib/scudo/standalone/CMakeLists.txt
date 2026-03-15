@@ -5,7 +5,7 @@ include_directories(../.. include)
 set(SCUDO_CFLAGS)
 
 list(APPEND SCUDO_CFLAGS
-  -Wno-error=conversion
+  -Werror=conversion
   -Wall
   -Wextra
   -pedantic

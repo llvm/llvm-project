@@ -3,7 +3,6 @@
 // RUN: env KMP_AFFINITY=granularity=core,compact %libomp-run
 // RUN: env KMP_AFFINITY=granularity=socket,compact %libomp-run
 // REQUIRES: linux
-// UNSUPPORTED: linux
 
 #include <stdio.h>
 #include <stdlib.h>

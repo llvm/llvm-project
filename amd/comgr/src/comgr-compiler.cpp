@@ -18,6 +18,7 @@
 #include "comgr-device-libs.h"
 #include "comgr-diagnostic-handler.h"
 #include "comgr-env.h"
+#include "comgr-libcxx-headers.h"
 #include "comgr-resource-directory.h"
 #include "comgr-spirv-command.h"
 #include "comgr-unbundle-command.h"
@@ -69,6 +70,10 @@
 #include "llvm/TargetParser/Host.h"
 
 #include "time-stat/ts-interface.h"
+
+#ifndef COMGR_DISABLE_SPIRV
+#include <LLVMSPIRVLib.h>
+#endif
 
 #include <csignal>
 #include <sstream>
@@ -626,6 +631,128 @@ amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+// Execute llvm-link in-process using llvm::Linker
+// Args format: -o <output.bc> <input1.bc> <input2.bc> ...
+// TODO: refactor this implementation to use a shared infra with linkBitcodeToBitcode()
+amd_comgr_status_t executeLLVMLink(ArrayRef<const char *> Args,
+                                   raw_ostream &LogS) {
+  // Parse args: find -o <output> and collect input .bc files
+  StringRef OutputPath;
+  SmallVector<StringRef, 4> InputPaths;
+
+  for (size_t I = 0; I < Args.size(); ++I) {
+    StringRef Arg(Args[I]);
+    if (Arg == "-o" && I + 1 < Args.size()) {
+      OutputPath = Args[++I];
+    } else if (Arg.ends_with(".bc")) {
+      InputPaths.push_back(Arg);
+    }
+  }
+
+  if (OutputPath.empty() || InputPaths.empty()) {
+    LogS << "llvm-link: missing input or output files\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  // Create composite module and linker
+  LLVMContext Context;
+  auto Composite = std::make_unique<llvm::Module>("llvm-link", Context);
+  Linker L(*Composite);
+
+  // Link each input BC
+  for (StringRef InputPath : InputPaths) {
+    auto BufOrErr = MemoryBuffer::getFile(InputPath);
+    if (!BufOrErr) {
+      LogS << "llvm-link: failed to read: " << InputPath << "\n";
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    SMDiagnostic Err;
+    auto Mod = parseIR(BufOrErr->get()->getMemBufferRef(), Err, Context);
+    if (!Mod) {
+      Err.print("llvm-link", LogS);
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    if (L.linkInModule(std::move(Mod))) {
+      LogS << "llvm-link: linking failed for: " << InputPath << "\n";
+      return AMD_COMGR_STATUS_ERROR;
+    }
+  }
+
+  // Write linked BC to output file
+  std::error_code EC;
+  raw_fd_ostream OS(OutputPath, EC);
+  if (EC) {
+    LogS << "llvm-link: failed to open output: " << OutputPath << "\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+  WriteBitcodeToFile(*Composite, OS);
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+#ifndef COMGR_DISABLE_SPIRV
+// Execute amd-llvm-spirv in-process using writeSpirv
+// Args format: [options...] <input.bc> -o <output.spv>
+amd_comgr_status_t executeSPIRVTranslator(ArrayRef<const char *> Args,
+                                          raw_ostream &LogS) {
+  // Parse args: find input .bc and -o <output>
+  StringRef InputPath, OutputPath;
+
+  for (size_t I = 0; I < Args.size(); ++I) {
+    StringRef Arg(Args[I]);
+    if (Arg == "-o" && I + 1 < Args.size()) {
+      OutputPath = Args[++I];
+    } else if (Arg.ends_with(".bc")) {
+      InputPath = Arg;
+    }
+  }
+
+  if (InputPath.empty() || OutputPath.empty()) {
+    LogS << "spirv-translator: missing input or output files\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  // Read input bitcode
+  auto BufOrErr = MemoryBuffer::getFile(InputPath);
+  if (!BufOrErr) {
+    LogS << "spirv-translator: failed to read: " << InputPath << "\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  LLVMContext Context;
+  SMDiagnostic Err;
+  auto Mod = parseIR(BufOrErr->get()->getMemBufferRef(), Err, Context);
+  if (!Mod) {
+    Err.print("spirv-translator", LogS);
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  // Configure SPIRV translator options (match amd-llvm-spirv defaults)
+  SPIRV::TranslatorOpts Opts;
+  Opts.enableAllExtensions();
+  Opts.setPreserveAuxData(true);
+  Opts.setSPIRVAllowUnknownIntrinsics({"llvm.amdgcn"});
+
+  // Translate to SPIRV
+  std::string ErrMsg;
+  std::ostringstream OSS;
+  if (!writeSpirv(Mod.get(), Opts, OSS, ErrMsg)) {
+    LogS << "spirv-translator: translation failed: " << ErrMsg << "\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  // Write SPIRV to output file
+  std::error_code EC;
+  raw_fd_ostream OS(OutputPath, EC);
+  if (EC) {
+    LogS << "spirv-translator: failed to open output: " << OutputPath << "\n";
+    return AMD_COMGR_STATUS_ERROR;
+  }
+  std::string Result = OSS.str();
+  OS.write(Result.data(), Result.size());
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+#endif
+
 void logArgv(raw_ostream &OS, StringRef ProgramName,
              ArrayRef<const char *> Argv) {
   OS << "     Driver Job Args: " << ProgramName;
@@ -708,6 +835,27 @@ executeCommand(const Command &Job, raw_ostream &LogS,
       return Status;
     }
   } else {
+    // Check executable name for additional tools (e.g., from AMDGCN::Linker)
+    StringRef Executable = Job.getExecutable();
+    StringRef ExeName = sys::path::filename(Executable);
+
+    if (ExeName.contains("llvm-link")) {
+      if (env::shouldEmitVerboseLogs()) {
+        logArgv(LogS, "llvm-link", Argv);
+      }
+      return executeLLVMLink(Arguments, LogS);
+    }
+#ifndef COMGR_DISABLE_SPIRV
+    if (ExeName.contains("llvm-spirv")) {
+      if (env::shouldEmitVerboseLogs()) {
+        logArgv(LogS, "llvm-spirv", Argv);
+      }
+      return executeSPIRVTranslator(Arguments, LogS);
+    }
+#endif
+
+    LogS << "     Unhandled Job: " << Job.getCreator().getName()
+         << " (executable: " << ExeName << ")\n";
     return AMD_COMGR_STATUS_ERROR;
   }
   return AMD_COMGR_STATUS_SUCCESS;
@@ -899,6 +1047,20 @@ amd_comgr_status_t AMDGPUCompiler::processFile(DataObject *Input,
   // we can pass -nogpulib to build without the ROCm device library
   if (NoGpuLib) {
     Argv.push_back("-nogpulib");
+  }
+
+  // Auto-inject embedded libc++ headers as a fallback include path.
+  // Using -idirafter places them AFTER all other include paths, so:
+  //   - System libstdc++ or libc++ headers take priority when available
+  //   - User-provided -I paths take priority
+  //   - Embedded headers only kick in when no other C++ headers are found
+  // This ensures backward compatibility while providing headers on systems
+  // without C++ development headers (e.g., driver-only installs).
+  if (HasEmbeddedHeaders && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
+    SmallString<256> LibcxxPath(env::getLLVMPath());
+    sys::path::append(LibcxxPath, "include", "c++", "v1");
+    Argv.push_back("-idirafter");
+    Argv.push_back(Saver.save(StringRef(LibcxxPath)).data());
   }
 
   // TODO: Enable this for OpenCL as well (SWDEV-377546)
@@ -1482,11 +1644,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       // string to assign. This string is used when the DataObject is written
       // to the file system via SAVE_TEMPS, or if the object is a bundle which
       // also needs a file system write for unpacking
-      const size_t BufSize = sizeof(char) * 30;
-      char *Buf = (char *)malloc(BufSize);
-      snprintf(Buf, BufSize, "comgr-anon-bitcode-%d.bc", std::rand() % 10000);
-
-      Input->Name = Buf;
+      std::string Name =
+          "comgr-anon-bitcode-" + std::to_string(std::rand() % 10000) + ".bc";
+      Input->setName(Name);
     }
 
     if (env::shouldSaveTemps()) {
@@ -2045,9 +2205,6 @@ amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
       }
     }
 
-    // COV5 required for SPIR-V
-    Bc->SpirvFlags.push_back("-mcode-object-version=5");
-
     if (env::shouldEmitVerboseLogs()) {
       LogS << "        SPIR-V Flags: " << Bc->Name << "\n";
       for (auto Flag : Bc->SpirvFlags)
@@ -2240,6 +2397,50 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
   } else {
     if (env::shouldEmitVerboseLogs()) {
       LogS << "\t File System: Real\n";
+    }
+  }
+
+  // Add embedded libc++ headers to VFS for HIP compilations.
+  if (getLanguage() == AMD_COMGR_LANGUAGE_HIP && hasEmbeddedLibcxxHeaders()) {
+    if (!InMemoryFS) {
+      InMemoryFS = new vfs::InMemoryFileSystem;
+      OverlayFS->pushOverlay(InMemoryFS);
+    }
+
+    SmallString<256> ClangBinaryPath(env::getLLVMPath());
+    sys::path::append(ClangBinaryPath, "bin", "clang");
+    std::string ResourceDir = GetResourcesPath(ClangBinaryPath);
+
+    // libc++ headers → <install>/include/c++/v1/<relative-path>
+    SmallString<256> LibcxxBase(env::getLLVMPath());
+    sys::path::append(LibcxxBase, "include", "c++", "v1");
+
+    for (const auto &Entry : getLibcxxHeaderFiles()) {
+      SmallString<128> Path(LibcxxBase);
+      path::append(Path, Entry.RelativePath);
+      InMemoryFS->addFile(Path, 0,
+                          MemoryBuffer::getMemBuffer(Entry.FileContent, Path,
+                                                     false));
+    }
+
+    // Clang builtin headers → <resource-dir>/include/<relative-path>
+    SmallString<256> ClangBuiltinBase(ResourceDir);
+    sys::path::append(ClangBuiltinBase, "include");
+
+    for (const auto &Entry : getClangBuiltinHeaderFiles()) {
+      SmallString<128> Path(ClangBuiltinBase);
+      path::append(Path, Entry.RelativePath);
+      InMemoryFS->addFile(Path, 0,
+                          MemoryBuffer::getMemBuffer(Entry.FileContent, Path,
+                                                     false));
+    }
+
+    HasEmbeddedHeaders = true;
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "\t Embedded " << getLibcxxHeaderFiles().size()
+           << " libc++ headers at: " << LibcxxBase << "\n";
+      LogS << "\t Embedded " << getClangBuiltinHeaderFiles().size()
+           << " clang builtins at: " << ClangBuiltinBase << "\n";
     }
   }
 }

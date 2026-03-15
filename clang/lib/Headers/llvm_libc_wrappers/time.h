@@ -25,7 +25,4 @@
 
 #undef __LIBC_ATTRS
 
-#else
-#include_next <time.h>
-
 #endif // __CLANG_LLVM_LIBC_WRAPPERS_TIME_H__

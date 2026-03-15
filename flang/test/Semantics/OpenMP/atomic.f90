@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp %openmp_flags -fopenmp-version=31
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp %openmp_flags
 use omp_lib
 ! Check OpenMP 2.13.6 atomic Construct
 

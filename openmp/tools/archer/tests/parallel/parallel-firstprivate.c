@@ -1,4 +1,3 @@
-// REQUIRES: garbage
 /*
  * parallel-firstprivate.c -- Archer testcase
  */

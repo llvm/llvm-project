@@ -41,7 +41,6 @@ class DbgValueLocEntry {
 
   /// Type of entry that this represents.
   enum EntryType {
-    E_Global,
     E_Location,
     E_Integer,
     E_ConstantFP,
@@ -63,9 +62,6 @@ class DbgValueLocEntry {
     /// Or a location from target specific location.
     TargetIndexLocation TIL;
   };
-
-  /// Or a global variable location.
-  const GlobalVariable *GV;
 
 public:
   DbgValueLocEntry(int64_t i) : EntryKind(E_Integer) { Constant.Int = i; }
@@ -95,21 +91,8 @@ public:
   MachineLocation getLoc() const { return Loc; }
   TargetIndexLocation getTargetIndexLocation() const { return TIL; }
   friend bool operator==(const DbgValueLocEntry &, const DbgValueLocEntry &);
-
-  DbgValueLocEntry(const GlobalVariable *GV) : EntryKind(E_Global), GV(GV) {}
-  bool isGlobal() const { return EntryKind == E_Global; }
-  const GlobalVariable *getGlobal() const { return GV; }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
-
-    if (isGlobal()) {
-      llvm::dbgs() << "GV = { ";
-      GV->printAsOperand(llvm::dbgs(), false);
-      llvm::dbgs() << "} ";
-      return;
-    }
-
     if (isLocation()) {
       llvm::dbgs() << "Loc = { reg=" << Loc.getReg() << " ";
       if (Loc.isIndirect())
@@ -273,8 +256,6 @@ inline bool operator==(const DbgValueLocEntry &A, const DbgValueLocEntry &B) {
     return false;
 
   switch (A.EntryKind) {
-  case DbgValueLocEntry::E_Global:
-    return A.GV == B.GV;
   case DbgValueLocEntry::E_Location:
     return A.Loc == B.Loc;
   case DbgValueLocEntry::E_TargetIndexLocation:

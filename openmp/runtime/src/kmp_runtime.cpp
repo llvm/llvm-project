@@ -8294,7 +8294,6 @@ void __kmp_cleanup(void) {
 #else
   __kmp_cleanup_user_locks();
 #endif
-
 #if OMPD_SUPPORT
   if (ompd_env_block) {
     __kmp_free(ompd_env_block);
@@ -9222,9 +9221,14 @@ void __kmp_add_threads_to_team(kmp_team_t *team, int new_nthreads) {
 // Globals and functions for hidden helper task
 kmp_info_t **__kmp_hidden_helper_threads;
 kmp_info_t *__kmp_hidden_helper_main_thread;
-kmp_int32 __kmp_hidden_helper_threads_num = 0;
 std::atomic<kmp_int32> __kmp_unexecuted_hidden_helper_tasks;
+#if KMP_OS_LINUX
+kmp_int32 __kmp_hidden_helper_threads_num = 8;
+kmp_int32 __kmp_enable_hidden_helper = TRUE;
+#else
+kmp_int32 __kmp_hidden_helper_threads_num = 0;
 kmp_int32 __kmp_enable_hidden_helper = FALSE;
+#endif
 
 namespace {
 std::atomic<kmp_int32> __kmp_hit_hidden_helper_threads_num;

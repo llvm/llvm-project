@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp  -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! Regression test for #143229
 
 !$omp parallel

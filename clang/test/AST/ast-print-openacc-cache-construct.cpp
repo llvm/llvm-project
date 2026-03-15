@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
+
 void foo() {
   int Array[5];
 #pragma acc loop

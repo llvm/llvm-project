@@ -3475,65 +3475,50 @@ v_rsq_f64 v[5:6], src_scc
 v_rsq_f64 v[254:255], 0xaf123456
 // GFX12: v_rsq_f64_e32 v[254:255], 0xaf123456 ; encoding: [0xff,0x62,0xfc,0x7f,0x56,0x34,0x12,0xaf]
 
-v_sat_pk_u8_i16 v5, v1
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, v1 ; encoding: [0x01,0xc5,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, v1 ; encoding: [0x01,0xc5,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, v1
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, v1 ; encoding: [0x01,0xc5,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, v255
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, v255 ; encoding: [0xff,0xc5,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, v255 ; encoding: [0xff,0xc5,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, v255
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, v255 ; encoding: [0xff,0xc5,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, s1
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, s1 ; encoding: [0x01,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, s1 ; encoding: [0x01,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, s1
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, s1 ; encoding: [0x01,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, s105
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, s105 ; encoding: [0x69,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, s105 ; encoding: [0x69,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, s105
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, s105 ; encoding: [0x69,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, vcc_lo
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, vcc_lo ; encoding: [0x6a,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, vcc_lo ; encoding: [0x6a,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, vcc_lo
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, vcc_lo ; encoding: [0x6a,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, vcc_hi
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, vcc_hi ; encoding: [0x6b,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, vcc_hi ; encoding: [0x6b,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, vcc_hi
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, vcc_hi ; encoding: [0x6b,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, ttmp15
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, ttmp15 ; encoding: [0x7b,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, ttmp15 ; encoding: [0x7b,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, ttmp15
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, ttmp15 ; encoding: [0x7b,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, m0
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, m0 ; encoding: [0x7d,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, m0 ; encoding: [0x7d,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, m0
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, m0 ; encoding: [0x7d,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, exec_lo
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, exec_lo ; encoding: [0x7e,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, exec_lo ; encoding: [0x7e,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, exec_lo
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, exec_lo ; encoding: [0x7e,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, exec_hi
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, exec_hi ; encoding: [0x7f,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, exec_hi ; encoding: [0x7f,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, exec_hi
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, exec_hi ; encoding: [0x7f,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, null
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, null ; encoding: [0x7c,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, null ; encoding: [0x7c,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, null
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, null ; encoding: [0x7c,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, -1
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, -1 ; encoding: [0xc1,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, -1 ; encoding: [0xc1,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, -1
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, -1 ; encoding: [0xc1,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, 0.5
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, 0.5 ; encoding: [0xf0,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, 0.5 ; encoding: [0xf0,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, 0.5
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, 0.5 ; encoding: [0xf0,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v5, src_scc
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v5, src_scc ; encoding: [0xfd,0xc4,0x0a,0x7e]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v5.l, src_scc ; encoding: [0xfd,0xc4,0x0a,0x7e]
+v_sat_pk_u8_i16 v5.l, src_scc
+// GFX12: v_sat_pk_u8_i16_e32 v5.l, src_scc ; encoding: [0xfd,0xc4,0x0a,0x7e]
 
-v_sat_pk_u8_i16 v127, 0xfe0b
-// GFX12-ASM: v_sat_pk_u8_i16_e32 v127, 0xfe0b ; encoding: [0xff,0xc4,0xfe,0x7e,0x0b,0xfe,0x00,0x00]
-// GFX12-DIS: v_sat_pk_u8_i16_e32 v127.l, 0xfe0b ; encoding: [0xff,0xc4,0xfe,0x7e,0x0b,0xfe,0x00,0x00]
+v_sat_pk_u8_i16 v127.l, 0xfe0b
+// GFX12: v_sat_pk_u8_i16_e32 v127.l, 0xfe0b ; encoding: [0xff,0xc4,0xfe,0x7e,0x0b,0xfe,0x00,0x00]
 
 v_sat_pk_u8_i16 v5.h, src_scc
 // GFX12: v_sat_pk_u8_i16_e32 v5.h, src_scc ; encoding: [0xfd,0xc4,0x0a,0x7f]

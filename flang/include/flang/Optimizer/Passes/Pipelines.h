@@ -143,12 +143,6 @@ struct OpenMPFIRPassPipelineOpts {
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;
-  bool enableOffloadGlobalFiltering;
-
-  /// Deactivates or activates MapInfoFinalization passes removal of
-  /// top-level descriptor mapping for non-Target Data/Target region
-  /// directives.
-  bool deferDescMap;
 
   /// Controls how to map `do concurrent` loops; to device, host, or none at
   /// all.

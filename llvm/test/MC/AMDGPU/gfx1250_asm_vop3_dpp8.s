@@ -54,45 +54,45 @@ v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 // GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x33,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, v255 bitop3:161 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, v255.l bitop3:161 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, v255 bitop3:0xa1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xfe,0x37,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, v255.l bitop3:0xa1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xfe,0x37,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, s105 bitop3:0x27 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, s105 bitop3:0x27 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, s105 bitop3:0x27 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xa6,0xe1,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, s105 bitop3:0x27 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xa6,0xe1,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, vcc_hi bitop3:100 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi bitop3:100 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, vcc_hi bitop3:0x64 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xae,0x89,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi bitop3:0x64 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xae,0x89,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, vcc_lo bitop3:0 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, vcc_lo bitop3:0 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x33,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x33,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, ttmp15 bitop3:15 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, ttmp15 bitop3:15 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, ttmp15 bitop3:0xf dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x33,0xd6,0xe9,0x04,0xee,0xe1,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, ttmp15 bitop3:0xf dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x33,0xd6,0xe9,0x04,0xee,0xe1,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, exec_hi bitop3:63 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, exec_hi bitop3:63 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, exec_hi bitop3:0x3f dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x07,0x33,0xd6,0xe9,0x04,0xfe,0xe1,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, exec_hi bitop3:0x3f dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x07,0x33,0xd6,0xe9,0x04,0xfe,0xe1,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, exec_lo bitop3:0x24 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, exec_lo bitop3:0x24 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, exec_lo bitop3:0x24 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xfa,0x81,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, exec_lo bitop3:0x24 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x33,0xd6,0xe9,0x04,0xfa,0x81,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, null bitop3:5 dpp8:[7,6,5,4,3,2,1,0]
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, null bitop3:5 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, null bitop3:5 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x33,0xd6,0xe9,0x04,0xf2,0xa1,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, null bitop3:5 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x33,0xd6,0xe9,0x04,0xf2,0xa1,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v5, v1, v2, -1 bitop3:6 dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, -1 bitop3:6 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v5, v1, v2, -1 bitop3:6 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x33,0xd6,0xea,0x04,0x06,0xc3,0x01,0x77,0x39,0x05]
+// GFX1250: v_bitop3_b16_e64_dpp v5.l, v1.l, v2.l, -1 bitop3:6 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x33,0xd6,0xea,0x04,0x06,0xc3,0x01,0x77,0x39,0x05]
 
-v_bitop3_b16_e64_dpp v255, v255, v255, src_scc bitop3:77 dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_bitop3_b16_e64_dpp v255.l, v255.l, v255.l, src_scc bitop3:77 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
-// GFX1250: v_bitop3_b16_e64_dpp v255, v255, v255, src_scc bitop3:0x4d dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x01,0x33,0xd6,0xe9,0xfe,0xf7,0xab,0xff,0x00,0x00,0x00]
+// GFX1250: v_bitop3_b16_e64_dpp v255.l, v255.l, v255.l, src_scc bitop3:0x4d dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x01,0x33,0xd6,0xe9,0xfe,0xf7,0xab,0xff,0x00,0x00,0x00]
 
 v_bitop3_b16_e64_dpp v5.h, v1.h, v2.h, exec_hi op_sel:[1,1,1,1] dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU

@@ -1,4 +1,3 @@
-// XFAIL: *
 // clang-format off
 // RUN: %libomptarget-compile-generic
 // RUN: env LIBOMPTARGET_INFO=16 \

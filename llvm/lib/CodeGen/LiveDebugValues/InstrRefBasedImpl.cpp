@@ -155,15 +155,6 @@ static cl::opt<unsigned>
                          cl::desc("livedebugvalues-stack-ws-limit"),
                          cl::init(250));
 
-// Limit for the maximum number of stack slot indexes. On targets where this is
-// exceeded, this effectivly disables tracking debug locations across spills.
-// The spill tracking in MLocTracker performs quite poorly in terms of memory
-// and time on targets with a more complicated register file (FIXME).
-static cl::opt<unsigned>
-    StackSlotIdxesLimit("livedebugvalues-max-stack-slot-idxes", cl::Hidden,
-                        cl::desc("livedebugvalues-max-stack-slot-idxes"),
-                        cl::init(128));
-
 DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
 
 /// Tracker for converting machine value locations and variable values into
@@ -708,7 +699,7 @@ public:
     Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
     MachineOperand MO = MachineOperand::CreateReg(Reg, false);
     PendingDbgValues.push_back(std::make_pair(
-        VarID, &*emitMOLoc(MO, Var, {NewExpr, Prop.Indirect, false, 1})));
+        VarID, &*emitMOLoc(MO, Var, {NewExpr, Prop.Indirect, false})));
     return true;
   }
 
@@ -1144,10 +1135,6 @@ void MLocTracker::writeRegMask(const MachineOperand *MO, unsigned CurBB,
 }
 
 std::optional<SpillLocationNo> MLocTracker::getOrTrackSpillLoc(SpillLoc L) {
-  // Disable spill tracking on targets with a large number of slot idxes.
-  if (NumSlotIdxes >= StackSlotIdxesLimit)
-    return std::nullopt;
-
   SpillLocationNo SpillID(SpillLocs.idFor(L));
 
   if (SpillID.id() == 0) {
@@ -1699,7 +1686,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // tracker about it. The rest of this LiveDebugValues implementation acts
   // exactly the same for DBG_INSTR_REFs as DBG_VALUEs (just, the former can
   // refer to values that aren't immediately available).
-  DbgValueProperties Properties(Expr, false, true, MI.getNumDebugOperands());
+  DbgValueProperties Properties(Expr, false, true);
   if (VTracker)
     VTracker->defVar(MI, Properties, DbgOpIDs);
 
@@ -1783,9 +1770,8 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
     }
     if (IsValidUseBeforeDef) {
       DebugVariableID VID = DVMap.insertDVID(V, MI.getDebugLoc().get());
-      TTracker->addUseBeforeDef(
-          VID, {MI.getDebugExpression(), false, true, MI.getNumDebugOperands()},
-          DbgOps, LastUseBeforeDef);
+      TTracker->addUseBeforeDef(VID, {MI.getDebugExpression(), false, true},
+                                DbgOps, LastUseBeforeDef);
     }
   }
 
@@ -3750,15 +3736,6 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
       new MLocTracker(MF, *TII, *TRI, *MF.getSubtarget().getTargetLowering());
   VTracker = nullptr;
   TTracker = nullptr;
-
-  if (MTracker->NumSlotIdxes >= StackSlotIdxesLimit) {
-    LLVM_DEBUG(
-        dbgs() << "Disabling InstrRefBasedLDV spill tracking for "
-               << MF.getName()
-               << " since target has too many potential stack slot indexes ("
-               << MTracker->NumSlotIdxes << ", limit is " << StackSlotIdxesLimit
-               << ")\n");
-  }
 
   SmallVector<MLocTransferMap, 32> MLocTransfer;
   SmallVector<VLocTracker, 8> vlocs;

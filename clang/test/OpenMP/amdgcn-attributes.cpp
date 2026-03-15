@@ -31,9 +31,15 @@ int callable(int x) {
   return x + 1;
 }
 
+<<<<<<< HEAD
 // DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,65" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 // CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,65" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "uniform-work-group-size" }
 // NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,65" "amdgpu-ieee"="false" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+=======
+// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "uniform-work-group-size" }
+// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 
 // DEFAULT: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CPU: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" }

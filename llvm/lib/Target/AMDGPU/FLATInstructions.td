@@ -1827,19 +1827,6 @@ multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 }
 
-def global_load_b128_intrin_pat : PatFrag<
-  (ops node:$ptr),
-  (int_amdgcn_global_load_b128 $ptr, srcvalue)>;
-
-def global_store_b128_intrin_pat : PatFrag<
-  (ops node:$data, node:$ptr),
-  (int_amdgcn_global_store_b128 $ptr, $data, srcvalue)>;
-
-let SubtargetPredicate = HasFlatGlobalInsts in {
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_DWORDX4, global_load_b128_intrin_pat, v4i32>;
-defm : GlobalFLATStorePats <GLOBAL_STORE_DWORDX4, global_store_b128_intrin_pat, v4i32>;
-}
-
 multiclass GlobalFLATStorePats_D16_t16<string inst, SDPatternOperator node, ValueType vt> {
   def : FlatStoreSignedPat<!cast<FLAT_Pseudo>(inst#"_t16"), node, vt> {
     let AddedComplexity = 10;

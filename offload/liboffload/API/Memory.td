@@ -157,7 +157,7 @@ def olMemRegister : Function {
         "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
-        "as it is a stable pointer for memory access."
+        "as it is a stable pointer for memory access."  
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,

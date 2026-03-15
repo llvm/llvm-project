@@ -395,11 +395,6 @@ Target Specific Changes
 AMDGPU Support
 ^^^^^^^^^^^^^^
 
-- Bump the default code object version to 6. ROCm 6.3 is required to run any program compiled with COV6.
-- Introduced a new target specific builtin ``__builtin_amdgcn_processor_is``,
-  a late / deferred query for the current target processor
-- Introduced a new target specific builtin ``__builtin_amdgcn_is_invocable``,
-  which enables fine-grained, per-builtin, feature availability
 - Initial support for gfx1310
 
 NVPTX Support

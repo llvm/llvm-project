@@ -17,10 +17,17 @@ int kernel_within_loop(int *a, int *b, int N, int num_iters) {
   return a[N-1];
 }
 //.
+<<<<<<< HEAD
 // CHECK: @.offload_sizes = private unnamed_addr constant [6 x i64] [i64 4, i64 0, i64 8, i64 0, i64 8, i64 0]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [6 x i64] [i64 800, i64 35, i64 32768, i64 35, i64 32768, i64 288]
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [6 x i64] [i64 4, i64 0, i64 8, i64 0, i64 8, i64 0]
 // CHECK: @.offload_maptypes.2 = private unnamed_addr constant [6 x i64] [i64 800, i64 35, i64 32768, i64 35, i64 32768, i64 288]
+=======
+// CHECK: @.offload_sizes = private unnamed_addr constant [5 x i64] [i64 4, i64 0, i64 8, i64 0, i64 8]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [5 x i64] [i64 800, i64 35, i64 16384, i64 35, i64 16384]
+// CHECK: @.offload_sizes.1 = private unnamed_addr constant [5 x i64] [i64 4, i64 0, i64 8, i64 0, i64 8]
+// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [5 x i64] [i64 800, i64 35, i64 16384, i64 35, i64 16384]
+>>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 //.
 // CHECK-LABEL: define dso_local noundef signext i32 @_Z18kernel_within_loopPiS_ii
 // CHECK-SAME: (ptr noundef [[A:%.*]], ptr noundef [[B:%.*]], i32 noundef signext [[N:%.*]], i32 noundef signext [[NUM_ITERS:%.*]]) #[[ATTR0:[0-9]+]] {

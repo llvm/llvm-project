@@ -76,6 +76,7 @@ set(SOURCES
   src/comgr-diagnostic-handler.cpp
   src/comgr-disassembly.cpp
   src/comgr-env.cpp
+  src/comgr-libcxx-headers.cpp
   src/comgr-metadata.cpp
   src/comgr-signal.cpp
   src/comgr-spirv-command.cpp
@@ -304,6 +305,13 @@ list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_COMGR_EXPORT)
 include(bc2h)
 include(opencl_header)
 include(DeviceLibs)
+
+# Embed libc++ headers for HIPRTC std C++ support
+# Can be disabled with -DCOMGR_EMBED_LIBCXX_HEADERS=OFF to reduce library size
+option(COMGR_EMBED_LIBCXX_HEADERS "Embed libc++ headers for HIPRTC" ON)
+if(COMGR_EMBED_LIBCXX_HEADERS)
+  include(LibcxxHeaders)
+endif()
 
 # Add major version to the name on windows, including Win64
 if (WIN32)
