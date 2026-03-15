@@ -122,7 +122,7 @@ if (BUILDING_FOR_ARM64_OSX)
         RESULT_VARIABLE SYSCTL_RESULT
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if(SYSCTL_RESULT EQUAL 0)
+    if(SYSCTL_RESULT EQUAL 0 AND SYSCTL_OUTPUT STREQUAL "1")
       set(default_arm64e_debugserver ON)
     endif()
   endif()

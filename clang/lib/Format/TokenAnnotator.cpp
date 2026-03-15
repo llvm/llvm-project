@@ -4147,7 +4147,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         if (Tok->is(TT_CtorInitializerColon))
           break;
         if (Tok->is(tok::arrow)) {
-          Tok->setType(TT_TrailingReturnArrow);
+          Tok->overwriteFixedType(TT_TrailingReturnArrow);
           break;
         }
         if (Tok->isNot(TT_TrailingAnnotation))
