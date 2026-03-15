@@ -1,4 +1,4 @@
-//===--- DefinitionsInHeadersCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,7 +93,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    bool IsFullSpec = FD->getTemplateSpecializationKind() != TSK_Undeclared;
+    const bool IsFullSpec =
+        FD->getTemplateSpecializationKind() != TSK_Undeclared;
     diag(FD->getLocation(),
          "%select{function|full function template specialization}0 %1 defined "
          "in a header file; function definitions in header files can lead to "
@@ -102,7 +103,7 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     // inline is not allowed for main function.
     if (FD->isMain())
       return;
-    diag(FD->getLocation(), /*Description=*/"make as 'inline'",
+    diag(FD->getLocation(), "mark the definition as 'inline'",
          DiagnosticIDs::Note)
         << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {

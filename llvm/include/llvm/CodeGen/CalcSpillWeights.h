@@ -18,6 +18,7 @@ class LiveIntervals;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
 class MachineLoopInfo;
+class ProfileSummaryInfo;
 class VirtRegMap;
 
   /// Normalize the spill weight of a live interval
@@ -47,6 +48,7 @@ class VirtRegMap;
     LiveIntervals &LIS;
     const VirtRegMap &VRM;
     const MachineLoopInfo &Loops;
+    ProfileSummaryInfo *PSI;
     const MachineBlockFrequencyInfo &MBFI;
 
     /// Returns true if Reg of live interval LI is used in instruction with many
@@ -56,8 +58,9 @@ class VirtRegMap;
   public:
     VirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS,
                    const VirtRegMap &VRM, const MachineLoopInfo &Loops,
-                   const MachineBlockFrequencyInfo &MBFI)
-        : MF(MF), LIS(LIS), VRM(VRM), Loops(Loops), MBFI(MBFI) {}
+                   const MachineBlockFrequencyInfo &MBFI,
+                   ProfileSummaryInfo *PSI = nullptr)
+        : MF(MF), LIS(LIS), VRM(VRM), Loops(Loops), PSI(PSI), MBFI(MBFI) {}
 
     virtual ~VirtRegAuxInfo() = default;
 
@@ -70,7 +73,7 @@ class VirtRegMap;
 
     /// Return the preferred allocation register for reg, given a COPY
     /// instruction.
-    static Register copyHint(const MachineInstr *MI, unsigned Reg,
+    static Register copyHint(const MachineInstr *MI, Register Reg,
                              const TargetRegisterInfo &TRI,
                              const MachineRegisterInfo &MRI);
 
@@ -78,6 +81,14 @@ class VirtRegMap;
     static bool isRematerializable(const LiveInterval &LI,
                                    const LiveIntervals &LIS,
                                    const VirtRegMap &VRM,
+                                   const MachineRegisterInfo &MRI,
+                                   const TargetInstrInfo &TII);
+
+    /// \returns true if all registers used by \p MI are also available with the
+    /// same value at \p UseIdx.
+    static bool allUsesAvailableAt(const MachineInstr *MI, SlotIndex UseIdx,
+                                   const LiveIntervals &LIS,
+                                   const MachineRegisterInfo &MRI,
                                    const TargetInstrInfo &TII);
 
   protected:
@@ -86,15 +97,8 @@ class VirtRegMap;
     /// start and end - compute future expected spill weight of a split
     /// artifact of LI that will span between start and end slot indexes.
     /// \param LI     The live interval for which to compute the weight.
-    /// \param Start  The expected beginning of the split artifact. Instructions
-    ///               before start will not affect the weight. Relevant for
-    ///               weight calculation of future split artifact.
-    /// \param End    The expected end of the split artifact. Instructions
-    ///               after end will not affect the weight. Relevant for
-    ///               weight calculation of future split artifact.
     /// \return The spill weight. Returns negative weight for unspillable LI.
-    float weightCalcHelper(LiveInterval &LI, SlotIndex *Start = nullptr,
-                           SlotIndex *End = nullptr);
+    float weightCalcHelper(LiveInterval &LI);
 
     /// Weight normalization function.
     virtual float normalize(float UseDefFreq, unsigned Size,

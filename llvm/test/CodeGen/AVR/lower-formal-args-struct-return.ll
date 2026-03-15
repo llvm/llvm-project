@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; This test ensures that the backend can lower returns of struct values.
 ; It does not check how these are lowered.

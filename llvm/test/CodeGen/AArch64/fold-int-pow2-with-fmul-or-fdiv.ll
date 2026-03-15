@@ -44,38 +44,38 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-NEON-LABEL: fmul_pow2_ldexp_4xfloat:
 ; CHECK-NEON:       // %bb.0:
 ; CHECK-NEON-NEXT:    sub sp, sp, #48
-; CHECK-NEON-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEON-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-NEON-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEON-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEON-NEXT:    mov w0, v0.s[1]
-; CHECK-NEON-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    fmov w0, s1
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    mov w0, v0.s[2]
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-NEON-NEXT:    mov v1.s[2], v0.s[0]
-; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-NEON-NEXT:    mov w0, v0.s[3]
 ; CHECK-NEON-NEXT:    fmov s0, #9.00000000
-; CHECK-NEON-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-NEON-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-NEON-NEXT:    bl ldexpf
-; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr q1, [sp] // 16-byte Reload
 ; CHECK-NEON-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-NEON-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEON-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEON-NEXT:    mov v1.s[3], v0.s[0]
 ; CHECK-NEON-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEON-NEXT:    add sp, sp, #48
@@ -224,7 +224,6 @@ define double @fmul_pow_mul_max_pow2(i16 %cnt) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    fmov d1, #3.00000000
 ; CHECK-NEXT:    lsl w8, w8, w0
 ; CHECK-NEXT:    lsl w9, w9, w0
@@ -263,10 +262,13 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ; CHECK-NEON-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEON-NEXT:    dup v1.2d, x8
 ; CHECK-NEON-NEXT:    ushl v0.2d, v1.2d, v0.2d
-; CHECK-NEON-NEXT:    fmov v1.2s, #15.00000000
-; CHECK-NEON-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEON-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEON-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    mov x8, v0.d[1]
+; CHECK-NEON-NEXT:    fmov x9, d0
+; CHECK-NEON-NEXT:    ucvtf s1, x9
+; CHECK-NEON-NEXT:    ucvtf s0, x8
+; CHECK-NEON-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-NEON-NEXT:    fmov v0.2s, #15.00000000
+; CHECK-NEON-NEXT:    fmul v0.2s, v1.2s, v0.2s
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-NO-NEON-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
@@ -433,7 +435,6 @@ define double @fmul_pow_shl_cnt_safe(i16 %cnt) nounwind {
 ; CHECK-LABEL: fmul_pow_shl_cnt_safe:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    lsl w8, w8, w0
 ; CHECK-NEXT:    and w8, w8, #0xffff
 ; CHECK-NEXT:    ucvtf d0, w8

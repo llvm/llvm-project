@@ -333,3 +333,235 @@ Sections:
       - Name: ABC
         Desc: '123456'
         Type: NT_VERSION
+
+## Check that an incorrect alignment is reported.
+
+# RUN: not yaml2obj --docnum=16 %s 2>&1 | FileCheck %s --check-prefix=ERR_ALIGN1
+# ERR_ALIGN1: error: .note.foo: invalid alignment for a note section: 0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note.foo
+    Type:         SHT_NOTE
+    AddressAlign: 1
+    Notes:
+      - Type: 0x1
+
+## Check that note entries and their "Desc" fields are aligned according to the
+## specified section alignment.
+
+# RUN: yaml2obj --docnum=17 -D ELFCLASS=64 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefix=TEST17
+
+# RUN: yaml2obj --docnum=17 -D ELFCLASS=32 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefix=TEST17
+
+# TEST17:      Name: .note.foo4
+# TEST17:      SectionData (
+# TEST17-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST17-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
+# TEST17-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
+# TEST17-NEXT:   0030: 03000000 474E5500                    |....GNU.|
+# TEST17-NEXT: )
+# TEST17:      Name: .note.foo8
+# TEST17:      SectionData (
+# TEST17-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST17-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
+# TEST17-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
+# TEST17-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
+# TEST17-NEXT:   0040: 03000000 474E5500                    |....GNU.|
+# TEST17-NEXT: )
+# TEST17:      NoteSections [
+# TEST17-NEXT:   NoteSection {
+# TEST17-NEXT:     Name: .note.foo4
+# TEST17-NEXT:     Offset:
+# TEST17-NEXT:     Size:
+# TEST17-NEXT:     Notes [
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: ABCD
+# TEST17-NEXT:         Data size: 0x2
+# TEST17-NEXT:         Type: NT_VERSION (version)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 0102                                 |..|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: 
+# TEST17-NEXT:         Data size: 0x3
+# TEST17-NEXT:         Type: NT_ARCH (architecture)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 030405                               |...|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: GNU
+# TEST17-NEXT:         Data size: 0x0
+# TEST17-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# TEST17-NEXT:         Build ID: 
+# TEST17-NEXT:       }
+# TEST17-NEXT:     ]
+# TEST17-NEXT:   }
+# TEST17-NEXT:   NoteSection {
+# TEST17-NEXT:     Name: .note.foo8
+# TEST17-NEXT:     Offset:
+# TEST17-NEXT:     Size:
+# TEST17-NEXT:     Notes [
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: ABCD
+# TEST17-NEXT:         Data size: 0x2
+# TEST17-NEXT:         Type: NT_VERSION (version)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 0102                                 |..|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: 
+# TEST17-NEXT:         Data size: 0x3
+# TEST17-NEXT:         Type: NT_ARCH (architecture)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 030405                               |...|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: GNU
+# TEST17-NEXT:         Data size: 0x0
+# TEST17-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# TEST17-NEXT:         Build ID: 
+# TEST17-NEXT:       }
+# TEST17-NEXT:     ]
+# TEST17-NEXT:   }
+# TEST17-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[ELFCLASS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note.foo4
+    Type:         SHT_NOTE
+    AddressAlign: 4
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+  - Name:        .note.foo8
+    Type:         SHT_NOTE
+    AddressAlign: 8
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+
+## Check that the alignment for note entries is taken from the "AddressAlign"
+## field even if "ShAddrAlign" is also specified; an unexpected value in the
+## "ShAddrAlign" property does not trigger an incorrect alignment error.
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=0 -D SHADDRALIGN=8 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=4 -D SHADDRALIGN=3 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=8 -D SHADDRALIGN=4 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_8
+
+# TEST18:        Name: .note
+# TEST18:        SectionData (
+# TEST18_4-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST18_4-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
+# TEST18_4-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
+# TEST18_4-NEXT:   0030: 03000000 474E5500                    |....GNU.|
+# TEST18_8-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST18_8-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
+# TEST18_8-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
+# TEST18_8-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
+# TEST18_8-NEXT:   0040: 03000000 474E5500                    |....GNU.|
+# TEST18-NEXT:   )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    AddressAlign: [[ADDRALIGN]]
+    ShAddrAlign:  [[SHADDRALIGN]]
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+
+## Check that an incorrect offset for generating notes is reported.
+
+# RUN: not yaml2obj --docnum=19 %s 2>&1 | FileCheck %s --check-prefix=ERR_OFFSET
+# ERR_OFFSET: error: .note: invalid offset of a note section: 0x501, should be aligned to 4
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .note
+    Type:   SHT_NOTE
+    Offset: 0x501
+    Notes:
+      - Type: 0x1
+
+## Do not issue an error if the notes array is empty.
+
+# RUN: yaml2obj --docnum=20 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data - | \
+# RUN:   FileCheck %s --check-prefix=TEST20
+
+# TEST20:      Section {
+# TEST20:      Name: .note
+# TEST20-NEXT:   Type: SHT_NOTE
+# TEST20-NEXT:   Flags [ (0x0)
+# TEST20-NEXT:   ]
+# TEST20-NEXT:   Address:
+# TEST20-NEXT:   Offset: 0x501
+# TEST20-NEXT:   Size: 0
+# TEST20-NEXT:   Link:
+# TEST20-NEXT:   Info:
+# TEST20-NEXT:   AddressAlignment: 5
+# TEST20-NEXT:   EntrySize:
+# TEST20-NEXT:   SectionData (
+# TEST20-NEXT:   )
+# TEST20-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    Offset:       0x501
+    AddressAlign: 5
+    Notes:        []

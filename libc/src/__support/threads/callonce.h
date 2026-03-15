@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H
 
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_LIKELY
 
 // Plaform specific routines, provides:
@@ -21,20 +22,14 @@
 #error "callonce is not supported on this platform"
 #endif
 
-namespace LIBC_NAMESPACE {
-
-// Common definitions
-using CallOnceCallback = void(void);
-namespace callonce_impl {
-int callonce_slowpath(CallOnceFlag *flag, CallOnceCallback *callback);
-} // namespace callonce_impl
-
-LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback *callback) {
+namespace LIBC_NAMESPACE_DECL {
+template <class CallOnceCallback>
+LIBC_INLINE int callonce(CallOnceFlag *flag, CallOnceCallback callback) {
   if (LIBC_LIKELY(callonce_impl::callonce_fastpath(flag)))
     return 0;
 
   return callonce_impl::callonce_slowpath(flag, callback);
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_CALLONCE_H

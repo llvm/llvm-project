@@ -8,7 +8,25 @@ macro(pythonize_bool var)
   endif()
 endmacro()
 
+# Install targets required to run libunwind tests into a temporary location.
+#
+# This ensures that we run the tests against the final installed products, which
+# is closer to what we actually ship than the contents of the build tree.
+set(LIBUNWIND_TESTING_INSTALL_PREFIX "${LIBUNWIND_BINARY_DIR}/test-suite-install")
+set(libunwind_test_suite_install_targets unwind-headers unwind)
+if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
+  list(APPEND libunwind_test_suite_install_targets cxx-headers cxx cxx-modules cxxabi-headers cxxabi)
+endif()
+foreach(target IN LISTS libunwind_test_suite_install_targets)
+  add_custom_target(libunwind-test-suite-install-${target} DEPENDS "${target}"
+                    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                                               --prefix "${LIBUNWIND_TESTING_INSTALL_PREFIX}"
+                                               --component "${target}")
+  add_dependencies(unwind-test-depends libunwind-test-suite-install-${target})
+endforeach()
+
 pythonize_bool(LIBUNWIND_ENABLE_CET)
+pythonize_bool(LIBUNWIND_ENABLE_GCS)
 pythonize_bool(LIBUNWIND_ENABLE_THREADS)
 pythonize_bool(LIBUNWIND_USES_ARM_EHABI)
 
@@ -47,4 +65,4 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-unwind "Running libunwind tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS unwind)
+  DEPENDS unwind-test-depends)

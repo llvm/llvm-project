@@ -9,11 +9,11 @@
 namespace cwg820 { // cwg820: 2.7
 export template <class T> struct B {};
 // cxx98-17-warning@-1 {{exported templates are unsupported}}
-// since-cxx20-error@-2 {{export declaration can only be used within a module purview}}
+// since-cxx20-error@-2 {{export declaration can only be used within a module interface}}
 export template<typename T> void f() {}
 // cxx98-17-warning@-1 {{exported templates are unsupported}}
-// since-cxx20-error@-2 {{export declaration can only be used within a module purview}}
-}
+// since-cxx20-error@-2 {{export declaration can only be used within a module interface}}
+} // namespace cwg820
 
 namespace cwg873 { // cwg873: 3.0
 #if __cplusplus >= 201103L
@@ -30,3 +30,9 @@ void g(int i) {
 }
 #endif
 } // namespace cwg873
+
+// cwg882: 3.5
+#if __cplusplus >= 201103L
+int main() = delete;
+// since-cxx11-error@-1 {{'main' is not allowed to be deleted}}
+#endif

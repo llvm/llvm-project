@@ -52,50 +52,50 @@ long long test_cmplxadd64(void *__A, long long __B, long long __C) {
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_NB);
 }
 
-int test_cmpnbexadd32(void *__A, int __B, int __C) {
-  // CHECK-LABEL: @test_cmpnbexadd32(
+int test_cmpaxadd32(void *__A, int __B, int __C) {
+  // CHECK-LABEL: @test_cmpaxadd32(
   // CHECK: call i32 @llvm.x86.cmpccxadd32(ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 4)
   return _cmpccxadd_epi32(__A, __B, __C, _CMPCCX_Z);
 }
 
-long long test_cmpnbexadd64(void *__A, long long __B, long long __C) {
-  // CHECK-LABEL: @test_cmpnbexadd64(
+long long test_cmpaxadd64(void *__A, long long __B, long long __C) {
+  // CHECK-LABEL: @test_cmpaxadd64(
   // CHECK: call i64 @llvm.x86.cmpccxadd64(ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 4)
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_Z);
 }
 
-int test_cmpnbxadd32(void *__A, int __B, int __C) {
-  // CHECK-LABEL: @test_cmpnbxadd32(
+int test_cmpaexadd32(void *__A, int __B, int __C) {
+  // CHECK-LABEL: @test_cmpaexadd32(
   // CHECK: call i32 @llvm.x86.cmpccxadd32(ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 5)
   return _cmpccxadd_epi32(__A, __B, __C, _CMPCCX_NZ);
 }
 
-long long test_cmpnbxadd64(void *__A, long long __B, long long __C) {
-  // CHECK-LABEL: @test_cmpnbxadd64(
+long long test_cmpaexadd64(void *__A, long long __B, long long __C) {
+  // CHECK-LABEL: @test_cmpaexadd64(
   // CHECK: call i64 @llvm.x86.cmpccxadd64(ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 5)
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_NZ);
 }
 
-int test_cmpnlexadd32(void *__A, int __B, int __C) {
-  // CHECK-LABEL: @test_cmpnlexadd32(
+int test_cmpgxadd32(void *__A, int __B, int __C) {
+  // CHECK-LABEL: @test_cmpgxadd32(
   // CHECK: call i32 @llvm.x86.cmpccxadd32(ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 6)
   return _cmpccxadd_epi32(__A, __B, __C, _CMPCCX_BE);
 }
 
-long long test_cmpnlexadd64(void *__A, long long __B, long long __C) {
-  // CHECK-LABEL: @test_cmpnlexadd64(
+long long test_cmpgxadd64(void *__A, long long __B, long long __C) {
+  // CHECK-LABEL: @test_cmpgxadd64(
   // CHECK: call i64 @llvm.x86.cmpccxadd64(ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 6)
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_BE);
 }
 
-int test_cmpnlxadd32(void *__A, int __B, int __C) {
-  // CHECK-LABEL: @test_cmpnlxadd32(
+int test_cmpgexadd32(void *__A, int __B, int __C) {
+  // CHECK-LABEL: @test_cmpgexadd32(
   // CHECK: call i32 @llvm.x86.cmpccxadd32(ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 7)
   return _cmpccxadd_epi32(__A, __B, __C, _CMPCCX_NBE);
 }
 
-long long test_cmpnlxadd64(void *__A, long long __B, long long __C) {
-  // CHECK-LABEL: @test_cmpnlxadd64(
+long long test_cmpgexadd64(void *__A, long long __B, long long __C) {
+  // CHECK-LABEL: @test_cmpgexadd64(
   // CHECK: call i64 @llvm.x86.cmpccxadd64(ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 7)
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_NBE);
 }
@@ -136,14 +136,14 @@ long long test_cmpnsxadd64(void *__A, long long __B, long long __C) {
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_P);
 }
 
-int test_cmpnzxadd32(void *__A, int __B, int __C) {
-  // CHECK-LABEL: @test_cmpnzxadd32(
+int test_cmpnexadd32(void *__A, int __B, int __C) {
+  // CHECK-LABEL: @test_cmpnexadd32(
   // CHECK: call i32 @llvm.x86.cmpccxadd32(ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 11)
   return _cmpccxadd_epi32(__A, __B, __C, _CMPCCX_NP);
 }
 
-long long test_cmpnzxadd64(void *__A, long long __B, long long __C) {
-  // CHECK-LABEL: @test_cmpnzxadd64(
+long long test_cmpnexadd64(void *__A, long long __B, long long __C) {
+  // CHECK-LABEL: @test_cmpnexadd64(
   // CHECK: call i64 @llvm.x86.cmpccxadd64(ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 11)
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_NP);
 }
@@ -184,14 +184,14 @@ long long test_cmpsxadd64(void *__A, long long __B, long long __C) {
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_LE);
 }
 
-int test_cmpzxadd32(void *__A, int __B, int __C) {
-  // CHECK-LABEL: @test_cmpzxadd32(
+int test_cmpexadd32(void *__A, int __B, int __C) {
+  // CHECK-LABEL: @test_cmpexadd32(
   // CHECK: call i32 @llvm.x86.cmpccxadd32(ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 15)
   return _cmpccxadd_epi32(__A, __B, __C, _CMPCCX_NLE);
 }
 
-long long test_cmpzxadd64(void *__A, long long __B, long long __C) {
-  // CHECK-LABEL: @test_cmpzxadd64(
+long long test_cmpexadd64(void *__A, long long __B, long long __C) {
+  // CHECK-LABEL: @test_cmpexadd64(
   // CHECK: call i64 @llvm.x86.cmpccxadd64(ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 15)
   return _cmpccxadd_epi64(__A, __B, __C, _CMPCCX_NLE);
 }

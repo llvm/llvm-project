@@ -733,8 +733,8 @@ variables is defined below.
     * ``LIBOMPTARGET_INFO=<Num>``
     * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
     * ``LIBOMPTARGET_STACK_SIZE=<Num>``
-    * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
     * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
+    * ``LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS=[TRUE/FALSE] (default FALSE)``
     * ``LIBOMPTARGET_JIT_OPT_LEVEL={0,1,2,3} (default 3)``
     * ``LIBOMPTARGET_JIT_SKIP_OPT=[TRUE/FALSE] (default FALSE)``
     * ``LIBOMPTARGET_JIT_REPLACEMENT_OBJECT=<in:Filename> (object file)``
@@ -743,6 +743,8 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
     * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
+    * ``OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)``
+    * ``OFFLOAD_TRACK_NUM_KERNEL_LAUNCH_TRACES=<Num> (default 0)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -1056,14 +1058,6 @@ allocated using ``malloc`` and ``free`` for the CUDA plugin. This is necessary
 for some applications that allocate too much memory either through the user or
 globalization.
 
-LIBOMPTARGET_SHARED_MEMORY_SIZE
-"""""""""""""""""""""""""""""""
-
-This environment variable sets the amount of dynamic shared memory in bytes used
-by the kernel once it is launched. A pointer to the dynamic memory buffer can be
-accessed using the ``llvm_omp_target_dynamic_shared_alloc`` function. An example
-is shown in :ref:`libomptarget_dynamic_shared`.
-
 .. toctree::
    :hidden:
    :maxdepth: 1
@@ -1085,6 +1079,23 @@ this option. To disable forced atomic map clauses use "false"/"FALSE" as the
 value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
 The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
 of LLVM did not.
+
+LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS
+"""""""""""""""""""""""""""""""""""""""""
+
+By default, OpenMP attach operations only perform pointer attachment
+when mapping an expression with a base-pointer/base-referring-pointer,
+when either the pointer or the pointee was newly allocated on a
+map-entering directive (aka ``attach(auto)`` as per OpenMP 6.1 TR14).
+
+When  ``LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS`` is set to ``true``,
+ATTACH map entries without the ALWAYS flag are implicitly treated as if
+the ALWAYS flag was set. This forces pointer attachments to occur even when
+the pointee/pointer were not newly allocated (similar to OpenMP 6.1
+TR14's ``attach(always)`` map-type-modifier), thereby treating
+``attach(auto))`` as ``attach(always)``. This can be used for
+experimentation, or as a workaround for programs compiled without
+``-fopenmp-version=61``.
 
 .. _libomptarget_jit_opt_level:
 
@@ -1170,6 +1181,18 @@ This environment variable can be used to control how the OpenMP runtime assigns
 blocks to loops with high trip counts. By default we reuse existing blocks
 rather than spawning new blocks.
 
+OFFLOAD_TRACK_ALLOCATION_TRACES
+"""""""""""""""""""""""""""""""
+
+This environment variable determines if the stack traces of allocations and
+deallocations are tracked to aid in error reporting, e.g., in case of
+double-free.
+
+OFFLOAD_TRACK_KERNEL_LAUNCH_TRACES
+""""""""""""""""""""""""""""""""""
+
+This environment variable determines how manytstack traces of kernel launches
+are tracked to aid in error reporting, e.g., what asynchronous kernel failed.
 
 .. _libomptarget_plugin:
 
@@ -1201,7 +1224,6 @@ Environment Variables
 
 There are several environment variables to change the behavior of the plugins:
 
-* ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
 * ``LIBOMPTARGET_STACK_SIZE``
 * ``LIBOMPTARGET_HEAP_SIZE``
 * ``LIBOMPTARGET_NUM_INITIAL_STREAMS``
@@ -1215,8 +1237,8 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
 * ``LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT``
 
-The environment variables ``LIBOMPTARGET_SHARED_MEMORY_SIZE``,
-``LIBOMPTARGET_STACK_SIZE`` and ``LIBOMPTARGET_HEAP_SIZE`` are described in
+The environment variables ``LIBOMPTARGET_STACK_SIZE`` and
+``LIBOMPTARGET_HEAP_SIZE`` are described in
 :ref:`libopenmptarget_environment_vars`.
 
 LIBOMPTARGET_NUM_INITIAL_STREAMS
@@ -1369,6 +1391,10 @@ LIBOMPTARGET_RPC_LATENCY
 """"""""""""""""""""""""
 This is the maximum amount of time the client will wait for a response from the server.
 
+.. warning::
+    The ``LIBOMPTARGET_SHARED_MEMORY_SIZE`` environment variable is not
+    supported anymore. Please use the ``dyn_groupprivate`` clause instead, as
+    shown in :ref:`libomptarget_dynamic_shared`.
 
 .. _libomptarget_libc:
 
@@ -1431,35 +1457,21 @@ IR during compilation.
 Dynamic Shared Memory
 ^^^^^^^^^^^^^^^^^^^^^
 
-The target device runtime contains a pointer to the dynamic shared memory
-buffer. This pointer can be obtained using the
+The OpenMP implementation provides access to dynamic shared memory in ``target``
+regions through the ``dyn_groupprivate`` clause, introduced in OpenMP 6.1. This
+is the preferred method to obtain dynamic shared memory. Please refer to
+the OpenMP standard documentation for more information.
+
+As an alternative, the target device runtime contains a pointer to the native
+dynamic shared memory buffer. This pointer can be obtained using the
 ``llvm_omp_target_dynamic_shared_alloc`` extension. If this function is called
 from the host it will simply return a null pointer. In order to use this buffer
 the kernel must be launched with an adequate amount of dynamic shared memory
-allocated. This can be done using the ``LIBOMPTARGET_SHARED_MEMORY_SIZE``
-environment variable or the ``ompx_dyn_cgroup_mem(<N>)`` target directive
-clause. Examples for both are given below.
+allocated. This can be done using the ``ompx_dyn_cgroup_mem(<N>)`` target
+directive clause. An example is given below.
 
-.. code-block:: c++
-
-    void foo() {
-      int x;
-    #pragma omp target parallel map(from : x)
-      {
-        int *buf = llvm_omp_target_dynamic_shared_alloc();
-        if (omp_get_thread_num() == 0)
-          *buf = 1;
-    #pragma omp barrier
-        if (omp_get_thread_num() == 1)
-          x = *buf;
-      }
-      assert(x == 1);
-    }
-
-.. code-block:: console
-
-    $ clang++ -fopenmp --offload-arch=sm_80 -O3 shared.c
-    $ env LIBOMPTARGET_SHARED_MEMORY_SIZE=256 ./shared
+Please notice that the ``LIBOMPTARGET_SHARED_MEMORY_SIZE`` environment variable
+is not supported anymore.
 
 .. code-block:: c++
 
@@ -1477,11 +1489,14 @@ clause. Examples for both are given below.
       assert(x == 1);
     }
 
-.. code-block:: console
+.. _libomptarget_device_allocator:
 
-    $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
-    $ env ./shared
+Device Allocation
+^^^^^^^^^^^^^^^^^
 
+The device runtime supports basic runtime allocation via the ``omp_alloc`` 
+function. Currently, this allocates global memory for all default traits. Access 
+modifiers are currently not supported and return a null pointer.
 
 .. _libomptarget_device_debugging:
 
@@ -1499,4 +1514,4 @@ debugging features are supported.
 
     * Enable debugging assertions in the device. ``0x01``
     * Enable diagnosing common problems during offloading . ``0x4``
-    * Enable device malloc statistics (amdgpu only). ``0x8``
+    * Dump device PGO counters (only if PGO on GPU is enabled). ``0x10``

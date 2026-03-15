@@ -58,8 +58,7 @@ ProcessElementList(StringTableBuilder &StrTabBuilder,
     size_t Idx = FindSequence(IndexBuffer, El.Indices);
     if (Idx == npos) {
       FinalElement.IndicesOffset = static_cast<uint32_t>(IndexBuffer.size());
-      IndexBuffer.insert(IndexBuffer.end(), El.Indices.begin(),
-                         El.Indices.end());
+      llvm::append_range(IndexBuffer, El.Indices);
     } else
       FinalElement.IndicesOffset = static_cast<uint32_t>(Idx);
     FinalElements.push_back(FinalElement);

@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
-#include "llvm/ADT/StringExtras.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -66,38 +64,20 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     return "-" + S.str();
   };
 
-  // Drop tiny core suffix for HVX version.
-  std::string HvxVer =
-      (Cpu.back() == 'T' || Cpu.back() == 't' ? Cpu.drop_back(1) : Cpu).str();
-  HasHVX = false;
-
-  // Handle -mhvx, -mhvx=, -mno-hvx. If versioned and versionless flags
-  // are both present, the last one wins.
-  Arg *HvxEnablingArg =
-      Args.getLastArg(options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ,
-                      options::OPT_mno_hexagon_hvx);
-  if (HvxEnablingArg) {
-    if (HvxEnablingArg->getOption().matches(options::OPT_mno_hexagon_hvx))
-      HvxEnablingArg = nullptr;
-  }
-
-  if (HvxEnablingArg) {
-    // If -mhvx[=] was given, it takes precedence.
-    if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx,
-                                 options::OPT_mhexagon_hvx_EQ)) {
-      // If the version was given, set HvxVer. Otherwise HvxVer
-      // will remain equal to the CPU version.
-      if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ))
-        HvxVer = StringRef(A->getValue()).lower();
+  std::optional<std::string> HvxVer =
+      toolchains::HexagonToolChain::GetHVXVersion(Args);
+  HasHVX = HvxVer.has_value();
+  if (HasHVX)
+    Features.push_back(makeFeature(Twine("hvx") + *HvxVer, true));
+  else {
+    if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx)) {
+      // If there was an explicit -mno-hvx, add -hvx to target features.
+      Features.push_back(makeFeature(A->getOption().getName(), false));
     }
-    HasHVX = true;
-    Features.push_back(makeFeature(Twine("hvx") + HvxVer, true));
-  } else if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx)) {
-    // If there was an explicit -mno-hvx, add -hvx to target features.
-    Features.push_back(makeFeature(A->getOption().getName(), false));
   }
 
-  StringRef HvxLen = getDefaultHvxLength(HvxVer);
+  StringRef HvxLen =
+      getDefaultHvxLength(HasHVX ? StringRef(*HvxVer) : StringRef(""));
 
   // Handle -mhvx-length=.
   if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
@@ -113,10 +93,14 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     Features.push_back(L);
   }
 
-  unsigned HvxVerNum;
+  unsigned HvxVerNum = 0;
   // getAsInteger returns 'true' on error.
-  if (StringRef(HvxVer).drop_front(1).getAsInteger(10, HvxVerNum))
-    HvxVerNum = 0;
+  if (HasHVX) {
+    StringRef HvxVerRef(*HvxVer);
+    if (HvxVerRef.size() <= 1 ||
+        HvxVerRef.drop_front(1).getAsInteger(10, HvxVerNum))
+      HvxVerNum = 0;
+  }
 
   // Handle HVX floating point flags.
   auto checkFlagHvxVersion =
@@ -294,9 +278,10 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncStartFiles = !Args.hasArg(options::OPT_nostartfiles);
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseG0 = false;
-  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
-  bool UseLLD = (llvm::sys::path::filename(Exec).equals_insensitive("ld.lld") ||
-                 llvm::sys::path::stem(Exec).equals_insensitive("ld.lld"));
+  bool UseLLD = false;
+  const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
+  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+           llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
@@ -312,6 +297,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                                      // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_static_libgcc);
 
+  CmdArgs.push_back("--eh-frame-hdr");
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
@@ -366,18 +352,21 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
+    ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
+
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
         linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
 
-        CmdArgs.push_back("-lunwind");
+        if (UNW != ToolChain::UNW_None)
+          CmdArgs.push_back("-lunwind");
       }
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
-      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+      CmdArgs.push_back("-lclang_rt.builtins-hexagon");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
@@ -618,13 +607,24 @@ HexagonToolChain::~HexagonToolChain() {}
 void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                            ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);
+  ToolChain::UnwindLibType UNW = GetUnwindLibType(Args);
+  if (UNW != ToolChain::UNW_None && UNW != ToolChain::UNW_CompilerRT) {
+    const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
+    if (A) {
+      getDriver().Diag(diag::err_drv_unsupported_unwind_for_platform)
+          << A->getValue() << getTriple().normalize();
+      return;
+    }
+  }
+
   switch (Type) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
     if (Args.hasArg(options::OPT_fexperimental_library))
       CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
-    CmdArgs.push_back("-lunwind");
+    if (UNW != ToolChain::UNW_None)
+      CmdArgs.push_back("-lunwind");
     break;
 
   case ToolChain::CST_Libstdcxx:
@@ -787,9 +787,7 @@ bool HexagonToolChain::isAutoHVXEnabled(const llvm::opt::ArgList &Args) {
 // Returns the default CPU for Hexagon. This is the default compilation target
 // if no Hexagon processor is selected at the command-line.
 //
-StringRef HexagonToolChain::GetDefaultCPU() {
-  return "hexagonv60";
-}
+StringRef HexagonToolChain::GetDefaultCPU() { return "hexagonv68"; }
 
 StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   Arg *CpuArg = nullptr;
@@ -800,3 +798,29 @@ StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   CPU.consume_front("hexagon");
   return CPU;
 }
+
+std::optional<std::string>
+HexagonToolChain::GetHVXVersion(const ArgList &Args) {
+  // Handle -mh[v]x= and -mno-hvx. If versioned and versionless flags
+  // are both present, the last one wins.
+  Arg *HvxEnablingArg =
+      Args.getLastArg(options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ,
+                      options::OPT_mno_hexagon_hvx);
+  if (!HvxEnablingArg ||
+      HvxEnablingArg->getOption().matches(options::OPT_mno_hexagon_hvx))
+    return std::nullopt;
+
+  StringRef Cpu(toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
+  std::string HvxVer;
+  if (!Cpu.empty() && (Cpu.back() == 'T' || Cpu.back() == 't'))
+    HvxVer = Cpu.drop_back(1).str();
+  else
+    HvxVer = Cpu.str();
+
+  if (HvxEnablingArg->getOption().matches(options::OPT_mhexagon_hvx_EQ))
+    HvxVer = StringRef(HvxEnablingArg->getValue()).lower();
+
+  return HvxVer;
+}
+
+// End Hexagon

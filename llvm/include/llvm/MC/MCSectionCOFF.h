@@ -47,16 +47,20 @@ class MCSectionCOFF final : public MCSection {
   /// section (Characteristics & IMAGE_SCN_LNK_COMDAT) != 0
   mutable int Selection;
 
+  unsigned UniqueID;
+
 private:
   friend class MCContext;
+  friend class MCAsmInfoCOFF;
   // The storage of Name is owned by MCContext's COFFUniquingMap.
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
-                MCSymbol *COMDATSymbol, int Selection, MCSymbol *Begin)
-      : MCSection(SV_COFF, Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
+                MCSymbol *COMDATSymbol, int Selection, unsigned UniqueID,
+                MCSymbol *Begin)
+      : MCSection(Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
                   Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA,
                   Begin),
         Characteristics(Characteristics), COMDATSymbol(COMDATSymbol),
-        Selection(Selection) {
+        Selection(Selection), UniqueID(UniqueID) {
     assert((Characteristics & 0x00F00000) == 0 &&
            "alignment must not be set upon section creation");
   }
@@ -64,7 +68,7 @@ private:
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
-  bool shouldOmitSectionDirective(StringRef Name, const MCAsmInfo &MAI) const;
+  bool shouldOmitSectionDirective(StringRef Name) const;
 
   unsigned getCharacteristics() const { return Characteristics; }
   MCSymbol *getCOMDATSymbol() const { return COMDATSymbol; }
@@ -72,11 +76,8 @@ public:
 
   void setSelection(int Selection) const;
 
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override;
-  bool useCodeAlign() const override;
-  StringRef getVirtualSectionKind() const override;
+  bool isUnique() const { return UniqueID != NonUniqueID; }
+  unsigned getUniqueID() const { return UniqueID; }
 
   unsigned getOrAssignWinCFISectionID(unsigned *NextID) const {
     if (WinCFISectionID == ~0U)
@@ -87,8 +88,6 @@ public:
   static bool isImplicitlyDiscardable(StringRef Name) {
     return Name.starts_with(".debug");
   }
-
-  static bool classof(const MCSection *S) { return S->getVariant() == SV_COFF; }
 };
 
 } // end namespace llvm

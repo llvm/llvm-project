@@ -46,10 +46,13 @@ public:
 
   Symbol *find(StringRef name);
 
-  void replace(StringRef name, Symbol* sym);
+  void replace(StringRef name, Symbol *sym);
 
   void trace(StringRef name);
 
+  Symbol *addSharedFunction(StringRef name, uint32_t flags, InputFile *file,
+                            const WasmSignature *sig);
+  Symbol *addSharedData(StringRef name, uint32_t flags, InputFile *file);
   Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
                              InputFunction *function);
   Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
@@ -105,7 +108,7 @@ private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);
   std::pair<Symbol *, bool> insertName(StringRef name);
 
-  bool getFunctionVariant(Symbol* sym, const WasmSignature *sig,
+  bool getFunctionVariant(Symbol *sym, const WasmSignature *sig,
                           const InputFile *file, Symbol **out);
   InputFunction *replaceWithUnreachable(Symbol *sym, const WasmSignature &sig,
                                         StringRef debugName);

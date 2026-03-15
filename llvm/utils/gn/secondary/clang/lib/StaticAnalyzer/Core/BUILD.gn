@@ -10,6 +10,7 @@ static_library("Core") {
     "//clang/lib/CrossTU",
     "//clang/lib/Lex",
     "//clang/lib/Rewrite",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/Support",
   ]
   sources = [
@@ -33,6 +34,7 @@ static_library("Core") {
     "CoreEngine.cpp",
     "DynamicExtent.cpp",
     "DynamicType.cpp",
+    "EntryPointStats.cpp",
     "Environment.cpp",
     "ExplodedGraph.cpp",
     "ExprEngine.cpp",

@@ -25,11 +25,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_store_release_i64
     ; CHECK: liveins: $w0, $x1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
-    ; CHECK: early-clobber %2:gpr32 = STLXRX [[COPY]], [[COPY1]] :: (volatile store (s64) into %ir.addr)
-    ; CHECK: $w0 = COPY %2
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
+    ; CHECK-NEXT: early-clobber %2:gpr32 = STLXRX [[COPY]], [[COPY1]] :: (volatile store (s64) into %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY %2
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:gpr(s64) = COPY $x1
     %2:gpr(p0) = COPY $x2
     %3:gpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.stlxr), %1(s64), %2(p0) :: (volatile store (s64) into %ir.addr)
@@ -48,11 +49,12 @@ body:             |
     liveins: $w0, $w1, $x2
     ; CHECK-LABEL: name: test_store_release_i32
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
-    ; CHECK: early-clobber %3:gpr32 = STLXRW [[COPY]], [[COPY1]] :: (volatile store (s32) into %ir.addr)
-    ; CHECK: $w0 = COPY %3
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
+    ; CHECK-NEXT: early-clobber %3:gpr32 = STLXRW [[COPY]], [[COPY1]] :: (volatile store (s32) into %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY %3
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(p0) = COPY $x2
     %3:gpr(s64) = G_ZEXT %1(s32)
@@ -73,14 +75,15 @@ body:             |
 
     ; CHECK-LABEL: name: test_store_release_i8
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
-    ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].sub_32
-    ; CHECK: early-clobber %5:gpr32 = STLXRB [[COPY2]], [[COPY1]] :: (volatile store (s8) into %ir.addr)
-    ; CHECK: $w0 = COPY %5
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].sub_32
+    ; CHECK-NEXT: early-clobber %5:gpr32 = STLXRB [[COPY2]], [[COPY1]] :: (volatile store (s8) into %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY %5
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %3:gpr(s32) = COPY $w1
     %2:gpr(p0) = COPY $x2
     %6:gpr(s64) = G_CONSTANT i64 255
@@ -103,14 +106,15 @@ body:             |
 
     ; CHECK-LABEL: name: test_store_release_i16
     ; CHECK: liveins: $w0, $w1, $x2
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
-    ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].sub_32
-    ; CHECK: early-clobber %5:gpr32 = STLXRH [[COPY2]], [[COPY1]] :: (volatile store (s16) into %ir.addr)
-    ; CHECK: $w0 = COPY %5
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x2
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[INSERT_SUBREG]].sub_32
+    ; CHECK-NEXT: early-clobber %5:gpr32 = STLXRH [[COPY2]], [[COPY1]] :: (volatile store (s16) into %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY %5
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %3:gpr(s32) = COPY $w1
     %2:gpr(p0) = COPY $x2
     %6:gpr(s64) = G_CONSTANT i64 65535

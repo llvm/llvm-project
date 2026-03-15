@@ -38,6 +38,11 @@ void test_string_discriminator(int *dp) {
   (void)t0;
 }
 
+void test_type_discriminator(int *dp) {
+  ptrauth_extra_data_t t0 = ptrauth_type_discriminator(int (*)(int));
+  (void)t0;
+}
+
 void test_sign_constant(int *dp) {
   dp = ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
 }

@@ -70,7 +70,12 @@ private:
         for (const parser::DoConstruct *loop{&outer}; loop && tileArgNb > 0;
              --tileArgNb) {
           const auto &block{std::get<parser::Block>(loop->t)};
-          const auto it{block.begin()};
+          auto it{block.begin()};
+          // Skip directives when checking tight nesting.
+          while (it != block.end() &&
+              parser::Unwrap<parser::CompilerDirective>(*it)) {
+            ++it;
+          }
           loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
                                    : nullptr;
         }
@@ -98,12 +103,30 @@ private:
     const auto &accClauseList =
         std::get<parser::AccClauseList>(beginLoopDirective.t);
     for (const auto &clause : accClauseList.v) {
-      if (std::holds_alternative<parser::AccClause::Collapse>(clause.u) ||
-          std::holds_alternative<parser::AccClause::Tile>(clause.u)) {
+      if (std::holds_alternative<parser::AccClause::Tile>(clause.u)) {
         messages_.Say(beginLoopDirective.source,
-            "TILE and COLLAPSE clause may not appear on loop construct "
+            "TILE clause may not appear on loop construct "
             "associated with DO CONCURRENT"_err_en_US);
       }
+      if (std::holds_alternative<parser::AccClause::Collapse>(clause.u)) {
+        messages_.Say(beginLoopDirective.source,
+            "COLLAPSE clause may not appear on loop construct "
+            "associated with DO CONCURRENT"_err_en_US);
+      }
+    }
+  }
+
+  // Utility to move all parser::CompilerDirective right after it to right
+  // before it.  This allows preserving loop directives $DIR that may lie
+  // between an $acc directive and loop and leave lowering decide if it should
+  // ignore them or lower/apply them to the acc loops.
+  void moveCompilerDirectivesBefore(
+      parser::Block &block, parser::Block::iterator it) {
+    parser::Block::iterator nextIt = std::next(it);
+    while (nextIt != block.end() &&
+        parser::Unwrap<parser::CompilerDirective>(*nextIt)) {
+      block.emplace(it, std::move(*nextIt));
+      nextIt = block.erase(nextIt);
     }
   }
 
@@ -115,6 +138,7 @@ private:
     auto &nestedDo{std::get<std::optional<parser::DoConstruct>>(x.t)};
 
     if (!nestedDo) {
+      moveCompilerDirectivesBefore(block, it);
       nextIt = it;
       if (++nextIt != block.end()) {
         if (auto *doCons{parser::Unwrap<parser::DoConstruct>(*nextIt)}) {
@@ -151,6 +175,7 @@ private:
     auto &nestedDo{std::get<std::optional<parser::DoConstruct>>(x.t)};
 
     if (!nestedDo) {
+      moveCompilerDirectivesBefore(block, it);
       nextIt = it;
       if (++nextIt != block.end()) {
         if (auto *doCons{parser::Unwrap<parser::DoConstruct>(*nextIt)}) {

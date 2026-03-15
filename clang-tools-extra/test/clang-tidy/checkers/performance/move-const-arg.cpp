@@ -1,36 +1,6 @@
 // RUN: %check_clang_tidy %s performance-move-const-arg %t
 
-namespace std {
-template <typename>
-struct remove_reference;
-
-template <typename _Tp>
-struct remove_reference {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-struct remove_reference<_Tp &&> {
-  typedef _Tp type;
-};
-
-template <typename _Tp>
-constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
-  return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
-}
-
-template <typename _Tp>
-constexpr _Tp &&
-forward(typename remove_reference<_Tp>::type &__t) noexcept {
-  return static_cast<_Tp &&>(__t);
-}
-
-} // namespace std
+#include <utility>
 
 class A {
 public:
@@ -546,3 +516,74 @@ void testAlsoNonMoveable() {
 }
 
 } // namespace issue_62550
+
+namespace GH111450 {
+struct Status;
+
+struct Error {
+    Error(const Status& S);
+};
+
+struct Result {
+  Error E;
+  Result(Status&& S) : E(std::move(S)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+};
+} // namespace GH111450
+
+namespace GH126515 {
+
+struct TernaryMoveCall {
+TernaryMoveCall();
+TernaryMoveCall(const TernaryMoveCall&);
+TernaryMoveCall operator=(const TernaryMoveCall&);
+
+void TernaryCheckTriviallyCopyable(const char * c) {}
+
+void testTernaryMove() {
+  TernaryMoveCall t1;
+  TernaryMoveCall other(false ? TernaryMoveCall() : TernaryMoveCall(std::move(t1)) );
+  // CHECK-MESSAGES: :[[@LINE-1]]:69: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-11]]:8: note: 'TernaryMoveCall' is not move assignable/constructible
+
+  const char* a = "a";
+  TernaryCheckTriviallyCopyable(true ? std::move(a) : "" );
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: std::move of the variable 'a' of the trivially-copyable type 'const char *' has no effect; remove std::move() [performance-move-const-arg]
+}
+
+};
+} // namespace GH126515
+
+namespace GH174826 {
+
+struct PrivateCopy {
+  PrivateCopy() = default;
+  PrivateCopy(PrivateCopy &&) = default;
+
+private:
+  PrivateCopy(const PrivateCopy &) = default;
+};
+
+void receive(PrivateCopy) {}
+
+void testPrivate() {
+  PrivateCopy v;
+  receive(std::move(v));
+}
+
+struct PublicCopy {
+  PublicCopy() = default;
+  PublicCopy(const PublicCopy &) = default;
+  PublicCopy(PublicCopy &&) = default;
+};
+
+void receive(PublicCopy) {}
+
+void testPublic() {
+  PublicCopy v;
+  receive(std::move(v));
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: std::move of the variable 'v' of the trivially-copyable type 'PublicCopy' has no effect; remove std::move() [performance-move-const-arg]
+  // CHECK-FIXES: receive(v);
+}
+
+} // namespace GH174826

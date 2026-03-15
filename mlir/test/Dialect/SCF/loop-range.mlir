@@ -21,12 +21,13 @@ func.func @fold_one_loop(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
 // CHECK:       %[[C4:.*]] = arith.constant 4 : index
 // CHECK:       %[[I0:.*]] = arith.addi %[[ARG2]], %[[C0]] : index
 // CHECK:       %[[I1:.*]] = arith.addi %[[ARG2]], %[[ARG1]] : index
-// CHECK:       %[[I2:.*]] = arith.muli %[[I1]], %[[C4]] : index
-// CHECK:       %[[I3:.*]] = arith.muli %[[C1]], %[[C4]] : index
-// CHECK:       scf.for %[[I:.*]] = %[[I0]] to %[[I2]] step %[[I3]] {
-// CHECK:         %[[I4:.*]] = memref.load %[[ARG0]]{{\[}}%[[I]]
-// CHECK:         %[[I5:.*]] = arith.muli %[[I4]], %[[I4]] : i32
-// CHECK:         memref.store %[[I5]], %[[ARG0]]{{\[}}%[[I]]
+// CHECK:       %[[I2:.*]] = arith.muli %[[I0]], %[[C4]] : index
+// CHECK:       %[[I3:.*]] = arith.muli %[[I1]], %[[C4]] : index
+// CHECK:       %[[I4:.*]] = arith.muli %[[C1]], %[[C4]] : index
+// CHECK:       scf.for %[[I:.*]] = %[[I2]] to %[[I3]] step %[[I4]] {
+// CHECK:         %[[I5:.*]] = memref.load %[[ARG0]]{{\[}}%[[I]]
+// CHECK:         %[[I6:.*]] = arith.muli %[[I5]], %[[I5]] : i32
+// CHECK:         memref.store %[[I6]], %[[ARG0]]{{\[}}%[[I]]
 
 func.func @fold_one_loop2(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
   %c0 = arith.constant 0 : index
@@ -54,12 +55,13 @@ func.func @fold_one_loop2(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
 // CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C10]] step %[[C1]] {
 // CHECK:         %[[I0:.*]] = arith.addi %[[ARG2]], %[[C0]] : index
 // CHECK:         %[[I1:.*]] = arith.addi %[[ARG2]], %[[ARG1]] : index
-// CHECK:         %[[I2:.*]] = arith.muli %[[I1]], %[[C4]] : index
-// CHECK:         %[[I3:.*]] = arith.muli %[[C1]], %[[C4]] : index
-// CHECK:         scf.for %[[I:.*]] = %[[I0]] to %[[I2]] step %[[I3]] {
-// CHECK:           %[[I4:.*]] = memref.load %[[ARG0]]{{\[}}%[[I]]
-// CHECK:           %[[I5:.*]] = arith.muli %[[I4]], %[[I4]] : i32
-// CHECK:           memref.store %[[I5]], %[[ARG0]]{{\[}}%[[I]]
+// CHECK:         %[[I2:.*]] = arith.muli %[[I0]], %[[C4]] : index
+// CHECK:         %[[I3:.*]] = arith.muli %[[I1]], %[[C4]] : index
+// CHECK:         %[[I4:.*]] = arith.muli %[[C1]], %[[C4]] : index
+// CHECK:         scf.for %[[I:.*]] = %[[I2]] to %[[I3]] step %[[I4]] {
+// CHECK:           %[[I5:.*]] = memref.load %[[ARG0]]{{\[}}%[[I]]
+// CHECK:           %[[I6:.*]] = arith.muli %[[I5]], %[[I5]] : i32
+// CHECK:           memref.store %[[I6]], %[[ARG0]]{{\[}}%[[I]]
 
 func.func @fold_two_loops(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
   %c0 = arith.constant 0 : index
@@ -86,14 +88,17 @@ func.func @fold_two_loops(%arg0: memref<?xi32>, %arg1: index, %arg2: index) {
 // CHECK:       %[[C10:.*]] = arith.constant 10 : index
 // CHECK:       %[[I0:.*]] = arith.addi %[[ARG2]], %[[C0]] : index
 // CHECK:       %[[I1:.*]] = arith.addi %[[ARG2]], %[[C10]] : index
-// CHECK:       scf.for %[[J:.*]] = %[[I0]] to %[[I1]] step %[[C1]] {
-// CHECK:         %[[I1:.*]] = arith.addi %[[ARG2]], %[[ARG1]] : index
-// CHECK:         %[[I2:.*]] = arith.muli %[[I1]], %[[C4]] : index
-// CHECK:         %[[I3:.*]] = arith.muli %[[C1]], %[[C4]] : index
-// CHECK:         scf.for %[[I:.*]] = %[[J]] to %[[I2]] step %[[I3]] {
-// CHECK:           %[[I4:.*]] = memref.load %[[ARG0]]{{\[}}%[[I]]
-// CHECK:           %[[I5:.*]] = arith.muli %[[I4]], %[[I4]] : i32
-// CHECK:           memref.store %[[I5]], %[[ARG0]]{{\[}}%[[I]]
+// CHECK:       %[[I2:.*]] = arith.muli %[[I0]], %[[C4]] : index
+// CHECK:       %[[I3:.*]] = arith.muli %[[I1]], %[[C4]] : index
+// CHECK:       %[[I4:.*]] = arith.muli %[[C1]], %[[C4]] : index
+// CHECK:       scf.for %[[J:.*]] = %[[I2]] to %[[I3]] step %[[I4]] {
+// CHECK:         %[[I5:.*]] = arith.addi %[[ARG2]], %[[ARG1]] : index
+// CHECK:         %[[I6:.*]] = arith.muli %[[I5]], %[[C4]] : index
+// CHECK:         %[[I7:.*]] = arith.muli %[[C1]], %[[C4]] : index
+// CHECK:         scf.for %[[I:.*]] = %[[J]] to %[[I6]] step %[[I7]] {
+// CHECK:           %[[I8:.*]] = memref.load %[[ARG0]]{{\[}}%[[I]]
+// CHECK:           %[[I9:.*]] = arith.muli %[[I8]], %[[I8]] : i32
+// CHECK:           memref.store %[[I9]], %[[ARG0]]{{\[}}%[[I]]
 
 // If an instruction's operands are not defined outside the loop, we cannot
 // perform the optimization, as is the case with the arith.muli below. (If

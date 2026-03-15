@@ -45,11 +45,11 @@ define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs3, vs3
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8:
@@ -138,9 +138,9 @@ define void @test4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    vperm v2, v5, v2, v4
 ; CHECK-P8-NEXT:    xvcvuxddp vs1, v2
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test4:
@@ -278,10 +278,10 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    li r4, 16
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r4
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: stest8:

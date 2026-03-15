@@ -542,7 +542,8 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
   auto RT = Call->getArg(0)->getType();
   if (!RT->isPointerType() ||
       RT->getPointeeType().getAddressSpace() == LangAS::opencl_constant) {
-    Diag(Call->getBeginLoc(), diag::err_opencl_builtin_to_addr_invalid_arg)
+    Diag(Call->getArg(0)->getBeginLoc(),
+         diag::err_opencl_builtin_to_addr_invalid_arg)
         << Call->getArg(0) << Call->getDirectCallee() << Call->getSourceRange();
     return true;
   }

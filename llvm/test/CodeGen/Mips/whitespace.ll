@@ -1,6 +1,6 @@
 ; Test that the instructions have the correct whitespace.
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck -strict-whitespace %s -check-prefix=16
-; RUN: llc  -march=mips -mcpu=mips32r2 < %s | FileCheck %s -strict-whitespace -check-prefix=32R2
+; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck -strict-whitespace %s -check-prefix=16
+; RUN: llc  -mtriple=mips -mcpu=mips32r2 < %s | FileCheck %s -strict-whitespace -check-prefix=32R2
 
 @main.L = internal unnamed_addr constant [5 x ptr] [ptr blockaddress(@main, %L1), ptr blockaddress(@main, %L2), ptr blockaddress(@main, %L3), ptr blockaddress(@main, %L4), ptr null], align 4
 @str = private unnamed_addr constant [2 x i8] c"A\00"

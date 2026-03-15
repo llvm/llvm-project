@@ -166,15 +166,19 @@ TEST(HashingTest, HashCombineRangeBasicTest) {
   hash_code arr1_hash = hash_combine_range(begin(arr1), end(arr1));
   EXPECT_NE(dummy_hash, arr1_hash);
   EXPECT_EQ(arr1_hash, hash_combine_range(begin(arr1), end(arr1)));
+  EXPECT_EQ(arr1_hash, hash_combine_range(arr1));
 
   const std::vector<int> vec(begin(arr1), end(arr1));
   EXPECT_EQ(arr1_hash, hash_combine_range(vec.begin(), vec.end()));
+  EXPECT_EQ(arr1_hash, hash_combine_range(vec));
 
   const std::list<int> list(begin(arr1), end(arr1));
   EXPECT_EQ(arr1_hash, hash_combine_range(list.begin(), list.end()));
+  EXPECT_EQ(arr1_hash, hash_combine_range(list));
 
   const std::deque<int> deque(begin(arr1), end(arr1));
   EXPECT_EQ(arr1_hash, hash_combine_range(deque.begin(), deque.end()));
+  EXPECT_EQ(arr1_hash, hash_combine_range(deque));
 
   const int arr2[] = { 3, 2, 1 };
   hash_code arr2_hash = hash_combine_range(begin(arr2), end(arr2));

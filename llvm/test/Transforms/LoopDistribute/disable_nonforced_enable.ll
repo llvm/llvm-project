@@ -1,17 +1,12 @@
-; RUN: opt -passes=loop-distribute -S < %s | FileCheck %s
+; RUN: opt -passes=loop-distribute -verify-loop-info -verify-dom-info -S < %s | FileCheck %s
 ;
 ; Check that llvm.loop.distribute.enable overrides
 ; llvm.loop.disable_nonforced.
 ;
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
+define void @disable_nonforced(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d,  ptr noalias %e) {
 ; CHECK-LABEL: @disable_nonforced(
 ; CHECK: for.body.ldist1:
-define void @disable_nonforced(ptr noalias %a,
-                         ptr noalias %b,
-                         ptr noalias %c,
-                         ptr noalias %d,
-                         ptr noalias %e) {
 entry:
   br label %for.body
 

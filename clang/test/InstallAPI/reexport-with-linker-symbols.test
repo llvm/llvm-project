@@ -1,0 +1,304 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+; RUN: yaml2obj %t/umbrella.yaml -o %t/System/Library/Frameworks/Umbrella.framework/Umbrella
+
+; RUN: clang-installapi -target arm64-apple-macosx14 -install_name \
+; RUN: /System/Library/Frameworks/Umbrella.framework/Versions/A/Umbrella \
+; RUN: --verify-against=%t/System/Library/Frameworks/Umbrella.framework/Umbrella \
+; RUN: -L%t/usr/lib -F%t/System/Library/Frameworks \
+; RUN: %t/System/Library/Frameworks/Umbrella.framework --verify-mode=Pedantic -reexport-lBar \
+; RUN: -o %t/Umbrella.tbd 2>&1 | FileCheck -allow-empty %s
+; RUN: llvm-readtapi -compare %t/Umbrella.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+;--- System/Library/Frameworks/Umbrella.framework/Headers/Umbrella.h
+extern const char ld_previous __asm("$ld$previous$/usr/lib/libLdPreviousBindPrevious.1.dylib$$1$11.0$16.0$_function$");
+extern void function();
+
+;--- umbrella.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x6
+  ncmds:           16
+  sizeofcmds:      856
+  flags:           0x85
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x3FB0
+        size:            4
+        offset:          0x3FB0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C0035FD6
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x3FB4
+        size:            1
+        offset:          0x3FB4
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '00'
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0x3FB8
+        size:            72
+        offset:          0x3FB8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000000000001C000000000000001C00000002000000B03F00003400000034000000B53F00000000000034000000030000000C000100100001000000000000000002
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          16384
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        584
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         96
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         '/System/Library/Frameworks/Umbrella.framework/Versions/A/Umbrella'
+    ZeroPadBytes:    7
+  - cmd:             LC_DYLD_CHAINED_FIXUPS
+    cmdsize:         16
+    dataoff:         16384
+    datasize:        48
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         16432
+    datasize:        104
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16560
+    nsyms:           2
+    stroff:          16592
+    strsize:         96
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      2
+    iundefsym:       2
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            CCD7F304-D97B-3521-A980-CC936CCD34E8
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           917504
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         62525440
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_SEGMENT_SPLIT_INFO
+    cmdsize:         16
+    dataoff:         16536
+    datasize:        16
+  - cmd:             LC_REEXPORT_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/usr/lib/libBar.dylib'
+    ZeroPadBytes:    3
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       2
+      current_version: 88539136
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16552
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16560
+    datasize:        0
+  - cmd:             LC_CODE_SIGNATURE
+    cmdsize:         16
+    dataoff:         16688
+    datasize:        280
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    3
+        NodeOffset:      94
+        Name:            '$ld$previous$/usr/lib/libLdPreviousBindPrevious.1.dylib$$1$11.0$16.0$_function$'
+        Flags:           0x0
+        Address:         0x3FB4
+        Other:           0x0
+        ImportName:      ''
+      - TerminalSize:    3
+        NodeOffset:      99
+        Name:            _function
+        Flags:           0x0
+        Address:         0x3FB0
+        Other:           0x0
+        ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         16308
+    - n_strx:          82
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         16304
+  StringTable:
+    - ' '
+    - '$ld$previous$/usr/lib/libLdPreviousBindPrevious.1.dylib$$1$11.0$16.0$_function$'
+    - _function
+    - ''
+    - ''
+    - ''
+    - ''
+  FunctionStarts:  [ 0x3FB0 ]
+  ChainedFixups:   [ 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0, 0x2C, 0x0, 
+                     0x0, 0x0, 0x2C, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+...
+
+;--- /usr/lib/libBar.dylib
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "$ld$previous$/usr/lib/libLdPreviousBindPrevious.1.dylib$$1$11.0$16.0$_function$"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/libBar.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- expected.tbd
+{
+  "main_library": {
+    "compatibility_versions": [ { "version": "0" } ],
+    "current_versions": [ { "version": "0" } ],
+    "exported_symbols": [
+      {
+        "data": {
+          "global": [
+            "$ld$previous$/usr/lib/libLdPreviousBindPrevious.1.dylib$$1$11.0$16.0$_function$"
+          ]
+        },
+        "text": { "global": [ "_function" ] }
+      }
+    ],
+    "flags": [
+      { "attributes": [ "not_app_extension_safe" ] }
+    ],
+    "install_names": [
+      { "name": "/System/Library/Frameworks/Umbrella.framework/Versions/A/Umbrella" }
+    ],
+    "reexported_libraries": [
+      { "names": [ "/usr/lib/libBar.dylib" ] }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "14",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

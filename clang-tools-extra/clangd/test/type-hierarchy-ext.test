@@ -12,6 +12,7 @@
 # CHECK-NEXT:        "data": {
 # CHECK-NEXT:           "symbolID": "A6576FE083F2949A"
 # CHECK-NEXT:        },
+# CHECK-NEXT:        "detail": "Child3",
 # CHECK-NEXT:        "kind": 23,
 # CHECK-NEXT:        "name": "Child3",
 # CHECK-NEXT:        "range": {
@@ -153,6 +154,7 @@
 # CHECK-NEXT:        "data": {
 # CHECK-NEXT:          "symbolID": "5705B382DFC77CBC"
 # CHECK-NEXT:        },
+# CHECK-NEXT:        "detail": "Child4",
 # CHECK-NEXT:        "kind": 23,
 # CHECK-NEXT:        "name": "Child4",
 # CHECK-NEXT:        "range": {

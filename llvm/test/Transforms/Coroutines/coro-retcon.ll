@@ -12,8 +12,7 @@ define ptr @f(ptr %buffer, i32 %n) {
 ;
 ; CORO-LABEL: @f(
 ; CORO-NEXT:  entry:
-; CORO-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[BUFFER:%.*]], i32 0, i32 0
-; CORO-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR]], align 4
+; CORO-NEXT:    store i32 [[N:%.*]], ptr [[N_VAL_SPILL_ADDR:%.*]], align 4
 ; CORO-NEXT:    call void @print(i32 [[N]])
 ; CORO-NEXT:    ret ptr @f.resume.0
 ;
@@ -33,7 +32,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -43,8 +42,10 @@ define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @print(i32 4)
-; CHECK-NEXT:    tail call void @print(i32 5), !noalias !0
-; CHECK-NEXT:    tail call void @print(i32 6), !noalias !3
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]]
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META3]]
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CORO-LABEL: @main(
@@ -82,9 +83,8 @@ define hidden { ptr, ptr } @g(ptr %buffer, ptr %ptr) {
 ; CORO-NEXT:  entry:
 ; CORO-NEXT:    [[TMP0:%.*]] = call ptr @allocate(i32 8)
 ; CORO-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
-; CORO-NEXT:    [[PTR_SPILL_ADDR:%.*]] = getelementptr inbounds [[G_FRAME:%.*]], ptr [[TMP0]], i32 0, i32 0
-; CORO-NEXT:    store ptr [[PTR:%.*]], ptr [[PTR_SPILL_ADDR]], align 8
-; CORO-NEXT:    [[PTR_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME]], ptr [[TMP0]], i32 0, i32 0
+; CORO-NEXT:    store ptr [[PTR:%.*]], ptr [[TMP0]], align 8
+; CORO-NEXT:    [[PTR_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 0
 ; CORO-NEXT:    [[PTR_RELOAD:%.*]] = load ptr, ptr [[PTR_RELOAD_ADDR]], align 8
 ; CORO-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, ptr } poison, ptr @g.resume.0, 0
 ; CORO-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, ptr } [[TMP1]], ptr [[PTR_RELOAD]], 1
@@ -103,7 +103,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -137,14 +137,14 @@ cleanup:
   call void @use_var_ptr(ptr %a)
   %al = load i32, ptr %a
   call void @use_var(i32 %al)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare void @use_var(i32)

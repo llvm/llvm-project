@@ -11,6 +11,13 @@
 //===----------------------------------------------------------------------===//
 #include "asan_test_utils.h"
 
+#ifdef __sparc__
+// Tests using unaligned accesses cannot work on strict-alignment targets.
+#define SKIP_ON_STRICT_ALIGNMENT(x) DISABLED_##x
+#else
+#define SKIP_ON_STRICT_ALIGNMENT(x) x
+#endif
+
 NOINLINE void asan_write_sized_aligned(uint8_t *p, size_t size) {
   EXPECT_EQ(0U, ((uintptr_t)p % size));
   if      (size == 1) asan_write((uint8_t*)p);
@@ -79,7 +86,7 @@ TEST(AddressSanitizer, OOB_char) {
   OOBTest<U1>();
 }
 
-TEST(AddressSanitizer, OOB_int) {
+TEST(AddressSanitizer, SKIP_ON_STRICT_ALIGNMENT(OOB_int)) {
   OOBTest<U4>();
 }
 

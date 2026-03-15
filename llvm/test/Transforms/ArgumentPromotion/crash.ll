@@ -55,7 +55,7 @@ bb:
 
 define internal i1 @barney(ptr %arg) {
 bb:
-  ret i1 undef
+  ret i1 poison
 }
 
 define i32 @test_inf_promote_caller(i32 %arg) {

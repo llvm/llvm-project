@@ -9,7 +9,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 
 using namespace llvm;
 

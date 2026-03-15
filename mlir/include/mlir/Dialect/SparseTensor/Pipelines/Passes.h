@@ -104,10 +104,6 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Allows compiler to assume indices fit in 32-bit if that yields "
            "faster code"),
       init(true)};
-  PassOptions::Option<bool> amx{
-      *this, "enable-amx",
-      desc("Enables the use of AMX dialect while lowering the vector dialect"),
-      init(false)};
   PassOptions::Option<bool> armNeon{
       *this, "enable-arm-neon",
       desc("Enables the use of ArmNeon dialect while lowering the vector "
@@ -118,9 +114,9 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Enables the use of ArmSVE dialect while lowering the vector "
            "dialect"),
       init(false)};
-  PassOptions::Option<bool> x86Vector{
-      *this, "enable-x86vector",
-      desc("Enables the use of X86Vector dialect while lowering the vector "
+  PassOptions::Option<bool> x86{
+      *this, "enable-x86",
+      desc("Enables the use of X86 dialect while lowering the vector "
            "dialect"),
       init(false)};
 
@@ -162,14 +158,13 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
-  ConvertVectorToLLVMPassOptions lowerVectorToLLVMOptions() const {
+  ConvertVectorToLLVMPassOptions convertVectorToLLVMOptions() const {
     ConvertVectorToLLVMPassOptions opts{};
     opts.reassociateFPReductions = reassociateFPReductions;
     opts.force32BitVectorIndices = force32BitVectorIndices;
     opts.armNeon = armNeon;
     opts.armSVE = armSVE;
-    opts.amx = amx;
-    opts.x86Vector = x86Vector;
+    opts.x86 = x86;
     return opts;
   }
 };

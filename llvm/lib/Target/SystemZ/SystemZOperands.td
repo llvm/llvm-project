@@ -165,6 +165,13 @@ class BDVMode<string bitsize, string dispsize>
                         !cast<Operand>("disp"#dispsize#"imm"#bitsize),
                         !cast<RegisterOperand>("VR128"))>;
 
+// An addressing mode with a base, 32-bit displacement and 32-bit index.
+class LXAMode<string bitsize, string dispsize>
+  : AddressOperand<bitsize, dispsize, "", "LXAAddr",
+                   (ops !cast<RegisterOperand>("ADDR"#bitsize),
+                        !cast<Operand>("disp"#dispsize#"imm32"),
+                        !cast<RegisterOperand>("ADDR32"))>;
+
 //===----------------------------------------------------------------------===//
 // Extracting immediate operands from nodes
 // These all create MVT::i64 nodes to ensure the value is not sign-extended
@@ -220,8 +227,8 @@ def NEGLF32 : SDNodeXForm<imm, [{
 
 // Truncate an immediate to a 8-bit signed quantity.
 def SIMM8 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int8_t(N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
+  return CurDAG->getSignedTargetConstant(int8_t(N->getSExtValue()), SDLoc(N),
+                                         MVT::i64);
 }]>;
 
 // Truncate an immediate to a 8-bit unsigned quantity.
@@ -244,14 +251,14 @@ def UIMM12 : SDNodeXForm<imm, [{
 
 // Truncate an immediate to a 16-bit signed quantity.
 def SIMM16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int16_t(N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
+  return CurDAG->getSignedTargetConstant(int16_t(N->getSExtValue()), SDLoc(N),
+                                         MVT::i64);
 }]>;
 
 // Negate and then truncate an immediate to a 16-bit signed quantity.
 def NEGSIMM16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int16_t(-N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
+  return CurDAG->getSignedTargetConstant(int16_t(-N->getSExtValue()), SDLoc(N),
+                                         MVT::i64);
 }]>;
 
 // Truncate an immediate to a 16-bit unsigned quantity.
@@ -262,14 +269,14 @@ def UIMM16 : SDNodeXForm<imm, [{
 
 // Truncate an immediate to a 32-bit signed quantity.
 def SIMM32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t(N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
+  return CurDAG->getSignedTargetConstant(int32_t(N->getSExtValue()), SDLoc(N),
+                                         MVT::i64);
 }]>;
 
 // Negate and then truncate an immediate to a 32-bit unsigned quantity.
 def NEGSIMM32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(int32_t(-N->getZExtValue()), SDLoc(N),
-                                   MVT::i64);
+  return CurDAG->getSignedTargetConstant(int32_t(-N->getSExtValue()), SDLoc(N),
+                                         MVT::i64);
 }]>;
 
 // Truncate an immediate to a 32-bit unsigned quantity.
@@ -601,18 +608,20 @@ def pcrel32 : PCRelAddress<i64, "pcrel32", PCRel32> {
 // Addressing modes
 //===----------------------------------------------------------------------===//
 
+class DispOp<ValueType vt, code pred> : Operand<vt>, PatLeaf<(vt imm), pred>;
+
 // 12-bit displacement operands.
 let EncoderMethod = "getImmOpValue<SystemZ::FK_390_U12Imm>",
     DecoderMethod = "decodeU12ImmOperand" in {
-  def disp12imm32 : Operand<i32>;
-  def disp12imm64 : Operand<i64>;
+  def disp12imm32 : DispOp<i32, [{ return N->getAPIntValue().isIntN(12); }]>;
+  def disp12imm64 : DispOp<i64, [{ return N->getAPIntValue().isIntN(12); }]>;
 }
 
 // 20-bit displacement operands.
 let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
     DecoderMethod = "decodeS20ImmOperand" in {
-  def disp20imm32 : Operand<i32>;
-  def disp20imm64 : Operand<i64>;
+  def disp20imm32 : DispOp<i32, [{ return N->getAPIntValue().isSignedIntN(20); }]>;
+  def disp20imm64 : DispOp<i64, [{ return N->getAPIntValue().isSignedIntN(20); }]>;
 }
 
 def BDAddr32Disp12      : AddressAsmOperand<"BDAddr",   "32", "12">;
@@ -625,6 +634,7 @@ def BDLAddr64Disp12Len4 : AddressAsmOperand<"BDLAddr",  "64", "12", "Len4">;
 def BDLAddr64Disp12Len8 : AddressAsmOperand<"BDLAddr",  "64", "12", "Len8">;
 def BDRAddr64Disp12     : AddressAsmOperand<"BDRAddr",  "64", "12">;
 def BDVAddr64Disp12     : AddressAsmOperand<"BDVAddr",  "64", "12">;
+def LXAAddr64Disp20     : AddressAsmOperand<"LXAAddr",  "64", "20">;
 
 // DAG patterns and operands for addressing modes.  Each mode has
 // the form <type><range><group>[<len>] where:
@@ -635,6 +645,7 @@ def BDVAddr64Disp12     : AddressAsmOperand<"BDVAddr",  "64", "12">;
 //   mviaddr  : like bdaddr, but reject cases with a natural index
 //   bdxaddr  : base + displacement + index
 //   laaddr   : like bdxaddr, but used for Load Address operations
+//   lxaaddr  : like bdxaddr, but used for Load (Logical) Indexed Address
 //   dynalloc : base + displacement + index + ADJDYNALLOC
 //   bdladdr  : base + displacement with a length field
 //   bdvaddr  : base + displacement with a vector index
@@ -669,6 +680,7 @@ def bdxaddr20pair     : BDXMode<"BDXAddr",  "64", "20", "Pair">;
 def dynalloc12only    : BDXMode<"DynAlloc", "64", "12", "Only">;
 def laaddr12pair      : BDXMode<"LAAddr",   "64", "12", "Pair">;
 def laaddr20pair      : BDXMode<"LAAddr",   "64", "20", "Pair">;
+def lxaaddr20only     : LXAMode<            "64", "20">;
 def bdladdr12onlylen4 : BDLMode<"BDLAddr",  "64", "12", "Only", "4">;
 def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
 def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;

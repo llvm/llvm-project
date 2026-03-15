@@ -261,10 +261,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     for (size_t I = Range.first; I < Range.second; ++I, JI += JIAdj) {
       MCSymbol *Entry = JT->Entries[I];
       const BinaryBasicBlock *ToBB = BF.getBasicBlockForLabel(Entry);
-      assert(ToBB || Entry == BF.getFunctionEndLabel() ||
-             Entry == BF.getFunctionEndLabel(FragmentNum::cold()));
-      if (Entry == BF.getFunctionEndLabel() ||
-          Entry == BF.getFunctionEndLabel(FragmentNum::cold()))
+      if (!ToBB)
         continue;
       const Location To(Entry);
       const BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);
@@ -386,13 +383,15 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
   JumpTableInfoType HotTargets;
   MCInst *MemLocInstr;
   MCInst *PCRelBaseOut;
+  MCInst *FixedEntryLoadInstr;
   unsigned BaseReg, IndexReg;
   int64_t DispValue;
   const MCExpr *DispExpr;
   MutableArrayRef<MCInst> Insts(&BB.front(), &CallInst);
   const IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
       CallInst, Insts.begin(), Insts.end(), BC.AsmInfo->getCodePointerSize(),
-      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut);
+      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut,
+      FixedEntryLoadInstr);
 
   assert(MemLocInstr && "There should always be a load for jump tables");
   if (!MemLocInstr)

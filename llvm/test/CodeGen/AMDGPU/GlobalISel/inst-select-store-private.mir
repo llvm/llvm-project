@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs  -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -O0 -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs  -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX9 %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX11 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 -o - %s | FileCheck -check-prefix=GFX12 %s
 

@@ -2,20 +2,20 @@
 ! TODO: Add checks when actual codegen is possible.
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang -fsyntax-only -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=NOLARGE
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang -fsyntax-only -flarge-sizes -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=LARGE
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang -fsyntax-only -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=NOLARGE
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang -fsyntax-only -flarge-sizes -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=LARGE
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang_fc1 -fsyntax-only -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=NOLARGE
-! RUN: rm -rf %t/dir-flang-new  && mkdir -p %t/dir-flang-new && %flang_fc1 -fsyntax-only -flarge-sizes -module-dir %t/dir-flang-new %s  2>&1
-! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=LARGE
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang_fc1 -fsyntax-only -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=NOLARGE
+! RUN: rm -rf %t/dir-flang  && mkdir -p %t/dir-flang && %flang_fc1 -fsyntax-only -flarge-sizes -module-dir %t/dir-flang %s  2>&1
+! RUN: cat %t/dir-flang/m.mod | FileCheck %s --check-prefix=LARGE
 
 ! NOLARGE: real(4)::z(1_8:10_8)
 ! NOLARGE-NEXT: integer(4),parameter::size_kind=4_4

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds -cse -verify-diagnostics \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds, cse))' -verify-diagnostics \
 // RUN:   -verify-diagnostics -split-input-file | FileCheck %s
 
 #map_dim_i = affine_map<(d0)[s0] -> (-d0 + 32400, s0)>

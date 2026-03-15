@@ -9,6 +9,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: crash_fn
     ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
     ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[C]](p0) :: (load (s16), align 8)
     ; CHECK-NEXT: [[ZEXTLOAD1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[C]](p0) :: (load (s16))
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ZEXTLOAD1]], [[ZEXTLOAD]]

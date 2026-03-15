@@ -16,11 +16,9 @@
 ///
 ////===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblySortRegion.h"
-#include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SetVector.h"
@@ -55,8 +53,8 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfo>();
     AU.addPreserved<WebAssemblyExceptionInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -186,10 +184,11 @@ struct Entry {
 /// Explore them.
 static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
-                       const MachineDominatorTree &MDT) {
+                       MachineDominatorTree &MDT) {
   // Remember original layout ordering, so we can update terminators after
   // reordering to point to the original layout successor.
   MF.RenumberBlocks();
+  MDT.updateBlockNumbers();
 
   // Prepare for a topological sort: Record the number of predecessors each
   // block has, ignoring loop backedges.
@@ -330,15 +329,9 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   }
   assert(Entries.empty() && "Active sort region list not finished");
   MF.RenumberBlocks();
+  MDT.updateBlockNumbers();
 
 #ifndef NDEBUG
-  SmallSetVector<const SortRegion *, 8> OnStack;
-
-  // Insert a sentinel representing the degenerate loop that starts at the
-  // function entry block and includes the entire function as a "loop" that
-  // executes once.
-  OnStack.insert(nullptr);
-
   for (auto &MBB : MF) {
     assert(MBB.getNumber() >= 0 && "Renumbered blocks should be non-negative.");
     const SortRegion *Region = SRI.getRegionFor(&MBB);
@@ -359,24 +352,61 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
           assert(Pred->getNumber() < MBB.getNumber() &&
                  "Non-loop-header predecessors should be topologically sorted");
       }
-      assert(OnStack.insert(Region) &&
-             "Regions should be declared at most once.");
-
     } else {
       // Not a region header. All predecessors should be sorted above.
       for (auto *Pred : MBB.predecessors())
         assert(Pred->getNumber() < MBB.getNumber() &&
                "Non-loop-header predecessors should be topologically sorted");
-      assert(OnStack.count(SRI.getRegionFor(&MBB)) &&
-             "Blocks must be nested in their regions");
     }
-    while (OnStack.size() > 1 && &MBB == SRI.getBottom(OnStack.back()))
-      OnStack.pop_back();
   }
-  assert(OnStack.pop_back_val() == nullptr &&
-         "The function entry block shouldn't actually be a region header");
-  assert(OnStack.empty() &&
-         "Control flow stack pushes and pops should be balanced.");
+
+  SmallSet<const SortRegion *, 8> Regions;
+  for (auto &MBB : MF) {
+    const SortRegion *Region = SRI.getRegionFor(&MBB);
+    if (Region)
+      Regions.insert(Region);
+  }
+
+  SmallVector<std::pair<int, int>, 8> RegionIntervals(Regions.size(), {-1, -1});
+
+  unsigned RegionIdx = 0;
+  for (auto *Region : Regions) {
+    assert(Region->getHeader() != &MF.front() &&
+           "The function entry block shouldn't actually be a region header");
+
+    auto *Header = Region->getHeader();
+    auto *Bottom = SRI.getBottom(Region);
+
+    assert(Header && "Regions must have a header");
+    assert(Bottom && "Regions must have a bottom");
+
+    std::pair<int, int> Interval = {Header->getNumber(), Bottom->getNumber()};
+    assert(Interval.first <= Interval.second &&
+           "Region bottoms must be sorted after region headers");
+
+    RegionIntervals[RegionIdx++] = Interval;
+
+    for (auto *MBB : Region->blocks()) {
+      assert(MBB->getNumber() >= Interval.first &&
+             MBB->getNumber() <= Interval.second &&
+             "All blocks within a region must have numbers within the region's "
+             "interval");
+    }
+  }
+
+  for (const auto &IntervalA : RegionIntervals) {
+    for (const auto &IntervalB : RegionIntervals) {
+      auto AContainsB = IntervalA.first <= IntervalB.first &&
+                        IntervalA.second >= IntervalB.second;
+      auto BContainsA = IntervalB.first <= IntervalA.first &&
+                        IntervalB.second >= IntervalA.second;
+      auto Disjoint = IntervalA.second < IntervalB.first ||
+                      IntervalA.first > IntervalB.second;
+      assert((AContainsB || BContainsA || Disjoint) &&
+             "Regions must be fully contained within their parents and not "
+             "overlap their siblings");
+    }
+  }
 #endif
 }
 
@@ -385,7 +415,7 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   // Liveness is not tracked for VALUE_STACK physreg.

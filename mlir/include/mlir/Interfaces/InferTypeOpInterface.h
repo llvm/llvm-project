@@ -33,6 +33,10 @@ using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<OpFoldResult>>;
 LogicalResult
 reifyResultShapes(OpBuilder &b, Operation *op,
                   ReifiedRankedShapedTypeDims &reifiedReturnShapes);
+FailureOr<SmallVector<OpFoldResult>>
+reifyShapeOfResult(OpBuilder &b, Operation *op, int resultIndex);
+FailureOr<OpFoldResult> reifyDimOfResult(OpBuilder &b, Operation *op,
+                                         int resultIndex, int dim);
 
 /// Adaptor class to abstract the differences between whether value is from
 /// a ShapedType or ShapedTypeComponents or DenseIntElementsAttribute.
@@ -110,7 +114,7 @@ class ShapedTypeComponents {
 
 public:
   /// Default construction is an unranked shape.
-  ShapedTypeComponents() : elementType(nullptr), attr(nullptr){};
+  ShapedTypeComponents() : elementType(nullptr), attr(nullptr) {};
   ShapedTypeComponents(Type elementType)
       : elementType(elementType), attr(nullptr), ranked(false) {}
   ShapedTypeComponents(ShapedType shapedType) : attr(nullptr) {
@@ -244,6 +248,10 @@ inferReturnTensorTypes(ArrayRef<ShapedTypeComponents> retComponents,
 /// Verifies that the inferred result types match the actual result types for
 /// the op. Precondition: op implements InferTypeOpInterface.
 LogicalResult verifyInferredResultTypes(Operation *op);
+
+/// Report a fatal error indicating that the result types could not be
+/// inferred.
+void reportFatalInferReturnTypesError(OperationState &state);
 } // namespace detail
 
 namespace OpTrait {
@@ -270,7 +278,7 @@ class InferShapedTypeOpAdaptor
 /// shape and elemental types.
 /// Requires: Op implements InferShapedTypeOpInterface and InferTypeOpInterface.
 ///   Less strict is possible (e.g., implements inferReturnTypeComponents and
-///   these always populates all element types and shapes or fails, but this\
+///   these always populates all element types and shapes or fails, but this
 ///   trait is currently only used where the interfaces are, so keep it
 ///   restricted for now).
 template <typename ConcreteType>

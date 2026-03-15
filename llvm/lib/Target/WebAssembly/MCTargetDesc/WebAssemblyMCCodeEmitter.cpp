@@ -13,14 +13,12 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
@@ -49,6 +47,14 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
+  void encodeP2AlignAndMemOrder(const MCInst &MI, unsigned P2AlignIdx,
+                                const MCInstrDesc &Desc,
+                                const MCSubtargetInfo &STI, raw_ostream &OS,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                uint64_t Start) const;
+
+  uint8_t getEncodedMemOrder(uint8_t Order, unsigned Opcode) const;
+
 public:
   WebAssemblyMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx)
       : MCII(MCII), Ctx{Ctx} {}
@@ -58,6 +64,47 @@ public:
 MCCodeEmitter *llvm::createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
                                                     MCContext &Ctx) {
   return new WebAssemblyMCCodeEmitter(MCII, Ctx);
+}
+
+uint8_t WebAssemblyMCCodeEmitter::getEncodedMemOrder(uint8_t Order,
+                                                     unsigned Opcode) const {
+  if (Order == wasm::WASM_MEM_ORDER_ACQ_REL) {
+    StringRef Name = MCII.getName(Opcode);
+    if (Name.contains("RMW") || Name.contains("CMPXCHG"))
+      return wasm::WASM_MEM_ORDER_RMW_ACQ_REL;
+  }
+  return Order;
+}
+
+void WebAssemblyMCCodeEmitter::encodeP2AlignAndMemOrder(
+    const MCInst &MI, unsigned P2AlignIdx, const MCInstrDesc &Desc,
+    const MCSubtargetInfo &STI, raw_ostream &OS,
+    SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
+  uint64_t P2Align = MI.getOperand(P2AlignIdx).getImm();
+  uint8_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+
+  // Atomic instructions always have an ordering, but if it's SEQ_CST then we
+  // don't use the relaxed-atomics encoding (even if relaxed-atomics is
+  // enabled) because the original encoding is smaller.
+  if (P2AlignIdx > 0 && Desc.operands()[P2AlignIdx - 1].OperandType ==
+                            WebAssembly::OPERAND_MEMORDER) {
+    Order = MI.getOperand(P2AlignIdx - 1).getImm();
+    if (Order != wasm::WASM_MEM_ORDER_SEQ_CST) {
+      assert(STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics] &&
+             "Non-default atomic ordering but feature not enabled");
+      P2Align |= wasm::WASM_MEMARG_HAS_MEM_ORDER;
+    }
+  }
+
+  encodeULEB128(P2Align, OS);
+
+  // Memory index will go here once we support multi-memory.
+
+  if (P2Align & wasm::WASM_MEMARG_HAS_MEM_ORDER) {
+    support::endian::write<uint8_t>(OS,
+                                    getEncodedMemOrder(Order, MI.getOpcode()),
+                                    llvm::endianness::little);
+  }
 }
 
 void WebAssemblyMCCodeEmitter::encodeInstruction(
@@ -82,14 +129,15 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
   // For br_table instructions, encode the size of the table. In the MCInst,
   // there's an index operand (if not a stack instruction), one operand for
   // each table entry, and the default operand.
-  if (MI.getOpcode() == WebAssembly::BR_TABLE_I32_S ||
-      MI.getOpcode() == WebAssembly::BR_TABLE_I64_S)
+  unsigned Opcode = MI.getOpcode();
+  if (Opcode == WebAssembly::BR_TABLE_I32_S ||
+      Opcode == WebAssembly::BR_TABLE_I64_S)
     encodeULEB128(MI.getNumOperands() - 1, OS);
-  if (MI.getOpcode() == WebAssembly::BR_TABLE_I32 ||
-      MI.getOpcode() == WebAssembly::BR_TABLE_I64)
+  if (Opcode == WebAssembly::BR_TABLE_I32 ||
+      Opcode == WebAssembly::BR_TABLE_I64)
     encodeULEB128(MI.getNumOperands() - 2, OS);
 
-  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  const MCInstrDesc &Desc = MCII.get(Opcode);
   for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
     const MCOperand &MO = MI.getOperand(I);
     if (MO.isReg()) {
@@ -104,17 +152,36 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         case WebAssembly::OPERAND_I32IMM:
           encodeSLEB128(int32_t(MO.getImm()), OS);
           break;
+        case WebAssembly::OPERAND_P2ALIGN:
+          encodeP2AlignAndMemOrder(MI, I, Desc, STI, OS, Fixups, Start);
+          break;
         case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_I64IMM:
-          encodeSLEB128(int64_t(MO.getImm()), OS);
+          encodeSLEB128(MO.getImm(), OS);
           break;
         case WebAssembly::OPERAND_SIGNATURE:
         case WebAssembly::OPERAND_VEC_I8IMM:
           support::endian::write<uint8_t>(OS, MO.getImm(),
                                           llvm::endianness::little);
           break;
+        case WebAssembly::OPERAND_MEMORDER: {
+          // If there is a p2align operand (everything but fence) it is encoded
+          // together with the mem ordering (in the next iteration).
+          if (I + 1 < Desc.getNumOperands() &&
+              Desc.operands()[I + 1].OperandType ==
+                  WebAssembly::OPERAND_P2ALIGN)
+            break;
+          uint8_t Val = getEncodedMemOrder(MO.getImm(), Opcode);
+          if (STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics]) {
+            support::endian::write<uint8_t>(OS, Val, llvm::endianness::little);
+          } else {
+            assert(Opcode == WebAssembly::ATOMIC_FENCE_S);
+            support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
+          }
+          break;
+        }
         case WebAssembly::OPERAND_VEC_I16IMM:
           support::endian::write<uint16_t>(OS, MO.getImm(),
                                            llvm::endianness::little);
@@ -136,7 +203,12 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }
       } else {
-        encodeULEB128(uint64_t(MO.getImm()), OS);
+        // Variadic immediate operands are br_table's destination operands or
+        // try_table's operands (# of catch clauses, catch sub-opcodes, or catch
+        // clause destinations)
+        assert(WebAssembly::isBrTable(Opcode) ||
+               Opcode == WebAssembly::TRY_TABLE_S);
+        encodeULEB128(uint32_t(MO.getImm()), OS);
       }
 
     } else if (MO.isSFPImm()) {
@@ -146,35 +218,41 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       uint64_t D = MO.getDFPImm();
       support::endian::write<uint64_t>(OS, D, llvm::endianness::little);
     } else if (MO.isExpr()) {
-      const MCOperandInfo &Info = Desc.operands()[I];
       llvm::MCFixupKind FixupKind;
       size_t PaddedSize = 5;
-      switch (Info.OperandType) {
-      case WebAssembly::OPERAND_I32IMM:
-        FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i32);
-        break;
-      case WebAssembly::OPERAND_I64IMM:
-        FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i64);
-        PaddedSize = 10;
-        break;
-      case WebAssembly::OPERAND_FUNCTION32:
-      case WebAssembly::OPERAND_TABLE:
-      case WebAssembly::OPERAND_OFFSET32:
-      case WebAssembly::OPERAND_SIGNATURE:
-      case WebAssembly::OPERAND_TYPEINDEX:
-      case WebAssembly::OPERAND_GLOBAL:
-      case WebAssembly::OPERAND_TAG:
-        FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
-        break;
-      case WebAssembly::OPERAND_OFFSET64:
-        FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i64);
-        PaddedSize = 10;
-        break;
-      default:
-        llvm_unreachable("unexpected symbolic operand kind");
+      if (I < Desc.getNumOperands()) {
+        const MCOperandInfo &Info = Desc.operands()[I];
+        switch (Info.OperandType) {
+        case WebAssembly::OPERAND_I32IMM:
+          FixupKind = WebAssembly::fixup_sleb128_i32;
+          break;
+        case WebAssembly::OPERAND_I64IMM:
+          FixupKind = WebAssembly::fixup_sleb128_i64;
+          PaddedSize = 10;
+          break;
+        case WebAssembly::OPERAND_FUNCTION32:
+        case WebAssembly::OPERAND_TABLE:
+        case WebAssembly::OPERAND_OFFSET32:
+        case WebAssembly::OPERAND_SIGNATURE:
+        case WebAssembly::OPERAND_TYPEINDEX:
+        case WebAssembly::OPERAND_GLOBAL:
+        case WebAssembly::OPERAND_TAG:
+          FixupKind = WebAssembly::fixup_uleb128_i32;
+          break;
+        case WebAssembly::OPERAND_OFFSET64:
+          FixupKind = WebAssembly::fixup_uleb128_i64;
+          PaddedSize = 10;
+          break;
+        default:
+          llvm_unreachable("unexpected symbolic operand kind");
+        }
+      } else {
+        // Variadic expr operands are try_table's catch/catch_ref clauses' tags.
+        assert(Opcode == WebAssembly::TRY_TABLE_S);
+        FixupKind = WebAssembly::fixup_uleb128_i32;
       }
-      Fixups.push_back(MCFixup::create(OS.tell() - Start, MO.getExpr(),
-                                       FixupKind, MI.getLoc()));
+      Fixups.push_back(
+          MCFixup::create(OS.tell() - Start, MO.getExpr(), FixupKind));
       ++MCNumFixups;
       encodeULEB128(0, OS, PaddedSize);
     } else {

@@ -1,4 +1,4 @@
-; DISABLED: llc < %s -march=mips -o %t
+; DISABLED: llc < %s -mtriple=mips -o %t
 ; DISABLED: grep {lui.*32767} %t | count 1
 ; DISABLED: grep {ori.*65535} %t | count 1
 ; RUN: false

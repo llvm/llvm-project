@@ -5,10 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
-// ALLOW_RETRIES: 2
 
 // <shared_mutex>
 
@@ -18,69 +17,89 @@
 //     bool try_lock_for(const chrono::duration<Rep, Period>& rel_time);
 
 #include <shared_mutex>
-#include <thread>
-#include <cstdlib>
+#include <atomic>
 #include <cassert>
 #include <chrono>
+#include <thread>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
-std::shared_timed_mutex m;
+template <class Function>
+std::chrono::microseconds measure(Function f) {
+  std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+  f();
+  std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+}
 
-typedef std::chrono::steady_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-
-ms WaitTime = ms(250);
-
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
-ms Tolerance = ms(50);
-#else
-ms Tolerance = ms(50 * 5);
-#endif
-
-void f1()
-{
-    time_point t0 = Clock::now();
-    assert(m.try_lock_for(WaitTime + Tolerance) == true);
-    time_point t1 = Clock::now();
+int main(int, char**) {
+  // Try to lock a mutex that is not locked yet. This should succeed immediately.
+  {
+    std::shared_timed_mutex m;
+    bool succeeded = m.try_lock_for(std::chrono::milliseconds(1));
+    assert(succeeded);
     m.unlock();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within tolerance
-}
+  }
 
-void f2()
-{
-    time_point t0 = Clock::now();
-    assert(m.try_lock_for(WaitTime) == false);
-    time_point t1 = Clock::now();
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within tolerance
-}
+  // Try to lock an already-locked mutex for a long enough amount of time and succeed.
+  // This is technically flaky, but we use such long durations that it should pass even
+  // in slow or contended environments.
+  {
+    std::chrono::milliseconds const wait_time(500);
+    std::chrono::milliseconds const tolerance = wait_time * 3;
+    std::atomic<bool> ready(false);
 
-int main(int, char**)
-{
-    {
-        m.lock();
-        std::thread t = support::make_test_thread(f1);
-        std::this_thread::sleep_for(WaitTime);
+    std::shared_timed_mutex m;
+    m.lock();
+
+    std::thread t = support::make_test_thread([&] {
+      auto elapsed = measure([&] {
+        ready          = true;
+        bool succeeded = m.try_lock_for(wait_time);
+        assert(succeeded);
         m.unlock();
-        t.join();
-    }
-    {
-        m.lock();
-        std::thread t = support::make_test_thread(f2);
-        std::this_thread::sleep_for(WaitTime + Tolerance);
-        m.unlock();
-        t.join();
-    }
+      });
+
+      // Ensure we didn't wait significantly longer than our timeout. This is technically
+      // flaky and non-conforming because an implementation is free to block for arbitrarily
+      // long, but any decent quality implementation should pass this test.
+      assert(elapsed - wait_time < tolerance);
+    });
+
+    // Wait for the thread to be ready to take the lock before we unlock it from here, otherwise
+    // there's a high chance that we're not testing the "locking an already locked" mutex use case.
+    // There is still technically a race condition here.
+    while (!ready)
+      /* spin */;
+    std::this_thread::sleep_for(wait_time / 5);
+
+    m.unlock(); // this should allow the thread to lock 'm'
+    t.join();
+  }
+
+  // Try to lock an already-locked mutex for a short amount of time and fail.
+  // Again, this is technically flaky but we use such long durations that it should work.
+  {
+    std::chrono::milliseconds const wait_time(10);
+    std::chrono::milliseconds const tolerance(750); // in case the thread we spawned goes to sleep or something
+
+    std::shared_timed_mutex m;
+    m.lock();
+
+    std::thread t = support::make_test_thread([&] {
+      auto elapsed = measure([&] {
+        bool succeeded = m.try_lock_for(wait_time);
+        assert(!succeeded);
+      });
+
+      // Ensure we failed within some bounded time.
+      assert(elapsed - wait_time < tolerance);
+    });
+
+    t.join();
+
+    m.unlock();
+  }
 
   return 0;
 }

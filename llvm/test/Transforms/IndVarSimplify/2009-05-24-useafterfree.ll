@@ -3,7 +3,7 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
 
-define void @0(ptr, ptr, i32, i32) nounwind {
+define void @0(ptr, ptr, i32, i32, i1 %arg) nounwind {
 	br i1 false, label %bb.nph1.preheader, label %.outer._crit_edge
 
 bb.nph1.preheader:		; preds = %4
@@ -12,7 +12,7 @@ bb.nph1.preheader:		; preds = %4
 	br label %bb.nph1
 
 bb.nph1:		; preds = %.outer, %bb.nph1.preheader
-	br i1 undef, label %bb.nph3.preheader, label %.outer
+	br i1 %arg, label %bb.nph3.preheader, label %.outer
 
 bb.nph3.preheader:		; preds = %bb.nph1
 	br label %bb.nph3
@@ -31,7 +31,7 @@ bb.nph3:		; preds = %bb.nph3, %bb.nph3.preheader
 	br label %.outer
 
 .outer:		; preds = %.outer.loopexit, %bb.nph1
-	br i1 undef, label %bb.nph1, label %.outer._crit_edge.loopexit
+	br i1 %arg, label %bb.nph1, label %.outer._crit_edge.loopexit
 
 .outer._crit_edge.loopexit:		; preds = %.outer
 	br label %.outer._crit_edge

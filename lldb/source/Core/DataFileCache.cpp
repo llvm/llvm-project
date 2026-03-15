@@ -132,6 +132,11 @@ bool DataFileCache::SetCachedData(llvm::StringRef key,
       if (file_or_err) {
         llvm::CachedFileStream *cfs = file_or_err->get();
         cfs->OS->write((const char *)data.data(), data.size());
+        if (llvm::Error err = cfs->commit()) {
+          Log *log = GetLog(LLDBLog::Modules);
+          LLDB_LOG_ERROR(log, std::move(err),
+                         "failed to commit to the cache for key: {0}");
+        }
         return true;
       } else {
         Log *log = GetLog(LLDBLog::Modules);
@@ -264,14 +269,12 @@ bool CacheSignature::Decode(const lldb_private::DataExtractor &data,
 }
 
 uint32_t ConstStringTable::Add(ConstString s) {
-  auto pos = m_string_to_offset.find(s);
-  if (pos != m_string_to_offset.end())
-    return pos->second;
-  const uint32_t offset = m_next_offset;
-  m_strings.push_back(s);
-  m_string_to_offset[s] = offset;
-  m_next_offset += s.GetLength() + 1;
-  return offset;
+  auto [pos, inserted] = m_string_to_offset.try_emplace(s, m_next_offset);
+  if (inserted) {
+    m_strings.push_back(s);
+    m_next_offset += s.GetLength() + 1;
+  }
+  return pos->second;
 }
 
 static const llvm::StringRef kStringTableIdentifier("STAB");

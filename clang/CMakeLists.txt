@@ -68,6 +68,10 @@ if(CLANG_BUILT_STANDALONE)
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
+  separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+  add_definitions(${LLVM_DEFINITIONS_LIST})
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
   include(AddLLVM)
   include(TableGen)
   include(HandleLLVMOptions)
@@ -75,6 +79,12 @@ if(CLANG_BUILT_STANDALONE)
   include(CheckAtomic)
   include(GetErrcMessages)
   include(LLVMDistributionSupport)
+
+  if(CMAKE_CROSSCOMPILING)
+    set(LLVM_USE_HOST_TOOLS ON)
+    include(CrossCompile)
+    llvm_create_cross_target(Clang NATIVE "" Release)
+  endif()
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
   set(BUG_REPORT_URL "${LLVM_PACKAGE_BUGREPORT}" CACHE STRING
@@ -146,6 +156,12 @@ if(CLANG_BUILT_STANDALONE)
     endif()
 
     umbrella_lit_testsuite_begin(check-all)
+
+    # If LLVM was built with Z3, check if we still have the headers around.
+    # They are used by a few tests.
+    if (LLVM_WITH_Z3)
+      find_package(Z3 4.8.9)
+    endif()
   endif() # LLVM_INCLUDE_TESTS
 endif() # standalone
 
@@ -183,18 +199,17 @@ check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 # This check requires _GNU_SOURCE on linux
 check_include_file(dlfcn.h CLANG_HAVE_DLFCN_H)
 if( CLANG_HAVE_DLFCN_H )
+  include(CMakePushCheckState)
   include(CheckLibraryExists)
   include(CheckSymbolExists)
   check_library_exists(dl dlopen "" HAVE_LIBDL)
+  cmake_push_check_state()
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
   endif()
   list(APPEND CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
   check_symbol_exists(dladdr dlfcn.h CLANG_HAVE_DLADDR)
-  list(REMOVE_ITEM CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
-  if( HAVE_LIBDL )
-    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
-  endif()
+  cmake_pop_check_state()
 endif()
 
 set(CLANG_RESOURCE_DIR "" CACHE STRING
@@ -212,6 +227,44 @@ if(GCC_INSTALL_PREFIX AND NOT USE_DEPRECATED_GCC_INSTALL_PREFIX)
     "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"
     "to specify the default --gcc-install-dir= or --gcc-triple=. --gcc-toolchain= is discouraged. "
     "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
+endif()
+
+cmake_dependent_option(CLANG_USE_XCSELECT "Use libxcselect to find the macOS SDK." OFF "APPLE" OFF)
+
+if(CLANG_USE_XCSELECT)
+  if(DEFAULT_SYSROOT)
+    message(FATAL_ERROR "Setting DEFAULT_SYSROOT is incompatible with CLANG_USE_XCSELECT.")
+  endif()
+
+  check_include_file(xcselect.h CLANG_HAVE_XCSELECT_H)
+  if(NOT CLANG_HAVE_XCSELECT_H)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but xcselect.h was not found.")
+  endif()
+
+  include(CheckSymbolExists)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES xcselect)
+  check_symbol_exists(xcselect_host_sdk_path xcselect.h CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+  list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES xcselect)
+
+  if(NOT CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but either libxcselect is not available "
+      "or it is missing xcselect_host_sdk_path.")
+  endif()
+
+  set(XCSELECT_VALID_POLICIES LATEST MATCHING_ONLY MATCHING_PREFERRED)
+  set(CLANG_XCSELECT_HOST_SDK_POLICY "LATEST" CACHE STRING
+    "Policy to use for xcselect. One of: ${XCSELECT_VALID_POLICIES}")
+  set_property(CACHE CLANG_XCSELECT_HOST_SDK_POLICY PROPERTY STRINGS ${XCSELECT_VALID_POLICIES})
+  string(TOUPPER ${CLANG_XCSELECT_HOST_SDK_POLICY} CLANG_XCSELECT_HOST_SDK_POLICY)
+  list(JOIN XCSELECT_VALID_POLICIES "|" XCSELECT_POLICY_REGEX)
+
+  if(NOT CLANG_XCSELECT_HOST_SDK_POLICY MATCHES "^XCSELECT_HOST_SDK_POLICY_(${XCSELECT_POLICY_REGEX})$")
+    if(NOT CLANG_XCSELECT_HOST_SDK_POLICY IN_LIST XCSELECT_VALID_POLICIES)
+      message(FATAL_ERROR
+        "CLANG_XCSELECT_HOST_SDK_POLICY (${CLANG_XCSELECT_HOST_SDK_POLICY}) must be one of: ${XCSELECT_VALID_POLICIES}")
+    endif()
+    set(CLANG_XCSELECT_HOST_SDK_POLICY "XCSELECT_HOST_SDK_POLICY_${CLANG_XCSELECT_HOST_SDK_POLICY}")
+  endif()
 endif()
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
@@ -331,6 +384,7 @@ if(NOT DEFINED CLANG_VERSION_SUFFIX)
   set(CLANG_VERSION_SUFFIX ${LLVM_VERSION_SUFFIX})
 endif()
 set(CLANG_VERSION "${CLANG_VERSION_MAJOR}.${CLANG_VERSION_MINOR}.${CLANG_VERSION_PATCHLEVEL}${CLANG_VERSION_SUFFIX}")
+set(MAX_CLANG_ABI_COMPAT_VERSION "${LLVM_VERSION_MAJOR}")
 message(STATUS "Clang version: ${CLANG_VERSION}")
 
 # Configure the Version.inc file.
@@ -341,9 +395,6 @@ configure_file(
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
-  if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
-  endif ()
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)
@@ -362,7 +413,6 @@ if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
-include(CMakeParseArguments)
 include(AddClang)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -432,18 +482,16 @@ if(NOT LLVM_STATIC_LINK_CXX_STDLIB)
   set(HAVE_CLANG_REPL_SUPPORT ON)
 endif()
 
-option(CLANG_ENABLE_ARCMT "Build ARCMT." ON)
+option(CLANG_ENABLE_OBJC_REWRITER "Build the Objective-C rewriter tool" OFF)
+
 option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
-  message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
-endif()
-
-if(CLANG_ENABLE_ARCMT)
-  set(CLANG_ENABLE_OBJC_REWRITER ON)
+if (DEFINED CLANG_ENABLE_ARCMT)
+  set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
+  message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
 endif()
 
 # This option is a stop-gap, we should commit to removing this as
@@ -635,6 +683,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       # variable, and have LLVM's CMake append the envar to the archiver calls.
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
+      set(${CLANG_STAGE}_LIBTOOL -DCMAKE_LIBTOOL=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-libtool-darwin)
     elseif(MSVC)
       add_dependencies(clang-bootstrap-deps llvm-lib)
       set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
@@ -744,11 +793,22 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps llvm-profdata)
     set(PGO_OPT -DLLVM_PROFDATA=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profdata)
+    string(TOUPPER "${BOOTSTRAP_LLVM_BUILD_INSTRUMENTED}" BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
+    if (BOOTSTRAP_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps llvm-profgen)
+      list(APPEND PGO_OPT -DLLVM_PROFGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-profgen)
+    endif()
   endif()
 
   if(LLVM_BUILD_INSTRUMENTED)
-    add_dependencies(clang-bootstrap-deps generate-profdata)
-    set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
+    if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+      add_dependencies(clang-bootstrap-deps generate-sprofdata)
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+    else()
+      add_dependencies(clang-bootstrap-deps generate-profdata)
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+    endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
       CMAKE_CXX_COMPILER
@@ -824,6 +884,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 ${${CLANG_STAGE}_RANLIB}
                 ${${CLANG_STAGE}_OBJCOPY}
                 ${${CLANG_STAGE}_STRIP}
+                ${${CLANG_STAGE}_LIBTOOL}
     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
                                    --config ${build_configuration}
                                    ${build_tool_args}
@@ -871,58 +932,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
 
     ExternalProject_Add_StepTargets(${NEXT_CLANG_STAGE} ${target})
   endforeach()
-endif()
-
-set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
-  May be specified as Instrument or Perf or LBR to use a particular profiling \
-  mechanism.")
-string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
-
-if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
-  set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-  set(CLANG_INSTRUMENTED ${LLVM_RUNTIME_OUTPUT_INTDIR}/${CLANG_BOLT_INSTRUMENTED})
-  set(BOLT_FDATA ${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/prof.fdata)
-
-  # Pass extra flag in no-LBR mode
-  if (CLANG_BOLT STREQUAL "PERF")
-    set(BOLT_NO_LBR "-nl")
-  endif()
-
-  if (CLANG_BOLT STREQUAL "INSTRUMENT")
-    # Instrument clang with BOLT
-    add_custom_target(clang-instrumented
-      DEPENDS ${CLANG_INSTRUMENTED}
-    )
-    add_custom_command(OUTPUT ${CLANG_INSTRUMENTED}
-      DEPENDS clang llvm-bolt
-      COMMAND llvm-bolt ${CLANG_PATH} -o ${CLANG_INSTRUMENTED}
-        -instrument --instrumentation-file-append-pid
-        --instrumentation-file=${BOLT_FDATA}
-      COMMENT "Instrumenting clang binary with BOLT"
-      VERBATIM
-    )
-    add_custom_target(clang-bolt-training-deps DEPENDS clang-instrumented)
-  else() # perf or LBR
-    add_custom_target(clang-bolt-training-deps DEPENDS clang)
-  endif()
-
-  # Optimize original (pre-bolt) Clang using the collected profile
-  set(CLANG_OPTIMIZED ${CMAKE_CURRENT_BINARY_DIR}/clang.bolt)
-  add_custom_target(clang-bolt
-    DEPENDS ${CLANG_OPTIMIZED}
-  )
-  add_custom_command(OUTPUT ${CLANG_OPTIMIZED}
-    DEPENDS clang-bolt-profile
-    COMMAND llvm-bolt ${CLANG_PATH}
-      -o ${CLANG_OPTIMIZED}
-      -data ${BOLT_FDATA}
-      -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions
-      -split-all-cold -split-eh -dyno-stats -icf=1 -use-gnu-stack
-      ${BOLT_NO_LBR}
-    COMMAND ${CMAKE_COMMAND} -E rename ${CLANG_OPTIMIZED} $<TARGET_FILE:clang>
-    COMMENT "Optimizing Clang with BOLT"
-    VERBATIM
-  )
 endif()
 
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)

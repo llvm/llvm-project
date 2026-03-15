@@ -301,7 +301,7 @@ define double @amdgcn_rcp_afn_sqrt_f64_contract(double %x) {
 define double @amdgcn_rcp_fpmath3_sqrt_f64_contract(double %x) {
 ; CHECK-LABEL: define double @amdgcn_rcp_fpmath3_sqrt_f64_contract
 ; CHECK-SAME: (double [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call contract double @llvm.sqrt.f64(double [[X]]), !fpmath !0
+; CHECK-NEXT:    [[SQRT:%.*]] = call contract double @llvm.sqrt.f64(double [[X]]), !fpmath [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[RSQ:%.*]] = call contract double @llvm.amdgcn.rcp.f64(double [[SQRT]])
 ; CHECK-NEXT:    ret double [[RSQ]]
 ;
@@ -314,7 +314,7 @@ define double @amdgcn_rcp_fpmath3_sqrt_f64_contract(double %x) {
 define double @amdgcn_rcp_fpmath1_sqrt_f64_contract(double %x) {
 ; CHECK-LABEL: define double @amdgcn_rcp_fpmath1_sqrt_f64_contract
 ; CHECK-SAME: (double [[X:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[SQRT:%.*]] = call contract double @llvm.sqrt.f64(double [[X]]), !fpmath !1
+; CHECK-NEXT:    [[SQRT:%.*]] = call contract double @llvm.sqrt.f64(double [[X]]), !fpmath [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[RSQ:%.*]] = call contract double @llvm.amdgcn.rcp.f64(double [[SQRT]])
 ; CHECK-NEXT:    ret double [[RSQ]]
 ;

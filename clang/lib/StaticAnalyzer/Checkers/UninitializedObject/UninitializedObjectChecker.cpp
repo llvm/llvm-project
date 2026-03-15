@@ -291,7 +291,9 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
 
   // Are all of this non-union's fields initialized?
   for (const FieldDecl *I : RD->fields()) {
-
+    if (I->isUnnamedBitField()) {
+      continue;
+    }
     const auto FieldVal =
         State->getLValue(I, loc::MemRegionVal(R)).castAs<loc::MemRegionVal>();
     const auto *FR = FieldVal.getRegionAs<FieldRegion>();

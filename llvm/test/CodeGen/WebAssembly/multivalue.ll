@@ -62,7 +62,7 @@ define %pair @pair_call_return() {
 ; CHECK-NEXT: call_indirect () -> (i32, i64){{$}}
 ; REF:        call_indirect __indirect_function_table, () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
-; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
+; REGS: call_indirect () -> (i32, i64), $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
 define %pair @pair_call_indirect(ptr %f) {
   %p = call %pair %f()
   ret %pair %p

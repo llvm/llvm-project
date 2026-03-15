@@ -12,9 +12,11 @@ entry:
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %mul = mul nsw i64 %iv, %s
-  %gep = getelementptr inbounds double, ptr %Src, i64 %mul
-  %bct = bitcast ptr %gep to ptr
+  %gep.src = getelementptr inbounds double, ptr %Src, i64 %mul
+  %bct = bitcast ptr %gep.src to ptr
   %ld = load i64, ptr %bct
+  %gep.data = getelementptr inbounds i64, ptr %data, i64 %iv
+  store i64 %ld, ptr %gep.data
   %iv.next = add nuw nsw i64 %iv, 1
   %cmp110.us = icmp slt i64 %iv.next, %n
   br i1 %cmp110.us, label %for.body, label %for.end

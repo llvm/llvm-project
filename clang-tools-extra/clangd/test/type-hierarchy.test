@@ -62,6 +62,7 @@
 # CHECK-NEXT:         ],
 # CHECK-NEXT:         "symbolID": "ECDC0C46D75120F4"
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "detail": "Child1",
 # CHECK-NEXT:       "kind": 23,
 # CHECK-NEXT:       "name": "Child1",
 # CHECK-NEXT:       "range": {
@@ -112,6 +113,7 @@
 # CHECK-NEXT:        ],
 # CHECK-NEXT:        "symbolID": "A6576FE083F2949A"
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "detail": "Child3",
 # CHECK-NEXT:       "kind": 23,
 # CHECK-NEXT:       "name": "Child3",
 # CHECK-NEXT:       "range": {

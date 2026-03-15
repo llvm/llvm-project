@@ -18,13 +18,13 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-    typedef std::multimap<int, std::string> map_type;
-    typedef map_type::value_compare value_compare;
-    typedef map_type::value_type value_type;
+  typedef std::multimap<int, std::string> map_type;
+  typedef map_type::value_compare value_compare;
+  typedef map_type::value_type value_type;
 
-    ASSERT_SAME_TYPE(value_compare::result_type, bool);
-    ASSERT_SAME_TYPE(value_compare::first_argument_type, value_type);
-    ASSERT_SAME_TYPE(value_compare::second_argument_type, value_type);
+  ASSERT_SAME_TYPE(value_compare::result_type, bool);
+  ASSERT_SAME_TYPE(value_compare::first_argument_type, value_type);
+  ASSERT_SAME_TYPE(value_compare::second_argument_type, value_type);
 
-    return 0;
+  return 0;
 }

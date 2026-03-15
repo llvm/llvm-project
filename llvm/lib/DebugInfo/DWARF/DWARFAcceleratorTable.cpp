@@ -321,17 +321,29 @@ void AppleAcceleratorTable::Iterator::prepareNextEntryOrEnd() {
 }
 
 void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
-  std::optional<uint32_t> StrOffset = getTable().readStringOffsetAt(Offset);
+  const AppleAcceleratorTable &Table = getTable();
+  if (Offset == 0) {
+    // Always start looking for strings using a valid offset from the Offsets
+    // table. Entries are not always consecutive.
+    std::optional<uint64_t> OptOffset = Table.readIthOffset(OffsetIdx++);
+    if (!OptOffset)
+      return setToEnd();
+    Offset = *OptOffset;
+  }
+  std::optional<uint32_t> StrOffset = Table.readStringOffsetAt(Offset);
   if (!StrOffset)
     return setToEnd();
 
-  // A zero denotes the end of the collision list. Read the next string
-  // again.
-  if (*StrOffset == 0)
+  // A zero denotes the end of the collision list. Skip to the next offset
+  // in the offsets table by setting the Offset to zero so we will grab the
+  // next offset from the offsets table.
+  if (*StrOffset == 0) {
+    Offset = 0;
     return prepareNextStringOrEnd();
+  }
   Current.StrOffset = *StrOffset;
 
-  std::optional<uint32_t> MaybeNumEntries = getTable().readU32FromAccel(Offset);
+  std::optional<uint32_t> MaybeNumEntries = Table.readU32FromAccel(Offset);
   if (!MaybeNumEntries || *MaybeNumEntries == 0)
     return setToEnd();
   NumEntriesToCome = *MaybeNumEntries;
@@ -339,7 +351,7 @@ void AppleAcceleratorTable::Iterator::prepareNextStringOrEnd() {
 
 AppleAcceleratorTable::Iterator::Iterator(const AppleAcceleratorTable &Table,
                                           bool SetEnd)
-    : Current(Table), Offset(Table.getEntriesBase()), NumEntriesToCome(0) {
+    : Current(Table), Offset(0), NumEntriesToCome(0) {
   if (SetEnd)
     setToEnd();
   else
@@ -635,7 +647,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU. 
+  // implicitly refer to the single CU.
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
@@ -665,7 +677,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUOffset() const {
 }
 
 std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
-  std::optional<uint64_t> Index = getLocalTUIndex();
+  std::optional<uint64_t> Index = getTUIndex();
   if (!Index || *Index >= NameIdx->getLocalTUCount())
     return std::nullopt;
   return NameIdx->getLocalTUOffset(*Index);
@@ -673,7 +685,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
 
 std::optional<uint64_t>
 DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
-  std::optional<uint64_t> Index = getLocalTUIndex();
+  std::optional<uint64_t> Index = getTUIndex();
   const uint32_t NumLocalTUs = NameIdx->getLocalTUCount();
   if (!Index || *Index < NumLocalTUs)
     return std::nullopt; // Invalid TU index or TU index is for a local TU
@@ -684,7 +696,7 @@ DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
   return NameIdx->getForeignTUSignature(ForeignTUIndex);
 }
 
-std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
+std::optional<uint64_t> DWARFDebugNames::Entry::getTUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
     return Off->getAsUnsignedConstant();
   return std::nullopt;
@@ -1061,14 +1073,16 @@ DWARFDebugNames::equal_range(StringRef Key) const {
 }
 
 const DWARFDebugNames::NameIndex *
-DWARFDebugNames::getCUNameIndex(uint64_t CUOffset) {
-  if (CUToNameIndex.size() == 0 && NameIndices.size() > 0) {
+DWARFDebugNames::getCUOrTUNameIndex(uint64_t UnitOffset) {
+  if (UnitOffsetToNameIndex.size() == 0 && NameIndices.size() > 0) {
     for (const auto &NI : *this) {
       for (uint32_t CU = 0; CU < NI.getCUCount(); ++CU)
-        CUToNameIndex.try_emplace(NI.getCUOffset(CU), &NI);
+        UnitOffsetToNameIndex.try_emplace(NI.getCUOffset(CU), &NI);
+      for (uint32_t TU = 0; TU < NI.getLocalTUCount(); ++TU)
+        UnitOffsetToNameIndex.try_emplace(NI.getLocalTUOffset(TU), &NI);
     }
   }
-  return CUToNameIndex.lookup(CUOffset);
+  return UnitOffsetToNameIndex.lookup(UnitOffset);
 }
 
 static bool isObjCSelector(StringRef Name) {
@@ -1136,5 +1150,8 @@ std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
   while (NumLeftAnglesToSkip--)
     StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
 
-  return Name.substr(0, StartOfTemplate - 1);
+  StringRef Result = Name.substr(0, StartOfTemplate - 1);
+  if (Result.empty())
+    return std::nullopt;
+  return Result;
 }

@@ -1,8 +1,0 @@
-header: sys-time.h
-standards: Linux
-macros: []
-types:
-  - type_name: struct_timeval
-enums: []
-functions: []
-objects: []

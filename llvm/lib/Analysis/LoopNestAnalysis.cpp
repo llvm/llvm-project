@@ -54,9 +54,8 @@ static CmpInst *getOuterLoopLatchCmp(const Loop &OuterLoop) {
   const BasicBlock *Latch = OuterLoop.getLoopLatch();
   assert(Latch && "Expecting a valid loop latch");
 
-  const BranchInst *BI = dyn_cast<BranchInst>(Latch->getTerminator());
-  assert(BI && BI->isConditional() &&
-         "Expecting loop latch terminator to be a branch instruction");
+  const CondBrInst *BI = dyn_cast<CondBrInst>(Latch->getTerminator());
+  assert(BI && "Expecting loop latch terminator to be a branch instruction");
 
   CmpInst *OuterLoopLatchCmp = dyn_cast<CmpInst>(BI->getCondition());
   DEBUG_WITH_TYPE(
@@ -68,8 +67,7 @@ static CmpInst *getOuterLoopLatchCmp(const Loop &OuterLoop) {
 }
 
 static CmpInst *getInnerLoopGuardCmp(const Loop &InnerLoop) {
-
-  BranchInst *InnerGuard = InnerLoop.getLoopGuardBranch();
+  CondBrInst *InnerGuard = InnerLoop.getLoopGuardBranch();
   CmpInst *InnerLoopGuardCmp =
       (InnerGuard) ? dyn_cast<CmpInst>(InnerGuard->getCondition()) : nullptr;
 
@@ -86,8 +84,8 @@ static bool checkSafeInstruction(const Instruction &I,
                                  const CmpInst *OuterLoopLatchCmp,
                                  std::optional<Loop::LoopBounds> OuterLoopLB) {
 
-  bool IsAllowed =
-      isSafeToSpeculativelyExecute(&I) || isa<PHINode>(I) || isa<BranchInst>(I);
+  bool IsAllowed = isSafeToSpeculativelyExecute(&I) || isa<PHINode>(I) ||
+                   isa<UncondBrInst>(I) || isa<CondBrInst>(I);
   if (!IsAllowed)
     return false;
   // The only binary instruction allowed is the outer loop step instruction,
@@ -346,7 +344,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
   // "guarded" inner loop which contains "only" Phi nodes corresponding to the
   // LCSSA Phi nodes in the exit block.
   auto IsExtraPhiBlock = [&](const BasicBlock &BB) {
-    return BB.getFirstNonPHI() == BB.getTerminator() &&
+    return &*BB.getFirstNonPHIIt() == BB.getTerminator() &&
            all_of(BB.phis(), [&](const PHINode &PN) {
              return all_of(PN.blocks(), [&](const BasicBlock *IncomingBlock) {
                return IncomingBlock == InnerLoopExit ||
@@ -364,7 +362,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
 
     // no conditional branch present
     if (&SingleSucc != InnerLoopPreHeader) {
-      const BranchInst *BI = dyn_cast<BranchInst>(SingleSucc.getTerminator());
+      const CondBrInst *BI = dyn_cast<CondBrInst>(SingleSucc.getTerminator());
 
       if (!BI || BI != InnerLoop.getLoopGuardBranch())
         return false;

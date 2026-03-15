@@ -12,11 +12,8 @@
 #define FORTRAN_SEMANTICS_CHECK_CALL_H_
 
 #include "flang/Evaluate/call.h"
+#include "flang/Parser/message.h"
 
-namespace Fortran::parser {
-class Messages;
-class ContextualMessages;
-} // namespace Fortran::parser
 namespace Fortran::evaluate::characteristics {
 struct Procedure;
 }
@@ -41,9 +38,17 @@ bool CheckArguments(const evaluate::characteristics::Procedure &,
 bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
     const evaluate::ActualArguments &actuals,
     evaluate::FoldingContext &context);
+bool CheckWindowsIntrinsic(
+    const Symbol &intrinsic, evaluate::FoldingContext &context);
 bool CheckArgumentIsConstantExprInRange(
     const evaluate::ActualArguments &actuals, int index, int lowerBound,
     int upperBound, parser::ContextualMessages &messages);
+
+parser::Messages CheckExplicitInterface(
+    const evaluate::characteristics::Procedure &, evaluate::ActualArguments &,
+    SemanticsContext &, const Scope *, const evaluate::SpecificIntrinsic *,
+    bool allowActualArgumentConversions, bool extentErrors,
+    bool ignoreImplicitVsExplicit);
 
 // Checks actual arguments for the purpose of resolving a generic interface.
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,

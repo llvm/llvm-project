@@ -107,18 +107,13 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; MACHO:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; MACHO:   ret i32 %[[REG]]
 ; MACHO: }
-; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
+; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {{.*}} {
 ; ELFRT-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; ELFRT-NOT:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; PS: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; PS:   %[[REG:.*]] = load i32, ptr @__llvm_profile_runtime
 ; XCOFF-NOT: define .* __llvm_profile_runtime_user
 
-; WASM:      define internal void @__llvm_profile_register_functions() unnamed_addr {
-; WASM-NEXT:   call void @__llvm_profile_register_function(ptr @__profd_foo)
-; WASM-NEXT:   call void @__llvm_profile_register_function(ptr @__profd_foo_weak)
-; WASM:        call void @__llvm_profile_register_names_function(ptr @__llvm_prf_nm
-; WASM-NEXT:   ret void
-; WASM-NEXT: }
+; WASM-NOT:   internal void @__llvm_profile_register_functions()
 
 ; XCOFF-NOT:  internal void @__llvm_profile_register_functions() 

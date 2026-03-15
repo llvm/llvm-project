@@ -1,38 +1,58 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums %s | FileCheck %s
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-ENUM
+// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-IMPL
+// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
 // XFAIL: vg_leak
 
-class IntrinsicProperty<bit is_default = 0> {
-  bit IsDefault = is_default;
-}
+include "llvm/IR/Intrinsics.td"
 
-class SDNodeProperty;
+// Make sure we can return up to 257 values. Intrinsics are in alphabetical order.
+// CHECK-ENUM: returns_a0_results = {{[0-9]+}}, // llvm.returns.a0.results
+// CHECK-ENUM: returns_b1_results, // llvm.returns.b1.results
+// CHECK-ENUM: returns_c2_results, // llvm.returns.c2.results
+// CHECK-ENUM: returns_d9_results, // llvm.returns.d9.results
+// CHECK-ENUM: returns_e10_results, // llvm.returns.e10.results
+// CHECK-ENUM: returns_f257_results, // llvm.returns.f257.results
 
-class ValueType<int size, int value> {
-  string Namespace = "MVT";
-  int Size = size;
-  int Value = value;
-}
+// Make sure the encoding table is correctly generated.
+// CHECK-IMPL: IIT_LongEncodingTable
+// CHECK-IMPL-NEXT: 21, 255
+// CHECK-IMPL-SAME: 15, 1, 15, 9, 15, 17, 15, 25, 15, 33, 15, 41, 15, 49, 15, 57, 15, 65, 15, 73, 15, 81,
+// CHECK-IMPL-NEXT: 21, 0
+// CHECK-IMPL-SAME: 15, 1, 15, 9, 0
+// CHECK-IMPL-NEXT: 21, 7
+// CHECK-IMPL-SAME: 15, 1, 15, 9, 15, 17, 15, 25, 15, 33, 15, 41, 15, 49, 15, 57, 15, 65, 0
+// CHECK-IMPL-NEXT: 21, 8
+// CHECK-IMPL-SAME: 15, 1, 15, 9, 15, 17, 15, 25, 15, 33, 15, 41, 15, 49, 15, 57, 15, 65, 15, 73, 0
+def int_returns_a0_results : Intrinsic<
+                             [],
+                             [], [], "llvm.returns.a0.results">;
 
-class LLVMType<ValueType vt> {
-  ValueType VT = vt;
-}
+def int_returns_b1_results : Intrinsic<
+                             [llvm_anyint_ty],
+                             [], [], "llvm.returns.b1.results">;
 
-class Intrinsic<string name, list<LLVMType> ret_types = []> {
-  string LLVMName = name;
-  bit isTarget = 0;
-  string TargetPrefix = "";
-  list<LLVMType> RetTypes = ret_types;
-  list<LLVMType> ParamTypes = [];
-  list<IntrinsicProperty> IntrProperties = [];
-  list<SDNodeProperty> Properties = [];
-  bit DisableDefaultAttributes = 1;
-}
+def int_returns_c2_results : Intrinsic<
+                             !listsplat(llvm_anyint_ty, 2),
+                             [], [], "llvm.returns.c2.results">;
 
-def iAny : ValueType<0, 253>;
-def llvm_anyint_ty : LLVMType<iAny>;
+def int_returns_d9_results : Intrinsic<
+                             !listsplat(llvm_anyint_ty, 9),
+                             [], [], "llvm.returns.d9.results">;
 
-// Make sure we can return up to 8 values
-// CHECK: returns_8_results = {{[0-9]+}}, // llvm.returns.8.results
-def int_returns_8_results : Intrinsic<"llvm.returns.8.results",
-    [llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty,
-     llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty]>;
+def int_returns_e10_results : Intrinsic<
+                              !listsplat(llvm_anyint_ty, 10),
+                              [], [], "llvm.returns.e10.results">;
+
+def int_returns_f257_results : Intrinsic<
+                               !listsplat(llvm_anyint_ty, 257),
+                               [], [], "llvm.returns.f257.results">;
+
+#ifdef ENABLE_ERROR
+// CHECK-ERROR: error: intrinsics can only return upto 257 values, 'int_returns_g258_results' returns 258 values
+// CHECK-ERROR-NEXT: def int_returns_g258_results : Intrinsic<
+def int_returns_g258_results : Intrinsic<
+                               !listsplat(llvm_anyint_ty, 258),
+                               [], [], "llvm.returns.g258.results">;
+
+#endif

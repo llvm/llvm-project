@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc < %s | FileCheck %s
+; RUN: llc -mtriple=sparc < %s | FileCheck %s
 
 
 ; If computeKnownSignBits (in SelectionDAG) can do a simple

@@ -95,11 +95,26 @@ def CallSiteLoc : DialectAttribute<(attr
   LocationAttr:$caller
 )>;
 
+let cType = "FileLineColRange" in {
+def FileLineColRange : DialectAttribute<(attr
+  StringAttr:$filename,
+  WithBuilder<"$_args",
+    WithType<"SmallVector<uint64_t>",
+    WithParser<"succeeded(readFileLineColRangeLocs($_reader, $_var))",
+    WithPrinter<"writeFileLineColRangeLocs($_writer, $_name)">>>>:$rawLocData
+)> {
+  let cBuilder = "getFileLineColRange(context, filename, rawLocData)";
+  let printerPredicate = "!isStrictFileLineColLoc($_val)";
+}
+
 def FileLineColLoc : DialectAttribute<(attr
   StringAttr:$filename,
-  VarInt:$line,
-  VarInt:$column
-)>;
+  VarInt:$start_line,
+  VarInt:$start_column
+)> {
+  let printerPredicate = "isStrictFileLineColLoc($_val)";
+}
+}
 
 let cType = "FusedLoc",
     cBuilder = "cast<FusedLoc>(get<FusedLoc>(context, $_args))" in {
@@ -158,12 +173,13 @@ def DenseArrayAttr : DialectAttribute<(attr
 )>;
 
 def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
-def DenseIntOrFPElementsAttr : DialectAttribute<(attr
+def DenseTypedElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
-  Blob:$rawData
-)> {
-  let cBuilder = "cast<$_resultType>($_resultType::getFromRawBuffer($_args))";
-}
+  WithBuilder<"$_args",
+    WithType<"SmallVector<char>",
+    WithParser<"succeeded(readDenseTypedElementsAttr($_reader, type, $_var))",
+    WithPrinter<"writeDenseTypedElementsAttr($_writer, $_name)">>>>:$rawData
+)>;
 
 def DenseStringElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
@@ -318,10 +334,11 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     UnknownLoc,
     DenseResourceElementsAttr,
     DenseArrayAttr,
-    DenseIntOrFPElementsAttr,
+    DenseTypedElementsAttr,
     DenseStringElementsAttr,
     SparseElementsAttr,
-    DistinctAttr
+    DistinctAttr,
+    FileLineColRange,
   ];
 }
 

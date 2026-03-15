@@ -80,7 +80,7 @@ body:             |
     $r2 = tMOVr $r0, 14, $noreg
     $r3 = tMOVr $r0, 14, $noreg
     $r4 = tMOVr $r0, 14, $noreg
-    tBLXr 14, $lr, $noreg
+    tBLXr 14, $noreg, $lr
   bb.1:
     liveins: $r0
     $lr = tMOVr $r0, 14, $noreg
@@ -88,7 +88,7 @@ body:             |
     $r2 = tMOVr $r0, 14, $noreg
     $r3 = tMOVr $r0, 14, $noreg
     $r4 = tMOVr $r0, 14, $noreg
-    tBLXr 14, $lr, $noreg
+    tBLXr 14, $noreg, $lr
   bb.2:
     tBX_RET 14, $noreg
 ...

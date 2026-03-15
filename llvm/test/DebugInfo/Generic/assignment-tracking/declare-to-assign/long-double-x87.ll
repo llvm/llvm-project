@@ -1,5 +1,4 @@
 ; RUN: opt %s -S -passes=declare-to-assign -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=declare-to-assign -o - | FileCheck %s
 
 ;; Generated from this C++:
 ;; long double get();
@@ -11,7 +10,7 @@
 ;; alloca (80 bits) can be represented with assignment tracking. Create a
 ;; fragment for the dbg.assign for bits 0-80.
 
-; CHECK: #dbg_assign(i1 undef, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 80), ![[#]], ptr %f, !DIExpression(),
+; CHECK: #dbg_assign(i1 poison, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 80), ![[#]], ptr %f, !DIExpression(),
 
 define dso_local void @_Z3funv() #0 !dbg !10 {
 entry:

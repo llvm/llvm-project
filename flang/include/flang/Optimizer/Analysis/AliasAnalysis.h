@@ -12,7 +12,9 @@
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
 
 namespace fir {
@@ -45,7 +47,7 @@ struct AliasAnalysis {
              Unknown);
 
   /// Attributes of the memory source object.
-  ENUM_CLASS(Attribute, Target, Pointer, IntentIn);
+  ENUM_CLASS(Attribute, Target, Pointer, IntentIn, CrayPointer, CrayPointee);
 
   // See
   // https://discourse.llvm.org/t/rfc-distinguish-between-data-and-non-data-in-fir-alias-analysis/78759/1
@@ -60,18 +62,18 @@ struct AliasAnalysis {
   //  module top
   //    real, pointer :: a(:)
   //  end module
-  //  
+  //
   //  subroutine test()
   //    use top
   //    a(1) = 1
   //  end subroutine
   //  -------------------------------------------------
-  // 
-  //  flang-new -fc1 -emit-fir test.f90 -o test.fir
+  //
+  //  flang -fc1 -emit-fir test.f90 -o test.fir
   //
   //  ------------------- test.fir --------------------
-  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>> 
-  //  
+  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  //
   //  func.func @_QPtest() {
   //    %c1 = arith.constant 1 : index
   //    %cst = arith.constant 1.000000e+00 : f32
@@ -100,12 +102,12 @@ struct AliasAnalysis {
   // Additionally, because it is relied on in HLFIR lowering, we allow querying
   // on a box SSA value, which is interpreted as querying on its data.
   //
-  // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data, 
+  // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data,
   // while !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> is not data.
 
   // This also applies to function arguments. In the example below, %arg0
   // is data, %arg1 is not data but a load of %arg1 is.
-  // 
+  //
   // func.func @_QFPtest2(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>> )  {
   //    %0 = fir.load %arg1 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   //    ... }
@@ -129,7 +131,7 @@ struct AliasAnalysis {
       /// inlining happens an inlined fir.declare of the callee's
       /// dummy argument identifies the scope where the source
       /// may be treated as a dummy argument.
-      mlir::Value instantiationPoint;
+      mlir::Operation *instantiationPoint;
 
       /// Whether the source was reached following data or box reference
       bool isData{false};
@@ -146,6 +148,8 @@ struct AliasAnalysis {
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
     bool approximateSource;
+    /// Source object is used in an internal procedure via host association.
+    bool isCapturedInInternalProcedure{false};
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;
@@ -153,24 +157,57 @@ struct AliasAnalysis {
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
 
-    /// Return true, if the memory source's `valueType` is a reference type
-    /// to an object of derived type that contains a component with POINTER
-    /// attribute.
-    bool isRecordWithPointerComponent() const;
+    /// Return true, if Target attribute is set.
+    bool isTarget() const;
+
+    /// Return true, if Pointer attribute is set.
+    bool isPointer() const;
+
+    /// Return true, if CrayPointer attribute is set.
+    bool isCrayPointer() const;
+
+    /// Return true, if CrayPointee attribute is set.
+    bool isCrayPointee() const;
+
+    /// Return true, if CrayPointer or CrayPointee attribute is set.
+    bool isCrayPointerOrPointee() const;
 
     bool isDummyArgument() const;
     bool isData() const;
     bool isBoxData() const;
 
-    mlir::Type getType() const;
+    /// Is this source a variable from the Fortran source?
+    bool isFortranUserVariable() const;
 
-    /// Return true, if `ty` is a reference type to a boxed
-    /// POINTER object or a raw fir::PointerType.
-    static bool isPointerReference(mlir::Type ty);
+    /// @name Dummy Argument Aliasing
+    ///
+    /// Check conditions related to dummy argument aliasing.
+    ///
+    /// For all uses, a result of false can prevent MayAlias from being
+    /// reported, so the list of cases where false is returned is conservative.
+
+    ///@{
+    /// The address of a (possibly host associated) dummy argument of the
+    /// current function?
+    bool mayBeDummyArgOrHostAssoc() const;
+    /// \c mayBeDummyArgOrHostAssoc and the address of a pointer?
+    bool mayBePtrDummyArgOrHostAssoc() const;
+    /// The address of an actual argument of the current function?
+    bool mayBeActualArg() const;
+    /// \c mayBeActualArg and the address of either a pointer or a composite
+    /// with a pointer component?
+    bool mayBeActualArgWithPtr(const mlir::Value *val) const;
+    ///@}
+
+    mlir::Type getType() const;
   };
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const AliasAnalysis::Source &op);
+
+  /// Given the values and their sources, return their aliasing behavior.
+  mlir::AliasResult alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                          mlir::Value rhs);
 
   /// Given two values, return their aliasing behavior.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
@@ -178,11 +215,62 @@ struct AliasAnalysis {
   /// Return the modify-reference behavior of `op` on `location`.
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
+  /// Return the modify-reference behavior of operations inside `region` on
+  /// `location`. Contrary to getModRef(operation, location), this will visit
+  /// nested regions recursively according to the HasRecursiveMemoryEffects
+  /// trait.
+  mlir::ModRefResult getModRef(mlir::Region &region, mlir::Value location);
+
   /// Return the memory source of a value.
-  /// If getInstantiationPoint is true, the search for the source
+  /// If getLastInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy
   /// argument declaration (i.e. it has the dummy_scope operand).
-  Source getSource(mlir::Value, bool getInstantiationPoint = false);
+  fir::AliasAnalysis::Source getSource(mlir::Value,
+                                       bool getLastInstantiationPoint = false);
+
+  /// Return true, if `ty` is a reference type to a boxed
+  /// POINTER object or a raw fir::PointerType.
+  static bool isPointerReference(mlir::Type ty);
+
+private:
+  /// Return true, if `ty` is a reference type to an object of derived type
+  /// that contains a component with POINTER attribute.
+  static bool isRecordWithPointerComponent(mlir::Type ty);
+
+  /// Return the symbol table nearest to the given operation.
+  /// If a SymbolTable has not been cached in symTabMap,
+  /// it will be created, which may be expensive.
+  const mlir::SymbolTable *getNearestSymbolTable(mlir::Operation *from);
+
+  /// Return true if the given symbol may correspond to a Fortran variable
+  /// with a TARGET attribute. 'from' is used to find the nearest
+  /// SymbolTable (by calling getNearestSymbolTable()).
+  bool symbolMayHaveTargetAttr(mlir::SymbolRefAttr symbol,
+                               mlir::Operation *from);
+
+  /// Return true if the given operation is a call to a Fortran user
+  /// procedure.
+  bool isCallToFortranUserProcedure(mlir::Operation *op);
+
+  /// Returns the modify-reference behavior of the given call
+  /// operation `op` on `var`. If `op` is not a fir.call, then
+  /// it returns the conservative ModAndRef result.
+  mlir::ModRefResult getCallModRef(mlir::Operation *op, mlir::Value var);
+
+  /// A map between operations with OpTrait::SymbolTable
+  /// and the SymbolTable objects associated with them.
+  /// TODO: it might be better to initialize just a single SymbolTable
+  /// during fir::AliasAnalysis construction, e.g. by giving
+  /// the constructor the operation from which the nearest SymbolTable
+  /// should be looked up. This implies that the users will have to
+  /// specify proper operation (e.g. 'module') so that the discovered
+  /// SymbolTable contains all the symbols that may appear during
+  /// the aliasing queries through the constructed AliasAnalysis
+  /// entity. On ther other hand, this approach may be too expensive
+  /// for the clients that create AliasAnalysis on the fly for just
+  /// a few values that are likely not globals.
+  /// We can have both modes for different clients.
+  llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

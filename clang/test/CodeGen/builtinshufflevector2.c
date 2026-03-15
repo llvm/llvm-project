@@ -5,7 +5,7 @@ typedef unsigned int uint4 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define {{.*}}void @clang_shufflevector_v_v(
 void clang_shufflevector_v_v( float4* A, float4 x, uint4 mask ) {
-// CHECK: [[MASK:%.*]] = and <4 x i32> {{%.*}}, <i32 3, i32 3, i32 3, i32 3>
+// CHECK: [[MASK:%.*]] = and <4 x i32> {{%.*}}, splat (i32 3)
 // CHECK: [[I:%.*]] = extractelement <4 x i32> [[MASK]], i{{[0-9]+}} 0
 // CHECK: [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i{{[0-9]+}} [[I]]
 //

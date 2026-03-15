@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#TYLONG:]] = OpTypeInt 32 0
@@ -14,8 +14,11 @@
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }
 
+@G = global i32 0
+
 define spir_kernel void @foo(ptr noundef byval(%struct.__wrapper_class) align 4 %_arg_Arr) {
 entry:
   %val = load i32, ptr %_arg_Arr
+  store i32 %val, ptr @G
   ret void
 }

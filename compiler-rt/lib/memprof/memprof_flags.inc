@@ -38,4 +38,7 @@ MEMPROF_FLAG(bool, allocator_frees_and_returns_null_on_realloc_zero, true,
 MEMPROF_FLAG(bool, print_text, false,
   "If set, prints the heap profile in text format. Else use the raw binary serialization format.")
 MEMPROF_FLAG(bool, print_terse, false,
-             "If set, prints memory profile in a terse format. Only applicable if print_text = true.")
+             "If set, prints memory profile in a terse format. Only applicable "
+             "if print_text = true.")
+MEMPROF_FLAG(bool, dump_at_exit, true,
+             "If set, dump profiles when the program terminates.")

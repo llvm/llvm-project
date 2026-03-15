@@ -73,9 +73,14 @@ public:
 
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
-                         const FileSpecList *module_search_paths_ptr,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
+
+  Status
+  GetModuleFromSharedCaches(const ModuleSpec &module_spec, Process *process,
+                            lldb::ModuleSP &module_sp,
+                            llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                            bool *did_create_ptr);
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;
@@ -117,39 +122,38 @@ public:
   llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(Process &process) override;
 
-  /// Return the toolchain directory the current LLDB instance is located in.
-  static FileSpec GetCurrentToolchainDirectory();
+  llvm::Expected<std::pair<XcodeSDK, bool>>
+  GetSDKPathFromDebugInfo(Module &module) override;
 
-  /// Return the command line tools directory the current LLDB instance is
-  /// located in.
-  static FileSpec GetCurrentCommandLineToolsDirectory();
+  llvm::Expected<std::string>
+  ResolveSDKPathFromDebugInfo(Module &module) override;
 
-  /// Search each CU associated with the specified 'module' for
-  /// the SDK paths the CUs were compiled against. In the presence
-  /// of different SDKs, we try to pick the most appropriate one
-  /// using \ref XcodeSDK::Merge.
-  ///
-  /// \param[in] module Module whose debug-info CUs to parse for
-  ///                   which SDK they were compiled against.
-  ///
-  /// \returns If successful, returns a pair of a parsed XcodeSDK
-  ///          object and a boolean that is 'true' if we encountered
-  ///          a conflicting combination of SDKs when parsing the CUs
-  ///          (e.g., a public and internal SDK).
-  static llvm::Expected<std::pair<XcodeSDK, bool>>
-  GetSDKPathFromDebugInfo(Module &module);
+  llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) override;
 
-  /// Returns the full path of the most appropriate SDK for the
-  /// specified 'module'. This function gets this path by parsing
-  /// debug-info (see \ref `GetSDKPathFromDebugInfo`).
+  llvm::Expected<std::string>
+  ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
+
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts (currently
+  /// just Python) from a .dSYM Python directory.
   ///
-  /// \param[in] module Module whose debug-info to parse for
-  ///                   which SDK it was compiled against.
+  /// \param[out] feedback_stream Any warnings/errors are printed into this
+  /// stream.
   ///
-  /// \returns If successful, returns the full path to an
-  ///          Xcode SDK.
-  static llvm::Expected<std::string>
-  ResolveSDKPathFromDebugInfo(Module &module);
+  /// \param[in] module_spec FileSpec of the Module for which to locate
+  /// scripting resources.
+  ///
+  /// \param[in] target Target which owns the ScriptInterpreter which is
+  /// eventually used for loading the scripting resources.
+  ///
+  /// \param[in] symfile_spec FileSpec for the SymbolFile inside the Module's
+  /// dSYM directory. The scripting resources are loaded from the adjacent
+  /// Resources directory in the same dSYM.
+  /// E.g., \c /path/to/.dSYM/Contents/Resources/DWARF/a.out
+  ///
+  static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
+      Stream &feedback_stream, FileSpec module_spec, const Target &target,
+      const FileSpec &symfile_spec);
 
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);
@@ -212,11 +216,8 @@ protected:
 
   Status FindBundleBinaryInExecSearchPaths(
       const ModuleSpec &module_spec, Process *process,
-      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
+      lldb::ModuleSP &module_sp,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
-
-  static std::string FindComponentInPath(llvm::StringRef path,
-                                         llvm::StringRef component);
 
   // The OSType where lldb is running.
   static llvm::Triple::OSType GetHostOSType();

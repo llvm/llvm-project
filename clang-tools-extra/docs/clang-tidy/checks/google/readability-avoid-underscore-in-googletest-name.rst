@@ -25,8 +25,8 @@ would trigger the check. `Underscores are not allowed`_ in test suite name nor
 test names.
 
 The ``DISABLED_`` prefix, which may be used to
-`disable test suites and individual tests`_, is removed from the test suite name
-and test name before checking for underscores.
+`disable test suites and individual tests`_, is removed from the test suite
+name and test name before checking for underscores.
 
 This check does not propose any fixes.
 

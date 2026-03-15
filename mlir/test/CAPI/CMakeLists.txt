@@ -10,6 +10,7 @@ function(_add_capi_test_executable name)
     PARTIAL_SOURCES_INTENDED
     ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${name} PROPERTIES FOLDER "MLIR/Tests")
+  set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL ON)
 
   llvm_update_compile_flags(${name})
   if(MLIR_BUILD_MLIR_C_DYLIB)
@@ -25,6 +26,13 @@ endfunction(_add_capi_test_executable)
 if(MLIR_ENABLE_EXECUTION_ENGINE)
   _add_capi_test_executable(mlir-capi-execution-engine-test
     execution_engine.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIConversion
+    MLIRCAPIExecutionEngine
+    MLIRCAPIRegisterEverything
+)
+  _add_capi_test_executable(mlir-capi-global-constructors-test
+    global_constructors.c
   LINK_LIBS PRIVATE
     MLIRCAPIConversion
     MLIRCAPIExecutionEngine
@@ -88,6 +96,15 @@ _add_capi_test_executable(mlir-capi-quant-test
     MLIRCAPIQuant
 )
 
+_add_capi_test_executable(mlir-capi-rewrite-test
+  rewrite.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegisterEverything
+    MLIRCAPITransforms
+)
+
+
 _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE
@@ -112,4 +129,14 @@ _add_capi_test_executable(mlir-capi-translation-test
     MLIRCAPILLVM
     MLIRCAPIRegisterEverything
     MLIRCAPITarget
+)
+
+_add_capi_test_executable(mlir-capi-smt-test
+  smt.c
+
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIFunc
+    MLIRCAPISMT
+    MLIRCAPIExportSMTLIB
 )

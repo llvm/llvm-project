@@ -12,7 +12,7 @@ void test0(_Bool cond) {
   // CHECK-NEXT: [[RELCOND:%.*]] = alloca i1
   // CHECK-NEXT: zext
   // CHECK-NEXT: store
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[X]])
   // CHECK-NEXT: [[T0:%.*]] = load i8, ptr [[COND]]
   // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
   // CHECK-NEXT: store i1 false, ptr [[RELCOND]]
@@ -32,7 +32,7 @@ void test0(_Bool cond) {
   // CHECK-NEXT: br label
   // CHECK:      [[T0:%.*]] = load ptr, ptr [[X]]
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]]) [[NUW]]
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[X]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[X]])
   // CHECK-NEXT: ret void
   id x = (cond ? 0 : test0_helper());
 }
@@ -53,9 +53,9 @@ void test1(int cond) {
   // CHECK-NEXT: [[CONDCLEANUPSAVE:%.*]] = alloca ptr
   // CHECK-NEXT: [[CONDCLEANUP:%.*]] = alloca i1
   // CHECK-NEXT: store i32
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[STRONG]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[STRONG]])
   // CHECK-NEXT: store ptr null, ptr [[STRONG]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[WEAK]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[WEAK]])
   // CHECK-NEXT: call ptr @llvm.objc.initWeak(ptr [[WEAK]], ptr null)
 
   // CHECK-NEXT: [[T0:%.*]] = load i32, ptr [[COND]]
@@ -67,7 +67,7 @@ void test1(int cond) {
   // CHECK:      [[T0:%.*]] = load ptr, ptr [[ARG]]
   // CHECK-NEXT: store ptr [[T0]], ptr [[TEMP1]]
   // CHECK-NEXT: br label
-  // CHECK:      [[W:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
+  // CHECK:      [[W:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ poison, {{%.*}} ]
   // CHECK-NEXT: call void @test1_sink(ptr noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
@@ -99,8 +99,8 @@ void test1(int cond) {
   // CHECK-NEXT: br label
 
   // CHECK:      call void @llvm.objc.destroyWeak(ptr [[WEAK]])
-  // CHECK:      call void @llvm.lifetime.end.p0(i64 8, ptr [[WEAK]])
-  // CHECK:      call void @llvm.lifetime.end.p0(i64 8, ptr [[STRONG]])
+  // CHECK:      call void @llvm.lifetime.end.p0(ptr [[WEAK]])
+  // CHECK:      call void @llvm.lifetime.end.p0(ptr [[STRONG]])
   // CHECK:      ret void
 }
 

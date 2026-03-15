@@ -14,3 +14,9 @@ CHECK: Build ID: [[ID:[[:xdigit:]]+]]
 
 COM: Then match it with the profdata output.
 CHECK-COUNT-1: BuildId: {{.*}}[[ID]]
+
+Test error message when profile build id does not match build id in a different binary.
+RUN: not llvm-profdata show --memory %p/Inputs/buildid.memprofraw --profiled-binary %p/Inputs/basic.memprofexe -o - 2>&1 | FileCheck %s -check-prefix=BUILDID-NOT-MATCH
+RUN: not llvm-profdata merge %p/Inputs/buildid.memprofraw %p/Inputs/basic.memprofraw  --profiled-binary %p/Inputs/basic.memprofexe -o %t4.prof 2>&1 | FileCheck %s -check-prefix=BUILDID-NOT-MATCH
+
+BUILDID-NOT-MATCH: No matching executable segments found in binary

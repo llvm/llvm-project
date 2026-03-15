@@ -70,7 +70,7 @@ void BinaryFunction::postProcessProfile() {
     return;
   }
 
-  if (!(getProfileFlags() & PF_LBR))
+  if (!(getProfileFlags() & PF_BRANCH))
     return;
 
   // If we have at least some branch data for the function indicate that it
@@ -336,7 +336,8 @@ void BinaryFunction::inferFallThroughCounts() {
       if (SuccBI.Count == 0) {
         SuccBI.Count = Inferred;
         SuccBI.MispredictedCount = BinaryBasicBlock::COUNT_INFERRED;
-        Succ->ExecutionCount += Inferred;
+        Succ->ExecutionCount =
+            std::max(Succ->getKnownExecutionCount(), Inferred);
       }
     }
   }

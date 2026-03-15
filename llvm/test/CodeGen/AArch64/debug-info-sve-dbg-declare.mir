@@ -164,10 +164,10 @@ stack:
   - { id: 1, name: z1.addr, size: 16, alignment: 16, stack-id: scalable-vector,
       debug-info-variable: '!31', debug-info-expression: '!DIExpression()',
       debug-info-location: '!32' }
-  - { id: 2, name: p0.addr, size: 2, alignment: 2, stack-id: scalable-vector,
+  - { id: 2, name: p0.addr, size: 2, alignment: 2, stack-id: scalable-predicate-vector,
       debug-info-variable: '!33', debug-info-expression: '!DIExpression()',
       debug-info-location: '!34' }
-  - { id: 3, name: p1.addr, size: 2, alignment: 2, stack-id: scalable-vector,
+  - { id: 3, name: p1.addr, size: 2, alignment: 2, stack-id: scalable-predicate-vector,
       debug-info-variable: '!35', debug-info-expression: '!DIExpression()',
       debug-info-location: '!36' }
   - { id: 4, name: w0.addr, size: 4, alignment: 4, local-offset: -4, debug-info-variable: '!37',
@@ -181,10 +181,10 @@ stack:
   - { id: 7, name: localv1, size: 16, alignment: 16, stack-id: scalable-vector,
       debug-info-variable: '!45', debug-info-expression: '!DIExpression()',
       debug-info-location: '!46' }
-  - { id: 8, name: localp0, size: 2, alignment: 2, stack-id: scalable-vector,
+  - { id: 8, name: localp0, size: 2, alignment: 2, stack-id: scalable-predicate-vector,
       debug-info-variable: '!48', debug-info-expression: '!DIExpression()',
       debug-info-location: '!49' }
-  - { id: 9, name: localp1, size: 2, alignment: 2, stack-id: scalable-vector,
+  - { id: 9, name: localp1, size: 2, alignment: 2, stack-id: scalable-predicate-vector,
       debug-info-variable: '!51', debug-info-expression: '!DIExpression()',
       debug-info-location: '!52' }
 machineFunctionInfo: {}

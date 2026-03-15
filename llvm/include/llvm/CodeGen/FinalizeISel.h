@@ -16,6 +16,7 @@ namespace llvm {
 class FinalizeISelPass : public PassInfoMixin<FinalizeISelPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

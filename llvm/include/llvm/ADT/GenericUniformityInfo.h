@@ -40,6 +40,9 @@ public:
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
 
+  using TemporalDivergenceTuple =
+      std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
+
   GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
   GenericUniformityInfo() = default;
@@ -65,7 +68,7 @@ public:
 
   // Similar queries for InstructionT. These accept a pointer argument so that
   // in LLVM IR, they overload the equivalent queries for Value*. For example,
-  // if querying whether a BranchInst is divergent, it should not be treated as
+  // if querying whether a CondBrInst is divergent, it should not be treated as
   // a Value in LLVM IR.
   bool isUniform(const InstructionT *I) const { return !isDivergent(I); };
   bool isDivergent(const InstructionT *I) const;
@@ -77,6 +80,8 @@ public:
   bool hasDivergentTerminator(const BlockT &B);
 
   void print(raw_ostream &Out) const;
+
+  iterator_range<TemporalDivergenceTuple *> getTemporalDivergenceList() const;
 
 private:
   using ImplT = GenericUniformityAnalysisImpl<ContextT>;

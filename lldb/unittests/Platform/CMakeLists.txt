@@ -5,13 +5,15 @@ add_lldb_unittest(LLDBPlatformTests
   PlatformSiginfoTest.cpp
   PlatformTest.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbPluginPlatformFreeBSD
     lldbPluginPlatformLinux
     lldbPluginPlatformMacOSX
     lldbPluginPlatformNetBSD
-  LINK_COMPONENTS
-    Support
+    lldbUtilityHelpers
   )
 
 add_subdirectory(Android)
+add_subdirectory(gdb-server)

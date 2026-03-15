@@ -17,7 +17,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
-#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,37 +24,6 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 using mlir::LLVM::detail::createIntrinsicCall;
-
-static llvm::Value *createIntrinsicCallWithRange(llvm::IRBuilderBase &builder,
-                                                 llvm::Intrinsic::ID intrinsic,
-                                                 DenseI32ArrayAttr maybeRange) {
-  auto *inst = llvm::cast<llvm::CallInst>(
-      createIntrinsicCall(builder, intrinsic, {}, {}));
-  if (maybeRange) {
-    llvm::ConstantRange Range(APInt(32, maybeRange[0]),
-                              APInt(32, maybeRange[1]));
-    inst->addRangeRetAttr(Range);
-  }
-  return inst;
-}
-
-// Create a call to ROCm-Device-Library function
-// Currently this routine will work only for calling ROCDL functions that
-// take a single int32 argument. It is likely that the interface of this
-// function will change to make it more generic.
-static llvm::Value *createDeviceFunctionCall(llvm::IRBuilderBase &builder,
-                                             StringRef fnName, int parameter) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::FunctionType *functionType = llvm::FunctionType::get(
-      llvm::Type::getInt64Ty(module->getContext()), // return type.
-      llvm::Type::getInt32Ty(module->getContext()), // parameter type.
-      false);                                       // no variadic arguments.
-  llvm::Function *fn = dyn_cast<llvm::Function>(
-      module->getOrInsertFunction(fnName, functionType).getCallee());
-  llvm::Value *fnOp0 = llvm::ConstantInt::get(
-      llvm::Type::getInt32Ty(module->getContext()), parameter);
-  return builder.CreateCall(fn, ArrayRef<llvm::Value *>(fnOp0));
-}
 
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
@@ -82,6 +50,7 @@ public:
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
     auto *dialect = dyn_cast<ROCDL::ROCDLDialect>(attribute.getNameDialect());
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     if (dialect->getKernelAttrHelper().getName() == attribute.getName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
@@ -105,7 +74,7 @@ public:
       // assumption. This assumption may be overridden by setting
       // `rocdl.uniform_work_group_size` on a given function.
       if (!llvmFunc->hasFnAttribute("uniform-work-group-size"))
-        llvmFunc->addFnAttr("uniform-work-group-size", "true");
+        llvmFunc->addFnAttr("uniform-work-group-size");
     }
     // Override flat-work-group-size
     // TODO: update clients to rocdl.flat_work_group_size instead,
@@ -127,6 +96,23 @@ public:
       llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
       attrValueStream << "1," << value.getInt();
       llvmFunc->addFnAttr("amdgpu-flat-work-group-size", llvmAttrValue);
+    }
+    if (dialect->getWavesPerEuAttrHelper().getName() == attribute.getName()) {
+      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+      if (!func)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " is only supported on `llvm.func` operations");
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be an integer");
+
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(func.getName());
+      llvm::SmallString<8> llvmAttrValue;
+      llvm::raw_svector_ostream attrValueStream(llvmAttrValue);
+      attrValueStream << value.getInt();
+      llvmFunc->addFnAttr("amdgpu-waves-per-eu", llvmAttrValue);
     }
     if (dialect->getFlatWorkGroupSizeAttrHelper().getName() ==
         attribute.getName()) {
@@ -157,7 +143,24 @@ public:
                                " must be a boolean");
       llvm::Function *llvmFunc =
           moduleTranslation.lookupFunction(func.getName());
-      llvmFunc->addFnAttr("uniform-work-group-size",
+      if (value.getValue())
+        llvmFunc->addFnAttr("uniform-work-group-size");
+      else
+        llvmFunc->removeFnAttr("uniform-work-group-size");
+    }
+    if (dialect->getUnsafeFpAtomicsAttrHelper().getName() ==
+        attribute.getName()) {
+      auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+      if (!func)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " is only supported on `llvm.func` operations");
+      auto value = dyn_cast<BoolAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a boolean");
+      llvm::Function *llvmFunc =
+          moduleTranslation.lookupFunction(func.getName());
+      llvmFunc->addFnAttr("amdgpu-unsafe-fp-atomics",
                           value.getValue() ? "true" : "false");
     }
     // Set reqd_work_group_size metadata
@@ -171,7 +174,6 @@ public:
       if (!value)
         return op->emitOpError(Twine(attribute.getName()) +
                                " must be a dense i32 array attribute");
-      llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
       SmallVector<llvm::Metadata *, 3> metadata;
       llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
       for (int32_t i : value.asArrayRef()) {
@@ -183,6 +185,31 @@ public:
       llvm::MDNode *node = llvm::MDNode::get(llvmContext, metadata);
       llvmFunc->setMetadata("reqd_work_group_size", node);
     }
+
+    // Atomic and nontemporal metadata
+    if (dialect->getLastUseAttrHelper().getName() == attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.last.use", llvm::MDNode::get(llvmContext, {}));
+    }
+    if (dialect->getNoRemoteMemoryAttrHelper().getName() ==
+        attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.no.remote.memory",
+                       llvm::MDNode::get(llvmContext, {}));
+    }
+    if (dialect->getNoFineGrainedMemoryAttrHelper().getName() ==
+        attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.no.fine.grained.memory",
+                       llvm::MDNode::get(llvmContext, {}));
+    }
+    if (dialect->getIgnoreDenormalModeAttrHelper().getName() ==
+        attribute.getName()) {
+      for (llvm::Instruction *i : instructions)
+        i->setMetadata("amdgpu.ignore.denormal.mode",
+                       llvm::MDNode::get(llvmContext, {}));
+    }
+
     return success();
   }
 };

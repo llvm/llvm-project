@@ -98,6 +98,49 @@ def testStructType():
     assert opaque.opaque
     # CHECK: !llvm.struct<"opaque", opaque>
 
+    typ = Type.parse('!llvm.struct<"zoo", (i32, i64)>')
+    assert isinstance(typ, llvm.StructType)
+
+
+# CHECK-LABEL: testArrayType
+@constructAndPrintInModule
+def testArrayType():
+    i32 = IntegerType.get_signless(32)
+    i8 = IntegerType.get_signless(8)
+
+    arr = llvm.ArrayType.get(i32, 4)
+    # CHECK: !llvm.array<4 x i32>
+    print(arr)
+    assert arr.element_type == i32
+    assert arr.num_elements == 4
+
+    arr2 = llvm.ArrayType.get(i8, 12)
+    # CHECK: !llvm.array<12 x i8>
+    print(arr2)
+    assert arr2.element_type == i8
+    assert arr2.num_elements == 12
+
+    typ = Type.parse("!llvm.array<4 x i32>")
+    assert isinstance(typ, llvm.ArrayType)
+    assert typ == arr
+
+
+# CHECK-LABEL: testArrayTypeOps
+@constructAndPrintInModule
+def testArrayTypeOps():
+    i32 = IntegerType.get_signless(32)
+    arr_t = llvm.ArrayType.get(i32, 4)
+
+    undef = llvm.UndefOp(arr_t)
+    c_42 = llvm.mlir_constant(IntegerAttr.get(i32, 42))
+    inserted = llvm.insertvalue(undef, c_42, [0])
+    llvm.extractvalue(i32, inserted, [0])
+
+    # CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<4 x i32>
+    # CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i32) : i32
+    # CHECK: %[[INS:.*]] = llvm.insertvalue %[[C42]], %[[UNDEF]][0] : !llvm.array<4 x i32>
+    # CHECK: %{{.*}} = llvm.extractvalue %[[INS]][0] : !llvm.array<4 x i32>
+
 
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
@@ -119,6 +162,9 @@ def testPointerType():
     ptr_with_addr = llvm.PointerType.get(1)
     # CHECK: !llvm.ptr<1>
     print(ptr_with_addr)
+
+    typ = Type.parse("!llvm.ptr<1>")
+    assert isinstance(typ, llvm.PointerType)
 
 
 # CHECK-LABEL: testConstant
@@ -150,3 +196,22 @@ def testIntrinsics():
     result = llvm.intr_memset(alloca, c_0, c_128, False)
     # CHECK: "llvm.intr.memset"(%[[ALLOCA]], %[[CST0]], %[[CST128]]) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
     print(result)
+
+
+# CHECK-LABEL: testTranslateToLLVMIR
+@constructAndPrintInModule
+def testTranslateToLLVMIR():
+    with Context(), Location.unknown():
+        module = Module.parse(
+            """\
+            llvm.func @add(%arg0: i64, %arg1: i64) -> i64 { 
+               %0 = llvm.add %arg0, %arg1  : i64 
+               llvm.return %0 : i64 
+            }
+        """
+        )
+        # CHECK: define i64 @add(i64 %0, i64 %1) {
+        # CHECK:   %3 = add i64 %0, %1
+        # CHECK:   ret i64 %3
+        # CHECK: }
+        print(llvm.translate_module_to_llvmir(module.operation))

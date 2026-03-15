@@ -1,0 +1,41 @@
+#RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../Inputs/ -y %s -o %t.dwarf
+#RUN: llvm-dwarfdump %t.dwarf | FileCheck %s
+
+# There should be two typedef DIE named "BarInt" in the resultant .dwarf file.
+# The second should refer to the first, which refer to "Foo<int>".
+# CHECK:      0x[[FIRST_BARINT_ADDR:[0-9a-f]*]]:  DW_TAG_typedef
+# CHECK-NEXT:     DW_AT_type  (0x{{([[:xdigit:]]*)}} "Foo<int>")
+# CHECK-NEXT:     DW_AT_name  ("BarInt")
+# CHECK:      0x{{([[:xdigit:]]*)}}:  DW_TAG_typedef
+# CHECK-NEXT:     DW_AT_type  (0x[[FIRST_BARINT_ADDR]] "BarInt")
+# CHECK-NEXT:     DW_AT_name  ("BarInt")
+
+# Source:
+#
+#   template <typename T> struct Foo;
+#   typedef Foo<int> BarInt;
+#   template <typename T>
+#   struct [[clang::preferred_name(BarInt)]] Foo{};
+#   int main() {
+#     BarInt barInt;
+#     return 0;
+#   }
+#
+# Compile with:
+#
+#   $ clang++ -g -O0 -c typedefs-with-same-name.cpp -o typedefs-with-same-name.o
+#
+# To generate the debug map:
+#
+#   $ clang++ typedefs-with-same-name.o -o typedefs-with-same-name
+#   $ dsymutil -dump-debug-map typedefs-with-same-name
+
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename:        '/typedefs-with-same-name.o'
+    timestamp:       1762438746
+    type:            102
+    symbols:
+      - { sym: _main, objAddr: 0x0, binAddr: 0x100000360, size: 0x14 }
+...

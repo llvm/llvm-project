@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_RINTTEST_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -21,6 +23,7 @@
 #include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+using LIBC_NAMESPACE::Sign;
 
 static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};

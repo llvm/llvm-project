@@ -347,7 +347,6 @@ static MemberData computeStringTable(StringRef Names) {
   printWithSpacePadding(Out, "//", 48);
   printWithSpacePadding(Out, Size + Pad, 10);
   Out << "`\n";
-  Out.flush();
   return {{}, std::move(Header), Names, Pad ? "\n" : ""};
 }
 
@@ -482,7 +481,8 @@ static uint64_t computeHeadersSize(object::Archive::Kind Kind,
 }
 
 static Expected<std::unique_ptr<SymbolicFile>>
-getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context) {
+getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context,
+                object::Archive::Kind Kind, function_ref<void(Error)> Warn) {
   const file_magic Type = identify_magic(Buf.getBuffer());
   // Don't attempt to read non-symbolic file types.
   if (!object::SymbolicFile::isSymbolicFile(Type, &Context))
@@ -490,8 +490,36 @@ getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context) {
   if (Type == file_magic::bitcode) {
     auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
         Buf, file_magic::bitcode, &Context);
-    if (!ObjOrErr)
-      return ObjOrErr.takeError();
+    // An error reading a bitcode file most likely indicates that the file
+    // was created by a compiler from the future. Normally we don't try to
+    // implement forwards compatibility for bitcode files, but when creating an
+    // archive we can implement best-effort forwards compatibility by treating
+    // the file as a blob and not creating symbol index entries for it. lld and
+    // mold ignore the archive symbol index, so provided that you use one of
+    // these linkers, LTO will work as long as lld or the gold plugin is newer
+    // than the compiler. We only ignore errors if the archive format is one
+    // that is supported by a linker that is known to ignore the index,
+    // otherwise there's no chance of this working so we may as well error out.
+    // We print a warning on read failure so that users of linkers that rely on
+    // the symbol index can diagnose the issue.
+    //
+    // This is the same behavior as GNU ar when the linker plugin returns an
+    // error when reading the input file. If the bitcode file is actually
+    // malformed, it will be diagnosed at link time.
+    if (!ObjOrErr) {
+      switch (Kind) {
+      case object::Archive::K_BSD:
+      case object::Archive::K_GNU:
+      case object::Archive::K_GNU64:
+        Warn(ObjOrErr.takeError());
+        return nullptr;
+      case object::Archive::K_AIXBIG:
+      case object::Archive::K_COFF:
+      case object::Archive::K_DARWIN:
+      case object::Archive::K_DARWIN64:
+        return ObjOrErr.takeError();
+      }
+    }
     return std::move(*ObjOrErr);
   } else {
     auto ObjOrErr = object::SymbolicFile::createSymbolicFile(Buf);
@@ -671,7 +699,7 @@ static bool isECObject(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isWindowsArm64EC() || T.getArch() == Triple::x86_64;
   }
 
@@ -690,7 +718,7 @@ static bool isAnyArm64COFF(object::SymbolicFile &Obj) {
         getBitcodeTargetTriple(Obj.getMemoryBufferRef());
     if (!TripleStr)
       return false;
-    Triple T(*TripleStr);
+    Triple T(std::move(*TripleStr));
     return T.isOSWindows() && T.getArch() == Triple::aarch64;
   }
 
@@ -725,9 +753,8 @@ static Expected<std::vector<unsigned>> getSymbols(SymbolicFile *Obj,
       raw_string_ostream NameStream(Name);
       if (Error E = S.printName(NameStream))
         return std::move(E);
-      if (Map->find(Name) != Map->end())
+      if (!Map->try_emplace(Name, Index).second)
         continue; // ignore duplicated symbol
-      (*Map)[Name] = Index;
       if (Map == &SymMap->Map) {
         Ret.push_back(SymNames.tell());
         SymNames << Name << '\0';
@@ -751,7 +778,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   object::Archive::Kind Kind, bool Thin, bool Deterministic,
                   SymtabWritingMode NeedSymbols, SymMap *SymMap,
                   LLVMContext &Context, ArrayRef<NewArchiveMember> NewMembers,
-                  std::optional<bool> IsEC) {
+                  std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
   uint64_t MemHeadPadSize = 0;
   uint64_t Pos =
@@ -819,8 +846,10 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
   if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
     for (const NewArchiveMember &M : NewMembers) {
-      Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr =
-          getSymbolicFile(M.Buf->getMemBufferRef(), Context);
+      Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr = getSymbolicFile(
+          M.Buf->getMemBufferRef(), Context, Kind, [&](Error Err) {
+            Warn(createFileError(M.MemberName, std::move(Err)));
+          });
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       SymFiles.push_back(std::move(*SymFileOrErr));
@@ -929,7 +958,6 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       printMemberHeader(Out, Pos, StringTable, MemberNames, Kind, Thin, *M,
                         ModTime, Size);
     }
-    Out.flush();
 
     std::vector<unsigned> Symbols;
     if (NeedSymbols != SymtabWritingMode::NoSymtab) {
@@ -997,10 +1025,12 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   return std::string(Relative);
 }
 
-static Error
-writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
-                     SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-                     bool Deterministic, bool Thin, std::optional<bool> IsEC) {
+Error writeArchiveToStream(raw_ostream &Out,
+                           ArrayRef<NewArchiveMember> NewMembers,
+                           SymtabWritingMode WriteSymtab,
+                           object::Archive::Kind Kind, bool Deterministic,
+                           bool Thin, std::optional<bool> IsEC,
+                           function_ref<void(Error)> Warn) {
   assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
 
   SmallString<0> SymNamesBuf;
@@ -1022,7 +1052,7 @@ writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
 
   Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
       StringTable, SymNames, Kind, Thin, Deterministic, WriteSymtab,
-      isCOFFArchive(Kind) ? &SymMap : nullptr, Context, NewMembers, IsEC);
+      isCOFFArchive(Kind) ? &SymMap : nullptr, Context, NewMembers, IsEC, Warn);
   if (Error E = DataOrErr.takeError())
     return E;
   std::vector<MemberData> &Data = *DataOrErr;
@@ -1087,10 +1117,26 @@ writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
     // to switch to 64-bit. Note that the file can be larger than 4GB as long as
     // the last member starts before the 4GB offset.
     if (*HeadersSize + LastMemberHeaderOffset >= Sym64Threshold) {
-      if (Kind == object::Archive::K_DARWIN)
+      switch (Kind) {
+      case object::Archive::K_COFF:
+        // COFF format has no 64-bit version, so we use GNU64 instead.
+        if (!SymMap.Map.empty() && !SymMap.ECMap.empty())
+          // Only the COFF format supports the ECSYMBOLS section, so don’t use
+          // GNU64 when two symbol maps are required.
+          return make_error<object::GenericBinaryError>(
+              "Archive is too large: ARM64X does not support archives larger "
+              "than 4GB");
+        // Since this changes the headers, we need to recalculate everything.
+        return writeArchiveToStream(Out, NewMembers, WriteSymtab,
+                                    object::Archive::K_GNU64, Deterministic,
+                                    Thin, IsEC, Warn);
+      case object::Archive::K_DARWIN:
         Kind = object::Archive::K_DARWIN64;
-      else
+        break;
+      default:
         Kind = object::Archive::K_GNU64;
+        break;
+      }
       HeadersSize.reset();
     }
   }
@@ -1265,11 +1311,15 @@ writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
   return Error::success();
 }
 
+void warnToStderr(Error Err) {
+  llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "warning: ");
+}
+
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                   std::optional<bool> IsEC) {
+                   std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
   Expected<sys::fs::TempFile> Temp =
       sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
   if (!Temp)
@@ -1277,7 +1327,7 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   raw_fd_ostream Out(Temp->FD, false);
 
   if (Error E = writeArchiveToStream(Out, NewMembers, WriteSymtab, Kind,
-                                     Deterministic, Thin, IsEC)) {
+                                     Deterministic, Thin, IsEC, Warn)) {
     if (Error DiscardError = Temp->discard())
       return joinErrors(std::move(E), std::move(DiscardError));
     return E;
@@ -1301,12 +1351,14 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
 Expected<std::unique_ptr<MemoryBuffer>>
 writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
                      SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-                     bool Deterministic, bool Thin) {
+                     bool Deterministic, bool Thin,
+                     function_ref<void(Error)> Warn) {
   SmallVector<char, 0> ArchiveBufferVector;
   raw_svector_ostream ArchiveStream(ArchiveBufferVector);
 
-  if (Error E = writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab,
-                                     Kind, Deterministic, Thin, std::nullopt))
+  if (Error E =
+          writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab, Kind,
+                               Deterministic, Thin, std::nullopt, Warn))
     return std::move(E);
 
   return std::make_unique<SmallVectorMemoryBuffer>(

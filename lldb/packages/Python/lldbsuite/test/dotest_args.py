@@ -58,6 +58,14 @@ def create_parser():
             """Specify the path to sysroot. This overrides apple_sdk sysroot."""
         ),
     )
+    group.add_argument(
+        "--triple",
+        metavar="triple",
+        dest="triple",
+        help=textwrap.dedent(
+            """Specify the target triple. Used for cross compilation."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
@@ -271,6 +279,12 @@ def create_parser():
         metavar="A plugin whose tests will be enabled",
         help="A plugin whose tests will be enabled. The only currently supported plugin is intel-pt.",
     )
+    group.add_argument(
+        "--enable-mte",
+        dest="enable_mte",
+        action="store_true",
+        help="Indicate that the test suite is running with MTE (Memory Tagging Extension) enabled.",
+    )
 
     # Configuration options
     group = parser.add_argument_group("Remote platform options")
@@ -291,6 +305,20 @@ def create_parser():
         dest="lldb_platform_working_dir",
         metavar="platform-working-dir",
         help="The directory to use on the remote platform.",
+    )
+    group.add_argument(
+        "--platform-available-ports",
+        dest="lldb_platform_available_ports",
+        nargs="*",
+        type=int,
+        metavar="platform-available-ports",
+        help="Ports available for connection to a lldb server on the remote platform",
+    )
+    group.add_argument(
+        "--cmake-build-type",
+        dest="cmake_build_type",
+        metavar="cmake-build-type",
+        help="Specifies the build type on single-configuration",
     )
 
     # Test-suite behaviour

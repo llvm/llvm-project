@@ -21,8 +21,14 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include <optional>
+#include <tuple>
 
 namespace Fortran::lower {
+
+/// Data structure packaging the SSA value(s) produced for the result of lowered
+/// function calls.
+using LoweredResult =
+    std::variant<fir::ExtendedValue, hlfir::EntityWithAttributes>;
 
 /// Given a call site for which the arguments were already lowered, generate
 /// the call and return the result. This function deals with explicit result
@@ -32,7 +38,7 @@ namespace Fortran::lower {
 /// It is only used for HLFIR.
 /// The returned boolean indicates if finalization has been emitted in
 /// \p stmtCtx for the result.
-std::pair<fir::ExtendedValue, bool> genCallOpAndResult(
+std::tuple<LoweredResult, bool, mlir::Operation *> genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,

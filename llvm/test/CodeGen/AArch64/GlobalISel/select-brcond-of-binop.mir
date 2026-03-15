@@ -62,7 +62,6 @@ body:             |
   ; CHECK-NEXT:   RET_ReallyLR
   ; TB(N)ZX has no encoding if the bit being tested is < 32, so we should get
   ; TBZW here.
-  ;
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $x0
@@ -172,7 +171,6 @@ body:             |
   ; We won't ever fold this, because
   ; bit = 0
   ; bit - constant < 0, which isn't valid for tbz/tbnz.
-  ;
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0
@@ -207,9 +205,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
   ; We can fold ashr, because we can have
-  ;
   ; (tbz (ashr x, c), 0) where 0 + c > # bits in x.
-  ;
   bb.1:
     successors: %bb.2, %bb.3
     liveins: $w0

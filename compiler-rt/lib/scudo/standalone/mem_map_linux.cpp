@@ -122,8 +122,45 @@ void MemMapLinux::setMemoryPermissionImpl(uptr Addr, uptr Size, uptr Flags) {
 void MemMapLinux::releaseAndZeroPagesToOSImpl(uptr From, uptr Size) {
   void *Addr = reinterpret_cast<void *>(From);
 
-  while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
+  int rc;
+  while ((rc = madvise(Addr, Size, MADV_DONTNEED)) == -1 && errno == EAGAIN) {
   }
+  if (rc == -1) {
+    // If we can't madvies the memory, then we still need to zero it.
+    memset(Addr, 0, Size);
+  }
+}
+
+s64 MemMapLinux::getResidentPagesImpl(uptr From, uptr Size) {
+  unsigned char PageData[256];
+
+  uptr PageSize = getPageSizeCached();
+  uptr PageSizeLog = getPageSizeLogCached();
+
+  // Make sure the address is page aligned.
+  uptr CurrentAddress = From & ~(PageSize - 1);
+  uptr LastAddress = roundUp(From + Size, PageSize);
+  s64 ResidentPages = 0;
+  while (CurrentAddress < LastAddress) {
+    uptr Length = LastAddress - CurrentAddress;
+    if ((Length >> PageSizeLog) > sizeof(PageData)) {
+      Length = sizeof(PageData) << PageSizeLog;
+    }
+    if (mincore(reinterpret_cast<void *>(CurrentAddress), Length, PageData) ==
+        -1) {
+      ScopedString Str;
+      Str.append("mincore failed: %s\n", strerror(errno));
+      Str.output();
+      return -1;
+    }
+    for (size_t I = 0; I < Length >> PageSizeLog; ++I) {
+      if (PageData[I])
+        ++ResidentPages;
+    }
+    CurrentAddress += Length;
+  }
+
+  return ResidentPages;
 }
 
 bool ReservedMemoryLinux::createImpl(uptr Addr, uptr Size, const char *Name,

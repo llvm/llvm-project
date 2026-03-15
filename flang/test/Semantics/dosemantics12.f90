@@ -14,7 +14,7 @@
 ! limitations under the License.
 !
 !Section 11.1.7.4.3, paragraph 2 states:
-!  Except for the incrementation of the DO variable that occurs in step (3), 
+!  Except for the incrementation of the DO variable that occurs in step (3),
 !  the DO variable shall neither be redefined nor become undefined while the
 !  DO construct is active.
 
@@ -176,14 +176,14 @@ subroutine s7()
 
   integer :: iostatVar, nextrecVar, numberVar, posVar, reclVar, sizeVar
 
-  inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+  inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
     pos=posVar, recl=reclVar, size=sizeVar)
 
   ! Redefinition via use in IOSTAT specifier (section 19.6.5, case (10))
   do iostatVar = 1,20
     print *, "hello"
 !ERROR: Cannot redefine DO variable 'iostatvar'
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
 
@@ -191,7 +191,7 @@ subroutine s7()
   do concurrent (iostatVar = 1:10)
     print *, "hello"
 !ERROR: Cannot redefine DO variable 'iostatvar'
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
 
@@ -199,7 +199,7 @@ subroutine s7()
   do nextrecVar = 1,20
     print *, "hello"
 !ERROR: Cannot redefine DO variable 'nextrecvar'
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
 
@@ -207,7 +207,7 @@ subroutine s7()
   do concurrent (nextrecVar = 1:10)
     print *, "hello"
 !ERROR: Cannot redefine DO variable 'nextrecvar'
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
 
@@ -215,7 +215,7 @@ subroutine s7()
   do numberVar = 1,20
     print *, "hello"
 !ERROR: Cannot redefine DO variable 'numbervar'
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
 
@@ -223,14 +223,14 @@ subroutine s7()
   do concurrent (numberVar = 1:10)
     print *, "hello"
 !ERROR: Cannot redefine DO variable 'numbervar'
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
 
   ! Redefinition via use in RECL specifier (section 19.6.5, case (10))
   do reclVar = 1,20
     print *, "hello"
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
 !ERROR: Cannot redefine DO variable 'reclvar'
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
@@ -238,7 +238,7 @@ subroutine s7()
   ! Redefinition via use in RECL specifier (section 19.6.5, case (10))
   do concurrent (reclVar = 1:10)
     print *, "hello"
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
 !ERROR: Cannot redefine DO variable 'reclvar'
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
@@ -246,7 +246,7 @@ subroutine s7()
   ! Redefinition via use in POS specifier (section 19.6.5, case (10))
   do posVar = 1,20
     print *, "hello"
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
 !ERROR: Cannot redefine DO variable 'posvar'
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
@@ -254,7 +254,7 @@ subroutine s7()
   ! Redefinition via use in POS specifier (section 19.6.5, case (10))
   do concurrent (posVar = 1:10)
     print *, "hello"
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
 !ERROR: Cannot redefine DO variable 'posvar'
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
@@ -262,7 +262,7 @@ subroutine s7()
   ! Redefinition via use in SIZE specifier (section 19.6.5, case (10))
   do sizeVar = 1,20
     print *, "hello"
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
 !ERROR: Cannot redefine DO variable 'sizevar'
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
@@ -270,7 +270,7 @@ subroutine s7()
   ! Redefinition via use in SIZE specifier (section 19.6.5, case (10))
   do concurrent (sizeVar = 1:10)
     print *, "hello"
-    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, & 
+    inquire(3, iostat=iostatVar, nextrec=nextrecVar, number=numberVar, &
 !ERROR: Cannot redefine DO variable 'sizevar'
       pos=posVar, recl=reclVar, size=sizeVar)
   end do
@@ -316,7 +316,7 @@ subroutine s9()
   ! Technically non-conformant (F'2023 19.4 p8)
   do concurrent (ivar = 1:10)
     print *, "hello"
-    !PORTABILITY: Index variable 'ivar' should not also be an index in an enclosing FORALL or DO CONCURRENT
+    !PORTABILITY: Index variable 'ivar' should not also be an index in an enclosing FORALL or DO CONCURRENT [-Wodd-index-variable-restrictions]
     do concurrent (ivar = 1:10)
       print *, "hello"
     end do
@@ -392,7 +392,7 @@ subroutine s12()
 
   call intentInOutSub(jvar, ivar)
   do ivar = 1,10
-    !WARNING: Possible redefinition of DO variable 'ivar'
+    !WARNING: Possible redefinition of DO variable 'ivar' [-Windex-var-redefinition]
     call intentInOutSub(jvar, ivar)
   end do
 
@@ -437,7 +437,7 @@ subroutine s13()
   end do
 
   do ivar = 1, 10
-    !WARNING: Possible redefinition of DO variable 'ivar'
+    !WARNING: Possible redefinition of DO variable 'ivar' [-Windex-var-redefinition]
     jvar = intentInOutFunc(ivar)
   end do
 

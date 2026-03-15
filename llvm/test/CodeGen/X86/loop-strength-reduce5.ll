@@ -13,14 +13,14 @@ define void @foo(i32 %N) nounwind {
 ; CHECK-NEXT:  # %bb.1: # %bb.preheader
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movw %dx, X
-; CHECK-NEXT:    movw %cx, Y
-; CHECK-NEXT:    incl %edx
-; CHECK-NEXT:    addl $4, %ecx
-; CHECK-NEXT:    cmpl %edx, %eax
+; CHECK-NEXT:    movw %cx, X
+; CHECK-NEXT:    movw %dx, Y
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    addl $4, %edx
+; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %return
 ; CHECK-NEXT:    retl

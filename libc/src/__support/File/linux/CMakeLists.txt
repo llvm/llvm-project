@@ -1,42 +1,24 @@
+# TODO: migrate to proxy headers
 add_object_library(
   file
   SRCS
     file.cpp
   HDRS
     file.h
+    lseekImpl.h
   DEPENDS
-    libc.include.fcntl
-    libc.include.stdio
+    libc.hdr.fcntl_macros
+    libc.hdr.stdio_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.off_t
+    libc.hdr.types.FILE
     libc.include.sys_syscall
+    libc.include.sys_stat
     libc.src.__support.CPP.new
     libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
     libc.src.__support.error_or
     libc.src.__support.File.file
-)
-
-add_object_library(
-  stdout
-  SRCS
-    stdout.cpp
-  DEPENDS
-    .file
-)
-
-add_object_library(
-  stdin
-  SRCS
-    stdin.cpp
-  DEPENDS
-    .file
-)
-
-add_object_library(
-  stderr
-  SRCS
-    stderr.cpp
-  DEPENDS
-    .file
+    libc.src.errno.errno
 )
 
 add_object_library(
@@ -44,7 +26,7 @@ add_object_library(
   SRCS
     dir.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.error_or

@@ -41,6 +41,6 @@ end
 subroutine s5
   implicit none
   data x/1./
-  !PORTABILITY: 'x' appeared in a DATA statement before its type was declared under IMPLICIT NONE(TYPE)
+  !PORTABILITY: 'x' appeared in a DATA statement before its type was declared under IMPLICIT NONE(TYPE) [-Wforward-ref-implicit-none-data]
   real x
 end

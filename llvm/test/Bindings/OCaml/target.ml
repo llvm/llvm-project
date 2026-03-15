@@ -14,7 +14,7 @@ open Llvm_target
 
 let () = Llvm_all_backends.initialize ()
 
-let context = global_context ()
+let context = create_context ()
 let i32_type = Llvm.i32_type context
 let i64_type = Llvm.i64_type context
 
@@ -108,4 +108,5 @@ let _ =
   test_target ();
   test_target_machine ();
   test_code_emission ();
-  dispose_module m
+  dispose_module m;
+  dispose_context context

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines all of the preprocessor directive parmeters for #embed
+// Defines all of the preprocessor directive parameters for #embed
 //
 //===----------------------------------------------------------------------===//
 
@@ -75,7 +75,6 @@ struct LexEmbedParametersResult {
   std::optional<PPEmbedParameterIfEmpty> MaybeIfEmptyParam;
   std::optional<PPEmbedParameterPrefix> MaybePrefixParam;
   std::optional<PPEmbedParameterSuffix> MaybeSuffixParam;
-  SourceRange ParamRange;
   int UnrecognizedParams;
 
   size_t PrefixTokenCount() const {

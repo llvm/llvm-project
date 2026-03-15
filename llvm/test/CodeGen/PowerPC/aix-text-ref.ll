@@ -14,7 +14,5 @@ entry:
 declare i32 @text(...)
 
 ; CHECK32: 00000000         *UND*  00000000 (idx: {{[[:digit:]]*}}) .text[PR]
-; CHECK32: 00000000         *UND*  00000000 (idx: {{[[:digit:]]*}}) text[DS]
 
 ; CHECK64: 0000000000000000         *UND*  0000000000000000 (idx: {{[[:digit:]]*}}) .text[PR]
-; CHECK64: 0000000000000000         *UND*  0000000000000000 (idx: {{[[:digit:]]*}}) text[DS]

@@ -34,3 +34,18 @@ define void @pr64886(i64 %len, ptr noalias %p) {
   call void @llvm.memcpy.p0.p0.i64(ptr inttoptr (i64 -1 to ptr), ptr %p, i64 poison, i1 false)
   ret void
 }
+
+define void @pr98610(ptr %p, ptr noalias %p2) {
+; CHECK-LABEL: @pr98610(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 1, i1 false)
+; CHECK-NEXT:    [[ZERO_EXT:%.*]] = zext i32 0 to i64
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[ZERO_EXT]], 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[P2:%.*]], i64 [[MUL]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 1, i1 false)
+  %zero.ext = zext i32 0 to i64
+  %mul = mul i64 %zero.ext, 1
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p2, i64 %mul, i1 false)
+  ret void
+}

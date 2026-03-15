@@ -8,9 +8,12 @@
 
 #include "mlir/CAPI/Support.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstring>
+#include <string>
 
 MlirStringRef mlirStringRefCreateFromCString(const char *str) {
   return mlirStringRefCreate(str, strlen(str));
@@ -30,6 +33,45 @@ MlirLlvmThreadPool mlirLlvmThreadPoolCreate() {
 
 void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool threadPool) {
   delete unwrap(threadPool);
+}
+
+int mlirLlvmThreadPoolGetMaxConcurrency(MlirLlvmThreadPool threadPool) {
+  return unwrap(threadPool)->getMaxConcurrency();
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM raw_fd_ostream API.
+//===----------------------------------------------------------------------===//
+
+MlirLlvmRawFdOStream
+mlirLlvmRawFdOStreamCreate(const char *path, bool binary,
+                           MlirStringCallback errorCallback, void *userData) {
+  std::error_code ec;
+  auto flags = binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
+  auto *stream = new llvm::raw_fd_ostream(path, ec, flags);
+  if (ec) {
+    delete stream;
+    if (errorCallback) {
+      std::string message = ec.message();
+      errorCallback(mlirStringRefCreate(message.data(), message.size()),
+                    userData);
+    }
+    return wrap(static_cast<llvm::raw_fd_ostream *>(nullptr));
+  }
+  return wrap(stream);
+}
+
+void mlirLlvmRawFdOStreamWrite(MlirLlvmRawFdOStream stream,
+                               MlirStringRef string) {
+  unwrap(stream)->write(string.data, string.length);
+}
+
+bool mlirLlvmRawFdOStreamIsNull(MlirLlvmRawFdOStream stream) {
+  return !stream.ptr;
+}
+
+void mlirLlvmRawFdOStreamDestroy(MlirLlvmRawFdOStream stream) {
+  delete unwrap(stream);
 }
 
 //===----------------------------------------------------------------------===//

@@ -3,7 +3,7 @@
 // CHECK: builtin_macro0:
 int builtin_macro0(int a) {
   // CHECK: Decision,File 0, [[@LINE+1]]:11 -> [[@LINE+2]]:15 = M:3, C:2
-  return (__LINE__ // CHECK: Branch,File 0, [[@LINE]]:11 -> [[@LINE]]:11 = 0, 0 [1,2,0]
+  return (__LINE__ // CHECK: Branch,File 0, [[@LINE]]:11 -> [[@LINE]]:11 = #1, 0 [1,2,0]
           && a); //   CHECK: Branch,File 0, [[@LINE]]:14 -> [[@LINE]]:15 = #2, (#1 - #2) [2,0,0]
 }
 
@@ -11,7 +11,7 @@ int builtin_macro0(int a) {
 int builtin_macro1(int a) {
   // CHECK: Decision,File 0, [[@LINE+1]]:11 -> [[@LINE+2]]:22 = M:3, C:2
   return (a // CHECK: Branch,File 0, [[@LINE]]:11 -> [[@LINE]]:12 = (#0 - #1), #1 [1,0,2]
-          || __LINE__); // CHECK: Branch,File 0, [[@LINE]]:14 -> [[@LINE]]:14 = 0, 0 [2,0,0]
+          || __LINE__); // CHECK: Branch,File 0, [[@LINE]]:14 -> [[@LINE]]:14 = (#1 - #2), 0 [2,0,0]
 }
 
 #define PRE(x) pre_##x

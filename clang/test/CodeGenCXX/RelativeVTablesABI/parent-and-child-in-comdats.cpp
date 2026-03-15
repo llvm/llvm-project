@@ -8,12 +8,12 @@
 // CHECK: $_ZN1A3fooEv = comdat any
 // CHECK: $_ZN1B3fooEv = comdat any
 // CHECK: $_ZTV1A = comdat any
-// CHECK: $_ZTS1A = comdat any
 // CHECK: $_ZTI1A = comdat any
+// CHECK: $_ZTS1A = comdat any
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 // CHECK: $_ZTV1B = comdat any
-// CHECK: $_ZTS1B = comdat any
 // CHECK: $_ZTI1B = comdat any
+// CHECK: $_ZTS1B = comdat any
 // CHECK: $_ZTI1B.rtti_proxy = comdat any
 
 // Both the vtables for A and B are emitted and in their own comdats.

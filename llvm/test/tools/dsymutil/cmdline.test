@@ -6,15 +6,19 @@ HELP: USAGE: {{.*}}dsymutil{{[^ ]*}} [options] <input files>
 HELP-NOT: -reverse-iterate
 HELP: Dsymutil Options:
 CHECK: -accelerator
+CHECK: -allow <path>
 CHECK: -arch <arch>
 CHECK: -build-variant-suffix <suffix=buildvariant>
+CHECK: -disallow <path>
 CHECK: -dump-debug-map
 CHECK: -D <path>
 CHECK: -fat64
 CHECK: -flat
 CHECK: -gen-reproducer
 CHECK: -help
+CHECK: -include-swiftmodules-from-interface
 CHECK: -keep-function-for-static
+CHECK: -no-object-timestamp
 CHECK: -no-odr
 CHECK: -no-output
 CHECK: -no-swiftmodule-timestamp
@@ -50,3 +54,6 @@ BOGUS: warning: ignoring unknown option: -bogus
 
 RUN: not dsymutil --quiet --verbose 2>&1 | FileCheck --check-prefix=CONFLICT %s
 CONFLICT: error: --quiet and --verbose cannot be specified together
+
+RUN: not dsymutil -y file1 --allow file2 2>&1 | FileCheck --check-prefix=CONFLICT2 %s
+CONFLICT2: error: -y and --allow/--disallow cannot be specified together

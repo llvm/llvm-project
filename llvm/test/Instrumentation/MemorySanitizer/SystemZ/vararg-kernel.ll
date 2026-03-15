@@ -4,17 +4,17 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
 %struct.__va_list = type { i64, i64, ptr, ptr }
-declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
 declare void @llvm.va_start(ptr)
 declare void @llvm.va_end(ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 define i64 @foo(i64 %guard, ...) #1 {
   %vl = alloca %struct.__va_list
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i64 0
 }
 

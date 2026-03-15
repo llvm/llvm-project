@@ -1070,6 +1070,58 @@
 // CHECK-FOPENMP-GOMP:    "-lgomp"
 // CHECK-FOPENMP:     "-lc"
 
+// Check powerpc-ibm-aix7.1.0.0, 32-bit per_target_runtime_dir.
+// RUN: %clang %s -### 2>&1 \
+// RUN:        -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-PER-TARGET %s
+// CHECK-LD32-PER-TARGET-NOT: warning:
+// CHECK-LD32-PER-TARGET:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-PER-TARGET:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD32-PER-TARGET:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-PER-TARGET:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-PER-TARGET-NOT: "-bnso"
+// CHECK-LD32-PER-TARGET:     "-b32"
+// CHECK-LD32-PER-TARGET:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-PER-TARGET:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-PER-TARGET:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-LD32-PER-TARGET-NOT: "-lc++"
+// CHECK-LD32-PER-TARGET-NOT: "-lc++abi"
+// CHECK-LD32-PER-TARGET:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc-ibm-aix{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-LD32-PER-TARGET-NOT: "--as-needed"
+// CHECK-LD32-PER-TARGET:     "-lunwind"
+// CHECK-LD32-PER-TARGET-NOT: "--no-as-needed"
+// CHECK-LD32-PER-TARGET-NOT: "-lm"
+// CHECK-LD32-PER-TARGET:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit.
+// RUN: %clang %s -### 2>&1 \
+// RUN:        -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-PER-TARGET %s
+// CHECK-LD64-PER-TARGET-NOT: warning:
+// CHECK-LD64-PER-TARGET:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-PER-TARGET:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD64-PER-TARGET:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-PER-TARGET:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-PER-TARGET-NOT: "-bnso"
+// CHECK-LD64-PER-TARGET:     "-b64"
+// CHECK-LD64-PER-TARGET:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-PER-TARGET:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-PER-TARGET:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-PER-TARGET-NOT: "-lc++"
+// CHECK-LD64-PER-TARGET-NOT: "-lc++abi"
+// CHECK-LD64-PER-TARGET:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64-ibm-aix{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-LD64-PER-TARGET-NOT: "--as-needed"
+// CHECK-LD64-PER-TARGET:     "-lunwind"
+// CHECK-LD64-PER-TARGET-NOT: "--no-as-needed"
+// CHECK-LD64-PER-TARGET-NOT: "-lm"
+// CHECK-LD64-PER-TARGET:     "-lc"
+
 // Check powerpc-ibm-aix7.1.0.0, 32-bit. -fopenmp=libfoo results an error.
 // RUN: not %clang %s 2>&1 -### \
 // RUN:        --target=powerpc-ibm-aix7.1.0.0 \

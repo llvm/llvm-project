@@ -36,15 +36,15 @@
 ; CHECK-SPIRV:        OpStore %[[#store_ptr]] %[[#inserted_array]]
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
-define spir_func void @array_test(%struct.arr addrspace(1)* %object) {
+define spir_func void @array_test(ptr addrspace(1) %object) {
 entry:
-  %0 = getelementptr inbounds %struct.arr, %struct.arr addrspace(1)* %object, i32 0, i32 0
-  %1 = load [7 x float], [7 x float] addrspace(1)* %0, align 4
+  %0 = getelementptr inbounds %struct.arr, ptr addrspace(1) %object, i32 0, i32 0
+  %1 = load [7 x float], ptr addrspace(1) %0, align 4
   %2 = extractvalue [7 x float] %1, 4
   %3 = extractvalue [7 x float] %1, 2
   %4 = fadd float %2, %3
   %5 = insertvalue [7 x float] %1, float %4, 5
-  store [7 x float] %5, [7 x float] addrspace(1)* %0
+  store [7 x float] %5, ptr addrspace(1) %0
   ret void
 }
 
@@ -58,13 +58,13 @@ entry:
 ; CHECK-SPIRV:        OpStore %[[#store1_ptr]] %[[#inserted_struct]]
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
-define spir_func void @struct_test(%struct.st addrspace(1)* %object) {
+define spir_func void @struct_test(ptr addrspace(1) %object) {
 entry:
-  %0 = getelementptr inbounds %struct.st, %struct.st addrspace(1)* %object, i32 0, i32 0
-  %1 = load %struct.inner, %struct.inner addrspace(1)* %0, align 4
+  %0 = getelementptr inbounds %struct.st, ptr addrspace(1) %object, i32 0, i32 0
+  %1 = load %struct.inner, ptr addrspace(1) %0, align 4
   %2 = extractvalue %struct.inner %1, 0
   %3 = fadd float %2, 1.000000e+00
   %4 = insertvalue %struct.inner %1, float %3, 0
-  store %struct.inner %4, %struct.inner addrspace(1)* %0
+  store %struct.inner %4, ptr addrspace(1) %0
   ret void
 }

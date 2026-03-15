@@ -1,11 +1,11 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Just make sure this test passes correctly.
 
-define void @kernel_ludcmp(ptr %b, ptr %y) #0 {
+define void @kernel_ludcmp(ptr %b, ptr %y) {
 entry:
   br label %entry.split
 
@@ -114,8 +114,6 @@ for.end.118:                                      ; preds = %for.cond.104.for.en
 for.end.131:                                      ; preds = %for.end.118
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

@@ -20,7 +20,7 @@ static bool shouldRunOnFunction(Function &F, ProfileSummaryInfo &PSI,
   if (F.isDeclaration())
     return false;
   // Respect existing attributes.
-  if (F.hasOptNone() || F.hasOptSize() || F.hasMinSize())
+  if (F.hasOptNone() || F.hasOptSize())
     return false;
   if (F.hasFnAttribute(Attribute::Cold))
     return true;

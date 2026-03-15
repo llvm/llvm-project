@@ -1,14 +1,16 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#int:]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: %[[#intv2:]] = OpTypeVector %[[#int]] 2
+; CHECK-SPIRV-DAG: %[[#intv3:]] = OpTypeVector %[[#int]] 3
 ; CHECK-SPIRV-DAG: %[[#float:]] = OpTypeFloat 32
-; CHECK-SPIRV-DAG: %[[#ScopeCrossWorkgroup:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#int]] 2
-; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3
+; CHECK-SPIRV-DAG: %[[#ScopeCrossWorkgroup:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV-DAG: %[[#ScopeWorkgroup:]] = OpConstant %[[#int]] 2{{$}}
+; CHECK-SPIRV-DAG: %[[#ScopeSubgroup:]] = OpConstant %[[#int]] 3{{$}}
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupFMax %[[#float]] %[[#ScopeWorkgroup]] Reduce
@@ -18,10 +20,10 @@
 ;;   res[0] = work_group_reduce_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupFMax(float noundef %a, float addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupFMax(float noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func float @_Z21work_group_reduce_maxf(float noundef %a)
-  store float %call, float addrspace(1)* %res, align 4
+  store float %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -35,10 +37,10 @@ declare spir_func float @_Z21work_group_reduce_maxf(float noundef) local_unnamed
 ;;   res[0] = work_group_reduce_min(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupFMin(float noundef %a, float addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupFMin(float noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func float @_Z21work_group_reduce_minf(float noundef %a)
-  store float %call, float addrspace(1)* %res, align 4
+  store float %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -52,10 +54,10 @@ declare spir_func float @_Z21work_group_reduce_minf(float noundef) local_unnamed
 ;;   res[0] = work_group_reduce_add(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupFAdd(float noundef %a, float addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupFAdd(float noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func float @_Z21work_group_reduce_addf(float noundef %a)
-  store float %call, float addrspace(1)* %res, align 4
+  store float %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -69,10 +71,10 @@ declare spir_func float @_Z21work_group_reduce_addf(float noundef) local_unnamed
 ;;   res[0] = work_group_scan_inclusive_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupScanInclusiveFMax(float noundef %a, float addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupScanInclusiveFMax(float noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func float @_Z29work_group_scan_inclusive_maxf(float noundef %a)
-  store float %call, float addrspace(1)* %res, align 4
+  store float %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -86,10 +88,10 @@ declare spir_func float @_Z29work_group_scan_inclusive_maxf(float noundef) local
 ;;   res[0] = work_group_scan_exclusive_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupScanExclusiveFMax(float noundef %a, float addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupScanExclusiveFMax(float noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func float @_Z29work_group_scan_exclusive_maxf(float noundef %a)
-  store float %call, float addrspace(1)* %res, align 4
+  store float %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -103,10 +105,10 @@ declare spir_func float @_Z29work_group_scan_exclusive_maxf(float noundef) local
 ;;   res[0] = work_group_reduce_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupSMax(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupSMax(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z21work_group_reduce_maxi(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -120,10 +122,10 @@ declare spir_func i32 @_Z21work_group_reduce_maxi(i32 noundef) local_unnamed_add
 ;;   res[0] = work_group_reduce_min(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupSMin(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupSMin(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z21work_group_reduce_mini(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -137,10 +139,10 @@ declare spir_func i32 @_Z21work_group_reduce_mini(i32 noundef) local_unnamed_add
 ;;   res[0] = work_group_reduce_add(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupIAddSigned(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupIAddSigned(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z21work_group_reduce_addi(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -154,10 +156,10 @@ declare spir_func i32 @_Z21work_group_reduce_addi(i32 noundef) local_unnamed_add
 ;;   res[0] = work_group_reduce_add(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupIAddUnsigned(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupIAddUnsigned(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z21work_group_reduce_addj(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -171,10 +173,10 @@ declare spir_func i32 @_Z21work_group_reduce_addj(i32 noundef) local_unnamed_add
 ;;   res[0] = work_group_reduce_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupUMax(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupUMax(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z21work_group_reduce_maxj(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -190,10 +192,10 @@ declare spir_func i32 @_Z21work_group_reduce_maxj(i32 noundef) local_unnamed_add
 ;; }
 ;; #pragma OPENCL EXTENSION cl_khr_subgroups: disable
 
-define dso_local spir_kernel void @testSubGroupUMax(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSubGroupUMax(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z20sub_group_reduce_maxj(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -207,10 +209,10 @@ declare spir_func i32 @_Z20sub_group_reduce_maxj(i32 noundef) local_unnamed_addr
 ;;   res[0] = work_group_scan_inclusive_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupScanInclusiveUMax(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupScanInclusiveUMax(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z29work_group_scan_inclusive_maxj(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -224,10 +226,10 @@ declare spir_func i32 @_Z29work_group_scan_inclusive_maxj(i32 noundef) local_unn
 ;;   res[0] = work_group_scan_exclusive_max(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupScanExclusiveUMax(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupScanExclusiveUMax(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z29work_group_scan_exclusive_maxj(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -241,10 +243,10 @@ declare spir_func i32 @_Z29work_group_scan_exclusive_maxj(i32 noundef) local_unn
 ;;   res[0] = work_group_reduce_min(a);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupUMin(i32 noundef %a, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupUMin(i32 noundef %a, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %call = call spir_func i32 @_Z21work_group_reduce_minj(i32 noundef %a)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  store i32 %call, ptr addrspace(1) %res, align 4
   ret void
 }
 
@@ -252,6 +254,10 @@ declare spir_func i32 @_Z21work_group_reduce_minj(i32 noundef) local_unnamed_add
 
 ; CHECK-SPIRV: OpFunction
 ; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeWorkgroup]] %[[#BroadcastValue:]] %[[#BroadcastLocalId:]]
+; CHECK-SPIRV: %[[#BroadcastVec2:]] = OpCompositeConstruct %[[#intv2]] %[[#BroadcastLocalId]] %[[#BroadcastLocalId]]
+; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeWorkgroup]] %[[#BroadcastValue]] %[[#BroadcastVec2]]
+; CHECK-SPIRV: %[[#BroadcastVec3:]] = OpCompositeConstruct %[[#intv3]] %[[#BroadcastLocalId]] %[[#BroadcastLocalId]] %[[#BroadcastLocalId]]
+; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeWorkgroup]] %[[#BroadcastValue]] %[[#BroadcastVec3]]
 ; CHECK-SPIRV: %[[#]] = OpGroupBroadcast %[[#int]] %[[#ScopeCrossWorkgroup]] %[[#BroadcastValue]] %[[#BroadcastLocalId]]
 ; CHECK-SPIRV: OpFunctionEnd
 
@@ -259,16 +265,20 @@ declare spir_func i32 @_Z21work_group_reduce_minj(i32 noundef) local_unnamed_add
 ;;   res[0] = work_group_broadcast(a, *id);
 ;; }
 
-define dso_local spir_kernel void @testWorkGroupBroadcast(i32 noundef %a, i32 addrspace(1)* nocapture noundef readonly %id, i32 addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testWorkGroupBroadcast(i32 noundef %a, ptr addrspace(1) nocapture noundef readonly %id, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
-  %0 = load i32, i32 addrspace(1)* %id, align 4
+  %0 = load i32, ptr addrspace(1) %id, align 4
   %call = call spir_func i32 @_Z20work_group_broadcastjj(i32 noundef %a, i32 noundef %0)
-  store i32 %call, i32 addrspace(1)* %res, align 4
+  %call_v2 = call spir_func i32 @_Z20work_group_broadcastjj(i32 noundef %a, i32 noundef %0, i32 noundef %0)
+  %call_v3 = call spir_func i32 @_Z20work_group_broadcastjj(i32 noundef %a, i32 noundef %0, i32 noundef %0, i32 noundef %0)
+  store i32 %call, ptr addrspace(1) %res, align 4
   %call1 = call spir_func i32 @__spirv_GroupBroadcast(i32 0, i32 noundef %a, i32 noundef %0)
   ret void
 }
 
 declare spir_func i32 @_Z20work_group_broadcastjj(i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z20work_group_broadcastjjj(i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z20work_group_broadcastjjjj(i32 noundef, i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 declare spir_func i32 @__spirv_GroupBroadcast(i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction

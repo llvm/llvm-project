@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/string/strcoll.h"
 #include "test/UnitTest/Test.h"
 
@@ -26,5 +27,21 @@ TEST(LlvmLibcStrcollTest, SimpleTest) {
   ASSERT_LT(result, 0);
 
   result = LIBC_NAMESPACE::strcoll(s3, s1);
+  ASSERT_GT(result, 0);
+}
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcStrcollTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::strcoll(nullptr, nullptr); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcStrcollTest, CharactersGreaterThan127ShouldBePositive) {
+  const char s1[] = {static_cast<char>(128), '\0'};
+  const char s2[] = {'\0'};
+  int result = LIBC_NAMESPACE::strcoll(s1, s2);
   ASSERT_GT(result, 0);
 }

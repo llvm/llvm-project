@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 
 int main() {} // required for cwg2811
@@ -14,14 +14,14 @@ namespace cwg2811 { // cwg2811: 3.5
 void f() {
   (void)[&] {
     using T = decltype(main);
-    // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+    // since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
   };
   using T2 = decltype(main);
-  // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+  // since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 }
 
 using T = decltype(main);
-// expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+// since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 
 int main();
 
@@ -30,11 +30,52 @@ using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
-namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
-#if __cpp_constexpr >= 202306L
+namespace cwg2813 { // cwg2813: 20
+#if __cplusplus >= 202302L
+struct X {
+  X() = default;
+
+  X(const X&) = delete;
+  X& operator=(const X&) = delete;
+
+  void f(this X self) { }
+};
+
+void f() {
+  X{}.f();
+}
+#endif
+} // namespace cwg2813
+
+namespace cwg2819 { // cwg2819: 19 c++26
+#if __cplusplus >= 201103L
+  // CWG 2024-04-19: This issue is not a DR.
   constexpr void* p = nullptr;
-  constexpr int* q = static_cast<int*>(p);
-  static_assert(q == nullptr);
+  constexpr int* q = static_cast<int*>(p); // #cwg2819-q
+  // cxx11-23-error@-1 {{constexpr variable 'q' must be initialized by a constant expression}}
+  //   cxx11-23-note@-2 {{cast from 'void *' is not allowed in a constant expression}}
+  static_assert(q == nullptr, "");
+  // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   cxx11-23-note@-2 {{initializer of 'q' is not a constant expression}}
+  //   cxx11-23-note@#cwg2819-q {{declared here}}
+#endif
+} // namespace cwg2819
+
+namespace cwg2823 { // cwg2823: no
+#if __cplusplus >= 201103L
+  constexpr int *p = 0;
+  constexpr int *q1 = &*p;
+  // expected-error@-1 {{constexpr variable 'q1' must be initialized by a constant expression}}
+  //   expected-note@-2 {{dereferencing a null pointer is not allowed in a constant expression}}
+  // FIXME: invalid: dereferencing a null pointer.
+  constexpr int *q2 = &p[0];
+
+  int arr[32];
+  constexpr int *r = arr;
+  // FIXME: invalid: dereferencing a past-the-end pointer.
+  constexpr int *s1 = &*(r + 32);
+  // FIXME: invalid: dereferencing a past-the-end pointer.
+  constexpr int *s2 = &r[32];
 #endif
 }
 
@@ -111,7 +152,7 @@ struct D : N::B {
 #endif
 } // namespace cwg2857
 
-namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
+namespace cwg2858 { // cwg2858: 19
 
 #if __cplusplus > 202302L
 
@@ -127,100 +168,32 @@ struct A {
   // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
   template<typename U>
   friend struct Ts...[0]::C;
-  // expected-warning-re@-1 {{dependent nested name specifier 'Ts...[{{.*}}]::' for friend template declaration is not supported; ignoring this friend declaration}}
+  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]' for friend template declaration is not supported; ignoring this friend declaration}}
 };
 
 #endif
 
 } // namespace cwg2858
 
-namespace cwg2877 { // cwg2877: 19 tentatively ready 2024-05-31
+namespace cwg2877 { // cwg2877: 19
 #if __cplusplus >= 202002L
 enum E { x };
 void f() {
   int E;
-  using enum E;   // OK, names ::E
+  using enum E;   // OK
 }
 using F = E;
-using enum F;     // OK, designates ::E
+using enum F;     // OK
 template<class T> using EE = T;
 void g() {
-  using enum EE<E>;  // OK, designates ::E
+  using enum EE<E>;  // OK
 }
 #endif
 } // namespace cwg2877
 
-namespace cwg2881 { // cwg2881: 19 tentatively ready 2024-04-19
+// cwg2881 is in cwg2881.cpp
 
-#if __cplusplus >= 202302L
-
-template <typename T> struct A : T {};
-template <typename T> struct B : T {};
-template <typename T> struct C : virtual T { C(T t) : T(t) {} };
-template <typename T> struct D : virtual T { D(T t) : T(t) {} };
-
-template <typename Ts>
-struct O1 : A<Ts>, B<Ts> {
-  using A<Ts>::operator();
-  using B<Ts>::operator();
-};
-
-template <typename Ts> struct O2 : protected Ts { // expected-note {{declared protected here}}
-  using Ts::operator();
-  O2(Ts ts) : Ts(ts) {}
-};
-
-template <typename Ts> struct O3 : private Ts { // expected-note {{declared private here}}
-  using Ts::operator();
-  O3(Ts ts) : Ts(ts) {}
-};
-
-// Not ambiguous because of virtual inheritance.
-template <typename Ts>
-struct O4 : C<Ts>, D<Ts> {
-  using C<Ts>::operator();
-  using D<Ts>::operator();
-  O4(Ts t) : Ts(t), C<Ts>(t), D<Ts>(t) {}
-};
-
-// This still has a public path to the lambda, and it's also not
-// ambiguous because of virtual inheritance.
-template <typename Ts>
-struct O5 : private C<Ts>, D<Ts> {
-  using C<Ts>::operator();
-  using D<Ts>::operator();
-  O5(Ts t) : Ts(t), C<Ts>(t), D<Ts>(t) {}
-};
-
-// This is only invalid if we call T's call operator.
-template <typename T, typename U>
-struct O6 : private T, U { // expected-note {{declared private here}}
-  using T::operator();
-  using U::operator();
-  O6(T t, U u) : T(t), U(u) {}
-};
-
-void f() {
-  int x;
-  auto L1 = [=](this auto&& self) { (void) &x; };
-  auto L2 = [&](this auto&& self) { (void) &x; };
-  O1<decltype(L1)>{L1, L1}(); // expected-error {{inaccessible due to ambiguity}}
-  O1<decltype(L2)>{L2, L2}(); // expected-error {{inaccessible due to ambiguity}}
-  O2{L1}(); // expected-error {{must derive publicly from the lambda}}
-  O3{L1}(); // expected-error {{must derive publicly from the lambda}}
-  O4{L1}();
-  O5{L1}();
-  O6 o{L1, L2};
-  o.decltype(L1)::operator()(); // expected-error {{must derive publicly from the lambda}}
-  o.decltype(L1)::operator()(); // No error here because we've already diagnosed this method.
-  o.decltype(L2)::operator()();
-}
-
-#endif
-
-} // namespace cwg2881
-
-namespace cwg2882 { // cwg2882: 2.7 tentatively ready 2024-05-31
+namespace cwg2882 { // cwg2882: 2.7
 struct C {
   operator void() = delete;
   // expected-warning@-1 {{conversion function converting 'cwg2882::C' to 'void' will never be used}}
@@ -232,7 +205,7 @@ void f(C c) {
 }
 } // namespace cwg2882
 
-namespace cwg2883 { // cwg2883: no tentatively ready 2024-05-31
+namespace cwg2883 { // cwg2883: no
 #if __cplusplus >= 201103L
 void f() {
   int x;
@@ -257,7 +230,7 @@ void g() {
 #endif
 } // namespace cwg2883
 
-namespace cwg2885 { // cwg2885: 16 tentatively ready 2024-05-31
+namespace cwg2885 { // cwg2885: 16 review 2024-05-31
 #if __cplusplus >= 202002L
 template <class T>
 struct A {
@@ -271,7 +244,7 @@ static_assert(!__is_trivially_constructible(B));
 #endif
 } // namespace cwg2885
 
-namespace cwg2886 { // cwg2886: 9 tentatively ready 2024-05-31
+namespace cwg2886 { // cwg2886: 9
 #if __cplusplus >= 201103L
 struct C {
   C() = default;

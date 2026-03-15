@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++11 %s -verify -triple x86_64-linux-gnu -fexperimental-new-constant-interpreter
 
 namespace std {
   typedef decltype(nullptr) nullptr_t;

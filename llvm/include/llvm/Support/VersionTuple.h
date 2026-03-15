@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 #include <tuple>
@@ -35,37 +36,52 @@ class VersionTuple {
   unsigned Subminor : 31;
   unsigned HasSubminor : 1;
 
-  unsigned Build : 31;
+  unsigned Build : 20;
+  unsigned Subbuild : 10;
   unsigned HasBuild : 1;
+  unsigned HasSubbuild : 1;
 
 public:
   constexpr VersionTuple()
       : Major(0), Minor(0), HasMinor(false), Subminor(0), HasSubminor(false),
-        Build(0), HasBuild(false) {}
+        Build(0), Subbuild(0), HasBuild(false), HasSubbuild(false) {}
 
   explicit constexpr VersionTuple(unsigned Major)
       : Major(Major), Minor(0), HasMinor(false), Subminor(0),
-        HasSubminor(false), Build(0), HasBuild(false) {}
+        HasSubminor(false), Build(0), Subbuild(0), HasBuild(false),
+        HasSubbuild(false) {}
 
   explicit constexpr VersionTuple(unsigned Major, unsigned Minor)
       : Major(Major), Minor(Minor), HasMinor(true), Subminor(0),
-        HasSubminor(false), Build(0), HasBuild(false) {}
+        HasSubminor(false), Build(0), Subbuild(0), HasBuild(false),
+        HasSubbuild(false) {}
 
   explicit constexpr VersionTuple(unsigned Major, unsigned Minor,
                                   unsigned Subminor)
       : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
-        HasSubminor(true), Build(0), HasBuild(false) {}
+        HasSubminor(true), Build(0), Subbuild(0), HasBuild(false),
+        HasSubbuild(false) {}
 
   explicit constexpr VersionTuple(unsigned Major, unsigned Minor,
                                   unsigned Subminor, unsigned Build)
       : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
-        HasSubminor(true), Build(Build), HasBuild(true) {}
+        HasSubminor(true), Build(Build), Subbuild(0), HasBuild(true),
+        HasSubbuild(false) {}
+
+  explicit constexpr VersionTuple(unsigned Major, unsigned Minor,
+                                  unsigned Subminor, unsigned Build,
+                                  unsigned Subbuild)
+      : Major(Major), Minor(Minor), HasMinor(true), Subminor(Subminor),
+        HasSubminor(true), Build(Build), Subbuild(Subbuild), HasBuild(true),
+        HasSubbuild(true) {}
+
+  std::tuple<unsigned, unsigned, unsigned, unsigned, unsigned> asTuple() const {
+    return {Major, Minor, Subminor, Build, Subbuild};
+  }
 
   /// Determine whether this version information is empty
   /// (e.g., all version components are zero).
-  bool empty() const {
-    return Major == 0 && Minor == 0 && Subminor == 0 && Build == 0;
-  }
+  bool empty() const { return *this == VersionTuple(); }
 
   /// Retrieve the major version number.
   unsigned getMajor() const { return Major; }
@@ -91,6 +107,13 @@ public:
     return Build;
   }
 
+  /// Retrieve the subbuild version number, if provided.
+  std::optional<unsigned> getSubbuild() const {
+    if (!HasSubbuild)
+      return std::nullopt;
+    return Subbuild;
+  }
+
   /// Return a version tuple that contains only the first 3 version components.
   VersionTuple withoutBuild() const {
     if (HasBuild)
@@ -100,19 +123,20 @@ public:
 
   /// Return a version tuple that contains a different major version but
   /// everything else is the same.
-  VersionTuple withMajorReplaced(unsigned NewMajor) const {
-    return VersionTuple(NewMajor, Minor, Subminor, Build);
-  }
+  LLVM_ABI VersionTuple withMajorReplaced(unsigned NewMajor) const;
 
   /// Return a version tuple that contains only components that are non-zero.
   VersionTuple normalize() const {
     VersionTuple Result = *this;
-    if (Result.Build == 0) {
-      Result.HasBuild = false;
-      if (Result.Subminor == 0) {
-        Result.HasSubminor = false;
-        if (Result.Minor == 0)
-          Result.HasMinor = false;
+    if (Result.Subbuild == 0) {
+      Result.HasSubbuild = false;
+      if (Result.Build == 0) {
+        Result.HasBuild = false;
+        if (Result.Subminor == 0) {
+          Result.HasSubminor = false;
+          if (Result.Minor == 0)
+            Result.HasMinor = false;
+        }
       }
     }
     return Result;
@@ -121,8 +145,7 @@ public:
   /// Determine if two version numbers are equivalent. If not
   /// provided, minor and subminor version numbers are considered to be zero.
   friend bool operator==(const VersionTuple &X, const VersionTuple &Y) {
-    return X.Major == Y.Major && X.Minor == Y.Minor &&
-           X.Subminor == Y.Subminor && X.Build == Y.Build;
+    return X.asTuple() == Y.asTuple();
   }
 
   /// Determine if two version numbers are not equivalent.
@@ -138,8 +161,7 @@ public:
   /// If not provided, minor and subminor version numbers are considered to be
   /// zero.
   friend bool operator<(const VersionTuple &X, const VersionTuple &Y) {
-    return std::tie(X.Major, X.Minor, X.Subminor, X.Build) <
-           std::tie(Y.Major, Y.Minor, Y.Subminor, Y.Build);
+    return X.asTuple() < Y.asTuple();
   }
 
   /// Determine whether one version number follows another.
@@ -169,26 +191,26 @@ public:
   }
 
   friend hash_code hash_value(const VersionTuple &VT) {
-    return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build);
+    return hash_combine(VT.Major, VT.Minor, VT.Subminor, VT.Build, VT.Subbuild);
   }
 
   template <typename HasherT, llvm::endianness Endianness>
   friend void addHash(HashBuilder<HasherT, Endianness> &HBuilder,
                       const VersionTuple &VT) {
-    HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build);
+    HBuilder.add(VT.Major, VT.Minor, VT.Subminor, VT.Build, VT.Subbuild);
   }
 
   /// Retrieve a string representation of the version number.
-  std::string getAsString() const;
+  LLVM_ABI std::string getAsString() const;
 
   /// Try to parse the given string as a version number.
   /// \returns \c true if the string does not match the regular expression
   ///   [0-9]+(\.[0-9]+){0,3}
-  bool tryParse(StringRef string);
+  LLVM_ABI bool tryParse(StringRef string);
 };
 
 /// Print a version number.
-raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
 
 // Provide DenseMapInfo for version tuples.
 template <> struct DenseMapInfo<VersionTuple> {
@@ -204,6 +226,8 @@ template <> struct DenseMapInfo<VersionTuple> {
       Result = detail::combineHashValue(Result, *Subminor);
     if (auto Build = Value.getBuild())
       Result = detail::combineHashValue(Result, *Build);
+    if (auto Subbuild = Value.getSubbuild())
+      Result = detail::combineHashValue(Result, *Subbuild);
 
     return Result;
   }

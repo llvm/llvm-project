@@ -8,7 +8,7 @@ define i64 @test(ptr %tmp13) nounwind {
 ; CHECK-NEXT:    movl (%rdi), %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %while.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb $1, %cl

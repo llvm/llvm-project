@@ -39,9 +39,52 @@ struct A {
   A& operator=(const A&);
 };
 
-class Abstract
-{
-    virtual ~Abstract() = 0;
+class Abstract {
+  virtual ~Abstract() = 0;
 };
+
+// Types for reference_{constructs/converts}_from_temporary
+
+#if TEST_STD_VER >= 23
+
+class NonPODClass {
+public:
+  NonPODClass(int);
+};
+enum Enum { EV };
+struct Base {
+  Enum e;
+  int i;
+  float f;
+  NonPODClass* p;
+};
+// Not PODs
+struct Derived : Base {};
+
+template <class T, class RefType = T&>
+class ConvertsToRef {
+public:
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+template <class T, class RefType = T&>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
+class ExplicitConversionRvalueRef {
+public:
+  operator int();
+  explicit operator int&&();
+};
+
+class ExplicitConversionRef {
+public:
+  operator int();
+  explicit operator int&();
+};
+
+#endif
 
 #endif // TEST_META_UNARY_COMP_COMMON_H

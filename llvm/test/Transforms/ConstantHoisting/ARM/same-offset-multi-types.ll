@@ -26,9 +26,9 @@ target triple = "thumbv6m-none--musleabi"
 @global = external dso_local global %0, align 4
 
 ; Function Attrs: nounwind optsize ssp
-define dso_local void @zot() {
+define dso_local void @zot(i1 %arg) {
 bb:
-  br i1 undef, label %bb2, label %bb1
+  br i1 %arg, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
   %tmp = load ptr, ptr getelementptr inbounds (%0, ptr @global, i32 0, i32 2, i32 0), align 4

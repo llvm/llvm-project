@@ -210,6 +210,16 @@ define float @round_f(float %a) {
   ret float %1
 }
 
+declare float     @llvm.roundeven.f32(float %Val)
+define float @roundeven_f(float %a) {
+; CHECK-LABEL: roundeven_f:
+; SOFT: bl roundevenf
+; VFP4: b roundevenf
+; FP-ARMv8: vrintn.f32
+  %1 = call float @llvm.roundeven.f32(float %a)
+  ret float %1
+}
+
 declare float     @llvm.fmuladd.f32(float %a, float %b, float %c)
 define float @fmuladd_f(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmuladd_f:
@@ -219,23 +229,5 @@ define float @fmuladd_f(float %a, float %b, float %c) {
 ; NO-VMLA: vmul.f32
 ; NO-VMLA: vadd.f32
   %1 = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
-  ret float %1
-}
-
-declare i16 @llvm.convert.to.fp16.f32(float %a)
-define i16 @f_to_h(float %a) {
-; CHECK-LABEL: f_to_h:
-; SOFT: bl __aeabi_f2h
-; HARD: vcvt{{[bt]}}.f16.f32
-  %1 = call i16 @llvm.convert.to.fp16.f32(float %a)
-  ret i16 %1
-}
-
-declare float @llvm.convert.from.fp16.f32(i16 %a)
-define float @h_to_f(i16 %a) {
-; CHECK-LABEL: h_to_f:
-; SOFT: bl __aeabi_h2f
-; HARD: vcvt{{[bt]}}.f32.f16
-  %1 = call float @llvm.convert.from.fp16.f32(i16 %a)
   ret float %1
 }

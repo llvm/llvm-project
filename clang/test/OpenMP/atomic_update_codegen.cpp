@@ -231,17 +231,17 @@ int main(void) {
 #pragma omp atomic update
   ldx = ldx * ldv;
 // CHECK: [[EXPR_RE:%.+]] = load i32, ptr @{{.+}}
-// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr @{{.+}}, i32 0, i32 1)
+// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4)
 // CHECK: call void @__atomic_load(i64 noundef 8, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
 // CHECK: [[X_RE:%.+]] = load i32, ptr [[X_RE_ADDR]]
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
 // CHECK: [[X_IM:%.+]] = load i32, ptr [[X_IM_ADDR]]
 // <Skip checks for complex calculations>
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[DESIRED_ADDR]], i32 0, i32 1
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[DESIRED_ADDR]], i32 0, i32 1
 // CHECK: store i32 %{{.+}}, ptr [[X_RE_ADDR]]
 // CHECK: store i32 %{{.+}}, ptr [[X_IM_ADDR]]
 // CHECK: [[SUCCESS_FAIL:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 8, ptr noundef [[X_ADDR]], ptr noundef [[EXPECTED_ADDR]], ptr noundef [[DESIRED_ADDR]], i32 noundef 0, i32 noundef 0)
@@ -250,17 +250,17 @@ int main(void) {
 #pragma omp atomic
   cix = civ / cix;
 // CHECK: [[EXPR_RE:%.+]] = load float, ptr @{{.+}}
-// CHECK: [[EXPR_IM:%.+]] = load float, ptr getelementptr inbounds ({ float, float }, ptr @{{.+}}, i32 0, i32 1)
+// CHECK: [[EXPR_IM:%.+]] = load float, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4)
 // CHECK: call void @__atomic_load(i64 noundef 8, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { float, float }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { float, float }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
 // CHECK: [[X_RE:%.+]] = load float, ptr [[X_RE_ADDR]]
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { float, float }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { float, float }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
 // CHECK: [[X_IM:%.+]] = load float, ptr [[X_IM_ADDR]]
 // <Skip checks for complex calculations>
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { float, float }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { float, float }, ptr [[DESIRED_ADDR]], i32 0, i32 1
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { float, float }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { float, float }, ptr [[DESIRED_ADDR]], i32 0, i32 1
 // CHECK: store float %{{.+}}, ptr [[X_RE_ADDR]]
 // CHECK: store float %{{.+}}, ptr [[X_IM_ADDR]]
 // CHECK: [[SUCCESS_FAIL:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 8, ptr noundef [[X_ADDR]], ptr noundef [[EXPECTED_ADDR]], ptr noundef [[DESIRED_ADDR]], i32 noundef 0, i32 noundef 0)
@@ -269,17 +269,17 @@ int main(void) {
 #pragma omp atomic update
   cfx = cfv + cfx;
 // CHECK: [[EXPR_RE:%.+]] = load double, ptr @{{.+}}
-// CHECK: [[EXPR_IM:%.+]] = load double, ptr getelementptr inbounds ({ double, double }, ptr @{{.+}}, i32 0, i32 1)
+// CHECK: [[EXPR_IM:%.+]] = load double, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 8)
 // CHECK: call void @__atomic_load(i64 noundef 16, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 5)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { double, double }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { double, double }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
 // CHECK: [[X_RE:%.+]] = load double, ptr [[X_RE_ADDR]]
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { double, double }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { double, double }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
 // CHECK: [[X_IM:%.+]] = load double, ptr [[X_IM_ADDR]]
 // <Skip checks for complex calculations>
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { double, double }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { double, double }, ptr [[DESIRED_ADDR]], i32 0, i32 1
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { double, double }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { double, double }, ptr [[DESIRED_ADDR]], i32 0, i32 1
 // CHECK: store double %{{.+}}, ptr [[X_RE_ADDR]]
 // CHECK: store double %{{.+}}, ptr [[X_IM_ADDR]]
 // CHECK: [[SUCCESS_FAIL:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 16, ptr noundef [[X_ADDR]], ptr noundef [[EXPECTED_ADDR]], ptr noundef [[DESIRED_ADDR]], i32 noundef 5, i32 noundef 5)
@@ -380,13 +380,13 @@ int main(void) {
 // CHECK: call void @__atomic_load(i64 noundef 8, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
 // CHECK: [[X_RE:%.+]] = load i32, ptr [[X_RE_ADDR]]
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
 // CHECK: [[X_IM:%.+]] = load i32, ptr [[X_IM_ADDR]]
 // <Skip checks for complex calculations>
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[DESIRED_ADDR]], i32 0, i32 1
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[DESIRED_ADDR]], i32 0, i32 1
 // CHECK: store i32 %{{.+}}, ptr [[X_RE_ADDR]]
 // CHECK: store i32 %{{.+}}, ptr [[X_IM_ADDR]]
 // CHECK: [[SUCCESS_FAIL:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 8, ptr noundef [[X_ADDR]], ptr noundef [[EXPECTED_ADDR]], ptr noundef [[DESIRED_ADDR]], i32 noundef 0, i32 noundef 0)
@@ -450,13 +450,13 @@ int main(void) {
 // CHECK: call void @__atomic_load(i64 noundef 8, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 0
 // CHECK: [[X_RE:%.+]] = load i32, ptr [[X_RE_ADDR]]
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[EXPECTED_ADDR]], i32 0, i32 1
 // CHECK: [[X_IM:%.+]] = load i32, ptr [[X_IM_ADDR]]
 // <Skip checks for complex calculations>
-// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
-// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds { i32, i32 }, ptr [[DESIRED_ADDR]], i32 0, i32 1
+// CHECK: [[X_RE_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[DESIRED_ADDR:%.+]], i32 0, i32 0
+// CHECK: [[X_IM_ADDR:%.+]] = getelementptr inbounds nuw { i32, i32 }, ptr [[DESIRED_ADDR]], i32 0, i32 1
 // CHECK: store i32 %{{.+}}, ptr [[X_RE_ADDR]]
 // CHECK: store i32 %{{.+}}, ptr [[X_IM_ADDR]]
 // CHECK: [[SUCCESS_FAIL:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 8, ptr noundef [[X_ADDR]], ptr noundef [[EXPECTED_ADDR]], ptr noundef [[DESIRED_ADDR]], i32 noundef 0, i32 noundef 0)
@@ -504,7 +504,7 @@ int main(void) {
 #pragma omp atomic update release
   bx = ldv * bx;
 // CHECK: [[EXPR_RE:%.+]] = load i32, ptr [[CIV_ADDR:@.+]],
-// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds ({ i32, i32 }, ptr [[CIV_ADDR]], i32 0, i32 1),
+// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr [[CIV_ADDR]], i64 4),
 // CHECK: [[XI8:%.+]] = load atomic i8, ptr [[X_ADDR:@.+]] monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
@@ -551,7 +551,7 @@ int main(void) {
 #pragma omp atomic update
   int4x[sv] |= bv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr getelementptr (i8, ptr @{{.+}}, i64 4) monotonic, align 4
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4) monotonic, align 4
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i32 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -569,7 +569,7 @@ int main(void) {
 // CHECK: or i32 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i32 %{{.+}}, ptr [[TEMP1]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i32, ptr [[TEMP1]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr (i8, ptr @{{.+}}, i64 4), i32 [[OLD_BF_VALUE]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), i32 [[OLD_BF_VALUE]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i32, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -577,7 +577,7 @@ int main(void) {
 #pragma omp atomic
   bfx.a = bfx.a - ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: call void @__atomic_load(i64 noundef 4, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
+// CHECK: call void @__atomic_load(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[PREV_VALUE:%.+]] = load i32, ptr [[LDTEMP]]
@@ -595,7 +595,7 @@ int main(void) {
 // CHECK: [[BF_CLEAR:%.+]] = and i32 [[NEW_VAL]], -2147483648
 // CHECK: or i32 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i32 %{{.+}}, ptr [[TEMP1]]
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 4, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP]], ptr noundef [[TEMP1]], i32 noundef 0, i32 noundef 0)
+// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP]], ptr noundef [[TEMP1]], i32 noundef 0, i32 noundef 0)
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic update
@@ -627,7 +627,7 @@ int main(void) {
 #pragma omp atomic
   bfx2.a -= ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @{{.+}}, i64 3) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 3) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -647,7 +647,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[BITCAST1]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[BITCAST1]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr (i8, ptr @{{.+}}, i64 3), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 3), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -682,7 +682,7 @@ int main(void) {
 #pragma omp atomic
   bfx3.a /= ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 1), ptr noundef [[BITCAST:%.+]], i32 noundef 0)
+// CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 1), ptr noundef [[BITCAST:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[PREV_VALUE:%.+]] = load i24, ptr [[LDTEMP:%.+]],
@@ -703,7 +703,7 @@ int main(void) {
 // CHECK: [[BF_CLEAR:%.+]] = and i24 [[BF_LD]], -131065
 // CHECK: or i24 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i24 %{{.+}}, ptr [[TEMP1]]
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP]], ptr noundef [[TEMP1]], i32 noundef 0, i32 noundef 0)
+// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP]], ptr noundef [[TEMP1]], i32 noundef 0, i32 noundef 0)
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 #pragma omp atomic update
@@ -738,7 +738,7 @@ int main(void) {
 #pragma omp atomic
   bfx4.a = bfx4.a * ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %{{.+}} ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -758,7 +758,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[BITCAST1]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[BITCAST1]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -793,7 +793,7 @@ int main(void) {
 #pragma omp atomic
   bfx4.b /= ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -813,7 +813,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[BITCAST1]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[BITCAST1]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]

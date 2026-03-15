@@ -141,7 +141,7 @@ define i32 @memcpy_addrspacecast() nounwind {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_INC:%.*]], [[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[I]] to i16
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(2) getelementptr inbounds (i8, ptr addrspace(2) @const_array, i16 4), i16 [[TMP0]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(2) getelementptr inbounds nuw (i8, ptr addrspace(2) @const_array, i16 4), i16 [[TMP0]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(2) [[PTR]], align 1
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[LOAD]] to i32
 ; CHECK-NEXT:    [[SUM_INC]] = add i32 [[SUM]], [[EXT]]
@@ -191,7 +191,7 @@ define ptr addrspace(4) @constant_fold_undef() #0 {
 
 define <4 x ptr addrspace(4)> @constant_fold_null_vector() #0 {
 ; CHECK-LABEL: @constant_fold_null_vector(
-; CHECK-NEXT:    ret <4 x ptr addrspace(4)> addrspacecast (<4 x ptr addrspace(3)> zeroinitializer to <4 x ptr addrspace(4)>)
+; CHECK-NEXT:    ret <4 x ptr addrspace(4)> <ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4))>
 ;
   %cast = addrspacecast <4 x ptr addrspace(3)> zeroinitializer to <4 x ptr addrspace(4)>
   ret <4 x ptr addrspace(4)> %cast

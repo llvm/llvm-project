@@ -472,7 +472,7 @@ void test_linear(void) {
   for (i = 0; i < 16; ++i)
     ;
 
-// expected-warning@+1 {{zero linear step (x and other variables in clause should probably be const)}}
+// expected-warning@+1 {{zero linear step ('x' and other variables in clause should probably be const)}}
 #pragma omp parallel for simd linear(x, y : 0)
   for (i = 0; i < 16; ++i)
     ;

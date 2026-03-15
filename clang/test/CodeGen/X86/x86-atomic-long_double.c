@@ -4,29 +4,60 @@
 
 // X64-LABEL: define dso_local x86_fp80 @testinc(
 // X64-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0:[0-9]+]] {
-// X64-NEXT:  [[ENTRY:.*:]]
-// X64-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:  [[ENTRY:.*]]:
 // X64-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP3:%.*]] = alloca x86_fp80, align 16
 // X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
-// X64-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 seq_cst, align 16
-// X64-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 1.000000e+00
-// X64-NEXT:    store float [[TMP2]], ptr [[RETVAL]], align 16
-// X64-NEXT:    [[TMP3:%.*]] = load x86_fp80, ptr [[RETVAL]], align 16
-// X64-NEXT:    ret x86_fp80 [[TMP3]]
+// X64-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i128, ptr [[TMP0]] seq_cst, align 16
+// X64-NEXT:    store i128 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X64:       [[ATOMIC_OP]]:
+// X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
+// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP2]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[INC]], ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP4:%.*]] = load i128, ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[TMP0]], i128 [[TMP3]], i128 [[TMP4]] seq_cst seq_cst, align 16
+// X64-NEXT:    [[TMP6:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+// X64-NEXT:    [[TMP7:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+// X64-NEXT:    store i128 [[TMP6]], ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    [[TMP8]] = load x86_fp80, ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    br i1 [[TMP7]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X64:       [[ATOMIC_CONT]]:
+// X64-NEXT:    ret x86_fp80 [[INC]]
 //
 // X86-LABEL: define dso_local x86_fp80 @testinc(
 // X86-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0:[0-9]+]] {
-// X86-NEXT:  [[ENTRY:.*:]]
-// X86-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:  [[ENTRY:.*]]:
 // X86-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 4
 // X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
-// X86-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 seq_cst, align 4
-// X86-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 1.000000e+00
-// X86-NEXT:    store float [[TMP2]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP3:%.*]] = load x86_fp80, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret x86_fp80 [[TMP3]]
+// X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// X86-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X86:       [[ATOMIC_OP]]:
+// X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
+// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[INC]], ptr [[ATOMIC_TEMP2]], align 4
+// X86-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
+// X86-NEXT:    [[TMP3]] = load x86_fp80, ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    br i1 [[CALL]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X86:       [[ATOMIC_CONT]]:
+// X86-NEXT:    ret x86_fp80 [[INC]]
 //
 long double testinc(_Atomic long double *addr) {
 
@@ -35,27 +66,60 @@ long double testinc(_Atomic long double *addr) {
 
 // X64-LABEL: define dso_local x86_fp80 @testdec(
 // X64-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0]] {
-// X64-NEXT:  [[ENTRY:.*:]]
-// X64-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:  [[ENTRY:.*]]:
 // X64-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP3:%.*]] = alloca x86_fp80, align 16
 // X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
-// X64-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 16
-// X64-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 16
-// X64-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 16
-// X64-NEXT:    ret x86_fp80 [[TMP2]]
+// X64-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i128, ptr [[TMP0]] seq_cst, align 16
+// X64-NEXT:    store i128 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X64:       [[ATOMIC_OP]]:
+// X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
+// X64-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP2]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[DEC]], ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP4:%.*]] = load i128, ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[TMP0]], i128 [[TMP3]], i128 [[TMP4]] seq_cst seq_cst, align 16
+// X64-NEXT:    [[TMP6:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+// X64-NEXT:    [[TMP7:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+// X64-NEXT:    store i128 [[TMP6]], ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    [[TMP8]] = load x86_fp80, ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    br i1 [[TMP7]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X64:       [[ATOMIC_CONT]]:
+// X64-NEXT:    ret x86_fp80 [[TMP1]]
 //
 // X86-LABEL: define dso_local x86_fp80 @testdec(
 // X86-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0]] {
-// X86-NEXT:  [[ENTRY:.*:]]
-// X86-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:  [[ENTRY:.*]]:
 // X86-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 4
 // X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
-// X86-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 4
-// X86-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret x86_fp80 [[TMP2]]
+// X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// X86-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X86:       [[ATOMIC_OP]]:
+// X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
+// X86-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[DEC]], ptr [[ATOMIC_TEMP2]], align 4
+// X86-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
+// X86-NEXT:    [[TMP3]] = load x86_fp80, ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    br i1 [[CALL]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X86:       [[ATOMIC_CONT]]:
+// X86-NEXT:    ret x86_fp80 [[TMP1]]
 //
 long double testdec(_Atomic long double *addr) {
 
@@ -175,29 +239,60 @@ long double testassign(_Atomic long double *addr) {
 
 // X64-LABEL: define dso_local x86_fp80 @test_volatile_inc(
 // X64-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0]] {
-// X64-NEXT:  [[ENTRY:.*:]]
-// X64-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:  [[ENTRY:.*]]:
 // X64-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP3:%.*]] = alloca x86_fp80, align 16
 // X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
-// X64-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 seq_cst, align 16
-// X64-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 1.000000e+00
-// X64-NEXT:    store float [[TMP2]], ptr [[RETVAL]], align 16
-// X64-NEXT:    [[TMP3:%.*]] = load x86_fp80, ptr [[RETVAL]], align 16
-// X64-NEXT:    ret x86_fp80 [[TMP3]]
+// X64-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic volatile i128, ptr [[TMP0]] seq_cst, align 16
+// X64-NEXT:    store i128 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X64:       [[ATOMIC_OP]]:
+// X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
+// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP2]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[INC]], ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP4:%.*]] = load i128, ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP5:%.*]] = cmpxchg volatile ptr [[TMP0]], i128 [[TMP3]], i128 [[TMP4]] seq_cst seq_cst, align 16
+// X64-NEXT:    [[TMP6:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+// X64-NEXT:    [[TMP7:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+// X64-NEXT:    store i128 [[TMP6]], ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    [[TMP8]] = load x86_fp80, ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    br i1 [[TMP7]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X64:       [[ATOMIC_CONT]]:
+// X64-NEXT:    ret x86_fp80 [[INC]]
 //
 // X86-LABEL: define dso_local x86_fp80 @test_volatile_inc(
 // X86-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0]] {
-// X86-NEXT:  [[ENTRY:.*:]]
-// X86-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:  [[ENTRY:.*]]:
 // X86-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 4
 // X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
-// X86-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr [[TMP0]], float 1.000000e+00 seq_cst, align 4
-// X86-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 1.000000e+00
-// X86-NEXT:    store float [[TMP2]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP3:%.*]] = load x86_fp80, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret x86_fp80 [[TMP3]]
+// X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// X86-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X86:       [[ATOMIC_OP]]:
+// X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
+// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP2]], 0xK3FFF8000000000000000
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[INC]], ptr [[ATOMIC_TEMP2]], align 4
+// X86-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
+// X86-NEXT:    [[TMP3]] = load x86_fp80, ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    br i1 [[CALL]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X86:       [[ATOMIC_CONT]]:
+// X86-NEXT:    ret x86_fp80 [[INC]]
 //
 long double test_volatile_inc(volatile _Atomic long double *addr) {
   return ++*addr;
@@ -205,27 +300,60 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
 
 // X64-LABEL: define dso_local x86_fp80 @test_volatile_dec(
 // X64-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0]] {
-// X64-NEXT:  [[ENTRY:.*:]]
-// X64-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:  [[ENTRY:.*]]:
 // X64-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP3:%.*]] = alloca x86_fp80, align 16
 // X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
-// X64-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 16
-// X64-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 16
-// X64-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 16
-// X64-NEXT:    ret x86_fp80 [[TMP2]]
+// X64-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic volatile i128, ptr [[TMP0]] seq_cst, align 16
+// X64-NEXT:    store i128 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X64:       [[ATOMIC_OP]]:
+// X64-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_OP]] ]
+// X64-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP2]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[DEC]], ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP4:%.*]] = load i128, ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP5:%.*]] = cmpxchg volatile ptr [[TMP0]], i128 [[TMP3]], i128 [[TMP4]] seq_cst seq_cst, align 16
+// X64-NEXT:    [[TMP6:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+// X64-NEXT:    [[TMP7:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+// X64-NEXT:    store i128 [[TMP6]], ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    [[TMP8]] = load x86_fp80, ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    br i1 [[TMP7]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X64:       [[ATOMIC_CONT]]:
+// X64-NEXT:    ret x86_fp80 [[TMP1]]
 //
 // X86-LABEL: define dso_local x86_fp80 @test_volatile_dec(
 // X86-SAME: ptr noundef [[ADDR:%.*]]) #[[ATTR0]] {
-// X86-NEXT:  [[ENTRY:.*:]]
-// X86-NEXT:    [[RETVAL:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:  [[ENTRY:.*]]:
 // X86-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 4
 // X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
-// X86-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 4
-// X86-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret x86_fp80 [[TMP2]]
+// X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// X86-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X86:       [[ATOMIC_OP]]:
+// X86-NEXT:    [[TMP2:%.*]] = phi x86_fp80 [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[ATOMIC_OP]] ]
+// X86-NEXT:    [[DEC:%.*]] = fadd x86_fp80 [[TMP2]], 0xKBFFF8000000000000000
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[TMP2]], ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[DEC]], ptr [[ATOMIC_TEMP2]], align 4
+// X86-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
+// X86-NEXT:    [[TMP3]] = load x86_fp80, ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    br i1 [[CALL]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X86:       [[ATOMIC_CONT]]:
+// X86-NEXT:    ret x86_fp80 [[TMP1]]
 //
 long double test_volatile_dec(volatile _Atomic long double *addr) {
   return (*addr)--;
@@ -340,4 +468,65 @@ long double test_volatile_assign(volatile _Atomic long double *addr) {
   *addr = 115;
 
   return *addr;
+}
+
+// X64-LABEL: define dso_local i32 @pr107054(
+// X64-SAME: ) #[[ATTR0]] {
+// X64-NEXT:  [[ENTRY:.*]]:
+// X64-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP3:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i128, ptr @pr107054.n seq_cst, align 16
+// X64-NEXT:    store i128 [[ATOMIC_LOAD]], ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X64:       [[ATOMIC_OP]]:
+// X64-NEXT:    [[TMP1:%.*]] = phi x86_fp80 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[ATOMIC_OP]] ]
+// X64-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP1]], 0xK3FFF8000000000000000
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[TMP1]], ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    [[TMP2:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP2]], i8 0, i64 16, i1 false)
+// X64-NEXT:    store x86_fp80 [[INC]], ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP2]], align 16
+// X64-NEXT:    [[TMP4:%.*]] = cmpxchg ptr @pr107054.n, i128 [[TMP2]], i128 [[TMP3]] seq_cst seq_cst, align 16
+// X64-NEXT:    [[TMP5:%.*]] = extractvalue { i128, i1 } [[TMP4]], 0
+// X64-NEXT:    [[TMP6:%.*]] = extractvalue { i128, i1 } [[TMP4]], 1
+// X64-NEXT:    store i128 [[TMP5]], ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    [[TMP7]] = load x86_fp80, ptr [[ATOMIC_TEMP3]], align 16
+// X64-NEXT:    br i1 [[TMP6]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X64:       [[ATOMIC_CONT]]:
+// X64-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[INC]], 0xK3FFF8000000000000000
+// X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+// X64-NEXT:    ret i32 [[CONV]]
+//
+// X86-LABEL: define dso_local i32 @pr107054(
+// X86-SAME: ) #[[ATTR0]] {
+// X86-NEXT:  [[ENTRY:.*]]:
+// X86-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    call void @__atomic_load(i32 noundef 12, ptr noundef @pr107054.n, ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// X86-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[ATOMIC_TEMP]], align 4
+// X86-NEXT:    br label %[[ATOMIC_OP:.*]]
+// X86:       [[ATOMIC_OP]]:
+// X86-NEXT:    [[TMP1:%.*]] = phi x86_fp80 [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[ATOMIC_OP]] ]
+// X86-NEXT:    [[INC:%.*]] = fadd x86_fp80 [[TMP1]], 0xK3FFF8000000000000000
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[TMP1]], ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP2]], i8 0, i64 12, i1 false)
+// X86-NEXT:    store x86_fp80 [[INC]], ptr [[ATOMIC_TEMP2]], align 4
+// X86-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 12, ptr noundef @pr107054.n, ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
+// X86-NEXT:    [[TMP2]] = load x86_fp80, ptr [[ATOMIC_TEMP1]], align 4
+// X86-NEXT:    br i1 [[CALL]], label %[[ATOMIC_CONT:.*]], label %[[ATOMIC_OP]]
+// X86:       [[ATOMIC_CONT]]:
+// X86-NEXT:    [[CMP:%.*]] = fcmp oeq x86_fp80 [[INC]], 0xK3FFF8000000000000000
+// X86-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+// X86-NEXT:    ret i32 [[CONV]]
+//
+int pr107054()
+{
+    static _Atomic long double n;
+    return (++n) == 1;
 }

@@ -142,14 +142,7 @@ define i1 @ssub_sat_low_bits(i8 %x, i8 %y) {
 
 define i1 @ssub_sat_fail_may_overflow(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ssub_sat_fail_may_overflow(
-; CHECK-NEXT:    [[XX:%.*]] = and i8 [[X:%.*]], 15
-; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 15
-; CHECK-NEXT:    [[LHS:%.*]] = or i8 [[XX]], 1
-; CHECK-NEXT:    [[RHS:%.*]] = and i8 [[YY]], -2
-; CHECK-NEXT:    [[EXP:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[LHS]], i8 [[RHS]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[EXP]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xx = and i8 %x, 15
   %yy = and i8 %y, 15

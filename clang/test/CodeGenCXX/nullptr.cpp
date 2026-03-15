@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -I%S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -I%S -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <typeinfo>
 
@@ -68,4 +69,11 @@ namespace PR39528 {
   constexpr nullptr_t null = nullptr;
   void f(nullptr_t);
   void g() { f(null); }
+}
+
+// CHECK-LABEL: define {{.*}}pr137276
+// CHECK: {{^}}  store i64 0, ptr %arr, align 8{{$}}
+void pr137276(nullptr_t np, int i) {
+  long arr[] = { long(np), i, 0 };
+  (void)arr;
 }

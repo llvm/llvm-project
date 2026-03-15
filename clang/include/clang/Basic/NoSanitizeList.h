@@ -29,6 +29,8 @@ class SanitizerSpecialCaseList;
 class NoSanitizeList {
   std::unique_ptr<SanitizerSpecialCaseList> SSCL;
   SourceManager &SM;
+  bool containsPrefix(SanitizerMask Mask, StringRef Prefix, StringRef Name,
+                      StringRef Category) const;
 
 public:
   NoSanitizeList(const std::vector<std::string> &NoSanitizeListPaths,

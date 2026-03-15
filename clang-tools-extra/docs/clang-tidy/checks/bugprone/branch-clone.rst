@@ -32,8 +32,27 @@ If this is the intended behavior, then there is no reason to use a conditional
 statement; otherwise the issue can be solved by fixing the branch that is
 handled incorrectly.
 
-The check also detects repeated branches in longer ``if/else if/else`` chains
+The check detects repeated branches in longer ``if/else if/else`` chains
 where it would be even harder to notice the problem.
+
+The check also detects repeated inner and outer ``if`` statements that may
+be a result of a copy-paste error. This check cannot currently detect
+identical inner and outer ``if`` statements if code is between the ``if``
+conditions. An example is as follows.
+
+.. code-block:: c++
+
+    void test_warn_inner_if_1(int x) {
+      if (x == 1) {    // warns, if with identical inner if
+        if (x == 1)    // inner if is here
+          ;
+      if (x == 1) {    // does not warn, cannot detect
+        int y = x;
+        if (x == 1)
+          ;
+      }
+    }
+
 
 In ``switch`` statements the check only reports repeated branches when they are
 consecutive, because it is relatively common that the ``case:`` labels have

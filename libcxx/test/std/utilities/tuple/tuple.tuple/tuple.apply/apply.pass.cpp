@@ -247,7 +247,7 @@ namespace ReturnTypeTest {
         using InvokeResult = decltype(std::apply(fn, t));
         static_assert(std::is_same<InvokeResult, Expect>::value, "");
     }
-} // end namespace ReturnTypeTest
+} // namespace ReturnTypeTest
 
 void test_return_type()
 {

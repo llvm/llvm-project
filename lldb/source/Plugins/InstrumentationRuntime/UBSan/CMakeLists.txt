@@ -1,6 +1,8 @@
 add_lldb_library(lldbPluginInstrumentationRuntimeUBSan PLUGIN
   InstrumentationRuntimeUBSan.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -8,6 +10,5 @@ add_lldb_library(lldbPluginInstrumentationRuntimeUBSan PLUGIN
     lldbInterpreter
     lldbSymbol
     lldbTarget
-  LINK_COMPONENTS
-    Support
+    lldbValueObject
   )

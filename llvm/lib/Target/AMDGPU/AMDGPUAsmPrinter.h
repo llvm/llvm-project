@@ -14,16 +14,18 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUASMPRINTER_H
 
+#include "AMDGPUMCResourceInfo.h"
 #include "SIProgramInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
 namespace llvm {
 
 class AMDGPUMachineFunction;
-struct AMDGPUResourceUsageAnalysis;
+class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
+class MCResourceInfo;
 
 namespace AMDGPU {
 struct MCKernelDescriptor;
@@ -34,11 +36,17 @@ class MetadataStreamer;
 } // namespace AMDGPU
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
 
-  AMDGPUResourceUsageAnalysis *ResourceUsage;
+  const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo
+      *ResourceUsage;
+
+  MCResourceInfo RI;
 
   SIProgramInfo CurrentProgramInfo;
 
@@ -46,7 +54,8 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
-  uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
+  // When appropriate, add a _dvgpr$ symbol.
+  void emitDVgprSymbol(MachineFunction &MF);
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
@@ -60,11 +69,6 @@ private:
   void EmitPALMetadata(const MachineFunction &MF,
                        const SIProgramInfo &KernelInfo);
   void emitPALFunctionMetadata(const MachineFunction &MF);
-  void emitCommonFunctionComments(uint32_t NumVGPR,
-                                  std::optional<uint32_t> NumAGPR,
-                                  uint32_t TotalNumVGPR, uint32_t NumSGPR,
-                                  uint64_t ScratchSize, uint64_t CodeSize,
-                                  const AMDGPUMachineFunction *MFI);
   void emitCommonFunctionComments(const MCExpr *NumVGPR, const MCExpr *NumAGPR,
                                   const MCExpr *TotalNumVGPR,
                                   const MCExpr *NumSGPR,
@@ -83,6 +87,11 @@ private:
   void initTargetStreamer(Module &M);
 
   SmallString<128> getMCExprStr(const MCExpr *Value);
+
+  /// Attempts to replace the validation that is missed in getSIProgramInfo due
+  /// to MCExpr being unknown. Invoked during doFinalization such that the
+  /// MCResourceInfo symbols are known.
+  void validateMCResourceInfo(Function &F);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
@@ -105,12 +114,12 @@ public:
   /// Lower the specified LLVM Constant to an MCExpr.
   /// The AsmPrinter::lowerConstantof does not know how to lower
   /// addrspacecast, therefore they should be lowered by this function.
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV, const Constant *BaseCV,
+                              uint64_t Offset) override;
 
   /// tblgen'erated driver function for lowering simple MI->MC pseudo
   /// instructions.
-  bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
-                                   const MachineInstr *MI);
+  bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
   /// Implemented in AMDGPUMCInstLower.cpp
   void emitInstruction(const MachineInstr *MI) override;

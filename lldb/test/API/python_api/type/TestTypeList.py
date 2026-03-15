@@ -6,9 +6,10 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
+from lldbsuite.test import lldbplatformutil
 
 class TypeAndTypeListTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -110,6 +111,16 @@ class TypeAndTypeListTestCase(TestBase):
             )
         # a second Task make be scared up by the Objective-C runtime
         self.assertGreaterEqual(len(type_list), 1)
+        self.assertEqual(
+            type_list[0].GetName(),
+            type_list.GetTypeAtIndex(0).GetName(),
+            "subscript [0] matches GetTypeAtIndex(0)",
+        )
+        self.assertEqual(
+            type_list[-1].GetName(),
+            type_list.GetTypeAtIndex(type_list.GetSize() - 1).GetName(),
+            "subscript [-1] matches last item",
+        )
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)
@@ -248,7 +259,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertEqual(myint_arr_element_type, myint_type)
 
         # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
-        if configuration.dwarf_version >= 4:
+        if int(lldbplatformutil.getDwarfVersion()) >= 4:
             enum_type = target.FindFirstType("EnumType")
             self.assertTrue(enum_type)
             self.DebugSBType(enum_type)

@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module {
+  // Should not copy types with no data layout (unkonwn byte size).
+  cir.func @invalid_copy(%arg0 : !cir.ptr<!cir.void>, %arg1 : !cir.ptr<!cir.void>) {
+    // expected-error@+1 {{missing data layout for pointee type}}
+    cir.copy %arg0 to %arg1 : !cir.ptr<!cir.void>
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // Should not copy to same address.
+  cir.func @invalid_copy(%arg0 : !cir.ptr<!cir.int<s, 8>>) {
+    // expected-error@+1 {{source and destination are the same}}
+    cir.copy %arg0 to %arg0 : !cir.ptr<!cir.int<s, 8>>
+    cir.return
+  }
+}

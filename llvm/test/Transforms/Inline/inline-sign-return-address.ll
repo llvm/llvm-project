@@ -9,7 +9,7 @@ define internal void @foo_nonleaf() #1 {
   ret void
 }
 
-define internal void @foo_none() #2 {
+define internal void @foo_none() {
   ret void
 }
 
@@ -51,7 +51,7 @@ define dso_local void @bar_nonleaf() #1 {
   ret void
 }
 
-define dso_local void @bar_none() #2 {
+define dso_local void @bar_none()  {
 ; CHECK-LABEL: bar_none
 ; CHECK-NEXT:    call void @foo_all()
 ; CHECK-NEXT:    call void @foo_nonleaf()
@@ -97,8 +97,7 @@ define dso_local void @bar_bkey() #4 {
 }
 
 
-attributes #0 = { "branch-protection-pauth-lr"="false" "sign-return-address"="all" }
-attributes #1 = { "branch-protection-pauth-lr"="false" "sign-return-address"="non-leaf" }
-attributes #2 = { "branch-protection-pauth-lr"="false" "sign-return-address"="none" }
-attributes #3 = { "branch-protection-pauth-lr"="true" "sign-return-address"="non-leaf" }
-attributes #4 = { "branch-protection-pauth-lr"="true" "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" }
+attributes #0 = { "sign-return-address"="all" }
+attributes #1 = { "sign-return-address"="non-leaf" }
+attributes #3 = { "branch-protection-pauth-lr" "sign-return-address"="non-leaf" }
+attributes #4 = { "branch-protection-pauth-lr" "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" }

@@ -17,9 +17,9 @@ define i32 @t0(i64 %x) nounwind {
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast i64 %x to <4 x i16>
-  %1 = bitcast <4 x i16> %0 to x86_mmx
-  %2 = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx %1, i8 -18)
-  %3 = bitcast x86_mmx %2 to <4 x i16>
+  %1 = bitcast <4 x i16> %0 to <1 x i64>
+  %2 = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> %1, i8 -18)
+  %3 = bitcast <1 x i64> %2 to <4 x i16>
   %4 = bitcast <4 x i16> %3 to <1 x i64>
   %5 = extractelement <1 x i64> %4, i32 0
   %6 = bitcast i64 %5 to <2 x i32>
@@ -52,9 +52,9 @@ define i64 @t1(i64 %x, i32 %n) nounwind {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast i64 %x to x86_mmx
-  %1 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %0, i32 %n)
-  %2 = bitcast x86_mmx %1 to i64
+  %0 = bitcast i64 %x to <1 x i64>
+  %1 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %0, i32 %n)
+  %2 = bitcast <1 x i64> %1 to i64
   ret i64 %2
 }
 
@@ -88,11 +88,11 @@ define i64 @t2(i64 %x, i32 %n, i32 %w) nounwind {
 entry:
   %0 = insertelement <2 x i32> undef, i32 %w, i32 0
   %1 = insertelement <2 x i32> %0, i32 0, i32 1
-  %2 = bitcast <2 x i32> %1 to x86_mmx
-  %3 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %2, i32 %n)
-  %4 = bitcast i64 %x to x86_mmx
-  %5 = tail call x86_mmx @llvm.x86.mmx.por(x86_mmx %4, x86_mmx %3)
-  %6 = bitcast x86_mmx %5 to i64
+  %2 = bitcast <2 x i32> %1 to <1 x i64>
+  %3 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %2, i32 %n)
+  %4 = bitcast i64 %x to <1 x i64>
+  %5 = tail call <1 x i64> @llvm.x86.mmx.por(<1 x i64> %4, <1 x i64> %3)
+  %6 = bitcast <1 x i64> %5 to i64
   ret i64 %6
 }
 
@@ -123,14 +123,14 @@ define i64 @t3(ptr %y, ptr %n) nounwind {
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = load x86_mmx, ptr %y, align 8
+  %0 = load <1 x i64>, ptr %y, align 8
   %1 = load i32, ptr %n, align 4
-  %2 = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx %0, i32 %1)
-  %3 = bitcast x86_mmx %2 to i64
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> %0, i32 %1)
+  %3 = bitcast <1 x i64> %2 to i64
   ret i64 %3
 }
 
-declare x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx, i8)
-declare x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx, i32)
-declare x86_mmx @llvm.x86.mmx.por(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64>, i8)
+declare <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64>, i32)
+declare <1 x i64> @llvm.x86.mmx.por(<1 x i64>, <1 x i64>)
 

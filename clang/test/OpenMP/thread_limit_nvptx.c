@@ -7,23 +7,21 @@
 #define HEADER
 
 void foo(int N) {
-// CHECK: l11, !"maxntidx", i32 128}
+// CHECK: define {{.*}}l11{{.*}} #[[ATTR0:[0-9]+]]
 #pragma omp target teams distribute parallel for simd
   for (int i = 0; i < N; ++i)
     ;
-// CHECK: l15, !"maxntidx", i32 4}
+// CHECK: define {{.*}}l15{{.*}} #[[ATTR1:[0-9]+]]
 #pragma omp target teams distribute parallel for simd thread_limit(4)
   for (int i = 0; i < N; ++i)
     ;
-// CHECK-NOT: l21, !"maxntidx", i32 128}
-// CHECK: l21, !"maxntidx", i32 42}
-// CHECK-NOT: l21, !"maxntidx", i32 128}
+
+// CHECK: define {{.*}}l20{{.*}} #[[ATTR2:[0-9]+]]
 #pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 42))))
   for (int i = 0; i < N; ++i)
     ;
-// CHECK-NOT: l27, !"maxntidx", i32 42}
-// CHECK: l27, !"maxntidx", i32 22}
-// CHECK-NOT: l27, !"maxntidx", i32 42}
+
+// CHECK: define {{.*}}l25{{.*}} #[[ATTR3:[0-9]+]]
 #pragma omp target teams distribute parallel for simd ompx_attribute(__attribute__((launch_bounds(42, 42)))) num_threads(22)
   for (int i = 0; i < N; ++i)
     ;
@@ -31,3 +29,7 @@ void foo(int N) {
 
 #endif
 
+// CHECK: attributes #[[ATTR0]] = {{{.*}} "nvvm.maxntid"="128" {{.*}}}
+// CHECK: attributes #[[ATTR1]] = {{{.*}} "nvvm.maxntid"="4" {{.*}}}
+// CHECK: attributes #[[ATTR2]] = {{{.*}} "nvvm.maxntid"="42" {{.*}}}
+// CHECK: attributes #[[ATTR3]] = {{{.*}} "nvvm.maxntid"="22" {{.*}}}

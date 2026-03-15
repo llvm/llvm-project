@@ -41,18 +41,17 @@ define i1 @foo(ptr %p) {
 ; AARCH64-LABEL: define i1 @foo
 ; AARCH64-SAME: (ptr [[P:%.*]]) {
 ; AARCH64-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; AARCH64-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @.cfi.jumptable to i64)
-; AARCH64-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
-; AARCH64-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP2]], 61
-; AARCH64-NEXT:    [[TMP5:%.*]] = or i64 [[TMP3]], [[TMP4]]
-; AARCH64-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], 1
-; AARCH64-NEXT:    ret i1 [[TMP6]]
+; AARCH64-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 8) to i64), [[TMP1]]
+; AARCH64-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
+; AARCH64-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 1
+; AARCH64-NEXT:    ret i1 [[TMP4]]
 ;
 ;
 ; AARCH64: Function Attrs: naked noinline
 ; AARCH64-LABEL: define private void @.cfi.jumptable
 ; AARCH64-SAME: () #[[ATTR1:[0-9]+]] align 8 {
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0Abti c\0Ab $1\0A", "s,s"(ptr @f.cfi, ptr @g.cfi)
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @f.cfi)
+; AARCH64-NEXT:    call void asm sideeffect "bti c\0Ab $0\0A", "s"(ptr @g.cfi)
 ; AARCH64-NEXT:    unreachable
 ;

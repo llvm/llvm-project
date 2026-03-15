@@ -2,7 +2,7 @@
 # Verify that .rodata is aligned to a 8 byte boundary.
 
 # RUN: llvm-mc -filetype=obj -triple=i386 %s -o %t.o
-# RUN: ld.lld %t.o -o %t.exe -n -Ttext 0
+# RUN: ld.lld %t.o -o %t.exe -n --image-base=0 -Ttext 0
 # RUN: llvm-readelf --section-headers %t.exe | FileCheck %s
 
 # CHECK: [ 0]           NULL     00000000 000000 000000 00      0   0  0

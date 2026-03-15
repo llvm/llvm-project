@@ -144,11 +144,13 @@ Error DWARFDebugArangeSet::extract(DWARFDataExtractor data,
     if (arangeDescriptor.Length == 0 && arangeDescriptor.Address == 0) {
       if (*offset_ptr == end_offset)
         return ErrorSuccess();
-      WarningHandler(createStringError(
-          errc::invalid_argument,
-          "address range table at offset 0x%" PRIx64
-          " has a premature terminator entry at offset 0x%" PRIx64,
-          Offset, EntryOffset));
+      if (WarningHandler) {
+        WarningHandler(createStringError(
+            errc::invalid_argument,
+            "address range table at offset 0x%" PRIx64
+            " has a premature terminator entry at offset 0x%" PRIx64,
+            Offset, EntryOffset));
+      }
     }
 
     ArangeDescriptors.push_back(arangeDescriptor);

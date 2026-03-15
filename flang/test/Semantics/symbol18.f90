@@ -2,21 +2,21 @@
 
 ! Intrinsic function in type declaration statement: type is ignored
 
-!DEF: /p1 MainProgram
-program p1
- !DEF: /p1/cos ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity INTEGER(4)
+!DEF: /P1 MainProgram
+program P1
+ !DEF: /P1/cos ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity INTEGER(4)
  integer cos
- !DEF: /p1/y (Implicit) ObjectEntity REAL(4)
- !REF: /p1/cos
- !DEF: /p1/x (Implicit) ObjectEntity REAL(4)
+ !DEF: /P1/y (Implicit) ObjectEntity REAL(4)
+ !REF: /P1/cos
+ !DEF: /P1/x (Implicit) ObjectEntity REAL(4)
  y = cos(x)
- !REF: /p1/y
- !DEF: /p1/sin ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
- !REF: /p1/x
+ !REF: /P1/y
+ !DEF: /P1/sin ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
+ !REF: /P1/x
  y = sin(x)
- !REF: /p1/y
+ !REF: /P1/y
  !DEF: /f EXTERNAL (Function, Implicit) ProcEntity REAL(4)
- !REF: /p1/x
+ !REF: /P1/x
  y = f(x)
 end program
 

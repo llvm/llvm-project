@@ -64,7 +64,7 @@ define i16 @Str64Ldr16_1(ptr nocapture %P, i64 %v, i64 %n) {
 ; CHECK-LABEL: Str64Ldr16_1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x1, [x0, #8]
-; CHECK-NEXT:    ubfx x0, x1, #16, #16
+; CHECK-NEXT:    lsr w0, w1, #16
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx0 = getelementptr inbounds i64, ptr %P, i64 1
@@ -149,7 +149,7 @@ define i8 @Str64Ldr8_3(ptr nocapture %P, i64 %v, i64 %n) {
 ; CHECK-LABEL: Str64Ldr8_3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x1, [x0, #8]
-; CHECK-NEXT:    ubfx x0, x1, #24, #8
+; CHECK-NEXT:    lsr w0, w1, #24
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx0 = getelementptr inbounds i64, ptr %P, i64 1
@@ -424,7 +424,7 @@ define i16 @Unscaled_Str64Ldr16_1(ptr nocapture %P, i64 %v, i64 %n) {
 ; CHECK-LABEL: Unscaled_Str64Ldr16_1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stur x1, [x0, #-8]
-; CHECK-NEXT:    ubfx x0, x1, #16, #16
+; CHECK-NEXT:    lsr w0, w1, #16
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx0 = getelementptr inbounds i64, ptr %P, i64 -1
@@ -509,7 +509,7 @@ define i8 @Unscaled_Str64Ldr8_3(ptr nocapture %P, i64 %v, i64 %n) {
 ; CHECK-LABEL: Unscaled_Str64Ldr8_3:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stur x1, [x0, #-8]
-; CHECK-NEXT:    ubfx x0, x1, #24, #8
+; CHECK-NEXT:    lsr w0, w1, #24
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx0 = getelementptr inbounds i64, ptr %P, i64 -1

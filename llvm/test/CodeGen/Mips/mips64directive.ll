@@ -1,5 +1,5 @@
-; RUN: llc  < %s -march=mips64el -mcpu=mips4 -target-abi=n64 | FileCheck %s
-; RUN: llc  < %s -march=mips64el -mcpu=mips64 -target-abi=n64 | FileCheck %s
+; RUN: llc  < %s -mtriple=mips64el-elf -mcpu=mips4 -target-abi=n64 | FileCheck %s
+; RUN: llc  < %s -mtriple=mips64el-elf -mcpu=mips64 -target-abi=n64 | FileCheck %s
 
 @gl = global i64 1250999896321, align 8
 

@@ -442,7 +442,7 @@ define <16 x i32> @stack_fold_inserti32x8(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -461,7 +461,7 @@ define <8 x i64> @stack_fold_inserti64x4(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2210,7 +2210,7 @@ define <16 x i32> @stack_fold_permd(<16 x i32> %a0, <16 x i32> %a1) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vpermd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2286,7 +2286,7 @@ define <8 x i64> @stack_fold_permq(<8 x i64> %a0) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vpermq $235, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[3,2,2,3,7,6,6,7]
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2307,7 +2307,7 @@ define <8 x i64> @stack_fold_permq_mask(ptr %passthru, <8 x i64> %a0, i8 %mask) 
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-NEXT:    vpermq $235, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[3,2,2,3,7,6,6,7]
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2347,7 +2347,7 @@ define <8 x i64> @stack_fold_permqvar(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vpermq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2368,7 +2368,7 @@ define <8 x i64> @stack_fold_permqvar_mask(ptr %passthru, <8 x i64> %a0, <8 x i6
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vmovdqa64 (%rdi), %zmm1
 ; CHECK-NEXT:    vpermq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
 ; CHECK-NEXT:    vpsubq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6091,7 +6091,7 @@ define <16 x i32> @stack_fold_pshufd_zmm(<16 x i32> %a0) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vpshufd $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; CHECK-NEXT:    vpsubd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -7047,6 +7047,7 @@ define <16 x i32> @stack_fold_ternlogd(<16 x i32> %x0, <16 x i32> %x1, <16 x i32
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vpternlogd $33, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm0 # 64-byte Folded Reload
+; CHECK-NEXT:    # zmm0 = ~(zmm1 | (zmm0 ^ mem))
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.pternlog.d.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2, i32 33)
@@ -7062,6 +7063,7 @@ define <8 x i64> @stack_fold_ternlogq(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vpternlogq $33, {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm0 # 64-byte Folded Reload
+; CHECK-NEXT:    # zmm0 = ~(zmm1 | (zmm0 ^ mem))
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <8 x i64> @llvm.x86.avx512.pternlog.q.512(<8 x i64> %x0, <8 x i64> %x1, <8 x i64> %x2, i32 33)

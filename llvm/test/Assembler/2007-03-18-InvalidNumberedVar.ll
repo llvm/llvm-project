@@ -1,7 +1,7 @@
 ; PR 1258
-; RUN: not llvm-as < %s >/dev/null 2> %t
-; RUN: grep "'%0' defined with type 'i1'" %t
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
+; CHECK: '%0' defined with type 'i1'
 define i32 @test1(i32 %a, i32 %b) {
 entry:
   icmp eq i32 %b, %a              ; <i1>:0 [#uses=1]

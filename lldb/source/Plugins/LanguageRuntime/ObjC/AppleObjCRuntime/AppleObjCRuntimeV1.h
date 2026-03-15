@@ -100,8 +100,8 @@ public:
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
-                                Address &address,
-                                Value::ValueType &value_type) override;
+                                Address &address, Value::ValueType &value_type,
+                                llvm::ArrayRef<uint8_t> &local_buffer) override;
 
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string, ExecutionContext &exe_ctx) override;

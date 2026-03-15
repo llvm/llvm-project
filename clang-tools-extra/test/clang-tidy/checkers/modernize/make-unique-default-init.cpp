@@ -5,8 +5,8 @@
 // RUN:             }" \
 // RUN:   -- -I %S/Inputs/smart-ptr
 
-#include "initializer_list.h"
 #include "unique_ptr.h"
+#include <vector>
 // CHECK-FIXES: #include <memory>
 
 void basic() {

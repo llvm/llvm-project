@@ -38,7 +38,6 @@ add_integration_test(
   SRCS
     tls_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.sys_mman
     libc.src.errno.errno
     libc.src.sys.mman.mmap
@@ -49,4 +48,18 @@ add_integration_test(
   SUITE libc-startup-tests
   SRCS
     init_fini_array_test.cpp
+)
+
+add_integration_test(
+  startup_irelative_test
+  SUITE libc-startup-tests
+  SRCS
+    irelative_test.cpp
+)
+
+add_integration_test(
+  startup_irelative_no_ifunc_test
+  SUITE libc-startup-tests
+  SRCS
+    irelative_no_ifunc_test.cpp
 )

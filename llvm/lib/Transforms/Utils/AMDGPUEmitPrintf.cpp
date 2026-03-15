@@ -119,7 +119,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   Builder.SetInsertPoint(Prev);
   auto CmpNull =
       Builder.CreateICmpEQ(Str, Constant::getNullValue(Str->getType()));
-  BranchInst::Create(Join, While, CmpNull, Prev);
+  Builder.CreateCondBr(CmpNull, Join, While);
 
   // Entry to the while loop.
   Builder.SetInsertPoint(While);
@@ -136,13 +136,12 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 
   // Add one to the computed length.
   Builder.SetInsertPoint(WhileDone, WhileDone->begin());
-  auto Begin = Builder.CreatePtrToInt(Str, Int64Ty);
-  auto End = Builder.CreatePtrToInt(PtrPhi, Int64Ty);
-  auto Len = Builder.CreateSub(End, Begin);
+  auto Len = Builder.CreatePtrDiff(PtrPhi, Str);
+  Len = Builder.CreateZExt(Len, Int64Ty);
   Len = Builder.CreateAdd(Len, One);
 
   // Final join.
-  BranchInst::Create(Join, WhileDone);
+  UncondBrInst::Create(Join, WhileDone);
   Builder.SetInsertPoint(Join, Join->begin());
   auto LenPhi = Builder.CreatePHI(Len->getType(), 2);
   LenPhi->addIncoming(Len, WhileDone);
@@ -154,12 +153,11 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
                                 Value *Length, bool isLast) {
   auto Int64Ty = Builder.getInt64Ty();
-  auto PtrTy = Builder.getPtrTy();
-  auto Int32Ty = Builder.getInt32Ty();
+  auto IsLastInt32 = Builder.getInt32(isLast);
   auto M = Builder.GetInsertBlock()->getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_string_n", Int64Ty,
-                                   Int64Ty, PtrTy, Int64Ty, Int32Ty);
-  auto IsLastInt32 = Builder.getInt32(isLast);
+                                   Desc->getType(), Str->getType(),
+                                   Length->getType(), IsLastInt32->getType());
   return Builder.CreateCall(Fn, {Desc, Str, Length, IsLastInt32});
 }
 
@@ -461,7 +459,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     BasicBlock *ArgPush = BasicBlock::Create(
         Ctx, "argpush.block", Builder.GetInsertBlock()->getParent());
 
-    BranchInst::Create(ArgPush, End, Cmp, Builder.GetInsertBlock());
+    CondBrInst::Create(Cmp, ArgPush, End, Builder.GetInsertBlock());
     Builder.SetInsertPoint(ArgPush);
 
     // Create controlDWord and store as the first entry, format as follows
@@ -514,7 +512,7 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
                               IsConstFmtStr);
 
     // End block, returns -1 on failure
-    BranchInst::Create(End, ArgPush);
+    UncondBrInst::Create(End, ArgPush);
     Builder.SetInsertPoint(End);
     return Builder.CreateSExt(Builder.CreateNot(Cmp), Int32Ty, "printf_result");
   }

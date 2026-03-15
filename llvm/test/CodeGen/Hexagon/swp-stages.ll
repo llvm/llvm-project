@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-aa-sched-mi -enable-pipeliner \
+; RUN: llc -mtriple=hexagon -enable-aa-sched-mi -enable-pipeliner \
 ; RUN:     -hexagon-expand-condsets=0 -pipeliner-max-stages=2 < %s
 ; REQUIRES: asserts
 

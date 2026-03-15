@@ -1,4 +1,4 @@
-//===--- RedundantSmartptrGetCheck.h - clang-tidy ---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ class RedundantSmartptrGetCheck : public ClangTidyCheck {
 public:
   RedundantSmartptrGetCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+        IgnoreMacros(Options.get("IgnoreMacros", true)) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }

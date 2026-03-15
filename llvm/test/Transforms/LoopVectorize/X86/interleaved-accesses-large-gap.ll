@@ -41,8 +41,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 ; Make sure interleave groups with a key being the special 'empty' value for
 ; the map do not cause a crash.
-define void @test_gap_empty_key() {
-; CHECK-LABEL: @test_gap_empty_key()
+define void @test_gap_empty_key(ptr %p) {
+; CHECK-LABEL: @test_gap_empty_key(ptr %p)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %for.body
 
@@ -57,7 +57,7 @@ entry:
 for.body:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %for.body ]
   %iv.next = add nsw i64 %iv, 1
-  %arrayidx = getelementptr inbounds [3 x i32], ptr undef, i64 0, i64 %iv.next
+  %arrayidx = getelementptr inbounds [3 x i32], ptr %p, i64 0, i64 %iv.next
   %G2 = getelementptr i32, ptr %arrayidx, i64 %iv.next
   %G9 = getelementptr i32, ptr %G2, i32 -2147483647
   store i32 0, ptr %G2
@@ -71,8 +71,8 @@ exit:
 
 ; Make sure interleave groups with a key being the special 'tombstone' value for
 ; the map do not cause a crash.
-define void @test_tombstone_key() {
-; CHECK-LABEL: @test_tombstone_key()
+define void @test_tombstone_key(ptr %p) {
+; CHECK-LABEL: @test_tombstone_key(ptr %p)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %for.body
 
@@ -87,7 +87,7 @@ entry:
 for.body:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %for.body ]
   %iv.next = add nsw i64 %iv, 1
-  %arrayidx = getelementptr inbounds [3 x i32], ptr undef, i64 0, i64 %iv.next
+  %arrayidx = getelementptr inbounds [3 x i32], ptr %p, i64 0, i64 %iv.next
   %G2 = getelementptr i32, ptr %arrayidx, i64 %iv.next
   %G9 = getelementptr i32, ptr %G2, i32 -2147483648
   store i32 0, ptr %G2

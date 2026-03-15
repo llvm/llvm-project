@@ -72,7 +72,7 @@ TEST12:
 	.fill TEST11 - TEST12, 4, 0x12345678
 
 # CHECK: TEST13
-# CHECK: .fill (TEST11-TEST12)+i, 4, 0x12345678
+# CHECK: .fill TEST11-TEST12+i, 4, 0x12345678
 # OBJ-ERRS: [[@LINE+2]]:8: error: expected assembly-time absolute expression
 TEST13:
 	.fill TEST11 - TEST12+i, 4, 0x12345678

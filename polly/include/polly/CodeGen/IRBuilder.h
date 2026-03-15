@@ -58,9 +58,12 @@ public:
   /// Annotate the new instruction @p I for all parallel loops.
   void annotate(llvm::Instruction *I);
 
-  /// Annotate the loop latch @p B wrt. @p L.
-  void annotateLoopLatch(llvm::BranchInst *B, llvm::Loop *L, bool IsParallel,
-                         bool IsLoopVectorizerDisabled) const;
+  /// Annotate the loop latch @p B.
+  /// Last argument is optional, if no value is passed, we don't annotate
+  /// any vectorize metadata.
+  void annotateLoopLatch(
+      llvm::BranchInst *B, bool IsParallel,
+      std::optional<bool> EnableVectorizeMetadata = std::nullopt) const;
 
   /// Add alternative alias based pointers
   ///
@@ -76,7 +79,7 @@ public:
   void addAlternativeAliasBases(
       llvm::DenseMap<llvm::AssertingVH<llvm::Value>,
                      llvm::AssertingVH<llvm::Value>> &NewMap) {
-    AlternativeAliasBases.insert(NewMap.begin(), NewMap.end());
+    AlternativeAliasBases.insert_range(NewMap);
   }
 
   /// Delete the set of alternative alias bases

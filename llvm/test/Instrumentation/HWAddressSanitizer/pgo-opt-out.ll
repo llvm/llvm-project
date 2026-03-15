@@ -1,15 +1,13 @@
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=HOT70
-; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=HOT99
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 2>&1 | FileCheck %s --check-prefix=ALL
 ; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 2>&1 | FileCheck %s --check-prefix=NONE
-
-; HOT70: remark: <unknown>:0:0: Sanitized: F=sanitized
-; HOT70: @sanitized
-; HOT70-NEXT: @__hwasan_tls
-
-; HOT99: remark: <unknown>:0:0: Skipped: F=sanitized
-; HOT99: @sanitized
-; HOT99-NEXT: %x = alloca i8, i64 4
+;
+; Skip check if either or both of the skip conditions (-hwasan-random-rate=0.0 or -hwasan-percentile-cutoff-hot=990000) is met.
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=ALL
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=1.0 -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 -hwasan-percentile-cutoff-hot=700000 2>&1 | FileCheck %s --check-prefix=NONE
+; RUN: opt < %s -passes='require<profile-summary>,hwasan' -pass-remarks=hwasan -pass-remarks-missed=hwasan -S -hwasan-random-rate=0.0 -hwasan-percentile-cutoff-hot=990000 2>&1 | FileCheck %s --check-prefix=NONE
 
 ; ALL: remark: <unknown>:0:0: Sanitized: F=sanitize
 ; ALL: @sanitized

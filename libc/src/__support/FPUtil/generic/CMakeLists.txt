@@ -8,6 +8,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -21,16 +22,17 @@ add_header_library(
     FMA.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.big_int
     libc.src.__support.macros.optimization
     libc.src.__support.uint128
 )
@@ -54,6 +56,26 @@ add_header_library(
   HDRS
     add_sub.h
   DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  div
+  HDRS
+    div.h
+  DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.algorithm
@@ -63,15 +85,14 @@ add_header_library(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
 )
 
 add_header_library(
-  div
+  mul
   HDRS
-    div.h
+    mul.h
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros

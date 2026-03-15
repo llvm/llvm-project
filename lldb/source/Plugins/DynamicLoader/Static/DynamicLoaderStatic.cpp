@@ -103,8 +103,8 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
           for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
             SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
             if (section_sp) {
-              if (target.GetSectionLoadList().GetSectionLoadAddress(
-                      section_sp) != LLDB_INVALID_ADDRESS) {
+              if (target.GetSectionLoadAddress(section_sp) !=
+                  LLDB_INVALID_ADDRESS) {
                 no_load_addresses = false;
                 break;
               }
@@ -130,9 +130,8 @@ DynamicLoaderStatic::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 Status DynamicLoaderStatic::CanLoadImage() {
-  Status error;
-  error.SetErrorString("can't load images on with a static debug session");
-  return error;
+  return Status::FromErrorString(
+      "can't load images on with a static debug session");
 }
 
 void DynamicLoaderStatic::Initialize() {

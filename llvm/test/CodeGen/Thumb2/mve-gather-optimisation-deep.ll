@@ -6,13 +6,13 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define arm_aapcs_vfpcc void @push_out_add_sub_block(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: @push_out_add_sub_block(
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 6, i32 6, i32 6, i32 6>
-; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, splat (i32 6)
+; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], <i32 32, i32 32, i32 32, i32 32>
+; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], splat (i32 32)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_END:%.*]] ]
@@ -65,13 +65,13 @@ end:
 define arm_aapcs_vfpcc void @push_out_add_sub_block_commutedphi(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: @push_out_add_sub_block_commutedphi(
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 6, i32 6, i32 6, i32 6>
-; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, splat (i32 6)
+; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], <i32 32, i32 32, i32 32, i32 32>
+; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], splat (i32 32)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_END:%.*]] ]
@@ -124,15 +124,15 @@ end:
 define arm_aapcs_vfpcc void @push_out_mul_sub_block(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n.vec) {
 ; CHECK-LABEL: @push_out_mul_sub_block(
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    [[PUSHEDOUTMUL:%.*]] = mul <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[PRODUCT:%.*]] = mul <4 x i32> <i32 8, i32 8, i32 8, i32 8>, <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> [[PUSHEDOUTMUL]], <i32 6, i32 6, i32 6, i32 6>
-; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[PUSHEDOUTMUL:%.*]] = mul <4 x i32> <i32 0, i32 2, i32 4, i32 6>, splat (i32 3)
+; CHECK-NEXT:    [[PRODUCT:%.*]] = mul <4 x i32> splat (i32 8), splat (i32 3)
+; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> [[PUSHEDOUTMUL]], splat (i32 6)
+; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], <i32 96, i32 96, i32 96, i32 96>
+; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], splat (i32 96)
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY_END:%.*]] ]
@@ -195,8 +195,8 @@ define arm_aapcs_vfpcc void @push_out_mul_sub_loop(ptr noalias nocapture readonl
 ; CHECK:       vector.2.ph:
 ; CHECK-NEXT:    br label [[VECTOR_2_BODY:%.*]]
 ; CHECK:       vector.2.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul <4 x i32> [[VEC_IND]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[TMP0]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <4 x i32> [[VEC_IND]], splat (i32 3)
+; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[TMP0]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -211,7 +211,7 @@ define arm_aapcs_vfpcc void @push_out_mul_sub_loop(ptr noalias nocapture readonl
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_BODY_END]], label [[VECTOR_2_BODY]]
 ; CHECK:       vector.body.end:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[END:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       end:
@@ -261,13 +261,13 @@ define arm_aapcs_vfpcc void @invariant_add(ptr noalias nocapture readonly %data,
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 2, i32 4, i32 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[L0:%.*]] = mul <4 x i32> [[VEC_IND]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[L0:%.*]] = mul <4 x i32> [[VEC_IND]], splat (i32 3)
 ; CHECK-NEXT:    [[L1:%.*]] = add <4 x i32> [[L0]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.arm.mve.vldr.gather.offset.v4i32.p0.v4i32(ptr [[DATA:%.*]], <4 x i32> [[L1]], i32 32, i32 2, i32 1)
 ; CHECK-NEXT:    [[L3:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[L3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 8)
 ; CHECK-NEXT:    [[L5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC:%.*]]
 ; CHECK-NEXT:    br i1 [[L5]], label [[END:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       end:

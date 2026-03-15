@@ -8,7 +8,7 @@
 
 # jitlink-check: *{8}P = X
 
-# CHECK-ERROR: relocation target "X" {{.*}} is out of range of Pointer8 fixup
+# CHECK-ERROR: relocation target {{.*}} (X) is out of range of Pointer8 fixup
 
 	.text
 	.section	.text.main,"ax",@progbits

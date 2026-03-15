@@ -103,7 +103,8 @@ protected:
   };
 
   enum RegisterSetWordSize {
-    e_regSetWordSizeGPR = sizeof(GPR) / sizeof(int),
+    e_regSetWordSizeGPR = (sizeof(GPR) - 32) / sizeof(int),
+    e_regSetWordSizeGPRFull = sizeof(GPR) / sizeof(int),
     e_regSetWordSizeFPU = sizeof(FPU) / sizeof(int),
     e_regSetWordSizeEXC = sizeof(EXC) / sizeof(int),
     e_regSetWordSizeAVX = sizeof(AVX) / sizeof(int),
@@ -130,6 +131,7 @@ protected:
     kern_return_t fpu_errs[2]; // Read/Write errors
     kern_return_t exc_errs[2]; // Read/Write errors
     kern_return_t dbg_errs[2]; // Read/Write errors
+    bool hasFullGPRState;
 
     State() {
       uint32_t i;

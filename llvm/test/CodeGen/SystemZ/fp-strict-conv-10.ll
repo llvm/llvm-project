@@ -9,25 +9,45 @@
 ; outside the i32 range but in the i64 range, so use the default expansion.
 ; Note that the strict expansion sequence must be used.
 
+declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128, metadata)
+
+; Test f16->i32. Converted to signed as the max float value is smaller than
+; the signed integer range.
+define i32 @f0(half %f) #0 {
+; CHECK-LABEL: f0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -160
+; CHECK-NEXT:    .cfi_def_cfa_offset 320
+; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT:    cfebr %r2, 5, %f0
+; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
+; CHECK-NEXT:    br %r14
+  %conv = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %f,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %conv
+}
 
 ; Test f32->i32.
 define i32 @f1(float %f) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI0_0
+; CHECK-NEXT:    larl %r1, .LCPI1_0
 ; CHECK-NEXT:    le %f1, 0(%r1)
 ; CHECK-NEXT:    kebr %f0, %f1
-; CHECK-NEXT:    jnl .LBB0_2
+; CHECK-NEXT:    jnl .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 0
 ; CHECK-NEXT:    lzer %f1
-; CHECK-NEXT:    j .LBB0_3
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    j .LBB1_3
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    llilh %r0, 32768
-; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    sebr %f0, %f1
 ; CHECK-NEXT:    cfebr %r2, 5, %f0
 ; CHECK-NEXT:    xr %r2, %r0
@@ -41,17 +61,17 @@ define i32 @f1(float %f) #0 {
 define i32 @f2(double %f) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    larl %r1, .LCPI1_0
+; CHECK-NEXT:    larl %r1, .LCPI2_0
 ; CHECK-NEXT:    ld %f1, 0(%r1)
 ; CHECK-NEXT:    kdbr %f0, %f1
-; CHECK-NEXT:    jnl .LBB1_2
+; CHECK-NEXT:    jnl .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 0
 ; CHECK-NEXT:    lzdr %f1
-; CHECK-NEXT:    j .LBB1_3
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    j .LBB2_3
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    llilh %r0, 32768
-; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    sdbr %f0, %f1
 ; CHECK-NEXT:    cfdbr %r2, 5, %f0
 ; CHECK-NEXT:    xr %r2, %r0
@@ -67,17 +87,17 @@ define i32 @f3(ptr %src) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
 ; CHECK-NEXT:    ld %f2, 8(%r2)
-; CHECK-NEXT:    larl %r1, .LCPI2_0
+; CHECK-NEXT:    larl %r1, .LCPI3_0
 ; CHECK-NEXT:    lxeb %f1, 0(%r1)
 ; CHECK-NEXT:    kxbr %f0, %f1
-; CHECK-NEXT:    jnl .LBB2_2
+; CHECK-NEXT:    jnl .LBB3_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    lhi %r0, 0
 ; CHECK-NEXT:    lzxr %f1
-; CHECK-NEXT:    j .LBB2_3
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    j .LBB3_3
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    llilh %r0, 32768
-; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    sxbr %f0, %f1
 ; CHECK-NEXT:    cfxbr %r2, 5, %f0
 ; CHECK-NEXT:    xr %r2, %r0

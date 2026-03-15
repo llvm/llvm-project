@@ -35,7 +35,7 @@ protected:
 
     // A failure here means that the test itself is buggy.
     if (!M)
-      report_fatal_error(Twine(os.str()));
+      report_fatal_error(Twine(errMsg));
 
     Function *F = M->getFunction("test");
     if (F == nullptr)
@@ -240,6 +240,30 @@ TEST_F(BasicTest, getShuffleDemandedElts) {
   EXPECT_TRUE(getShuffleDemandedElts(4, {4, 2, 7, 3}, APInt(4, 0xf), LHS, RHS));
   EXPECT_EQ(LHS.getZExtValue(), 0xcU);
   EXPECT_EQ(RHS.getZExtValue(), 0x9U);
+}
+
+TEST_F(BasicTest, getHorizontalDemandedEltsForFirstOperand) {
+  APInt LHS, RHS;
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b0000), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0000U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0000U);
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b0001), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0001U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0000U);
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b1000), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0000U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0100U);
+
+  getHorizDemandedEltsForFirstOperand(128, APInt(4, 0b0110), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0100U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0001U);
+
+  getHorizDemandedEltsForFirstOperand(256, APInt(4, 0b0100), LHS, RHS);
+  EXPECT_EQ(LHS.getZExtValue(), 0b0100U);
+  EXPECT_EQ(RHS.getZExtValue(), 0b0000U);
 }
 
 TEST_F(BasicTest, getSplatIndex) {
@@ -583,8 +607,7 @@ protected:
   }
 
   bool validParams(ArrayRef<VFParameter> Parameters) {
-    Shape.Parameters =
-        SmallVector<VFParameter, 8>(Parameters.begin(), Parameters.end());
+    Shape.Parameters = SmallVector<VFParameter, 8>(Parameters);
     return Shape.hasValidParameterList();
   }
 };

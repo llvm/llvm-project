@@ -14,6 +14,18 @@ static const char *ClonedLoopTag = "loop_constrainer.loop.clone";
 
 #define DEBUG_TYPE "loop-constrainer"
 
+static bool isLoopEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
+                                     ICmpInst::Predicate Pred,
+                                     const SCEV *Start, const SCEV *Bound) {
+  // First, try to prove the predicate without applying loop guards.
+  if (SE.isLoopEntryGuardedByCond(L, Pred, Start, Bound))
+    return true;
+  // Otherwise, try again with loop guards applied to the SCEVs.
+  auto StartLG = SE.applyLoopGuards(Start, L);
+  auto BoundLG = SE.applyLoopGuards(Bound, L);
+  return SE.isLoopEntryGuardedByCond(L, Pred, StartLG, BoundLG);
+}
+
 /// Given a loop with an deccreasing induction variable, is it possible to
 /// safely calculate the bounds of a new loop using the given Predicate.
 static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
@@ -42,11 +54,8 @@ static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   ICmpInst::Predicate BoundPred =
       IsSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
 
-  auto StartLG = SE.applyLoopGuards(Start, L);
-  auto BoundLG = SE.applyLoopGuards(BoundSCEV, L);
-
   if (LatchBrExitIdx == 1)
-    return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, BoundLG);
+    return isLoopEntryGuardedByCond(SE, L, BoundPred, Start, BoundSCEV);
 
   assert(LatchBrExitIdx == 0 && "LatchBrExitIdx should be either 0 or 1");
 
@@ -57,10 +66,10 @@ static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Min), StepPlusOne);
 
   const SCEV *MinusOne =
-      SE.getMinusSCEV(BoundLG, SE.getOne(BoundLG->getType()));
+      SE.getMinusSCEV(BoundSCEV, SE.getOne(BoundSCEV->getType()));
 
-  return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, MinusOne) &&
-         SE.isLoopEntryGuardedByCond(L, BoundPred, BoundLG, Limit);
+  return isLoopEntryGuardedByCond(SE, L, BoundPred, Start, MinusOne) &&
+         isLoopEntryGuardedByCond(SE, L, BoundPred, BoundSCEV, Limit);
 }
 
 /// Given a loop with an increasing induction variable, is it possible to
@@ -89,11 +98,8 @@ static bool isSafeIncreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   ICmpInst::Predicate BoundPred =
       IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
 
-  auto StartLG = SE.applyLoopGuards(Start, L);
-  auto BoundLG = SE.applyLoopGuards(BoundSCEV, L);
-
   if (LatchBrExitIdx == 1)
-    return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, BoundLG);
+    return isLoopEntryGuardedByCond(SE, L, BoundPred, Start, BoundSCEV);
 
   assert(LatchBrExitIdx == 0 && "LatchBrExitIdx should be 0 or 1");
 
@@ -103,9 +109,9 @@ static bool isSafeIncreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
                        : APInt::getMaxValue(BitWidth);
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Max), StepMinusOne);
 
-  return (SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG,
-                                      SE.getAddExpr(BoundLG, Step)) &&
-          SE.isLoopEntryGuardedByCond(L, BoundPred, BoundLG, Limit));
+  return (isLoopEntryGuardedByCond(SE, L, BoundPred, Start,
+                                   SE.getAddExpr(BoundSCEV, Step)) &&
+          isLoopEntryGuardedByCond(SE, L, BoundPred, BoundSCEV, Limit));
 }
 
 /// Returns estimate for max latch taken count of the loop of the narrowest
@@ -150,8 +156,8 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     return std::nullopt;
   }
 
-  BranchInst *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
-  if (!LatchBr || LatchBr->isUnconditional()) {
+  CondBrInst *LatchBr = dyn_cast<CondBrInst>(Latch->getTerminator());
+  if (!LatchBr) {
     FailureReason = "latch terminator not conditional branch";
     return std::nullopt;
   }
@@ -397,8 +403,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
-  const DataLayout &DL = Preheader->getDataLayout();
-  SCEVExpander Expander(SE, DL, "loop-constrainer");
+  SCEVExpander Expander(SE, "loop-constrainer");
   Instruction *Ins = Preheader->getTerminator();
 
   if (FixedRightSCEV)
@@ -510,7 +515,7 @@ void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
       for (PHINode &PN : SBB->phis()) {
         Value *OldIncoming = PN.getIncomingValueForBlock(OriginalBB);
         PN.addIncoming(GetClonedValue(OldIncoming), ClonedBB);
-        SE.forgetValue(&PN);
+        SE.forgetLcssaPhiWithNewPredecessor(&OriginalLoop, &PN);
       }
     }
   }
@@ -598,7 +603,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   RRI.PseudoExit = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".pseudo.exit", &F,
                                       BBInsertLocation);
 
-  BranchInst *PreheaderJump = cast<BranchInst>(Preheader->getTerminator());
+  Instruction *PreheaderJump = Preheader->getTerminator();
   bool Increasing = LS.IndVarIncreasing;
   bool IsSignedPredicate = LS.IsSignedPredicate;
 
@@ -642,8 +647,8 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   Value *IterationsLeft = B.CreateICmp(Pred, IndVarBase, LoopExitAt);
   B.CreateCondBr(IterationsLeft, RRI.PseudoExit, LS.LatchExit);
 
-  BranchInst *BranchToContinuation =
-      BranchInst::Create(ContinuationBlock, RRI.PseudoExit);
+  UncondBrInst *BranchToContinuation =
+      UncondBrInst::Create(ContinuationBlock, RRI.PseudoExit);
 
   // We emit PHI nodes into `RRI.PseudoExit' that compute the "latest" value of
   // each of the PHI nodes in the loop header.  This feeds into the initial
@@ -685,7 +690,7 @@ BasicBlock *LoopConstrainer::createPreheader(const LoopStructure &LS,
                                              BasicBlock *OldPreheader,
                                              const char *Tag) const {
   BasicBlock *Preheader = BasicBlock::Create(Ctx, Tag, &F, LS.Header);
-  BranchInst::Create(LS.Header, Preheader);
+  UncondBrInst::Create(LS.Header, Preheader);
 
   LS.Header->replacePhiUsesWith(OldPreheader, Preheader);
 
@@ -733,7 +738,7 @@ bool LoopConstrainer::run() {
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
-  SCEVExpander Expander(SE, F.getDataLayout(), "loop-constrainer");
+  SCEVExpander Expander(SE, "loop-constrainer");
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'

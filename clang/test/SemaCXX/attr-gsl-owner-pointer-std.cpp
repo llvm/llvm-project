@@ -27,6 +27,11 @@ public:
 static_assert(sizeof(vector<int>), "");           // Force instantiation.
 static_assert(sizeof(vector<int>::iterator), ""); // Force instantiation.
 
+template <>
+class vector<bool> {};
+// CHECK: ClassTemplateSpecializationDecl {{.*}} vector
+// CHECK: OwnerAttr {{.*}}
+
 // If std::container::iterator is a using declaration, attributes are inferred
 // for the underlying class.
 template <typename T>
@@ -173,6 +178,18 @@ class reference_wrapper;
 class some_unknown_type;
 // CHECK: CXXRecordDecl {{.*}} some_unknown_type
 
+using size_t = unsigned;
+inline constexpr size_t dynamic_extent = -1;
+template <typename _Tp, size_t _Extent = dynamic_extent>
+class span;
+// CHECK: CXXRecordDecl {{.*}} span
+// CHECK: PointerAttr {{.*}}
+
+
+template <typename _Tp>
+struct span<_Tp, dynamic_extent> {};
+// CHECK: ClassTemplatePartialSpecializationDecl {{.*}} span
+// CHECK: PointerAttr {{.*}}
 } // namespace std
 
 namespace user {

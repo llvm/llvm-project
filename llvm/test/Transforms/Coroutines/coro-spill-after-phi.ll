@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 ; Verifies that the both phis are stored correctly in the coroutine frame
-; CHECK: %f.Frame = type { ptr, ptr, i32, i32, i1 }
+
 
 define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-LABEL: @f(
@@ -12,15 +12,15 @@ define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[N:%.*]], i32 0, i32 2
 ; CHECK-NEXT:    [[SPEC_SELECT5:%.*]] = select i1 [[N]], i32 1, i32 3
-; CHECK-NEXT:    [[PHI2_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[PHI2_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT5]], ptr [[PHI2_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[PHI1_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[PHI1_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    store i32 [[SPEC_SELECT]], ptr [[PHI1_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[INDEX_ADDR4:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR4]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
@@ -50,7 +50,7 @@ cleanup:
   call void @free(ptr %mem)
   br label %suspend
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -63,7 +63,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32)
 declare i32 @print(i32)

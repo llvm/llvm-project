@@ -35,25 +35,14 @@ def testLocationEnterExit():
             # Asserting a different context should clear it.
             with Context() as ctx2:
                 assert Context.current is ctx2
-                try:
-                    _ = Location.current
-                except ValueError:
-                    pass
-                else:
-                    assert False, "Expected exception"
+                assert Location.current is None
 
             # And should restore.
             assert Context.current is ctx1
             assert Location.current is loc1
 
     # All should clear.
-    try:
-        _ = Location.current
-    except ValueError as e:
-        # CHECK: No current Location
-        print(e)
-    else:
-        assert False, "Expected exception"
+    assert Location.current is None
 
 
 run(testLocationEnterExit)
@@ -72,12 +61,7 @@ def testInsertionPointEnterExit():
             assert InsertionPoint.current is ip
             assert Location.current is loc1
         # Location should clear.
-        try:
-            _ = Location.current
-        except ValueError:
-            pass
-        else:
-            assert False, "Expected exception"
+        assert Location.current is None
 
         # Asserting the same Context should preserve.
         with ctx1:

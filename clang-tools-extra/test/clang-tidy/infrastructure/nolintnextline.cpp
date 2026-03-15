@@ -70,11 +70,11 @@ class I5 { I5(int x); };
 class I6 { I6(int x); };
 
 int array1[10];
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead [cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays]
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
 int array2[10];
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use std::array<> instead [modernize-avoid-c-arrays]
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: do not declare C-style arrays, use 'std::array' instead [modernize-avoid-c-arrays]
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 int array3[10];

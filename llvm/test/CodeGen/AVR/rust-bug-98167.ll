@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; The bug can be found here:
 ; https://github.com/rust-lang/rust/issues/98167

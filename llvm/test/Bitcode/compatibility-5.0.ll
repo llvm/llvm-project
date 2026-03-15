@@ -514,7 +514,7 @@ declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
 ; CHECK: declare void @f.param.noalias(ptr noalias)
 declare void @f.param.nocapture(i8* nocapture)
-; CHECK: declare void @f.param.nocapture(ptr nocapture)
+; CHECK: declare void @f.param.nocapture(ptr captures(none))
 declare void @f.param.nest(i8* nest)
 ; CHECK: declare void @f.param.nest(ptr nest)
 declare i8* @f.param.returned(i8* returned)
@@ -820,7 +820,7 @@ define void @typesystem() {
   %t6 = alloca ppc_fp128
   ; CHECK: %t6 = alloca ppc_fp128
   %t7 = alloca x86_mmx
-  ; CHECK: %t7 = alloca x86_mmx
+  ; CHECK: %t7 = alloca <1 x i64>
   %t8 = alloca %opaquety*
   ; CHECK: %t8 = alloca ptr
 

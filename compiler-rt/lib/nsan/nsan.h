@@ -32,10 +32,12 @@ using __sanitizer::uptr;
 // Private nsan interface. Used e.g. by interceptors.
 extern "C" {
 
+void __nsan_init();
+
 // This marks the shadow type of the given block of application memory as
 // unknown.
 // printf-free (see comment in nsan_interceptors.cc).
-void __nsan_set_value_unknown(const u8 *addr, uptr size);
+void __nsan_set_value_unknown(const void *addr, uptr size);
 
 // Copies annotations in the shadow memory for a block of application memory to
 // a new address. This function is used together with memory-copying functions
@@ -43,11 +45,19 @@ void __nsan_set_value_unknown(const u8 *addr, uptr size);
 // `__nsan_copy_values(dest, src, size)` after builtin calls to
 // `memcpy(dest, src, size)`. Intercepted memcpy calls also call this function.
 // printf-free (see comment in nsan_interceptors.cc).
-void __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size);
+void __nsan_copy_values(const void *daddr, const void *saddr, uptr size);
 
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
 __nsan_default_options();
 }
+
+// Unwind the stack for fatal error, as the parameter `stack` is
+// empty without origins.
+#define GET_FATAL_STACK_TRACE_IF_EMPTY(STACK)                                  \
+  if (nsan_initialized && (STACK)->size == 0) {                                \
+    (STACK)->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,  \
+                    common_flags()->fast_unwind_on_fatal);                     \
+  }
 
 namespace __nsan {
 
@@ -55,36 +65,33 @@ extern bool nsan_initialized;
 extern bool nsan_init_is_running;
 
 void InitializeInterceptors();
+void InitializeMallocInterceptors();
 
 // See notes in nsan_platform.
-// printf-free (see comment in nsan_interceptors.cc).
-inline u8 *GetShadowAddrFor(u8 *Ptr) {
-  uptr AppOffset = ((uptr)Ptr) & ShadowMask();
+inline u8 *GetShadowAddrFor(void *ptr) {
+  uptr AppOffset = ((uptr)ptr) & ShadowMask();
   return (u8 *)(AppOffset * kShadowScale + ShadowAddr());
 }
 
-// printf-free (see comment in nsan_interceptors.cc).
-inline const u8 *GetShadowAddrFor(const u8 *Ptr) {
-  return GetShadowAddrFor(const_cast<u8 *>(Ptr));
+inline u8 *GetShadowAddrFor(const void *ptr) {
+  return GetShadowAddrFor(const_cast<void *>(ptr));
 }
 
-// printf-free (see comment in nsan_interceptors.cc).
-inline u8 *GetShadowTypeAddrFor(u8 *Ptr) {
-  uptr AppOffset = ((uptr)Ptr) & ShadowMask();
-  return (u8 *)(AppOffset + TypesAddr());
+inline u8 *GetShadowTypeAddrFor(void *ptr) {
+  uptr app_offset = ((uptr)ptr) & ShadowMask();
+  return (u8 *)(app_offset + TypesAddr());
 }
 
-// printf-free (see comment in nsan_interceptors.cc).
-inline const u8 *GetShadowTypeAddrFor(const u8 *Ptr) {
-  return GetShadowTypeAddrFor(const_cast<u8 *>(Ptr));
+inline u8 *GetShadowTypeAddrFor(const void *ptr) {
+  return GetShadowTypeAddrFor(const_cast<void *>(ptr));
 }
 
 // Information about value types and their shadow counterparts.
 template <typename FT> struct FTInfo {};
 template <> struct FTInfo<float> {
   using orig_type = float;
-  using orig_bits_type = __sanitizer::u32;
-  using mantissa_bits_type = __sanitizer::u32;
+  using orig_bits_type = u32;
+  using mantissa_bits_type = u32;
   using shadow_type = double;
   static const char *kCppTypeName;
   static constexpr unsigned kMantissaBits = 23;
@@ -101,8 +108,8 @@ template <> struct FTInfo<float> {
 };
 template <> struct FTInfo<double> {
   using orig_type = double;
-  using orig_bits_type = __sanitizer::u64;
-  using mantissa_bits_type = __sanitizer::u64;
+  using orig_bits_type = u64;
+  using mantissa_bits_type = u64;
   using shadow_type = __float128;
   static const char *kCppTypeName;
   static constexpr unsigned kMantissaBits = 52;
@@ -123,7 +130,7 @@ template <> struct FTInfo<double> {
 };
 template <> struct FTInfo<long double> {
   using orig_type = long double;
-  using mantissa_bits_type = __sanitizer::u64;
+  using mantissa_bits_type = u64;
   using shadow_type = __float128;
   static const char *kCppTypeName;
   static constexpr unsigned kMantissaBits = 63;

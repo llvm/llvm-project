@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 // RUN:   %p/Inputs/exclude-libs.s -o %t2.o
-// RUN: llvm-as --data-layout=elf %p/Inputs/exclude-libs.ll -o %t3.o
+// RUN: llvm-as --data-layout=e %p/Inputs/exclude-libs.ll -o %t3.o
 // RUN: mkdir -p %t.dir
 // RUN: rm -f %t.dir/exc.a
 // RUN: llvm-ar rcs %t.dir/exc.a %t2.o %t3.o

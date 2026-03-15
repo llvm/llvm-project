@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    void f(int *A, char N, char p) {
 ;      for (char i = 0; i < N; i++) {

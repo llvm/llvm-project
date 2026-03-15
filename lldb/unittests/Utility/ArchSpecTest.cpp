@@ -114,6 +114,14 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_EQ(ArchSpec::eCore_ppc_ppc970, AS.GetCore());
 
   AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("24-0-apple-unknown"));
+  EXPECT_EQ(uint32_t(llvm::MachO::CPU_TYPE_RISCV), AS.GetMachOCPUType());
+  EXPECT_EQ(0u, AS.GetMachOCPUSubType());
+  EXPECT_TRUE(llvm::StringRef(AS.GetTriple().str())
+                  .consume_front("riscv32-apple-unknown"));
+  EXPECT_EQ(ArchSpec::eCore_riscv32, AS.GetCore());
+
+  AS = ArchSpec();
   EXPECT_TRUE(AS.SetTriple("i686-pc-windows"));
   EXPECT_EQ(llvm::Triple::x86, AS.GetTriple().getArch());
   EXPECT_EQ(llvm::Triple::PC, AS.GetTriple().getVendor());
@@ -128,6 +136,12 @@ TEST(ArchSpecTest, TestSetTriple) {
   EXPECT_EQ(llvm::Triple::msp430, AS.GetTriple().getArch());
   EXPECT_STREQ("msp430", AS.GetArchitectureName());
   EXPECT_EQ(ArchSpec::eCore_msp430, AS.GetCore());
+
+  AS = ArchSpec();
+  EXPECT_TRUE(AS.SetTriple("amd64-unknown-openbsd"));
+  EXPECT_EQ(llvm::Triple::x86_64, AS.GetTriple().getArch());
+  EXPECT_STREQ("amd64", AS.GetArchitectureName());
+  EXPECT_EQ(ArchSpec::eCore_x86_64_amd64, AS.GetCore());
 
   // Various flavors of invalid triples.
   AS = ArchSpec();
@@ -393,6 +407,12 @@ TEST(ArchSpecTest, Compatibility) {
     // ios-macabi wins.
     B.MergeFrom(A);
     ASSERT_TRUE(B.IsExactMatch(C));
+  }
+  {
+    ArchSpec A("x86_64-apple-driverkit19.0");
+    ArchSpec B("x86_64-apple-macosx10.15.0");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
 }
 

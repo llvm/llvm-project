@@ -1,5 +1,4 @@
 ; RUN: opt -passes=hwasan -S -o - %s | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=hwasan -S -o - %s | FileCheck %s
 
 source_filename = "test.ll"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

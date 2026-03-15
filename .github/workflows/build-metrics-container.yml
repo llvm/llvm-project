@@ -1,0 +1,56 @@
+name: Build Metrics Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-metrics-container.yml
+      - '.ci/metrics/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-metrics-container.yml
+      - '.ci/metrics/**'
+
+jobs:
+  build-metrics-container:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .ci/metrics/
+            .github/actions/build-container
+      - name: Build Container
+        uses: ./.github/actions/build-container
+        with:
+          container-name: metrics
+          context: .ci/metrics
+          dockerfile: .ci/metrics/Dockerfile
+  
+  push-metrics-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-metrics-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/actions/push-container
+
+      - uses: ./.github/actions/push-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

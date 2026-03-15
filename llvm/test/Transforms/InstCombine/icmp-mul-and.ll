@@ -54,8 +54,7 @@ define i1 @mul_mask_pow2_ne0_use2(i8 %x) {
 
 define i1 @mul_mask_pow2_sgt0(i8 %x) {
 ; CHECK-LABEL: @mul_mask_pow2_sgt0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %x, 44
@@ -68,8 +67,7 @@ define i1 @mul_mask_pow2_sgt0(i8 %x) {
 
 define i1 @mul_mask_fakepow2_ne0(i8 %x) {
 ; CHECK-LABEL: @mul_mask_fakepow2_ne0(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %x, 44
@@ -82,8 +80,7 @@ define i1 @mul_mask_fakepow2_ne0(i8 %x) {
 
 define i1 @mul_mask_pow2_eq4(i8 %x) {
 ; CHECK-LABEL: @mul_mask_pow2_eq4(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul i8 %x, 44
@@ -158,7 +155,7 @@ define i32 @pr40493_neg3(i32 %area) {
 
 define <4 x i1> @pr40493_vec1(<4 x i32> %area) {
 ; CHECK-LABEL: @pr40493_vec1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[AREA:%.*]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[AREA:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -171,7 +168,7 @@ define <4 x i1> @pr40493_vec1(<4 x i32> %area) {
 define <4 x i1> @pr40493_vec2(<4 x i32> %area) {
 ; CHECK-LABEL: @pr40493_vec2(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[AREA:%.*]], <i32 12, i32 12, i32 12, i32 undef>
-; CHECK-NEXT:    [[REM:%.*]] = and <4 x i32> [[MUL]], <i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[REM:%.*]] = and <4 x i32> [[MUL]], splat (i32 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[REM]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -183,7 +180,7 @@ define <4 x i1> @pr40493_vec2(<4 x i32> %area) {
 
 define <4 x i1> @pr40493_vec3(<4 x i32> %area) {
 ; CHECK-LABEL: @pr40493_vec3(
-; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[AREA:%.*]], <i32 12, i32 12, i32 12, i32 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i32> [[AREA:%.*]], splat (i32 12)
 ; CHECK-NEXT:    [[REM:%.*]] = and <4 x i32> [[MUL]], <i32 4, i32 4, i32 4, i32 undef>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[REM]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]

@@ -26,6 +26,7 @@ def ResX2 : ProcResource<1>; // X2
 let OutOperandList = (outs), InOperandList = (ins) in {
   def Inst_A : Instruction;
   def Inst_B : Instruction;
+  def Inst_C : Instruction;
 }
 
 let CompleteModel = 0 in {
@@ -34,6 +35,7 @@ let CompleteModel = 0 in {
 
 def WriteInst_A : SchedWrite;
 def WriteInst_B : SchedWrite;
+def WriteInst_C : SchedWrite;
 
 let SchedModel = SchedModel_A in {
 // Check the generated data when there are no semantic issues.
@@ -49,8 +51,13 @@ def : WriteRes<WriteInst_A, [ResX0, ResX1, ResX2]> {
 }
 def : WriteRes<WriteInst_B, [ResX2]> {
 // If unspecified, AcquireAtCycle is set to 0.
-// CORRECT-NEXT: { 3, 1, 0} // #4
+// CORRECT-NEXT: { 3, 1, 0}, // #4
     let ReleaseAtCycles = [1];
+}
+def : WriteRes<WriteInst_C, [ResX0]> {
+// AcquireAtCycle and ReleaseAtCycle are allowed to be the same.
+// CORRECT-NEXT: { 1, 0, 0} // #5
+    let ReleaseAtCycles = [0];
 }
 #endif // CORRECT
 
@@ -63,7 +70,7 @@ def : WriteRes<WriteInst_A, [ResX0, ResX1, ResX2]> {
 #endif
 
 #ifdef WRONG_VALUE
-// WRONG_VALUE: AcquireAtCycle.td:[[@LINE+1]]:1: error: Inconsistent resource cycles: AcquireAtCycles < ReleaseAtCycles must hold
+// WRONG_VALUE: AcquireAtCycle.td:[[@LINE+1]]:1: error: Inconsistent resource cycles: AcquireAtCycles <= ReleaseAtCycles must hold
 def : WriteRes<WriteInst_A, [ResX0, ResX1, ResX2]> {
     let ReleaseAtCycles = [2, 4, 3];
     let AcquireAtCycles = [0, 1, 8];
@@ -80,6 +87,7 @@ def : WriteRes<WriteInst_A, [ResX0]> {
 
 def : InstRW<[WriteInst_A], (instrs Inst_A)>;
 def : InstRW<[WriteInst_B], (instrs Inst_B)>;
+def : InstRW<[WriteInst_C], (instrs Inst_C)>;
 }
 
 def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
