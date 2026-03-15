@@ -193,8 +193,13 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`bugprone-argument-comment
-  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
-  inherited constructors.
+  <clang-tidy/checks/bugprone/argument-comment>`:
+
+  - Checks for C++11 inherited constructors.
+
+  - Adds `CommentAnonymousInitLists` and `CommentTypedInitLists` options
+    to comment braced-init list arguments (for example, ``{}`` and
+    ``Type{}``).
 
 - Improved :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
