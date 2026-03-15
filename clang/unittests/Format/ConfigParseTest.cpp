@@ -231,6 +231,9 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AcrossComments);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseArrows);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseColons);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Empty);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Inline);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Other);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
@@ -687,7 +690,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: None",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({}));
+              FormatStyle::ShortFunctionStyle());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Inline",
               AllowShortFunctionsOnASingleLine,
               FormatStyle::ShortFunctionStyle::setEmptyAndInline());
@@ -704,7 +707,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
               AllowShortFunctionsOnASingleLine,
-              FormatStyle::ShortFunctionStyle({}));
+              FormatStyle::ShortFunctionStyle());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
               AllowShortFunctionsOnASingleLine,
               FormatStyle::ShortFunctionStyle::setAll());
