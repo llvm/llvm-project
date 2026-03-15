@@ -117,8 +117,6 @@ private:
   friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
-  template <class _Tp, class>
-  friend struct __optional_iterator;
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
   operator==(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {

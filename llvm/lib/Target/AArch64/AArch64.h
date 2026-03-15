@@ -82,13 +82,13 @@ ModulePass *createAArch64Arm64ECCallLoweringPass();
 
 void initializeAArch64A53Fix835769LegacyPass(PassRegistry &);
 void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
-void initializeAArch64AdvSIMDScalarPass(PassRegistry&);
+void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
 void initializeAArch64PointerAuthPass(PassRegistry&);
-void initializeAArch64BranchTargetsPass(PassRegistry&);
+void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);
 void initializeAArch64CFIFixupPass(PassRegistry&);
-void initializeAArch64CollectLOHPass(PassRegistry &);
-void initializeAArch64CompressJumpTablesPass(PassRegistry&);
+void initializeAArch64CollectLOHLegacyPass(PassRegistry &);
+void initializeAArch64CompressJumpTablesLegacyPass(PassRegistry &);
 void initializeAArch64CondBrTuningPass(PassRegistry &);
 void initializeAArch64ConditionOptimizerPass(PassRegistry&);
 void initializeAArch64ConditionalComparesPass(PassRegistry &);
@@ -130,6 +130,33 @@ public:
 };
 
 class AArch64A53Fix835769Pass : public PassInfoMixin<AArch64A53Fix835769Pass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64BranchTargetsPass
+    : public PassInfoMixin<AArch64BranchTargetsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64AdvSIMDScalarPass
+    : public PassInfoMixin<AArch64AdvSIMDScalarPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64CollectLOHPass : public PassInfoMixin<AArch64CollectLOHPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AArch64CompressJumpTablesPass
+    : public PassInfoMixin<AArch64CompressJumpTablesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

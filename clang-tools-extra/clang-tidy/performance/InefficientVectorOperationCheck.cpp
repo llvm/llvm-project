@@ -229,14 +229,14 @@ void InefficientVectorOperationCheck::check(
   if (VectorAppendCall != nullptr) {
     PartialReserveStmt = ".reserve";
   } else {
-    llvm::StringRef FieldName = ProtoAddFieldCall->getMethodDecl()->getName();
+    StringRef FieldName = ProtoAddFieldCall->getMethodDecl()->getName();
     FieldName.consume_front("add_");
     const std::string MutableFieldName = ("mutable_" + FieldName).str();
     PartialReserveStmt = "." + MutableFieldName +
                          "()->Reserve"; // e.g., ".mutable_xxx()->Reserve"
   }
 
-  const llvm::StringRef VarName = Lexer::getSourceText(
+  const StringRef VarName = Lexer::getSourceText(
       CharSourceRange::getTokenRange(
           AppendCall->getImplicitObjectArgument()->getSourceRange()),
       SM, Context->getLangOpts());

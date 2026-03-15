@@ -309,91 +309,91 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
                           unsigned short *usp, unsigned short us, int *ip,
                           int i, unsigned int *uip, unsigned ui, long *lp,
                           long l, long long *llp, long long ll) {
-  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw add ptr {{.*}} monotonic, align 4
   __nvvm_atom_add_gen_i(ip, i);
-  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw add ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_add_gen_l(&dl, l);
-  // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw add ptr {{.*}} monotonic, align 8
   __nvvm_atom_add_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align 4
   __nvvm_atom_sub_gen_i(ip, i);
-  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_sub_gen_l(&dl, l);
-  // CHECK: atomicrmw sub ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw sub ptr {{.*}} monotonic, align 8
   __nvvm_atom_sub_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw and ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw and ptr {{.*}} monotonic, align 4
   __nvvm_atom_and_gen_i(ip, i);
-  // CHECK: atomicrmw and ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw and ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_and_gen_l(&dl, l);
-  // CHECK: atomicrmw and ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw and ptr {{.*}} monotonic, align 8
   __nvvm_atom_and_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw or ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw or ptr {{.*}} monotonic, align 4
   __nvvm_atom_or_gen_i(ip, i);
-  // CHECK: atomicrmw or ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw or ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_or_gen_l(&dl, l);
-  // CHECK: atomicrmw or ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw or ptr {{.*}} monotonic, align 8
   __nvvm_atom_or_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xor ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align 4
   __nvvm_atom_xor_gen_i(ip, i);
-  // CHECK: atomicrmw xor ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_xor_gen_l(&dl, l);
-  // CHECK: atomicrmw xor ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw xor ptr {{.*}} monotonic, align 8
   __nvvm_atom_xor_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align 4
   __nvvm_atom_xchg_gen_i(ip, i);
-  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_xchg_gen_l(&dl, l);
-  // CHECK: atomicrmw xchg ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw xchg ptr {{.*}} monotonic, align 8
   __nvvm_atom_xchg_gen_ll(&sll, ll);
 
-  // CHECK: atomicrmw max ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw max ptr {{.*}} monotonic, align 4
   __nvvm_atom_max_gen_i(ip, i);
-  // CHECK: atomicrmw umax ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align 4
   __nvvm_atom_max_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw max ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw max ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_max_gen_l(&dl, l);
-  // CHECK: atomicrmw umax ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_max_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw max ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw max ptr {{.*}} monotonic, align 8
   __nvvm_atom_max_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umax ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw umax ptr {{.*}} monotonic, align 8
   __nvvm_atom_max_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: atomicrmw min ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw min ptr {{.*}} monotonic, align 4
   __nvvm_atom_min_gen_i(ip, i);
-  // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align 4
   __nvvm_atom_min_gen_ui((unsigned int *)ip, i);
-  // CHECK: atomicrmw min ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw min ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_min_gen_l(&dl, l);
-  // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align {{4|8}}
+  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align {{4|8}}
   __nvvm_atom_min_gen_ul((unsigned long *)&dl, l);
-  // CHECK: atomicrmw min ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw min ptr {{.*}} monotonic, align 8
   __nvvm_atom_min_gen_ll(&sll, ll);
-  // CHECK: atomicrmw umin ptr {{.*}} seq_cst, align 8
+  // CHECK: atomicrmw umin ptr {{.*}} monotonic, align 8
   __nvvm_atom_min_gen_ull((unsigned long long *)&sll, ll);
 
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 4
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 4
   // CHECK-NEXT: extractvalue { i32, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_i(ip, 0, i);
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align {{4|8}}
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align {{4|8}}
   // CHECK-NEXT: extractvalue { {{i32|i64}}, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_l(&dl, 0, l);
-  // CHECK: cmpxchg ptr {{.*}} seq_cst seq_cst, align 8
+  // CHECK: cmpxchg ptr {{.*}} monotonic monotonic, align 8
   // CHECK-NEXT: extractvalue { i64, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_ll(&sll, 0, ll);
 
-  // CHECK: atomicrmw fadd ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw fadd ptr {{.*}} monotonic, align 4
   __nvvm_atom_add_gen_f(fp, f);
 
-  // CHECK: atomicrmw uinc_wrap ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}} monotonic, align 4
   __nvvm_atom_inc_gen_ui(uip, ui);
 
-  // CHECK: atomicrmw udec_wrap ptr {{.*}} seq_cst, align 4
+  // CHECK: atomicrmw udec_wrap ptr {{.*}} monotonic, align 4
   __nvvm_atom_dec_gen_ui(uip, ui);
 
 
@@ -646,7 +646,7 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
 #endif
 
 #if __CUDA_ARCH__ >= 700
-  // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} seq_cst seq_cst, align 2
+  // CHECK_PTX63_SM70: cmpxchg ptr {{.*}} monotonic monotonic, align 2
   // CHECK_PTX63_SM70-NEXT: extractvalue { i16, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_us(usp, 0, us);
   // CHECK_PTX63_SM70: call i16 @llvm.nvvm.atomic.cas.gen.i.cta.i16.p0

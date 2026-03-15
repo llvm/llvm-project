@@ -277,12 +277,10 @@ public:
     /// remove the Def from this map and add this SuperNode to the list of
     /// dependants of the defining node.
     ///
-    /// Returns true if SuperNodeDeps was changed.
+    /// Returns true if any elements were removed.
     bool hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
                    ElemToSuperNodeMap &ElemToSN) {
-      bool SuperNodeDepsChanged = false;
-
-      Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+      return Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
         auto I = ElemToSN.find(Container);
         if (I == ElemToSN.end())
           return false;
@@ -294,15 +292,11 @@ public:
             return false;
 
           auto *DefSN = J->second;
-          if (DefSN != this) {
-            SuperNodeDepsChanged = true;
+          if (DefSN != this)
             SuperNodeDeps[DefSN].insert(this);
-          }
           return true;
         });
       });
-
-      return SuperNodeDepsChanged;
     }
   };
 
@@ -471,8 +465,21 @@ public:
     ElemToSuperNodeMap ElemToSN;
   };
 
+  class OpRecorder {
+  public:
+    virtual ~OpRecorder() = default;
+    virtual void
+    recordSimplify(const std::vector<std::unique_ptr<SuperNode>> &SNs) = 0;
+    virtual void recordFail(const ContainerElementsMap &Failed) = 0;
+    virtual void recordEnd() = 0;
+  };
+
   /// Preprocess a list of SuperNodes to remove all intra-SN dependencies.
-  static SimplifyResult simplify(std::vector<std::unique_ptr<SuperNode>> SNs) {
+  static SimplifyResult simplify(std::vector<std::unique_ptr<SuperNode>> SNs,
+                                 OpRecorder *Rec = nullptr) {
+    if (Rec)
+      Rec->recordSimplify(SNs);
+
     // Build ElemToSN map.
     ElemToSuperNodeMap ElemToSN;
     for (auto &SN : SNs)
@@ -559,7 +566,10 @@ public:
   /// result, so clients should take whatever actions are needed to mark
   /// this as failed in their external representation.
   std::vector<std::unique_ptr<SuperNode>>
-  fail(const ContainerElementsMap &Failed) {
+  fail(const ContainerElementsMap &Failed, OpRecorder *Rec = nullptr) {
+    if (Rec)
+      Rec->recordFail(Failed);
+
     std::vector<std::unique_ptr<SuperNode>> FailedSNs;
 
     visitWithRemoval(PendingSNs, [&](std::unique_ptr<SuperNode> &SN) {
@@ -725,34 +735,21 @@ private:
   processExternalDeps(std::vector<std::unique_ptr<SuperNode>> &SNs,
                       GetExternalStateFn &GetExternalState) {
     DenseSet<SuperNode *> FailedSNs;
-    for (auto &SN : SNs) {
-      bool SNHasError = false;
-      SmallVector<ContainerId> ContainersToRemove;
-      for (auto &[Container, Elems] : SN->Deps) {
-        SmallVector<ElementId> ElemToRemove;
-        for (auto &Elem : Elems) {
+    for (auto &SN : SNs)
+      SN->Deps.visit([&](ContainerId &Container, ElementSet &Elements) {
+        return Elements.remove_if([&](ElementId &Elem) {
           switch (GetExternalState(Container, Elem)) {
           case ExternalState::None:
-            break;
+            return false;
           case ExternalState::Ready:
-            ElemToRemove.push_back(Elem);
-            break;
+            return true;
           case ExternalState::Failed:
-            ElemToRemove.push_back(Elem);
-            SNHasError = true;
-            break;
-          }
-        }
-        for (auto &Elem : ElemToRemove)
-          Elems.erase(Elem);
-        if (Elems.empty())
-          ContainersToRemove.push_back(Container);
-      }
-      for (auto &Container : ContainersToRemove)
-        SN->Deps.erase(Container);
-      if (SNHasError)
-        FailedSNs.insert(SN.get());
-    }
+            FailedSNs.insert(SN.get());
+            return true;
+          };
+          llvm_unreachable("Unknown ExternalState enum");
+        });
+      });
 
     return FailedSNs;
   }

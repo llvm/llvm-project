@@ -110,9 +110,9 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   auto Replaces = getReplacerMap();
   ReverseDescriptor = getReverseDescriptor();
   auto BeginEndNames = getFreeBeginEndMethods();
-  const llvm::SmallVector<StringRef, 4> BeginNames{
+  const SmallVector<StringRef, 4> BeginNames{
       llvm::make_first_range(BeginEndNames)};
-  const llvm::SmallVector<StringRef, 4> EndNames{
+  const SmallVector<StringRef, 4> EndNames{
       llvm::make_second_range(BeginEndNames)};
   Replacers.clear();
   llvm::DenseSet<Replacer *> SeenRepl;
@@ -163,7 +163,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
 static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
                                ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
-  llvm::SmallVector<unsigned> Sorted(Indexes);
+  SmallVector<unsigned> Sorted(Indexes);
   llvm::sort(Sorted);
   // Keep track of commas removed
   llvm::SmallBitVector Commas(Call.getNumArgs());
@@ -233,7 +233,7 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     if (auto Include = Replacer->getHeaderInclusion(*Function))
       Diag << Inserter.createIncludeInsertion(
           Result.SourceManager->getFileID(Call->getBeginLoc()), *Include);
-    llvm::SmallVector<unsigned, 3> ToRemove;
+    SmallVector<unsigned, 3> ToRemove;
     for (const auto &[First, Second, Replace] : Sig) {
       auto ArgNode = ArgName + std::to_string(First);
       if (const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode)) {

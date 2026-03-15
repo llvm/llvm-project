@@ -26,15 +26,15 @@ using namespace orc_rt;
 using ::testing::Eq;
 using ::testing::Optional;
 
-class MockResourceManager : public ResourceManager {
+class MockService : public Service {
 public:
   enum class Op { Detach, Shutdown };
 
   static Error alwaysSucceed(Op) { return Error::success(); }
 
-  MockResourceManager(std::optional<size_t> &DetachOpIdx,
-                      std::optional<size_t> &ShutdownOpIdx, size_t &OpIdx,
-                      move_only_function<Error(Op)> GenResult = alwaysSucceed)
+  MockService(std::optional<size_t> &DetachOpIdx,
+              std::optional<size_t> &ShutdownOpIdx, size_t &OpIdx,
+              move_only_function<Error(Op)> GenResult = alwaysSucceed)
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
@@ -53,6 +53,21 @@ private:
   std::optional<size_t> &ShutdownOpIdx;
   size_t &OpIdx;
   move_only_function<Error(Op)> GenResult;
+};
+
+class ConfigurableService : public Service {
+public:
+  ConfigurableService(int ConstructorOption) {}
+
+  void onDetach(OnCompleteFn OnComplete) override {
+    OnComplete(Error::success());
+  }
+
+  void onShutdown(OnCompleteFn OnComplete) override {
+    OnComplete(Error::success());
+  }
+
+  void doMoreConfig(int) noexcept {}
 };
 
 class NoDispatcher : public TaskDispatcher {
@@ -292,15 +307,15 @@ TEST(SessionTest, DispatchTask) {
   EXPECT_EQ(X, 1);
 }
 
-TEST(SessionTest, SingleResourceManager) {
+TEST(SessionTest, SingleService) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
 
   {
     Session S(std::make_unique<NoDispatcher>(), noErrors);
-    S.addResourceManager(std::make_unique<MockResourceManager>(
-        DetachOpIdx, ShutdownOpIdx, OpIdx));
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
   }
 
   EXPECT_EQ(OpIdx, 1U);
@@ -308,7 +323,7 @@ TEST(SessionTest, SingleResourceManager) {
   EXPECT_THAT(ShutdownOpIdx, Optional(Eq(0)));
 }
 
-TEST(SessionTest, MultipleResourceManagers) {
+TEST(SessionTest, MultipleServices) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx[3];
   std::optional<size_t> ShutdownOpIdx[3];
@@ -316,8 +331,8 @@ TEST(SessionTest, MultipleResourceManagers) {
   {
     Session S(std::make_unique<NoDispatcher>(), noErrors);
     for (size_t I = 0; I != 3; ++I)
-      S.addResourceManager(std::make_unique<MockResourceManager>(
-          DetachOpIdx[I], ShutdownOpIdx[I], OpIdx));
+      S.addService(std::make_unique<MockService>(DetachOpIdx[I],
+                                                 ShutdownOpIdx[I], OpIdx));
   }
 
   EXPECT_EQ(OpIdx, 3U);
@@ -330,7 +345,7 @@ TEST(SessionTest, MultipleResourceManagers) {
 
 TEST(SessionTest, ExpectedShutdownSequence) {
   // Check that Session shutdown results in...
-  // 1. ResourceManagers being shut down.
+  // 1. Services being shut down.
   // 2. The TaskDispatcher being shut down.
   // 3. A call to OnShutdownComplete.
 
@@ -350,8 +365,8 @@ TEST(SessionTest, ExpectedShutdownSequence) {
                   DispatcherShutDown = true;
                 }),
             noErrors);
-  S.addResourceManager(
-      std::make_unique<MockResourceManager>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+  S.addService(
+      std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
   S.shutdown([&]() {
     EXPECT_TRUE(DispatcherShutDown);
@@ -360,6 +375,18 @@ TEST(SessionTest, ExpectedShutdownSequence) {
   S.waitForShutdown();
 
   EXPECT_TRUE(SessionShutdownComplete);
+}
+
+TEST(SessionTest, AddServiceAndUseRef) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  auto &CS = S.addService(std::make_unique<ConfigurableService>(42));
+  CS.doMoreConfig(1);
+}
+
+TEST(SessionTest, CreateServiceAndUseRef) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  auto &CS = S.createService<ConfigurableService>(42);
+  CS.doMoreConfig(1);
 }
 
 TEST(ControllerAccessTest, Basics) {

@@ -208,11 +208,11 @@ ChainedASTReaderListener::ReadFileSystemOptions(const FileSystemOptions &FSOpts,
 
 bool ChainedASTReaderListener::ReadHeaderSearchOptions(
     const HeaderSearchOptions &HSOpts, StringRef ModuleFilename,
-    StringRef SpecificModuleCachePath, bool Complain) {
-  return First->ReadHeaderSearchOptions(HSOpts, ModuleFilename,
-                                        SpecificModuleCachePath, Complain) ||
-         Second->ReadHeaderSearchOptions(HSOpts, ModuleFilename,
-                                         SpecificModuleCachePath, Complain);
+    StringRef ContextHash, bool Complain) {
+  return First->ReadHeaderSearchOptions(HSOpts, ModuleFilename, ContextHash,
+                                        Complain) ||
+         Second->ReadHeaderSearchOptions(HSOpts, ModuleFilename, ContextHash,
+                                         Complain);
 }
 
 bool ChainedASTReaderListener::ReadPreprocessorOptions(
@@ -960,25 +960,31 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
 /// \returns true when the module cache paths differ.
-static bool checkModuleCachePath(
-    llvm::vfs::FileSystem &VFS, StringRef SpecificModuleCachePath,
-    StringRef ExistingSpecificModuleCachePath, StringRef ASTFilename,
-    DiagnosticsEngine *Diags, const LangOptions &LangOpts,
-    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
-    const HeaderSearchOptions &ASTFileHSOpts) {
+static bool checkModuleCachePath(FileManager &FileMgr, StringRef ContextHash,
+                                 StringRef ExistingSpecificModuleCachePath,
+                                 StringRef ASTFilename,
+                                 DiagnosticsEngine *Diags,
+                                 const LangOptions &LangOpts,
+                                 const PreprocessorOptions &PPOpts,
+                                 const HeaderSearchOptions &HSOpts,
+                                 const HeaderSearchOptions &ASTFileHSOpts) {
+  std::string SpecificModuleCachePath = createSpecificModuleCachePath(
+      FileMgr, ASTFileHSOpts.ModuleCachePath, ASTFileHSOpts.DisableModuleHash,
+      std::string(ContextHash));
+
   if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
       SpecificModuleCachePath == ExistingSpecificModuleCachePath)
     return false;
-  auto EqualOrErr =
-      VFS.equivalent(SpecificModuleCachePath, ExistingSpecificModuleCachePath);
+  auto EqualOrErr = FileMgr.getVirtualFileSystem().equivalent(
+      SpecificModuleCachePath, ExistingSpecificModuleCachePath);
   if (EqualOrErr && *EqualOrErr)
     return false;
   if (Diags) {
     // If the module cache arguments provided from the command line are the
     // same, the mismatch must come from other arguments of the configuration
     // and not directly the cache path.
-    EqualOrErr =
-        VFS.equivalent(ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
+    EqualOrErr = FileMgr.getVirtualFileSystem().equivalent(
+        ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
     if (EqualOrErr && *EqualOrErr)
       Diags->Report(clang::diag::warn_ast_file_config_mismatch) << ASTFilename;
     else
@@ -991,14 +997,14 @@ static bool checkModuleCachePath(
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                            StringRef ASTFilename,
-                                           StringRef SpecificModuleCachePath,
+                                           StringRef ContextHash,
                                            bool Complain) {
   const HeaderSearch &HeaderSearchInfo = PP.getHeaderSearchInfo();
-  return checkModuleCachePath(
-      Reader.getFileManager().getVirtualFileSystem(), SpecificModuleCachePath,
-      HeaderSearchInfo.getSpecificModuleCachePath(), ASTFilename,
-      Complain ? &Reader.Diags : nullptr, PP.getLangOpts(),
-      PP.getPreprocessorOpts(), HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
+  return checkModuleCachePath(Reader.getFileManager(), ContextHash,
+                              HeaderSearchInfo.getSpecificModuleCachePath(),
+                              ASTFilename, Complain ? &Reader.Diags : nullptr,
+                              PP.getLangOpts(), PP.getPreprocessorOpts(),
+                              HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
@@ -5877,13 +5883,11 @@ namespace {
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                 StringRef ASTFilename,
-                                 StringRef SpecificModuleCachePath,
+                                 StringRef ASTFilename, StringRef ContextHash,
                                  bool Complain) override {
       return checkModuleCachePath(
-          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
-          ExistingSpecificModuleCachePath, ASTFilename, nullptr,
-          ExistingLangOpts, ExistingPPOpts, ExistingHSOpts, HSOpts);
+          FileMgr, ContextHash, ExistingSpecificModuleCachePath, ASTFilename,
+          nullptr, ExistingLangOpts, ExistingPPOpts, ExistingHSOpts, HSOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -6705,10 +6709,10 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
   HSOpts.UseStandardSystemIncludes = Record[Idx++];
   HSOpts.UseStandardCXXIncludes = Record[Idx++];
   HSOpts.UseLibcxx = Record[Idx++];
-  std::string SpecificModuleCachePath = ReadString(Record, Idx);
+  std::string ContextHash = ReadString(Record, Idx);
 
-  return Listener.ReadHeaderSearchOptions(HSOpts, ModuleFilename,
-                                          SpecificModuleCachePath, Complain);
+  return Listener.ReadHeaderSearchOptions(HSOpts, ModuleFilename, ContextHash,
+                                          Complain);
 }
 
 bool ASTReader::ParseHeaderSearchPaths(const RecordData &Record, bool Complain,

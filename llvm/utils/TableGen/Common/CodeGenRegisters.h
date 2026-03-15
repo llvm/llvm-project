@@ -318,6 +318,10 @@ inline bool operator==(const CodeGenRegister &A, const CodeGenRegister &B) {
   return A.EnumValue == B.EnumValue;
 }
 
+inline bool operator!=(const CodeGenRegister &A, const CodeGenRegister &B) {
+  return !(A == B);
+}
+
 class CodeGenRegisterClass {
   CodeGenRegister::Vec Members;
   // Bit mask of members, indexed by getRegIndex.

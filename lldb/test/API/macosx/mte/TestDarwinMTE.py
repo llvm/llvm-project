@@ -5,6 +5,7 @@ import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import configuration
 import lldbsuite.test.cpu_feature as cpu_feature
 
 exe_name = "uaf"  # Must match Makefile
@@ -18,7 +19,15 @@ class TestDarwinMTE(TestBase):
         self.build(make_targets=["binary-plain"])
         self.createTestTarget(self.getBuildArtifact(exe_name))
 
-        self.expect("process launch", substrs=["exited with status = 0"])
+        if configuration.mte_enabled:
+            # When running under the MTE launcher, MTE is inherited by child
+            # processes, so even without --memory-tagging the UAF is caught.
+            self.expect(
+                "process launch",
+                substrs=["stopped", "stop reason = EXC_ARM_MTE_TAG_FAULT"],
+            )
+        else:
+            self.expect("process launch", substrs=["exited with status = 0"])
 
         self.expect(
             "process launch --memory-tagging",
