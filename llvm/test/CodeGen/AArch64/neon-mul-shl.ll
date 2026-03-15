@@ -31,6 +31,58 @@ define <2 x i64> @mul_v2i64_9(<2 x i64> %v) {
   ret <2 x i64> %mul
 }
 
+define <2 x i64> @mul_v2i64_neg_33(<2 x i64> %v) {
+; CHECK-LABEL: mul_v2i64_neg_33:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v1.2d, v0.2d, #5
+; CHECK-NEXT:    add v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    neg v0.2d, v0.2d
+; CHECK-NEXT:    ret
+  %mul = mul <2 x i64> %v, splat (i64 -33)
+  ret <2 x i64> %mul
+}
+
+define <2 x i64> @mul_v2i64_neg_15(<2 x i64> %v) {
+; CHECK-LABEL: mul_v2i64_neg_15:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v1.2d, v0.2d, #4
+; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %mul = mul <2 x i64> %v, splat (i64 -15)
+  ret <2 x i64> %mul
+}
+define <2 x i64> @mul_v2i64_8800(<2 x i64> %v) {
+; CHECK-LABEL: mul_v2i64_8800:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v1.2d, v0.2d, #11
+; CHECK-NEXT:    shl v0.2d, v0.2d, #15
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %mul = mul <2 x i64> %v, splat (i64 34816) ; 0x8800
+  ret <2 x i64> %mul
+}
+
+define <2 x i64> @mul_v2i64_f800(<2 x i64> %v) {
+; CHECK-LABEL: mul_v2i64_f800:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v1.2d, v0.2d, #11
+; CHECK-NEXT:    shl v0.2d, v0.2d, #16
+; CHECK-NEXT:    sub v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %mul = mul <2 x i64> %v, splat (i64 63488) ; 0xf800
+  ret <2 x i64> %mul
+}
+
+;; This should not be optimized as it doesn't lower to a mul
+define <2 x i64> @mul_v2i64_256(<2 x i64> %v) {
+; CHECK-LABEL: mul_v2i64_256:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2d, v0.2d, #8
+; CHECK-NEXT:    ret
+  %mul = mul <2 x i64> %v, splat (i64 256)
+  ret <2 x i64> %mul
+}
+
 ;; This should not be optimized
 define <2 x i64> @mul_v2i64_13_no_opt(<2 x i64> %v) {
 ; CHECK-LABEL: mul_v2i64_13_no_opt:
