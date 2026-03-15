@@ -589,13 +589,13 @@ private:
     const auto *NextLine = I[1];
 
     // Current line begins both record and block, brace was not wrapped.
-    if (Line->Last->isOneOf(TT_StructLBrace, TT_ClassLBrace, TT_UnionLBrace)) {
+    if (Line->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace, TT_UnionLBrace)) {
       auto ShouldWrapLBrace = [&](TokenType LBraceType) {
         switch (LBraceType) {
-        case TT_StructLBrace:
-          return Style.BraceWrapping.AfterStruct;
         case TT_ClassLBrace:
           return Style.BraceWrapping.AfterClass;
+        case TT_StructLBrace:
+          return Style.BraceWrapping.AfterStruct;
         case TT_UnionLBrace:
           return Style.BraceWrapping.AfterUnion;
         default:
