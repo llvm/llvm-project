@@ -5586,13 +5586,17 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
 
   Function *F = CLI->getFunction();
   // Blocks must have terminators.
-  auto *UI = new UnreachableInst(F->getContext(), CLI->getAfter());
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return DominatorTreeAnalysis(); });
   FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
   LoopAnalysis LIA;
   LoopInfo &&LI = LIA.run(*F, FAM);
-  UI->eraseFromParent();
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
   Loop *L = LI.getLoopFor(CLI->getHeader());
   SmallVector<Metadata *> LoopMDList;
   if (ChunkSize || DistScheduleChunkSize)
@@ -6878,7 +6882,10 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   Function *F = CanonicalLoop->getFunction();
 
   // Blocks must have terminators.
-  auto *UI = new UnreachableInst(Ctx, CanonicalLoop->getAfter());
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
 
   // TODO: We should not rely on pass manager. Currently we use pass manager
   // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
@@ -6892,7 +6899,8 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   LoopAnalysis LIA;
   LoopInfo &&LI = LIA.run(*F, FAM);
 
-  UI->eraseFromParent();
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
 
   Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
   if (AlignedVars.size()) {
@@ -7012,7 +7020,10 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
 
   // Blocks must have terminators.
-  auto *UI = new UnreachableInst(F->getContext(), CLI->getAfter());
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
 
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return TargetLibraryAnalysis(); });
@@ -7038,7 +7049,8 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   AssumptionCache &&AC = ACT.run(*F, FAM);
   OptimizationRemarkEmitter ORE{F};
 
-  UI->eraseFromParent();
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
 
   Loop *L = LI.getLoopFor(CLI->getHeader());
   assert(L && "Expecting CanonicalLoopInfo to be recognized as a loop");
