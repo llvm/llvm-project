@@ -317,7 +317,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-inefficient-string-concatenation
   <clang-tidy/checks/performance/inefficient-string-concatenation>` check by
-  adding support for detecting inefficient string concatenation in ``do-while`` loops.
+  adding support for detecting inefficient string concatenation in ``do-while``
+  loops.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
