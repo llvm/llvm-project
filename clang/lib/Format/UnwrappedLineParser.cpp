@@ -2546,8 +2546,8 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
     // PP directive and returned the first post-PP token (AtEndOfPPLine ==
     // true), flush the accumulated pre-PP body tokens as their own
     // UnwrappedLine. This gives each PP-separated segment its own line so the
-    // BWHCCodeLine level-boost in addUnwrappedLine can apply the correct
-    // indentation.
+    // IsACodeLineInsidePPBlock level-boost in addUnwrappedLine can apply the 
+    // correct indentation.
     if (IsEnum && !IsAngleBracket &&
         Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
         Style.AllowShortEnumsOnASingleLine && AtEndOfPPLine &&
@@ -4703,14 +4703,14 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
     // Line->PPLevel (set at first-token push time) instead of the current
     // PPBranchLevel, which may have been altered by later PP directives that
     // readToken processed after the code tokens but before addUnwrappedLine.
-    const bool BWHCCodeLine =
+    const bool IsACodeLineInsidePPBlock =
         Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
         !Line->InPPDirective && Line->PPLevel > 0;
-    const unsigned PPAdj = BWHCCodeLine ? Line->PPLevel : 0;
-    if (BWHCCodeLine)
+    const unsigned PPAdj = IsACodeLineInsidePPBlock ? Line->PPLevel : 0;
+    if (IsACodeLineInsidePPBlock)
       Line->Level += PPAdj;
     CurrentLines->push_back(std::move(*Line));
-    if (BWHCCodeLine)
+    if (IsACodeLineInsidePPBlock)
       Line->Level -= PPAdj;
   }
   Line->Tokens.clear();
