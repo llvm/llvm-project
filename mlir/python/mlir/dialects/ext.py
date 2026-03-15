@@ -17,7 +17,7 @@ from typing import (
 from collections.abc import Sequence
 from dataclasses import dataclass
 from inspect import Parameter, Signature
-from types import UnionType, SimpleNamespace
+from types import UnionType
 from . import irdl
 from ._ods_common import _cext, segmented_accessor
 from .irdl import Variadicity
