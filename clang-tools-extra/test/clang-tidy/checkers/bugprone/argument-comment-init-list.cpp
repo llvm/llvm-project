@@ -13,16 +13,18 @@
 #include <initializer_list>
 #include <vector>
 
-namespace GH171842 {
-
 struct T {
   int value;
 };
 
 void foo(T some_arg, const std::vector<int> &dims);
 void foo_init_list(T some_arg, std::initializer_list<int> dims);
+void foo_nested_init_list(T some_arg,
+                          std::initializer_list<std::initializer_list<int>> dims);
 template <typename ElemTy>
 void foo_template(T some_arg, const std::vector<ElemTy> &dims);
+template <typename DimsTy>
+void foo_template_typed(T some_arg, const DimsTy &dims);
 
 void test_braced_init_list() {
   T some_arg{0};
@@ -76,6 +78,26 @@ void test_initializer_list() {
   // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-4]]:27: warning: argument comment missing for literal argument 'dims'
   // CHECK-MESSAGES-BOTH: [[@LINE-5]]:27: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-BOTH: foo_init_list(some_arg, /*dims=*/{1, 2, 3});
+
+  foo_init_list(some_arg, std::initializer_list<int>{1, 2, 3});
+  // CHECK-MESSAGES-OFF-NOT: :[[@LINE-1]]:27: warning: argument comment missing for literal argument 'dims'
+  // CHECK-MESSAGES-ANON-NOT: :[[@LINE-2]]:27: warning: argument comment missing for literal argument 'dims'
+  // CHECK-MESSAGES-TYPED: [[@LINE-3]]:27: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-TYPED: foo_init_list(some_arg, /*dims=*/std::initializer_list<int>{1, 2, 3});
+  // CHECK-MESSAGES-BOTH: [[@LINE-5]]:27: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH: foo_init_list(some_arg, /*dims=*/std::initializer_list<int>{1, 2, 3});
+}
+
+void test_nested_initializer_list() {
+  T some_arg{0};
+
+  foo_nested_init_list(some_arg, {{1, 2}, {3, 4}});
+  // CHECK-MESSAGES-OFF-NOT: :[[@LINE-1]]:34: warning: argument comment missing for literal argument 'dims'
+  // CHECK-MESSAGES-ANON: [[@LINE-2]]:34: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-ANON: foo_nested_init_list(some_arg, /*dims=*/{{.*}});
+  // CHECK-MESSAGES-TYPED-NOT: :[[@LINE-4]]:34: warning: argument comment missing for literal argument 'dims'
+  // CHECK-MESSAGES-BOTH: [[@LINE-5]]:34: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH: foo_nested_init_list(some_arg, /*dims=*/{{.*}});
 }
 
 template <typename ElemTy>
@@ -99,6 +121,18 @@ void test_template_dependent_init_list() {
   // CHECK-FIXES-BOTH: foo_template<ElemTy>(some_arg, /*dims=*/std::vector<ElemTy>{});
 }
 
-template void test_template_dependent_init_list<int>();
+template <typename DimsTy>
+void test_template_dependent_typed_init_list() {
+  T some_arg{0};
 
-} // namespace GH171842
+  foo_template_typed<DimsTy>(some_arg, DimsTy{1, 2, 3});
+  // CHECK-MESSAGES-OFF-NOT: :[[@LINE-1]]:40: warning: argument comment missing for literal argument 'dims'
+  // CHECK-MESSAGES-ANON-NOT: :[[@LINE-2]]:40: warning: argument comment missing for literal argument 'dims'
+  // CHECK-MESSAGES-TYPED: [[@LINE-3]]:40: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-TYPED: foo_template_typed<DimsTy>(some_arg, /*dims=*/DimsTy{1, 2, 3});
+  // CHECK-MESSAGES-BOTH: [[@LINE-5]]:40: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
+  // CHECK-FIXES-BOTH: foo_template_typed<DimsTy>(some_arg, /*dims=*/DimsTy{1, 2, 3});
+}
+
+template void test_template_dependent_init_list<int>();
+template void test_template_dependent_typed_init_list<std::vector<int>>();

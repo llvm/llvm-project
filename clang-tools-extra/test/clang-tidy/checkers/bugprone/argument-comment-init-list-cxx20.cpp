@@ -10,8 +10,6 @@
 // RUN:     bugprone-argument-comment.CommentAnonymousInitLists: true, \
 // RUN:     bugprone-argument-comment.CommentTypedInitLists: true}}" --
 
-namespace GH171842 {
-
 struct T {
   int value;
 };
@@ -44,5 +42,3 @@ void test_designated_init() {
   // CHECK-MESSAGES-BOTH: [[@LINE-5]]:28: warning: argument comment missing for literal argument 'dims' [bugprone-argument-comment]
   // CHECK-FIXES-BOTH: foo_designated(some_arg, /*dims=*/Agg{.x = 1});
 }
-
-} // namespace GH171842

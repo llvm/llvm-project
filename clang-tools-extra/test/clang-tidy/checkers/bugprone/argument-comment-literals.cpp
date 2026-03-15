@@ -7,6 +7,7 @@
 // RUN:     bugprone-argument-comment.CommentStringLiterals: true, \
 // RUN:     bugprone-argument-comment.CommentNullPtrs: true, \
 // RUN:     bugprone-argument-comment.CommentCharacterLiterals: true}}" --
+
 struct A {
   void foo(bool abc);
   void foo(bool abc, bool cde);

@@ -215,12 +215,10 @@ enum class InitListKind {
 } // namespace
 
 static InitListKind getInitListKind(const Expr *Arg) {
-  Arg = Arg->IgnoreImplicit();
+  Arg = Arg->IgnoreUnlessSpelledInSource();
 
-  // Peel std::initializer_list wrappers until we reach the underlying
-  // list-initialization expression.
-  while (const auto *StdInit = dyn_cast<CXXStdInitializerListExpr>(Arg))
-    Arg = StdInit->getSubExpr()->IgnoreImplicit();
+  if (const auto *StdInit = dyn_cast<CXXStdInitializerListExpr>(Arg))
+    Arg = StdInit->getSubExpr()->IgnoreUnlessSpelledInSource();
 
   if (isa<InitListExpr>(Arg))
     return InitListKind::Anonymous;
@@ -236,8 +234,12 @@ static InitListKind getInitListKind(const Expr *Arg) {
     return InitListKind::Anonymous;
   }
 
+  // std::initializer_list<T>{...} is represented as a functional cast whose
+  // subexpression carries the list-initialization spelling.
   if (const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg)) {
-    if (FuncCast->isListInitialization())
+    const Expr *SubExpr = FuncCast->getSubExpr()->IgnoreImplicit();
+    if (FuncCast->isListInitialization() ||
+        isa<CXXStdInitializerListExpr>(SubExpr))
       return InitListKind::Typed;
   }
 
@@ -247,6 +249,8 @@ static InitListKind getInitListKind(const Expr *Arg) {
 // Given the argument type and the options determine if we should
 // be adding an argument comment.
 bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
+  const InitListKind Kind = getInitListKind(Arg);
+
   // Strip implicit wrappers so brace-init arguments bound to references still
   // look like list-initialization at this point.
   Arg = Arg->IgnoreImplicit();
@@ -254,8 +258,6 @@ bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
     Arg = UO->getSubExpr()->IgnoreImplicit();
   if (Arg->getExprLoc().isMacroID())
     return false;
-
-  const InitListKind Kind = getInitListKind(Arg);
 
   return (CommentAnonymousInitLists && Kind == InitListKind::Anonymous) ||
          (CommentTypedInitLists && Kind == InitListKind::Typed) ||
