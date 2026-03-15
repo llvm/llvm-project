@@ -49,7 +49,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              raw_ostream &O) {
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
-                                          
+
   if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
     // Look up the bitwidth of this int type register from
     // IntTypeBitwidths map.
