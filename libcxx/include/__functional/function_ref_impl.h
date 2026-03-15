@@ -54,7 +54,8 @@ private:
 
   // use a union instead of a plain `void*` to avoid dropping const qualifiers and casting function pointers to data
   // pointers
-  // todo: libstdc++ does not support volatile objects. shall we support it? the standard does not say it should not be supported
+  // todo: libstdc++ does not support volatile objects. shall we support it? the standard does not say it should not be
+  // supported
   union __storage_t {
     void* __obj_ptr_;
     void const* __obj_const_ptr_;

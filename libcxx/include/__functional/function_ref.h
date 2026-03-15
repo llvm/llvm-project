@@ -19,14 +19,13 @@
 #if _LIBCPP_STD_VER >= 26
 // NOLINTBEGIN(readability-duplicate-include)
 
-#define _LIBCPP_FUNCTION_REF_CV
-#include <__functional/function_ref_impl.h>
-#undef _LIBCPP_FUNCTION_REF_CV
+#  define _LIBCPP_FUNCTION_REF_CV
+#  include <__functional/function_ref_impl.h>
+#  undef _LIBCPP_FUNCTION_REF_CV
 
-
-#define _LIBCPP_FUNCTION_REF_CV const
-#include <__functional/function_ref_impl.h>
-#undef _LIBCPP_FUNCTION_REF_CV
+#  define _LIBCPP_FUNCTION_REF_CV const
+#  include <__functional/function_ref_impl.h>
+#  undef _LIBCPP_FUNCTION_REF_CV
 
 // NOLINTEND(readability-duplicate-include)
 #endif // _LIBCPP_STD_VER >= 26
