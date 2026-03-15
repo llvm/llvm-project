@@ -123,7 +123,7 @@ struct HeapAddressDescription {
   u32 free_stack_id;
   ChunkAccess chunk_access;
 
-  void Print() const;
+  void Print(bool nonself = false) const;
 };
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
@@ -228,7 +228,7 @@ class AddressDescription {
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }
-  void Print(const char *bug_descr = nullptr) const {
+  void Print(const char *bug_descr = nullptr, bool nonself = false) const {
     switch (data.kind) {
       case kAddressKindWild:
         data.wild.Print();
@@ -236,7 +236,7 @@ class AddressDescription {
       case kAddressKindShadow:
         return data.shadow.Print();
       case kAddressKindHeap:
-        return data.heap.Print();
+        return data.heap.Print(nonself);
       case kAddressKindStack:
         return data.stack.Print();
       case kAddressKindGlobal:

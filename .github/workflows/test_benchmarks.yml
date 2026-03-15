@@ -1,0 +1,87 @@
+name: Test Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+      test_runs_on:
+        type: string
+  workflow_call:
+    inputs:
+      artifact_group:
+        type: string
+      artifact_run_id:
+        type: string
+        default: ""
+      amdgpu_families:
+        type: string
+      test_runs_on:
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  configure_benchmark_matrix:
+    name: "Configure benchmark matrix"
+    # if there is a test machine available
+    if: ${{ inputs.test_runs_on != '' }}
+    runs-on: ${{ inputs.test_runs_on }}
+    outputs:
+      components: ${{ steps.configure.outputs.components }}
+      platform: ${{ steps.configure.outputs.platform }}
+    steps:
+      - name: "Fetch 'build_tools' from repository"
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: build_tools
+          path: "prejob"
+
+      # Checkout failure is possible on Windows, as it's the first job on a GPU test runner.
+      # Post-job cleanup isn't necessary since no executables are launched in this job.
+      - name: Pre-job cleanup processes on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: powershell
+        run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
+
+      - name: "Checking out repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setting up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.12
+
+      - name: "Configuring benchmark options"
+        id: configure
+        env:
+          ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+          AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+          IS_BENCHMARK_WORKFLOW: "true"
+        run: python ./build_tools/github_actions/fetch_test_configurations.py
+
+  run_benchmarks:
+    name: 'Benchmark ${{ matrix.components.job_name }}'
+    needs: [configure_benchmark_matrix]
+    # skip benchmarks if no benchmark matrix to run
+    if: ${{ needs.configure_benchmark_matrix.outputs.components != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        components: ${{ fromJSON(needs.configure_benchmark_matrix.outputs.components) }}
+    uses: './.github/workflows/test_component.yml'
+    secrets: inherit
+    with:
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_group: ${{ inputs.artifact_group }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      test_runs_on: ${{ inputs.test_runs_on }}
+      platform: ${{ needs.configure_benchmark_matrix.outputs.platform }}
+      component: ${{ toJSON(matrix.components) }}

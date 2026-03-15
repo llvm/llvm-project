@@ -35,7 +35,7 @@
 #undef __OPENMP_SPIRV__
 #endif // __SPIRV__
 
-#endif
+#endif //__CLANG_OPENMP_COMPLEX__
 
 // Grab the host header too.
 #include_next <complex>

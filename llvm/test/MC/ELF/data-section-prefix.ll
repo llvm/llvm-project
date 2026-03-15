@@ -1,7 +1,7 @@
 ; REQUIRES: bpf-registered-target
 
 ; RUN: llc -filetype obj -o - %s | llvm-readobj --sections - | FileCheck --check-prefix="SECTIONS" %s
-;
+
 ; SECTIONS:         Name: .data.A
 ; SECTIONS-NEXT:    Type: SHT_PROGBITS (0x1)
 ; SECTIONS-NEXT:        Flags [ (0x3)

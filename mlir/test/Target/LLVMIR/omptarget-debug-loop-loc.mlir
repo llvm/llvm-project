@@ -1,4 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// REQUIRES: downstream_stability
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   omp.private {type = private} @_QFEj_private_i32 : i32 loc(#loc1)

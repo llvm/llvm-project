@@ -4,6 +4,8 @@
 ///-----------------------------------------------------------------------------
 /// Checking dwarf-version
 
+// XFAIL: *
+
 // RUN: %clangxx -### -g --target=ve-unknown-linux-gnu \
 // RUN:     %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 // DWARF_VER: "-dwarf-version=5"

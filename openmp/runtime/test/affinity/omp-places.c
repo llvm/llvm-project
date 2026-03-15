@@ -3,6 +3,7 @@
 // RUN: env OMP_PLACES=cores %libomp-run
 // RUN: env OMP_PLACES=sockets %libomp-run
 // REQUIRES: linux
+// UNSUPPORTED: linux
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -25,7 +25,7 @@ using namespace llvm::support::endian;
 using namespace llvm::sys::fs;
 
 template <size_t N>
-static bool startswith(StringRef Magic, const char (&S)[N]) {
+static bool starts_with(StringRef Magic, const char (&S)[N]) {
   return Magic.starts_with(StringRef(S, N - 1));
 }
 
@@ -36,7 +36,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
   switch ((unsigned char)Magic[0]) {
   case 0x00: {
     // COFF bigobj, CL.exe's LTO object file, or short import library file
-    if (startswith(Magic, "\0\0\xFF\xFF")) {
+    if (starts_with(Magic, "\0\0\xFF\xFF")) {
       size_t MinSize =
           offsetof(COFF::BigObjHeader, UUID) + sizeof(COFF::BigObjMagic);
       if (Magic.size() < MinSize)
@@ -56,61 +56,61 @@ file_magic llvm::identify_magic(StringRef Magic) {
     // 0x0000 = COFF unknown machine type
     if (Magic[1] == 0)
       return file_magic::coff_object;
-    if (startswith(Magic, "\0asm"))
+    if (starts_with(Magic, "\0asm"))
       return file_magic::wasm_object;
     break;
   }
 
   case 0x01:
     // XCOFF format
-    if (startswith(Magic, "\x01\xDF"))
+    if (starts_with(Magic, "\x01\xDF"))
       return file_magic::xcoff_object_32;
-    if (startswith(Magic, "\x01\xF7"))
+    if (starts_with(Magic, "\x01\xF7"))
       return file_magic::xcoff_object_64;
     break;
 
   case 0x03:
-    if (startswith(Magic, "\x03\xF0\x00"))
+    if (starts_with(Magic, "\x03\xF0\x00"))
       return file_magic::goff_object;
     // SPIR-V format in little-endian mode.
-    if (startswith(Magic, "\x03\x02\x23\x07"))
+    if (starts_with(Magic, "\x03\x02\x23\x07"))
       return file_magic::spirv_object;
     break;
 
   case 0x07: // SPIR-V format in big-endian mode.
-    if (startswith(Magic, "\x07\x23\x02\x03"))
+    if (starts_with(Magic, "\x07\x23\x02\x03"))
       return file_magic::spirv_object;
     break;
 
   case 0x10:
-    if (startswith(Magic, "\x10\xFF\x10\xAD"))
+    if (starts_with(Magic, "\x10\xFF\x10\xAD"))
       return file_magic::offload_binary;
     break;
 
   case 0xDE: // 0x0B17C0DE = BC wraper
-    if (startswith(Magic, "\xDE\xC0\x17\x0B"))
+    if (starts_with(Magic, "\xDE\xC0\x17\x0B"))
       return file_magic::bitcode;
     break;
   case 'B':
-    if (startswith(Magic, "BC\xC0\xDE"))
+    if (starts_with(Magic, "BC\xC0\xDE"))
       return file_magic::bitcode;
     break;
   case 'C':
-    if (startswith(Magic, "CCOB"))
+    if (starts_with(Magic, "CCOB"))
       return file_magic::offload_bundle_compressed;
-    if (startswith(Magic, "CPCH"))
+    if (starts_with(Magic, "CPCH"))
       return file_magic::clang_ast;
     break;
   case '!':
-    if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
+    if (starts_with(Magic, "!<arch>\n") || starts_with(Magic, "!<thin>\n"))
       return file_magic::archive;
     break;
   case '<':
-    if (startswith(Magic, "<bigaf>\n"))
+    if (starts_with(Magic, "<bigaf>\n"))
       return file_magic::archive;
     break;
   case '\177':
-    if (startswith(Magic, "\177ELF") && Magic.size() >= 18) {
+    if (starts_with(Magic, "\177ELF") && Magic.size() >= 18) {
       bool Data2MSB = Magic[5] == 2;
       unsigned high = Data2MSB ? 16 : 17;
       unsigned low = Data2MSB ? 17 : 16;
@@ -134,8 +134,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
     break;
 
   case 0xCA:
-    if (startswith(Magic, "\xCA\xFE\xBA\xBE") ||
-        startswith(Magic, "\xCA\xFE\xBA\xBF")) {
+    if (starts_with(Magic, "\xCA\xFE\xBA\xBE") ||
+        starts_with(Magic, "\xCA\xFE\xBA\xBF")) {
       // This is complicated by an overlap with Java class files.
       // See the Mach-O section in /usr/share/file/magic for details.
       if (Magic.size() >= 8 && Magic[7] < 43)
@@ -150,8 +150,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 0xCE:
   case 0xCF: {
     uint16_t type = 0;
-    if (startswith(Magic, "\xFE\xED\xFA\xCE") ||
-        startswith(Magic, "\xFE\xED\xFA\xCF")) {
+    if (starts_with(Magic, "\xFE\xED\xFA\xCE") ||
+        starts_with(Magic, "\xFE\xED\xFA\xCF")) {
       /* Native endian */
       size_t MinSize;
       if (Magic[3] == char(0xCE))
@@ -160,8 +160,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
         MinSize = sizeof(MachO::mach_header_64);
       if (Magic.size() >= MinSize)
         type = Magic[12] << 24 | Magic[13] << 12 | Magic[14] << 8 | Magic[15];
-    } else if (startswith(Magic, "\xCE\xFA\xED\xFE") ||
-               startswith(Magic, "\xCF\xFA\xED\xFE")) {
+    } else if (starts_with(Magic, "\xCE\xFA\xED\xFE") ||
+               starts_with(Magic, "\xCF\xFA\xED\xFE")) {
       /* Reverse endian */
       size_t MinSize;
       if (Magic[0] == char(0xCE))
@@ -206,7 +206,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 0x84: // Alpha 64-bit
   case 0x66: // MPS R4000 Windows
   case 0x50: // mc68K
-    if (startswith(Magic, "\x50\xed\x55\xba"))
+    if (starts_with(Magic, "\x50\xed\x55\xba"))
       return file_magic::cuda_fatbinary;
     [[fallthrough]];
 
@@ -224,7 +224,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
 
   case 'M': // Possible MS-DOS stub on Windows PE file, MSF/PDB file or a
             // Minidump file.
-    if (startswith(Magic, "MZ") && Magic.size() >= 0x3c + 4) {
+    if (starts_with(Magic, "MZ") && Magic.size() >= 0x3c + 4) {
       uint32_t off = read32le(Magic.data() + 0x3c);
       // PE/COFF file, either EXE or DLL.
       if (Magic.substr(off).starts_with(
@@ -233,7 +233,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
     }
     if (Magic.starts_with("Microsoft C/C++ MSF 7.00\r\n"))
       return file_magic::pdb;
-    if (startswith(Magic, "MDMP"))
+    if (starts_with(Magic, "MDMP"))
       return file_magic::minidump;
     break;
 
@@ -243,7 +243,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
     break;
 
   case 0x2d: // YAML '-' MachO TBD.
-    if (startswith(Magic, "--- !tapi") || startswith(Magic, "---\narchs:"))
+    if (starts_with(Magic, "--- !tapi") || starts_with(Magic, "---\narchs:"))
       return file_magic::tapi_file;
     break;
   case 0x7b: // JSON '{' MachO TBD.
@@ -251,7 +251,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
     break;
 
   case 'D': // DirectX container file - DXBC
-    if (startswith(Magic, "DXBC"))
+    if (starts_with(Magic, "DXBC"))
       return file_magic::dxcontainer_object;
     break;
 
@@ -267,7 +267,7 @@ file_magic llvm::identify_magic(StringRef Magic) {
 
   case '_': {
     const char OBMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
-    if (Magic.size() >= sizeof(OBMagic) && startswith(Magic, OBMagic))
+    if (Magic.size() >= sizeof(OBMagic) && starts_with(Magic, OBMagic))
       return file_magic::offload_bundle;
     break;
   }

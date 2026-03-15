@@ -2564,7 +2564,7 @@ llvm.func @omp_sections(%arg0 : i32, %arg1 : i32, %arg2 : !llvm.ptr) -> () {
       // CHECK: [[SECTION3]]:
       // CHECK:   br label %[[REGION3:[^ ,]*]]
       // CHECK: [[REGION3]]:
-      // CHECK:   %11 = add i32 %{{.*}}, %{{.*}}
+      // CHECK:   %10 = add i32 %{{.*}}, %{{.*}}
       %add = llvm.add %arg0, %arg1 : i32
       // CHECK:   store i32 %{{.*}}, ptr %{{.*}}, align 4
       // CHECK:   br label %{{.*}}

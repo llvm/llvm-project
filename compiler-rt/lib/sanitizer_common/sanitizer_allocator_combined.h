@@ -28,20 +28,33 @@ class CombinedAllocator {
       LargeMmapAllocator<typename PrimaryAllocator::MapUnmapCallback,
                          LargeMmapAllocatorPtrArray,
                          typename PrimaryAllocator::AddressSpaceView>;
+#if SANITIZER_AMDGPU
+  using DeviceAllocator =
+      DeviceAllocatorT<typename PrimaryAllocator::MapUnmapCallback>;
+#endif
 
   void InitLinkerInitialized(s32 release_to_os_interval_ms,
-                             uptr heap_start = 0) {
+                             uptr heap_start = 0,
+                             bool enable_device_allocator = false) {
     primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.InitLinkerInitialized();
+#if SANITIZER_AMDGPU
+    device_.Init(enable_device_allocator, primary_.kMetadataSize);
+#endif
   }
 
-  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
+  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0,
+            bool enable_device_allocator = false) {
     stats_.Init();
     primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.Init();
+#if SANITIZER_AMDGPU
+    device_.Init(enable_device_allocator, primary_.kMetadataSize);
+#endif
   }
 
-  void *Allocate(AllocatorCache *cache, uptr size, uptr alignment) {
+  void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
+                 DeviceAllocationInfo *da_info = nullptr) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
@@ -65,6 +78,11 @@ class CombinedAllocator {
     // alignment without such requirement, and allocating 'size' would use
     // extraneous memory, so we employ 'original_size'.
     void *res;
+#if SANITIZER_AMDGPU
+    if (da_info)
+      res = device_.Allocate(&stats_, original_size, alignment, da_info);
+    else
+#endif
     if (primary_.CanAllocate(size, alignment))
       res = cache->Allocate(&primary_, primary_.ClassID(size));
     else
@@ -90,8 +108,12 @@ class CombinedAllocator {
     if (!p) return;
     if (primary_.PointerIsMine(p))
       cache->Deallocate(&primary_, primary_.GetSizeClass(p), p);
-    else
+    else if (secondary_.PointerIsMine(p))
       secondary_.Deallocate(&stats_, p);
+#if SANITIZER_AMDGPU
+    else if (device_.PointerIsMine(p))
+      device_.Deallocate(&stats_, p);
+#endif
   }
 
   void *Reallocate(AllocatorCache *cache, void *p, uptr new_size,
@@ -115,7 +137,13 @@ class CombinedAllocator {
   bool PointerIsMine(const void *p) const {
     if (primary_.PointerIsMine(p))
       return true;
-    return secondary_.PointerIsMine(p);
+    if (secondary_.PointerIsMine(p))
+      return true;
+#if SANITIZER_AMDGPU
+    if (device_.PointerIsMine(p))
+      return true;
+#endif
+    return false;
   }
 
   bool FromPrimary(const void *p) const { return primary_.PointerIsMine(p); }
@@ -123,31 +151,60 @@ class CombinedAllocator {
   void *GetMetaData(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetMetaData(p);
-    return secondary_.GetMetaData(p);
+    if (secondary_.PointerIsMine(p))
+      return secondary_.GetMetaData(p);
+#if SANITIZER_AMDGPU
+    if (device_.PointerIsMine(p))
+      return device_.GetMetaData(p);
+#endif
+    return nullptr;
   }
 
   void *GetBlockBegin(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
-    return secondary_.GetBlockBegin(p);
+    if (secondary_.PointerIsMine(p))
+      return secondary_.GetBlockBegin(p);
+#if SANITIZER_AMDGPU
+    if (device_.PointerIsMine(p))
+      return device_.GetBlockBegin(p);
+#endif
+    return nullptr;
   }
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
   void *GetBlockBeginFastLocked(const void *p) {
+    void *beg;
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
-    return secondary_.GetBlockBeginFastLocked(p);
+    if ((beg = secondary_.GetBlockBeginFastLocked(p)))
+      return beg;
+#if SANITIZER_AMDGPU
+    if ((beg = device_.GetBlockBeginFastLocked(p)))
+      return beg;
+#endif
+    return nullptr;
   }
 
   uptr GetActuallyAllocatedSize(void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetActuallyAllocatedSize(p);
-    return secondary_.GetActuallyAllocatedSize(p);
+    if (secondary_.PointerIsMine(p))
+      return secondary_.GetActuallyAllocatedSize(p);
+#if SANITIZER_AMDGPU
+    if (device_.PointerIsMine(p))
+      return device_.GetActuallyAllocatedSize(p);
+#endif
+    return 0;
   }
 
   uptr TotalMemoryUsed() {
-    return primary_.TotalMemoryUsed() + secondary_.TotalMemoryUsed();
+    return primary_.TotalMemoryUsed() + secondary_.TotalMemoryUsed()
+#if SANITIZER_AMDGPU
+      + device_.TotalMemoryUsed()
+#endif
+      ;
   }
 
   void TestOnlyUnmap() { primary_.TestOnlyUnmap(); }
@@ -171,11 +228,17 @@ class CombinedAllocator {
   void PrintStats() {
     primary_.PrintStats();
     secondary_.PrintStats();
+#if SANITIZER_AMDGPU
+    device_.PrintStats();
+#endif
   }
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
   // introspection API.
   void ForceLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+#if SANITIZER_AMDGPU
+    device_.ForceLock();
+#endif
     primary_.ForceLock();
     secondary_.ForceLock();
   }
@@ -183,6 +246,9 @@ class CombinedAllocator {
   void ForceUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     secondary_.ForceUnlock();
     primary_.ForceUnlock();
+#if SANITIZER_AMDGPU
+    device_.ForceUnlock();
+#endif
   }
 
   // Iterate over all existing chunks.
@@ -190,10 +256,16 @@ class CombinedAllocator {
   void ForEachChunk(ForEachChunkCallback callback, void *arg) {
     primary_.ForEachChunk(callback, arg);
     secondary_.ForEachChunk(callback, arg);
+#if SANITIZER_AMDGPU
+    device_.ForEachChunk(callback, arg);
+#endif
   }
 
  private:
   PrimaryAllocator primary_;
   SecondaryAllocator secondary_;
+#if SANITIZER_AMDGPU
+  DeviceAllocator device_;
+#endif
   AllocatorGlobalStats stats_;
 };

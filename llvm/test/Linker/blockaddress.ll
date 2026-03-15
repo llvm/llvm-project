@@ -1,5 +1,5 @@
-; RUN: llvm-as %s -o %t.bc
-; RUN: llvm-link %t.bc -S | FileCheck %s
+; RUN: llvm-as  %s -o %t.bc
+; RUN: llvm-link  %t.bc -S | FileCheck %s
 
 declare void @f(ptr)
 

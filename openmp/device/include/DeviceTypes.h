@@ -12,6 +12,7 @@
 #ifndef OMPTARGET_TYPES_H
 #define OMPTARGET_TYPES_H
 
+#include "DevRTLExtras.h"
 #include <gpuintrin.h>
 #include <stddef.h>
 #include <stdint.h>

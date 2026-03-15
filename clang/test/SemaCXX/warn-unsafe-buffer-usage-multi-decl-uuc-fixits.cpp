@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage \
 // RUN:            -fsafe-buffer-usage-suggestions \
 // RUN:            -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
-
 void bar(int * param) {}
 
 void foo1a() {

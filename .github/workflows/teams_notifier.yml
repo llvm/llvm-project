@@ -1,0 +1,126 @@
+name: Teams Notifier
+
+on:
+  workflow_call:
+    inputs:
+      JOB_NAME_TO_MATCH:
+        required: true
+        type: string
+    secrets:
+      AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL:
+         required: true
+jobs:
+  notify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+        with:
+            sparse-checkout: .github
+
+      - name: Calculate URLs and Fetch Manifest
+        id: extract_urls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="$GITHUB_RUN_ID"  # Use the current run ID
+
+          ORG_NAME="${{ github.repository_owner }}"
+          PROJECT_NAME="${{ github.event.repository.name }}"
+    
+          JOBS_URL="https://api.github.com/repos/$ORG_NAME/$PROJECT_NAME/actions/runs/$RUN_ID/jobs"
+          JOB_ID=$(curl -H "Authorization: token $GITHUB_TOKEN" -L "$JOBS_URL" \
+                  | jq -r --arg JOB_NAME "${{ inputs.JOB_NAME_TO_MATCH }}" \
+                  '.jobs[] | select(.name==$JOB_NAME) | .id')
+
+
+          echo "JOB_ID=$JOB_ID"
+
+          # Fetch logs for the selected job ID using the constructed URL
+          LOG_URL="https://api.github.com/repos/$ORG_NAME/$PROJECT_NAME/actions/jobs/$JOB_ID/logs"
+          curl -H "Authorization: token $GITHUB_TOKEN" -L "$LOG_URL" -o logs.txt
+
+          # Parse URLs from the logs using grep
+          THE_ROCK_MANIFEST_URL=$(grep -oP '\[TheRock Manifest\]\(\K[^\)]+' "logs.txt" || echo "")
+          ARTIFACTS_URL=$(grep -oP '\[Artifacts\]\(\K[^\)]+' "logs.txt" || echo "") 
+          BUILD_LOGS_URL=$(grep -oP '\[Build Logs\]\(\K[^\)]+' "logs.txt" || echo "")
+
+          # Fetch the manifest file and set URLs as environment variables
+          if [[ -n "$THE_ROCK_MANIFEST_URL" ]]; then
+            curl -L "$THE_ROCK_MANIFEST_URL" -o manifest.json
+            echo "Manifest file has been downloaded."
+            echo "THE_ROCK_MANIFEST_URL=$THE_ROCK_MANIFEST_URL" >> $GITHUB_ENV
+            echo "ARTIFACTS_URL=$ARTIFACTS_URL" >> $GITHUB_ENV
+            echo "BUILD_LOGS_URL=$BUILD_LOGS_URL" >> $GITHUB_ENV
+          else
+            echo "Failed to extract URLs from logs.txt."
+          fi
+
+      - name: Set environment variables
+        run: |
+          echo "ORG_NAME=ROCm" >> $GITHUB_ENV
+          echo "PROJECT_NAME=llvm-project" >> $GITHUB_ENV
+          echo "RUN_ID=${{ github.run_id }}" >> $GITHUB_ENV
+          echo "MANIFEST_FILE=manifest.json" >> $GITHUB_ENV
+          echo "OUTPUT_FILE=results.json" >> $GITHUB_ENV
+
+      - name: Execute Python script for Notification Content
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_NAME: ${{ env.ORG_NAME }}
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
+          RUN_ID: ${{ env.RUN_ID }}
+          MANIFEST_FILE: ${{ env.MANIFEST_FILE }}
+          ROCK_MANIFEST_URL: ${{ env.THE_ROCK_MANIFEST_URL }}
+          ARTIFACTS_URL: ${{ env.ARTIFACTS_URL }}
+          BUILD_LOGS_URL: ${{ env.BUILD_LOGS_URL }}
+          OUTPUT_FILE: ${{ env.OUTPUT_FILE }}
+        run: |
+          python .github/workflows/build_metadata_extractor.py
+
+      - name: Notify status
+        continue-on-error: true
+        env:
+          TZ: 'America/Chicago'
+          JSON_RESULT_FILE: results.json
+          RUN_ID: ${{ env.RUN_ID }}
+        run: |
+          # Default notification content setup
+          START_DATE=$(date +"%Y-%m-%d")
+          # Initialize STATUS based on job results
+          if [ "${{ needs.windows_build_and_test.result }}" = "success" ] && [ "${{ needs.linux_build_and_test.result }}" = "success" ]; then
+            STATUS="success"
+          else
+            STATUS="failure"
+          fi
+
+          # Determine the icon based on the STATUS
+          ICON="❌"
+          [ "$STATUS" = "success" ] && ICON="✅"
+
+
+          # Try to read the JSON file
+          if [[ -f "$JSON_RESULT_FILE" ]]; then
+            echo "Reading results from $JSON_RESULT_FILE..."
+            SUBMODULE_TABLE=$(jq -r '.submodule_table' < "$JSON_RESULT_FILE")
+            MANIFEST_ARTIFACTS_TABLE=$(jq -r '.manifest_artifacts_table' < "$JSON_RESULT_FILE")
+            FAILURE_TABLE=$(jq -r '.failure_table' < "$JSON_RESULT_FILE")
+
+            # Construct JSON content without EOF
+            NOTIFICATION_CONTENT="{\"title\":\"$START_DATE - $ICON Build $STATUS\", \"text\":\"**Repository:** ${{ github.repository }} \\n\\n**Branch:** ${{ github.ref_name }} \\n\\n**Status:** $STATUS \\n\\n🔗 [Build Link](https://github.com/${{ github.repository }}/actions/runs/$RUN_ID) \\n\\n**Manifest, Artifacts, and Logs:** \\n\\n$MANIFEST_ARTIFACTS_TABLE\\n\\n**Details:** \\n\\n$SUBMODULE_TABLE\\n\\n"
+
+            if [[ "$FAILURE_TABLE" != "No failures found" ]]; then
+              NOTIFICATION_CONTENT+="**Failure Jobs:** \\n\\n$FAILURE_TABLE \\n\\n"
+            fi
+
+            NOTIFICATION_CONTENT+="\"}"
+          else
+            echo "Error reading JSON file $JSON_RESULT_FILE! Falling back to short notification content."
+            NOTIFICATION_CONTENT="{\"title\":\"$START_DATE - $ICON Build $STATUS\", \"text\":\"**Repository:** ${{ github.repository }} \\n\\n**Branch:** ${{ github.ref_name }} \\n\\n**Status:** $STATUS \\n\\n🔗 [Build Link](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) \\n\\n**Details:** Unable to fetch detailed results. Please check logs.\\n\\n\"}"
+          fi
+
+          echo "Notification JSON Content:"
+          echo "$NOTIFICATION_CONTENT"
+
+          curl -H "Content-Type: application/json" -d "$NOTIFICATION_CONTENT" ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
+

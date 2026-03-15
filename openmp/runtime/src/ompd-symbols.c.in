@@ -1,0 +1,33 @@
+
+#include "ompd-specific.h"
+
+
+#if OMPD_SUPPORT
+
+const char *ompd_symbols [] = {
+
+  /* OMPD_FOREACH_ACCESS: ompd_access__##t##__##m, */
+#  define ompd_define_symbol_string(t,m) "ompd_access__" #t "__" #m ,___NEWLINE___
+OMPD_FOREACH_ACCESS(ompd_define_symbol_string)
+#  undef ompd_define_symbol_string
+
+  /* OMPD_FOREACH_ACCESS: ompd_sizeof__##t##__##m, */
+#  define ompd_define_symbol_string(t,m) "ompd_sizeof__" #t "__" #m,___NEWLINE___
+OMPD_FOREACH_ACCESS(ompd_define_symbol_string)
+#  undef ompd_define_symbol_string
+
+  /* OMPD_FOREACH_BITFIELD: ompd_bitfield__##t##__##m, */
+#  define ompd_define_symbol_string(t,m) "ompd_bitfield__" #t "__" #m,___NEWLINE___
+OMPD_FOREACH_BITFIELD(ompd_define_symbol_string)
+#  undef ompd_define_symbol_string
+
+  /* OMPD_FOREACH_SIZEOF: ompd_sizeof__##t, */
+#  define ompd_define_symbol_string(t) "ompd_sizeof__" #t,___NEWLINE___
+OMPD_FOREACH_SIZEOF(ompd_define_symbol_string)
+#  undef ompd_define_symbol_string
+
+  0
+}; /* ompd_symbols */
+
+#endif
+

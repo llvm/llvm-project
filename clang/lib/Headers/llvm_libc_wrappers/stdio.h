@@ -24,28 +24,6 @@
 // Some headers provide these as macros. Temporarily undefine them so they do
 // not conflict with any definitions for the GPU.
 
-#pragma push_macro("stdout")
-#pragma push_macro("stdin")
-#pragma push_macro("stderr")
-
-#undef stdout
-#undef stderr
-#undef stdin
-
-#pragma omp begin declare target
-
-__LIBC_ATTRS extern FILE *stderr;
-__LIBC_ATTRS extern FILE *stdin;
-__LIBC_ATTRS extern FILE *stdout;
-
-#pragma omp end declare target
-
-// Restore the original macros when compiling on the host.
-#if !defined(__NVPTX__) && !defined(__AMDGPU__)
-#pragma pop_macro("stderr")
-#pragma pop_macro("stdin")
-#pragma pop_macro("stdout")
-#endif
 
 #undef __LIBC_ATTRS
 

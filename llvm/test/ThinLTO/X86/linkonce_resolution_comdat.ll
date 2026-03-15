@@ -2,12 +2,12 @@
 ; comdats after making it available_externally. If not we would get a
 ; verification error. g_internal/g_private are changed to available_externally
 ; as well since it is in the same comdat of g.
-; RUN: opt -module-summary %s -o %t1.bc
-; RUN: opt -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
-; RUN: llvm-lto -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
+; RUN: opt  -module-summary %s -o %t1.bc
+; RUN: opt  -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
+; RUN: llvm-lto  -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
 
-; RUN: llvm-dis %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
-; RUN: llvm-dis %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2
+; RUN: llvm-dis  %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
+; RUN: llvm-dis  %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2
 ; Copy from first module is prevailing and converted to weak_odr, copy
 ; from second module is preempted and converted to available_externally and
 ; removed from comdat.

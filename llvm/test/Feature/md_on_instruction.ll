@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | llvm-as  | llvm-dis  | FileCheck %s
 
 define i32 @foo() nounwind ssp {
 entry:

@@ -755,6 +755,16 @@ public:
                    }) != PrologEpilogSGPRSpills.end();
   }
 
+  // Remove if an entry created for \p Reg.
+  void removePrologEpilogSGPRSpillEntry(Register Reg) {
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    if (I == PrologEpilogSGPRSpills.end())
+      return;
+
+    PrologEpilogSGPRSpills.erase(I);
+  }
+
   const PrologEpilogSGPRSaveRestoreInfo &
   getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
     const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
@@ -833,7 +843,7 @@ public:
 
   /// If \p ResetSGPRSpillStackIDs is true, reset the stack ID from sgpr-spill
   /// to the default stack.
-  bool removeDeadFrameIndices(MachineFrameInfo &MFI,
+  bool removeDeadFrameIndices(MachineFunction &MF,
                               bool ResetSGPRSpillStackIDs);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);

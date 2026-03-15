@@ -3,7 +3,6 @@
 #include <omp.h>
 
 #include <chrono>
-#include <cstdint>
 #include <iostream>
 #include <thread>
 
@@ -11,7 +10,7 @@
 #define PTASK_FLAG_DETACHABLE 0x40
 
 // OpenMP RTL interfaces
-using kmp_int32 = int32_t;
+typedef long long kmp_int64;
 
 typedef struct ID {
   int reserved_1;
@@ -60,8 +59,7 @@ extern "C" {
 extern int __kmpc_global_thread_num(void *id_ref);
 extern int **__kmpc_omp_task_alloc(id *loc, int gtid, int flags, size_t sz,
                                    size_t shar, task_entry_t rtn);
-extern kmp_int32 __kmpc_omp_task(ident_t *loc_ref, kmp_int32 gtid,
-                                 kmp_task_t *new_task);
+extern int __kmpc_omp_task(id *loc, kmp_int64 gtid, kmp_task_t *task);
 extern omp_event_handle_t __kmpc_task_allow_completion_event(ident_t *loc_ref,
                                                              int gtid,
                                                              kmp_task_t *task);

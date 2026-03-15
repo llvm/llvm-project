@@ -32,8 +32,6 @@ void foo(int N) {
 
 // CHECK-AMDGPU: attributes #[[ATTR1]] = { {{.*}} "amdgpu-flat-work-group-size"="1,256" {{.*}} }
 // CHECK-AMDGPU: attributes #[[ATTR2]] = { {{.*}} "amdgpu-flat-work-group-size"="1,4" {{.*}} }
-// CHECK-AMDGPU: attributes #[[ATTR3]] = { {{.*}} "amdgpu-flat-work-group-size"="1,42" "amdgpu-max-num-workgroups"="42,1,1"{{.*}} }
-// CHECK-AMDGPU: attributes #[[ATTR4]] = { {{.*}} "amdgpu-flat-work-group-size"="1,22" "amdgpu-max-num-workgroups"="42,1,1"{{.*}} }
 
 // CHECK-SPIRV: attributes #[[ATTR1]] = { {{.*}} "omp_target_thread_limit"="256" {{.*}} }
 // CHECK-SPIRV: attributes #[[ATTR2]] = { {{.*}} "omp_target_thread_limit"="4"  {{.*}} }

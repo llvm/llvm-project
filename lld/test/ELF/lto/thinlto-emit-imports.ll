@@ -1,3 +1,4 @@
+; REQUIRES: jenkins-permissions-issue
 ; REQUIRES: x86, non-root-user
 ;; Test a few properties not tested by thinlto-index-only.ll
 

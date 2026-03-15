@@ -39,15 +39,9 @@ int map_struct() {
 #endif
 //.
 // CHECK: @.offload_sizes = private unnamed_addr constant [3 x i64] [i64 264, i64 40, i64 8]
-<<<<<<< HEAD
 // CHECK: @.offload_maptypes = private unnamed_addr constant [3 x i64] [i64 [[#0x1]], i64 [[#0x1]], i64 [[#0x8000]]]
 // CHECK: @.offload_sizes.1 = private unnamed_addr constant [2 x i64] [i64 264, i64 0]
 // CHECK: @.offload_maptypes.2 = private unnamed_addr constant [2 x i64] [i64 [[#0x223]], i64 [[#0x120]]]
-=======
-// CHECK: @.offload_maptypes = private unnamed_addr constant [3 x i64] [i64 [[#0x1]], i64 [[#0x1]], i64 [[#0x4000]]]
-// CHECK: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 264]
-// CHECK: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x223]]]
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 // CHECK: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 264]
 // CHECK: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 [[#0x2]]]
 //.

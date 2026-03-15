@@ -1,6 +1,5 @@
 ! RUN: bbc --use-desc-for-alloc=false -emit-hlfir %s -o - | FileCheck %s
 ! RUN: bbc --use-desc-for-alloc=false -emit-hlfir %s -o - | tco | FileCheck %s --check-prefix=LLVM
-
 module poly
   type p1
     integer :: a

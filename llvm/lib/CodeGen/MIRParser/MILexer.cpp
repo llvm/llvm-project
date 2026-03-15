@@ -240,6 +240,11 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("window_save", MIToken::kw_cfi_window_save)
       .Case("negate_ra_sign_state",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
+      .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
+      .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
+      .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
+      .Case("llvm_vector_register_mask",
+            MIToken::kw_cfi_llvm_vector_register_mask)
       .Case("negate_ra_sign_state_with_pc",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
       .Case("blockaddress", MIToken::kw_blockaddress)

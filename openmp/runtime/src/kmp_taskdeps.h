@@ -9,6 +9,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef KMP_TASKDEPS_H
 #define KMP_TASKDEPS_H
@@ -17,6 +20,12 @@
 
 #define KMP_ACQUIRE_DEPNODE(gtid, n) __kmp_acquire_lock(&(n)->dn.lock, (gtid))
 #define KMP_RELEASE_DEPNODE(gtid, n) __kmp_release_lock(&(n)->dn.lock, (gtid))
+
+/* AOCC begin */
+#define DI_DEP_TYPE_IN 11
+#define DI_DEP_TYPE_OUT 12
+#define DI_DEP_TYPE_INOUT 13
+/* AOCC end */
 
 static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
   if (!node)

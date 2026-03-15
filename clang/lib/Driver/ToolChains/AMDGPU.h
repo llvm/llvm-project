@@ -38,7 +38,50 @@ public:
 
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
-                             std::vector<StringRef> &Features);
+                             std::vector<StringRef> &Features,
+                             StringRef TcTargetID = StringRef());
+
+namespace dlr {
+llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                        const SanitizerArgs &SanArgs, const Driver &D,
+                        const std::string &GPUArch, bool isOpenMP,
+                        const RocmInstallationDetector &RocmInstallation,
+                        const clang::driver::Action::OffloadKind DeviceOffloadingKind = Action::OFK_OpenMP);
+
+const char *
+getCbslCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
+                   llvm::opt::ArgStringList &CbslArgs,
+                   const SmallVectorImpl<std::string> &InputFileNames,
+                   llvm::StringRef OutputFilePrefix);
+
+const char *
+getLinkCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
+                   llvm::opt::ArgStringList &LastLinkArgs, const ToolChain &TC,
+                   const llvm::Triple &Triple, llvm::StringRef TargetID,
+                   llvm::StringRef OutputFilePrefix, const char *InputFileName,
+                   const RocmInstallationDetector &RocmInstallation,
+                   llvm::opt::ArgStringList &EnvironmentLibraryPaths);
+
+const char *getOptCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &OptArgs,
+                              const llvm::Triple &Triple,
+                              llvm::StringRef TargetID,
+                              llvm::StringRef OutputFilePrefix,
+                              const char *InputFileName);
+
+const char *
+getLlcCommandArgs(Compilation &C, const llvm::opt::ArgList &Args,
+                  llvm::opt::ArgStringList &LlcArgs, const llvm::Triple &Triple,
+                  llvm::StringRef TargetID, llvm::StringRef OutputFilePrefix,
+                  const char *InputFileName, bool OutputIsAsm = false);
+
+const char *getLldCommandArgs(
+    Compilation &C, const InputInfo &Output, const llvm::opt::ArgList &Args,
+    llvm::opt::ArgStringList &LldArgs, const llvm::Triple &Triple,
+    llvm::StringRef TargetID, const char *InputFileName,
+    const std::optional<std::string> OutputFilePrefix = std::nullopt);
+} // end namespace dlr
 
 void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs);
@@ -50,7 +93,7 @@ namespace toolchains {
 class LLVM_LIBRARY_VISIBILITY AMDGPUToolChain : public Generic_ELF {
 protected:
   const std::map<options::ID, const StringRef> OptionsDefault;
-
+  unsigned CodeObjectVersion = 5;
   Tool *buildLinker() const override;
   StringRef getOptionDefault(options::ID OptID) const {
     auto opt = OptionsDefault.find(OptID);
@@ -106,6 +149,11 @@ public:
                                 const llvm::opt::ArgList &DriverArgs,
                                 StringRef TargetID,
                                 const llvm::opt::Arg *A) const;
+
+  /// Should skip argument.
+  bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
+
+  unsigned GetCodeObjectVersion() const { return CodeObjectVersion; }
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.

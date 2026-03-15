@@ -1,6 +1,6 @@
 ; Test to make sure intrinsics are automatically upgraded.
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
+; RUN: verify-uselistorder  %s
 
 %0 = type opaque;
 

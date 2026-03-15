@@ -1,0 +1,101 @@
+name: Copy release to dev bucket
+
+on:
+  workflow_dispatch:
+    inputs:
+      rocm_version:
+        description: ROCm version to copy, e.g. 7.0.0rc20250912
+        type: string
+      amdgpu_family:
+        type: choice
+        options:
+          - gfx101X-dgpu
+          - gfx103X-dgpu
+          - gfx110X-all
+          - gfx1150
+          - gfx1151
+          - gfx120X-all
+          - gfx90X-dcgpu
+          - gfx94X-dcgpu
+          - gfx950-dcgpu
+        default: gfx94X-dcgpu
+      python_version:
+        type: choice
+        options:
+          - 3.11
+          - 3.12
+          - 3.13
+        default: 3.12
+      include_torch:
+        type: boolean
+        default: false
+      sourcesubdir:
+        type: choice
+        options:
+          - v2
+          - v2-staging
+      destsubdir:
+        type: string
+        default: v2
+      sourcebucket:
+        type: choice
+        options:
+          - nightly
+          - dev
+        default: nightly
+      destbucket:
+        type: choice
+        options:
+          - dev
+          - nightly
+        default: dev
+permissions:
+  contents: read
+
+jobs:
+  copy_python_packages:
+    name: Copy ${{ inputs.sourcebucket }} ${{ inputs.sourcesubdir }} -> ${{ inputs.destbucket }} ${{ inputs.destsubdir }} | ${{ inputs.amdgpu_family }} | rocm ${{ inputs.rocm_version }} | py ${{ inputs.python_version }}
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install the AWS tool
+        run: ./dockerfiles/install_awscli.sh
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          aws-region: us-east-2
+          role-to-assume: arn:aws:iam::692859939525:role/therock-${{ inputs.destbucket }}-releases
+
+      - name: Select Python version
+        run: |
+          python build_tools/github_actions/python_to_cp_version.py \
+            --python-version ${{ inputs.python_version }}
+
+      - name: Copy ROCm packages between S3 buckets
+        run: |
+          aws s3 cp \
+            s3://therock-${{ inputs.sourcebucket }}-python/${{ inputs.sourcesubdir }}/${{ inputs.amdgpu_family }}/ \
+            s3://therock-${{ inputs.destbucket }}-python/${{ inputs.destsubdir }}/${{ inputs.amdgpu_family }}/ \
+            --recursive --exclude "*"  --include "rocm*${{ inputs.rocm_version }}*"
+
+      - name: Copy torch wheels between S3 buckets
+        if: ${{ inputs.include_torch }}
+        run: |
+          aws s3 cp \
+            s3://therock-${{ inputs.sourcebucket }}-python/${{ inputs.sourcesubdir }}/${{ inputs.amdgpu_family }}/ \
+            s3://therock-${{ inputs.destbucket }}-python/${{ inputs.destsubdir }}/${{ inputs.amdgpu_family }}/ \
+            --recursive --exclude "*"  --include "*torch*${{ inputs.rocm_version }}*${{ env.cp_version }}*"
+
+      - name: (Re-)Generate Python package release index
+        env:
+          S3_BUCKET_PY: "therock-${{ inputs.destbucket }}-python"
+          CUSTOM_PREFIX: "${{ inputs.destsubdir }}/${{ inputs.amdgpu_family }}"
+        run: |
+          pip install boto3 packaging
+          python ./build_tools/third_party/s3_management/manage.py ${CUSTOM_PREFIX}

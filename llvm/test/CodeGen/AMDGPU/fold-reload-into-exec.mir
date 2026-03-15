@@ -12,7 +12,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec_lo
-    ; CHECK: S_NOP 0, implicit-def $exec_lo
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; CHECK-NEXT: S_NOP 0, implicit-def $exec_lo
     ; CHECK-NEXT: $sgpr0 = S_MOV_B32 $exec_lo
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
@@ -37,7 +39,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec_hi
-    ; CHECK: S_NOP 0, implicit-def $exec_hi
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; CHECK-NEXT: S_NOP 0, implicit-def $exec_hi
     ; CHECK-NEXT: $sgpr0 = S_MOV_B32 $exec_hi
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
@@ -62,7 +66,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: merge_sgpr_spill_into_copy_from_exec
-    ; CHECK: S_NOP 0, implicit-def $exec
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; CHECK-NEXT: S_NOP 0, implicit-def $exec
     ; CHECK-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
@@ -93,7 +99,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec_lo
-    ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_lo
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_lo
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0
@@ -116,7 +124,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec_hi
-    ; CHECK: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_hi
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0, implicit-def dead renamable $sgpr1, implicit-def $exec_hi
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0
     ; CHECK-NEXT: $sgpr0 = V_READLANE_B32 $vgpr0, 0
@@ -139,7 +149,9 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reload_sgpr_spill_into_copy_to_exec
-    ; CHECK: S_NOP 0, implicit-def renamable $sgpr0_sgpr1, implicit-def dead renamable $sgpr2_sgpr3, implicit-def $exec
+    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
+    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $sgpr0_sgpr1, implicit-def dead renamable $sgpr2_sgpr3, implicit-def $exec
     ; CHECK-NEXT: $vgpr0 = IMPLICIT_DEF
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr0, 0, $vgpr0, implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
     ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr1, 1, $vgpr0, implicit $sgpr0_sgpr1

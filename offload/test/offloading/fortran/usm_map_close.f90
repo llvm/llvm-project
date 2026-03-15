@@ -16,7 +16,7 @@ program use_device_test
           USE, intrinsic :: iso_c_binding
           implicit none
        end function get_ptr
- 
+
        integer(c_int) function check_equality(host, dev) BIND(C)
           USE, intrinsic :: iso_c_binding
           implicit none

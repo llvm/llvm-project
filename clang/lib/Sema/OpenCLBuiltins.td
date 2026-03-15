@@ -896,6 +896,7 @@ defm : VloadVstore<[ConstantAS], 0>;
 multiclass VloadVstoreHalf<list<AddressSpace> addrspaces, bit defStores> {
   foreach AS = addrspaces in {
     def : Builtin<"vload_half", [Float, Size, !cast<Type>("HalfPtrConst" # AS)], Attr.Pure>;
+    def : Builtin<"vloada_half", [Float, Size, !cast<Type>("HalfPtrConst" # AS)], Attr.Pure>;
     foreach VSize = [2, 3, 4, 8, 16] in {
       foreach name = ["vload_half" # VSize, "vloada_half" # VSize] in {
         def : Builtin<name, [VectorType<Float, VSize>, Size, !cast<Type>("HalfPtrConst" # AS)], Attr.Pure>;
@@ -903,7 +904,7 @@ multiclass VloadVstoreHalf<list<AddressSpace> addrspaces, bit defStores> {
     }
     if defStores then {
       foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
-        foreach name = ["vstore_half" # rnd] in {
+        foreach name = ["vstore_half" # rnd, "vstorea_half" # rnd] in {
           def : Builtin<name, [Void, Float, Size, !cast<Type>("HalfPtr" # AS)]>;
           def : Builtin<name, [Void, Double, Size, !cast<Type>("HalfPtr" # AS)]>;
         }

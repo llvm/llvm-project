@@ -725,37 +725,13 @@ define amdgpu_kernel void @indirect_call_known_callees(i1 %cond) {
 ; GFX9-LABEL: define amdgpu_kernel void @indirect_call_known_callees(
 ; GFX9-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; GFX9-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
-; GFX9-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
-; GFX9-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
-; GFX9:       [[BB2]]:
-; GFX9-NEXT:    call void @also_empty()
-; GFX9-NEXT:    br label %[[BB6:.*]]
-; GFX9:       [[BB3]]:
-; GFX9-NEXT:    br i1 true, label %[[BB4:.*]], label %[[BB5:.*]]
-; GFX9:       [[BB4]]:
-; GFX9-NEXT:    call void @empty()
-; GFX9-NEXT:    br label %[[BB6]]
-; GFX9:       [[BB5]]:
-; GFX9-NEXT:    unreachable
-; GFX9:       [[BB6]]:
+; GFX9-NEXT:    call void [[FPTR]]()
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @indirect_call_known_callees(
 ; GFX10-SAME: i1 [[COND:%.*]]) #[[ATTR0]] {
 ; GFX10-NEXT:    [[FPTR:%.*]] = select i1 [[COND]], ptr @empty, ptr @also_empty
-; GFX10-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FPTR]], @also_empty
-; GFX10-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
-; GFX10:       [[BB2]]:
-; GFX10-NEXT:    call void @also_empty()
-; GFX10-NEXT:    br label %[[BB6:.*]]
-; GFX10:       [[BB3]]:
-; GFX10-NEXT:    br i1 true, label %[[BB4:.*]], label %[[BB5:.*]]
-; GFX10:       [[BB4]]:
-; GFX10-NEXT:    call void @empty()
-; GFX10-NEXT:    br label %[[BB6]]
-; GFX10:       [[BB5]]:
-; GFX10-NEXT:    unreachable
-; GFX10:       [[BB6]]:
+; GFX10-NEXT:    call void [[FPTR]]()
 ; GFX10-NEXT:    ret void
 ;
   %fptr = select i1 %cond, ptr @empty, ptr @also_empty

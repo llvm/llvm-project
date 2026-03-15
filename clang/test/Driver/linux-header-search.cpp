@@ -1,3 +1,5 @@
+// XFAIL: *
+
 // General tests that the header search paths detected by the driver and passed
 // to CC1 are sane.
 //

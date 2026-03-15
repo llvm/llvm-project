@@ -1,5 +1,7 @@
 ; RUN: not opt -passes="default" < %s 2>&1 | FileCheck %s --check-prefix=MISSING-OPT-LEVEL
 ; RUN: not opt -passes="default<foo>" < %s 2>&1 | FileCheck %s --check-prefix=INVALID-OPT-LEVEL
+; RUN: not opt -passes="default-post-link" < %s 2>&1 | FileCheck %s --check-prefix=MISSING-OPT-LEVEL
+; RUN: not opt -passes="default-post-link<foo>" < %s 2>&1 | FileCheck %s --check-prefix=INVALID-OPT-LEVEL
 ; RUN: not opt -passes="thinlto-pre-link" < %s 2>&1 | FileCheck %s --check-prefix=MISSING-OPT-LEVEL
 ; RUN: not opt -passes="thinlto-pre-link<foo>" < %s 2>&1 | FileCheck %s --check-prefix=INVALID-OPT-LEVEL
 ; RUN: not opt -passes="thinlto" < %s 2>&1 | FileCheck %s --check-prefix=MISSING-OPT-LEVEL

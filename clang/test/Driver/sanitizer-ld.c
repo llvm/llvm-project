@@ -1077,7 +1077,7 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-SAFESTACK
 // CHECK-SHADOWCALLSTACK-SAFESTACK-NOT: error:
 // CHECK-SHADOWCALLSTACK-SAFESTACK: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-SHADOWCALLSTACK-SAFESTACK: libclang_rt.safestack.a
+// CHECK-SHADOWCALLSTACK-SAFESTACK: libclang_rt.safestack{{.*}}.a
 
 // RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \

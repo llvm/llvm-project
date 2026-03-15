@@ -2672,6 +2672,10 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     // zero so we can copy the metadata over as is.
     NewGlobal->copyMetadata(G, 0);
 
+    // Attach "SanitizedPaddedGlobal" attribute to the new global.
+    NewGlobal->addAttribute(Attribute::SanitizedPaddedGlobal);
+
+
     G->replaceAllUsesWith(NewGlobal);
     NewGlobal->takeName(G);
     G->eraseFromParent();

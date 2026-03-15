@@ -92,6 +92,9 @@ TYPE("f95",                      Fortran,      PP_Fortran,      nullptr,  phases
 TYPE("f95-cpp-input",            PP_Fortran,   PP_Fortran,      "i",      phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("java",                     Java,         INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 
+TYPE("f77",                      PP_F_FixedForm, INVALID,       "fi",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("f77-cpp-input",            F_FixedForm,  PP_F_FixedForm,  "fi",  phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+
 // LLVM IR/LTO types. We define separate types for IR and LTO because LTO
 // outputs should use the standard suffixes.
 TYPE("ir",                       LLVM_IR,      INVALID,         "ll",     phases::Compile, phases::Backend, phases::Assemble, phases::Link)

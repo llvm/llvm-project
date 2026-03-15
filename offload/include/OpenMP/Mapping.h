@@ -35,7 +35,7 @@ class MappingConfig {
     UseEventsForAtomicTransfers = ForceAtomic;
 
     BoolEnvar TreatAttachAutoAsAlwaysEnvar(
-        "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS", false);
+        "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS", true);
     TreatAttachAutoAsAlways = TreatAttachAutoAsAlwaysEnvar;
   }
 
@@ -116,6 +116,7 @@ struct HostDataToTargetTy {
   const uintptr_t HstPtrBegin;
   const uintptr_t HstPtrEnd;       // non-inclusive.
   const map_var_info_t HstPtrName; // Optional source name of mapped variable.
+  const int32_t AllocKind;
 
   const uintptr_t TgtAllocBegin; // allocated target memory
   const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
@@ -172,10 +173,11 @@ private:
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E,
                      uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
-                     bool UseHoldRefCount, map_var_info_t Name = nullptr,
-                     bool IsINF = false)
+                     bool UseHoldRefCount, int32_t AllocKind,
+                     map_var_info_t Name = nullptr, bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtAllocBegin(TgtAllocBegin), TgtPtrBegin(TgtPtrBegin),
+        AllocKind(AllocKind), TgtAllocBegin(TgtAllocBegin),
+        TgtPtrBegin(TgtPtrBegin),
         States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
                                           : IsINF         ? INFRefCount
                                                           : 1,
@@ -667,11 +669,12 @@ struct MappingInfoTy {
   /// - Data transfer issue fails.
   TargetPointerResultTy getTargetPointer(
       HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
-      int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,
-      bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
-      bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
-      AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
-      bool ReleaseHDTTMap = true, StateInfoTy *StateInfo = nullptr);
+      int64_t TgtPadding, int64_t Size, int64_t TypeFlags,
+      map_var_info_t HstPtrName, bool HasFlagTo, bool HasFlagAlways,
+      bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
+      bool HasPresentModifier, bool HasHoldModifier, AsyncInfoTy &AsyncInfo,
+      HostDataToTargetTy *OwnedTPR = nullptr, bool ReleaseHDTTMap = true,
+      StateInfoTy *StateInfo = nullptr);
 
   /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
   /// ensures exclusive access to the HDTT map.

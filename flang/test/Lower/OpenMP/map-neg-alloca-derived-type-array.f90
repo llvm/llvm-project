@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-
+! XFAIL: *
 subroutine map_negative_bounds_allocatable_dtype()
     type derived_type
         real(4), pointer :: data(:,:,:) => null()

@@ -19,6 +19,10 @@
 #include "Mapping.h"
 #include "State.h"
 
+namespace ompx {
+namespace synchronize {} // namespace synchronize
+} // namespace ompx
+
 using namespace ompx;
 
 namespace impl {
@@ -26,6 +30,23 @@ namespace impl {
 /// Atomics
 ///
 ///{
+/// NOTE: This function needs to be implemented by every target.
+uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope);
+
+constexpr uint32_t UNSET = 0;
+constexpr uint32_t SET = 1;
+
+// TODO: This seems to hide a bug in the declare variant handling. If it is
+// called before it is defined
+//       here the overload won't happen. Investigate lalter!
+void unsetLock(omp_lock_t *Lock) {
+  (void)atomicExchange((uint32_t *)Lock, UNSET, atomic::seq_cst);
+}
+
+int testLock(omp_lock_t *Lock) {
+  return atomic::add((uint32_t *)Lock, 0u, atomic::seq_cst);
+}
 ///}
 
 /// AMDGCN Implementation
@@ -45,7 +66,7 @@ void namedBarrier() {
   // assert(NumThreads % 32 == 0);
 
   uint32_t WarpSize = mapping::getWarpSize();
-  uint32_t NumWaves = NumThreads / WarpSize;
+  uint32_t NumWaves = (NumThreads < WarpSize) ? 1 : NumThreads / WarpSize;
 
   fence::team(atomic::acquire);
 
@@ -91,15 +112,20 @@ void syncThreadsAligned(atomic::OrderingTy Ordering) {
   synchronize::threads(Ordering);
 }
 
-// TODO: Don't have wavefront lane locks. Possibly can't have them.
-void unsetLock(omp_lock_t *) { __builtin_trap(); }
-int testLock(omp_lock_t *) { __builtin_trap(); }
-void initLock(omp_lock_t *) { __builtin_trap(); }
-void destroyLock(omp_lock_t *) { __builtin_trap(); }
-void setLock(omp_lock_t *) { __builtin_trap(); }
+void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
-constexpr uint32_t UNSET = 0;
-constexpr uint32_t SET = 1;
+void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
+
+void setLock(omp_lock_t *Lock) {
+  uint64_t lowestActiveThread = utils::ffs(mapping::activemask()) - 1;
+  if (mapping::getThreadIdInWarp() == lowestActiveThread) {
+    while (!atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
+                        atomic::seq_cst, atomic::MemScopeTy::system)) {
+      __builtin_amdgcn_s_sleep(0);
+    }
+  }
+  // test_lock will now return true for any thread in the warp
+}
 
 void unsetCriticalLock(omp_lock_t *Lock) {
   [[maybe_unused]] uint32_t before =
@@ -111,7 +137,7 @@ void setCriticalLock(omp_lock_t *Lock) {
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
     fence::kernel(atomic::release);
     while (
-        !cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
+        !atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
     fence::kernel(atomic::acquire);
@@ -141,17 +167,6 @@ void namedBarrier() {
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
-constexpr uint32_t UNSET = 0;
-constexpr uint32_t SET = 1;
-
-void unsetLock(omp_lock_t *Lock) {
-  [[maybe_unused]] uint32_t before = atomicExchange(
-      reinterpret_cast<uint32_t *>(Lock), UNSET, atomic::seq_cst);
-}
-
-int testLock(omp_lock_t *Lock) {
-  return atomic::add(reinterpret_cast<uint32_t *>(Lock), 0u, atomic::seq_cst);
-}
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
@@ -278,6 +293,12 @@ void __kmpc_end_single(IdentTy *Loc, int32_t TId) {
 }
 
 void __kmpc_flush(IdentTy *Loc) { fence::kernel(atomic::seq_cst); }
+
+void __kmpc_flush_acquire(IdentTy *Loc) { fence::kernel(atomic::acquire); }
+
+void __kmpc_flush_release(IdentTy *Loc) { fence::kernel(atomic::release); }
+
+void __kmpc_flush_acqrel(IdentTy *Loc) { fence::kernel(atomic::acq_rel); }
 
 uint64_t __kmpc_warp_active_thread_mask(void) { return mapping::activemask(); }
 

@@ -1,8 +1,8 @@
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
-; RUN: llvm-modextract -b -n 0 -o %t0.bc %t
-; RUN: llvm-modextract -b -n 1 -o %t1.bc %t
-; RUN: llvm-dis -o - %t0.bc | FileCheck --check-prefix=M0 %s
-; RUN: llvm-dis -o - %t1.bc | FileCheck --check-prefix=M1 %s
+; RUN: opt  -thinlto-bc -thinlto-split-lto-unit -o %t %s
+; RUN: llvm-modextract  -b -n 0 -o %t0.bc %t
+; RUN: llvm-modextract  -b -n 1 -o %t1.bc %t
+; RUN: llvm-dis  -o - %t0.bc | FileCheck --check-prefix=M0 %s
+; RUN: llvm-dis  -o - %t1.bc | FileCheck --check-prefix=M1 %s
 
 ; M0: @default = external constant [1 x i8]
 ; M0: @hidden = external hidden constant [1 x i8]

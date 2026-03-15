@@ -1,5 +1,4 @@
 // RUN: tco %s | FileCheck %s
-
 // Test code gen for unlimited polymorphic type descriptor.
 
 func.func @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived() {

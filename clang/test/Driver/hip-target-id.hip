@@ -26,7 +26,7 @@
 // CHECK-SAME: "-target-feature" "+sramecc"
 // CHECK-SAME: "-target-feature" "+xnack"
 
-// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgcn-amd-amdhsa"
+// TMP: [[CLANG_TMP:"[^"]*clang"]] "-cc1as" "-triple" "amdgcn-amd-amdhsa"
 // TMP-SAME: "-target-cpu" "gfx908"
 // TMP-SAME: "-target-feature" "+sramecc"
 // TMP-SAME: "-target-feature" "+xnack"

@@ -523,6 +523,10 @@ FPClassTest Attribute::getNoFPClass() const {
   return static_cast<FPClassTest>(pImpl->getValueAsInt());
 }
 
+bool Attribute::isSanitizedPaddedGlobal() const {
+  return hasAttribute(Attribute::SanitizedPaddedGlobal);
+}
+
 const ConstantRange &Attribute::getRange() const {
   assert(hasAttribute(Attribute::Range) &&
          "Trying to get range args from non-range attribute");
@@ -713,6 +717,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     raw_string_ostream(Result) << getNoFPClass();
     return Result;
   }
+
+  if (hasAttribute(Attribute::SanitizedPaddedGlobal))
+    return "sanitized_padded_global";
 
   if (hasAttribute(Attribute::Range)) {
     std::string Result;

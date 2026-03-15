@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mapping.h"
+#include "Debug.h"
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 #include "Interface.h"
@@ -17,14 +18,6 @@
 #include "gpuintrin.h"
 
 using namespace ompx;
-
-// FIXME: This resolves the handling for the AMDGPU workgroup size when the ABI
-// is set to 'none'. We only support COV5+ but this can be removed when COV4 is
-// fully deprecated.
-#ifdef __AMDGPU__
-extern const inline uint32_t __oclc_ABI_version = 500;
-[[gnu::alias("__oclc_ABI_version")]] const uint32_t __oclc_ABI_version__;
-#endif
 
 static bool isInLastWarp() {
   uint32_t MainTId = (mapping::getNumberOfThreadsInBlock() - 1) &
@@ -97,6 +90,11 @@ uint32_t mapping::getWarpSize() { return __gpu_num_lanes(); }
 
 uint32_t mapping::getMaxTeamThreads(bool IsSPMD) {
   uint32_t BlockSize = mapping::getNumberOfThreadsInBlock();
+  if (IsSPMD)
+    return BlockSize;
+  // Trim off the odd lanes in the last warp
+  if (BlockSize % mapping::getWarpSize())
+    return BlockSize - (BlockSize % mapping::getWarpSize());
   // If we are in SPMD mode, remove one warp.
   return BlockSize - (!IsSPMD * mapping::getWarpSize());
 }
@@ -174,6 +172,10 @@ extern "C" {
 
 [[gnu::noinline]] uint32_t __kmpc_get_warp_size() {
   return mapping::getWarpSize();
+}
+
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_num_blocks() {
+  return mapping::getNumberOfBlocksInKernel(0);
 }
 }
 

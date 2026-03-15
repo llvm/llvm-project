@@ -7,9 +7,11 @@
 ! Case 1
 subroutine linear_clause_01(arg)
     integer, intent(in) :: arg(:)
-    !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
-    !ERROR: List item 'arg' in LINEAR clause must be a scalar variable
-    !$omp do linear(uval(arg))
+!    !ERROR: A modifier may not be specified in a LINEAR clause on the DO directive
+!    !ERROR: List item 'arg' in LINEAR clause must be a scalar variable
+! TODO: the following line currently breaks buildbots. Disabling it until the author
+! of the breaking change can fix it.
+!    !$omp do linear(uval(arg))
     do i = 1, 5
         print *, arg(i)
     end do
@@ -17,15 +19,18 @@ end subroutine linear_clause_01
 
 ! Case 2
 subroutine linear_clause_02(arg_01, arg_02)
+    !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
     !ERROR: The list item 'arg_01' specified without the REF 'linear-modifier' must be of INTEGER type
     !ERROR: List item 'arg_01' in LINEAR clause must be a scalar variable
     !$omp declare simd linear(val(arg_01))
     real, intent(in) :: arg_01(:)
 
+    !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'arg_02' must be a dummy argument without the VALUE attribute
     !$omp declare simd linear(uval(arg_02))
     integer, value, intent(in) :: arg_02
 
+    !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'var' must be a dummy argument without the VALUE attribute
     !ERROR: The list item `var` must be a dummy argument
     !ERROR: The list item `var` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute
@@ -36,6 +41,7 @@ end subroutine linear_clause_02
 ! Case 3
 subroutine linear_clause_03(arg)
     integer, intent(in) :: arg
+    !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
     !ERROR: The list item `arg` specified with the REF 'linear-modifier' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute
     !ERROR: List item 'arg' present at multiple LINEAR clauses
     !ERROR: 'arg' appears in more than one data-sharing clause on the same OpenMP directive

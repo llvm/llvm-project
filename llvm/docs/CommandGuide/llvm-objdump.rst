@@ -223,7 +223,8 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading sections and HIP offload bundles.
+  Display the content of the LLVM offloading section.
+  Extract Clang offload binaries into code objects.
 
 .. option:: --prefix=<prefix>
 

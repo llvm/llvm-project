@@ -28,11 +28,28 @@
 #pragma push_macro("__DEVICE__")
 #ifdef __OPENMP_NVPTX__
 #if defined(__cplusplus)
+#ifdef __BUILD_MATH_BUILTINS_LIB__
+#include <limits.h>
+#define HUGE_VALF (__builtin_huge_valf())
+#define HUGE_VAL (__builtin_huge_val())
+#define __DEVICE__ extern "C" __attribute__((always_inline, nothrow))
+#else
 #define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
+#endif // __BUILD_MATH_BUILTINS_LIB__
+#else
+// Use __BUILD_MATH_BUILTINS_LIB__ to build device specific libm-nvptx.bc
+// for FORTRAN bitcode linking since FORTRAN cannot use c headers.
+#ifdef __BUILD_MATH_BUILTINS_LIB__
+#include <limits.h>
+#define HUGE_VALF (__builtin_huge_valf())
+#define HUGE_VAL (__builtin_huge_val())
+#define __DEVICE__ extern __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE__ static __attribute__((always_inline, nothrow))
-#endif
+#endif // __BUILD_MATH_BUILTINS_LIB__
+#endif // __cplusplus
 #else
+// CUDA Clang
 #define __DEVICE__ static __device__ __forceinline__
 #endif
 

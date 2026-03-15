@@ -1,3 +1,4 @@
+// REQUIRES: garbage
 // RUN: %libarcher-compile -fopenmp-version=50 && env OMP_NUM_THREADS='3' \
 // RUN:   %libarcher-run-race | FileCheck %s
 

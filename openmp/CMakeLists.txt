@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "OpenMP")
 
+if(DEFINED LIBOMP_SHARED_LINKER_FLAGS)
+  set(CMAKE_SHARED_LINKER_FLAGS "${LIBOMP_SHARED_LINKER_FLAGS}")
+endif()
+
+if(DEFINED LIBOMP_INSTALL_RPATH)
+  set(CMAKE_INSTALL_RPATH "${LIBOMP_INSTALL_RPATH}")
+endif()
+
+# Add cmake directory to search for custom cmake functions.
+#set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
@@ -23,11 +33,6 @@ endif()
 # Must go below project(..)
 include(GNUInstallDirs)
 
-# Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
-# we assume it is not available otherwise. The exception is that we are in an
-# LLVM_ENABLE_PROJECTS=openmp build, the LLVM tree is actually available.
-# Note that this build mode has been deprecated.
-# See https://github.com/llvm/llvm-project/issues/124014
 if (NOT LLVM_RUNTIMES_BUILD AND "openmp" IN_LIST LLVM_ENABLE_PROJECTS)
   set(LLVM_TREE_AVAILABLE True)
 endif ()
@@ -42,6 +47,9 @@ else()
   set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
       "Path where built OpenMP libraries should be installed.")
 endif()
+
+set(OPENMP_INSTALL_CFGDIR "lib/cmake" CACHE STRING
+      "Path where OpenMP config should be installed")
 
 set(OPENMP_TEST_C_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 set(OPENMP_TEST_CXX_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}")

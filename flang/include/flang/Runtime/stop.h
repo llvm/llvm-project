@@ -34,9 +34,7 @@ void RTNAME(RegisterFailImageCallback)(void (*)(void));
 
 // Extensions
 NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
-RT_OFFLOAD_API_GROUP_BEGIN
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
-RT_OFFLOAD_API_GROUP_END
 void FORTRAN_PROCEDURE_NAME(backtrace)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran

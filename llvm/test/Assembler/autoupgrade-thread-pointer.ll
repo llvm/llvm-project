@@ -1,5 +1,5 @@
 ; Test autoupgrade of arch-specific thread pointer intrinsics
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
 
 declare ptr @llvm.aarch64.thread.pointer()
 declare ptr @llvm.arm.thread.pointer()

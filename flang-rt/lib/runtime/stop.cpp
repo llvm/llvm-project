@@ -13,11 +13,17 @@
 #include "flang-rt/runtime/file.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/terminator.h"
+#if not defined(__AMDGPU__) && not defined(__NVPTX__)
+#include "flang/Runtime/main.h"
+#endif
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
+#if not defined(__AMDGPU__) && not defined(__NVPTX__)
+#include <thread>
+#endif
 
-#ifdef HAVE_BACKTRACE
+#if defined(HAVE_BACKTRACE) && !defined(__AMDGPU__) && !defined(__NVPTX__)
 #include BACKTRACE_HEADER
 #endif
 
@@ -71,10 +77,7 @@ static void CloseAllExternalUnits(const char *why) {
 #endif
 }
 
-<<<<<<< HEAD
 #if (not defined(__AMDGPU__) && not defined(__NVPTX__))
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatement)(
     int code, bool isErrorStop, bool quiet) {
 #if defined(RT_DEVICE_COMPILATION)
@@ -106,17 +109,17 @@ static void CloseAllExternalUnits(const char *why) {
     std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
+  if (RTNAME(GetMainThreadId)() != std::this_thread::get_id())
+    std::abort();
   if (isErrorStop)
     Fortran::runtime::ErrorExit(code);
   else
     Fortran::runtime::NormalExit(code);
 #endif
 }
+#endif
 
-<<<<<<< HEAD
 #if (not defined(__AMDGPU__) && not defined(__NVPTX__))
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 [[noreturn]] RT_API_ATTRS void RTNAME(StopStatementText)(
     const char *code, std::size_t length, bool isErrorStop, bool quiet) {
 #if defined(RT_DEVICE_COMPILATION)
@@ -140,6 +143,8 @@ static void CloseAllExternalUnits(const char *why) {
     }
     DescribeIEEESignaledExceptions();
   }
+  if (RTNAME(GetMainThreadId)() != std::this_thread::get_id())
+    std::abort();
   if (isErrorStop) {
     Fortran::runtime::ErrorExit(EXIT_FAILURE);
   } else {
@@ -147,6 +152,7 @@ static void CloseAllExternalUnits(const char *why) {
   }
 #endif
 }
+#endif
 
 #if !RT_GPU_TARGET
 static bool StartPause() {
@@ -219,7 +225,7 @@ void RTNAME(RegisterFailImageCallback)(void (*callback)(void)) {
 }
 
 static RT_NOINLINE_ATTR void PrintBacktrace() {
-#ifdef HAVE_BACKTRACE
+#if defined(HAVE_BACKTRACE) && !defined(__AMDGPU__) && !defined(__NVPTX__)
   // TODO: Need to parse DWARF information to print function line numbers
   constexpr int MAX_CALL_STACK{999};
   void *buffer[MAX_CALL_STACK];
@@ -243,17 +249,14 @@ static RT_NOINLINE_ATTR void PrintBacktrace() {
 
 #endif
 }
-<<<<<<< HEAD
 #if (not defined(__AMDGPU__) && not defined(__NVPTX__))
-=======
-
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 [[noreturn]] RT_OPTNONE_ATTR void RTNAME(Abort)() {
 #ifdef HAVE_BACKTRACE
   PrintBacktrace();
 #endif
   std::abort();
 }
+#endif
 
 RT_OPTNONE_ATTR void FORTRAN_PROCEDURE_NAME(backtrace)() { PrintBacktrace(); }
 

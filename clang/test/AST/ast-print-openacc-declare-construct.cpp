@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
+// flang decided that we would NOT accept -fopenacc downsteam
 
 int *Global, *Global2;
 int GlobalArray[5];

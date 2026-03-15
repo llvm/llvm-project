@@ -21,10 +21,10 @@
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 ;.
 ; CHECK: @S = external local_unnamed_addr global ptr
-; CHECK: @kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK: @kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 ; CHECK-DISABLED: @S = external local_unnamed_addr global ptr
-; CHECK-DISABLED: @kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
+; CHECK-DISABLED: @kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
 define weak i32 @__kmpc_target_init(ptr %0, ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init

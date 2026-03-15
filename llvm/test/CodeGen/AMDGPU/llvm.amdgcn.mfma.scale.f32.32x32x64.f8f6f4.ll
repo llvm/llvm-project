@@ -2334,20 +2334,20 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    v_writelane_b32 v34, s37, 1
 ; GISEL-NEXT:    v_writelane_b32 v34, s38, 2
 ; GISEL-NEXT:    v_writelane_b32 v34, s39, 3
+; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
+; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
+; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
+; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    s_mov_b32 s12, s0
 ; GISEL-NEXT:    s_mov_b32 s13, s1
 ; GISEL-NEXT:    s_mov_b32 s14, s2
 ; GISEL-NEXT:    s_mov_b32 s15, s3
 ; GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[12:13]
-; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
-; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
 ; GISEL-NEXT:    s_mov_b32 s36, s28
 ; GISEL-NEXT:    s_mov_b32 s37, s29
-; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    v_mov_b32_e32 v16, v14
 ; GISEL-NEXT:    v_mov_b32_e32 v17, v15
 ; GISEL-NEXT:    v_readfirstlane_b32 s38, v0
@@ -2750,20 +2750,20 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgpr_vgpr_sgpr__vgp
 ; GISEL-NEXT:    v_writelane_b32 v34, s37, 1
 ; GISEL-NEXT:    v_writelane_b32 v34, s38, 2
 ; GISEL-NEXT:    v_writelane_b32 v34, s39, 3
+; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
+; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
+; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
+; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    s_mov_b32 s12, s0
 ; GISEL-NEXT:    s_mov_b32 s13, s1
 ; GISEL-NEXT:    s_mov_b32 s14, s2
 ; GISEL-NEXT:    s_mov_b32 s15, s3
 ; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
 ; GISEL-NEXT:    v_mov_b64_e32 v[30:31], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[28:29], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[26:27], s[12:13]
-; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
-; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
 ; GISEL-NEXT:    s_mov_b32 s36, s20
 ; GISEL-NEXT:    s_mov_b32 s37, s21
-; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    v_mov_b32_e32 v18, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v19, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v20, v2

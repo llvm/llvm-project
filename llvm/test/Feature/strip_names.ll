@@ -1,5 +1,5 @@
-; RUN: opt < %s -S | FileCheck %s
-; RUN: opt < %s  | opt -S -discard-value-names | FileCheck --check-prefix=NONAME %s
+; RUN: opt  < %s -S | FileCheck %s
+; RUN: opt  < %s  | opt  -S -discard-value-names | FileCheck --check-prefix=NONAME %s
 
 
 ; CHECK: @GlobalValueName

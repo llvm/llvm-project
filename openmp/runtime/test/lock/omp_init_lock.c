@@ -1,3 +1,4 @@
+// REQUIRES: Determinism
 // RUN: %libomp-compile-and-run
 #include "omp_testsuite.h"
 #include <stdio.h>

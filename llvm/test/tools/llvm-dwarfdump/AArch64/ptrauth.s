@@ -23,7 +23,7 @@
 
 # CHECK: 0x0000004f:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p3")
-# CHECK:                 DW_AT_type      (0x0000005a "void *__ptrauth(4, 1, 0x04d4, "authenticates-null-values,strip")")
+# CHECK:                 DW_AT_type      (0x0000005a "void *__ptrauth(4, 1, 0x04d4, "authenticates-null-values")")
 
 # CHECK: 0x0000005a:   DW_TAG_LLVM_ptrauth_type
 # CHECK:                 DW_AT_LLVM_ptrauth_key  (0x04)
@@ -33,7 +33,7 @@
 
 # CHECK: 0x00000063:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p4")
-# CHECK:                 DW_AT_type (0x0000006e "void *__ptrauth(4, 1, 0x04d5, "isa-pointer,authenticates-null-values,sign-and-strip")")
+# CHECK:                 DW_AT_type (0x0000006e "void *__ptrauth(4, 1, 0x04d5, "isa-pointer,authenticates-null-values")")
 
 # CHECK: 0x0000006e:   DW_TAG_LLVM_ptrauth_type
 # CHECK:                 DW_AT_LLVM_ptrauth_key  (0x04)
@@ -140,7 +140,7 @@ Lsection_abbrev:
 	.byte	5                               ; DW_FORM_data2
 	.ascii	"\211|"                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
 	.byte	25                              ; DW_FORM_flag_present
-	.ascii	"\212|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
+	.ascii	"\217|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
 	.byte	11                              ; DW_FORM_data1
 	.byte	0                               ; EOM(1)
 	.byte	0                               ; EOM(2)
@@ -159,7 +159,7 @@ Lsection_abbrev:
 	.byte	25                              ; DW_FORM_flag_present
 	.ascii	"\211|"                         ; DW_AT_LLVM_ptrauth_authenticates_null_values
 	.byte	25                              ; DW_FORM_flag_present
-	.ascii	"\212|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
+	.ascii	"\217|"                         ; DW_AT_LLVM_ptrauth_authentication_mode
 	.byte	11                              ; DW_FORM_data1
 	.byte	0                               ; EOM(1)
 	.byte	0                               ; EOM(2)

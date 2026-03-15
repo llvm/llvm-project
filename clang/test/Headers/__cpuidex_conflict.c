@@ -1,5 +1,4 @@
 // Make sure that __cpuidex in cpuid.h doesn't conflict with the MS
-// extensions built in by ensuring compilation succeeds:
 // RUN: %clang_cc1 %s -DIS_STATIC="" -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=19.00 -triple x86_64-pc-windows-msvc -emit-llvm -o -
 // RUN: %clang_cc1 %s -DIS_STATIC="" -ffreestanding -triple x86_64-w64-windows-gnu -fms-extensions -emit-llvm -o -
 

@@ -1,0 +1,21 @@
+#pragma once
+
+#include <stdint.h>
+
+namespace std {
+#ifdef __INT32_TYPE__
+using ::uint32_t;
+#endif
+
+#ifdef __INT64_TYPE__
+using ::uint64_t;
+#endif
+
+#ifdef __INTPTR_TYPE__
+using ::intptr_t;
+using ::uintptr_t;
+#else
+#error Every target should have __INTPTR_TYPE__
+#endif
+
+} // namespace std

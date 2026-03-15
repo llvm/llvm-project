@@ -1326,6 +1326,12 @@ static void __kmp_stg_parse_use_hidden_helper(char const *name,
          ("__kmp_stg_parse_use_hidden_helper: Disable hidden helper task on "
           "non-Linux platform although it is enabled by user explicitly.\n"));
 #endif
+  // Set the number to 0 if hidden helper task is disabled
+  if (__kmp_enable_hidden_helper == FALSE) {
+    __kmp_hidden_helper_threads_num = 0;
+  } else {
+    __kmp_hidden_helper_threads_num = 8;
+  }
 } // __kmp_stg_parse_use_hidden_helper
 
 static void __kmp_stg_print_use_hidden_helper(kmp_str_buf_t *buffer,

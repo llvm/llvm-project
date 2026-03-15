@@ -24,6 +24,8 @@ namespace clang {
 namespace driver {
 namespace tools {
 
+bool needFortranLibs(const Driver &D, const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 
@@ -56,18 +58,29 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
+void AddStaticDeviceLibsLinking(
+    Compilation &C, const Tool &T, const JobAction &JA,
+    const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CmdArgs, StringRef Arch, StringRef TargetID,
+    bool isBitCodeSDL, bool postClangLink, bool unpackage);
 void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
                                 const JobAction &JA,
                                 const InputInfoList &Inputs,
                                 const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CmdArgs,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL);
+                                StringRef Arch, StringRef TargetID,
+                                bool isBitCodeSDL, bool postClangLink);
+void AddStaticDeviceLibsPostLinking(const Driver &D,
+                                    const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    StringRef Arch, StringRef TargetID,
+                                    bool isBitCodeSDL, bool postClangLink);
 void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
                          const InputInfoList *Inputs, const Driver &D,
                          const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
-                         StringRef Target, bool isBitCodeSDL);
+                         StringRef TargetID, bool isBitCodeSDL,
+                         bool postClangLink, bool unpackage = false);
 
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
@@ -122,6 +135,9 @@ void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
 
+void addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
+                                   const llvm::opt::ArgList &Args,
+                                   llvm::opt::ArgStringList &CmdArgs);
 void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
 void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -181,7 +197,8 @@ std::string getCPUName(const Driver &D, const llvm::opt::ArgList &Args,
 void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                        const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool ForAS,
-                       bool IsAux = false);
+                       bool IsAux = false,
+                       const StringRef TcTargetID = StringRef());
 
 /// Iterate \p Args and convert -mxxx to +xxx and -mno-xxx to -xxx and
 /// append it to \p Features.
@@ -210,6 +227,10 @@ void addMultilibFlag(bool Enabled, const StringRef Flag,
 void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs, bool IsLTO,
                            const StringRef PluginOptPrefix = "");
+
+unsigned getOrCheckAMDGPUCodeObjectVersion(const Driver &D,
+                              const llvm::opt::ArgList &Args,
+                              bool Diagnose = false);
 
 void checkAMDGPUCodeObjectVersion(const Driver &D,
                                   const llvm::opt::ArgList &Args);

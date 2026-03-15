@@ -10,16 +10,16 @@ void bar();
 
 void foo() {
 #pragma omp metadirective when(implementation = {vendor(score(0)  \
-                                                        : llvm)}, \
+                                                        : amd)}, \
                                device = {kind(cpu)}               \
                                : parallel) default(target teams)
   bar();
 #pragma omp metadirective when(device = {kind(gpu)}                                 \
-                               : target teams) when(implementation = {vendor(llvm)} \
+                               : target teams) when(implementation = {vendor(amd)} \
                                                     : parallel) default()
   bar();
 #pragma omp metadirective default(target) when(implementation = {vendor(score(5)  \
-                                                                        : llvm)}, \
+                                                                        : amd)}, \
                                                device = {kind(cpu, host)}         \
                                                : parallel)
   bar();

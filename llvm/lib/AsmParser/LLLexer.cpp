@@ -633,6 +633,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(no_sanitize_address);
   KEYWORD(no_sanitize_hwaddress);
   KEYWORD(sanitize_address_dyninit);
+  KEYWORD(sanitized_padded_global);
 
   KEYWORD(ccc);
   KEYWORD(fastcc);
@@ -1000,6 +1001,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);
   DWKEYWORD(APPLE_ENUM_KIND, DwarfEnumKind);
+  DWKEYWORD(MSPACE_LLVM, DwarfMSpaceLLVM);
 
 #undef DWKEYWORD
 
@@ -1044,6 +1046,11 @@ lltok::Kind LLLexer::LexIdentifier() {
       Keyword == "Default") {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::NameTableKind;
+  }
+
+  if (Keyword.starts_with("DIOp")) {
+    StrVal.assign(Keyword.begin(), Keyword.end());
+    return lltok::DIOp;
   }
 
   if (Keyword == "Binary" || Keyword == "Decimal" || Keyword == "Rational") {

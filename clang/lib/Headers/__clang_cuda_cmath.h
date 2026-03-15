@@ -85,7 +85,7 @@ __DEVICE__ float frexp(float __arg, int *__exp) {
 //        this clash we add a new trait to some of them that is always true
 //        (this is LLVM after all ;)). It will only influence the mangled name
 //        of the variants inside the inner region and avoid the clash.
-#pragma omp begin declare variant match(implementation = {vendor(llvm)})
+#pragma omp begin declare variant match(implementation = {vendor(amd)})
 
 __DEVICE__ int isinf(float __x) { return ::__isinff(__x); }
 __DEVICE__ int isinf(double __x) { return ::__isinf(__x); }

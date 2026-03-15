@@ -1,8 +1,8 @@
-; RUN: opt -module-summary %s -o %t1.bc
-; RUN: opt -module-summary %p/Inputs/alias_resolution.ll -o %t2.bc
-; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t1.bc %t2.bc
-; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE_MOD2 --check-prefix=NOTPROMOTED
-; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE_MOD1 --check-prefix=NOTPROMOTED
+; RUN: opt  -module-summary %s -o %t1.bc
+; RUN: opt  -module-summary %p/Inputs/alias_resolution.ll -o %t2.bc
+; RUN: llvm-lto  -thinlto-action=thinlink -o %t.index.bc %t1.bc %t2.bc
+; RUN: llvm-lto  -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-dis  -o - | FileCheck %s --check-prefix=PROMOTE_MOD2 --check-prefix=NOTPROMOTED
+; RUN: llvm-lto  -thinlto-action=promote -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis  -o - | FileCheck %s --check-prefix=PROMOTE_MOD1 --check-prefix=NOTPROMOTED
 
 ; There is no importing going on with this IR, but let's check the ODR resolution for compile time
 

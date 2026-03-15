@@ -57,7 +57,7 @@
 ; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t1_regular.o %t2.o -o %t4_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
+; RUN: ld.lld %t1_regular.o %t2.o -o %t4_regular --save-temps=no-asm --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
 ; RUN: llvm-dis %t4_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
 
@@ -74,7 +74,7 @@
 ; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t1_regular.o %t2.so -o %t5_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
+; RUN: ld.lld %t1_regular.o %t2.so -o %t5_regular --save-temps=no-asm --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
 ; RUN: llvm-dis %t5_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
 

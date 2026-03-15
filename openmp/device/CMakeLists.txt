@@ -7,6 +7,15 @@ if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not 'Clang ${req_ver}'.")
 endif()
 
+option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
+  set(emissary_sources
+    src/EmissaryFortrt.cpp
+    src/EmissaryPrint.cpp
+  )
+endif()
+
 set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Allocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Configuration.cpp
@@ -23,7 +32,37 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Tasking.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Workshare.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/ExtraMapping.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteamr.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Memory.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteams.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceMemInit.cpp
+  ${emissary_sources}
+
 )
+# Only link AMD ockl/ocml device libraries when actually building for AMDGCN.
+# The previous condition checked LLVM_TARGETS_TO_BUILD which includes all backends
+# (e.g. X86;AMDGPU;NVPTX), causing ockl.bc/ocml.bc to be linked into NVPTX builds
+# and contaminating the NVPTX DeviceRTL bitcode with AMDGCN intrinsics.
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
+  find_package(AMDDeviceLibs REQUIRED CONFIG
+               HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
+                     ${CMAKE_BINARY_DIR}/../rocm-device-libs-prefix/src/rocm-device-libs-build
+                     ${CMAKE_INSTALL_PREFIX}
+  )
+  get_target_property(_ocml_bc ocml IMPORTED_LOCATION)
+  get_target_property(_ockl_bc ockl IMPORTED_LOCATION)
+
+  if(NOT _ockl_bc)
+    message(FATAL_ERROR "Could not find ockl.bc")
+  endif()
+  if(NOT _ocml_bc)
+    message(FATAL_ERROR "Could not find ocml.bc")
+  endif()
+  list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ockl_bc}")
+  list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ocml_bc}")
+endif()
 
 list(APPEND compile_options -flto)
 list(APPEND compile_options -fvisibility=hidden)
@@ -33,7 +72,8 @@ list(APPEND compile_options -fno-rtti)
 list(APPEND compile_options -fno-exceptions)
 list(APPEND compile_options -fconvergent-functions)
 list(APPEND compile_options -Wno-unknown-cuda-version)
-
+list(APPEND compile_options -fno-sanitize=address)
+list(APPEND compile_options -O3)
 if(LLVM_DEFAULT_TARGET_TRIPLE)
   list(APPEND compile_options --target=${LLVM_DEFAULT_TARGET_TRIPLE})
 endif()
@@ -44,11 +84,11 @@ endif()
 # instructions yet and we end up missing out on way more important constant
 # propagation. That said, we will run the vectorizer again after the runtime
 # has been linked into the user program.
-list(APPEND compile_options "SHELL: -mllvm -vectorize-slp=false")
+list(APPEND compile_flags "SHELL: -mllvm -vectorize-slp=false")
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
   set(target_name "amdgpu")
-  list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
+  list(APPEND compile_flags "SHELL:-Xclang -mcode-object-version=none")
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
   set(target_name "nvptx")
@@ -61,7 +101,7 @@ endif()
 # Trick to combine these into a bitcode file via the linker's LTO pass.
 add_executable(libompdevice ${src_files})
 set_target_properties(libompdevice PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   LINKER_LANGUAGE CXX
   BUILD_RPATH ""
   INSTALL_RPATH ""
@@ -77,7 +117,7 @@ target_include_directories(libompdevice PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
-target_compile_options(libompdevice PRIVATE ${compile_options})
+target_compile_options(libompdevice PRIVATE ${compile_options} ${compile_flags})
 if(NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" AND
    NOT "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
   target_link_options(libompdevice PRIVATE
@@ -96,13 +136,14 @@ install(TARGETS libompdevice
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
-             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/libomptarget-${target_name}.bc)
+             ${CMAKE_CURRENT_BINARY_DIR}/libomptarget-${target_name}.bc)
 
 # Archive all the object files generated above into a static library
 add_library(ompdevice STATIC)
 add_dependencies(ompdevice libompdevice)
 set_target_properties(ompdevice PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  ARCHIVE_OUTPUT_DIRECTORY "${OPENMP_INSTALL_LIBDIR}"
+  ARCHIVE_OUTPUT_NAME ompdevice
   LINKER_LANGUAGE CXX
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)

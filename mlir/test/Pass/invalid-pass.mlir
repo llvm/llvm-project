@@ -1,11 +1,7 @@
 // RUN: not mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-module-pass{test-option=a}))' 2>&1 | FileCheck %s
 // RUN: not mlir-opt %s -mlir-print-ir-module-scope -mlir-print-ir-before=cse 2>&1 | FileCheck -check-prefix=PRINT_MODULE_IR_WITH_MULTITHREAD %s
 // RUN: not mlir-opt %s --tosa-to-linalg-pipeline=foo 2>&1 | FileCheck -check-prefix=SHORTHAND %s
-<<<<<<< HEAD
 // XFAIL: *
-=======
-
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 // CHECK: <Pass-Options-Parser>: no such option test-option
 // CHECK: failed to add `test-module-pass` with options `test-option=a`
 // CHECK: failed to add `builtin.module` with options `` to inner pipeline

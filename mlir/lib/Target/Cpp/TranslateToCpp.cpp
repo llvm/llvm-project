@@ -1080,7 +1080,8 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
   // inlined, and as such should be wrapped in parentheses in order to guarantee
   // its precedence and associativity.
   auto requiresParentheses = [&](Value value) {
-    auto expressionOp = value.getDefiningOp<ExpressionOp>();
+    auto expressionOp =
+        dyn_cast_if_present<ExpressionOp>(value.getDefiningOp());
     if (!expressionOp)
       return false;
     return shouldBeInlined(expressionOp);
@@ -1687,7 +1688,7 @@ LogicalResult CppEmitter::emitOperand(Value value, bool isInBrackets) {
     return success();
   }
 
-  auto expressionOp = value.getDefiningOp<ExpressionOp>();
+  auto expressionOp = dyn_cast_if_present<ExpressionOp>(value.getDefiningOp());
   if (expressionOp && shouldBeInlined(expressionOp))
     return emitExpression(expressionOp);
 

@@ -1,11 +1,11 @@
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
-; RUN: llvm-modextract -b -n 0 -o %t0 %t
-; RUN: llvm-modextract -b -n 1 -o %t1 %t
+; RUN: opt  -thinlto-bc -thinlto-split-lto-unit -o %t %s
+; RUN: llvm-modextract  -b -n 0 -o %t0 %t
+; RUN: llvm-modextract  -b -n 1 -o %t1 %t
 ; RUN: not llvm-modextract -b -n 2 -o - %t 2>&1 | FileCheck --check-prefix=ERROR %s
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=M0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=M1 %s
-; RUN: llvm-bcanalyzer -dump %t0 | FileCheck --check-prefix=BCA0 %s
-; RUN: llvm-bcanalyzer -dump %t1 | FileCheck --check-prefix=BCA1 %s
+; RUN: llvm-dis  -o - %t0 | FileCheck --check-prefix=M0 %s
+; RUN: llvm-dis  -o - %t1 | FileCheck --check-prefix=M1 %s
+; RUN: llvm-bcanalyzer  -dump %t0 | FileCheck --check-prefix=BCA0 %s
+; RUN: llvm-bcanalyzer  -dump %t1 | FileCheck --check-prefix=BCA1 %s
 
 ; ERROR: llvm-modextract: error: module index out of range; bitcode file contains 2 module(s)
 

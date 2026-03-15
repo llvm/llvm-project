@@ -1,5 +1,6 @@
 ! Test for correct forwarding of fast-math flags from the compiler driver to the
 ! frontend driver
+! REQUIRES: StableDriver
 
 ! Check warning message for Ofast deprecation
 ! RUN: %flang -Ofast -### %s -o %t 2>&1 | FileCheck %s

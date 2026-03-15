@@ -13,7 +13,12 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H
 
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Value.h"
+
 namespace fir {
+
+class FirOpBuilder;
 
 using MinlocBodyOpGeneratorTy = llvm::function_ref<mlir::Value(
     fir::FirOpBuilder &, mlir::Location, const mlir::Type &, mlir::Value,

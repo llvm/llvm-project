@@ -1,6 +1,7 @@
 ; Check that the git revision is contained in the assembly/object files
 
 ; REQUIRES: vc-rev-enabled 
+; REQUIRES: vanilla-revision
 
 ; RUN: llc < %s | FileCheck %s -DREVISION=git-revision
 ; RUN: llc -filetype=obj < %s | FileCheck %s -DREVISION=git-revision

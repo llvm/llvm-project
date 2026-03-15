@@ -34,9 +34,9 @@ MyObject *objects;
 #pragma omp end declare target
 
 // CHECK-DAG: [[SIZES0:@.+]] = private unnamed_addr constant [2 x i64] [i64 {{8|4}}, i64 {{8|4}}]
-// CHECK-DAG: [[MAPS0:@.+]] = private unnamed_addr constant [2 x i64] [i64 1, i64 16384]
+// CHECK-DAG: [[MAPS0:@.+]] = private unnamed_addr constant [2 x i64] [i64 1, i64 32768]
 // CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 {{8|4}}]
-// CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 1, i64 16384]
+// CHECK-DAG: [[MAPS1:@.+]] = private unnamed_addr constant [2 x i64] [i64 1, i64 32768]
 // CHECK: @main
 int main(void) {
 

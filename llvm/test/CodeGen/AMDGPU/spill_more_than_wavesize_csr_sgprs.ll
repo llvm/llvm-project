@@ -142,8 +142,8 @@ define void @spill_more_than_wavesize_csr_sgprs_with_stack_object() {
 ; CHECK-NEXT:    v_writelane_b32 v1, s99, 32
 ; CHECK-NEXT:    v_writelane_b32 v1, s100, 33
 ; CHECK-NEXT:    v_writelane_b32 v1, s101, 34
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_writelane_b32 v1, s102, 35
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART

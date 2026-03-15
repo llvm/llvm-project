@@ -1,7 +1,7 @@
 ; This test checks to make sure that constant exprs fold in some simple situations
 
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as  < %s | llvm-dis  | FileCheck %s
+; RUN: verify-uselistorder  %s
 
 ; CHECK-NOT: bitcast
 ; CHECK-NOT: trunc

@@ -44,8 +44,8 @@ int foo() {
 // IR-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[_TMP2:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
-// IR-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
+// IR-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// IR-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // IR-NEXT:    [[J3:%.*]] = alloca i32, align 4
@@ -69,30 +69,30 @@ int foo() {
 // IR-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP2]]
 // IR-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // IR:       omp.arrayinit.done:
-// IR-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
-// IR-NEXT:    store i32 99, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// IR-NEXT:    store i32 99, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // IR-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // IR-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-// IR-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP4]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_COMB_LB]], ptr [[DOTOMP_COMB_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP4]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// IR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP5]], 99
 // IR-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // IR:       cond.true:
 // IR-NEXT:    br label [[COND_END:%.*]]
 // IR:       cond.false:
-// IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    br label [[COND_END]]
 // IR:       cond.end:
 // IR-NEXT:    [[COND:%.*]] = phi i32 [ 99, [[COND_TRUE]] ], [ [[TMP6]], [[COND_FALSE]] ]
-// IR-NEXT:    store i32 [[COND]], ptr [[DOTOMP_COMB_UB]], align 4
-// IR-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// IR-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// IR-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // IR-NEXT:    store i32 [[TMP7]], ptr [[DOTOMP_IV]], align 4
 // IR-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // IR:       omp.inner.for.cond:
 // IR-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[TMP8]], [[TMP9]]
 // IR-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR:       omp.inner.for.body:
@@ -240,8 +240,8 @@ int foo() {
 // IR-PCH-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[_TMP2:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[DOTOMP_COMB_LB:%.*]] = alloca i32, align 4
-// IR-PCH-NEXT:    [[DOTOMP_COMB_UB:%.*]] = alloca i32, align 4
+// IR-PCH-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
+// IR-PCH-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
 // IR-PCH-NEXT:    [[J3:%.*]] = alloca i32, align 4
@@ -265,30 +265,30 @@ int foo() {
 // IR-PCH-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP2]]
 // IR-PCH-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // IR-PCH:       omp.arrayinit.done:
-// IR-PCH-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
-// IR-PCH-NEXT:    store i32 99, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-PCH-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
+// IR-PCH-NEXT:    store i32 99, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 // IR-PCH-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // IR-PCH-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-// IR-PCH-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP4]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_COMB_LB]], ptr [[DOTOMP_COMB_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-PCH-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP4]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// IR-PCH-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP5]], 99
 // IR-PCH-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 // IR-PCH:       cond.true:
 // IR-PCH-NEXT:    br label [[COND_END:%.*]]
 // IR-PCH:       cond.false:
-// IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-PCH-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    br label [[COND_END]]
 // IR-PCH:       cond.end:
 // IR-PCH-NEXT:    [[COND:%.*]] = phi i32 [ 99, [[COND_TRUE]] ], [ [[TMP6]], [[COND_FALSE]] ]
-// IR-PCH-NEXT:    store i32 [[COND]], ptr [[DOTOMP_COMB_UB]], align 4
-// IR-PCH-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
+// IR-PCH-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// IR-PCH-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 // IR-PCH-NEXT:    store i32 [[TMP7]], ptr [[DOTOMP_IV]], align 4
 // IR-PCH-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // IR-PCH:       omp.inner.for.cond:
 // IR-PCH-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// IR-PCH-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
+// IR-PCH-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    [[CMP5:%.*]] = icmp sle i32 [[TMP8]], [[TMP9]]
 // IR-PCH-NEXT:    br i1 [[CMP5]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // IR-PCH:       omp.inner.for.body:

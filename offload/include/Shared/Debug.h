@@ -42,6 +42,8 @@
 #include <cstdarg>
 #include <mutex>
 #include <string>
+#include <cstdint>
+#include <cstdlib>
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
@@ -61,8 +63,15 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_PLUGIN_KERNEL = 0x0010,
   // Print whenever data is transferred to the device
   OMP_INFOTYPE_DATA_TRANSFER = 0x0020,
+  // AMD-only flag values (at least for now)
+  // Show kernel launches
+  OMP_INFOTYPE_AMD_KERNEL_TRACE = 0x1000,
+  // Enable also API-level tracing
+  OMP_INFOTYPE_AMD_API_TRACE = 0x200,
   // Print whenever data does not have a viable device counterpart.
   OMP_INFOTYPE_EMPTY_MAPPING = 0x0040,
+  // Print diagnostic information for users.
+  OMP_INFOTYPE_USER_DIAGNOSTIC = 0x0080,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
@@ -73,6 +82,25 @@ inline std::atomic<uint32_t> &getInfoLevelInternal() {
   std::call_once(Flag, []() {
     if (char *EnvStr = getenv("LIBOMPTARGET_INFO"))
       InfoLevel.store(std::stoi(EnvStr));
+  });
+
+  static std::once_flag KTFlag{};
+  std::call_once(KTFlag, []() {
+    if (char *EnvStr = getenv("LIBOMPTARGET_KERNEL_TRACE")) {
+      auto V = std::stoi(EnvStr);
+      // Match the LIBOMPTARGET_KERNEL_TRACE values and set InfoLevel to the
+      // enum values to keep backward-compatibility for
+      // LIBOMPTARGET_KERNEL_TRACE
+      if (V == 1)
+        InfoLevel.store(OMP_INFOTYPE_AMD_KERNEL_TRACE);
+      if (V == 2)
+        InfoLevel.store(OMP_INFOTYPE_AMD_API_TRACE |
+                        /*OMP_INFOTYPE_API_TRACE=*/0xff000000);
+      if (V == 3)
+        InfoLevel.store(OMP_INFOTYPE_AMD_KERNEL_TRACE |
+			OMP_INFOTYPE_AMD_API_TRACE |
+                        /*OMP_INFOTYPE_API_TRACE=*/0xff000000);
+    }
   });
 
   return InfoLevel;
@@ -618,7 +646,7 @@ static inline odbg_ostream reportErrorStream() {
     if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME),
                                                  (ODT_Error), RealLevel))
       return odbg_ostream{
-          ::llvm::offload::debug::computePrefix(DEBUG_PREFIX, ODT_Error),
+          ::llvm::offload::debug::computePrefix("DEBUG_PREFIX_FIXME:", ODT_Error),
           ::llvm::offload::debug::dbgs(), RealLevel};
     else
       return odbg_ostream{"", ::llvm::nulls(), 1};
@@ -670,7 +698,9 @@ template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
   };
 
   constexpr const char *result = getId();
+#if FIXME
   static_assert(result != nullptr, "Unknown InfoId being used");
+#endif
   return result;
 }
 

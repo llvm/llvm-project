@@ -48,6 +48,7 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
+using namespace llvm::omp::xteam_red;
 
 namespace {
 /// Base class for handling code generation inside OpenMP regions.
@@ -553,6 +554,26 @@ enum OpenMPSchedType {
   OMP_sch_modifier_nonmonotonic = (1 << 30),
 };
 
+/// Hint enum values for atomic and critical constructs (these enumerators are
+/// taken from the enum omp_sync_hint_t in omp.h).
+enum OpenMPSyncHintExpr {
+  OMP_sync_hint_none = 0,
+  OMP_lock_hint_none = OMP_sync_hint_none,
+  OMP_sync_hint_uncontended = 1,
+  OMP_lock_hint_uncontended = OMP_sync_hint_uncontended,
+  OMP_sync_hint_contended = (1 << 1),
+  OMP_lock_hint_contended = OMP_sync_hint_contended,
+  OMP_sync_hint_nonspeculative = (1 << 2),
+  OMP_lock_hint_nonspeculative = OMP_sync_hint_nonspeculative,
+  OMP_sync_hint_speculative = (1 << 3),
+  OMP_lock_hint_speculative = OMP_sync_hint_speculative,
+  kmp_lock_hint_hle = (1 << 16),
+  kmp_lock_hint_rtm = (1 << 17),
+  kmp_lock_hint_adaptive = (1 << 18),
+  AMD_fast_fp_atomics = (1 << 19),
+  AMD_safe_fp_atomics = (1 << 20)
+};
+
 /// A basic class for pre|post-action for advanced codegen sequence for OpenMP
 /// region.
 class CleanupTy final : public EHScopeStack::Cleanup {
@@ -1053,7 +1074,8 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
 
   // The user forces the compiler to behave as if omp requires
   // unified_shared_memory was given.
-  if (CGM.getLangOpts().OpenMPForceUSM) {
+  if (CGM.getLangOpts().OpenMPForceUSM ||
+      CGM.getLangOpts().OpenMPTargetMultiDevice) {
     HasRequiresUnifiedSharedMemory = true;
     OMPBuilder.Config.setHasRequiresUnifiedSharedMemory(true);
   }
@@ -1217,7 +1239,8 @@ struct PushAndPopStackRAII {
 static llvm::Function *emitParallelOrTeamsOutlinedFunction(
     CodeGenModule &CGM, const OMPExecutableDirective &D, const CapturedStmt *CS,
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
-    const StringRef OutlinedHelperName, const RegionCodeGenTy &CodeGen) {
+    const StringRef OutlinedHelperName, const RegionCodeGenTy &CodeGen,
+    bool EmittingOutlinedTeams) {
   assert(ThreadIDVar->getType()->isPointerType() &&
          "thread id variable must be of type kmp_int32 *");
   CodeGenFunction CGF(CGM, true);
@@ -1248,7 +1271,8 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D);
+  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D,
+                                                EmittingOutlinedTeams, false);
 }
 
 std::string CGOpenMPRuntime::getOutlinedHelperName(StringRef Name) const {
@@ -1272,7 +1296,7 @@ llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
   const CapturedStmt *CS = D.getCapturedStmt(OMPD_parallel);
   return emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
-      CodeGen);
+      CodeGen, /*EmittingOutlinedTeams*/ false);
 }
 
 llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
@@ -1282,7 +1306,7 @@ llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
   const CapturedStmt *CS = D.getCapturedStmt(OMPD_teams);
   return emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
-      CodeGen);
+      CodeGen, /*EmittingOutlinedTeams*/ true);
 }
 
 llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
@@ -2710,19 +2734,38 @@ static void emitForStaticInitCall(
             Schedule == OMP_dist_sch_static_chunked) &&
            "expected static chunked schedule");
   }
-  llvm::Value *Args[] = {
-      UpdateLocation,
-      ThreadId,
-      CGF.Builder.getInt32(addMonoNonMonoModifier(CGF.CGM, Schedule, M1,
-                                                  M2)), // Schedule type
-      Values.IL.emitRawPointer(CGF),                    // &isLastIter
-      Values.LB.emitRawPointer(CGF),                    // &LB
-      Values.UB.emitRawPointer(CGF),                    // &UB
-      Values.ST.emitRawPointer(CGF),                    // &Stride
-      CGF.Builder.getIntN(Values.IVSize, 1),            // Incr
-      Chunk                                             // Chunk
-  };
-  CGF.EmitRuntimeCall(ForStaticInitFunction, Args);
+
+  if (Values.IsMultiDevice) {
+    llvm::Value *Args[] = {
+        UpdateLocation,
+        ThreadId,
+        CGF.Builder.getInt32(addMonoNonMonoModifier(CGF.CGM, Schedule, M1,
+                                                    M2)), // Schedule type
+        Values.IL.emitRawPointer(CGF),                    // &isLastIter
+        Values.MultiDeviceLB.emitRawPointer(CGF),         // &MultiDeviceLB
+        Values.MultiDeviceUB.emitRawPointer(CGF),         // &MultiDeviceUB
+        Values.LB.emitRawPointer(CGF),                    // &LB
+        Values.UB.emitRawPointer(CGF),                    // &UB
+        Values.ST.emitRawPointer(CGF),                    // &Stride
+        CGF.Builder.getIntN(Values.IVSize, 1),            // Incr
+        Chunk                                             // Chunk
+    };
+    CGF.EmitRuntimeCall(ForStaticInitFunction, Args);
+  } else {
+    llvm::Value *Args[] = {
+        UpdateLocation,
+        ThreadId,
+        CGF.Builder.getInt32(addMonoNonMonoModifier(CGF.CGM, Schedule, M1,
+                                                    M2)), // Schedule type
+        Values.IL.emitRawPointer(CGF),                    // &isLastIter
+        Values.LB.emitRawPointer(CGF),                    // &LB
+        Values.UB.emitRawPointer(CGF),                    // &UB
+        Values.ST.emitRawPointer(CGF),                    // &Stride
+        CGF.Builder.getIntN(Values.IVSize, 1),            // Incr
+        Chunk                                             // Chunk
+    };
+    CGF.EmitRuntimeCall(ForStaticInitFunction, Args);
+  }
 }
 
 void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
@@ -2750,7 +2793,7 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
 void CGOpenMPRuntime::emitDistributeStaticInit(
     CodeGenFunction &CGF, SourceLocation Loc,
     OpenMPDistScheduleClauseKind SchedKind,
-    const CGOpenMPRuntime::StaticRTInput &Values) {
+    const CGOpenMPRuntime::StaticRTInput &Values, bool IsMultiDeviceKernel) {
   OpenMPSchedType ScheduleNum =
       getRuntimeSchedule(SchedKind, Values.Chunk != nullptr);
   llvm::Value *UpdatedLocation =
@@ -2759,9 +2802,13 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::FunctionCallee StaticInitFunction;
   bool isGPUDistribute =
       CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU();
-  StaticInitFunction = OMPBuilder.createForStaticInitFunction(
-      Values.IVSize, Values.IVSigned, isGPUDistribute);
-
+  if (IsMultiDeviceKernel && isGPUDistribute) {
+    StaticInitFunction = OMPBuilder.createMDDistributeForStaticInitFunction(
+        Values.IVSize, Values.IVSigned);
+  } else {
+    StaticInitFunction = OMPBuilder.createForStaticInitFunction(
+        Values.IVSize, Values.IVSigned, isGPUDistribute);
+  }
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, OMPC_SCHEDULE_MODIFIER_unknown,
                         OMPC_SCHEDULE_MODIFIER_unknown, Values);
@@ -6376,7 +6423,9 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-        return CGF.GenerateOpenMPCapturedStmtFunction(CS, D);
+        return CGF.GenerateOpenMPCapturedStmtFunction(
+            CS, D,
+            /*CanHaveMultiDeviceArgs*/ true, /*IsTopKernel*/ true);
       };
 
   cantFail(OMPBuilder.emitTargetRegionFunction(
@@ -10626,6 +10675,33 @@ llvm::Value *CGOpenMPRuntime::emitTargetNumIterationsCall(
   return llvm::ConstantInt::get(CGF.Int64Ty, 0);
 }
 
+void addXTeamReductionComponentHelper(
+    CodeGenFunction &CGF, MappableExprsHandler::MapCombinedInfoTy &CombinedInfo,
+    llvm::Value *InfoComponent) {
+  MappableExprsHandler::MapCombinedInfoTy CurInfo;
+  CurInfo.Exprs.push_back(nullptr);
+  CurInfo.BasePointers.push_back(InfoComponent);
+  CurInfo.Pointers.push_back(InfoComponent);
+  CurInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+      CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
+      /*isSigned=*/true));
+
+  // Copy to the device as an argument. No need to retrieve it.
+  CurInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
+                          OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+  CurInfo.Mappers.push_back(nullptr);
+
+  assert(CurInfo.BasePointers.size() == CurInfo.Pointers.size() &&
+         CurInfo.BasePointers.size() == CurInfo.Sizes.size() &&
+         CurInfo.BasePointers.size() == CurInfo.Types.size() &&
+         CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
+         "Inconsistent map information sizes!");
+
+  // We need to append the results of this capture to what we already
+  // have.
+  CombinedInfo.append(CurInfo);
+}
+
 static void
 emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
                        const OMPExecutableDirective &D,
@@ -10637,7 +10713,8 @@ emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
   } else {
     if (RequiresOuterTask) {
       CapturedVars.clear();
-      CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
+      CGF.GenerateOpenMPCapturedVars(CS, CapturedVars,
+                                     CGF.CGM.getOptKernelKey(D));
     }
     llvm::SmallVector<llvm::Value *, 16> Args(CapturedVars.begin(),
                                               CapturedVars.end());
@@ -10706,16 +10783,54 @@ emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
 static void genMapInfoForCaptures(
     MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
     const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+    llvm::SmallVectorImpl<llvm::Value *> &MultiTargetVars,
     llvm::OpenMPIRBuilder &OMPBuilder,
     llvm::DenseSet<CanonicalDeclPtr<const Decl>> &MappedVarSet,
+    uint32_t &CapturedCount,
     MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
-
   llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
+
+  // If a for statement is present and the compiler flag for multi-device
+  // targets is enabled then it means we have 2 variables at the start which
+  // represent the lower and upper bounds of the loop:
+  // TODO: add compiler flag condition
+  for (auto *MTV = MultiTargetVars.begin(); MTV != MultiTargetVars.end();
+       ++MTV) {
+    // This should always be null because the any used variable (if one exists)
+    // will be included when capturing the actual variables (not the
+    // multi-target ones).
+    MappedVarSet.insert(nullptr);
+
+    MappableExprsHandler::MapCombinedInfoTy CurInfo;
+    CurInfo.Exprs.push_back(nullptr);
+    CurInfo.BasePointers.push_back(*MTV);
+    CurInfo.Pointers.push_back(*MTV);
+    CurInfo.Sizes.push_back(llvm::ConstantInt::get(CGF.Int64Ty, 4));
+
+    // Copy to the device as an argument. No need to retrieve it.
+    CurInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
+                            OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
+                            OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+    CurInfo.Mappers.push_back(nullptr);
+
+    assert(CurInfo.BasePointers.size() == CurInfo.Pointers.size() &&
+           CurInfo.BasePointers.size() == CurInfo.Sizes.size() &&
+           CurInfo.BasePointers.size() == CurInfo.Types.size() &&
+           CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
+           "Inconsistent map information sizes!");
+
+    // We need to append the results of this capture to what we already
+    // have.
+    CombinedInfo.append(CurInfo);
+  }
+
   auto RI = CS.getCapturedRecordDecl()->field_begin();
   auto *CV = CapturedVars.begin();
+  CapturedCount = 0;
   for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),
                                             CE = CS.capture_end();
        CI != CE; ++CI, ++RI, ++CV) {
+    ++CapturedCount;
     MappableExprsHandler::MapCombinedInfoTy CurInfo;
 
     // VLA sizes are passed to the outlined region by copy and do not have map
@@ -10816,6 +10931,7 @@ genMapInfo(MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
                llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) {
 
   CodeGenModule &CGM = CGF.CGM;
+
   // Map any list items in a map clause that were not captures because they
   // weren't referenced within the construct.
   MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, SkippedVarSet);
@@ -10834,14 +10950,16 @@ genMapInfo(MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
 static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
                        const CapturedStmt &CS,
                        llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+                       llvm::SmallVectorImpl<llvm::Value *> &MultiTargetVars,
                        llvm::OpenMPIRBuilder &OMPBuilder,
+                       uint32_t &CapturedCount,
                        MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
   // Get mappable expression information.
   MappableExprsHandler MEHandler(D, CGF);
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
 
-  genMapInfoForCaptures(MEHandler, CGF, CS, CapturedVars, OMPBuilder,
-                        MappedVarSet, CombinedInfo);
+  genMapInfoForCaptures(MEHandler, CGF, CS, CapturedVars, MultiTargetVars,
+                        OMPBuilder, MappedVarSet, CapturedCount, CombinedInfo);
   genMapInfo(MEHandler, CGF, CombinedInfo, OMPBuilder, MappedVarSet);
 }
 
@@ -10864,8 +10982,9 @@ emitClauseForBareTargetDirective(CodeGenFunction &CGF,
 static void emitTargetCallKernelLaunch(
     CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
     const OMPExecutableDirective &D,
-    llvm::SmallVectorImpl<llvm::Value *> &CapturedVars, bool RequiresOuterTask,
-    const CapturedStmt &CS, bool OffloadingMandatory,
+    llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+    llvm::SmallVectorImpl<llvm::Value *> &MultiTargetVars,
+    bool RequiresOuterTask, const CapturedStmt &CS, bool OffloadingMandatory,
     llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
     llvm::Value *OutlinedFnID, CodeGenFunction::OMPTargetDataInfo &InputInfo,
     llvm::Value *&MapTypesArray, llvm::Value *&MapNamesArray,
@@ -10877,7 +10996,6 @@ static void emitTargetCallKernelLaunch(
 
   // Fill up the arrays with all the captured variables.
   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
-<<<<<<< HEAD
   uint32_t CapturedCount;
   genMapInfo(D, CGF, CS, CapturedVars, MultiTargetVars, OMPBuilder,
              CapturedCount, CombinedInfo);
@@ -11187,11 +11305,7 @@ static void emitTargetCallKernelLaunch(
   CombinedInfo.Mappers.push_back(nullptr);
   CombinedInfo.DevicePtrDecls.push_back(nullptr);
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
   CGOpenMPRuntime::TargetDataInfo Info;
-  genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
-
   emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);
 
@@ -11214,6 +11328,9 @@ static void emitTargetCallKernelLaunch(
     bool IsReverseOffloading = Device.getInt() == OMPC_DEVICE_ancestor;
 
     if (IsReverseOffloading) {
+      assert(
+          !CGF.CGM.getLangOpts().OpenMPTargetMultiDevice &&
+          "Cannot enable multi-device targets when doing reverse offloading");
       // Reverse offloading is not supported, so just execute on the host.
       // FIXME: This fallback solution is incorrect since it ignores the
       // OMP_TARGET_OFFLOAD environment variable. Instead it would be better to
@@ -11278,10 +11395,27 @@ static void emitTargetCallKernelLaunch(
     CGF.Builder.restoreIP(AfterIP);
   };
 
-  if (RequiresOuterTask)
+  if (RequiresOuterTask) {
+    assert(!CGM.getLangOpts().OpenMPTargetMultiDevice &&
+           "Cannot yet enable multi-device targets for situations in which an "
+           "outer task is required");
     CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
-  else
+  } else
     OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
+
+  if (HasXTeamReduction) {
+    if (!CGF.CGM.isXteamRedFast(FStmt) &&
+        !(CGF.CGM.isXteamScanKernel() && CGF.CGM.isXteamScanPhaseOne)) {
+      // Deallocate XTeam reduction variables:
+      for (uint32_t I = 0; I < CGF.CGM.ReductionVars.size(); ++I) {
+        llvm::Value *FreeArgs[] = {CGF.CGM.ReductionVars[I], DevIdVal};
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                CGF.CGM.getModule(), OMPRTL_omp_target_free),
+                            FreeArgs);
+      }
+      CGF.CGM.ReductionVars.clear();
+    }
+  }
 }
 
 static void
@@ -11330,10 +11464,12 @@ void CGOpenMPRuntime::emitTargetCall(
        needsTaskBasedThreadLimit(D.getDirectiveKind()) &&
        D.hasClausesOfKind<OMPThreadLimitClause>());
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
+  llvm::SmallVector<llvm::Value *, 4> MultiTargetVars;
   const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
-  auto &&ArgsCodegen = [&CS, &CapturedVars](CodeGenFunction &CGF,
-                                            PrePostActionTy &) {
-    CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
+  auto &&ArgsCodegen = [&CS, &D, &CapturedVars, &MultiTargetVars](
+                           CodeGenFunction &CGF, PrePostActionTy &) {
+    CGF.GenerateOpenMPCapturedVarsDevice(CS, CapturedVars, MultiTargetVars,
+                                         CGF.CGM.getOptKernelKey(D));
   };
   emitInlinedDirective(CGF, OMPD_unknown, ArgsCodegen);
 
@@ -11341,15 +11477,15 @@ void CGOpenMPRuntime::emitTargetCall(
   llvm::Value *MapTypesArray = nullptr;
   llvm::Value *MapNamesArray = nullptr;
 
-  auto &&TargetThenGen = [this, OutlinedFn, &D, &CapturedVars,
+  auto &&TargetThenGen = [this, OutlinedFn, &D, &CapturedVars, &MultiTargetVars,
                           RequiresOuterTask, &CS, OffloadingMandatory, Device,
                           OutlinedFnID, &InputInfo, &MapTypesArray,
                           &MapNamesArray, SizeEmitter](CodeGenFunction &CGF,
                                                        PrePostActionTy &) {
-    emitTargetCallKernelLaunch(this, OutlinedFn, D, CapturedVars,
-                               RequiresOuterTask, CS, OffloadingMandatory,
-                               Device, OutlinedFnID, InputInfo, MapTypesArray,
-                               MapNamesArray, SizeEmitter, CGF, CGM);
+    emitTargetCallKernelLaunch(
+        this, OutlinedFn, D, CapturedVars, MultiTargetVars, RequiresOuterTask,
+        CS, OffloadingMandatory, Device, OutlinedFnID, InputInfo, MapTypesArray,
+        MapNamesArray, SizeEmitter, CGF, CGM);
   };
 
   auto &&TargetElseGen =
@@ -11446,6 +11582,10 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
       CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
           CGM, ParentName,
           cast<OMPTargetTeamsDistributeParallelForDirective>(E));
+      if (CGM.isXteamScanKernel() && !CGM.isXteamScanPhaseOne)
+        CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
+            CGM, ParentName,
+            cast<OMPTargetTeamsDistributeParallelForDirective>(E));
       break;
     case OMPD_target_teams_distribute_parallel_for_simd:
       CodeGenFunction::
@@ -11706,7 +11846,9 @@ void CGOpenMPRuntime::adjustTargetSpecificDataForLambdas(
 
 void CGOpenMPRuntime::processRequiresDirective(const OMPRequiresDecl *D) {
   for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+    // default unified_address to the same semantics as unified_shared_memory
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory ||
+        Clause->getClauseKind() == OMPC_unified_address) {
       HasRequiresUnifiedSharedMemory = true;
       OMPBuilder.Config.setHasRequiresUnifiedSharedMemory(true);
     } else if (const auto *AC =
@@ -11965,8 +12107,8 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createTargetData(
-          OmpLoc, AllocaIP, CodeGenIP, DeviceID, IfCondVal, Info, GenMapInfoCB,
-          CustomMapperCB,
+          OmpLoc, AllocaIP, CodeGenIP, /*DeallocIPs=*/{}, DeviceID, IfCondVal,
+          Info, GenMapInfoCB, CustomMapperCB,
           /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
@@ -13661,7 +13803,8 @@ void CGOpenMPSIMDRuntime::emitForStaticInit(
 
 void CGOpenMPSIMDRuntime::emitDistributeStaticInit(
     CodeGenFunction &CGF, SourceLocation Loc,
-    OpenMPDistScheduleClauseKind SchedKind, const StaticRTInput &Values) {
+    OpenMPDistScheduleClauseKind SchedKind, const StaticRTInput &Values,
+    bool IsMultiDeviceKernel) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

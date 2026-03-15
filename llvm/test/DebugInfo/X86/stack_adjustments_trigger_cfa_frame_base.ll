@@ -150,7 +150,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !9 = !DINamespace(name: "core", scope: null)
 !10 = !DISubroutineType(types: !11)
 !11 = !{!12, !12}
-!12 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&()", baseType: !13, size: 64, align: 64, dwarfAddressSpace: 0)
+!12 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&()", baseType: !13, size: 64, align: 64, addressSpace: 0)
 !13 = !DIBasicType(name: "()", encoding: DW_ATE_unsigned)
 !14 = !{!15}
 !15 = !DILocalVariable(name: "dummy", arg: 1, scope: !6, file: !7, line: 294, type: !12)
@@ -165,7 +165,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !24 = distinct !DISubprogram(name: "black_box<&mut ()>", linkageName: "_ZN4core4hint9black_box17hff24a8f6cdc261d0E", scope: !8, file: !7, line: 294, type: !25, scopeLine: 294, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !4, templateParams: !30, retainedNodes: !28)
 !25 = !DISubroutineType(types: !26)
 !26 = !{!27, !27}
-!27 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&mut ()", baseType: !13, size: 64, align: 64, dwarfAddressSpace: 0)
+!27 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "&mut ()", baseType: !13, size: 64, align: 64, addressSpace: 0)
 !28 = !{!29}
 !29 = !DILocalVariable(name: "dummy", arg: 1, scope: !24, file: !7, line: 294, type: !27)
 !30 = !{!31}

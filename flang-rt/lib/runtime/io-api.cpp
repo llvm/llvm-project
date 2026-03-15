@@ -31,7 +31,9 @@
 #include <memory>
 
 namespace Fortran::runtime::io {
+#ifdef RT_OFFLOAD_IO
 RT_EXT_API_GROUP_BEGIN
+#endif
 
 template <Direction DIR>
 RT_API_ATTRS Cookie BeginInternalArrayListIO(const Descriptor &descriptor,
@@ -1330,5 +1332,7 @@ enum Iostat IODEF(CheckUnitNumberInRange128)(common::int128_t unit,
 }
 #endif
 
+#ifdef RT_OFFLOAD_IO
 RT_EXT_API_GROUP_END
+#endif
 } // namespace Fortran::runtime::io

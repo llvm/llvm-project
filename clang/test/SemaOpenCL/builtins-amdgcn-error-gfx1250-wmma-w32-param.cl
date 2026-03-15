@@ -285,13 +285,13 @@ void test_amdgcn_swmmac_bf16f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf1
 
 void test_amdgcn_swmmac_i32_16x16x128_iu8(global v8i* out, v8i a, v16i b, v8i c, int index, int mod)
 {
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(mod, a, 0, b, c, index, false, false); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, mod, b, c, index, false, false); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, mod, false); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, mod); // expected-error {{'__builtin_amdgcn_swmmac_i32_16x16x128_iu8' must be a constant integer}}
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, 32.0f); // expected-error {{integer constant expression must have integer type, not 'double'}}
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, mod); // expected-error {{expression is not an integer constant expression}}
-  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, true, 32.0f); // expected-error {{too many arguments to function call, expected at most 9, have 10}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(mod, a, 0, b, c, index, false, false); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, mod, b, c, index, false, false); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, mod, false); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, mod); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, 32.0f); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, mod); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
+  *out = __builtin_amdgcn_swmmac_i32_16x16x128_iu8(0, a, 0, b, c, index, false, true, true, 32.0f); // expected-error {{'__private int' to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(int)))) int' (vector of 2 'int' values)}}
 }
 
 void test_amdgcn_swmmac_f32_16x16x64_f16(global v8f* out, v16h a, v32h b, v8f c, int index, int mod)

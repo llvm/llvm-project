@@ -5,6 +5,10 @@
 ; A call should be skipped if all lanes are zero, since we don't know
 ; what side effects should be avoided inside the call.
 define hidden void @func() #1 {
+; GCN-LABEL: func:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
@@ -18,9 +22,9 @@ define void @if_call(i32 %flag) #0 {
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v1, s30, 0
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v1, s31, 1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[16:17], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %call
@@ -30,8 +34,8 @@ define void @if_call(i32 %flag) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:  .LBB1_2: ; %end
 ; GCN-NEXT:    s_or_b64 exec, exec, s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v1, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v1, 0
+; GCN-NEXT:    v_readlane_b32 s31, v1, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33 ; 4-byte Folded Reload

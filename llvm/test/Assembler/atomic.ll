@@ -1,5 +1,5 @@
-; RUN: opt < %s | opt -S | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: opt  < %s | opt  -S | FileCheck %s
+; RUN: verify-uselistorder  %s
 ; Basic smoke test for atomic operations.
 
 define void @f(ptr %x) {

@@ -1,7 +1,6 @@
 ; This test verifies whether we can outline a singleton instance (i.e., an instance that does not repeat)
 ; by running two codegen rounds.
 ; This test also verifies if caches for the two-round codegens are correctly working.
-
 ; REQUIRES: asserts
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t

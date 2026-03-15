@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 
 ! OpenMP Version 5.0
 ! Check OpenMP construct validity for the following directives:

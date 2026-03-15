@@ -1229,6 +1229,8 @@ define <vscale x 1 x float> @frem_nxv1f32_allonesmask(<vscale x 1 x float> %x, f
 ; NO-VEC-COMBINE-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x float> @llvm.vp.fadd.nxv1f32(<vscale x 1 x float> [[X:%.*]], <vscale x 1 x float> [[TMP3]], <vscale x 1 x i1> [[MASK]], i32 [[EVL]])
 ; NO-VEC-COMBINE-NEXT:    ret <vscale x 1 x float> [[TMP4]]
 ;
+
+
   %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %1 = insertelement <vscale x 1 x float> poison, float %y, i64 0
@@ -1272,6 +1274,11 @@ define <vscale x 1 x float> @fdiv_nxv1f32_allonesmask_knownvl(<vscale x 1 x floa
 ; NO-VEC-COMBINE-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x float> @llvm.vp.fadd.nxv1f32(<vscale x 1 x float> [[X:%.*]], <vscale x 1 x float> [[TMP3]], <vscale x 1 x i1> [[MASK]], i32 4)
 ; NO-VEC-COMBINE-NEXT:    ret <vscale x 1 x float> [[TMP4]]
 ;
+
+
+
+
+
   %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %1 = insertelement <vscale x 1 x float> poison, float %y, i64 0
@@ -1315,6 +1322,8 @@ define <vscale x 1 x float> @frem_nxv1f32_allonesmask_knownvl(<vscale x 1 x floa
 ; NO-VEC-COMBINE-NEXT:    [[TMP4:%.*]] = call <vscale x 1 x float> @llvm.vp.fadd.nxv1f32(<vscale x 1 x float> [[X:%.*]], <vscale x 1 x float> [[TMP3]], <vscale x 1 x i1> [[MASK]], i32 4)
 ; NO-VEC-COMBINE-NEXT:    ret <vscale x 1 x float> [[TMP4]]
 ;
+
+
   %splat = insertelement <vscale x 1 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %1 = insertelement <vscale x 1 x float> poison, float %y, i64 0

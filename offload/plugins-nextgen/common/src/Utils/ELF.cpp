@@ -12,6 +12,9 @@
 
 #include "Utils/ELF.h"
 
+#include "Shared/APITypes.h"
+#include "Shared/Debug.h"
+
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -22,6 +25,7 @@
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
+using namespace llvm::omp::target::debug;
 
 bool utils::elf::isELF(StringRef Buffer) {
   switch (identify_magic(Buffer)) {
@@ -32,6 +36,7 @@ bool utils::elf::isELF(StringRef Buffer) {
   case file_magic::elf_core:
     return true;
   default:
+    ODBG(ODT_Tool) << "Not an ELF image!";
     return false;
   }
 }

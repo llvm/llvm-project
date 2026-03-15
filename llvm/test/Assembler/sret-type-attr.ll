@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: llvm-as  < %s | llvm-dis  | llvm-as  | llvm-dis  | FileCheck %s
 
 ; CHECK: define void @foo(ptr sret(i32) align 4 %0)
 define void @foo(ptr sret(i32) align 4 %0) {

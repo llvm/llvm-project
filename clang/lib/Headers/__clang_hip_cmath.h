@@ -24,15 +24,17 @@
 #include <stdint.h>
 #endif // !defined(__HIPCC_RTC__)
 
+// __DEVICE__ is a helper macro with common set of attributes for the wrappers
+// we implement in this file. We need static in order to avoid emitting unused
+// functions.
 #pragma push_macro("__DEVICE__")
 #pragma push_macro("__CONSTEXPR__")
+#define __CONSTEXPR__
 #ifdef __OPENMP_AMDGCN__
-#define __DEVICE__ static __attribute__((always_inline, nothrow))
-#define __CONSTEXPR__ constexpr
+#define __DEVICE__ static constexpr __attribute__((always_inline, nothrow))
 #else
 #define __DEVICE__ static __device__ inline __attribute__((always_inline))
-#define __CONSTEXPR__
-#endif // __OPENMP_AMDGCN__
+#endif
 
 // Start with functions that cannot be defined by DEF macros below.
 #if defined(__cplusplus)
@@ -81,7 +83,7 @@ __DEVICE__ __CONSTEXPR__ float frexp(float __arg, int *__exp) {
 //        this clash we add a new trait to some of them that is always true
 //        (this is LLVM after all ;)). It will only influence the mangled name
 //        of the variants inside the inner region and avoid the clash.
-#pragma omp begin declare variant match(implementation = {vendor(llvm)})
+#pragma omp begin declare variant match(implementation = {vendor(amd)})
 
 __DEVICE__ __CONSTEXPR__ int isinf(float __x) { return ::__isinff(__x); }
 __DEVICE__ __CONSTEXPR__ int isinf(double __x) { return ::__isinf(__x); }

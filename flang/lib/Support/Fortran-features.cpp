@@ -77,6 +77,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CUDA); // !@cuf
   disable_.set(LanguageFeature::CudaManaged);
   disable_.set(LanguageFeature::CudaUnified);
+  disable_.set(LanguageFeature::AmdMemoryAllocator);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
   disable_.set(LanguageFeature::ImplicitNoneExternal);

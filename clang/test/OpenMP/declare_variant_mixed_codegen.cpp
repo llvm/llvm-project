@@ -35,25 +35,25 @@
 
 int foo() { return 2; }
 
-#pragma omp declare variant(foo) match(implementation = {vendor(llvm)}, device={kind(cpu)})
+#pragma omp declare variant(foo) match(implementation = {vendor(amd)}, device={kind(cpu)})
 int bar() { return 3; }
 
 int bazzz();
-#pragma omp declare variant(bazzz) match(implementation = {vendor(llvm)}, device={kind(host)})
+#pragma omp declare variant(bazzz) match(implementation = {vendor(amd)}, device={kind(host)})
 int baz() { return 4; }
 
 int test();
-#pragma omp declare variant(test) match(implementation = {vendor(llvm)}, device={kind(cpu)})
+#pragma omp declare variant(test) match(implementation = {vendor(amd)}, device={kind(cpu)})
 int call() { return 5; }
 
 static int stat_unused_no_emit() { return 6; }
 static int stat_unused_();
-#pragma omp declare variant(stat_unused_) match(implementation = {vendor(llvm)}, device={kind(cpu)})
+#pragma omp declare variant(stat_unused_) match(implementation = {vendor(amd)}, device={kind(cpu)})
 #pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(unknown)}, device = {kind(gpu)})
 static int stat_unused() { return 7; }
 
 static int stat_used_();
-#pragma omp declare variant(stat_used_) match(implementation = {vendor(llvm)}, device={kind(host)})
+#pragma omp declare variant(stat_used_) match(implementation = {vendor(amd)}, device={kind(host)})
 static int stat_used() { return 8; }
 
 int main() { return bar() + baz() + call() + stat_used(); }
@@ -69,10 +69,10 @@ struct SpecialFuncs {
 
   int method_() { return 12; }
 #pragma omp declare variant(SpecialFuncs::method_)                             \
-    match(implementation = {vendor(llvm)}, device={kind(cpu)})
+    match(implementation = {vendor(amd)}, device={kind(cpu)})
   int method() { return 13; }
 #pragma omp declare variant(SpecialFuncs::method_)                             \
-    match(implementation = {vendor(llvm)}, device={kind(host)})
+    match(implementation = {vendor(amd)}, device={kind(host)})
   int Method();
 } s;
 
@@ -85,10 +85,10 @@ struct SpecSpecialFuncs {
 
   int method_();
 #pragma omp declare variant(SpecSpecialFuncs::method_)                         \
-    match(implementation = {vendor(llvm)}, device={kind(cpu)})
+    match(implementation = {vendor(amd)}, device={kind(cpu)})
   int method() { return 15; }
 #pragma omp declare variant(SpecSpecialFuncs::method_)                         \
-    match(implementation = {vendor(llvm)}, device={kind(host)})
+    match(implementation = {vendor(amd)}, device={kind(host)})
   int Method();
 } s1;
 
@@ -103,38 +103,38 @@ void xxx() {
 int prio() { return 18; }
 int prio1() { return 19; }
 
-#pragma omp declare variant(prio1) match(implementation = {vendor(score(2): llvm)}, device={kind(cpu,host)})
-#pragma omp declare variant(prio) match(implementation = {vendor(score(1): llvm)}, device={kind(cpu)})
+#pragma omp declare variant(prio1) match(implementation = {vendor(score(2): amd)}, device={kind(cpu,host)})
+#pragma omp declare variant(prio) match(implementation = {vendor(score(1): amd)}, device={kind(cpu)})
 int prio_() { return 20; }
 
 static int prio2() { return 21; }
 static int prio3() { return 22; }
 static int prio4() { return 23; }
 
-#pragma omp declare variant(prio4) match(implementation = {vendor(score(5): llvm)})
-#pragma omp declare variant(prio2) match(implementation = {vendor(score(8): llvm)}, device={kind(cpu,host)})
-#pragma omp declare variant(prio3) match(implementation = {vendor(score(7): llvm)}, device={kind(cpu)})
+#pragma omp declare variant(prio4) match(implementation = {vendor(score(5): amd)})
+#pragma omp declare variant(prio2) match(implementation = {vendor(score(8): amd)}, device={kind(cpu,host)})
+#pragma omp declare variant(prio3) match(implementation = {vendor(score(7): amd)}, device={kind(cpu)})
 static int prio1_() { return 24; }
 
 int int_fn() { return prio1_(); }
 
 int fn_linkage_variant() { return 25; }
 extern "C" {
-#pragma omp declare variant(fn_linkage_variant) match(implementation = {vendor(llvm)}, device={kind(cpu)})
+#pragma omp declare variant(fn_linkage_variant) match(implementation = {vendor(amd)}, device={kind(cpu)})
 int fn_linkage() { return 26; }
 }
 
 extern "C" int fn_linkage_variant1() { return 27; }
-#pragma omp declare variant(fn_linkage_variant1) match(implementation = {vendor(llvm)}, device={kind(host)})
+#pragma omp declare variant(fn_linkage_variant1) match(implementation = {vendor(amd)}, device={kind(host)})
 int fn_linkage1() { return 28; }
 
 int fn_variant2() { return 29; }
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm, ibm)}, device={kind(cpu)})
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(cpu,gpu)})
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(nohost)})
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(cpu,nohost)})
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(gpu)})
-#pragma omp declare variant(fn_variant2) match(implementation = {vendor(llvm)}, device={kind(fpga)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd, ibm)}, device={kind(cpu)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd)}, device={kind(cpu,gpu)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd)}, device={kind(nohost)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd)}, device={kind(cpu,nohost)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd)}, device={kind(gpu)})
+#pragma omp declare variant(fn_variant2) match(implementation = {vendor(amd)}, device={kind(fpga)})
 int fn2() { return 30; }
 
 #pragma omp declare variant(stat_unused_no_emit) match(implementation = {vendor(unknown)}, device = {kind(gpu)})

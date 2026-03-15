@@ -1,0 +1,154 @@
+# RUN: llc -disable-dwarf-locations --mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -start-after=livedebugvalues %s -filetype=obj -o - | llvm-dwarfdump -a - | FileCheck %s
+
+# XFAIL: *
+
+# Check that -disable-dwarf-locations inhibits emitting attributes with
+# "simple" and location-list expression types (TODO: add a non-location-list
+# "complex" expression), and the accompanying .debug_loc section for
+# location-list expressions.
+# 
+# Source variable "x" has a static debug location throughout the function, and
+# a simple input expression.
+#
+# Source variable "y" requires a location-list.
+
+# CHECK-NOT: DW_AT_frame_base
+# CHECK-NOT: DW_AT_location
+# CHECK-NOT: .debug_loc
+
+--- |
+  define hidden i32 @disable_dwarf_locations(i32 %x) #0 {
+  entry:
+    %x.addr = alloca i32, align 4, addrspace(5), !amdgpu.uniform !2
+    store i32 %x, i32 addrspace(5)* %x.addr, align 4
+    call void @llvm.dbg.declare(metadata i32 addrspace(5)* %x.addr, metadata !14, metadata !DIExpression())
+    call void @ex(i32 addrspace(5)* %x.addr) #6
+    %0 = load i32, i32 addrspace(5)* %x.addr, align 4
+    %and = and i32 %0, 1
+    %tobool = icmp ne i32 %and, 0
+    %1 = xor i1 %tobool, true
+    %2 = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %1)
+    %3 = extractvalue { i1, i64 } %2, 0
+    %4 = extractvalue { i1, i64 } %2, 1
+    br i1 %3, label %if.else, label %if.end
+
+  if.else:                                          ; preds = %entry
+    %shr = ashr i32 %0, 1
+    call void @llvm.dbg.value(metadata i32 %shr, metadata !23, metadata !DIExpression())
+    br label %if.end, !amdgpu.uniform !2
+
+  if.end:                                           ; preds = %if.else, %entry
+    %y.0 = phi i32 [ %0, %entry ], [ %shr, %if.else ]
+    call void @llvm.dbg.value(metadata i32 %y.0, metadata !23, metadata !DIExpression())
+    ret i32 %y.0
+  }
+
+  declare hidden void @ex(i32 addrspace(5)*) #2
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+  declare { i1, i64 } @llvm.amdgcn.if.i64(i1) #3
+
+  attributes #0 = { convergent noinline norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime" "uniform-work-group-size"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind readnone speculatable willreturn }
+  attributes #2 = { convergent "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+gfx8-insts,+gfx9-insts,+s-memrealtime" "uniform-work-group-size"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #3 = { convergent nounwind }
+  attributes #4 = { convergent nounwind readnone }
+  attributes #5 = { nounwind }
+  attributes #6 = { convergent }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !opencl.ocl.version = !{!7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "-", directory: "/")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"PIC Level", i32 1}
+  !7 = !{i32 2, i32 0}
+  !9 = distinct !DISubprogram(name: "disable_dwarf_locations", scope: !1, file: !1, line: 2, type: !11, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+  !11 = !DISubroutineType(types: !12)
+  !12 = !{!13, !13}
+  !13 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !14 = !DILocalVariable(name: "x", arg: 1, scope: !9, file: !1, line: 2, type: !13)
+  !15 = !DILocation(line: 2, column: 33, scope: !9)
+  !19 = distinct !DILexicalBlock(scope: !9, file: !1, line: 5, column: 9)
+  !22 = distinct !DILexicalBlock(scope: !19, file: !1, line: 7, column: 12)
+  !23 = !DILocalVariable(name: "y", scope: !9, file: !1, line: 4, type: !13)
+
+...
+---
+name: disable_dwarf_locations
+stack:
+  - { id: 0, name: x.addr, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: 0, debug-info-variable: '!14', debug-info-expression: '!DIExpression()' }
+  - { id: 2, name: '', type: spill-slot, offset: 4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '' }
+  - { id: 3, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: sgpr-spill, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '' }
+  - { id: 4, name: '', type: default, offset: 8, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000)
+    liveins: $vgpr0, $vgpr40, $sgpr30_sgpr31
+
+    S_WAITCNT 0
+    $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, 0, implicit $exec :: (store 4 into %stack.2, addrspace 5)
+    $exec = S_MOV_B64 killed $sgpr4_sgpr5
+    $vgpr40 = V_WRITELANE_B32 $sgpr33, 2, undef $vgpr40
+    $sgpr33 = S_MOV_B32 $sgpr32
+    $vgpr40 = V_WRITELANE_B32 killed $sgpr30, 0, undef $vgpr40
+    $vgpr40 = V_WRITELANE_B32 killed $sgpr31, 1, killed $vgpr40
+    BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec :: (store 4 into %ir.x.addr, addrspace 5)
+    $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1024, implicit-def $scc
+    renamable $sgpr4 = S_GETREG_B32 30735,
+    $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
+    renamable $sgpr4 = S_LSHL_B32 killed renamable $sgpr4, 16, implicit-def dead $scc,
+    V_CMP_NE_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $exec,
+    $vgpr1 = V_MOV_B32_e32 killed $sgpr4, implicit $exec, implicit $exec,
+    renamable $vgpr0 = V_CNDMASK_B32_e32 0, killed $vgpr0, implicit $vcc, implicit $exec,
+    renamable $vgpr1 = V_CNDMASK_B32_e32 0, killed $vgpr1, implicit killed $vcc, implicit $exec,
+    BUNDLE implicit-def $sgpr4_sgpr5, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $scc {
+      $sgpr4_sgpr5 = S_GETPC_B64
+      $sgpr4 = S_ADD_U32 internal $sgpr4, target-flags(amdgpu-rel32-lo) @ex + 4, implicit-def $scc,
+      $sgpr5 = S_ADDC_U32 internal $sgpr5, target-flags(amdgpu-rel32-hi) @ex + 4, implicit-def $scc, implicit internal $scc,
+    }
+    dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, @ex, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $vgpr0, implicit killed $vgpr1,
+    renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, 0, implicit $exec,
+    S_WAITCNT 3952,
+    renamable $vgpr1 = V_AND_B32_e32 1, $vgpr0, implicit $exec,
+    V_CMP_EQ_U32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $exec,
+    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
+
+  bb.1.if.else:
+    successors: %bb.2(0x80000000)
+    liveins: $vgpr0, $vgpr40, $sgpr4_sgpr5
+
+    renamable $vgpr0 = V_ASHRREV_I32_e32 1, killed $vgpr0, implicit $exec,
+    DBG_VALUE $vgpr0, $noreg, !23, !DIExpression(), debug-location !15
+
+  bb.2.if.end:
+    liveins: $vgpr0, $vgpr40, $sgpr4_sgpr5
+
+    DBG_VALUE $vgpr0, $noreg, !23, !DIExpression(), debug-location !15
+    $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
+    DBG_VALUE $vgpr0, $noreg, !23, !DIExpression(), debug-location !15
+    $sgpr4 = V_READLANE_B32 $vgpr40, 0, implicit-def $sgpr4_sgpr5,
+    $sgpr5 = V_READLANE_B32 $vgpr40, 1,
+    $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1024, implicit-def $scc
+    $sgpr33 = V_READLANE_B32 killed $vgpr40, 2
+    $sgpr6_sgpr7 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4, 0, 0, 0, implicit $exec :: (load 4 from %stack.2, addrspace 5)
+    $exec = S_MOV_B64 killed $sgpr6_sgpr7
+    S_WAITCNT 3952,
+    S_SETPC_B64_return killed renamable $sgpr4_sgpr5, implicit killed $vgpr0,
+
+...

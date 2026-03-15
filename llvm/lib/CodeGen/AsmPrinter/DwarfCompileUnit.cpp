@@ -207,6 +207,8 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
   addAnnotation(*VariableDIE, GV->getAnnotations());
 
+  addMemorySpaceAttribute(*VariableDIE, GV->getDWARFMemorySpace());
+
   if (uint32_t AlignInBytes = GV->getAlignInBytes())
     addUInt(*VariableDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
             AlignInBytes);
@@ -267,6 +269,27 @@ void DwarfCompileUnit::addLocationAttribute(
     if (Expr) {
       Expr = DD->adjustExpressionForTarget(Expr, TargetAddrSpace);
       DwarfExpr->addFragmentOffset(Expr);
+
+      std::optional<DIExpression::NewElementsRef> NewElementsRef
+          = Expr ? Expr->getNewElementsRef() : std::nullopt;
+      if (NewElementsRef) {
+        SmallVector<DbgValueLocEntry> ArgLocEntries;
+        if (Global)
+          ArgLocEntries.emplace_back(Global);
+        DwarfExpr->addExpression(*NewElementsRef, ArgLocEntries);
+        continue;
+      }
+    }
+
+    // FIXME: This is a workaround to avoid generating symbols for non-global
+    // address spaces, e.g. LDS. Generate a 'DW_OP_constu' with a dummy
+    // constant value (0) for now.
+    unsigned AMDGPUGlobalAddrSpace = 1;
+    if ((Asm->TM.getTargetTriple().getArch() == Triple::amdgcn) &&
+        (Global->getAddressSpace() != AMDGPUGlobalAddrSpace)) {
+      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
+      addUInt(*Loc, dwarf::DW_FORM_udata, 0);
+      continue;
     }
 
     if (Global) {
@@ -828,8 +851,19 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
 
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   DwarfExpr.addFragmentOffset(Expr);
-  DIExpressionCursor Cursor(Expr);
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();
+
+  if (Expr) {
+    if (auto NewElementsRef = Expr->getNewElementsRef()) {
+      if (DV.isDivergentAddrSpaceCompatible())
+        DwarfExpr.permitDivergentAddrSpace();
+      DwarfExpr.addExpression(*NewElementsRef, DVal->getLocEntries(), &TRI);
+      addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+      return;
+    }
+  }
+
+  DIExpressionCursor Cursor(Expr);
 
   auto AddEntry = [&](const DbgValueLocEntry &Entry,
                       DIExpressionCursor &Cursor) {
@@ -896,6 +930,17 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
   std::optional<unsigned> TargetAddrSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+  auto PoisonedExpr =
+      find_if(MMI.getFrameIndexExprs(), [](const auto &Fragment) {
+        return Fragment.Expr->holdsOldElements() && Fragment.Expr->isPoisoned();
+      });
+  if (PoisonedExpr != MMI.getFrameIndexExprs().end()) {
+    DwarfExpr.addExpression(PoisonedExpr->Expr);
+    addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+    return;
+  }
+  if (DV.isDivergentAddrSpaceCompatible())
+    DwarfExpr.permitDivergentAddrSpace();
   for (const auto &Fragment : MMI.getFrameIndexExprs()) {
     Register FrameReg;
     const DIExpression *Expr = Fragment.Expr;
@@ -905,6 +950,22 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     DwarfExpr.addFragmentOffset(Expr);
 
     auto *TRI = Asm->MF->getSubtarget().getRegisterInfo();
+
+    if (Expr->holdsNewElements()) {
+      // TODO: support frame symbol
+      assert(!Asm->getFunctionFrameSymbol());
+      SmallVector<DbgValueLocEntry> ArgLocEntries;
+      if (FrameReg)
+        ArgLocEntries.push_back({MachineLocation{FrameReg}});
+      else
+        ArgLocEntries.push_back({int64_t{0}});
+      DIExpression *UpdatedExpr =
+          TFI->lowerFIArgToFPArg(*Asm->MF, Expr, /*ArgIndex=*/0u, Offset);
+      DwarfExpr.addExpression(*UpdatedExpr->getNewElementsRef(), ArgLocEntries,
+                              TRI);
+      continue;
+    }
+
     SmallVector<uint64_t, 8> Ops;
     TRI->getOffsetOpcodes(Offset, Ops);
 
@@ -1602,9 +1663,13 @@ void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
     addAddress(Die, dwarf::DW_AT_location, Location);
 }
 
+/// Add an address attribute to a die based on the location provided.
 void DwarfCompileUnit::addLocationWithExpr(DIE &Die, dwarf::Attribute Attribute,
                                            const MachineLocation &Location,
                                            ArrayRef<uint64_t> Expr) {
+  if (DisableDwarfLocations)
+    return;
+
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   if (Location.isIndirect())
@@ -1648,6 +1713,9 @@ void DwarfCompileUnit::addMemoryLocation(DIE &Die, dwarf::Attribute Attribute,
 void DwarfCompileUnit::addComplexAddress(const DIExpression *DIExpr, DIE &Die,
                                          dwarf::Attribute Attribute,
                                          const MachineLocation &Location) {
+  if (DisableDwarfLocations)
+    return;
+
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
   DwarfExpr.addFragmentOffset(DIExpr);
@@ -1674,6 +1742,9 @@ void DwarfCompileUnit::addComplexAddress(const DIExpression *DIExpr, DIE &Die,
 /// Add a Dwarf loclistptr attribute data and value.
 void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
                                        unsigned Index) {
+  if (DisableDwarfLocations)
+    return;
+
   dwarf::Form Form = (DD->getDwarfVersion() >= 5)
                          ? dwarf::DW_FORM_loclistx
                          : DD->getDwarfSectionOffsetForm();
@@ -1687,6 +1758,7 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
     addString(VariableDie, dwarf::DW_AT_name, Name);
   const auto *DIVar = Var.getVariable();
   if (DIVar) {
+    addMemorySpaceAttribute(VariableDie, DIVar->getDWARFMemorySpace());
     if (uint32_t AlignInBytes = DIVar->getAlignInBytes())
       addUInt(VariableDie, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
               AlignInBytes);
@@ -1694,7 +1766,19 @@ void DwarfCompileUnit::applyCommonDbgVariableAttributes(const DbgVariable &Var,
   }
 
   addSourceLine(VariableDie, DIVar);
-  addType(VariableDie, Var.getType());
+
+  const DIType *VarTy = Var.getType();
+  if (Var.isDivergentAddrSpaceCompatible()) {
+    if (std::optional<unsigned> EntityAS = Var.getCommonDivergentAddrSpace()) {
+      if (auto DwarfAS = getAsmPrinter()->TM.mapToDWARFAddrSpace(*EntityAS)) {
+        TempDIDerivedType Tmp =
+            cast<DIDerivedType>(VarTy)->cloneWithAddressSpace(*DwarfAS);
+        VarTy = MDNode::replaceWithUniqued(std::move(Tmp));
+      }
+    }
+  }
+
+  addType(VariableDie, VarTy);
   if (Var.isArtificial())
     addFlag(VariableDie, dwarf::DW_AT_artificial);
 }

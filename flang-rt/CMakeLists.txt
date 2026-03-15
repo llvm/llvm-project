@@ -27,7 +27,7 @@ set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
 # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
 if (CMAKE_VERSION VERSION_LESS "3.24")
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+  if (_Fortran_COMPILER_STEM STREQUAL "flang")
     include(CMakeForceCompiler)
     CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 
@@ -159,10 +159,7 @@ if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
 endif ()
 
 option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
-<<<<<<< HEAD
 
-=======
->>>>>>> ffd00fa811f9e517bdd62e3ccfa4053b1068387e
 if (WIN32)
   # Windows DLL currently not implemented.
   set(FLANG_RT_ENABLE_SHARED OFF)
@@ -204,6 +201,7 @@ if (FLANG_RT_INCLUDE_CUF)
   find_package(CUDAToolkit REQUIRED)
 endif()
 
+option(FLANG_RT_INCLUDE_AMD "Build Fortran runtime with special support for AMD GPUs" OFF)
 
 ########################
 # System Introspection #
@@ -318,7 +316,9 @@ endif ()
 
 if (FLANG_RT_INCLUDE_TESTS)
   add_subdirectory(test)
-  add_subdirectory(unittests)
+  if (NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+    add_subdirectory(unittests)
+  endif()
 else ()
   add_custom_target(check-flang-rt)
 endif()

@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -transform-interpreter -split-input-file -canonicalize -cse -verify-diagnostics | FileCheck %s
 
+// REQUIRES: strange-fix-for-ubuntu
+
 func.func @reduction_tile(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],

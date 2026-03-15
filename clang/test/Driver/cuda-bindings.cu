@@ -5,6 +5,7 @@
 // - User-requested final phase - binary or assembly.
 // It parallels cuda-phases.cu test, but verifies whether output file is temporary or not.
 
+
 // It's hard to check whether file name is temporary in a portable
 // way. Instead we check whether we've generated a permanent name on
 // device side, which appends '-device-cuda-<triple>' suffix.

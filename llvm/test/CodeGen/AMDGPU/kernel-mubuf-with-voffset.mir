@@ -31,6 +31,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39, $sgpr40, $sgpr41, $sgpr42, $sgpr43, $sgpr44, $sgpr45, $sgpr46, $sgpr47, $sgpr48, $sgpr49, $sgpr50, $sgpr51, $sgpr52, $sgpr53, $sgpr54, $sgpr55, $sgpr56, $sgpr57, $sgpr58, $sgpr59, $sgpr60, $sgpr61, $sgpr62, $sgpr63, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $sgpr96, $sgpr97, $sgpr98, $sgpr99, $sgpr100, $sgpr101, $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 0
   ; CHECK-NEXT:   $sgpr0 = S_ADD_U32 $sgpr0, $noreg, implicit-def $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   $sgpr1 = S_ADDC_U32 $sgpr1, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3

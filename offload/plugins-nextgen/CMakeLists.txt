@@ -5,6 +5,7 @@ add_subdirectory(common)
 function(add_target_library target_name lib_name)
   add_llvm_library(${target_name} STATIC
     LINK_COMPONENTS
+    ${LLVM_TARGETS_TO_BUILD}
       AggressiveInstCombine
       Analysis
       BinaryFormat
@@ -38,8 +39,12 @@ function(add_target_library target_name lib_name)
   llvm_update_compile_flags(${target_name})
   target_include_directories(${target_name} PUBLIC ${common_dir}/include
                              ${common_bin_dir}/include)
+  if(OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+    target_include_directories(${target_name} PUBLIC ${common_dir}/OMPT)
+  endif()
+
   target_link_libraries(${target_name} PRIVATE
-                        PluginCommon ${OPENMP_PTHREAD_LIB})
+                        PluginCommon ${llvm_libs} ${OPENMP_PTHREAD_LIB})
 
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
   target_compile_definitions(${target_name} PRIVATE

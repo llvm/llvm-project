@@ -9,3 +9,6 @@ extern int abs(int __x) __attribute__((__const__));
 extern long labs(long __x) __attribute__((__const__));
 extern long long llabs(long long __x) __attribute__((__const__));
 #endif
+
+void free(void* ptr);
+void* malloc(size_t size);

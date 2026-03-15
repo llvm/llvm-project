@@ -172,12 +172,28 @@ static u32 FindRegistrationSite(const Global *g) {
   return 0;
 }
 
+#if SANITIZER_AMDGPU
+static bool IsValidGlobal(const Global *g) {
+  return
+    *(u8 *)MEM_TO_SHADOW((uptr)g) == kAsanGlobalRedzoneMagic &&
+    *(u8 *)MEM_TO_SHADOW((uptr)g + sizeof(__asan_global) - sizeof(uptr))
+            == kAsanGlobalRedzoneMagic &&
+    g->size < g->size_with_redzone &&
+    g->has_dynamic_init < 2 &&
+    g->beg < kHighMemEnd;
+}
+#endif
+
 int GetGlobalsForAddress(uptr addr, Global *globals, u32 *reg_sites,
                          int max_globals) {
   if (!flags()->report_globals) return 0;
   Lock lock(&mu_for_globals);
   int res = 0;
   for (const auto &l : list_of_all_globals) {
+#if SANITIZER_AMDGPU
+    if (!IsValidGlobal(l.g))
+      continue;
+#endif
     const Global &g = *l.g;
     if (flags()->report_globals >= 2)
       ReportGlobal(g, "Search");

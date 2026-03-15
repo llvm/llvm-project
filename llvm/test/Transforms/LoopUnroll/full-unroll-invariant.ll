@@ -61,9 +61,15 @@ define i32 @test3(i8 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ZEXT_9:%.*]] = zext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[DIV_9:%.*]] = udiv i32 [[ZEXT_9]], 31
-; CHECK-NEXT:    ret i32 [[DIV_9]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[ZEXT]], 31
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[PHI]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 10
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_EXIT:%.*]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    [[DIV_LCSSA:%.*]] = phi i32 [ [[DIV]], [[FOR_BODY]] ]
+; CHECK-NEXT:    ret i32 [[DIV_LCSSA]]
 ;
 entry:
   br label %for.body
