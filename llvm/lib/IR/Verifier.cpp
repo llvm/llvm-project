@@ -1630,6 +1630,8 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
   if (auto *RawNode = N.getRawRetainedNodes()) {
     auto *Node = dyn_cast<MDTuple>(RawNode);
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
+
+    DenseMap<unsigned, DILocalVariable *> Args;
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op, "nullptr in retained nodes", &N, Node);
 
@@ -1657,6 +1659,17 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
           "invalid retained nodes, retained node does not belong to subprogram",
           &N, Node, RetainedNode, RetainedNodeScope, RetainedNodeSP,
           RetainedNodeUnit);
+
+      auto *DV = dyn_cast<DILocalVariable>(RetainedNode);
+      if (!DV)
+        continue;
+      if (unsigned ArgNum = DV->getArg()) {
+        auto [ArgI, Inserted] = Args.insert({ArgNum, DV});
+        CheckDI(Inserted || DV == ArgI->second,
+                "invalid retained nodes, more than one local variable with the "
+                "same argument index",
+                &N, N.getUnit(), Node, RetainedNode, Args[ArgNum]);
+      }
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),

@@ -249,7 +249,10 @@ static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
   //    `- std::optional<Expr>      ^->v
-  return DEREF(typedExpr.get()).v;
+  if (auto *wrapper{typedExpr.get()}) {
+    return wrapper->v;
+  }
+  return std::nullopt;
 }
 
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {

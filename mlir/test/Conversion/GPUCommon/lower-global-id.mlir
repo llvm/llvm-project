@@ -11,9 +11,8 @@ gpu.module @kernel {
 // ROCDL-LABEL:   llvm.func @gpu_global_id() -> i64 {
 // ROCDL:           %[[WORKGROUP_0:.*]] = rocdl.workgroup.id.x : i32
 // ROCDL:           %[[SEXT_0:.*]] = llvm.sext %[[WORKGROUP_0]] : i32 to i64
-// ROCDL:           %[[WORKGROUP_1:.*]] = rocdl.workgroup.dim.x : i32
-// ROCDL:           %[[SEXT_1:.*]] = llvm.sext %[[WORKGROUP_1]] : i32 to i64
-// ROCDL:           %[[MUL_0:.*]] = llvm.mul %[[SEXT_0]], %[[SEXT_1]] : i64
+// ROCDL:           %[[DIM64:.*]] = llvm.call @__ockl_get_local_size(%{{.*}}) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 1025>})
+// ROCDL:           %[[MUL_0:.*]] = llvm.mul %[[SEXT_0]], %[[DIM64]] : i64
 // ROCDL:           %[[WORKITEM_0:.*]] = rocdl.workitem.id.x : i32
 // ROCDL:           %[[SEXT_2:.*]] = llvm.sext %[[WORKITEM_0]] : i32 to i64
 // ROCDL:           %[[ADD_0:.*]] = llvm.add %[[SEXT_2]], %[[MUL_0]] : i64
