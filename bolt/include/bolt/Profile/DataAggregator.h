@@ -146,6 +146,14 @@ private:
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
+  /// Filter pre-aggregated entries belonging to a DSO with this buildid.
+  /// Set when processing a shared library, empty implies main binary.
+  StringRef FilterBuildID;
+  /// Per-DSO samples breakdown: buildid -> sample count.
+  StringMap<uint64_t> DSOSamples;
+  /// Cross-DSO branch counts: (FromDSO -> ToDSO) -> branch count.
+  std::unordered_map<std::pair<StringRef, StringRef>, uint64_t> CrossDSOSamples;
+
   template <typename T> void clear(T &Container) {
     T TempContainer;
     TempContainer.swap(Container);
@@ -579,6 +587,7 @@ private:
   void printBranchSamplesDiagnostics() const;
   void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
   void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
+  void printDSODiagnostics() const;
 
   /// Get instruction at \p Addr either from containing binary function or
   /// disassemble in-place, and invoke \p Callback on resulting MCInst.
