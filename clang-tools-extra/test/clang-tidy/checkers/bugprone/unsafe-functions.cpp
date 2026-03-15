@@ -1,12 +1,8 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-unsafe-functions %t --
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-unsafe-functions %t
+
+#include <utility>
 
 namespace std {
-template <class T1, class T2>
-struct pair {
-  T1 first;
-  T2 second;
-};
-
 using ptrdiff_t = long long;
 
 template<class T>
