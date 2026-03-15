@@ -143,5 +143,5 @@ print StringAttr
 
 # CHECK-LABEL: +print ElementsAttr
 print ElementsAttr
-# CHECK: typeID = mlir::TypeID::get<mlir::DenseIntOrFPElementsAttr>()
-# CHECK: members of mlir::detail::DenseIntOrFPElementsAttrStorage
+# CHECK: typeID = mlir::TypeID::get<mlir::DenseTypedElementsAttr>()
+# CHECK: members of mlir::detail::DenseTypedElementsAttrStorage

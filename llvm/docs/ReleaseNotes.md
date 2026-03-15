@@ -86,6 +86,10 @@ Changes to LLVM infrastructure
 * The ``Br`` opcode was split into two opcodes separating unconditional
   (``UncondBr``) and conditional (``CondBr``) branches.
 
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``getOperand`` or
+  ``setOperand`` to access successors.
+
 Changes to building LLVM
 ------------------------
 
@@ -189,6 +193,10 @@ Changes to the C API
 --------------------
 
 * Replaced opcode ``LLVMBr`` with ``LLVMUncondBr`` and ``LLVMCondBr``.
+
+* The operand order of ``CondBr`` instructions was adjusted to match the
+  successor order. This can cause subtle breakage when using ``LLVMGetOperand``
+  or ``LLVMSetOperand`` to access successors.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
