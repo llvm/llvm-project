@@ -2742,7 +2742,7 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   mlir::Type llvmType = getTypeConverter()->convertType(type);
   mlir::Location loc = op.getLoc();
 
-  // Integer unary operations: + - ~ ++ --
+  // Integer unary operations: - ~ ++ --
   if (mlir::isa<cir::IntType>(elementType)) {
     mlir::LLVM::IntegerOverflowFlags maybeNSW =
         op.getNoSignedWrap() ? mlir::LLVM::IntegerOverflowFlags::nsw
@@ -2762,9 +2762,6 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
                                                      one, maybeNSW);
       return mlir::success();
     }
-    case cir::UnaryOpKind::Plus:
-      rewriter.replaceOp(op, adaptor.getInput());
-      return mlir::success();
     case cir::UnaryOpKind::Minus: {
       mlir::Value zero;
       if (isVector)
@@ -2796,7 +2793,7 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     llvm_unreachable("Unexpected unary op for int");
   }
 
-  // Floating point unary operations: + - ++ --
+  // Floating point unary operations: - ++ --
   if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     switch (op.getKind()) {
     case cir::UnaryOpKind::Inc: {
@@ -2815,9 +2812,6 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
                                                       adaptor.getInput());
       return mlir::success();
     }
-    case cir::UnaryOpKind::Plus:
-      rewriter.replaceOp(op, adaptor.getInput());
-      return mlir::success();
     case cir::UnaryOpKind::Minus:
       rewriter.replaceOpWithNewOp<mlir::LLVM::FNegOp>(op, llvmType,
                                                       adaptor.getInput());
@@ -2834,7 +2828,6 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     switch (op.getKind()) {
     case cir::UnaryOpKind::Inc:
     case cir::UnaryOpKind::Dec:
-    case cir::UnaryOpKind::Plus:
     case cir::UnaryOpKind::Minus:
       // Some of these are allowed in source code, but we shouldn't get here
       // with a boolean type.
@@ -2848,19 +2841,6 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     }
     }
     llvm_unreachable("Unexpected unary op for bool");
-  }
-
-  // Pointer unary operations: + only.  (++ and -- of pointers are implemented
-  // with cir.ptr_stride, not cir.unary.)
-  if (mlir::isa<cir::PointerType>(elementType)) {
-    switch (op.getKind()) {
-    case cir::UnaryOpKind::Plus:
-      rewriter.replaceOp(op, adaptor.getInput());
-      return mlir::success();
-    default:
-      op.emitError() << "Unknown pointer unary operation during CIR lowering";
-      return mlir::failure();
-    }
   }
 
   return op.emitError() << "Unary operation has unsupported type: "
@@ -2998,16 +2978,31 @@ mlir::LogicalResult CIRToLLVMXorOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMMaxOpLowering::matchAndRewrite(
-    cir::MaxOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
+template <typename CIROp, typename UIntOp, typename SIntOp>
+static mlir::LogicalResult
+lowerMinMaxOp(CIROp op, typename CIROp::Adaptor adaptor,
+              mlir::ConversionPatternRewriter &rewriter) {
   const mlir::Value lhs = adaptor.getLhs();
   const mlir::Value rhs = adaptor.getRhs();
   if (isIntTypeUnsigned(elementTypeIfVector(op.getRhs().getType())))
-    rewriter.replaceOpWithNewOp<mlir::LLVM::UMaxOp>(op, lhs, rhs);
+    rewriter.replaceOpWithNewOp<UIntOp>(op, lhs, rhs);
   else
-    rewriter.replaceOpWithNewOp<mlir::LLVM::SMaxOp>(op, lhs, rhs);
+    rewriter.replaceOpWithNewOp<SIntOp>(op, lhs, rhs);
   return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMaxOpLowering::matchAndRewrite(
+    cir::MaxOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerMinMaxOp<cir::MaxOp, mlir::LLVM::UMaxOp, mlir::LLVM::SMaxOp>(
+      op, adaptor, rewriter);
+}
+
+mlir::LogicalResult CIRToLLVMMinOpLowering::matchAndRewrite(
+    cir::MinOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerMinMaxOp<cir::MinOp, mlir::LLVM::UMinOp, mlir::LLVM::SMinOp>(
+      op, adaptor, rewriter);
 }
 
 /// Convert from a CIR comparison kind to an LLVM IR integral comparison kind.

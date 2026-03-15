@@ -221,28 +221,12 @@ OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
 static void replaceTargetsFromPHINode(BasicBlock *PHIBlock, BasicBlock *Find,
                                       BasicBlock *Replace,
                                       DenseSet<BasicBlock *> &Included) {
-  for (PHINode &PN : PHIBlock->phis()) {
-    for (unsigned Idx = 0, PNEnd = PN.getNumIncomingValues(); Idx != PNEnd;
-         ++Idx) {
+  for (PHINode &PN : PHIBlock->phis())
+    for (BasicBlock *Incoming : PN.blocks())
       // Check if the incoming block is included in the set of blocks being
       // outlined.
-      BasicBlock *Incoming = PN.getIncomingBlock(Idx);
-      if (!Included.contains(Incoming))
-        continue;
-
-      BranchInst *BI = dyn_cast<BranchInst>(Incoming->getTerminator());
-      assert(BI && "Not a branch instruction?");
-      // Look over the branching instructions into this block to see if we
-      // used to branch to Find in this outlined block.
-      for (unsigned Succ = 0, End = BI->getNumSuccessors(); Succ != End;
-           Succ++) {
-        // If we have found the block to replace, we do so here.
-        if (BI->getSuccessor(Succ) != Find)
-          continue;
-        BI->setSuccessor(Succ, Replace);
-      }
-    }
-  }
+      if (Included.contains(Incoming))
+        Incoming->getTerminator()->replaceSuccessorWith(Find, Replace);
 }
 
 
@@ -1540,23 +1524,11 @@ static BasicBlock *findOrCreatePHIBlock(OutlinableGroup &Group, Value *RetVal) {
                                             ReturnBB->getParent());
   PhiBlockForRetVal->second = PHIBlock;
 
-  // We find the predecessors of the return block in the newly created outlined
-  // function in order to point them to the new PHIBlock rather than the already
-  // existing return block.
-  SmallVector<BranchInst *, 2> BranchesToChange;
-  for (BasicBlock *Pred : predecessors(ReturnBB))
-    BranchesToChange.push_back(cast<BranchInst>(Pred->getTerminator()));
+  // We replace all branches to the return block in the newly created outlined
+  // function to point to the new PHIBlock.
+  ReturnBB->replaceAllUsesWith(PHIBlock);
 
-  // Now we mark the branch instructions found, and change the references of the
-  // return block to the newly created PHIBlock.
-  for (BranchInst *BI : BranchesToChange)
-    for (unsigned Succ = 0, End = BI->getNumSuccessors(); Succ < End; Succ++) {
-      if (BI->getSuccessor(Succ) != ReturnBB)
-        continue;
-      BI->setSuccessor(Succ, PHIBlock);
-    }
-
-  BranchInst::Create(ReturnBB, PHIBlock);
+  UncondBrInst::Create(ReturnBB, PHIBlock);
 
   return PhiBlockForRetVal->second;
 }
@@ -1969,7 +1941,7 @@ std::optional<unsigned> findDuplicateOutputBlock(
 
       BasicBlock::iterator NIt = OutputBB->begin();
       for (Instruction &I : *CompBB) {
-        if (isa<BranchInst>(&I))
+        if (isa<UncondBrInst, CondBrInst>(&I))
           continue;
 
         if (!I.isIdenticalTo(&(*NIt))) {
@@ -2084,7 +2056,7 @@ static void alignOutputBlockWithAggFunc(
     LLVM_DEBUG(dbgs() << "Create output block for region in"
                       << Region.ExtractedFunction << " to "
                       << *NewBB);
-    BranchInst::Create(VBBIt->second, NewBB);
+    UncondBrInst::Create(VBBIt->second, NewBB);
     OutputStoreBBs.back().insert(std::make_pair(RetValueForBB, NewBB));
   }
 }
@@ -2246,7 +2218,7 @@ void IROutliner::fillOverallFunction(
       DenseMap<Value *, BasicBlock *>::iterator VBBIt =
           CurrentGroup.EndBBs.find(VToBB.first);
       BasicBlock *EndBB = VBBIt->second;
-      BranchInst::Create(EndBB, VToBB.second);
+      UncondBrInst::Create(EndBB, VToBB.second);
       OutputStoreBBs.back().insert(VToBB);
     }
   }
@@ -2379,7 +2351,7 @@ void IROutliner::pruneIncompatibleRegions(
   // outlinining a call instruction, we ignore it as a space saving.
   if (FirstCandidate.getLength() == 2) {
     if (isa<CallInst>(FirstCandidate.front()->Inst) &&
-        isa<BranchInst>(FirstCandidate.back()->Inst))
+        isa<UncondBrInst, CondBrInst>(FirstCandidate.back()->Inst))
       return;
   }
 
@@ -2536,7 +2508,7 @@ static InstructionCost findCostForOutputBlocks(Module &M,
   // of the region.
   DenseSet<BasicBlock *> FoundBlocks;
   for (IRInstructionData &ID : Candidate) {
-    if (!isa<BranchInst>(ID.Inst))
+    if (!isa<UncondBrInst, CondBrInst>(ID.Inst))
       continue;
 
     for (Value *V : ID.OperVals) {

@@ -822,7 +822,6 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
     resultImag = operandImag;
     break;
 
-  case cir::UnaryOpKind::Plus:
   case cir::UnaryOpKind::Minus:
     resultReal = builder.createUnaryOp(loc, opKind, operandReal);
     resultImag = builder.createUnaryOp(loc, opKind, operandImag);
