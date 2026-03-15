@@ -430,7 +430,7 @@ class MCPseudoProbeDecoder {
   ErrorOr<StringRef> readString(uint32_t Size);
 
 public:
-  // MCPseudoProbeDecoder cannot be copeied/moved due to address dependence on
+  // MCPseudoProbeDecoder cannot be copied/moved due to address dependence on
   // the DummyInlineRoot member address.
   MCPseudoProbeDecoder() = default;
   MCPseudoProbeDecoder(const MCPseudoProbeDecoder &) = delete;
