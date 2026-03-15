@@ -45,13 +45,14 @@ class MCRegister {
 public:
   constexpr MCRegister(unsigned Val = 0) : Reg(Val) {}
 
-  // Register numbers can represent physical registers, virtual registers, and
-  // sometimes stack slots. The unsigned values are divided into these ranges:
+  // Only a small range of `Reg` value is considered valid:
   //
   //   0           Not a register, can be used as a sentinel.
   //   [1;2^30)    Physical registers assigned by TableGen.
-  //   [2^30;2^31) Stack slots. (Rarely used.)
-  //   [2^31;2^32) Virtual registers assigned by MachineRegisterInfo.
+  //
+  // Any other `Reg` values, which are most likely originated from incorrectly
+  // copying virtual register or stack slot from `Register`, are not allowed
+  // in `MCRegister`. This is currently enforced by `MCRegister::from` below.
   //
   // Further sentinels can be allocated from the small negative integers.
   // DenseMapInfo<unsigned> uses -1u and -2u.
