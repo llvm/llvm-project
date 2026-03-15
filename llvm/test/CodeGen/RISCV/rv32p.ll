@@ -186,15 +186,14 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    addi a2, a0, 32
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    j .LBB15_3
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    clz a2, a1
+; CHECK-NEXT:    clz a0, a1
 ; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    waddau a0, a2, zero
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    wsubu a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i64 %x, 63
   %b = xor i64 %x, %a
@@ -1236,10 +1235,8 @@ define i64 @wsubu(i32 %a, i32 %b) nounwind {
 define i64 @wsub_from_neg_const(i32 %a) nounwind {
 ; CHECK-LABEL: wsub_from_neg_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    li a0, -42
-; CHECK-NEXT:    waddau a0, a2, zero
+; CHECK-NEXT:    li a1, 42
+; CHECK-NEXT:    wsubu a0, a0, a1
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %sum = add i64 %ext_a, -42
