@@ -3810,6 +3810,9 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_already_instantiated : Warning<
+  "%0 attribute ignored; class template is already instantiated">,
+  InGroup<IgnoredAttributes>;
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
   InGroup<IgnoredAttributes>;
@@ -3933,6 +3936,9 @@ def err_attribute_dllimport_static_field_definition : Error<
 def warn_attribute_dllimport_static_field_definition : Warning<
   "definition of dllimport static field">,
   InGroup<DiagGroup<"dllimport-static-field-def">>;
+def warn_attribute_dllimport_explicit_instantiation_def : Warning<
+  "'dllimport' attribute ignored on explicit instantiation definition">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
