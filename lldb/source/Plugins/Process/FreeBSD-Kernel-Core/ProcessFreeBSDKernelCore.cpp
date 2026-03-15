@@ -394,8 +394,10 @@ void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
 
-  if (!debugger.GetCommandInterpreter().IsInteractive())
-    return;
+  // Todo: GetCommandInterpreter().IsInteractive() is flaky. When it is
+  // stabilized, restore the following code.
+  // if (!debugger.GetCommandInterpreter().IsInteractive())
+  //   return;
 
   Status error;
 
