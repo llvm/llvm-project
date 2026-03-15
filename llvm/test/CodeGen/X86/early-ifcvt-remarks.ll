@@ -73,42 +73,35 @@ define i64 @mm3(i1 %pred, i64 %val, i64 %e1, i128 %e2, i128 %e3, i128 %e4, i128 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movq %rsi, %r10
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %if.false
+; CHECK-NEXT:    movq %rcx, %r9
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    imulq %rdx, %rdx
 ; CHECK-NEXT:    movq %rdx, %r10
 ; CHECK-NEXT:    sarq $63, %r10
-; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    movq %rdx, %r9
+; CHECK-NEXT:    movq %r9, %rax
+; CHECK-NEXT:    movq %rdx, %rdi
 ; CHECK-NEXT:    mulq %rdx
-; CHECK-NEXT:    imulq %rcx, %r10
-; CHECK-NEXT:    imulq %r9, %r8
+; CHECK-NEXT:    imulq %r9, %r10
+; CHECK-NEXT:    imulq %rdi, %r8
 ; CHECK-NEXT:    addq %rdx, %r8
 ; CHECK-NEXT:    addq %r10, %r8
 ; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
-; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
-; CHECK-NEXT:    xorq %r8, %rdi
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK-NEXT:    xorq %rsi, %r10
-; CHECK-NEXT:    xorq %rax, %r10
+; CHECK-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
+; CHECK-NEXT:    xorq %r8, %rsi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; CHECK-NEXT:    xorq %rcx, %rdx
+; CHECK-NEXT:    xorq %rax, %rdx
+; CHECK-NEXT:    shrdq %cl, %rsi, %rdx
+; CHECK-NEXT:    sarq %cl, %rsi
+; CHECK-NEXT:    testb $64, %cl
+; CHECK-NEXT:    cmoveq %rdx, %rsi
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    sarq %cl, %rax
-; CHECK-NEXT:    addq %rdi, %rdi
-; CHECK-NEXT:    notb %cl
-; CHECK-NEXT:    shlq %cl, %rdi
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrq %cl, %r10
-; CHECK-NEXT:    orq %rdi, %r10
-; CHECK-NEXT:    testb $64, %sil
-; CHECK-NEXT:    cmovneq %rax, %r10
-; CHECK-NEXT:    movq %r9, %rax
 ; CHECK-NEXT:  .LBB2_2: # %if.endif
-; CHECK-NEXT:    addq %r10, %rax
+; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 entry:
   br i1 %pred, label %if.true, label %if.false
