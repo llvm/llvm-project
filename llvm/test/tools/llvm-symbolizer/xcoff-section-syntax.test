@@ -123,6 +123,7 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
 
 ## Document 2: XCOFF object with only TEXT section (no DATA).
 --- !XCOFF
@@ -143,6 +144,7 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
 
 ## Document 3: ELF object (non-XCOFF) for testing the format-check error.
 --- !ELF
