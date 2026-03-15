@@ -61,7 +61,9 @@ LLVM_C_EXTERN_C_BEGIN
 typedef enum {
   /* Terminator Instructions */
   LLVMRet            = 1,
-  LLVMBr             = 2,
+  /* removed 2 due to API changes */
+  LLVMUncondBr       = 70,
+  LLVMCondBr         = 71,
   LLVMSwitch         = 3,
   LLVMIndirectBr     = 4,
   LLVMInvoke         = 5,
@@ -2051,6 +2053,8 @@ LLVM_C_ABI unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy,
       macro(ShuffleVectorInst)              \
       macro(StoreInst)                      \
       macro(BranchInst)                     \
+        macro(UncondBrInst)                 \
+        macro(CondBrInst)                   \
       macro(IndirectBrInst)                 \
       macro(InvokeInst)                     \
       macro(ReturnInst)                     \
@@ -4295,29 +4299,27 @@ LLVM_C_ABI void LLVMSetSuccessor(LLVMValueRef Term, unsigned i,
                                  LLVMBasicBlockRef block);
 
 /**
- * Return if a branch is conditional.
+ * Return if an instruction is a conditional branch.
  *
- * This only works on llvm::BranchInst instructions.
- *
- * @see llvm::BranchInst::isConditional
+ * Deprecated: Use LLVMIsACondBrInst instead.
  */
 LLVM_C_ABI LLVMBool LLVMIsConditional(LLVMValueRef Branch);
 
 /**
  * Return the condition of a branch instruction.
  *
- * This only works on llvm::BranchInst instructions.
+ * This only works on llvm::CondBrInst instructions.
  *
- * @see llvm::BranchInst::getCondition
+ * @see llvm::CondBrInst::getCondition
  */
 LLVM_C_ABI LLVMValueRef LLVMGetCondition(LLVMValueRef Branch);
 
 /**
  * Set the condition of a branch instruction.
  *
- * This only works on llvm::BranchInst instructions.
+ * This only works on llvm::CondBrInst instructions.
  *
- * @see llvm::BranchInst::setCondition
+ * @see llvm::CondBrInst::setCondition
  */
 LLVM_C_ABI void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond);
 

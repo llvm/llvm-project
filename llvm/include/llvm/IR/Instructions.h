@@ -3023,6 +3023,13 @@ public:
     return getNumOperands() != 0 ? getOperand(0) : nullptr;
   }
 
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(op_end()), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(op_end()), const_succ_iterator(op_end())};
+  }
+
   unsigned getNumSuccessors() const { return 0; }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3056,125 +3063,39 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ReturnInst, Value)
 /// Conditional or Unconditional Branch instruction.
 ///
 class BranchInst : public Instruction {
-  /// Ops list - Branches are strange.  The operands are ordered:
-  ///  [Cond, FalseDest,] TrueDest.  This makes some accessors faster because
-  /// they don't have to check for cond/uncond branchness. These are mostly
-  /// accessed relative from op_end().
-  BranchInst(const BranchInst &BI, AllocInfo AllocInfo);
-  // BranchInst constructors (where {B, T, F} are blocks, and C is a condition):
-  // BranchInst(BB *B)                           - 'br B'
-  // BranchInst(BB* T, BB *F, Value *C)          - 'br C, T, F'
-  // BranchInst(BB* B, Iter It)                  - 'br B'        insert before I
-  // BranchInst(BB* T, BB *F, Value *C, Iter It) - 'br C, T, F', insert before I
-  // BranchInst(BB* B, Inst *I)                  - 'br B'        insert before I
-  // BranchInst(BB* T, BB *F, Value *C, Inst *I) - 'br C, T, F', insert before I
-  // BranchInst(BB* B, BB *I)                    - 'br B'        insert at end
-  // BranchInst(BB* T, BB *F, Value *C, BB *I)   - 'br C, T, F', insert at end
-  LLVM_ABI explicit BranchInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
-                               InsertPosition InsertBefore);
-  LLVM_ABI BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-                      AllocInfo AllocInfo, InsertPosition InsertBefore);
-
-  void AssertOK();
-
 protected:
-  // Note: Instruction needs to be a friend here to call cloneImpl.
-  friend class Instruction;
-
-  LLVM_ABI BranchInst *cloneImpl() const;
+  BranchInst(Type *Ty, unsigned Opcode, AllocInfo AllocInfo,
+             InsertPosition InsertBefore = nullptr)
+      : Instruction(Ty, Opcode, AllocInfo, InsertBefore) {}
 
 public:
-  /// Iterator type that casts an operand to a basic block.
-  ///
-  /// This only makes sense because the successors are stored as adjacent
-  /// operands for branch instructions.
-  struct succ_op_iterator
-      : iterator_adaptor_base<succ_op_iterator, value_op_iterator,
-                              std::random_access_iterator_tag, BasicBlock *,
-                              ptrdiff_t, BasicBlock *, BasicBlock *> {
-    explicit succ_op_iterator(value_op_iterator I) : iterator_adaptor_base(I) {}
-
-    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    BasicBlock *operator->() const { return operator*(); }
-  };
-
-  /// The const version of `succ_op_iterator`.
-  struct const_succ_op_iterator
-      : iterator_adaptor_base<const_succ_op_iterator, const_value_op_iterator,
-                              std::random_access_iterator_tag,
-                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
-                              const BasicBlock *> {
-    explicit const_succ_op_iterator(const_value_op_iterator I)
-        : iterator_adaptor_base(I) {}
-
-    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    const BasicBlock *operator->() const { return operator*(); }
-  };
-
   static BranchInst *Create(BasicBlock *IfTrue,
-                            InsertPosition InsertBefore = nullptr) {
-    IntrusiveOperandsAllocMarker AllocMarker{1};
-    return new (AllocMarker) BranchInst(IfTrue, AllocMarker, InsertBefore);
-  }
+                            InsertPosition InsertBefore = nullptr);
 
   static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                            Value *Cond,
-                            InsertPosition InsertBefore = nullptr) {
-    IntrusiveOperandsAllocMarker AllocMarker{3};
-    return new (AllocMarker)
-        BranchInst(IfTrue, IfFalse, Cond, AllocMarker, InsertBefore);
-  }
+                            Value *Cond, InsertPosition InsertBefore = nullptr);
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  bool isUnconditional() const { return getNumOperands() == 1; }
-  bool isConditional()   const { return getNumOperands() == 3; }
+  // Defined out-of-line below to access CondBrInst.
+  bool isUnconditional() const;
+  bool isConditional() const;
 
-  Value *getCondition() const {
-    assert(isConditional() && "Cannot get condition of an uncond branch!");
-    return Op<-3>();
-  }
-
-  void setCondition(Value *V) {
-    assert(isConditional() && "Cannot set condition of unconditional branch!");
-    Op<-3>() = V;
-  }
-
-  unsigned getNumSuccessors() const { return 1+isConditional(); }
-
-  BasicBlock *getSuccessor(unsigned i) const {
-    assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
-    return cast_or_null<BasicBlock>((&Op<-1>() - i)->get());
-  }
-
-  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
-    assert(idx < getNumSuccessors() && "Successor # out of range for Branch!");
-    *(&Op<-1>() - idx) = NewSucc;
-  }
+  Value *getCondition() const;
+  void setCondition(Value *V);
 
   /// Swap the successors of this branch instruction.
   ///
   /// Swaps the successors of the branch instruction. This also swaps any
   /// branch weight metadata associated with the instruction so that it
   /// continues to map correctly to each operand.
-  LLVM_ABI void swapSuccessors();
-
-  iterator_range<succ_op_iterator> successors() {
-    return make_range(
-        succ_op_iterator(std::next(value_op_begin(), isConditional() ? 1 : 0)),
-        succ_op_iterator(value_op_end()));
-  }
-
-  iterator_range<const_succ_op_iterator> successors() const {
-    return make_range(const_succ_op_iterator(
-                          std::next(value_op_begin(), isConditional() ? 1 : 0)),
-                      const_succ_op_iterator(value_op_end()));
-  }
+  void swapSuccessors();
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
-    return (I->getOpcode() == Instruction::Br);
+    return (I->getOpcode() == Instruction::UncondBr ||
+            I->getOpcode() == Instruction::CondBr);
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
@@ -3185,6 +3106,196 @@ template <>
 struct OperandTraits<BranchInst> : public VariadicOperandTraits<BranchInst> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BranchInst, Value)
+
+//===----------------------------------------------------------------------===//
+//                               UncondBrInst Class
+//===----------------------------------------------------------------------===//
+
+//===---------------------------------------------------------------------------
+/// Unconditional Branch instruction.
+///
+class UncondBrInst : public BranchInst {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
+  UncondBrInst(const UncondBrInst &BI);
+  LLVM_ABI explicit UncondBrInst(BasicBlock *IfTrue,
+                                 InsertPosition InsertBefore);
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+
+  LLVM_ABI UncondBrInst *cloneImpl() const;
+
+public:
+  static UncondBrInst *Create(BasicBlock *IfTrue,
+                              InsertPosition InsertBefore = nullptr) {
+    return new (AllocMarker) UncondBrInst(IfTrue, InsertBefore);
+  }
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+private:
+  // Hide methods.
+  using BranchInst::getCondition;
+  using BranchInst::isConditional;
+  using BranchInst::isUnconditional;
+  using BranchInst::setCondition;
+  using BranchInst::swapSuccessors;
+
+public:
+  unsigned getNumSuccessors() const { return 1; }
+
+  BasicBlock *getSuccessor(unsigned i = 0) const {
+    assert(i == 0 && "Successor # out of range for Branch!");
+    return cast_or_null<BasicBlock>(Op<-1>().get());
+  }
+
+  void setSuccessor(BasicBlock *NewSucc) { Op<-1>() = NewSucc; }
+  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
+    assert(idx == 0 && "Successor # out of range for Branch!");
+    Op<-1>() = NewSucc;
+  }
+
+  iterator_range<succ_iterator> successors() {
+    return make_range(succ_iterator(op_begin()), succ_iterator(op_end()));
+  }
+
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(const_succ_iterator(op_begin()),
+                      const_succ_iterator(op_end()));
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return (I->getOpcode() == Instruction::UncondBr);
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+template <>
+struct OperandTraits<UncondBrInst>
+    : public FixedNumOperandTraits<UncondBrInst, 1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UncondBrInst, Value)
+
+//===----------------------------------------------------------------------===//
+//                               CondBrInst Class
+//===----------------------------------------------------------------------===//
+
+//===---------------------------------------------------------------------------
+/// Conditional Branch instruction.
+///
+class CondBrInst : public BranchInst {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
+
+  CondBrInst(const CondBrInst &BI);
+  LLVM_ABI CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
+                      InsertPosition InsertBefore);
+
+  void AssertOK();
+
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+
+  LLVM_ABI CondBrInst *cloneImpl() const;
+
+private:
+  // Hide methods.
+  using BranchInst::isConditional;
+  using BranchInst::isUnconditional;
+
+public:
+  static CondBrInst *Create(Value *Cond, BasicBlock *IfTrue,
+                            BasicBlock *IfFalse,
+                            InsertPosition InsertBefore = nullptr) {
+    return new (AllocMarker) CondBrInst(Cond, IfTrue, IfFalse, InsertBefore);
+  }
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  Value *getCondition() const { return Op<-3>(); }
+  void setCondition(Value *V) { Op<-3>() = V; }
+
+  unsigned getNumSuccessors() const { return 2; }
+
+  BasicBlock *getSuccessor(unsigned i) const {
+    assert(i < getNumSuccessors() && "Successor # out of range for Branch!");
+    return cast_or_null<BasicBlock>((&Op<-2>() + i)->get());
+  }
+
+  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
+    assert(idx < getNumSuccessors() && "Successor # out of range for Branch!");
+    *(&Op<-2>() + idx) = NewSucc;
+  }
+
+  /// Swap the successors of this branch instruction.
+  ///
+  /// Swaps the successors of the branch instruction. This also swaps any
+  /// branch weight metadata associated with the instruction so that it
+  /// continues to map correctly to each operand.
+  LLVM_ABI void swapSuccessors();
+
+  iterator_range<succ_iterator> successors() {
+    return make_range(succ_iterator(std::next(op_begin())),
+                      succ_iterator(op_end()));
+  }
+
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(const_succ_iterator(std::next(op_begin())),
+                      const_succ_iterator(op_end()));
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return (I->getOpcode() == Instruction::CondBr);
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+template <>
+struct OperandTraits<CondBrInst> : public FixedNumOperandTraits<CondBrInst, 3> {
+};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CondBrInst, Value)
+
+//===----------------------------------------------------------------------===//
+//                     BranchInst Out-Of-Line Functions
+//===----------------------------------------------------------------------===//
+
+inline BranchInst *BranchInst::Create(BasicBlock *IfTrue,
+                                      InsertPosition InsertBefore) {
+  return UncondBrInst::Create(IfTrue, InsertBefore);
+}
+
+inline BranchInst *BranchInst::Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                                      Value *Cond,
+                                      InsertPosition InsertBefore) {
+  return CondBrInst::Create(Cond, IfTrue, IfFalse, InsertBefore);
+}
+
+inline bool BranchInst::isConditional() const { return isa<CondBrInst>(this); }
+inline bool BranchInst::isUnconditional() const {
+  return isa<UncondBrInst>(this);
+}
+
+inline Value *BranchInst::getCondition() const {
+  return cast<CondBrInst>(this)->getCondition();
+}
+inline void BranchInst::setCondition(Value *V) {
+  cast<CondBrInst>(this)->setCondition(V);
+}
+
+inline void BranchInst::swapSuccessors() {
+  cast<CondBrInst>(this)->swapSuccessors();
+}
 
 //===----------------------------------------------------------------------===//
 //                               SwitchInst Class
@@ -3519,6 +3630,13 @@ public:
   /// case.
   LLVM_ABI CaseIt removeCase(CaseIt I);
 
+  iterator_range<succ_iterator> successors() {
+    return make_range(std::next(op_begin()), op_end());
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(std::next(op_begin()), op_end());
+  }
+
   unsigned getNumSuccessors() const { return getNumOperands() - 1; }
   BasicBlock *getSuccessor(unsigned idx) const {
     assert(idx < getNumSuccessors() &&"Successor idx out of range for switch!");
@@ -3627,33 +3745,6 @@ protected:
 public:
   void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
-  /// Iterator type that casts an operand to a basic block.
-  ///
-  /// This only makes sense because the successors are stored as adjacent
-  /// operands for indirectbr instructions.
-  struct succ_op_iterator
-      : iterator_adaptor_base<succ_op_iterator, value_op_iterator,
-                              std::random_access_iterator_tag, BasicBlock *,
-                              ptrdiff_t, BasicBlock *, BasicBlock *> {
-    explicit succ_op_iterator(value_op_iterator I) : iterator_adaptor_base(I) {}
-
-    BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    BasicBlock *operator->() const { return operator*(); }
-  };
-
-  /// The const version of `succ_op_iterator`.
-  struct const_succ_op_iterator
-      : iterator_adaptor_base<const_succ_op_iterator, const_value_op_iterator,
-                              std::random_access_iterator_tag,
-                              const BasicBlock *, ptrdiff_t, const BasicBlock *,
-                              const BasicBlock *> {
-    explicit const_succ_op_iterator(const_value_op_iterator I)
-        : iterator_adaptor_base(I) {}
-
-    const BasicBlock *operator*() const { return cast<BasicBlock>(*I); }
-    const BasicBlock *operator->() const { return operator*(); }
-  };
-
   static IndirectBrInst *Create(Value *Address, unsigned NumDests,
                                 InsertPosition InsertBefore = nullptr) {
     return new IndirectBrInst(Address, NumDests, InsertBefore);
@@ -3691,14 +3782,14 @@ public:
     setOperand(i + 1, NewSucc);
   }
 
-  iterator_range<succ_op_iterator> successors() {
-    return make_range(succ_op_iterator(std::next(value_op_begin())),
-                      succ_op_iterator(value_op_end()));
+  iterator_range<succ_iterator> successors() {
+    return make_range(succ_iterator(std::next(op_begin())),
+                      succ_iterator(op_end()));
   }
 
-  iterator_range<const_succ_op_iterator> successors() const {
-    return make_range(const_succ_op_iterator(std::next(value_op_begin())),
-                      const_succ_op_iterator(value_op_end()));
+  iterator_range<const_succ_iterator> successors() const {
+    return make_range(const_succ_iterator(std::next(op_begin())),
+                      const_succ_iterator(op_end()));
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3845,6 +3936,15 @@ public:
   }
 
   unsigned getNumSuccessors() const { return 2; }
+
+  iterator_range<succ_iterator> successors() {
+    Use *First = &Op<NormalDestOpEndIdx>();
+    return {succ_iterator(First), succ_iterator(First + 2)};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    const Use *First = &Op<NormalDestOpEndIdx>();
+    return {const_succ_iterator(First), const_succ_iterator(First + 2)};
+  }
 
   /// Updates profile metadata by scaling it by \p S / \p T.
   LLVM_ABI void updateProfWeight(uint64_t S, uint64_t T);
@@ -4023,6 +4123,15 @@ public:
 
   unsigned getNumSuccessors() const { return getNumIndirectDests() + 1; }
 
+  iterator_range<succ_iterator> successors() {
+    Use *First = &Op<-1>() - getNumIndirectDests() - 1;
+    return {succ_iterator(First), succ_iterator(&Op<-1>())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    const Use *First = &Op<-1>() - getNumIndirectDests() - 1;
+    return {const_succ_iterator(First), const_succ_iterator(&Op<-1>())};
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::CallBr);
@@ -4099,6 +4208,13 @@ private:
 
   void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
     llvm_unreachable("ResumeInst has no successors!");
+  }
+
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(op_end()), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(op_end()), const_succ_iterator(op_end())};
   }
 };
 
@@ -4262,6 +4378,14 @@ public:
     setOperand(Idx + 1, NewSucc);
   }
 
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(std::next(op_begin())), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(std::next(op_begin())),
+            const_succ_iterator(op_end())};
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::CatchSwitch;
@@ -4411,6 +4535,14 @@ private:
     assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
     setSuccessor(B);
   }
+
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(std::next(op_begin())), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(std::next(op_begin())),
+            const_succ_iterator(op_end())};
+  }
 };
 
 template <>
@@ -4498,6 +4630,14 @@ private:
     setUnwindDest(B);
   }
 
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(std::next(op_begin())), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(std::next(op_begin())),
+            const_succ_iterator(op_end())};
+  }
+
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
   template <typename Bitfield>
@@ -4559,6 +4699,13 @@ private:
 
   void setSuccessor(unsigned idx, BasicBlock *B) {
     llvm_unreachable("UnreachableInst has no successors!");
+  }
+
+  iterator_range<succ_iterator> successors() {
+    return {succ_iterator(op_end()), succ_iterator(op_end())};
+  }
+  iterator_range<const_succ_iterator> successors() const {
+    return {const_succ_iterator(op_end()), const_succ_iterator(op_end())};
   }
 };
 

@@ -64,7 +64,6 @@ static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
-  // case Intrinsic::dx_wave_allequal:
   // case Intrinsic::dx_wave_readfirst:
   // case Intrinsic::dx_wave_reduce.and:
   // case Intrinsic::dx_wave_reduce.or:
@@ -85,14 +84,19 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_is_first_lane:
   case Intrinsic::dx_wave_getlaneindex:
   case Intrinsic::dx_wave_any:
+  case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_active_countbits:
   case Intrinsic::dx_wave_ballot:
   case Intrinsic::dx_wave_prefix_bit_count:
   // Wave Active Op Variants
+  case Intrinsic::dx_wave_reduce_or:
+  case Intrinsic::dx_wave_reduce_xor:
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_wave_product:
+  case Intrinsic::dx_wave_uproduct:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_min:
@@ -104,6 +108,13 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_prefix_uproduct:
     return true;
   }
+}
+
+static bool isOptimizationDisabled(const Module &M) {
+  const StringRef Key = "dx.disable_optimizations";
+  if (auto *Flag = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key)))
+    return Flag->getValue().getBoolValue();
+  return false;
 }
 
 // Checks to see if the status bit from a load with status
@@ -251,18 +262,7 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 
   ComputedShaderFlags CSF;
 
-  // Set DisableOptimizations flag based on the presence of OptimizeNone
-  // attribute of entry functions.
-  if (MMDI.EntryPropertyVec.size() > 0) {
-    CSF.DisableOptimizations = MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
-        llvm::Attribute::OptimizeNone);
-    // Ensure all entry functions have the same optimization attribute
-    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
-      if (CSF.DisableOptimizations !=
-          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
-        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
-            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
-  }
+  CSF.DisableOptimizations = isOptimizationDisabled(M);
 
   CSF.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 

@@ -513,8 +513,8 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
 std::unique_ptr<FunctionOutliningInfo>
 PartialInlinerImpl::computeOutliningInfo(Function &F) const {
   BasicBlock *EntryBlock = &F.front();
-  BranchInst *BR = dyn_cast<BranchInst>(EntryBlock->getTerminator());
-  if (!BR || BR->isUnconditional())
+  CondBrInst *BR = dyn_cast<CondBrInst>(EntryBlock->getTerminator());
+  if (!BR)
     return std::unique_ptr<FunctionOutliningInfo>();
 
   // Returns true if Succ is BB's successor
@@ -661,10 +661,8 @@ static bool hasProfileData(const Function &F, const FunctionOutliningInfo &OI) {
     return true;
   // Now check if any of the entry block has MD_prof data:
   for (auto *E : OI.Entries) {
-    BranchInst *BR = dyn_cast<BranchInst>(E->getTerminator());
-    if (!BR || BR->isUnconditional())
-      continue;
-    if (hasBranchWeightMD(*BR))
+    CondBrInst *BR = dyn_cast<CondBrInst>(E->getTerminator());
+    if (BR && hasBranchWeightMD(*BR))
       return true;
   }
   return false;

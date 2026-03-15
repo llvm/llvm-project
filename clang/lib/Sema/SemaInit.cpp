@@ -1910,17 +1910,16 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
   QualType ElemTy = MT->getElementType();
 
   Index = 0;
-  InitializedEntity ElemEnt =
+  InitializedEntity Element =
       InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
 
   while (Index < IList->getNumInits()) {
     // Not a sublist: just consume directly.
-    unsigned ColMajorIndex = (Index % MT->getNumRows()) * MT->getNumColumns() +
-                             (Index / MT->getNumRows());
-    ElemEnt.setElementIndex(ColMajorIndex);
-    CheckSubElementType(ElemEnt, IList, ElemTy, ColMajorIndex, StructuredList,
+    // Note: In HLSL, elements of the InitListExpr are in row-major order, so no
+    // change is needed to the Index.
+    Element.setElementIndex(Index);
+    CheckSubElementType(Element, IList, ElemTy, Index, StructuredList,
                         StructuredIndex);
-    ++Index;
   }
 }
 
@@ -3476,7 +3475,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
   // the rest of this array subobject.
   if (IsFirstDesignator) {
     if (NextElementIndex)
-      *NextElementIndex = DesignatedStartIndex;
+      *NextElementIndex = std::move(DesignatedStartIndex);
     StructuredIndex = ElementIndex;
     return false;
   }
@@ -4689,6 +4688,18 @@ static void TryConstructorInitialization(Sema &S,
       return;
     }
   }
+
+  // if the initialization is direct-initialization, or if it is
+  // copy-initialization where the cv-unqualified version of the source type is
+  // the same as or is derived from the class of the destination type,
+  // constructors are considered.
+  if ((Kind.getKind() == InitializationKind::IK_Direct ||
+       Kind.getKind() == InitializationKind::IK_Copy) &&
+      Args.size() == 1 &&
+      S.getASTContext().hasSameUnqualifiedType(
+          Args[0]->getType().getNonReferenceType(),
+          DestType.getNonReferenceType()))
+    RequireActualConstructor = true;
 
   // C++11 [over.match.list]p1:
   //   - If no viable initializer-list constructor is found, overload resolution

@@ -787,7 +787,7 @@ private:
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
-  std::unique_ptr<interp::Context> InterpContext;
+  mutable std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
 
   /// Keeps track of the deallocated DeclListNodes for future reuse.
@@ -803,7 +803,7 @@ public:
   ASTMutationListener *Listener = nullptr;
 
   /// Returns the clang bytecode interpreter context.
-  interp::Context &getInterpContext();
+  interp::Context &getInterpContext() const;
 
   struct CUDAConstantEvalContext {
     /// Do not allow wrong-sided variables in constant expressions.

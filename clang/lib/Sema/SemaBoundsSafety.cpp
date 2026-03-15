@@ -115,7 +115,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     //
     // struct Handle;
     // struct Wrapper {
-    //   size_t size;
+    //   size_t count;
     //   struct Handle* __counted_by(count) handles;
     // }
     //

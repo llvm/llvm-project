@@ -10,11 +10,13 @@
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
+#include <optional>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
 
@@ -137,10 +139,6 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
     mlir::omp::ClauseMapFlags mapTypeBits);
 
-mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    fir::RecordType recordType, llvm::StringRef mapperNameStr);
-
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec);
 
@@ -188,6 +186,48 @@ void collectTileSizesFromOpenMPConstruct(
     const parser::OpenMPConstruct *ompCons,
     llvm::SmallVectorImpl<int64_t> &tileSizes,
     Fortran::semantics::SemanticsContext &semaCtx);
+
+mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
+                                  mlir::Location loc,
+                                  const mlir::DataLayout &dl,
+                                  hlfir::Entity entity);
+
+mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+                            const omp::Object &object,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            mlir::Location loc);
+
+mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const mlir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<mlir::Value> bounds);
+
+struct IteratorRange {
+  mlir::Value lb;
+  mlir::Value ub;
+  mlir::Value step;
+  Fortran::semantics::Symbol *ivSym = nullptr;
+};
+
+bool hasIteratorIVReference(
+    const omp::Object &object,
+    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+
+/// Default name mangler for implicit default mappers.
+///
+/// \param converter The converter to use for name mangling.
+/// \param mapperIdName The name of the mapper to mangle.
+/// \param memberName The name of the member to mangle.
+void defaultMangler(Fortran::lower::AbstractConverter &converter,
+                    std::string &mapperIdName, llvm::StringRef memberName);
+
+mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
+                                  hlfir::Entity entity,
+                                  llvm::ArrayRef<mlir::Value> ivs,
+                                  mlir::Location loc);
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
 } // namespace omp
 } // namespace lower
