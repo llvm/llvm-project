@@ -14,7 +14,7 @@
 #define ORC_RT_SESSION_H
 
 #include "orc-rt/Error.h"
-#include "orc-rt/ResourceManager.h"
+#include "orc-rt/Service.h"
 #include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
@@ -142,8 +142,8 @@ public:
   /// Initiate session shutdown and block until complete.
   void waitForShutdown();
 
-  /// Add a ResourceManager to the session.
-  void addResourceManager(std::unique_ptr<ResourceManager> RM);
+  /// Add a Service to the session.
+  void addService(std::unique_ptr<Service> Srv);
 
   /// Set the ControllerAccess object.
   void setController(std::shared_ptr<ControllerAccess> CA);
@@ -163,7 +163,7 @@ public:
 private:
   struct ShutdownInfo {
     bool Complete = false;
-    std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+    std::vector<std::unique_ptr<Service>> Services;
     std::vector<OnShutdownCompleteFn> OnCompletes;
   };
 
@@ -190,7 +190,7 @@ private:
   ErrorReporterFn ReportError;
 
   std::mutex M;
-  std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
+  std::vector<std::unique_ptr<Service>> Services;
   std::unique_ptr<ShutdownInfo> SI;
 };
 
