@@ -38,7 +38,6 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
-  void initTargetSpecificSections() override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
   void scanSection(InputSectionBase &sec) override {
@@ -77,41 +76,6 @@ Hexagon::Hexagon(Ctx &ctx) : TargetInfo(ctx) {
   tlsOffsetRel = R_HEX_DTPREL_32;
 
   needsThunks = true;
-}
-
-namespace {
-class HexagonGuardSection final : public SyntheticSection {
-public:
-  std::atomic<bool> isUsed{false};
-  HexagonGuardSection(Ctx &ctx)
-      : SyntheticSection(ctx, ".text.guard", SHT_PROGBITS,
-                         SHF_ALLOC | SHF_EXECINSTR, 4) {}
-  size_t getSize() const override { return 4; }
-  bool isNeeded() const override {
-    return isUsed.load(std::memory_order_relaxed);
-  }
-  void finalizeContents() override {
-    if (isNeeded() && ctx.in.symTab)
-      ctx.in.symTab->addSymbol(ctx.in.hexagonGuardSym);
-  }
-  void writeTo(uint8_t *buf) override {
-    // { jumpr r31 }
-    write32le(buf, 0x529fc000);
-  }
-};
-} // namespace
-
-void Hexagon::initTargetSpecificSections() {
-  ctx.in.hexagonGuard = std::make_unique<HexagonGuardSection>(ctx);
-  ctx.inputSections.push_back(ctx.in.hexagonGuard.get());
-  // Create the guard symbol but do not add it to the symtab yet.
-  // HexagonGuardSection::finalizeContents() adds it only if the section is
-  // actually referenced, avoiding a dangling symtab entry when the section
-  // is removed by removeUnusedSyntheticSections().
-  ctx.in.hexagonGuardSym =
-      makeDefined(ctx, /*file=*/nullptr, "__linker_guard_weak_undef", STB_LOCAL,
-                  STV_DEFAULT, STT_FUNC, /*value=*/0, /*size=*/4,
-                  ctx.in.hexagonGuard.get());
 }
 
 uint32_t Hexagon::calcEFlags() const {
@@ -197,44 +161,24 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_ABS;
       break;
 
-    // PC-relative branch relocations — redirect undefined weak symbols
-    // to the guard section so branches land on a safe { jumpr r31 } stub
-    // instead of a potentially mid-packet target.
+    // PC-relative relocations:
     case R_HEX_B9_PCREL:
     case R_HEX_B13_PCREL:
-    case R_HEX_B15_PCREL: {
-      Symbol *target = &sym;
-      if (sym.isUndefWeak() && ctx.in.hexagonGuardSym) {
-        target = ctx.in.hexagonGuardSym;
-        static_cast<HexagonGuardSection *>(ctx.in.hexagonGuard.get())
-            ->isUsed.store(true, std::memory_order_relaxed);
-      }
-      rs.processR_PC(type, offset, addend, *target);
-      continue;
-    }
-
-    // Non-branch PC-relative relocations (no redirect needed):
+    case R_HEX_B15_PCREL:
     case R_HEX_6_PCREL_X:
     case R_HEX_32_PCREL:
       rs.processR_PC(type, offset, addend, sym);
       continue;
 
-    // PLT-generating branch relocations — same guard redirect:
+    // PLT-generating relocations:
     case R_HEX_B9_PCREL_X:
     case R_HEX_B15_PCREL_X:
     case R_HEX_B22_PCREL:
     case R_HEX_PLT_B22_PCREL:
     case R_HEX_B22_PCREL_X:
-    case R_HEX_B32_PCREL_X: {
-      Symbol *target = &sym;
-      if (sym.isUndefWeak() && ctx.in.hexagonGuardSym) {
-        target = ctx.in.hexagonGuardSym;
-        static_cast<HexagonGuardSection *>(ctx.in.hexagonGuard.get())
-            ->isUsed.store(true, std::memory_order_relaxed);
-      }
-      rs.processR_PLT_PC(type, offset, addend, *target);
+    case R_HEX_B32_PCREL_X:
+      rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
-    }
     case R_HEX_GD_PLT_B22_PCREL:
     case R_HEX_GD_PLT_B22_PCREL_X:
     case R_HEX_GD_PLT_B32_PCREL_X:
@@ -426,9 +370,8 @@ bool Hexagon::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 bool Hexagon::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                          uint64_t branchAddr, const Symbol &s,
                          int64_t a) const {
-  // Undefined weak symbols without PLT entries are redirected to the
-  // guard section during relocation scanning, so this check should not
-  // normally be reached for branch relocs.  It remains as a safety net.
+  // Undefined weak symbols without PLT entries resolve to address zero.
+  // Thunks are not needed since the branch target is fixed.
   if (s.isUndefined() && !s.isInPlt(ctx))
     return false;
   switch (type) {
