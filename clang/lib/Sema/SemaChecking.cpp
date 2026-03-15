@@ -4884,6 +4884,14 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   // For _n operations, the value type must also be a valid atomic type.
   if (Form == Arithmetic || IsN) {
+    // C23 §7.17.7.5p1: atomic arithmetic operations are not permitted on
+    // atomic_bool (_Bool). GCC similarly rejects this. Only applies to
+    // arithmetic forms; non-arithmetic _n ops (load, store, exchange) are fine.
+    if (Form == Arithmetic && ValType->isBooleanType()) {
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_not_supported_for_bool)
+          << Ptr->getType() << Ptr->getSourceRange();
+      return ExprError();
+    }
     // GCC does not enforce these rules for GNU atomics, but we do to help catch
     // trivial type errors.
     auto IsAllowedValueType = [&](QualType ValType,
