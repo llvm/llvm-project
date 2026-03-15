@@ -2543,10 +2543,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       }
     }
     // For BeforeHashWithCode enum bodies: whenever readToken just processed a
-    // PP directive and returned the first post-PP token (AtEndOfPPLine == true),
-    // flush the accumulated pre-PP body tokens as their own UnwrappedLine.
-    // This gives each PP-separated segment its own line so the BWHCCodeLine
-    // level-boost in addUnwrappedLine can apply the correct indentation.
+    // PP directive and returned the first post-PP token (AtEndOfPPLine ==
+    // true), flush the accumulated pre-PP body tokens as their own
+    // UnwrappedLine. This gives each PP-separated segment its own line so the
+    // BWHCCodeLine level-boost in addUnwrappedLine can apply the correct
+    // indentation.
     if (IsEnum && !IsAngleBracket &&
         Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
         Style.AllowShortEnumsOnASingleLine && AtEndOfPPLine &&
@@ -3922,8 +3923,9 @@ bool UnwrappedLineParser::parseEnum() {
   }
   // Parse enum body.
   nextToken();
-  bool updateLevel = !Style.AllowShortEnumsOnASingleLine ||
-                     Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
+  bool updateLevel =
+      !Style.AllowShortEnumsOnASingleLine ||
+      Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
   if (updateLevel) {
     addUnwrappedLine();
     Line->Level += 1;
@@ -5004,8 +5006,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       // (e.g. leaving a block), but do NOT apply PPBranchLevel since PP
       // directives should align with the code rather than nesting PP levels.
       assert((LevelDifference >= 0 ||
-                static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
-               "LevelDifference makes Line->Level negative");
+              static_cast<unsigned>(-LevelDifference) <= Line->Level) &&
+             "LevelDifference makes Line->Level negative");
       Line->Level += LevelDifference;
       if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode) {
         // When this PP directive is being deferred to PreprocessorDirectives
