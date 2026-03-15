@@ -160,7 +160,7 @@ public:
     return LI;
   }
 
-  LiveInterval &createAndComputeVirtRegInterval(Register Reg, bool& NeedSplit) {
+  LiveInterval &createAndComputeVirtRegInterval(Register Reg, bool &NeedSplit) {
     LiveInterval &LI = createEmptyInterval(Reg);
     NeedSplit = computeVirtRegInterval(LI);
     return LI;
