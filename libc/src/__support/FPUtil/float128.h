@@ -22,14 +22,14 @@ namespace fputil {
 
 class Float128 {
 private:
-  UInt128 bits_;
+  UInt128 bits_ = 0;
 
 public:
-  constexpr Float128() = default;
+    constexpr Float128() = default;
 
-  constexpr explicit Float128(UInt128 value) : bits_(value) {}
+    constexpr explicit Float128(UInt128 value) : bits_(value) {}
 
-  constexpr UInt128 get_bits() const { return bits_; }
+    constexpr UInt128 get_bits() const { return bits_; }
 };
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
