@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/iterator.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
@@ -74,9 +75,9 @@ public:
 /// `Repeated<T>` is also a proper random-access range: `begin()`/`end()`
 /// return iterators that always dereference to the same stored value.
 template <typename T> struct [[nodiscard]] Repeated {
-  /// Pointer-aligned wrapper for the stored value, suitable for use as a
-  /// PointerUnion target in range types (e.g. TypeRange, ValueRange).
-  struct alignas(alignof(void *)) Storage {
+  /// Wrapper for the stored value, meant to be suitable for use as a
+  /// PointerUnion target in range types (e.g., TypeRange, ValueRange).
+  struct alignas(std::max(alignof(void *), alignof(T))) Storage {
     T value;
   };
 

@@ -65,7 +65,9 @@ TEST(RepeatedTest, CTAD) {
 TEST(RepeatedTest, StorageAlignment) {
   static_assert(alignof(Repeated<int>::Storage) >= alignof(void *));
   static_assert(alignof(Repeated<std::string>::Storage) >= alignof(void *));
-  static_assert(alignof(Repeated<void *>::Storage) >= alignof(void *));
+  static_assert(alignof(Repeated<bool>::Storage) >= alignof(void *));
+  static_assert(alignof(Repeated<long double>::Storage) >=
+                alignof(long double));
 }
 
 TEST(RepeatedTest, IteratorRandomAccess) {
