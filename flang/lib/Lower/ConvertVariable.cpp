@@ -760,21 +760,20 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
                                                         ultimateSymbol);
-    llvm::SmallVector<mlir::Value> indices;
-    llvm::SmallVector<mlir::Value> elidedShape =
-        fir::factory::elideExtentsAlreadyInType(ty, shape);
-    llvm::SmallVector<mlir::Value> elidedLenParams =
-        fir::factory::elideLengthsAlreadyInType(ty, lenParams);
-    auto idxTy = builder.getIndexType();
-    for (mlir::Value sh : elidedShape)
-      indices.push_back(builder.createConvert(loc, idxTy, sh));
-    if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+    if (dataAttr.getValue() == cuf::DataAttribute::Shared) {
+      llvm::SmallVector<mlir::Value> elidedShape =
+          fir::factory::elideExtentsAlreadyInType(ty, shape);
+      auto idxTy = builder.getIndexType();
+      llvm::SmallVector<mlir::Value> indices;
+      for (mlir::Value sh : elidedShape)
+        indices.push_back(builder.createConvert(loc, idxTy, sh));
       return cuf::SharedMemoryOp::create(builder, loc, ty, nm, symNm, lenParams,
                                          indices);
+    }
 
     if (!cuf::isCUDADeviceContext(builder.getRegion()))
-      return cuf::AllocOp::create(builder, loc, ty, nm, symNm, dataAttr,
-                                  lenParams, indices);
+      return Fortran::lower::genCUFAlloc(builder, loc, ty, nm, symNm, dataAttr,
+                                         lenParams, shape);
   }
 
   // Let the builder do all the heavy lifting.

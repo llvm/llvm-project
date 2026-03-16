@@ -507,9 +507,10 @@ public:
 private:
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
   DenseMap<MachineBasicBlock *, PreheaderFlushFlags> PreheadersToFlush;
-  MachineLoopInfo *MLI;
-  MachinePostDominatorTree *PDT;
+  MachineLoopInfo &MLI;
+  MachinePostDominatorTree &PDT;
   AliasAnalysis *AA = nullptr;
+  MachineFunction &MF;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -534,9 +535,9 @@ private:
   AMDGPU::HardwareLimits Limits;
 
 public:
-  SIInsertWaitcnts(MachineLoopInfo *MLI, MachinePostDominatorTree *PDT,
-                   AliasAnalysis *AA)
-      : MLI(MLI), PDT(PDT), AA(AA) {
+  SIInsertWaitcnts(MachineLoopInfo &MLI, MachinePostDominatorTree &PDT,
+                   AliasAnalysis *AA, MachineFunction &MF)
+      : MLI(MLI), PDT(PDT), AA(AA), MF(MF) {
     (void)ForceExpCounter;
     (void)ForceLgkmCounter;
     (void)ForceVMCounter;
@@ -551,7 +552,7 @@ public:
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool isDSRead(const MachineInstr &MI) const;
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
-  bool run(MachineFunction &MF);
+  bool run();
 
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
@@ -2525,7 +2526,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         if (Memop->isStore()) {
           if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
             addWait(Wait, SmemAccessCounter, 0);
-            if (PDT->dominates(MI.getParent(), It->second))
+            if (PDT.dominates(MI.getParent(), It->second))
               SLoadAddresses.erase(It);
           }
         }
@@ -3380,7 +3381,7 @@ SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
   if (!Succ)
     return PreheaderFlushFlags();
 
-  MachineLoop *Loop = MLI->getLoopFor(Succ);
+  MachineLoop *Loop = MLI.getLoopFor(Succ);
   if (!Loop)
     return PreheaderFlushFlags();
 
@@ -3595,26 +3596,26 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
 }
 
 bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  auto *PDT =
-      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &PDT =
+      getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   AliasAnalysis *AA = nullptr;
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
 
-  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
+  return SIInsertWaitcnts(MLI, PDT, AA, MF).run();
 }
 
 PreservedAnalyses
 SIInsertWaitcntsPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto *PDT = &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &PDT = MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *AA = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                  .getManager()
                  .getCachedResult<AAManager>(MF.getFunction());
 
-  if (!SIInsertWaitcnts(MLI, PDT, AA).run(MF))
+  if (!SIInsertWaitcnts(MLI, PDT, AA, MF).run())
     return PreservedAnalyses::all();
 
   return getMachineFunctionPassPreservedAnalyses()
@@ -3622,7 +3623,7 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
       .preserve<AAManager>();
 }
 
-bool SIInsertWaitcnts::run(MachineFunction &MF) {
+bool SIInsertWaitcnts::run() {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
@@ -3642,14 +3643,14 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
                               .getFnAttribute("amdgpu-expert-scheduling-mode")
                               .getValueAsBool());
     MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
-    if (!WCG)
-      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, &Limits,
-                                                        IsExpertMode);
+    // Initialize WCG per MF. It contains state that depends on MF attributes.
+    WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, &Limits,
+                                                      IsExpertMode);
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    if (!WCG)
-      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(MF, NUM_NORMAL_INST_CNTS,
-                                                       &Limits);
+    // Initialize WCG per MF. It contains state that depends on MF attributes.
+    WCG = std::make_unique<WaitcntGeneratorPreGFX12>(MF, NUM_NORMAL_INST_CNTS,
+                                                     &Limits);
   }
 
   for (auto T : inst_counter_types())
