@@ -143,6 +143,9 @@ def X86bsf     : SDNode<"X86ISD::BSF",      SDTBinaryArithWithFlags>;
 // Bit scan reverse.
 def X86bsr     : SDNode<"X86ISD::BSR",      SDTBinaryArithWithFlags>;
 
+// Leading zero count (flags-producing variant). CF=1 when source is zero.
+def X86lzcnt   : SDNode<"X86ISD::LZCNT",    SDTUnaryArithWithFlags>;
+
 // X86 funnel/double shift i16 instructions. These correspond to
 // X86::SHLDW and X86::SHRDW instructions which have different amt
 // modulo rules to generic funnel shifts.

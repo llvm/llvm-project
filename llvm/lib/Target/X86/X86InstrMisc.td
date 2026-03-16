@@ -1186,6 +1186,16 @@ defm LZCNT16 : Lzcnt<0xF5, "lzcnt", null_frag, Xi16, WriteLZCNT, WriteLZCNTLd, "
 defm LZCNT32 : Lzcnt<0xF5, "lzcnt", null_frag, Xi32, WriteLZCNT, WriteLZCNTLd, "_NF">, NF;
 defm LZCNT64 : Lzcnt<0xF5, "lzcnt", null_frag, Xi64, WriteLZCNT, WriteLZCNTLd, "_NF">, NF;
 
+// Patterns for the flags-producing X86ISD::LZCNT node.  These reuse the
+// existing LZCNT instructions; the difference is that the CF output is exposed
+// so that a subsequent CMOV can consume it directly (CF=1 when source == 0).
+let Predicates = [HasLZCNT] in {
+  def : Pat<(X86lzcnt GR32:$src), (LZCNT32rr GR32:$src)>;
+  def : Pat<(X86lzcnt (loadi32 addr:$src)), (LZCNT32rm addr:$src)>;
+  def : Pat<(X86lzcnt GR64:$src), (LZCNT64rr GR64:$src)>;
+  def : Pat<(X86lzcnt (loadi64 addr:$src)), (LZCNT64rm addr:$src)>;
+}
+
 //===----------------------------------------------------------------------===//
 // BMI Instructions
 //

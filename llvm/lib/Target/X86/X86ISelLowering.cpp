@@ -48411,6 +48411,42 @@ static SDValue combineSelectToMinMax(SelectionDAG &DAG,
   return DAG.getNode(Opcode, DL, N->getValueType(0), LHS, RHS);
 }
 
+/// Fold SELECT(SETCC(x, 0, SETNE), CTLZ_ZERO_UNDEF(x), y)
+///      -> X86ISD::CMOV(y, X86ISD::LZCNT(x), COND_AE, lzcnt_flags)
+///
+/// LZCNT sets CF=1 when its source is zero and CF=0 when non-zero, so the
+/// separate SETCC + TEST can be replaced by a CMOV that reads CF directly,
+/// eliminating a redundant TEST instruction. This fires for the i128 CTLZ
+/// expansion: SELECT(Hi != 0, ctlz(Hi), ctlz(Lo) + 64).
+static SDValue foldSelectCTLZToLZCNT(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
+  if (!Subtarget.hasLZCNT())
+    return SDValue();
+
+  SDValue Cond = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+
+  if (Cond.getOpcode() != ISD::SETCC || LHS.getOpcode() != ISD::CTLZ_ZERO_UNDEF)
+    return SDValue();
+
+  EVT VT = LHS.getValueType();
+  if (VT.isVector())
+    return SDValue();
+
+  SDValue Src = LHS.getOperand(0);
+  if (cast<CondCodeSDNode>(Cond.getOperand(2))->get() != ISD::SETNE ||
+      !isNullConstant(Cond.getOperand(1)) || Cond.getOperand(0) != Src)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
+  SDValue Lzcnt = DAG.getNode(X86ISD::LZCNT, DL, VTs, Src);
+  SDValue Ops[] = {RHS, Lzcnt, DAG.getTargetConstant(X86::COND_AE, DL, MVT::i8),
+                   Lzcnt.getValue(1)};
+  return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+}
+
 /// Do target-specific dag combines on SELECT and VSELECT nodes.
 static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              TargetLowering::DAGCombinerInfo &DCI,
@@ -48423,6 +48459,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Try simplification again because we use this function to optimize
   // BLENDV nodes that are not handled by the generic combiner.
   if (SDValue V = DAG.simplifySelect(Cond, LHS, RHS))
+    return V;
+
+  if (SDValue V = foldSelectCTLZToLZCNT(N, DAG, Subtarget))
     return V;
 
   // When avx512 is available the lhs operand of select instruction can be
