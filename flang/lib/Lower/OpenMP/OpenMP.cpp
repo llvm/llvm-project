@@ -2496,7 +2496,7 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const parser::LoopControl::Bounds *bounds =
       std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
   mlir::Operation *storeOp =
-      setLoopVar(converter, loc, indexVal, bounds->name.thing.symbol);
+      setLoopVar(converter, loc, indexVal, bounds->Name().thing.symbol);
   firOpBuilder.setInsertionPointAfter(storeOp);
   return scanOp;
 }
