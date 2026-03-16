@@ -30,7 +30,7 @@ class AnalysisDriver;
 
 /// Type-erased base for summary analyses. Known to AnalysisDriver.
 ///
-/// Not subclassed directly — use SummaryAnalysis<ResultT, EntitySummaryT>.
+/// Not subclassed directly -- use SummaryAnalysis<ResultT, EntitySummaryT>.
 /// A summary analysis processes per-entity EntitySummary objects from the
 /// LUSummary one at a time, accumulating whole-program data into an
 /// AnalysisResult.

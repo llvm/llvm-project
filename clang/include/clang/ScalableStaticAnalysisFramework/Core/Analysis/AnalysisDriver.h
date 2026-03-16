@@ -28,14 +28,14 @@ namespace clang::ssaf {
 /// Orchestrates whole-program analysis over an LUSummary.
 ///
 /// Three run() patterns are supported:
-///   - run() &&        — all registered analyses; silently skips any whose
-///                       entity data is absent or whose dependency was skipped.
-///                       Requires an rvalue driver because this exhausts the
-///                       LUSummary.
-///   - run(names)      — named subset plus transitive dependencies; returns
-///                       Expected and fails if any listed name has no
-///                       registered analysis or missing entity data.
-///   - run<ResultTs..> — type-safe variant of run(names).
+///   - run() &&        -- all registered analyses; silently skips any whose
+///                        entity data is absent or whose dependency was
+///                        skipped. Requires an rvalue driver because this
+///                        exhausts the LUSummary.
+///   - run(names)      -- named subset plus transitive dependencies; returns
+///                        Expected and fails if any listed name has no
+///                        registered analysis or missing entity data.
+///   - run<ResultTs..> -- type-safe variant of run(names).
 class AnalysisDriver final {
 public:
   explicit AnalysisDriver(std::unique_ptr<LUSummary> LU);

@@ -26,7 +26,7 @@ class DerivedAnalysisBase;
 
 /// Minimal common base for both analysis kinds.
 ///
-/// Not subclassed directly — use SummaryAnalysis<...> or
+/// Not subclassed directly -- use SummaryAnalysis<...> or
 /// DerivedAnalysis<...> instead.
 class AnalysisBase {
   friend class AnalysisDriver;

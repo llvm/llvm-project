@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Base class for all whole-program analysis results produced by AnalysisDriver.
-// Replaces SummaryData. Concrete subclasses carry a static analysisName().
+// Concrete subclasses carry a static analysisName().
 //
 //===----------------------------------------------------------------------===//
 

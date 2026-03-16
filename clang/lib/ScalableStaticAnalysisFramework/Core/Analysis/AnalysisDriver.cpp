@@ -114,7 +114,8 @@ llvm::Error AnalysisDriver::executeSummaryAnalysis(
     return Err;
   }
 
-  Suite.Data.emplace(Summary->analysisName(), std::move(*Summary).result());
+  AnalysisName Name = Summary->analysisName();
+  Suite.Data.emplace(Name, std::move(*Summary).result());
 
   return llvm::Error::success();
 }
@@ -151,7 +152,8 @@ llvm::Error AnalysisDriver::executeDerivedAnalysis(
     return Err;
   }
 
-  Suite.Data.emplace(Derived->analysisName(), std::move(*Derived).result());
+  AnalysisName Name = Derived->analysisName();
+  Suite.Data.emplace(Name, std::move(*Derived).result());
 
   return llvm::Error::success();
 }

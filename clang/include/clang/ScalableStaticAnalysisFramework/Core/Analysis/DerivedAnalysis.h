@@ -20,6 +20,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisTraits.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <map>
 #include <memory>
 #include <vector>
@@ -30,7 +31,7 @@ class AnalysisDriver;
 
 /// Type-erased base for derived analyses. Known to AnalysisDriver.
 ///
-/// Not subclassed directly — use DerivedAnalysis<ResultT, DepResultTs...>.
+/// Not subclassed directly -- use DerivedAnalysis<ResultT, DepResultTs...>.
 /// A derived analysis consumes previously produced AnalysisResult objects
 /// and computes a new one via an initialize/step/finalize lifecycle.
 class DerivedAnalysisBase : public AnalysisBase {
@@ -66,7 +67,7 @@ private:
 ///   llvm::Expected<bool> step() override;
 /// and may override finalize().
 ///
-/// Dependencies are fixed for the lifetime of the analysis — initialize()
+/// Dependencies are fixed for the lifetime of the analysis: initialize()
 /// binds them once, step() is called until it returns false, and
 /// finalize() post-processes after convergence.
 template <typename ResultT, typename... DepResultTs>
@@ -115,11 +116,18 @@ protected:
 
 private:
   /// Seals the type-erased base overload, downcasts, and dispatches to the
-  /// typed initialize().
+  /// typed initialize(). All dependencies are guaranteed present by the driver.
   llvm::Error
   initialize(const std::map<AnalysisName, const AnalysisResult *> &Map) final {
+    auto lookup = [&Map](const AnalysisName &Name) -> const AnalysisResult * {
+      auto It = Map.find(Name);
+      if (It == Map.end())
+        llvm_unreachable("dependency missing from DepResults map; "
+                         "dependency graph is not topologically sorted");
+      return It->second;
+    };
     return initialize(*static_cast<const DepResultTs *>(
-        Map.at(DepResultTs::analysisName()))...);
+        lookup(DepResultTs::analysisName()))...);
   }
 
   /// Type-erased result extraction for the driver.
