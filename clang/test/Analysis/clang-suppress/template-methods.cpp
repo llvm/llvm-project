@@ -46,7 +46,19 @@ struct TemplateClassWithTemplateMethod {
   void unsuppressed(U) {
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
   }
+};
 
+void test_tpl_class_tpl_inline_method() {
+  TemplateClassWithTemplateMethod<TypeA>().suppressed(TypeB{});
+  TemplateClassWithTemplateMethod<TypeA>().unsuppressed(TypeB{});
+}
+
+// ============================================================================
+// Group C: Template class with template methods — out-of-line
+// ============================================================================
+
+template <typename T>
+struct TemplateClassWithTemplateOOLMethod {
   template <typename U>
   [[clang::suppress]] void suppress_at_decl_outline(U);
 
@@ -54,29 +66,23 @@ struct TemplateClassWithTemplateMethod {
   void suppress_at_def_outline(U);
 };
 
-// ============================================================================
-// Group C: Template class with template methods — out-of-line
-// ============================================================================
-
 // Attribute on declaration only — NOT honored at out-of-line definition.
 template <typename T>
 template <typename U>
-void TemplateClassWithTemplateMethod<T>::suppress_at_decl_outline(U) {
+void TemplateClassWithTemplateOOLMethod<T>::suppress_at_decl_outline(U) {
   clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
 }
 
 // Attribute on out-of-line definition — suppressed.
 template <typename T>
 template <typename U>
-[[clang::suppress]] void TemplateClassWithTemplateMethod<T>::suppress_at_def_outline(U) {
+[[clang::suppress]] void TemplateClassWithTemplateOOLMethod<T>::suppress_at_def_outline(U) {
   clang_analyzer_warnIfReached(); // no-warning
 }
 
-void test_tpl_class_tpl_method() {
-  TemplateClassWithTemplateMethod<TypeA>().suppressed(TypeB{});
-  TemplateClassWithTemplateMethod<TypeA>().unsuppressed(TypeB{});
-  TemplateClassWithTemplateMethod<TypeA>().suppress_at_decl_outline(TypeB{});
-  TemplateClassWithTemplateMethod<TypeA>().suppress_at_def_outline(TypeB{});
+void test_tpl_class_tpl_ool_method() {
+  TemplateClassWithTemplateOOLMethod<TypeA>().suppress_at_decl_outline(TypeB{});
+  TemplateClassWithTemplateOOLMethod<TypeA>().suppress_at_def_outline(TypeB{});
 }
 
 // ============================================================================
