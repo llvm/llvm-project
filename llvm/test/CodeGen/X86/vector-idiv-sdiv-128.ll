@@ -1217,83 +1217,64 @@ define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pushq %r14
 ; SSE-NEXT:    .cfi_def_cfa_offset 24
-; SSE-NEXT:    pushq %r13
-; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    pushq %r12
-; SSE-NEXT:    .cfi_def_cfa_offset 40
 ; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 48
-; SSE-NEXT:    .cfi_offset %rbx, -48
-; SSE-NEXT:    .cfi_offset %r12, -40
-; SSE-NEXT:    .cfi_offset %r13, -32
+; SSE-NEXT:    .cfi_def_cfa_offset 32
+; SSE-NEXT:    .cfi_offset %rbx, -32
 ; SSE-NEXT:    .cfi_offset %r14, -24
 ; SSE-NEXT:    .cfi_offset %r15, -16
 ; SSE-NEXT:    movq %rcx, %r9
 ; SSE-NEXT:    movq %rdx, %rcx
-; SSE-NEXT:    movabsq $1152921504606846975, %r15 # imm = 0xFFFFFFFFFFFFFFF
+; SSE-NEXT:    movabsq $1152921504606846975, %r14 # imm = 0xFFFFFFFFFFFFFFF
 ; SSE-NEXT:    movq %rsi, %rax
-; SSE-NEXT:    andq %r15, %rax
+; SSE-NEXT:    andq %r14, %rax
 ; SSE-NEXT:    movq %rsi, %rdx
 ; SSE-NEXT:    shrdq $60, %rcx, %rdx
-; SSE-NEXT:    andq %r15, %rdx
+; SSE-NEXT:    andq %r14, %rdx
 ; SSE-NEXT:    addq %rax, %rdx
 ; SSE-NEXT:    movq %rcx, %r10
 ; SSE-NEXT:    shrq $56, %r10
 ; SSE-NEXT:    addq %rdx, %r10
-; SSE-NEXT:    movabsq $5270498306774157605, %r12 # imm = 0x4924924924924925
+; SSE-NEXT:    movabsq $5270498306774157605, %r15 # imm = 0x4924924924924925
 ; SSE-NEXT:    movq %r10, %rax
-; SSE-NEXT:    mulq %r12
-; SSE-NEXT:    movq %rdx, %r11
-; SSE-NEXT:    shrq %r11
-; SSE-NEXT:    leaq (,%r11,8), %rax
-; SSE-NEXT:    subq %rax, %r11
-; SSE-NEXT:    addq %r10, %r11
-; SSE-NEXT:    movabsq $2635249153387078803, %r13 # imm = 0x2492492492492493
-; SSE-NEXT:    movq %r11, %rax
-; SSE-NEXT:    mulq %r13
-; SSE-NEXT:    leal (,%rdx,8), %eax
+; SSE-NEXT:    mulq %r15
+; SSE-NEXT:    shrq %rdx
+; SSE-NEXT:    leaq (,%rdx,8), %rax
 ; SSE-NEXT:    subq %rax, %rdx
-; SSE-NEXT:    addq %r11, %rdx
+; SSE-NEXT:    addq %r10, %rdx
 ; SSE-NEXT:    subq %rdx, %rsi
 ; SSE-NEXT:    sbbq $0, %rcx
-; SSE-NEXT:    movabsq $-5270498306774157605, %rbx # imm = 0xB6DB6DB6DB6DB6DB
+; SSE-NEXT:    movabsq $-5270498306774157605, %r11 # imm = 0xB6DB6DB6DB6DB6DB
 ; SSE-NEXT:    movq %rsi, %r10
-; SSE-NEXT:    imulq %rbx, %r10
-; SSE-NEXT:    movabsq $7905747460161236407, %r14 # imm = 0x6DB6DB6DB6DB6DB7
+; SSE-NEXT:    imulq %r11, %r10
+; SSE-NEXT:    movabsq $7905747460161236407, %rbx # imm = 0x6DB6DB6DB6DB6DB7
 ; SSE-NEXT:    movq %rsi, %rax
-; SSE-NEXT:    mulq %r14
+; SSE-NEXT:    mulq %rbx
 ; SSE-NEXT:    movq %rax, %rsi
 ; SSE-NEXT:    addq %r10, %rdx
-; SSE-NEXT:    imulq %r14, %rcx
+; SSE-NEXT:    imulq %rbx, %rcx
 ; SSE-NEXT:    addq %rdx, %rcx
 ; SSE-NEXT:    movq %r9, %rax
-; SSE-NEXT:    andq %r15, %rax
+; SSE-NEXT:    andq %r14, %rax
 ; SSE-NEXT:    movq %r9, %rdx
 ; SSE-NEXT:    shrdq $60, %r8, %rdx
-; SSE-NEXT:    andq %r15, %rdx
+; SSE-NEXT:    andq %r14, %rdx
 ; SSE-NEXT:    addq %rax, %rdx
 ; SSE-NEXT:    movq %r8, %r10
 ; SSE-NEXT:    shrq $56, %r10
 ; SSE-NEXT:    addq %rdx, %r10
 ; SSE-NEXT:    movq %r10, %rax
-; SSE-NEXT:    mulq %r12
-; SSE-NEXT:    movq %rdx, %r11
-; SSE-NEXT:    shrq %r11
-; SSE-NEXT:    leaq (,%r11,8), %rax
-; SSE-NEXT:    subq %rax, %r11
-; SSE-NEXT:    addq %r10, %r11
-; SSE-NEXT:    movq %r11, %rax
-; SSE-NEXT:    mulq %r13
-; SSE-NEXT:    leal (,%rdx,8), %eax
+; SSE-NEXT:    mulq %r15
+; SSE-NEXT:    shrq %rdx
+; SSE-NEXT:    leaq (,%rdx,8), %rax
 ; SSE-NEXT:    subq %rax, %rdx
-; SSE-NEXT:    addq %r11, %rdx
+; SSE-NEXT:    addq %r10, %rdx
 ; SSE-NEXT:    subq %rdx, %r9
 ; SSE-NEXT:    sbbq $0, %r8
-; SSE-NEXT:    imulq %r9, %rbx
+; SSE-NEXT:    imulq %r9, %r11
 ; SSE-NEXT:    movq %r9, %rax
-; SSE-NEXT:    mulq %r14
-; SSE-NEXT:    addq %rbx, %rdx
-; SSE-NEXT:    imulq %r14, %r8
+; SSE-NEXT:    mulq %rbx
+; SSE-NEXT:    addq %r11, %rdx
+; SSE-NEXT:    imulq %rbx, %r8
 ; SSE-NEXT:    addq %rdx, %r8
 ; SSE-NEXT:    movq %rax, 16(%rdi)
 ; SSE-NEXT:    movq %rsi, (%rdi)
@@ -1301,10 +1282,6 @@ define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
 ; SSE-NEXT:    movq %rcx, 8(%rdi)
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 40
-; SSE-NEXT:    popq %r12
-; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    popq %r13
 ; SSE-NEXT:    .cfi_def_cfa_offset 24
 ; SSE-NEXT:    popq %r14
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
@@ -1318,83 +1295,64 @@ define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    pushq %r14
 ; AVX-NEXT:    .cfi_def_cfa_offset 24
-; AVX-NEXT:    pushq %r13
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    pushq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 40
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    .cfi_offset %rbx, -48
-; AVX-NEXT:    .cfi_offset %r12, -40
-; AVX-NEXT:    .cfi_offset %r13, -32
+; AVX-NEXT:    .cfi_def_cfa_offset 32
+; AVX-NEXT:    .cfi_offset %rbx, -32
 ; AVX-NEXT:    .cfi_offset %r14, -24
 ; AVX-NEXT:    .cfi_offset %r15, -16
 ; AVX-NEXT:    movq %rcx, %r9
 ; AVX-NEXT:    movq %rdx, %rcx
-; AVX-NEXT:    movabsq $1152921504606846975, %r15 # imm = 0xFFFFFFFFFFFFFFF
+; AVX-NEXT:    movabsq $1152921504606846975, %r14 # imm = 0xFFFFFFFFFFFFFFF
 ; AVX-NEXT:    movq %rsi, %rax
-; AVX-NEXT:    andq %r15, %rax
+; AVX-NEXT:    andq %r14, %rax
 ; AVX-NEXT:    movq %rsi, %rdx
 ; AVX-NEXT:    shrdq $60, %rcx, %rdx
-; AVX-NEXT:    andq %r15, %rdx
+; AVX-NEXT:    andq %r14, %rdx
 ; AVX-NEXT:    addq %rax, %rdx
 ; AVX-NEXT:    movq %rcx, %r10
 ; AVX-NEXT:    shrq $56, %r10
 ; AVX-NEXT:    addq %rdx, %r10
-; AVX-NEXT:    movabsq $5270498306774157605, %r12 # imm = 0x4924924924924925
+; AVX-NEXT:    movabsq $5270498306774157605, %r15 # imm = 0x4924924924924925
 ; AVX-NEXT:    movq %r10, %rax
-; AVX-NEXT:    mulq %r12
-; AVX-NEXT:    movq %rdx, %r11
-; AVX-NEXT:    shrq %r11
-; AVX-NEXT:    leaq (,%r11,8), %rax
-; AVX-NEXT:    subq %rax, %r11
-; AVX-NEXT:    addq %r10, %r11
-; AVX-NEXT:    movabsq $2635249153387078803, %r13 # imm = 0x2492492492492493
-; AVX-NEXT:    movq %r11, %rax
-; AVX-NEXT:    mulq %r13
-; AVX-NEXT:    leal (,%rdx,8), %eax
+; AVX-NEXT:    mulq %r15
+; AVX-NEXT:    shrq %rdx
+; AVX-NEXT:    leaq (,%rdx,8), %rax
 ; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %r11, %rdx
+; AVX-NEXT:    addq %r10, %rdx
 ; AVX-NEXT:    subq %rdx, %rsi
 ; AVX-NEXT:    sbbq $0, %rcx
-; AVX-NEXT:    movabsq $-5270498306774157605, %rbx # imm = 0xB6DB6DB6DB6DB6DB
+; AVX-NEXT:    movabsq $-5270498306774157605, %r11 # imm = 0xB6DB6DB6DB6DB6DB
 ; AVX-NEXT:    movq %rsi, %r10
-; AVX-NEXT:    imulq %rbx, %r10
-; AVX-NEXT:    movabsq $7905747460161236407, %r14 # imm = 0x6DB6DB6DB6DB6DB7
+; AVX-NEXT:    imulq %r11, %r10
+; AVX-NEXT:    movabsq $7905747460161236407, %rbx # imm = 0x6DB6DB6DB6DB6DB7
 ; AVX-NEXT:    movq %rsi, %rax
-; AVX-NEXT:    mulq %r14
+; AVX-NEXT:    mulq %rbx
 ; AVX-NEXT:    movq %rax, %rsi
 ; AVX-NEXT:    addq %r10, %rdx
-; AVX-NEXT:    imulq %r14, %rcx
+; AVX-NEXT:    imulq %rbx, %rcx
 ; AVX-NEXT:    addq %rdx, %rcx
 ; AVX-NEXT:    movq %r9, %rax
-; AVX-NEXT:    andq %r15, %rax
+; AVX-NEXT:    andq %r14, %rax
 ; AVX-NEXT:    movq %r9, %rdx
 ; AVX-NEXT:    shrdq $60, %r8, %rdx
-; AVX-NEXT:    andq %r15, %rdx
+; AVX-NEXT:    andq %r14, %rdx
 ; AVX-NEXT:    addq %rax, %rdx
 ; AVX-NEXT:    movq %r8, %r10
 ; AVX-NEXT:    shrq $56, %r10
 ; AVX-NEXT:    addq %rdx, %r10
 ; AVX-NEXT:    movq %r10, %rax
-; AVX-NEXT:    mulq %r12
-; AVX-NEXT:    movq %rdx, %r11
-; AVX-NEXT:    shrq %r11
-; AVX-NEXT:    leaq (,%r11,8), %rax
-; AVX-NEXT:    subq %rax, %r11
-; AVX-NEXT:    addq %r10, %r11
-; AVX-NEXT:    movq %r11, %rax
-; AVX-NEXT:    mulq %r13
-; AVX-NEXT:    leal (,%rdx,8), %eax
+; AVX-NEXT:    mulq %r15
+; AVX-NEXT:    shrq %rdx
+; AVX-NEXT:    leaq (,%rdx,8), %rax
 ; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %r11, %rdx
+; AVX-NEXT:    addq %r10, %rdx
 ; AVX-NEXT:    subq %rdx, %r9
 ; AVX-NEXT:    sbbq $0, %r8
-; AVX-NEXT:    imulq %r9, %rbx
+; AVX-NEXT:    imulq %r9, %r11
 ; AVX-NEXT:    movq %r9, %rax
-; AVX-NEXT:    mulq %r14
-; AVX-NEXT:    addq %rbx, %rdx
-; AVX-NEXT:    imulq %r14, %r8
+; AVX-NEXT:    mulq %rbx
+; AVX-NEXT:    addq %r11, %rdx
+; AVX-NEXT:    imulq %rbx, %r8
 ; AVX-NEXT:    addq %rdx, %r8
 ; AVX-NEXT:    movq %rax, 16(%rdi)
 ; AVX-NEXT:    movq %rsi, (%rdi)
@@ -1402,10 +1360,6 @@ define <2 x i128> @v2i128_div_by_7(<2 x i128> %x) {
 ; AVX-NEXT:    movq %rcx, 8(%rdi)
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 40
-; AVX-NEXT:    popq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    popq %r13
 ; AVX-NEXT:    .cfi_def_cfa_offset 24
 ; AVX-NEXT:    popq %r14
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
@@ -1525,116 +1479,80 @@ entry:
 define <2 x i128> @v2i128_rem_by_7(<2 x i128> %x) {
 ; SSE-LABEL: v2i128_rem_by_7:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    .cfi_offset %rbx, -16
 ; SSE-NEXT:    movq %rdx, %r9
-; SSE-NEXT:    movabsq $1152921504606846975, %r11 # imm = 0xFFFFFFFFFFFFFFF
+; SSE-NEXT:    movabsq $1152921504606846975, %r10 # imm = 0xFFFFFFFFFFFFFFF
 ; SSE-NEXT:    movq %rsi, %rax
-; SSE-NEXT:    andq %r11, %rax
+; SSE-NEXT:    andq %r10, %rax
 ; SSE-NEXT:    shrdq $60, %rdx, %rsi
-; SSE-NEXT:    andq %r11, %rsi
+; SSE-NEXT:    andq %r10, %rsi
 ; SSE-NEXT:    addq %rax, %rsi
 ; SSE-NEXT:    shrq $56, %r9
 ; SSE-NEXT:    addq %rsi, %r9
-; SSE-NEXT:    movabsq $5270498306774157605, %rbx # imm = 0x4924924924924925
+; SSE-NEXT:    movabsq $5270498306774157605, %r11 # imm = 0x4924924924924925
 ; SSE-NEXT:    movq %r9, %rax
-; SSE-NEXT:    mulq %rbx
-; SSE-NEXT:    movq %rdx, %r10
-; SSE-NEXT:    shrq %r10
-; SSE-NEXT:    leaq (,%r10,8), %rax
-; SSE-NEXT:    subq %rax, %r10
-; SSE-NEXT:    addq %r9, %r10
-; SSE-NEXT:    movabsq $2635249153387078803, %r9 # imm = 0x2492492492492493
-; SSE-NEXT:    movq %r10, %rax
-; SSE-NEXT:    mulq %r9
+; SSE-NEXT:    mulq %r11
 ; SSE-NEXT:    movq %rdx, %rsi
-; SSE-NEXT:    leal (,%rdx,8), %eax
+; SSE-NEXT:    shrq %rsi
+; SSE-NEXT:    leaq (,%rsi,8), %rax
 ; SSE-NEXT:    subq %rax, %rsi
-; SSE-NEXT:    addq %r10, %rsi
+; SSE-NEXT:    addq %r9, %rsi
 ; SSE-NEXT:    movq %rcx, %rax
-; SSE-NEXT:    andq %r11, %rax
+; SSE-NEXT:    andq %r10, %rax
 ; SSE-NEXT:    shrdq $60, %r8, %rcx
-; SSE-NEXT:    andq %r11, %rcx
+; SSE-NEXT:    andq %r10, %rcx
 ; SSE-NEXT:    addq %rax, %rcx
 ; SSE-NEXT:    shrq $56, %r8
 ; SSE-NEXT:    addq %rcx, %r8
 ; SSE-NEXT:    movq %r8, %rax
-; SSE-NEXT:    mulq %rbx
-; SSE-NEXT:    movq %rdx, %rcx
-; SSE-NEXT:    shrq %rcx
-; SSE-NEXT:    leaq (,%rcx,8), %rax
-; SSE-NEXT:    subq %rax, %rcx
-; SSE-NEXT:    addq %r8, %rcx
-; SSE-NEXT:    movq %rcx, %rax
-; SSE-NEXT:    mulq %r9
-; SSE-NEXT:    leal (,%rdx,8), %eax
+; SSE-NEXT:    mulq %r11
+; SSE-NEXT:    shrq %rdx
+; SSE-NEXT:    leaq (,%rdx,8), %rax
 ; SSE-NEXT:    subq %rax, %rdx
-; SSE-NEXT:    addq %rcx, %rdx
+; SSE-NEXT:    addq %r8, %rdx
 ; SSE-NEXT:    movq %rdx, 16(%rdi)
 ; SSE-NEXT:    movq %rsi, (%rdi)
 ; SSE-NEXT:    movq $0, 24(%rdi)
 ; SSE-NEXT:    movq $0, 8(%rdi)
 ; SSE-NEXT:    movq %rdi, %rax
-; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v2i128_rem_by_7:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    .cfi_offset %rbx, -16
 ; AVX-NEXT:    movq %rdx, %r9
-; AVX-NEXT:    movabsq $1152921504606846975, %r11 # imm = 0xFFFFFFFFFFFFFFF
+; AVX-NEXT:    movabsq $1152921504606846975, %r10 # imm = 0xFFFFFFFFFFFFFFF
 ; AVX-NEXT:    movq %rsi, %rax
-; AVX-NEXT:    andq %r11, %rax
+; AVX-NEXT:    andq %r10, %rax
 ; AVX-NEXT:    shrdq $60, %rdx, %rsi
-; AVX-NEXT:    andq %r11, %rsi
+; AVX-NEXT:    andq %r10, %rsi
 ; AVX-NEXT:    addq %rax, %rsi
 ; AVX-NEXT:    shrq $56, %r9
 ; AVX-NEXT:    addq %rsi, %r9
-; AVX-NEXT:    movabsq $5270498306774157605, %rbx # imm = 0x4924924924924925
+; AVX-NEXT:    movabsq $5270498306774157605, %r11 # imm = 0x4924924924924925
 ; AVX-NEXT:    movq %r9, %rax
-; AVX-NEXT:    mulq %rbx
-; AVX-NEXT:    movq %rdx, %r10
-; AVX-NEXT:    shrq %r10
-; AVX-NEXT:    leaq (,%r10,8), %rax
-; AVX-NEXT:    subq %rax, %r10
-; AVX-NEXT:    addq %r9, %r10
-; AVX-NEXT:    movabsq $2635249153387078803, %r9 # imm = 0x2492492492492493
-; AVX-NEXT:    movq %r10, %rax
-; AVX-NEXT:    mulq %r9
+; AVX-NEXT:    mulq %r11
 ; AVX-NEXT:    movq %rdx, %rsi
-; AVX-NEXT:    leal (,%rdx,8), %eax
+; AVX-NEXT:    shrq %rsi
+; AVX-NEXT:    leaq (,%rsi,8), %rax
 ; AVX-NEXT:    subq %rax, %rsi
-; AVX-NEXT:    addq %r10, %rsi
+; AVX-NEXT:    addq %r9, %rsi
 ; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    andq %r11, %rax
+; AVX-NEXT:    andq %r10, %rax
 ; AVX-NEXT:    shrdq $60, %r8, %rcx
-; AVX-NEXT:    andq %r11, %rcx
+; AVX-NEXT:    andq %r10, %rcx
 ; AVX-NEXT:    addq %rax, %rcx
 ; AVX-NEXT:    shrq $56, %r8
 ; AVX-NEXT:    addq %rcx, %r8
 ; AVX-NEXT:    movq %r8, %rax
-; AVX-NEXT:    mulq %rbx
-; AVX-NEXT:    movq %rdx, %rcx
-; AVX-NEXT:    shrq %rcx
-; AVX-NEXT:    leaq (,%rcx,8), %rax
-; AVX-NEXT:    subq %rax, %rcx
-; AVX-NEXT:    addq %r8, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    mulq %r9
-; AVX-NEXT:    leal (,%rdx,8), %eax
+; AVX-NEXT:    mulq %r11
+; AVX-NEXT:    shrq %rdx
+; AVX-NEXT:    leaq (,%rdx,8), %rax
 ; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
+; AVX-NEXT:    addq %r8, %rdx
 ; AVX-NEXT:    movq %rdx, 16(%rdi)
 ; AVX-NEXT:    movq %rsi, (%rdi)
 ; AVX-NEXT:    movq $0, 24(%rdi)
 ; AVX-NEXT:    movq $0, 8(%rdi)
 ; AVX-NEXT:    movq %rdi, %rax
-; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
   %rem = urem <2 x i128> %x, <i128 7, i128 7>

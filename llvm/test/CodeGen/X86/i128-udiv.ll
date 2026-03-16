@@ -954,17 +954,10 @@ define i128 @div_by_7(i128 %x) {
 ; X64-NEXT:    movabsq $5270498306774157605, %rdx # imm = 0x4924924924924925
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdx
-; X64-NEXT:    movq %rdx, %r8
-; X64-NEXT:    shrq %r8
-; X64-NEXT:    leaq (,%r8,8), %rax
-; X64-NEXT:    subq %rax, %r8
-; X64-NEXT:    addq %rcx, %r8
-; X64-NEXT:    movabsq $2635249153387078803, %rcx # imm = 0x2492492492492493
-; X64-NEXT:    movq %r8, %rax
-; X64-NEXT:    mulq %rcx
-; X64-NEXT:    leal (,%rdx,8), %eax
+; X64-NEXT:    shrq %rdx
+; X64-NEXT:    leaq (,%rdx,8), %rax
 ; X64-NEXT:    subq %rax, %rdx
-; X64-NEXT:    addq %r8, %rdx
+; X64-NEXT:    addq %rcx, %rdx
 ; X64-NEXT:    subq %rdx, %rdi
 ; X64-NEXT:    sbbq $0, %rsi
 ; X64-NEXT:    movabsq $-5270498306774157605, %rcx # imm = 0xB6DB6DB6DB6DB6DB
@@ -1292,13 +1285,9 @@ define i128 @div_by_9(i128 %x) {
 ; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    shrq $56, %rcx
 ; X64-NEXT:    addq %rdx, %rcx
-; X64-NEXT:    movabsq $2049638230412172402, %r8 # imm = 0x1C71C71C71C71C72
+; X64-NEXT:    movabsq $2049638230412172402, %rdx # imm = 0x1C71C71C71C71C72
 ; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %r8
-; X64-NEXT:    leaq (%rdx,%rdx,8), %rax
-; X64-NEXT:    subq %rax, %rcx
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %r8
+; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    leaq (%rdx,%rdx,8), %rax
 ; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    subq %rcx, %rdi
@@ -1633,13 +1622,6 @@ define i128 @div_by_11(i128 %x) {
 ; X64-NEXT:    mulq %r8
 ; X64-NEXT:    shrq %rdx
 ; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
-; X64-NEXT:    leaq (%rdx,%rax,2), %rax
-; X64-NEXT:    subq %rax, %rcx
-; X64-NEXT:    movabsq $1676976733973595602, %rdx # imm = 0x1745D1745D1745D2
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %rdx
-; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
-; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    leaq (%rdx,%rax,2), %rax
 ; X64-NEXT:    subq %rax, %rcx
 ; X64-NEXT:    subq %rcx, %rdi
@@ -2285,12 +2267,6 @@ define i128 @div_by_25(i128 %x) {
 ; X64-NEXT:    movq %rcx, %rax
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    shrq $2, %rdx
-; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
-; X64-NEXT:    leaq (%rax,%rax,4), %rax
-; X64-NEXT:    subq %rax, %rcx
-; X64-NEXT:    movabsq $737869762948382065, %rdx # imm = 0xA3D70A3D70A3D71
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    leaq (%rdx,%rdx,4), %rax
 ; X64-NEXT:    leaq (%rax,%rax,4), %rax
 ; X64-NEXT:    subq %rax, %rcx
@@ -2956,12 +2932,6 @@ define i128 @rem_by_7(i128 %x) {
 ; X64-NEXT:    mulq %rdx
 ; X64-NEXT:    shrq %rdx
 ; X64-NEXT:    leaq (,%rdx,8), %rax
-; X64-NEXT:    subq %rax, %rdx
-; X64-NEXT:    addq %rdx, %rcx
-; X64-NEXT:    movabsq $2635249153387078803, %rdx # imm = 0x2492492492492493
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    mulq %rdx
-; X64-NEXT:    leal (,%rdx,8), %eax
 ; X64-NEXT:    subq %rax, %rdx
 ; X64-NEXT:    addq %rdx, %rcx
 ; X64-NEXT:    movq %rcx, %rax

@@ -294,11 +294,9 @@ entry:
 define i64 @PR23590(i64 %x) nounwind {
 ; X86-LABEL: PR23590:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $12345 # imm = 0x3039
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -311,19 +309,13 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    shrdl $27, %ecx, %edx
 ; X86-NEXT:    andl $134217727, %edx # imm = 0x7FFFFFF
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    shrl $22, %ebx
-; X86-NEXT:    addl %eax, %ebx
-; X86-NEXT:    addl %edx, %ebx
-; X86-NEXT:    movl $613566757, %ebp # imm = 0x24924925
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    mull %ebp
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    leal (,%edx,8), %eax
-; X86-NEXT:    subl %eax, %edi
-; X86-NEXT:    addl %ebx, %edi
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    shrl $22, %edi
+; X86-NEXT:    addl %eax, %edi
+; X86-NEXT:    addl %edx, %edi
+; X86-NEXT:    movl $613566757, %edx # imm = 0x24924925
 ; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    mull %ebp
+; X86-NEXT:    mull %edx
 ; X86-NEXT:    leal (,%edx,8), %eax
 ; X86-NEXT:    subl %eax, %edx
 ; X86-NEXT:    addl %edi, %edx
@@ -336,11 +328,9 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    imull $-1227133513, %ecx, %ecx # imm = 0xB6DB6DB7
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-FAST-LABEL: PR23590:

@@ -8263,7 +8263,8 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         // Max sum is NumChunks * (2^I - 1) so by approximation we need
         // NumChunks × 2^I < 2^L. Taking log on both size we will have
         // log2(NumChunks) + I < L.
-        if (I + Log2_32_Ceil(NumChunks) < LegalWidth) {
+        // if (I + llvm::bit_width(NumChunks - 1) <= LegalWidth) {
+	if (I + Log2_32_Ceil(NumChunks) < LegalWidth) {
           BestChunkWidth = I;
           break;
         }
@@ -8291,15 +8292,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
           DAG.getNode(ISD::AND, dl, LegalVT, TruncChunk, Mask);
       TotalSum = DAG.getNode(ISD::ADD, dl, LegalVT, TotalSum, MaskedChunk);
     }
-
-    // Final reduction: TotalSum % Divisor.
-    // Since TotalSum is in LegalVT, this UREM will be lowered via magic
-    // multiplication.
-    SDValue ResRem =
-        DAG.getNode(ISD::UREM, dl, LegalVT, TotalSum,
-                    DAG.getConstant(Divisor.trunc(LegalWidth), dl, LegalVT));
-
-    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, ResRem);
+    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, TotalSum);
   }
 
   // If we didn't find a sum, we can't do the expansion.

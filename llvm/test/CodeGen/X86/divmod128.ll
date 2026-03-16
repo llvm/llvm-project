@@ -82,13 +82,6 @@ define i64 @umod128(i128 %x) nounwind {
 ; X86-64-NEXT:    leaq (%rdx,%rdx,4), %rax
 ; X86-64-NEXT:    leaq (%rdx,%rax,2), %rax
 ; X86-64-NEXT:    subq %rax, %rcx
-; X86-64-NEXT:    movabsq $1676976733973595602, %rdx # imm = 0x1745D1745D1745D2
-; X86-64-NEXT:    movq %rcx, %rax
-; X86-64-NEXT:    mulq %rdx
-; X86-64-NEXT:    leaq (%rdx,%rdx,4), %rax
-; X86-64-NEXT:    movl %eax, %eax
-; X86-64-NEXT:    leaq (%rdx,%rax,2), %rax
-; X86-64-NEXT:    subq %rax, %rcx
 ; X86-64-NEXT:    movq %rcx, %rax
 ; X86-64-NEXT:    retq
 ;
@@ -107,13 +100,6 @@ define i64 @umod128(i128 %x) nounwind {
 ; WIN64-NEXT:    mulq %rcx
 ; WIN64-NEXT:    shrq %rdx
 ; WIN64-NEXT:    leaq (%rdx,%rdx,4), %rax
-; WIN64-NEXT:    leaq (%rdx,%rax,2), %rax
-; WIN64-NEXT:    subq %rax, %r8
-; WIN64-NEXT:    movabsq $1676976733973595602, %rcx # imm = 0x1745D1745D1745D2
-; WIN64-NEXT:    movq %r8, %rax
-; WIN64-NEXT:    mulq %rcx
-; WIN64-NEXT:    leaq (%rdx,%rdx,4), %rax
-; WIN64-NEXT:    movl %eax, %eax
 ; WIN64-NEXT:    leaq (%rdx,%rax,2), %rax
 ; WIN64-NEXT:    subq %rax, %r8
 ; WIN64-NEXT:    movq %r8, %rax

@@ -886,9 +886,6 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV32IM-NEXT:    mulhu a2, a1, a6
 ; RV32IM-NEXT:    li a4, 23
 ; RV32IM-NEXT:    mul a2, a2, a4
-; RV32IM-NEXT:    sub a1, a1, a2
-; RV32IM-NEXT:    mulhu a2, a1, a6
-; RV32IM-NEXT:    mul a2, a2, a4
 ; RV32IM-NEXT:    sub s7, a1, a2
 ; RV32IM-NEXT:    li a2, 1
 ; RV32IM-NEXT:    mv a1, a3
