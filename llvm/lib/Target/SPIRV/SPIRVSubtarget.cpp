@@ -210,10 +210,11 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
 
   if (!HasShaderAttr) {
     if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
-      assert(MemModel->getNumOperands() > 0 && "Invalid spirv.MemoryModel");
+      if (MemModel->getNumOperands() == 0)
+        report_fatal_error("Invalid spirv.MemoryModel metadata");
       auto *MemMD = MemModel->getOperand(0);
-      assert(MemMD->getNumOperands() > 1 &&
-             "Invalid spirv.MemoryModel operand");
+      if (MemMD->getNumOperands() < 2)
+        report_fatal_error("Invalid spirv.MemoryModel operand");
       unsigned MemModelVal =
           mdconst::extract<ConstantInt>(MemMD->getOperand(1))->getZExtValue();
       switch (MemModelVal) {
@@ -228,6 +229,9 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
         break;
       case SPIRV::MemoryModel::OpenCL:
         break;
+      default:
+        report_fatal_error(
+            "Unknown memory model in spirv.MemoryModel metadata");
       }
     }
   }
