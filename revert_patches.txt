@@ -7,3 +7,7 @@ breaks build of hipblaslt
 ---
 breaks comgr builds
 [comgr] Auto-discover and embed libc++ headers for HIPRTC (#1696)
+---
+needs more work
+[mlir][llvmir][OpenMP] Translate affinity clause in task construct to llvmir (#182223)
+---
