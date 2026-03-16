@@ -686,6 +686,13 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
          "Expected the same scalar types");
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+
+  // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
+  // For now, skip all fixed vector cost analysis when P extension is available
+  // to avoid crashes in getMinRVVVectorSizeInBits()
+  if (ST->hasStdExtP() && isa<FixedVectorType>(SrcTy))
+    return 1;
+
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // First, handle cases where having a fixed length vector enables us to
@@ -3582,8 +3589,7 @@ bool RISCVTTIImpl::shouldTreatInstructionLikeSelect(
     // break point in the code - the end of a block with an unconditional
     // terminator.
     if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
+        isa<UncondBrInst>(I->getNextNode()))
       return true;
 
     if (I->getOpcode() == Instruction::Add ||

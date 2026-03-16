@@ -1286,6 +1286,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  erff16
+  SRCS
+    erff16.cpp
+  HDRS
+    ../erff16.h
+  DEPENDS
+    libc.src.__support.math.erff16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   exp
   SRCS
     exp.cpp
@@ -1834,6 +1845,17 @@ add_entrypoint_object(
     ../log10f16.h
   DEPENDS
     libc.src.__support.math.log10f16
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  log10p1f16
+  SRCS
+    log10p1f16.cpp
+  HDRS
+    ../log10p1f16.h
+  DEPENDS
+    libc.src.__support.math.log10p1f16
     libc.src.errno.errno
 )
 
@@ -3021,6 +3043,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  hypotbf16
+  SRCS
+    hypotbf16.cpp
+  HDRS
+    ../hypotbf16.h
+  DEPENDS
+    libc.src.__support.math.hypotbf16
+)
+
+add_entrypoint_object(
   hypotf
   SRCS
     hypotf.cpp
@@ -3169,7 +3201,7 @@ add_entrypoint_object(
   HDRS
     ../hypot.h
   DEPENDS
-    libc.src.__support.FPUtil.hypot
+    libc.src.__support.math.hypot
 )
 
 add_entrypoint_object(
@@ -4169,6 +4201,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atan2f16
+  SRCS
+    atan2f16.cpp
+  HDRS
+    ../atan2f16.h
+  DEPENDS
+    libc.src.__support.math.atan2f16
+)
+
+add_entrypoint_object(
   atan2
   SRCS
     atan2.cpp
@@ -4373,6 +4415,16 @@ add_entrypoint_object(
     ../fma.h
   DEPENDS
     libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
+  fmabf16
+  SRCS
+    fmabf16.cpp
+  HDRS
+    ../fmabf16.h
+  DEPENDS
+    libc.src.__support.math.fmabf16
 )
 
 add_entrypoint_object(
@@ -5059,11 +5111,7 @@ add_entrypoint_object(
   HDRS
     ../bf16div.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.div
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16div
 )
 
 add_entrypoint_object(

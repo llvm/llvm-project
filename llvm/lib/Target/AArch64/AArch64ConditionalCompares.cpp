@@ -220,6 +220,13 @@ bool SSACCmpConv::trivialTailPHIs() {
     for (unsigned oi = 1, oe = I.getNumOperands(); oi != oe; oi += 2) {
       MachineBasicBlock *MBB = I.getOperand(oi + 1).getMBB();
       Register Reg = I.getOperand(oi).getReg();
+      MachineInstr *MI;
+      while ((MI = MRI->getUniqueVRegDef(Reg)) &&
+             MI->getOpcode() == TargetOpcode::COPY) {
+        if (MI->getOperand(1).getReg().isPhysical())
+          break;
+        Reg = MI->getOperand(1).getReg();
+      }
       if (MBB == Head) {
         assert((!HeadReg || HeadReg == Reg) && "Inconsistent PHI operands");
         HeadReg = Reg;

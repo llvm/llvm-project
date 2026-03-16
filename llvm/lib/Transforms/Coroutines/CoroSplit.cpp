@@ -1102,10 +1102,10 @@ void coro::SwitchCloner::create() {
   // Clone the function
   coro::BaseCloner::create();
 
-  // Eliminate coro.free from the clones, replacing it with 'null' in cleanup,
-  // to suppress deallocation code.
-  coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
-                        /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
+  // Replacing coro.free with 'null' in cleanup to suppress deallocation code.
+  if (FKind == coro::CloneKind::SwitchCleanup)
+    coro::replaceCoroFree(cast<CoroIdInst>(VMap[Shape.CoroBegin->getId()]),
+                          /*Elide=*/FKind == coro::CloneKind::SwitchCleanup);
 }
 
 static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {

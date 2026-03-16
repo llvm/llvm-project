@@ -554,10 +554,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakZeroSrcSIVtest(const SCEV *DstCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result) const;
+  bool weakZeroSrcSIVtest(const SCEV *SrcConst, const SCEVAddRecExpr *Dst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// weakZeroDstSIVtest - Tests the weak-zero SIV subscript pair
   /// (Src and Dst) for dependence.
@@ -567,10 +565,8 @@ private:
   /// Returns true if any possible dependence is disproved.
   /// If there might be a dependence, returns false.
   /// Sets appropriate direction entry.
-  bool weakZeroDstSIVtest(const SCEV *SrcCoeff, const SCEV *SrcConst,
-                          const SCEV *DstConst, const Loop *CurrentSrcLoop,
-                          const Loop *CurrentDstLoop, unsigned Level,
-                          FullDependence &Result) const;
+  bool weakZeroDstSIVtest(const SCEVAddRecExpr *Src, const SCEV *DstConst,
+                          unsigned Level, FullDependence &Result) const;
 
   /// exactRDIVtest - Tests the RDIV subscript pair for dependence.
   /// Things of the form [c1 + a*i] and [c2 + b*j],

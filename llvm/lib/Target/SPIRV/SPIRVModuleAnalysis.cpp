@@ -42,7 +42,7 @@ static cl::list<SPIRV::Capability::Capability>
     AvoidCapabilities("avoid-spirv-capabilities",
                       cl::desc("SPIR-V capabilities to avoid if there are "
                                "other options enabling a feature"),
-                      cl::ZeroOrMore, cl::Hidden,
+                      cl::Hidden,
                       cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
                                             "SPIR-V Shader capability")));
 // Use sets instead of cl::list to check "if contains" condition
