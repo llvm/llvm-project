@@ -1426,6 +1426,14 @@ def : Pat<(X86tcret (i64 texternalsym:$dst), timm:$off),
           (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
           Requires<[IsLP64]>;
 
+def : Pat<(X86tcret (i64 (X86Wrapper tglobaladdr:$dst)), timm:$off),
+          (TCRETURNdi64 tglobaladdr:$dst, timm:$off)>,
+          Requires<[IsNotPIC, HasJMPABS]>;
+
+def : Pat<(X86tcret (i64 (X86Wrapper texternalsym:$dst)), timm:$off),
+          (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
+          Requires<[IsNotPIC, HasJMPABS]>;
+
 // Normal calls, with various flavors of addresses.
 def : Pat<(X86call (i32 tglobaladdr:$dst)),
           (CALLpcrel32 tglobaladdr:$dst)>;

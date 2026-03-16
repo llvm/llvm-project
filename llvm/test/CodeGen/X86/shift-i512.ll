@@ -604,8 +604,7 @@ define i512 @ashr_i512(i512 %a0, i512 %a1) nounwind {
 ; AVX512F-NEXT:    andl $56, %eax
 ; AVX512F-NEXT:    vmovdqu64 -128(%rsp,%rax), %zmm1
 ; AVX512F-NEXT:    vpsrlq %xmm0, %zmm1, %zmm2
-; AVX512F-NEXT:    vpbroadcastq -72(%rsp,%rax), %xmm3
-; AVX512F-NEXT:    vpsraq $63, %zmm3, %zmm3
+; AVX512F-NEXT:    vpsraq $63, -72(%rsp,%rax){1to8}, %zmm3
 ; AVX512F-NEXT:    valignq {{.*#+}} zmm1 = zmm1[1,2,3,4,5,6,7],zmm3[0]
 ; AVX512F-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
 ; AVX512F-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0

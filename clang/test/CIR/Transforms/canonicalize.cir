@@ -64,8 +64,8 @@ module {
   // CHECK-NEXT: }
 
   cir.func @unary_not_not(%arg0: !cir.bool) -> !cir.bool {
-    %0 = cir.unary(not, %arg0) : !cir.bool, !cir.bool
-    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    %0 = cir.not %arg0 : !cir.bool
+    %1 = cir.not %0 : !cir.bool
     cir.return %1 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @unary_not_not(%arg0: !cir.bool) -> !cir.bool
@@ -73,7 +73,7 @@ module {
 
   cir.func @unary_poison() -> !s32i {
     %0 = cir.const #cir.poison : !s32i
-    %1 = cir.unary(inc, %0) : !s32i, !s32i
+    %1 = cir.inc %0 : !s32i
     cir.return %1 : !s32i
   }
   // CHECK:      @unary_poison
@@ -83,7 +83,7 @@ module {
 
   cir.func @unary_not_true() -> !cir.bool {
     %0 = cir.const #true
-    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    %1 = cir.not %0 : !cir.bool
     cir.return %1 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @unary_not_true() -> !cir.bool
@@ -92,7 +92,7 @@ module {
 
   cir.func @unary_not_false() -> !cir.bool {
     %0 = cir.const #false
-    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    %1 = cir.not %0 : !cir.bool
     cir.return %1 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @unary_not_false() -> !cir.bool
@@ -101,7 +101,7 @@ module {
 
   cir.func @unary_not_int() -> !s32i {
     %0 = cir.const #cir.int<1> : !s32i
-    %1 = cir.unary(not, %0) : !s32i, !s32i
+    %1 = cir.not %0 : !s32i
     cir.return %1 : !s32i
   }
   // CHECK:      cir.func{{.*}} @unary_not_int() -> !s32i
@@ -110,7 +110,7 @@ module {
 
   cir.func @unary_not_uint() -> !u32i {
     %0 = cir.const #cir.int<1> : !u32i
-    %1 = cir.unary(not, %0) : !u32i, !u32i
+    %1 = cir.not %0 : !u32i
     cir.return %1 : !u32i
   }
   // CHECK:      cir.func{{.*}} @unary_not_uint() -> !u32i
@@ -119,7 +119,7 @@ module {
 
   cir.func @unary_minus_true() -> !cir.bool {
     %0 = cir.const #true
-    %1 = cir.unary(minus, %0) : !cir.bool, !cir.bool
+    %1 = cir.minus %0 : !cir.bool
     cir.return %1 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @unary_minus_true() -> !cir.bool
@@ -128,7 +128,7 @@ module {
 
   cir.func @unary_minus_false() -> !cir.bool {
     %0 = cir.const #false
-    %1 = cir.unary(minus, %0) : !cir.bool, !cir.bool
+    %1 = cir.minus %0 : !cir.bool
     cir.return %1 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @unary_minus_false() -> !cir.bool
@@ -137,7 +137,7 @@ module {
 
   cir.func @unary_minus_int() -> !s32i {
     %0 = cir.const #cir.int<1> : !s32i
-    %1 = cir.unary(minus, %0) : !s32i, !s32i
+    %1 = cir.minus %0 : !s32i
     cir.return %1 : !s32i
   }
   // CHECK:      cir.func{{.*}} @unary_minus_int() -> !s32i
@@ -146,7 +146,7 @@ module {
 
   cir.func @unary_minus_uint() -> !u32i {
     %0 = cir.const #cir.int<1> : !u32i
-    %1 = cir.unary(minus, %0) : !u32i, !u32i
+    %1 = cir.minus %0 : !u32i
     cir.return %1 : !u32i
   }
   // CHECK:      cir.func{{.*}} @unary_minus_uint() -> !u32i
@@ -155,7 +155,7 @@ module {
 
   cir.func @unary_minus_float() -> !cir.float {
     %0 = cir.const #cir.fp<1.100000e+00> : !cir.float
-    %1 = cir.unary(minus, %0) : !cir.float, !cir.float
+    %1 = cir.minus %0 : !cir.float
     cir.return %1 : !cir.float
   }
   // CHECK:      cir.func{{.*}} @unary_minus_float() -> !cir.float
@@ -164,7 +164,7 @@ module {
 
   cir.func @unary_minus_double() -> !cir.double {
     %0 = cir.const #cir.fp<1.100000e+00> : !cir.double
-    %1 = cir.unary(minus, %0) : !cir.double, !cir.double
+    %1 = cir.minus %0 : !cir.double
     cir.return %1 : !cir.double
   }
   // CHECK:      cir.func{{.*}} @unary_minus_double() -> !cir.double
@@ -173,7 +173,7 @@ module {
 
   cir.func @unary_minus_nan() -> !cir.float {
     %0 = cir.const #cir.fp<0x7F800000> : !cir.float
-    %1 = cir.unary(minus, %0) : !cir.float, !cir.float
+    %1 = cir.minus %0 : !cir.float
     cir.return %1 : !cir.float
   }
   // CHECK:      cir.func{{.*}} @unary_minus_nan() -> !cir.float
@@ -182,7 +182,7 @@ module {
 
   cir.func @unary_minus_neg_nan() -> !cir.float {
     %0 = cir.const #cir.fp<0xFF800000> : !cir.float
-    %1 = cir.unary(minus, %0) : !cir.float, !cir.float
+    %1 = cir.minus %0 : !cir.float
     cir.return %1 : !cir.float
   }
   // CHECK:      cir.func{{.*}} @unary_minus_neg_nan() -> !cir.float
