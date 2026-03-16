@@ -117,20 +117,20 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
     if (LIBC_UNLIKELY(xbits.is_zero()))
       return x;
 
-    if (LIBC_UNLIKELY(xbits.uintval() == 0x0a48 || xbits.uintval() == 0x8a48)) {
+    if (LIBC_UNLIKELY(xbits.abs().uintval() == 0x0a48)) {
       int rounding = fputil::quick_get_round();
-
-      if (rounding == FE_UPWARD && xbits.uintval() == 0x0a48)
-        return fputil::FPBits<float16>(uint16_t(0x0400)).get_val();
-
-      if (rounding == FE_DOWNWARD && xbits.uintval() == 0x8a48)
-        return fputil::FPBits<float16>(uint16_t(0x8400)).get_val();
+      if (!is_neg) {
+        if (rounding == FE_UPWARD)
+          return fputil::cast<float16>(0x1p-14f);
+        return fputil::cast<float16>(0x1.ffd7ap-15f);
+      } else {
+        if (rounding == FE_DOWNWARD)
+          return fputil::cast<float16>(-0x1p-14f);
+        return fputil::cast<float16>(-0x1.ffd7ap-15f);
+      }
     }
-
     double result = atanpi_eval(x_abs);
     float16 s_result = signed_result(result);
-    if (FPBits(s_result).is_subnormal())
-      fputil::raise_except_if_required(FE_UNDERFLOW);
     return s_result;
   }
 
