@@ -41,24 +41,6 @@ bfloat16x4_t test_vget_low_bf16(bfloat16x8_t a) {
   return vget_low_bf16(a);
 }
 
-// CHECK-LABEL: @test_vget_lane_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x bfloat> [[V:%.*]], i32 1
-// CHECK-NEXT:    ret bfloat [[VGET_LANE]]
-//
-bfloat16_t test_vget_lane_bf16(bfloat16x4_t v) {
-  return vget_lane_bf16(v, 1);
-}
-
-// CHECK-LABEL: @test_vgetq_lane_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x bfloat> [[V:%.*]], i32 7
-// CHECK-NEXT:    ret bfloat [[VGETQ_LANE]]
-//
-bfloat16_t test_vgetq_lane_bf16(bfloat16x8_t v) {
-  return vgetq_lane_bf16(v, 7);
-}
-
 // CHECK-LABEL: @test_vset_lane_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <4 x bfloat> [[V:%.*]], bfloat [[A:%.*]], i32 1

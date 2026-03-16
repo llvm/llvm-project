@@ -120,3 +120,19 @@ bfloat16x8_t test_vdupq_laneq_bf16(bfloat16x8_t v) {
     // LLVM-NEXT: ret <8 x bfloat> [[VECINIT7_I]]
     return vdupq_n_bf16(v);
   }
+
+// ALL-LABEL: @test_vget_lane_bf16(
+bfloat16_t test_vget_lane_bf16(bfloat16x4_t v) {
+  // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !cir.bf16>
+  // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x bfloat> %{{.*}}, i32 1
+  // LLVM: ret bfloat [[VGET_LANE]]
+  return vget_lane_bf16(v, 1);
+}
+
+// ALL-LABEL: @test_vgetq_lane_bf16(
+bfloat16_t test_vgetq_lane_bf16(bfloat16x8_t v) {
+  // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !cir.bf16>
+  // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x bfloat> %{{.*}}, i32 7
+  // LLVM: ret bfloat [[VGETQ_LANE]]
+  return vgetq_lane_bf16(v, 7);
+}
