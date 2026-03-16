@@ -122,6 +122,13 @@ foreach( tool IN ITEMS opt llvm-link )
   endif()
 endforeach()
 
+# Determine prefix based on compiler type
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_C_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  set(flag_prefix "/clang:")
+else()
+  set(flag_prefix "")
+endif()
+
 add_subdirectory(clc/lib/generic)
 add_subdirectory(clc/lib/amdgpu)
 add_subdirectory(clc/lib/ptx-nvidiacl)
@@ -186,11 +193,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   set(opt_flags -O3)
 
   if(ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
-    list(APPEND target_compile_flags -O0 -finline-hint-functions)
+    list(APPEND target_compile_flags "${flag_prefix}-O0" "${flag_prefix}-finline-hint-functions")
     list(APPEND target_extra_defines CLC_SPIRV)
     set(opt_flags)
   elseif(ARCH STREQUAL clspv OR ARCH STREQUAL clspv64)
-    list(APPEND target_compile_flags -Wno-unknown-assumption)
+    list(APPEND target_compile_flags "${flag_prefix}-Wno-unknown-assumption")
     list(APPEND target_extra_defines CLC_CLSPV)
   elseif(ARCH STREQUAL amdgcn)
     list(APPEND target_compile_flags "SHELL:-Xclang -mcode-object-version=none")
@@ -224,21 +231,20 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       ${OPENCL_GENERIC_SOURCES} ${_opencl_overrides})
   endif()
 
-  # Common compile options shared by CLC and OpenCL libraries.
   set(compile_flags
-    -flto
-    --target=${clang_triple}
-    -nostdlib
-    -nostdlibinc
-    -cl-no-stdinc
-    -cl-std=CL3.0
-    -include opencl-c-base.h
-    -Werror=undef
-    -Wall
-    -Wextra
-    -fdiscard-value-names
-    -ffp-contract=fast-honor-pragmas
-    -fdenormal-fp-math=dynamic
+    "${flag_prefix}-flto"
+    "${flag_prefix}--target=${clang_triple}"
+    "${flag_prefix}-nostdlib"
+    "${flag_prefix}-nostdlibinc"
+    "${flag_prefix}-cl-no-stdinc"
+    "${flag_prefix}-cl-std=CL3.0"
+    "${flag_prefix}-include" "${flag_prefix}opencl-c-base.h"
+    "${flag_prefix}-Werror=undef"
+    "${flag_prefix}-Wall"
+    "${flag_prefix}-Wextra"
+    "${flag_prefix}-fdiscard-value-names"
+    "${flag_prefix}-ffp-contract=fast-honor-pragmas"
+    "${flag_prefix}-fdenormal-fp-math=dynamic"
     ${target_compile_flags}
   )
 
