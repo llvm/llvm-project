@@ -3923,7 +3923,7 @@ bool UnwrappedLineParser::parseEnum() {
   }
   // Parse enum body.
   nextToken();
-  bool updateLevel =
+  const bool UpdateLevel =
       !Style.AllowShortEnumsOnASingleLine ||
       Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
   if (updateLevel) {

@@ -57,6 +57,7 @@ write_lit_config("lit_site_cfg") {
     "CLANG_ENABLE_OBJC_REWRITER=0",
     "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
+    "CLANG_USE_XCSELECT=0",
     "CLANG_VENDOR_UTI=org.llvm.clang",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",

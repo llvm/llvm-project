@@ -91,6 +91,12 @@ template <typename T> move_only_function<void(T)> waitFor(std::future<T> &F) {
   return [P = std::move(P)](T Val) mutable { P.set_value(std::move(Val)); };
 }
 
+move_only_function<void()> waitFor(std::future<void> &F) {
+  std::promise<void> P;
+  F = P.get_future();
+  return [P = std::move(P)]() mutable { P.set_value(); };
+}
+
 TEST(SimpleNativeMemoryMapTest, CreateAndDestroy) {
   // Test that we can create and destroy a SimpleNativeMemoryMap instance as
   // expected.
@@ -288,9 +294,9 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeShutdown) {
 
   EXPECT_EQ(SentinelValue, 0U);
 
-  std::future<Error> ShutdownResult;
+  std::future<void> ShutdownResult;
   SNMM->onShutdown(waitFor(ShutdownResult));
-  cantFail(ShutdownResult.get());
+  ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
 }
@@ -325,15 +331,15 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeDetachShutdown) {
 
   EXPECT_EQ(SentinelValue, 0U);
 
-  std::future<Error> DetachResult;
+  std::future<void> DetachResult;
   SNMM->onDetach(waitFor(DetachResult));
-  cantFail(DetachResult.get());
+  DetachResult.get();
 
   EXPECT_EQ(SentinelValue, 0);
 
-  std::future<Error> ShutdownResult;
+  std::future<void> ShutdownResult;
   SNMM->onShutdown(waitFor(ShutdownResult));
-  cantFail(ShutdownResult.get());
+  ShutdownResult.get();
 
   EXPECT_EQ(SentinelValue, 42);
 }
