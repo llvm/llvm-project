@@ -6,90 +6,155 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Emit OpenMP clause nodes as CIR code.
+// OpenMP clause processor implementation. See CIRGenOpenMPClause.h.
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenOpenMPClause.h"
 #include "CIRGenFunction.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "clang/Basic/OpenMPKinds.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-namespace {
-template <typename OpTy>
-class OpenMPClauseCIREmitter final
-    : public ConstOMPClauseVisitor<OpenMPClauseCIREmitter<OpTy>> {
-  OpTy &operation;
-  CIRGen::CIRGenFunction &cgf;
-  CIRGen::CIRGenBuilderTy &builder;
+static mlir::omp::ClauseMapFlags
+mapClauseKindToFlags(OpenMPMapClauseKind kind) {
+  switch (kind) {
+  case OMPC_MAP_to:
+    return mlir::omp::ClauseMapFlags::to;
+  case OMPC_MAP_from:
+    return mlir::omp::ClauseMapFlags::from;
+  case OMPC_MAP_tofrom:
+    return mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::from;
+  case OMPC_MAP_alloc:
+  case OMPC_MAP_release:
+    return mlir::omp::ClauseMapFlags::storage;
+  case OMPC_MAP_delete:
+    return mlir::omp::ClauseMapFlags::del;
+  default:
+    return mlir::omp::ClauseMapFlags::none;
+  }
+}
 
-public:
-  OpenMPClauseCIREmitter(OpTy &operation, CIRGen::CIRGenFunction &cgf,
-                         CIRGen::CIRGenBuilderTy &builder)
-      : operation(operation), cgf(cgf), builder(builder) {}
+static mlir::Value emitMapInfoForVar(CIRGenFunction &cgf,
+                                     mlir::OpBuilder &builder,
+                                     mlir::Location loc, const VarDecl *vd,
+                                     mlir::omp::ClauseMapFlags mapFlags) {
+  Address addr = cgf.getAddrOfLocalVar(vd);
+  mlir::Value varPtr = addr.getPointer();
+  auto varPtrType = mlir::cast<cir::PointerType>(varPtr.getType());
+  mlir::Type elementType = varPtrType.getPointee();
 
-  void VisitOMPClause(const OMPClause *clause) {
-    cgf.cgm.errorNYI(clause->getBeginLoc(), "OpenMPClause ",
-                     llvm::omp::getOpenMPClauseName(clause->getClauseKind()));
+  // Cast to generic pointer if needed.
+  if (varPtrType.getAddrSpace()) {
+    auto genericPtrType =
+        cir::PointerType::get(builder.getContext(), elementType);
+    varPtr = cir::CastOp::create(builder, loc, genericPtrType,
+                                 cir::CastKind::address_space, varPtr);
+    varPtrType = genericPtrType;
   }
 
-  void VisitOMPProcBindClause(const OMPProcBindClause *clause) {
-    if constexpr (std::is_same_v<OpTy, mlir::omp::ParallelOp>) {
-      mlir::omp::ClauseProcBindKind kind;
-      switch (clause->getProcBindKind()) {
-      case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
-        kind = mlir::omp::ClauseProcBindKind::Master;
-        break;
-      case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
-        kind = mlir::omp::ClauseProcBindKind::Close;
-        break;
-      case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
-        kind = mlir::omp::ClauseProcBindKind::Spread;
-        break;
-      case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
-        kind = mlir::omp::ClauseProcBindKind::Primary;
-        break;
-      case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
-        // 'default' in the classic-codegen does no runtime call/doesn't
-        // really do anything. So this is a no-op, and thus shouldn't change
-        // the IR.
-        return;
-      case llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown:
-        llvm_unreachable("unknown proc-bind kind");
+  return mlir::omp::MapInfoOp::create(
+      builder, loc,
+      /*omp_ptr=*/varPtrType,
+      /*var_ptr=*/varPtr,
+      /*var_ptr_type=*/mlir::TypeAttr::get(elementType),
+      /*map_type=*/builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapFlags),
+      /*map_capture_type=*/
+      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
+          mlir::omp::VariableCaptureKind::ByRef),
+      /*var_ptr_ptr=*/mlir::Value{},
+      /*var_ptr_ptr_type=*/mlir::TypeAttr{},
+      /*members=*/mlir::ValueRange{},
+      /*members_index=*/mlir::ArrayAttr{},
+      /*bounds=*/mlir::ValueRange{},
+      /*mapper_id=*/mlir::FlatSymbolRefAttr{},
+      /*name=*/builder.getStringAttr(vd->getName()),
+      /*partial_map=*/builder.getBoolAttr(false));
+}
+
+bool OpenMPClauseProcessor::processProcBind(
+    mlir::omp::ProcBindClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *pbc = dyn_cast<OMPProcBindClause>(clause);
+    if (!pbc)
+      continue;
+
+    switch (pbc->getProcBindKind()) {
+    case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
+      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
+          builder.getContext(), mlir::omp::ClauseProcBindKind::Master);
+      break;
+    case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
+      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
+          builder.getContext(), mlir::omp::ClauseProcBindKind::Close);
+      break;
+    case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
+      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
+          builder.getContext(), mlir::omp::ClauseProcBindKind::Spread);
+      break;
+    case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
+      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
+          builder.getContext(), mlir::omp::ClauseProcBindKind::Primary);
+      break;
+    case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
+      break;
+    case llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown:
+      llvm_unreachable("unknown proc-bind kind");
+    }
+    return true;
+  }
+  return false;
+}
+
+bool OpenMPClauseProcessor::processMap(
+    mlir::omp::MapClauseOps &result,
+    llvm::SmallVectorImpl<const VarDecl *> *mapSyms) const {
+  bool found = false;
+  for (const OMPClause *clause : clauses) {
+    const auto *mc = dyn_cast<OMPMapClause>(clause);
+    if (!mc)
+      continue;
+
+    found = true;
+
+    for (OpenMPMapModifierKind mod : mc->getMapTypeModifiers()) {
+      if (mod != OMPC_MAP_MODIFIER_unknown)
+        cgm.errorNYI(mc->getBeginLoc(),
+                     std::string("OpenMP map modifier '") +
+                         getOpenMPSimpleClauseTypeName(
+                             llvm::omp::Clause::OMPC_map, mod) +
+                         "'");
+    }
+
+    if (mc->isImplicit()) {
+      cgm.errorNYI(mc->getBeginLoc(), "OpenMP implicit map clause");
+      continue;
+    }
+
+    mlir::omp::ClauseMapFlags mapFlags = mapClauseKindToFlags(mc->getMapType());
+
+    for (const Expr *varExpr : mc->varlist()) {
+      const auto *refExpr = dyn_cast<DeclRefExpr>(varExpr->IgnoreImplicit());
+      if (!refExpr) {
+        cgm.errorNYI(varExpr->getExprLoc(),
+                     "OpenMP map clause with non-DeclRefExpr variable");
+        continue;
       }
-      operation.setProcBindKind(kind);
-    } else {
-      cgf.cgm.errorNYI(
-          clause->getBeginLoc(),
-          "OMPProcBindClause unimplemented on this directive kind");
+
+      const auto *vd = dyn_cast<VarDecl>(refExpr->getDecl());
+      if (!vd) {
+        cgm.errorNYI(varExpr->getExprLoc(),
+                     "OpenMP map clause with non-VarDecl variable");
+        continue;
+      }
+
+      result.mapVars.push_back(
+          emitMapInfoForVar(cgf, builder, loc, vd, mapFlags));
+      if (mapSyms)
+        mapSyms->push_back(vd);
     }
   }
-
-  void emitClauses(ArrayRef<const OMPClause *> clauses) {
-    for (const auto *c : clauses)
-      this->Visit(c);
-  }
-};
-template <typename OpTy>
-auto makeClauseEmitter(OpTy &op, CIRGen::CIRGenFunction &cgf,
-                       CIRGen::CIRGenBuilderTy &builder) {
-  return OpenMPClauseCIREmitter<OpTy>(op, cgf, builder);
+  return found;
 }
-} // namespace
-
-template <typename Op>
-void CIRGenFunction::emitOpenMPClauses(Op &op,
-                                       ArrayRef<const OMPClause *> clauses) {
-  mlir::OpBuilder::InsertionGuard guardCase(builder);
-  builder.setInsertionPoint(op);
-  makeClauseEmitter(op, *this, builder).emitClauses(clauses);
-}
-
-// We're defining the template for this in a .cpp file, so we have to explicitly
-// specialize the templates.
-#define EXPL_SPEC(N)                                                           \
-  template void CIRGenFunction::emitOpenMPClauses<N>(                          \
-      N &, ArrayRef<const OMPClause *>);
-EXPL_SPEC(mlir::omp::ParallelOp)
-#undef EXPL_SPEC
