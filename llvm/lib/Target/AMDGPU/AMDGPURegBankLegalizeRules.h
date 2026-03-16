@@ -279,7 +279,7 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
-  SplitFFB64To32
+  SplitBitCount64To32
 };
 
 enum FastRulesTypes {

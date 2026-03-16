@@ -1188,11 +1188,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S64, {{Sgpr64}, {Sgpr64}})
       .Div(S64, {{Vgpr64}, {Vgpr64}});
 
-  addRulesForGOpcs({G_AMDGPU_FFBH_U32, G_AMDGPU_FFBL_B32})
+  addRulesForGOpcs({G_AMDGPU_FFBH_U32, G_AMDGPU_FFBL_B32, G_CTLZ_ZERO_UNDEF,
+                    G_CTTZ_ZERO_UNDEF})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}})
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS32, S64}, {{Sgpr32}, {Sgpr64}}})
-      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, SplitFFB64To32}});
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}, SplitBitCount64To32}});
 
   addRulesForGOpcs({G_FENCE}).Any({{{}}, {{}, {}}});
 
