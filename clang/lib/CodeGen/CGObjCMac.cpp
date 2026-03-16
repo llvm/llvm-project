@@ -1189,8 +1189,9 @@ public:
   ConstantAddress
   GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) override;
   ConstantAddress GenerateConstantDictionary(
-      const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
-      const ArrayRef<llvm::Constant *> &Objects) override;
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects)
+      override;
 
   ConstantAddress GenerateConstantNSString(const StringLiteral *SL);
   ConstantAddress GenerateConstantNSNumber(const bool Value,
@@ -1201,10 +1202,9 @@ public:
                                            const QualType &Ty);
   ConstantAddress
   GenerateConstantNSArray(const ArrayRef<llvm::Constant *> &Objects);
-  ConstantAddress
-  GenerateConstantNSDictionary(const ObjCDictionaryLiteral *E,
-                               const ArrayRef<llvm::Constant *> &Keys,
-                               const ArrayRef<llvm::Constant *> &Objects);
+  ConstantAddress GenerateConstantNSDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects);
 
   llvm::Function *
   GenerateMethod(const ObjCMethodDecl *OMD,
@@ -2088,9 +2088,9 @@ ConstantAddress CGObjCCommonMac::GenerateConstantArray(
 }
 
 ConstantAddress CGObjCCommonMac::GenerateConstantDictionary(
-    const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
-    const ArrayRef<llvm::Constant *> &Objects) {
-  return GenerateConstantNSDictionary(E, Keys, Objects);
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
+  return GenerateConstantNSDictionary(E, KeysAndObjects);
 }
 
 static llvm::StringMapEntry<llvm::GlobalVariable *> &
@@ -2306,7 +2306,8 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
   CharUnits Alignment = CGM.getPointerAlign();
 
   // check if we've already emitted, if so emit a reference to it
-  llvm::GlobalVariable *&Entry = NSConstantNumberMap[{Ty, Value}];
+  llvm::GlobalVariable *&Entry =
+      NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
   if (Entry) {
     return ConstantAddress(Entry, Entry->getValueType(), Alignment);
   }
@@ -2374,7 +2375,8 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
   CharUnits Alignment = CGM.getPointerAlign();
 
   // check if we've already emitted, if so emit a reference to it
-  llvm::GlobalVariable *&Entry = NSConstantNumberMap[{Ty, Value}];
+  llvm::GlobalVariable *&Entry =
+      NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
   if (Entry) {
     return ConstantAddress(Entry, Entry->getValueType(), Alignment);
   }
@@ -2551,11 +2553,11 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSArray(
   };
  */
 ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
-    const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
-    const ArrayRef<llvm::Constant *> &Objects) {
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
   CharUnits Alignment = CGM.getPointerAlign();
 
-  if (Keys.size() == 0) {
+  if (KeysAndObjects.size() == 0) {
     llvm::GlobalVariable *GV = EmitEmptyConstantNSDictionary();
     return ConstantAddress(GV, GV->getValueType(), Alignment);
   }
@@ -2587,12 +2589,10 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
 
   // Use the hashing helper to manage the keys and sorting
   auto HashOpts(NSDictionaryBuilder::Options::Sorted);
-  NSDictionaryBuilder DictBuilder(E, Keys, Objects, HashOpts);
+  NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts);
 
   // Ask `HashBuilder` for the fully sorted keys / values and the count
   uint64_t const NumElements = DictBuilder.getNumElements();
-  SmallVectorImpl<llvm::Constant *> &SortedKeys = DictBuilder.getKeys();
-  SmallVectorImpl<llvm::Constant *> &SortedObjects = DictBuilder.getObjects();
 
   llvm::Constant *OptionsConstant = llvm::ConstantInt::get(
       NSUIntegerTy, static_cast<uint64_t>(DictBuilder.getOptions()));
@@ -2601,6 +2601,15 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
   // count
   llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, NumElements);
   Fields.add(Count);
+
+  // Split sorted pairs into separate keys and objects arrays for storage.
+  SmallVector<llvm::Constant *, 16> SortedKeys, SortedObjects;
+  SortedKeys.reserve(NumElements);
+  SortedObjects.reserve(NumElements);
+  for (auto &[Key, Obj] : DictBuilder.getElements()) {
+    SortedKeys.push_back(Key);
+    SortedObjects.push_back(Obj);
+  }
 
   // keys
   llvm::GlobalVariable *KeysGV =

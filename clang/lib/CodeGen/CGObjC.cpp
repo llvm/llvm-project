@@ -137,10 +137,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   if (!ALE)
     DLE = cast<ObjCDictionaryLiteral>(E);
 
-  // Decided in Sema if constant initializers are supported by the runtime and
-  // not disabled and the contents can be emitted as a constant NSNumber
-  // subclass; if so emit as a constant collection type
-  bool const CanBeExpressedAsConstant =
+  const bool CanBeExpressedAsConstant =
       ALE ? ALE->isExpressibleAsConstantInitializer()
           : DLE->isExpressibleAsConstantInitializer();
   if (CanBeExpressedAsConstant) {

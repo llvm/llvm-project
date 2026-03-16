@@ -324,12 +324,12 @@ static bool CheckObjCNumberExpressionIsConstant(Sema &S, Expr *Number) {
     return false;
 
   const QualType Ty = Number->IgnoreParens()->getType();
-  ASTContext &CX = S.Context;
+  ASTContext &Context = S.Context;
 
   if (Number->isValueDependent())
     return false;
 
-  if (!Number->isEvaluatable(CX))
+  if (!Number->isEvaluatable(Context))
     return false;
 
   // Note `@YES` `@NO` need to be handled explicitly
@@ -342,7 +342,8 @@ static bool CheckObjCNumberExpressionIsConstant(Sema &S, Expr *Number) {
   assert(Runtime.hasConstantCFBooleans() &&
          "The current ABI doesn't support the constant CFBooleanTrue "
          "singleton!");
-  bool const IsBoolType = (Ty->isBooleanType() || NSAPI(CX).isObjCBOOLType(Ty));
+  const bool IsBoolType =
+      (Ty->isBooleanType() || NSAPI(Context).isObjCBOOLType(Ty));
   if (IsBoolType)
     return true;
 
@@ -354,13 +355,13 @@ static bool CheckObjCNumberExpressionIsConstant(Sema &S, Expr *Number) {
   // Note: Other parts of Sema prevent the boxing of types that aren't supported
   // by `NSNumber`
   Expr::EvalResult IntResult{};
-  if (Number->EvaluateAsInt(IntResult, CX))
+  if (Number->EvaluateAsInt(IntResult, Context))
     return true;
 
   // Eval the number as an llvm::APFloat and ensure it fits
   // what NSNumber expects.
   APFloat FloatValue(0.0);
-  if (Number->EvaluateAsFloat(FloatValue, CX)) {
+  if (Number->EvaluateAsFloat(FloatValue, Context)) {
     // This asserts that the sema checks for `ObjCBoxedExpr` haven't changed to
     // allow larger values than NSNumber supports
     if (&FloatValue.getSemantics() == &APFloat::IEEEsingle())
@@ -423,7 +424,7 @@ ExprResult SemaObjC::BuildObjCNumericLiteral(SourceLocation AtLoc,
     return ExprError();
   Number = ConvertedNumber.get();
 
-  bool const IsConstInitLiteral =
+  const bool IsConstInitLiteral =
       CheckObjCNumberExpressionIsConstant(SemaRef, Number);
 
   auto *NumberLiteral = new (Context)
@@ -574,7 +575,8 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
   ASTContext &Context = getASTContext();
   if (ValueExpr->isTypeDependent()) {
     ObjCBoxedExpr *BoxedExpr = new (Context)
-        ObjCBoxedExpr(ValueExpr, Context.DependentTy, nullptr, true, SR);
+        ObjCBoxedExpr(ValueExpr, Context.DependentTy, nullptr,
+                      /*ExpressibleAsConstantInitializer=*/true, SR);
     return BoxedExpr;
   }
   ObjCMethodDecl *BoxingMethod = nullptr;
@@ -586,7 +588,7 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
   }
 
   // Check if the runtime supports constant init literals
-  bool const IsConstInitLiteral =
+  const bool IsConstInitLiteral =
       CheckObjCNumberExpressionIsConstant(SemaRef, ValueExpr);
   SourceLocation Loc = SR.getBegin();
   ValueExpr = RValue.get();

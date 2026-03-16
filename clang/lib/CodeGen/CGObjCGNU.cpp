@@ -574,8 +574,9 @@ public:
   ConstantAddress
   GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) override;
   ConstantAddress GenerateConstantDictionary(
-      const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
-      const ArrayRef<llvm::Constant *> &Objects) override;
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects)
+      override;
 
   RValue
   GenerateMessageSend(CodeGenFunction &CGF, ReturnValueSlot Return,
@@ -2766,8 +2767,8 @@ CGObjCGNU::GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) {
 }
 
 ConstantAddress CGObjCGNU::GenerateConstantDictionary(
-    const ObjCDictionaryLiteral *E, const ArrayRef<llvm::Constant *> &Keys,
-    const ArrayRef<llvm::Constant *> &Objects) {
+    const ObjCDictionaryLiteral *E,
+    ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects) {
   llvm_unreachable("Method should not be called, no GNU runtimes provide these "
                    "or support ObjC dictionary literal constant initializers");
 }

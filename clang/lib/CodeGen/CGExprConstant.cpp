@@ -2369,7 +2369,7 @@ ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
 
   // Note `@YES` `@NO` need to be handled explicitly
   // to meet existing plist encoding / decoding expectations
-  bool const IsBoolType =
+  const bool IsBoolType =
       (Ty->isBooleanType() || NSAPI(Context).isObjCBOOLType(Ty));
   bool BoolValue = false;
   if (IsBoolType && SubExpr->EvaluateAsBooleanCondition(BoolValue, Context)) {
@@ -2427,23 +2427,19 @@ ConstantLValueEmitter::VisitObjCArrayLiteral(const ObjCArrayLiteral *E) {
 
 ConstantLValue ConstantLValueEmitter::VisitObjCDictionaryLiteral(
     const ObjCDictionaryLiteral *E) {
-  SmallVector<llvm::Constant *, 16> KeyExpressions;
-  SmallVector<llvm::Constant *, 16> ObjectExpressions;
+  SmallVector<std::pair<llvm::Constant *, llvm::Constant *>, 16> KeysAndObjects;
   uint64_t NumElements = E->getNumElements();
-  KeyExpressions.reserve(NumElements);
-  ObjectExpressions.reserve(NumElements);
+  KeysAndObjects.reserve(NumElements);
 
   for (uint64_t i = 0; i < NumElements; i++) {
-    Expr *KeyExpr = E->getKeyValueElement(i).Key;
-    llvm::Constant *KeyVal = VisitObjCCollectionElement(KeyExpr);
-    KeyExpressions.push_back(KeyVal);
-
-    Expr *ValueExpr = E->getKeyValueElement(i).Value;
-    llvm::Constant *Val = VisitObjCCollectionElement(ValueExpr);
-    ObjectExpressions.push_back(Val);
+    llvm::Constant *Key =
+        VisitObjCCollectionElement(E->getKeyValueElement(i).Key);
+    llvm::Constant *Val =
+        VisitObjCCollectionElement(E->getKeyValueElement(i).Value);
+    KeysAndObjects.push_back({Key, Val});
   }
-  ConstantAddress C = CGM.getObjCRuntime().GenerateConstantDictionary(
-      E, KeyExpressions, ObjectExpressions);
+  ConstantAddress C =
+      CGM.getObjCRuntime().GenerateConstantDictionary(E, KeysAndObjects);
   return C.withElementType(CGM.getTypes().ConvertTypeForMem(E->getType()));
 }
 

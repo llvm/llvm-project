@@ -50,11 +50,13 @@ class CXXBaseSpecifier;
 /// Base class for Objective-C object literals (@"...", @42, @[], @{}).
 class ObjCObjectLiteral : public Expr {
 protected:
-  ObjCObjectLiteral(StmtClass SC, QualType T, bool ECI, ExprValueKind VK,
+  ObjCObjectLiteral(StmtClass SC, QualType T,
+                    bool ExpressibleAsConstantInitializer, ExprValueKind VK,
                     ExprObjectKind OK)
       : Expr(SC, T, VK, OK) {
     setDependence(ExprDependence::None);
-    ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer = ECI;
+    ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer =
+        ExpressibleAsConstantInitializer;
   }
   explicit ObjCObjectLiteral(StmtClass SC, EmptyShell Empty)
       : Expr(SC, Empty) {}
@@ -66,8 +68,10 @@ public:
   bool isExpressibleAsConstantInitializer() const {
     return ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer;
   }
-  void setExpressibleAsConstantInitializer(bool ECI) {
-    ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer = ECI;
+  void
+  setExpressibleAsConstantInitializer(bool ExpressibleAsConstantInitializer) {
+    ObjCObjectLiteralBits.IsExpressibleAsConstantInitializer =
+        ExpressibleAsConstantInitializer;
   }
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstObjCObjectLiteralConstant &&
@@ -160,10 +164,12 @@ class ObjCBoxedExpr final : public ObjCObjectLiteral {
 public:
   friend class ASTStmtReader;
 
-  ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *method, bool ECI,
-                SourceRange R)
-      : ObjCObjectLiteral(ObjCBoxedExprClass, T, ECI, VK_PRValue, OK_Ordinary),
-        SubExpr(E), BoxingMethod(method), Range(R) {
+  ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *Method,
+                bool ExpressibleAsConstantInitializer, SourceRange R)
+      : ObjCObjectLiteral(ObjCBoxedExprClass, T,
+                          ExpressibleAsConstantInitializer, VK_PRValue,
+                          OK_Ordinary),
+        SubExpr(E), BoxingMethod(Method), Range(R) {
     setDependence(computeDependence(this));
   }
   explicit ObjCBoxedExpr(EmptyShell Empty)
@@ -217,7 +223,8 @@ class ObjCArrayLiteral final
   ObjCMethodDecl *ArrayWithObjectsMethod;
 
   ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
-                   ObjCMethodDecl *Method, bool ECI, SourceRange SR);
+                   ObjCMethodDecl *Method,
+                   bool ExpressibleAsConstantInitializer, SourceRange SR);
 
   explicit ObjCArrayLiteral(EmptyShell Empty, unsigned NumElements)
       : ObjCObjectLiteral(ObjCArrayLiteralClass, Empty),
@@ -229,7 +236,8 @@ public:
 
   static ObjCArrayLiteral *Create(const ASTContext &C,
                                   ArrayRef<Expr *> Elements, QualType T,
-                                  ObjCMethodDecl *Method, bool ECI,
+                                  ObjCMethodDecl *Method,
+                                  bool ExpressibleAsConstantInitializer,
                                   SourceRange SR);
 
   static ObjCArrayLiteral *CreateEmpty(const ASTContext &C,
@@ -247,6 +255,11 @@ public:
 
   /// getNumElements - Return number of elements of objective-c array literal.
   unsigned getNumElements() const { return NumElements; }
+
+  /// elements - Return the elements of the array literal.
+  ArrayRef<const Expr *> elements() const {
+    return {getElements(), NumElements};
+  }
 
   /// getElement - Return the Element at the specified index.
   Expr *getElement(unsigned Index) {
@@ -348,7 +361,8 @@ class ObjCDictionaryLiteral final
 
   ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
                         bool HasPackExpansions, QualType T,
-                        ObjCMethodDecl *method, bool ECI, SourceRange SR);
+                        ObjCMethodDecl *Method,
+                        bool ExpressibleAsConstantInitializer, SourceRange SR);
 
   explicit ObjCDictionaryLiteral(EmptyShell Empty, unsigned NumElements,
                                  bool HasPackExpansions)
@@ -364,11 +378,10 @@ public:
   friend class ASTStmtWriter;
   friend TrailingObjects;
 
-  static ObjCDictionaryLiteral *Create(const ASTContext &C,
-                                       ArrayRef<ObjCDictionaryElement> VK,
-                                       bool HasPackExpansions, QualType T,
-                                       ObjCMethodDecl *method, bool ECI,
-                                       SourceRange SR);
+  static ObjCDictionaryLiteral *
+  Create(const ASTContext &C, ArrayRef<ObjCDictionaryElement> VK,
+         bool HasPackExpansions, QualType T, ObjCMethodDecl *Method,
+         bool ExpressibleAsConstantInitializer, SourceRange SR);
 
   static ObjCDictionaryLiteral *CreateEmpty(const ASTContext &C,
                                             unsigned NumElements,

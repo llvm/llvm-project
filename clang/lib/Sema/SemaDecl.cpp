@@ -12869,8 +12869,7 @@ bool Sema::CheckForConstantInitializer(Expr *Init, unsigned DiagID) {
     // For collection literals iterate the elements to highlight which one is
     // the offender.
     if (auto ALE = dyn_cast<ObjCArrayLiteral>(Init)) {
-      for (size_t I = 0, N = ALE->getNumElements(); I != N; ++I) {
-        Expr *Elm = ALE->getElement(I);
+      for (auto *Elm : ALE->elements()) {
         if (!Elm->isConstantInitializer(Context, false, nullptr)) {
           Diag(Elm->getExprLoc(),
                diag::err_objc_literal_nonconstant_at_file_scope)

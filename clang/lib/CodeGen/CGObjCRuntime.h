@@ -157,10 +157,10 @@ public:
                                                  const QualType &Ty) = 0;
   virtual ConstantAddress
   GenerateConstantArray(const ArrayRef<llvm::Constant *> &Objects) = 0;
-  virtual ConstantAddress
-  GenerateConstantDictionary(const ObjCDictionaryLiteral *E,
-                             const ArrayRef<llvm::Constant *> &Keys,
-                             const ArrayRef<llvm::Constant *> &Objects) = 0;
+  virtual ConstantAddress GenerateConstantDictionary(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>>
+          KeysAndObjects) = 0;
 
   /// Generate a category.  A category contains a list of methods (and
   /// accompanying metadata) and a list of protocols.

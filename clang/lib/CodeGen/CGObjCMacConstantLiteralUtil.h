@@ -20,7 +20,6 @@
 #include "clang/AST/Type.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include <numeric>
 
@@ -38,22 +37,22 @@ class NSConstantNumberMapInfo {
   };
 
   MapInfoType InfoType;
-  QualType QType;
+  CanQualType QType;
   llvm::APSInt Int;
   llvm::APFloat Float;
 
   /// Default constructor that can create Empty or Tombstone info entries
   explicit NSConstantNumberMapInfo(MapInfoType I = MapInfoType::Empty)
-      : InfoType(I), QType(QualType()), Int(), Float(0.0) {}
+      : InfoType(I), QType(), Int(), Float(0.0) {}
 
   bool isEmptyOrTombstone() const {
     return InfoType == MapInfoType::Empty || InfoType == MapInfoType::Tombstone;
   }
 
 public:
-  NSConstantNumberMapInfo(const QualType &QT, const llvm::APSInt &V)
+  NSConstantNumberMapInfo(CanQualType QT, const llvm::APSInt &V)
       : InfoType(MapInfoType::Int), QType(QT), Int(V), Float(0.0) {}
-  NSConstantNumberMapInfo(const QualType &QT, const llvm::APFloat &V)
+  NSConstantNumberMapInfo(CanQualType QT, const llvm::APFloat &V)
       : InfoType(MapInfoType::Float), QType(QT), Int(), Float(V) {}
 
   unsigned getHashValue() const {
@@ -100,34 +99,24 @@ public:
 using std::iota;
 
 class NSDictionaryBuilder {
-  SmallVector<llvm::Constant *, 16> Keys;
-  SmallVector<llvm::Constant *, 16> Objects;
+  SmallVector<std::pair<llvm::Constant *, llvm::Constant *>, 16> Elements;
   uint64_t Opts;
 
 public:
   enum class Options : uint64_t { Sorted = 1 };
 
-  NSDictionaryBuilder(const ObjCDictionaryLiteral *E,
-                      const ArrayRef<llvm::Constant *> &KYS,
-                      const ArrayRef<llvm::Constant *> &OBS,
-                      const Options O = Options::Sorted) {
-    assert((KYS.size() == OBS.size()) &&
-           "NSConstantDictionary requires key / value pairs!"
-           "keys and objects not of equal size!");
-
+  NSDictionaryBuilder(
+      const ObjCDictionaryLiteral *E,
+      ArrayRef<std::pair<llvm::Constant *, llvm::Constant *>> KeysAndObjects,
+      const Options O = Options::Sorted) {
     Opts = static_cast<uint64_t>(O);
-    uint64_t const NumElements = KYS.size();
+    uint64_t const NumElements = KeysAndObjects.size();
 
     // Reserve the capacity for the sorted keys & values
-    Keys.reserve(NumElements);
-    Objects.reserve(NumElements);
+    Elements.reserve(NumElements);
 
     // Setup the element indicies 0 ..< NumElements
-    SmallVector<size_t, 16> ElementIndicies;
-    ElementIndicies.reserve(NumElements);
-    for (size_t i = 0; i < NumElements; i++) {
-      ElementIndicies.push_back(i);
-    }
+    SmallVector<size_t, 16> ElementIndicies(NumElements);
     std::iota(ElementIndicies.begin(), ElementIndicies.end(), 0);
 
     // Now perform the sorts and shift the indicies as needed
@@ -153,20 +142,20 @@ public:
           llvm_unreachable("Unexpected `NSDictionaryBuilder::Options given");
         });
 
-    // Finally use the sorted indicies to insert into `Keys` and `Objects`
+    // Finally use the sorted indicies to insert into `Elements`.
     for (auto &Idx : ElementIndicies) {
-      Keys.push_back(KYS[Idx]);
-      Objects.push_back(OBS[Idx]);
+      Elements.push_back(KeysAndObjects[Idx]);
     }
   }
 
-  SmallVector<llvm::Constant *, 16> &getKeys() { return Keys; }
-
-  SmallVector<llvm::Constant *, 16> &getObjects() { return Objects; }
+  SmallVectorImpl<std::pair<llvm::Constant *, llvm::Constant *>> &
+  getElements() {
+    return Elements;
+  }
 
   Options getOptions() const { return static_cast<Options>(Opts); }
 
-  uint64_t getNumElements() const { return Keys.size(); }
+  uint64_t getNumElements() const { return Elements.size(); }
 };
 
 } // namespace CGObjCMacConstantLiteralUtil

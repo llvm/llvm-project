@@ -24,9 +24,12 @@
 using namespace clang;
 
 ObjCArrayLiteral::ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
-                                   ObjCMethodDecl *Method, bool ECI,
+                                   ObjCMethodDecl *Method,
+                                   bool ExpressibleAsConstantInitializer,
                                    SourceRange SR)
-    : ObjCObjectLiteral(ObjCArrayLiteralClass, T, ECI, VK_PRValue, OK_Ordinary),
+    : ObjCObjectLiteral(ObjCArrayLiteralClass, T,
+                        ExpressibleAsConstantInitializer, VK_PRValue,
+                        OK_Ordinary),
       NumElements(Elements.size()), Range(SR), ArrayWithObjectsMethod(Method) {
   Expr **SaveElements = getElements();
   for (unsigned I = 0, N = Elements.size(); I != N; ++I)
@@ -35,12 +38,14 @@ ObjCArrayLiteral::ObjCArrayLiteral(ArrayRef<Expr *> Elements, QualType T,
   setDependence(computeDependence(this));
 }
 
-ObjCArrayLiteral *ObjCArrayLiteral::Create(const ASTContext &C,
-                                           ArrayRef<Expr *> Elements,
-                                           QualType T, ObjCMethodDecl *Method,
-                                           bool ECI, SourceRange SR) {
+ObjCArrayLiteral *
+ObjCArrayLiteral::Create(const ASTContext &C, ArrayRef<Expr *> Elements,
+                         QualType T, ObjCMethodDecl *Method,
+                         bool ExpressibleAsConstantInitializer,
+                         SourceRange SR) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(Elements.size()));
-  return new (Mem) ObjCArrayLiteral(Elements, T, Method, ECI, SR);
+  return new (Mem) ObjCArrayLiteral(Elements, T, Method,
+                                    ExpressibleAsConstantInitializer, SR);
 }
 
 ObjCArrayLiteral *ObjCArrayLiteral::CreateEmpty(const ASTContext &C,
@@ -51,14 +56,15 @@ ObjCArrayLiteral *ObjCArrayLiteral::CreateEmpty(const ASTContext &C,
   return ALE;
 }
 
-ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
-                                             bool HasPackExpansions, QualType T,
-                                             ObjCMethodDecl *method, bool ECI,
-                                             SourceRange SR)
-    : ObjCObjectLiteral(ObjCDictionaryLiteralClass, T, ECI, VK_PRValue,
+ObjCDictionaryLiteral::ObjCDictionaryLiteral(
+    ArrayRef<ObjCDictionaryElement> VK, bool HasPackExpansions, QualType T,
+    ObjCMethodDecl *Method, bool ExpressibleAsConstantInitializer,
+    SourceRange SR)
+    : ObjCObjectLiteral(ObjCDictionaryLiteralClass, T,
+                        ExpressibleAsConstantInitializer, VK_PRValue,
                         OK_Ordinary),
       NumElements(VK.size()), HasPackExpansions(HasPackExpansions), Range(SR),
-      DictWithObjectsMethod(method) {
+      DictWithObjectsMethod(Method) {
   KeyValuePair *KeyValues = getTrailingObjects<KeyValuePair>();
   ExpansionData *Expansions =
       HasPackExpansions ? getTrailingObjects<ExpansionData>() : nullptr;
@@ -78,12 +84,12 @@ ObjCDictionaryLiteral::ObjCDictionaryLiteral(ArrayRef<ObjCDictionaryElement> VK,
 
 ObjCDictionaryLiteral *ObjCDictionaryLiteral::Create(
     const ASTContext &C, ArrayRef<ObjCDictionaryElement> VK,
-    bool HasPackExpansions, QualType T, ObjCMethodDecl *method, bool ECI,
-    SourceRange SR) {
+    bool HasPackExpansions, QualType T, ObjCMethodDecl *Method,
+    bool ExpressibleAsConstantInitializer, SourceRange SR) {
   void *Mem = C.Allocate(totalSizeToAlloc<KeyValuePair, ExpansionData>(
       VK.size(), HasPackExpansions ? VK.size() : 0));
-  return new (Mem)
-      ObjCDictionaryLiteral(VK, HasPackExpansions, T, method, ECI, SR);
+  return new (Mem) ObjCDictionaryLiteral(VK, HasPackExpansions, T, Method,
+                                         ExpressibleAsConstantInitializer, SR);
 }
 
 ObjCDictionaryLiteral *
