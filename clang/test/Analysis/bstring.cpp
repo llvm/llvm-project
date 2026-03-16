@@ -22,6 +22,10 @@
 // RUN:     -analyzer-checker=alpha.unix.cstring.BufferOverlap \
 // RUN:     -analyzer-checker=unix.cstring.NotNullTerminated
 
+// RUN: %{analyzer} \
+// RUN:   -DUNINIT_WITHOUT_OUTOFBOUND \
+// RUN:   -analyzer-checker=alpha.unix.cstring.UninitializedRead
+
 #include "Inputs/system-header-simulator-cxx.h"
 #include "Inputs/system-header-simulator-for-malloc.h"
 
@@ -230,5 +234,14 @@ void memset1_new_array() {
   memset(array + 1, 'a', 10 * sizeof(9));
   clang_analyzer_eval(array[2] == 0); // expected-warning{{UNKNOWN}}
   delete[] array;
+}
+#endif
+
+#ifdef UNINIT_WITHOUT_OUTOFBOUND
+void memmove_uninit_without_outofbound() {
+  int src[4];
+  int dst[4];
+  memmove(dst, src, sizeof(src)); // expected-warning{{The first element of the 2nd argument is undefined}}
+                                  // expected-note@-1{{Other elements might also be undefined}}
 }
 #endif
