@@ -119,6 +119,14 @@ func.func @shuffle_empty_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
 
 // -----
 
+func.func @shuffle_scalar_input(%a: i8, %b: i8) {
+  // expected-error @+1 {{expected vector type}}
+  %shuffle = vector.shuffle %a, %b [0] : i8, i8
+  return
+}
+
+// -----
+
 func.func @extract_vector_type(%arg0: index) {
   // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'index'}}
   %1 = vector.extract %arg0[] : index from index

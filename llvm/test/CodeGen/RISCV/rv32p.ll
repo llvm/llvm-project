@@ -781,6 +781,46 @@ define i64 @wmulsu_i32(i32 %x, i32 %y) {
   ret i64 %c
 }
 
+define i64 @wsla_i32(i32 %x, i64 %y) {
+; CHECK-LABEL: wsla_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsla a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = shl i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @wsll_i32(i32 %x, i64 %y) {
+; CHECK-LABEL: wsll_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsll a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = shl i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @wslai_i32(i32 %x) {
+; CHECK-LABEL: wslai_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wslai a0, a0, 23
+; CHECK-NEXT:    ret
+  %a = sext i32 %x to i64
+  %b = shl i64 %a, 23
+  ret i64 %b
+}
+
+define i64 @wslli_i32(i32 %x, i64 %y) {
+; CHECK-LABEL: wslli_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wslli a0, a0, 10
+; CHECK-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = shl i64 %a, 10
+  ret i64 %b
+}
+
 ; Test that mulh continues to be used with P.
 define i32 @mulh_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mulh_i32:

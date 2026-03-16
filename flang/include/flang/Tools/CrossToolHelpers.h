@@ -14,6 +14,7 @@
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
 #include "flang/Frontend/CodeGenOptions.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Support/LangOptions.h"
 #include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
@@ -88,6 +89,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       const Fortran::common::MathOptionsBase &mathOpts) {
     OptLevel = level;
     StackArrays = opts.StackArrays;
+    EnableSafeTrampoline = opts.EnableSafeTrampoline;
     Underscoring = opts.Underscoring;
     LoopVersioning = opts.LoopVersioning;
     DebugInfo = opts.getDebugInfo();
@@ -115,6 +117,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   bool StackArrays = false; ///< convert memory allocations to alloca.
+  bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.
@@ -150,6 +153,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
   std::string SplitDwarfFile = ""; ///< File name for the split debug info
   std::string DwarfDebugFlags = ""; ///< Debug flags to append to DWARF producer
+  Fortran::common::FPMaxminBehavior fpMaxminBehavior =
+      Fortran::common::FPMaxminBehavior::Legacy;
 };
 
 struct OffloadModuleOpts {

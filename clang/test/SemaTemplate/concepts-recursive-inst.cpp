@@ -87,30 +87,16 @@ auto it = begin(rng); // #BEGIN_CALL
 
 namespace GH50891 {
   template <typename T>
-  concept Numeric = requires(T a) { // #NUMERIC
-      foo(a); // #FOO_CALL
+  concept Numeric = requires(T a) {
+      foo(a);
     };
 
   struct Deferred {
     friend void foo(Deferred);
-    template <Numeric TO> operator TO(); // #OP_TO
+    template <Numeric TO> operator TO();
   };
 
-  static_assert(Numeric<Deferred>); // #STATIC_ASSERT
-  // expected-error@#NUMERIC{{satisfaction of constraint 'requires (T a) { foo(a); }' depends on itself}}
-  // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-  // expected-note@#OP_TO {{while checking the satisfaction of concept 'Numeric<Deferred>' requested here}}
-  // expected-note@#OP_TO {{skipping 1 context}}
-  // expected-note@#FOO_CALL 2{{while checking constraint satisfaction for template}}
-  // expected-note@#FOO_CALL 2{{while substituting deduced template arguments into function template}}
-  // expected-note@#FOO_CALL 2{{in instantiation of requirement here}}
-  // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
-
-  // expected-error@#STATIC_ASSERT {{static assertion failed}}
-  // expected-note@#STATIC_ASSERT{{while checking the satisfaction of concept 'Numeric<Deferred>' requested here}}
-  // expected-note@#STATIC_ASSERT{{because 'Deferred' does not satisfy 'Numeric'}}
-  // expected-note@#FOO_CALL{{because 'foo(a)' would be invalid}}
-
+  static_assert(Numeric<Deferred>);
 } // namespace GH50891
 
 
@@ -360,5 +346,29 @@ static_assert(!StreamCanReceiveString<NotAStream>);
 
 static_assert(StreamCanReceiveString<std::stringstream>);
 #endif
+}
+}
+
+
+namespace GH149443 {
+template<class T>
+concept can_simply_copy_construct = requires (const T& x) {
+  T(x);
+};
+
+struct A {
+  template <can_simply_copy_construct T>
+  operator T() const noexcept {
+    return T{};
+  }
+};
+
+template<can_simply_copy_construct T1, can_simply_copy_construct T0>
+T1 f(T0 t) {
+  return t;
+}
+
+int main() {
+  (void) f<int>(A{});
 }
 }

@@ -2,7 +2,7 @@
 // RUN:   -config="{CheckOptions: \
 // RUN:             {readability-redundant-string-init.StringNames: \
 // RUN:                '::std::basic_string;::std::basic_string_view;our::TestString'} \
-// RUN:             }" -- -isystem %clang_tidy_headers
+// RUN:             }"
 #include <string>
 
 void f() {

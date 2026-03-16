@@ -27,17 +27,17 @@ template<int> struct KN;
 // emission of a function during device compilation (but not during host
 // compilation) and to trigger a diagnostic if ODR-used from a function
 // emitted during device compilation.
-// device-note@+1 4 {{attribute is here}}
+// device-note@+1 2 {{attribute is here}}
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void skep();
 struct SKL {
-  // device-note@+1 6 {{attribute is here}}
+  // device-note@+1 4 {{attribute is here}}
   [[clang::sycl_kernel_entry_point(KN<2>)]]
   void mskep();
-  // device-note@+1 6 {{attribute is here}}
+  // device-note@+1 4 {{attribute is here}}
   [[clang::sycl_kernel_entry_point(KN<3>)]]
   static void smskep();
-  // device-note@+1 2 {{attribute is here}}
+  // device-note@+1 {{attribute is here}}
   [[clang::sycl_kernel_entry_point(KN<4>)]]
   void operator()() const;
 };
@@ -62,22 +62,22 @@ void df() {
   (void)typeid(&SKL::mskep);
   (void)typeid(&SKL::smskep);
 
-  // device-error@+1 2 {{function 'skep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'skep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   skep();
-  // device-error@+1 2 {{function 'mskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'mskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   SKL{}.mskep();
-  // device-error@+1 2 {{function 'smskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'smskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   SKL::smskep();
 
-  // device-error@+1 2 {{function 'skep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'skep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   (void)&skep;
-  // device-error@+1 2 {{function 'mskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'mskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   (void)&SKL::mskep;
-  // device-error@+1 2 {{function 'smskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'smskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   (void)&SKL::smskep;
 
   SKL sklo;
-  // device-error@+1 2 {{function 'operator()' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
+  // device-error@+1 {{function 'operator()' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   sklo();
 }
 
@@ -133,6 +133,7 @@ void SKL::operator()() const {
 void sedf() {
   // device-note@+1 {{called by 'sedf'}}
   df();
+  // device-note@+2 {{which is called by 'sedf'}}
   // device-error@+1 {{function 'skep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
   skep();
   // device-error@+1 {{function 'mskep' cannot be used in device code because it is declared with the 'clang::sycl_kernel_entry_point' attribute}}
