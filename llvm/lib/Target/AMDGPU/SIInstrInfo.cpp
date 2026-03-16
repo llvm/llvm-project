@@ -5565,7 +5565,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
         const MachineOperand &MO = MI.getOperand(ModIdx);
         if (!MO.isImm()) {
-          ErrInfo = "Source modifier of VOP3/VOP3P instruction should be immediate";
+          ErrInfo =
+              "Source modifier of VOP3/VOP3P instruction should be immediate";
           return false;
         }
       }
