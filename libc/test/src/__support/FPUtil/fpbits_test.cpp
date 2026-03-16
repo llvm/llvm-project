@@ -778,3 +778,9 @@ TEST(LlvmLibcFPBitsTest, Float128Type) {
   EXPECT_EQ(quiet_nan.is_quiet_nan(), true);
 }
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+TEST(LlvmLibcFPBitsTest, Float128WrapperInstantiation) {
+  LIBC_NAMESPACE::fputil::Float128 x;
+  LIBC_NAMESPACE::fputil::FPBits<LIBC_NAMESPACE::fputil::Float128> bits(x);
+  EXPECT_TRUE(bits.is_zero());
+}
