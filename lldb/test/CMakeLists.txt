@@ -132,6 +132,11 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
+if(TARGET darwin-mte-launcher)
+  add_lldb_test_dependency(darwin-mte-launcher)
+  set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
+endif()
+
 if (LLDB_CAN_USE_LLDB_RPC_SERVER)
   add_lldb_test_dependency(lldb-rpc-generate-sources)
 endif()
@@ -250,6 +255,7 @@ set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests ex
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA

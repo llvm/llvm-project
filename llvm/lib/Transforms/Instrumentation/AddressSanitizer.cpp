@@ -446,8 +446,7 @@ static SmallSet<unsigned, 8> SrcAddrSpaces;
 static cl::list<unsigned> ClAddrSpaces(
     "asan-instrument-address-spaces",
     cl::desc("Only instrument variables in the specified address spaces."),
-    cl::Hidden, cl::CommaSeparated, cl::ZeroOrMore,
-    cl::callback([](const unsigned &AddrSpace) {
+    cl::Hidden, cl::CommaSeparated, cl::callback([](const unsigned &AddrSpace) {
       SrcAddrSpaces.insert(AddrSpace);
     }));
 
@@ -1998,8 +1997,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, InsertBefore, false, MDBuilder(*C).createUnlikelyBranchWeights());
-    assert(cast<BranchInst>(CheckTerm)->isUnconditional());
-    BasicBlock *NextBB = CheckTerm->getSuccessor(0);
+    BasicBlock *NextBB = cast<UncondBrInst>(CheckTerm)->getSuccessor();
     IRB.SetInsertPoint(CheckTerm);
     Value *Cmp2 = createSlowPathCmp(IRB, AddrLong, ShadowValue, TypeStoreSize);
     if (Recover) {
@@ -2008,7 +2006,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
       BasicBlock *CrashBlock =
         BasicBlock::Create(*C, "", NextBB->getParent(), NextBB);
       CrashTerm = new UnreachableInst(*C, CrashBlock);
-      BranchInst *NewTerm = BranchInst::Create(CrashBlock, NextBB, Cmp2);
+      CondBrInst *NewTerm = CondBrInst::Create(Cmp2, CrashBlock, NextBB);
       ReplaceInstWithInst(CheckTerm, NewTerm);
     }
   } else {

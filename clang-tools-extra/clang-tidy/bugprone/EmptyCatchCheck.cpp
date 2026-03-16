@@ -35,8 +35,7 @@ AST_MATCHER_P(CXXCatchStmt, hasCaughtType, Matcher<QualType>, InnerMatcher) {
   return InnerMatcher.matches(Node.getCaughtType(), Finder, Builder);
 }
 
-AST_MATCHER_P(CompoundStmt, hasAnyTextFromList, std::vector<llvm::StringRef>,
-              List) {
+AST_MATCHER_P(CompoundStmt, hasAnyTextFromList, std::vector<StringRef>, List) {
   if (List.empty())
     return false;
 

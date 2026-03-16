@@ -235,7 +235,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   // Check if we have a suitable dereferencable assumption we can use.
   Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
   if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
-    if (isa<BranchInst>(LoopPred->getTerminator()))
+    if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
   RetainedKnowledge DerefRK;
@@ -250,8 +250,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
                          return true;
                        });
   if (DerefRK) {
-    DerefBytesSCEV =
-        SE.getUMaxExpr(DerefBytesSCEV, SE.getSCEV(DerefRK.IRArgValue));
+    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
+    Type *CommonTy =
+        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
   }
 
   if (DerefBytesSCEV->isZero())

@@ -1061,6 +1061,22 @@ def skipUnlessCompilerIsClang(func):
     return skipTestIfFn(is_compiler_clang)(func)
 
 
+def skipUnlessMSVC(func):
+    """Decorate the item to skip test unless msvc is available."""
+
+    def is_msvc_in_path():
+        result = subprocess.run(
+            ["cl.exe"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return f"Test requires MSVC to be in the Path."
+        return None
+
+    return skipTestIfFn(is_msvc_in_path)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1127,6 +1143,17 @@ def is_running_under_asan():
     if "ASAN_OPTIONS" in os.environ:
         return "ASAN unsupported"
     return None
+
+
+def is_running_under_mte():
+    if configuration.mte_enabled:
+        return "MTE unsupported"
+    return None
+
+
+def skipIfMTE(func):
+    """Skip this test when running with MTE (Memory Tagging Extension) enabled."""
+    return skipTestIfFn(is_running_under_mte)(func)
 
 
 def skipUnlessAddressSanitizer(func):

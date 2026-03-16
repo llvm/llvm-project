@@ -3850,6 +3850,13 @@ defm objc_convert_messages_to_runtime_calls : BoolFOption<"objc-convert-messages
   CodeGenOpts<"ObjCConvertMessagesToRuntimeCalls">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>>;
+defm objc_msgsend_selector_stubs : BoolFOption<"objc-msgsend-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>, NegFlag<SetFalse>>;
+defm objc_msgsend_class_selector_stubs : BoolFOption<"objc-msgsend-class-selector-stubs",
+  CodeGenOpts<"ObjCMsgSendClassSelectorStubs">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
+  NegFlag<SetFalse>>;
 defm objc_arc_exceptions : BoolFOption<"objc-arc-exceptions",
   CodeGenOpts<"ObjCAutoRefCountExceptions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -9842,6 +9849,8 @@ def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
+def dxc_Fre : DXCJoinedOrSeparate<"Fre">,
+              HelpText<"Set output file name for reflection files">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,

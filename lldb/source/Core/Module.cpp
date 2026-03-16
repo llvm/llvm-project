@@ -1438,56 +1438,60 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 
   Debugger &debugger = target->GetDebugger();
   const ScriptLanguage script_language = debugger.GetScriptLanguage();
-  if (script_language != eScriptLanguageNone) {
+  if (script_language == eScriptLanguageNone)
+    return true;
 
-    PlatformSP platform_sp(target->GetPlatform());
+  PlatformSP platform_sp(target->GetPlatform());
 
-    if (!platform_sp) {
-      error = Status::FromErrorString("invalid Platform");
+  if (!platform_sp) {
+    error = Status::FromErrorString("invalid Platform");
+    return false;
+  }
+
+  FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
+      target, *this, feedback_stream);
+
+  const uint32_t num_specs = file_specs.GetSize();
+  if (num_specs == 0)
+    return true;
+
+  ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
+  if (!script_interpreter) {
+    error = Status::FromErrorString("invalid ScriptInterpreter");
+    return false;
+  }
+
+  for (uint32_t i = 0; i < num_specs; ++i) {
+    FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
+    if (!scripting_fspec && !FileSystem::Instance().Exists(scripting_fspec))
+      continue;
+
+    if (should_load == eLoadScriptFromSymFileWarn) {
+      feedback_stream.Format(R"(
+warning: '{0}' contains a debug script. To run this script in this debug session:
+
+    command script import "{1}"
+
+To run all discovered debug scripts in this session:
+
+    settings set target.load-script-from-symbol-file true
+)",
+                             GetFileSpec().GetFileNameStrippingExtension(),
+                             scripting_fspec.GetPath());
+
       return false;
     }
 
-    FileSpecList file_specs = platform_sp->LocateExecutableScriptingResources(
-        target, *this, feedback_stream);
-
-    const uint32_t num_specs = file_specs.GetSize();
-    if (num_specs) {
-      ScriptInterpreter *script_interpreter = debugger.GetScriptInterpreter();
-      if (script_interpreter) {
-        for (uint32_t i = 0; i < num_specs; ++i) {
-          FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-          if (scripting_fspec &&
-              FileSystem::Instance().Exists(scripting_fspec)) {
-            if (should_load == eLoadScriptFromSymFileWarn) {
-              feedback_stream.Printf(
-                  "warning: '%s' contains a debug script. To run this script "
-                  "in "
-                  "this debug session:\n\n    command script import "
-                  "\"%s\"\n\n"
-                  "To run all discovered debug scripts in this session:\n\n"
-                  "    settings set target.load-script-from-symbol-file "
-                  "true\n",
-                  GetFileSpec().GetFileNameStrippingExtension().GetCString(),
-                  scripting_fspec.GetPath().c_str());
-              return false;
-            }
-            StreamString scripting_stream;
-            scripting_fspec.Dump(scripting_stream.AsRawOstream());
-            LoadScriptOptions options;
-            bool did_load = script_interpreter->LoadScriptingModule(
-                scripting_stream.GetData(), options, error,
-                /*module_sp*/ nullptr, /*extra_path*/ {},
-                target->shared_from_this());
-            if (!did_load)
-              return false;
-          }
-        }
-      } else {
-        error = Status::FromErrorString("invalid ScriptInterpreter");
-        return false;
-      }
-    }
+    StreamString scripting_stream;
+    scripting_fspec.Dump(scripting_stream.AsRawOstream());
+    LoadScriptOptions options;
+    bool did_load = script_interpreter->LoadScriptingModule(
+        scripting_stream.GetData(), options, error,
+        /*module_sp*/ nullptr, /*extra_path*/ {}, target->shared_from_this());
+    if (!did_load)
+      return false;
   }
+
   return true;
 }
 

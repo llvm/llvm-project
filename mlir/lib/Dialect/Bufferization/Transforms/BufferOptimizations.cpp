@@ -105,7 +105,17 @@ static bool defaultIsSmallAlloc(Value alloc, unsigned maximumSizeInBytes,
   }
   unsigned bitwidth = mlir::DataLayout::closest(alloc.getDefiningOp())
                           .getTypeSizeInBits(type.getElementType());
-  return type.getNumElements() * bitwidth <= maximumSizeInBytes * 8;
+  // Use tryGetNumElements to avoid an assertion on integer overflow (e.g. for
+  // very large statically-shaped memrefs).  If the element count overflows
+  // int64_t the allocation is certainly not "small", so return false.
+  std::optional<int64_t> numElements = type.tryGetNumElements();
+  if (!numElements)
+    return false;
+  // Guard against overflow in the size computation as well.
+  if (bitwidth != 0 &&
+      *numElements > static_cast<int64_t>(maximumSizeInBytes * 8ULL / bitwidth))
+    return false;
+  return *numElements * bitwidth <= maximumSizeInBytes * 8;
 }
 
 /// Checks whether the given aliases leave the allocation scope.

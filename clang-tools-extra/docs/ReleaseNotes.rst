@@ -154,6 +154,12 @@ New checks
   Suggests insertion of ``std::move(...)`` to turn copy assignment operator
   calls into move assignment ones, when deemed valid and profitable.
 
+- New :doc:`readability-redundant-qualified-alias
+  <clang-tidy/checks/readability/redundant-qualified-alias>` check.
+
+  Finds redundant identity type aliases that re-expose a qualified name and can
+  be replaced with a ``using`` declaration.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
@@ -258,6 +264,10 @@ Changes in existing checks
   - Fixed false positive where an array of pointers to ``const`` was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+- Improved :doc:`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
+  virtual inheritance causes concrete bases to be counted more than once.
+
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
 
@@ -287,6 +297,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
 
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by fixing
+  spurious ``missing '(' after '__has_feature'`` errors caused by builtin
+  macros appearing in the return type of a function.
+
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
@@ -306,6 +321,11 @@ Changes in existing checks
 
   - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
+- Improved :doc:`performance-inefficient-string-concatenation
+  <clang-tidy/checks/performance/inefficient-string-concatenation>` check by
+  adding support for detecting inefficient string concatenation in ``do-while``
+  loops.
+
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
   correctly handling vector-like classes when ``push_back``/``emplace_back`` are
@@ -316,8 +336,12 @@ Changes in existing checks
   positives on trivially copyable types with a non-public copy constructor.
 
 - Improved :doc:`readability-container-size-empty
-  <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
-  when a member expression has a non-identifier name.
+  <clang-tidy/checks/readability/container-size-empty>` check:
+
+  - Fix a crash when a member expression has a non-identifier name.
+
+  - Reduce verbosity by removing the note indicating source location of the
+    ``empty`` function.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
@@ -325,9 +349,15 @@ Changes in existing checks
   - Fixed missed diagnostics when ``if`` statements appear in unbraced
     ``switch`` case labels.
 
+  - Fixed a false positive involving ``if`` statements which contain
+    a ``return``, ``break``, etc., jumped over by a ``goto``.
+
   - Added support for handling attributed ``if`` then-branches such as
     ``[[likely]]`` and ``[[unlikely]]``.
 
+  - Diagnose and remove redundant ``else`` branches after calls to
+    ``[[noreturn]]`` functions.
+    
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making

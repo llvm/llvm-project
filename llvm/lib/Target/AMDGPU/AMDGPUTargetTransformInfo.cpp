@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -166,8 +167,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
       // if region and potentially even PHI itself, saving on both divergence
       // and registers used for the PHI.
       // Add a small bonus for each of such "if" statements.
-      if (const BranchInst *Br = dyn_cast<BranchInst>(&I)) {
-        if (UP.Threshold < MaxBoost && Br->isConditional()) {
+      if (const CondBrInst *Br = dyn_cast<CondBrInst>(&I)) {
+        if (UP.Threshold < MaxBoost) {
           BasicBlock *Succ0 = Br->getSuccessor(0);
           BasicBlock *Succ1 = Br->getSuccessor(1);
           if ((L->contains(Succ0) && L->isLoopExiting(Succ0)) ||
@@ -268,6 +269,11 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
+  // If a user provided an explicit unroll pragma (with or without count),
+  // override expensive trip count checks
+  UnrollPragmaInfo PInfo(L);
+  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0)
+    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
@@ -878,15 +884,13 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
       (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency);
   const int CBrCost = SCost ? 5 : 7;
   switch (Opcode) {
-  case Instruction::Br: {
+  case Instruction::UncondBr:
     // Branch instruction takes about 4 slots on gfx900.
-    const auto *BI = dyn_cast_or_null<BranchInst>(I);
-    if (BI && BI->isUnconditional())
-      return SCost ? 1 : 4;
+    return SCost ? 1 : 4;
+  case Instruction::CondBr:
     // Suppose conditional branch takes additional 3 exec manipulations
     // instructions in average.
     return CBrCost;
-  }
   case Instruction::Switch: {
     const auto *SI = dyn_cast_or_null<SwitchInst>(I);
     // Each case (including default) takes 1 cmp + 1 cbr instructions in
