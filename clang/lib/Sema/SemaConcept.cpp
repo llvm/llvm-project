@@ -2544,7 +2544,8 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
   }
 
   SubsumptionChecker SC(*this);
-  std::optional<bool> Subsumes = SC.Subsumes(D1, AC1, D2, AC2);
+  std::optional<bool> Subsumes =
+      SC.Subsumes(D1, AC1, D2, AC2, /*DepthAdjusted=*/Depth1 != Depth2);
   if (!Subsumes) {
     // Normalization failed
     return true;
@@ -2778,14 +2779,16 @@ void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
 
 std::optional<bool> SubsumptionChecker::Subsumes(
     const NamedDecl *DP, ArrayRef<AssociatedConstraint> P, const NamedDecl *DQ,
-    ArrayRef<AssociatedConstraint> Q) {
+    ArrayRef<AssociatedConstraint> Q, bool DepthAdjusted) {
   const NormalizedConstraint *PNormalized =
-      SemaRef.getNormalizedAssociatedConstraints(DP, P);
+      SemaRef.getNormalizedAssociatedConstraints(DepthAdjusted ? nullptr : DP,
+                                                 P);
   if (!PNormalized)
     return std::nullopt;
 
   const NormalizedConstraint *QNormalized =
-      SemaRef.getNormalizedAssociatedConstraints(DQ, Q);
+      SemaRef.getNormalizedAssociatedConstraints(DepthAdjusted ? nullptr : DQ,
+                                                 Q);
   if (!QNormalized)
     return std::nullopt;
 
