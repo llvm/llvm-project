@@ -141,6 +141,22 @@ public:
     return B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
   }
 
+  /// Create a column-major matrix from a row-major matrix with the given
+  /// logical dimensions by transposing it.
+  CallInst *CreateRowMajorToColumnMajorTransform(Value *Matrix, unsigned Rows,
+                                                 unsigned Columns,
+                                                 const Twine &Name = "") {
+    return CreateMatrixTranspose(Matrix, Columns, Rows, Name);
+  }
+
+  /// Create a row-major matrix from a column-major matrix with the given
+  /// logical dimensions by transposing it.
+  CallInst *CreateColumnMajorToRowMajorTransform(Value *Matrix, unsigned Rows,
+                                                 unsigned Columns,
+                                                 const Twine &Name = "") {
+    return CreateMatrixTranspose(Matrix, Rows, Columns, Name);
+  }
+
   /// Insert a single element \p NewVal into \p Matrix at indices (\p RowIdx, \p
   /// ColumnIdx).
   Value *CreateMatrixInsert(Value *Matrix, Value *NewVal, Value *RowIdx,

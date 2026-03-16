@@ -1122,32 +1122,64 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
+    // The matrix multiply intrinsic only operates on column-major order
+    // matrices. Therefore matrix memory layout transforms must be inserted
+    // before and after matrix multiply intrinsics.
+    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
-      unsigned M = MatTy->getNumColumns();
-      return MB.CreateMatrixMultiply(Op0, Op1, 1, N, M, "hlsl.mul");
+      unsigned Rows = MatTy->getNumRows();
+      unsigned Cols = MatTy->getNumColumns();
+      if (IsRowMajor)
+        Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
+      return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
+      if (IsRowMajor)
+        Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
     assert(IsMat0 && IsMat1);
     auto *MatTy0 = QTy0->castAs<ConstantMatrixType>();
     auto *MatTy1 = QTy1->castAs<ConstantMatrixType>();
-    return MB.CreateMatrixMultiply(Op0, Op1, MatTy0->getNumRows(),
-                                   MatTy0->getNumColumns(),
-                                   MatTy1->getNumColumns(), "hlsl.mul");
+    unsigned Rows0 = MatTy0->getNumRows();
+    unsigned Rows1 = MatTy1->getNumRows();
+    unsigned Cols0 = MatTy0->getNumColumns();
+    unsigned Cols1 = MatTy1->getNumColumns();
+    if (IsRowMajor) {
+      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
+      Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
+    }
+    Value *Result =
+        MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
+    if (IsRowMajor)
+      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
+    return Result;
   }
   case Builtin::BI__builtin_hlsl_transpose: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
+    unsigned Rows = MatTy->getNumRows();
+    unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    return MB.CreateMatrixTranspose(Op0, MatTy->getNumRows(),
-                                    MatTy->getNumColumns());
+    // The matrix transpose intrinsic only operates on column-major order
+    // matrices. Therefore matrix memory layout transforms must be inserted
+    // before and after matrix transpose intrinsics.
+    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    if (IsRowMajor)
+      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
+    Value *Result = MB.CreateMatrixTranspose(Op0, Rows, Cols);
+    if (IsRowMajor)
+      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Cols, Rows);
+    return Result;
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
