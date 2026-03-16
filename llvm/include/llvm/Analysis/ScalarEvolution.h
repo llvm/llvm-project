@@ -70,7 +70,9 @@ class SCEV;
 
 struct SCEVUse : PointerIntPair<const SCEV *, 2> {
   SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
-  SCEVUse(const SCEV *S) : PointerIntPair() { setFromOpaqueValue((void *)S); }
+  SCEVUse(const SCEV *S) : PointerIntPair() {
+    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
+  }
   SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
 
   operator const SCEV *() const { return getPointer(); }
@@ -1593,12 +1595,6 @@ private:
 
   /// Mark predicate values currently being processed by isImpliedCond.
   SmallPtrSet<const Value *, 6> PendingLoopPredicates;
-
-  /// Mark SCEVUnknown Phis currently being processed by getRangeRef.
-  SmallPtrSet<const PHINode *, 6> PendingPhiRanges;
-
-  /// Mark SCEVUnknown Phis currently being processed by getRangeRefIter.
-  SmallPtrSet<const PHINode *, 6> PendingPhiRangesIter;
 
   // Mark SCEVUnknown Phis currently being processed by isImpliedViaMerge.
   SmallPtrSet<const PHINode *, 6> PendingMerges;

@@ -180,7 +180,7 @@ readDenseTypedElementsAttr(DialectBytecodeReader &reader, ShapedType type,
   size_t packedSize = llvm::divideCeil(numElements, 8);
 
   // Unpack splats to single element 0x01 to match unpacked splat format.
-  if (blob.size() == 1 && blob[0] == ~0x00) {
+  if (blob.size() == 1 && blob[0] == static_cast<char>(~0x00)) {
     rawData.resize(1);
     rawData[0] = 0x01;
     return success();

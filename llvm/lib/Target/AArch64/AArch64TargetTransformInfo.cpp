@@ -5242,7 +5242,7 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
     return false;
 
   if (any_of(Blocks, [](BasicBlock *BB) {
-        return !isa<BranchInst>(BB->getTerminator());
+        return !isa<UncondBrInst, CondBrInst>(BB->getTerminator());
       }))
     return false;
 
@@ -5371,10 +5371,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
   // Try to runtime-unroll loops with early-continues depending on loop-varying
   // loads; this helps with branch-prediction for the early-continues.
-  auto *Term = dyn_cast<BranchInst>(Header->getTerminator());
+  auto *Term = dyn_cast<CondBrInst>(Header->getTerminator());
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
-  if (!Term || !Term->isConditional() || Preds.size() == 1 ||
-      !llvm::is_contained(Preds, Header) ||
+  if (!Term || Preds.size() == 1 || !llvm::is_contained(Preds, Header) ||
       none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
@@ -6530,8 +6529,7 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
     // break point in the code - the end of a block with an unconditional
     // terminator.
     if (I->getOpcode() == Instruction::Or &&
-        isa<BranchInst>(I->getNextNode()) &&
-        cast<BranchInst>(I->getNextNode())->isUnconditional())
+        isa<UncondBrInst>(I->getNextNode()))
       return true;
 
     if (I->getOpcode() == Instruction::Add ||

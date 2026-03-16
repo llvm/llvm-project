@@ -352,6 +352,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
+- Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching 
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported 
@@ -384,6 +385,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 - Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
 - Fixed a crash when evaluating ``__is_bitwise_cloneable`` on invalid record types. (#GH183707)
+- Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
 
 OpenACC Specific Changes
 ------------------------
@@ -480,6 +482,7 @@ clang-format
   constructor initializers after commas, keeping the colon on the same line.
 - Extend ``BreakBinaryOperations`` to accept a structured configuration with
   per-operator break rules and minimum chain length gating via ``PerOperator``.
+- Add ``AllowShortRecordOnASingleLine`` option and set it to ``EmptyAndAttached`` for LLVM style.
 
 libclang
 --------
