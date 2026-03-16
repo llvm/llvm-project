@@ -834,8 +834,8 @@ bool RegBankLegalizeHelper::lowerSplitTo32SExtInReg(MachineInstr &MI) {
 
 bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
   // Split 64-bit find-first-bit operations into 32-bit halves:
-  //   (ffbh hi:lo)             -> umin(ffbh(hi), uaddsat(ffbh(lo), 32))
-  //   (ffbl hi:lo)             -> umin(ffbl(lo), uaddsat(ffbl(hi), 32))
+  //   (ffbh hi:lo)            -> umin(ffbh(hi), uaddsat(ffbh(lo), 32))
+  //   (ffbl hi:lo)            -> umin(ffbl(lo), uaddsat(ffbl(hi), 32))
   //   (ctlz_zero_undef hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
   //   (cttz_zero_undef hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
   unsigned Opc = MI.getOpcode();
