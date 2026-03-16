@@ -76,7 +76,7 @@ protected:
                                              {}, PSE);
 
     VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
-    VPlanTransforms::addMiddleCheck(*Plan, true, false);
+    VPlanTransforms::addMiddleCheck(*Plan, false);
 
     VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
