@@ -4,14 +4,24 @@
 define i64 @bswap_i24(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-LABEL: define i64 @bswap_i24(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[P1:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i8>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i8>, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add <3 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <3 x i8> [[TMP3]] to <3 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <3 x i32> [[TMP4]], <i32 16, i32 8, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[TMP5]])
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[P]], i32 2
+; CHECK-NEXT:    [[T2:%.*]] = load i8, ptr [[G2]], align 1
+; CHECK-NEXT:    [[G12:%.*]] = getelementptr i8, ptr [[P1]], i32 2
+; CHECK-NEXT:    [[T12:%.*]] = load i8, ptr [[G12]], align 1
+; CHECK-NEXT:    [[A2:%.*]] = add i8 [[T2]], [[T12]]
+; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[A2]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[P1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <2 x i32> [[TMP4]], <i32 16, i32 8>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    ret i64 [[TMP9]]
+; CHECK-NEXT:    [[OR01:%.*]] = or disjoint i64 [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[OR012:%.*]] = or disjoint i64 [[OR01]], [[Z2]]
+; CHECK-NEXT:    ret i64 [[OR012]]
 ;
   %g1 = getelementptr i8, ptr %p, i32 1
   %g2 = getelementptr i8, ptr %p, i32 2
