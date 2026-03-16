@@ -1898,7 +1898,6 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const ModuleWP module_wp) {
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
-                                                Stream &feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;
@@ -1912,8 +1911,7 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
   for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
-      if (!module->LoadScriptingResourceInTarget(target, error,
-                                                 feedback_stream)) {
+      if (!module->LoadScriptingResourceInTarget(target, error)) {
         if (error.Fail() && error.AsCString()) {
           error = Status::FromErrorStringWithFormat(
               "unable to load scripting data for "
