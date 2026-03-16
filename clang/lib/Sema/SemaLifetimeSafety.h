@@ -45,6 +45,7 @@ public:
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                           const Expr *MovedExpr,
+                          const llvm::SmallVector<AssignmentPair> AliasList,
                           SourceLocation FreeLoc) override {
     S.Diag(IssueExpr->getExprLoc(),
            MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
@@ -54,6 +55,52 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+
+    for (auto AliasStmt = AliasList.rbegin(); AliasStmt != AliasList.rend();
+         ++AliasStmt) {
+      if (const auto *CurrDeclExpr =
+              llvm::dyn_cast<const DeclRefExpr *>((*AliasStmt).first)) {
+        S.Diag(CurrDeclExpr->getExprLoc(),
+               diag::note_lifetime_safety_note_alias_chain)
+            << (*AliasStmt).second->getNameAsString()
+            << CurrDeclExpr->getDecl()->getNameAsString();
+      } else if (const auto *CurrDeclExpr =
+                     llvm::dyn_cast<const CXXTemporaryObjectExpr *>(
+                         (*AliasStmt).first)) {
+        S.Diag(CurrDeclExpr->getExprLoc(),
+               diag::note_lifetime_safety_note_alias_chain)
+            << (*AliasStmt).second->getNameAsString()
+            << CurrDeclExpr->getConstructor()->getNameAsString() + "()";
+      } else if (const auto *CurrCallExpr =
+                     llvm::dyn_cast<const CallExpr *>((*AliasStmt).first)) {
+        std::string OutStr;
+        llvm::raw_string_ostream OutStream(OutStr);
+        LangOptions Lo;
+        PrintingPolicy Policy(Lo);
+
+        if (const Expr *Callee = CurrCallExpr->getCallee()) {
+          Callee->IgnoreParenCasts()->printPretty(OutStream, nullptr, Policy);
+        }
+
+        OutStream << "(";
+        for (size_t i = 0; i < CurrCallExpr->getNumArgs(); ++i) {
+          const Expr *CurrArg = CurrCallExpr->getArg(i);
+          if (CurrArg) {
+            CurrArg->printPretty(OutStream, nullptr, Policy);
+          }
+
+          if (i < CurrCallExpr->getNumArgs() - 1) {
+            OutStream << ", ";
+          }
+        }
+        OutStream << ")";
+
+        S.Diag(CurrCallExpr->getExprLoc(),
+               diag::note_lifetime_safety_note_alias_chain)
+            << (*AliasStmt).second->getNameAsString() << OutStream.str();
+      }
+    }
+
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }

@@ -222,19 +222,22 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 
 void test_get_on_temporary_pointer() {
   const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{object whose reference is captured does not live long enough}}.
-                                                   // expected-note@-1 {{destroyed here}}
+                                                   // expected-note@-1 {{destroyed here}}.
+                                                   // expected-note@-2 {{variable `s_ref` is now an alias of `ReturnsSelf().get()`}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
   const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{object whose reference is captured does not live long enough}}.
-                                                   // expected-note@-1 {{destroyed here}}
+                                                   // expected-note@-1 {{destroyed here}}.
+                                                   // expected-note@-2 {{variable `s_ref` is now an alias of `ReturnsSelf().get()`}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
   View sv = ViewProvider{1}.getView();      // expected-warning {{object whose reference is captured does not live long enough}}.
-                                            // expected-note@-1 {{destroyed here}}
+                                            // expected-note@-1 {{destroyed here}}.
+                                            // expected-note@-2 {{variable `sv` is now an alias of `ViewProvider{1}.getView()`}}
   (void)sv;                                 // expected-note {{later used here}}
 }
 

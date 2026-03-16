@@ -55,6 +55,13 @@ using AnnotationTarget =
     llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *>;
 using EscapingTarget = LifetimeSafetySemaHelper::EscapingTarget;
 
+struct AliasAssignmentSearchResult {
+  const llvm::SmallVector<AssignmentPair> Payload;
+  bool SearchComplete;
+  const ValueDecl *LastDestDecl;
+  std::optional<OriginID> LastOrigin;
+};
+
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
@@ -67,6 +74,7 @@ private:
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
   const Decl *FD;
+  AnalysisDeclContext &ADC;
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
@@ -89,7 +97,7 @@ public:
                   LifetimeSafetySemaHelper *SemaHelper)
       : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
-        AST(ADC.getASTContext()), FD(ADC.getDecl()) {
+        AST(ADC.getASTContext()), FD(ADC.getDecl()), ADC(ADC) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -224,6 +232,194 @@ public:
     }
   }
 
+  std::optional<llvm::SmallVector<AssignmentPair>>
+  getAliasListInMultiBlock(const CFGBlock *StartBlock, const LoanID EndLoanID,
+                           OriginID *StartOID) {
+    const ValueDecl *LastDestDecl = nullptr;
+    llvm::SmallVector<const CFGBlock *> PendingBlocks;
+    std::optional<AssignmentPair> StartStmt = std::nullopt;
+    std::optional<AssignmentPair> EndStmt = std::nullopt;
+    std::optional<OriginID> LastOriginID = std::nullopt;
+    llvm::SmallPtrSet<const CFGBlock *, 32> VistedBlocks;
+    llvm::DenseMap<AssignmentPair, AssignmentPair> VistedExprs;
+
+    const auto AliasStmtFilter = [&VistedExprs](const AssignmentPair StartStmt,
+                                                const AssignmentPair EndStmt) {
+      llvm::SmallVector<AssignmentPair> AliasStmts;
+      for (auto Stmt = StartStmt; Stmt != EndStmt;
+           Stmt = VistedExprs.at(Stmt)) {
+        AliasStmts.push_back(Stmt);
+      }
+      AliasStmts.push_back(EndStmt);
+      return AliasStmts;
+    };
+
+    PendingBlocks.push_back(StartBlock);
+
+    for (size_t i = 0; i < PendingBlocks.size(); ++i) {
+      const CFGBlock *CurrBlock = PendingBlocks[i];
+
+      const auto [BlockAliasList, Success, CurrLastDestDecl, CurrLastOriginID] =
+          getAliasListCore(CurrBlock, EndLoanID, StartOID, LastDestDecl,
+                           LastOriginID);
+      if (CurrLastDestDecl)
+        LastDestDecl = CurrLastDestDecl;
+      if (CurrLastOriginID.has_value())
+        LastOriginID = CurrLastOriginID;
+
+      if (!BlockAliasList.empty()) {
+        if (VistedExprs.empty()) {
+          StartStmt = BlockAliasList[0];
+        }
+
+        for (size_t i = 0; i < BlockAliasList.size() - 1; ++i) {
+          VistedExprs.insert({BlockAliasList[i], BlockAliasList[i + 1]});
+        }
+
+        if (EndStmt.has_value())
+          VistedExprs.insert({EndStmt.value(), BlockAliasList[0]});
+
+        EndStmt = BlockAliasList[BlockAliasList.size() - 1];
+      }
+
+      if (Success && StartStmt.has_value() && EndStmt.has_value()) {
+        return AliasStmtFilter(StartStmt.value(), EndStmt.value());
+      }
+
+      for (const auto Block : CurrBlock->preds()) {
+        if (Block && VistedBlocks.insert(Block).second)
+          PendingBlocks.push_back(Block);
+      }
+
+      if (VistedBlocks.size() >= 32 && StartStmt.has_value() &&
+          EndStmt.has_value()) {
+        return AliasStmtFilter(StartStmt.value(), EndStmt.value());
+      }
+    }
+
+    if (StartStmt.has_value() && EndStmt.has_value()) {
+      return AliasStmtFilter(StartStmt.value(), EndStmt.value());
+    }
+
+    return std::nullopt;
+  }
+
+  std::optional<OriginSrcExpr> GetPureSrcExpr(const Expr *TargetExpr) {
+    if (!TargetExpr)
+      return std::nullopt;
+    const Expr *SExpr = TargetExpr->IgnoreParenCasts();
+    if (!SExpr)
+      return std::nullopt;
+
+    if (const auto *SDRExpr = llvm::dyn_cast<DeclRefExpr>(SExpr)) {
+      return SDRExpr;
+    }
+    if (const auto *STMExpr = llvm::dyn_cast<CXXTemporaryObjectExpr>(SExpr)) {
+      return STMExpr;
+    }
+    if (const auto *SCExpr = llvm::dyn_cast<CallExpr>(SExpr)) {
+      return SCExpr;
+    }
+
+    if (const auto *SCCExpr = llvm::dyn_cast<CXXConstructExpr>(SExpr)) {
+      if (SCCExpr->getNumArgs() > 0)
+        return GetPureSrcExpr(SCCExpr->getArg(0));
+    }
+    if (const auto *SUOExpr = llvm::dyn_cast<UnaryOperator>(SExpr)) {
+      return GetPureSrcExpr(SUOExpr->getSubExpr());
+    }
+    if (const auto *SCBExpr = llvm::dyn_cast<CXXBindTemporaryExpr>(SExpr)) {
+      return GetPureSrcExpr(SCBExpr->getSubExpr());
+    }
+
+    return std::nullopt;
+  }
+
+  /// Retrieves a list of assignment chains for use-after-scope analysis.
+  ///
+  /// To help users understand the data flow, we track where the problematic
+  /// address originated.
+  AliasAssignmentSearchResult
+  getAliasListCore(const CFGBlock *Block, const LoanID EndLoanID,
+                   OriginID *TargetOID, const ValueDecl *LastDestDecl = nullptr,
+                   const std::optional<OriginID> LastOriginID = std::nullopt) {
+    llvm::SmallVector<AssignmentPair> AliasStmts;
+    const ValueDecl *DestDecl = LastDestDecl;
+    const auto Facts = FactMgr.getFacts(Block);
+    bool FetchLoan = false;
+    auto IssueOriginID = LastOriginID;
+
+    for (auto F = Facts.rbegin(); F != Facts.rend(); ++F) {
+      if (const auto *OFF = (*F)->getAs<OriginFlowFact>()) {
+        if (IssueOriginID.has_value() &&
+            OFF->getDestOriginID() == IssueOriginID.value()) {
+          FetchLoan = true;
+        }
+        if (OFF->getDestOriginID() == *TargetOID) {
+          const auto HeldLoans =
+              LoanPropagation.getLoans(OFF->getSrcOriginID(), OFF);
+
+          if (HeldLoans.contains(EndLoanID)) {
+            const auto TargetOrigin =
+                FactMgr.getOriginMgr().getOrigin(OFF->getDestOriginID());
+
+            if (DestDecl == nullptr) {
+              if (const ValueDecl *DDecl = TargetOrigin.getDecl()) {
+                DestDecl = DDecl;
+              }
+            } else {
+              auto SExpr = GetPureSrcExpr(TargetOrigin.getExpr());
+              if (!SExpr.has_value()) {
+                const auto SrcOrigin =
+                    FactMgr.getOriginMgr().getOrigin(OFF->getSrcOriginID());
+                SExpr = GetPureSrcExpr(SrcOrigin.getExpr());
+              }
+
+              if (SExpr.has_value()) {
+                AliasStmts.push_back({SExpr.value(), DestDecl});
+                DestDecl = nullptr;
+              }
+            }
+            *TargetOID = OFF->getSrcOriginID();
+          }
+        }
+      } else if (const auto *IF = (*F)->getAs<IssueFact>()) {
+        if (IF->getLoanID() == EndLoanID) {
+          IssueOriginID = IF->getOriginID();
+        }
+      }
+
+      if (FetchLoan) {
+        return {AliasStmts, true, DestDecl, IssueOriginID};
+      }
+    }
+    return {AliasStmts, false, DestDecl, IssueOriginID};
+  }
+
+  std::optional<llvm::SmallVector<AssignmentPair>>
+  getAliasList(const UseFact *UF, const LoanID End, const bool InOneBlock) {
+    const CFGBlock *IssueBlock =
+        ADC.getCFGStmtMap()->getBlock(UF->getUseExpr());
+    assert(IssueBlock && "Searching CFGBlock failed");
+
+    for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin()) {
+      auto TargetOID = Cur->getOuterOriginID();
+      if (InOneBlock) {
+        AliasAssignmentSearchResult Result =
+            getAliasListCore(IssueBlock, End, &TargetOID);
+        if (!Result.Payload.empty())
+          return Result.Payload;
+      } else {
+        auto Result = getAliasListInMultiBlock(IssueBlock, End, &TargetOID);
+        if (Result.has_value())
+          return Result.value();
+      }
+    }
+
+    return std::nullopt;
+  }
+
   void issuePendingWarnings() {
     if (!SemaHelper)
       return;
@@ -248,10 +444,20 @@ public:
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
 
-        } else
+        } else {
           // Scope-based expiry (use-after-scope).
+          const CFGStmtMap *CurrCFGStmtMap = ADC.getCFGStmtMap();
+          const auto AliasExprs =
+              getAliasList(UF, LID,
+                           CurrCFGStmtMap->getBlock(UF->getUseExpr()) ==
+                               CurrCFGStmtMap->getBlock(IssueExpr));
+          if (!AliasExprs.has_value()) {
+            llvm::dbgs() << "Search variable assignment chain failed\n";
+          }
+
           SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
-                                         ExpiryLoc);
+                                         AliasExprs.value_or({}), ExpiryLoc);
+        }
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
