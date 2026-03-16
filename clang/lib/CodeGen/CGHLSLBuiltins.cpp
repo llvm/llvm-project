@@ -1134,6 +1134,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       auto *MatTy = QTy1->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
+      assert(N == Rows && "vector length must match matrix row count");
       if (IsRowMajor)
         Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
@@ -1142,6 +1143,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       auto *MatTy = QTy0->castAs<ConstantMatrixType>();
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
+      unsigned N = QTy1->castAs<VectorType>()->getNumElements();
+      assert(N == Cols && "vector length must match matrix column count");
       if (IsRowMajor)
         Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
@@ -1153,6 +1156,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows1 = MatTy1->getNumRows();
     unsigned Cols0 = MatTy0->getNumColumns();
     unsigned Cols1 = MatTy1->getNumColumns();
+    assert(Cols0 == Rows1 &&
+           "inner matrix dimensions must match for multiplication");
     if (IsRowMajor) {
       Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
       Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
