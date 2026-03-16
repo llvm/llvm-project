@@ -25,13 +25,6 @@
 
 namespace llvm {
 
-template <> struct format_provider<clang::ssaf::AnalysisName> {
-  static void format(const clang::ssaf::AnalysisName &Val, raw_ostream &OS,
-                     StringRef Style) {
-    OS << Val;
-  }
-};
-
 template <> struct format_provider<clang::ssaf::EntityId> {
   static void format(const clang::ssaf::EntityId &Val, raw_ostream &OS,
                      StringRef Style) {
@@ -83,6 +76,13 @@ template <> struct format_provider<clang::ssaf::EntityName> {
 
 template <> struct format_provider<clang::ssaf::SummaryName> {
   static void format(const clang::ssaf::SummaryName &Val, raw_ostream &OS,
+                     StringRef Style) {
+    OS << Val;
+  }
+};
+
+template <> struct format_provider<clang::ssaf::AnalysisName> {
+  static void format(const clang::ssaf::AnalysisName &Val, raw_ostream &OS,
                      StringRef Style) {
     OS << Val;
   }
