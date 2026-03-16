@@ -2,8 +2,6 @@
 ; RUN: opt < %s -S -passes=loop-unroll | FileCheck %s
 ; Checks that loops with expensive trip counts are unrolled when the loop.unroll.enable metadata is present.
 
-%struct.ArgVec = type { [4 x float] }
-
 ; Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 define dso_local void @complex_loop_unroll(i64 noundef %input_offset, i64 noundef %step, i64 noundef %n) {
 ; CHECK-LABEL: define dso_local void @complex_loop_unroll(
