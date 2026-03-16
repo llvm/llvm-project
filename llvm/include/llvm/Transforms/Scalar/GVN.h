@@ -77,6 +77,7 @@ class GVNLegacyPass;
 /// additional setters and then pass it to GVN.
 struct GVNOptions {
   std::optional<bool> AllowPRE;
+  std::optional<bool> AllowScalarPRE;
   std::optional<bool> AllowLoadPRE;
   std::optional<bool> AllowLoadInLoopPRE;
   std::optional<bool> AllowLoadPRESplitBackedge;
@@ -88,6 +89,12 @@ struct GVNOptions {
   /// Enables or disables PRE in GVN.
   GVNOptions &setPRE(bool PRE) {
     AllowPRE = PRE;
+    return *this;
+  }
+
+  /// Enables or disables PRE of scalars in GVN.
+  GVNOptions &setScalarPRE(bool ScalarPRE) {
+    AllowScalarPRE = ScalarPRE;
     return *this;
   }
 
@@ -149,6 +156,7 @@ public:
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
   LLVM_ABI bool isPREEnabled() const;
+  LLVM_ABI bool isScalarPREEnabled() const;
   LLVM_ABI bool isLoadPREEnabled() const;
   LLVM_ABI bool isLoadInLoopPREEnabled() const;
   LLVM_ABI bool isLoadPRESplitBackedgeEnabled() const;
@@ -408,6 +416,7 @@ private:
 };
 
 /// Create a legacy GVN pass.
+LLVM_ABI FunctionPass *createGVNPass(bool ScalarPRE);
 LLVM_ABI FunctionPass *createGVNPass();
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
