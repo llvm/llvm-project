@@ -51,6 +51,7 @@ def join_per_line_map(m):
         joined_lines_list.append("\n".join(sorted_lines_map[line]))
     return "\n".join(joined_lines_list)
 
+
 cm.check_args(sys.argv)
 srcdir = cm.set_source(sys.argv[1])
 with open(srcdir, "r", encoding="utf-8") as f:
