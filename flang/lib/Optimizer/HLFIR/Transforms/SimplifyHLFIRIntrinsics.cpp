@@ -802,6 +802,7 @@ private:
     this->checkReductions(currentValue);
     llvm::SmallVector<mlir::Value> result;
     fir::FirOpBuilder &builder = this->builder;
+    builder.setFPMaxminBehavior(fpMaxminBehavior);
     mlir::Location loc = this->loc;
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
@@ -893,45 +894,10 @@ private:
     assert(!useIsFirst() &&
            "unordered max/min reduction must not use first predicate");
 
-    if (mlir::isa<fir::CharacterType>(this->getSourceElementType()))
-      TODO(loc, "max/minval with CHARACTER type");
-
-    if (auto intType =
-            mlir::dyn_cast<mlir::IntegerType>(this->getSourceElementType())) {
-      if (intType.isUnsigned())
-        TODO(loc, "max/minval with UNSIGNED type");
-
-      if constexpr (isMax)
-        return mlir::arith::MaxSIOp::create(builder, loc, elementValue,
-                                            currentMinMax);
-      else
-        return mlir::arith::MinSIOp::create(builder, loc, elementValue,
-                                            currentMinMax);
-    }
-
-    if (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Extremum) {
-      if constexpr (isMax)
-        return mlir::arith::MaximumFOp::create(builder, loc, elementValue,
-                                               currentMinMax);
-      else
-        return mlir::arith::MinimumFOp::create(builder, loc, elementValue,
-                                               currentMinMax);
-    }
-
-    if (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::ExtremeNum ||
-        (fpMaxminBehavior == Fortran::common::FPMaxminBehavior::Portable &&
-         mlir::arith::bitEnumContainsAll(
-             this->getFastMath(), mlir::arith::FastMathFlags::nnan |
-                                      mlir::arith::FastMathFlags::nsz))) {
-      if constexpr (isMax)
-        return mlir::arith::MaxNumFOp::create(builder, loc, elementValue,
-                                              currentMinMax);
-      else
-        return mlir::arith::MinNumFOp::create(builder, loc, elementValue,
-                                              currentMinMax);
-    }
-
-    llvm_unreachable("unhandled unordered max/min reduction");
+    if constexpr (isMax)
+      return fir::genMax(builder, loc, {elementValue, currentMinMax});
+    else
+      return fir::genMin(builder, loc, {elementValue, currentMinMax});
   }
 
   std::size_t getNumReductions() const { return useIsFirst() ? 2 : 1; }
