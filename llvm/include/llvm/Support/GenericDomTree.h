@@ -388,7 +388,10 @@ private:
       assert(BlockNumberEpoch ==
                  GraphTraits<ParentPtr>::getNumberEpoch(Parent) &&
              "dominator tree used with outdated block numbers");
-      return BB ? GraphTraits<const NodeT *>::getNumber(BB) + 1 : 0;
+      assert((IsPostDom || BB) && "pre-dominator tree block must be non-null");
+      if (IsPostDom && !BB)
+        return 0; // BB may only be nullptr for post-dominator tree
+      return GraphTraits<const NodeT *>::getNumber(BB) + 1;
     } else {
       if (auto It = NodeNumberMap.find(BB); It != NodeNumberMap.end())
         return It->second;

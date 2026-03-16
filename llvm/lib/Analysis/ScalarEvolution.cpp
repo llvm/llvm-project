@@ -7672,7 +7672,7 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
     // reachable. Such instructions don't matter, and they aren't required
     // to obey basic rules for definitions dominating uses which this
     // analysis depends on.
-    if (!DT.isReachableFromEntry(I->getParent()))
+    if (!I->getParent() || !DT.isReachableFromEntry(I->getParent()))
       return getUnknown(PoisonValue::get(V->getType()));
   } else if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
     return getConstant(CI);
