@@ -286,6 +286,9 @@ Improvements to Clang's diagnostics
   when parsing alias declarations involving a token-split ``>>`` sequence
   (for example, ``using A = X<int>>;``). (#GH184425)
 
+- Fixed incorrect ``implicitly deleted`` diagnostic for explicitly deleted
+  candidate function. (#GH185693)
+
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
