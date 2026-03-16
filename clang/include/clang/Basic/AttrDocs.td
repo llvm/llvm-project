@@ -2686,8 +2686,10 @@ path of execution, but that can be confusing:
 .. code-block:: c++
 
   if (b) {
-    [[unlikely]] --b; // In the path of execution,
-                      // this branch is considered unlikely.
+    [[unlikely]] --b; // Per the standard this is in the path of
+                      // execution, so this branch should be considered
+                      // unlikely. However, Clang ignores the attribute
+                      // here since it is not on the substatement.
   }
 
   if (b) {

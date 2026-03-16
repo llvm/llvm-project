@@ -94,3 +94,36 @@ func.func @test_host_data_hoisting_ref_to_box() {
   return
 }
 
+// -----
+
+// Test single use_device used by multiple host_data: one use_device is created
+// per host_data, each inserted right before its host_data.
+func.func @multiple_host_data_(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "arr"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFmultiple_host_dataEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %2 = fir.rebox %1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  %3 = acc.use_device var(%2 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "arr"}
+  acc.host_data dataOperands(%3 : !fir.box<!fir.array<?xf32>>) {
+    %4 = fir.dummy_scope : !fir.dscope
+    %5 = fir.declare %3 dummy_scope %4 arg 1 {uniq_name = "_QFmultiple_host_dataEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+    acc.terminator
+  }
+  acc.host_data dataOperands(%3 : !fir.box<!fir.array<?xf32>>) {
+    %4 = fir.dummy_scope : !fir.dscope
+    %5 = fir.declare %3 dummy_scope %4 arg 1 {uniq_name = "_QFmultiple_host_dataEarr"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+    acc.terminator
+  }
+  return
+}
+// CHECK-LABEL: func.func @multiple_host_data_
+// CHECK-SAME: %arg0: !fir.box<!fir.array<?xf32>>
+// CHECK: fir.box_addr %2
+// CHECK: fir.box_addr %2
+// CHECK: %[[USE_DEVICE_1:.*]] = acc.use_device varPtr({{.*}} : !fir.ref<!fir.array<?xf32>>) varType(!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr"}
+// CHECK: acc.host_data dataOperands(%[[USE_DEVICE_1]] : !fir.ref<!fir.array<?xf32>>) {
+// CHECK: acc.terminator
+// CHECK: }
+// CHECK: %[[USE_DEVICE_2:.*]] = acc.use_device varPtr({{.*}} : !fir.ref<!fir.array<?xf32>>) varType(!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr"}
+// CHECK: acc.host_data dataOperands(%[[USE_DEVICE_2]] : !fir.ref<!fir.array<?xf32>>) {
+// CHECK: acc.terminator
+// CHECK: }

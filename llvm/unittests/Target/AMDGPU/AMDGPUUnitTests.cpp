@@ -168,6 +168,12 @@ static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
         << CPUName << " dynamic VGPR block size " << DynamicVGPRBlockSize
         << ":\nOcc    MinVGPR        MaxVGPR\n"
         << Table.str() << '\n';
+    // In dVGPR mode, max VGPR limits do not depend on occupancy:
+    EXPECT_EQ(ST.getMaxNumVGPRs(1, DynamicVGPRBlockSize),
+              ST.getMaxNumVGPRs(ST.getMaxWavesPerEU(), DynamicVGPRBlockSize));
+    EXPECT_EQ(ST.getMinNumVGPRs(1, DynamicVGPRBlockSize), 0u);
+    EXPECT_EQ(ST.getMinNumVGPRs(ST.getMaxWavesPerEU(), DynamicVGPRBlockSize),
+              0u);
   };
 
   testWithBlockSize(16);

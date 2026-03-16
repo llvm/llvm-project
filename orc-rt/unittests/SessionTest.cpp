@@ -30,42 +30,40 @@ class MockService : public Service {
 public:
   enum class Op { Detach, Shutdown };
 
-  static Error alwaysSucceed(Op) { return Error::success(); }
+  static void noop(Op) {}
 
   MockService(std::optional<size_t> &DetachOpIdx,
               std::optional<size_t> &ShutdownOpIdx, size_t &OpIdx,
-              move_only_function<Error(Op)> GenResult = alwaysSucceed)
+              move_only_function<void(Op)> GenResult = noop)
       : DetachOpIdx(DetachOpIdx), ShutdownOpIdx(ShutdownOpIdx), OpIdx(OpIdx),
         GenResult(std::move(GenResult)) {}
 
   void onDetach(OnCompleteFn OnComplete) override {
     DetachOpIdx = OpIdx++;
-    OnComplete(GenResult(Op::Detach));
+    GenResult(Op::Detach);
+    OnComplete();
   }
 
   void onShutdown(OnCompleteFn OnComplete) override {
     ShutdownOpIdx = OpIdx++;
-    OnComplete(GenResult(Op::Shutdown));
+    GenResult(Op::Shutdown);
+    OnComplete();
   }
 
 private:
   std::optional<size_t> &DetachOpIdx;
   std::optional<size_t> &ShutdownOpIdx;
   size_t &OpIdx;
-  move_only_function<Error(Op)> GenResult;
+  move_only_function<void(Op)> GenResult;
 };
 
 class ConfigurableService : public Service {
 public:
   ConfigurableService(int ConstructorOption) {}
 
-  void onDetach(OnCompleteFn OnComplete) override {
-    OnComplete(Error::success());
-  }
+  void onDetach(OnCompleteFn OnComplete) override { OnComplete(); }
 
-  void onShutdown(OnCompleteFn OnComplete) override {
-    OnComplete(Error::success());
-  }
+  void onShutdown(OnCompleteFn OnComplete) override { OnComplete(); }
 
   void doMoreConfig(int) noexcept {}
 };
@@ -387,6 +385,35 @@ TEST(SessionTest, CreateServiceAndUseRef) {
   Session S(std::make_unique<NoDispatcher>(), noErrors);
   auto &CS = S.createService<ConfigurableService>(42);
   CS.doMoreConfig(1);
+}
+
+TEST(SessionTest, ControllerInterfaceContainsSessionByDefault) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  ASSERT_TRUE(S.controllerInterface()->count("orc_rt_SessionInstance"));
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_SessionInstance"),
+            static_cast<void *>(&S));
+}
+
+TEST(SessionTest, ControllerInterfaceWithRef) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  int X = 0, Y = 0;
+  S.controllerInterface().with_ref([&](Session::SymbolMap &Syms) {
+    Syms["orc_rt_A"] = &X;
+    Syms["orc_rt_B"] = &Y;
+  });
+
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_A"), &X);
+  EXPECT_EQ(S.controllerInterface()->at("orc_rt_B"), &Y);
+}
+
+TEST(SessionTest, ControllerInterfaceConstAccess) {
+  Session S(std::make_unique<NoDispatcher>(), noErrors);
+  int X = 0;
+  S.controllerInterface()->emplace("orc_rt_X", &X);
+
+  const Session &CS = S;
+  ASSERT_TRUE(CS.controllerInterface()->count("orc_rt_X"));
+  EXPECT_EQ(CS.controllerInterface()->at("orc_rt_X"), &X);
 }
 
 TEST(ControllerAccessTest, Basics) {

@@ -14,9 +14,9 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/EntityLinker.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/TUSummaryEncoding.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -133,14 +133,11 @@ SerializationFormat *getFormatForExtension(llvm::StringRef Extension) {
     return It->second.get();
   }
 
-  // SerializationFormats are uppercase while file extensions are lowercase.
-  std::string CapitalizedExtension = Extension.upper();
-
-  if (!isFormatRegistered(CapitalizedExtension)) {
+  if (!isFormatRegistered(Extension)) {
     return nullptr;
   }
 
-  auto Format = makeFormat(CapitalizedExtension);
+  auto Format = makeFormat(Extension);
   SerializationFormat *Result = Format.get();
   assert(Result);
 
@@ -303,8 +300,6 @@ int main(int argc, const char **argv) {
   cl::SetVersionPrinter(printVersion);
   // Parse command-line arguments and exit with an error if they are invalid.
   cl::ParseCommandLineOptions(argc, argv, "SSAF Linker\n");
-
-  initializeJSONFormat();
 
   llvm::TimerGroup LinkerTimers(ToolName, "SSAF Linker");
   LinkerInput LI;

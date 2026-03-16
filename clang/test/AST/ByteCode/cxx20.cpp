@@ -1304,3 +1304,30 @@ namespace PointerCmp {
   static_assert((void*)(&a.i + 1) != (void*)(&a.i[1])); // expected-error {{static assertion failed}}
   static_assert((void*)(&a.i[2] + 1) == (void*)(&a.i[3]));
 }
+
+namespace ExpandOnOPTEPointers {
+
+  template <class _BidirectionalIterator>
+  constexpr void inplace_merge(_BidirectionalIterator __first,
+                               _BidirectionalIterator __middle) {
+
+    if (__first != __middle)
+      ++__first;
+  }
+  template <class> struct bidirectional_iterator {
+    int *it_;
+    constexpr void operator++() { ++it_; }
+
+    friend constexpr bool operator!=(bidirectional_iterator x,
+                                     bidirectional_iterator y) {
+      return x.it_ != y.it_;
+    }
+  };
+  constexpr bool test() {
+    int *ia = new int[0];
+    inplace_merge(bidirectional_iterator<int *>(ia), bidirectional_iterator<int *>(ia + 0));
+    delete[] ia;
+    return true;
+  }
+  static_assert(test());
+}

@@ -1631,6 +1631,9 @@ def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
 // Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
 def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
 
+def riscv_waddu : RVSDNode<"WADDU", SDTIntBinHiLoOp, [SDNPCommutative]>;
+def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
+
 def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
 def SDT_RISCVWideningShiftLeft : SDTypeProfile<2, 2, [SDTCisVT<0, i32>,

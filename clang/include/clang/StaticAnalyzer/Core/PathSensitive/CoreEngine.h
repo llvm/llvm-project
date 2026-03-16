@@ -306,7 +306,6 @@ public:
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
 
-  const NodeBuilderContext &getContext() const { return C; }
   bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {

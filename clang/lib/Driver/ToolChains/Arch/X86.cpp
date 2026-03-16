@@ -265,13 +265,13 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       if (IsNegative) {
         EGPROpt = EGPRFeature::Disabled;
         Features.insert(Features.end(),
-                        {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
+                        {"-egpr", "-ndd", "-ccmp", "-nf", "-zu", "-jmpabs"});
         if (!Triple.isOSWindows())
           Features.insert(Features.end(), {"-push2pop2", "-ppx"});
       } else {
         EGPROpt = EGPRFeature::Enabled;
         Features.insert(Features.end(),
-                        {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
+                        {"+egpr", "+ndd", "+ccmp", "+nf", "+zu", "+jmpabs"});
         if (!Triple.isOSWindows())
           Features.insert(Features.end(), {"+push2pop2", "+ppx"});
 
@@ -291,7 +291,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       for (StringRef Value : A->getValues()) {
         if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&
             Value != "ndd" && Value != "ccmp" && Value != "nf" &&
-            Value != "cf" && Value != "zu")
+            Value != "cf" && Value != "zu" && Value != "jmpabs")
           D.Diag(clang::diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Value;
 

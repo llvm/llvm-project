@@ -2,10 +2,11 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefix=VARIANT0 %s
 ; RUN: llc -mtriple=amdgcn -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT1 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=VARIANT2 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=VARIANT2-GISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT3 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefix=VARIANT4 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT5 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefix=VARIANT6 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck --check-prefix=VARIANT6 %s
 
 define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT0-LABEL: test_barrier:
@@ -69,6 +70,28 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT2-NEXT:    s_waitcnt vmcnt(0)
 ; VARIANT2-NEXT:    global_store_dword v2, v0, s[0:1]
 ; VARIANT2-NEXT:    s_endpgm
+;
+; VARIANT2-GISEL-LABEL: test_barrier:
+; VARIANT2-GISEL:       ; %bb.0: ; %entry
+; VARIANT2-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VARIANT2-GISEL-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; VARIANT2-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 2, v0
+; VARIANT2-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; VARIANT2-GISEL-NEXT:    global_store_dword v4, v0, s[0:1]
+; VARIANT2-GISEL-NEXT:    s_add_i32 s2, s2, -1
+; VARIANT2-GISEL-NEXT:    v_sub_u32_e32 v0, s2, v0
+; VARIANT2-GISEL-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VARIANT2-GISEL-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; VARIANT2-GISEL-NEXT:    v_mov_b32_e32 v3, s1
+; VARIANT2-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; VARIANT2-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; VARIANT2-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; VARIANT2-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; VARIANT2-GISEL-NEXT:    s_barrier
+; VARIANT2-GISEL-NEXT:    global_load_dword v0, v[0:1], off
+; VARIANT2-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; VARIANT2-GISEL-NEXT:    global_store_dword v4, v0, s[0:1]
+; VARIANT2-GISEL-NEXT:    s_endpgm
 ;
 ; VARIANT3-LABEL: test_barrier:
 ; VARIANT3:       ; %bb.0: ; %entry

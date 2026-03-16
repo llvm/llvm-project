@@ -636,13 +636,15 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 }
 
 std::string codegen::getCPUStr() {
+  std::string MCPU = getMCPU();
+
   // If user asked for the 'native' CPU, autodetect here. If autodection fails,
   // this will set the CPU to an empty string which tells the target to
   // pick a basic default.
-  if (getMCPU() == "native")
+  if (MCPU == "native")
     return std::string(sys::getHostCPUName());
 
-  return getMCPU();
+  return MCPU;
 }
 
 std::string codegen::getFeaturesStr() {

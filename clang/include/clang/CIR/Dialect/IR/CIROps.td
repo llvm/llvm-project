@@ -5706,7 +5706,7 @@ def FPClassTestEnum : CIR_I32EnumAttr<"FPClassTest", "floating-point class test 
   let cppNamespace = "::cir";
 }
 
-def CIR_IsFPClassOp : CIR_Op<"is_fp_class"> {
+def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let summary = "Corresponding to the `__builtin_fpclassify` builtin function in clang";
 
   let description = [{

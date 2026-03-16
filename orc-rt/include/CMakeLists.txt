@@ -11,6 +11,7 @@ set(ORC_RT_HEADERS
     orc-rt/ExecutorAddress.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
+    orc-rt/LockedAccess.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/QueueingTaskDispatcher.h

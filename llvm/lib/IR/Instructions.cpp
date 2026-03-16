@@ -3809,22 +3809,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
   llvm_unreachable("Unknown predicate!");
 }
 
-bool CmpInst::isUnsigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_ULE: case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: return true;
-  }
-}
-
-bool CmpInst::isSigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_SLE: case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: return true;
-  }
-}
-
 bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,
                        ICmpInst::Predicate Pred) {
   assert(ICmpInst::isIntPredicate(Pred) && "Only for integer predicates!");

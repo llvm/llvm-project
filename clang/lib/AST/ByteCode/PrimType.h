@@ -24,7 +24,6 @@ namespace interp {
 class Pointer;
 class Boolean;
 class Floating;
-class FunctionPointer;
 class MemberPointer;
 class FixedPoint;
 template <bool Signed> class IntegralAP;

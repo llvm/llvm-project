@@ -166,6 +166,7 @@ Changes to the RISC-V Backend
 * `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 * Adds experimental assembler support for the 'Zvzip` (RISC-V Vector
   Reordering Structured Data) extension.
+* `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

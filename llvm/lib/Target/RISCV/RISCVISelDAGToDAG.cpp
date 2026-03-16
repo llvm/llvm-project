@@ -1842,8 +1842,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
-  case RISCVISD::WMULSU: {
-    // Custom select (S/U)MUL_LOHI to WMUL(U) for RV32P.
+  case RISCVISD::WMULSU:
+  case RISCVISD::WADDU:
+  case RISCVISD::WSUBU: {
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
            "Unexpected opcode");
 
@@ -1860,12 +1861,18 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     case RISCVISD::WMULSU:
       Opc = RISCV::WMULSU;
       break;
+    case RISCVISD::WADDU:
+      Opc = RISCV::WADDU;
+      break;
+    case RISCVISD::WSUBU:
+      Opc = RISCV::WSUBU;
+      break;
     }
 
-    SDNode *WMUL = CurDAG->getMachineNode(
+    SDNode *Result = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
 
-    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(WMUL, 0));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(Result, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
     CurDAG->RemoveDeadNode(Node);

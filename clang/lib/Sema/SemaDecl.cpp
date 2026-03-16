@@ -15138,7 +15138,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // If this variable must be emitted, add it as an initializer for the current
   // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty() &&
+      (ModuleScopes.back().Module->isHeaderLikeModule() ||
+       // For named modules, we may only emit non discardable variables.
+       !isDiscardableGVALinkage(Context.GetGVALinkageForVariable(var))))
     Context.addModuleInitializer(ModuleScopes.back().Module, var);
 
   // Build the bindings if this is a structured binding declaration.

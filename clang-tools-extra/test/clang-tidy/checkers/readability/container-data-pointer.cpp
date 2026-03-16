@@ -4,14 +4,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-
-namespace std {
-template <typename T>
-struct unique_ptr {
-  T &operator*() const;
-  T *operator->() const;
-};
-}
+#include <memory>
 
 template <typename T>
 void f(const T *);

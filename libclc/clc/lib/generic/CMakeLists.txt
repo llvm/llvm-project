@@ -163,6 +163,7 @@ libclc_configure_source_list(CLC_GENERIC_SOURCES
   math/clc_tanpi.cl
   math/clc_tgamma.cl
   math/clc_trunc.cl
+  mem_fence/clc_mem_fence.cl
   misc/clc_shuffle.cl
   misc/clc_shuffle2.cl
   relational/clc_all.cl

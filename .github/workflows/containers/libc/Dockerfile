@@ -19,8 +19,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# TODO(boomanaiden154): Remove the LLVM 21 installation once we are no longer
+# using it in the libc fullbuild tests workflow.
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
+    sudo ./llvm.sh 23 && \
     sudo ./llvm.sh 21 && \
     rm llvm.sh
     

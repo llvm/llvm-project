@@ -1686,7 +1686,8 @@ bool LoongArch::relaxOnce(int pass) const {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
-      changed |= relax(ctx, *sec);
+      if (sec->relaxAux)
+        changed |= relax(ctx, *sec);
   }
   return changed;
 }
@@ -1698,6 +1699,8 @@ void LoongArch::finalizeRelax(int passes) const {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (!sec->relaxAux)
+        continue;
       RelaxAux &aux = *sec->relaxAux;
       if (!aux.relocDeltas)
         continue;

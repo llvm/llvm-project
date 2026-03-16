@@ -354,7 +354,7 @@ TEST_F(PlatformDarwinLocateTest,
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/_import.py").str();
   std::string expected = llvm::formatv(
-      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "the symbol file '{0}' contains a debug script. However, its "
       "name conflicts with a keyword and as such cannot be loaded. If you "
       "intend to have this script loaded, please rename '{1}' to '{2}' and "
       "retry.\n",
@@ -394,7 +394,7 @@ TEST_F(PlatformDarwinLocateTest,
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/_import.py").str();
   std::string expected = llvm::formatv(
-      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "the symbol file '{0}' contains a debug script. However, its "
       "name '{1}' conflicts with a keyword and as such cannot be loaded. LLDB "
       "will load '{2}' instead. Consider removing the file with the malformed "
       "name to eliminate this warning.\n",
@@ -461,7 +461,7 @@ TEST_F(
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/TestModule_1_1_1.py").str();
   std::string expected = llvm::formatv(
-      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "the symbol file '{0}' contains a debug script. However, its "
       "name contains reserved characters and as such cannot be loaded. If you "
       "intend to have this script loaded, please rename '{1}' to '{2}' and "
       "retry.\n",
@@ -502,7 +502,7 @@ TEST_F(
   std::string fixed_script =
       (m_tmp_dsym_dwarf_dir + "/../Python/TestModule_1_1_1.py").str();
   std::string expected = llvm::formatv(
-      "warning: the symbol file '{0}' contains a debug script. However, its "
+      "the symbol file '{0}' contains a debug script. However, its "
       "name '{1}' contains reserved characters and as such cannot be loaded. "
       "LLDB will load '{2}' instead. Consider removing the file with the "
       "malformed name to eliminate this warning.\n",

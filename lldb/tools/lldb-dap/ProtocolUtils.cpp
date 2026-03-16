@@ -300,7 +300,8 @@ Variable CreateVariable(lldb::SBValue v, var_ref_t var_ref, bool format_hex,
     var.memoryReference = addr;
 
   bool is_readonly = v.GetType().IsAggregateType() ||
-                     v.GetValueType() == lldb::eValueTypeRegisterSet;
+                     v.GetValueType() == lldb::eValueTypeRegisterSet ||
+                     var.name == "(Return Value)";
   if (is_readonly) {
     if (!var.presentationHint)
       var.presentationHint = {VariablePresentationHint()};

@@ -7555,6 +7555,186 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskIfCondition) {
   EXPECT_EQ(OulinedFnCall->getNextNode(), TaskCompleteCall);
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateTaskAffinity) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
+    return Error::success();
+  };
+
+  LLVMContext &Ctx = M->getContext();
+  StructType *AffInfoTy = StructType::get(
+      Type::getInt64Ty(Ctx), Type::getInt64Ty(Ctx), Type::getInt32Ty(Ctx));
+
+  // Create [1 x AffInfoTy] as alloca (element alloca is fine too).
+  Value *CountI32 = Builder.getInt32(1);
+  AllocaInst *AffArr =
+      Builder.CreateAlloca(AffInfoTy, Builder.getInt64(1), "omp.affinity_list");
+
+  // Fill entry 0 minimally so the pointer definitely dominates use.
+  Value *Entry0 = Builder.CreateInBoundsGEP(
+      AffInfoTy, AffArr, Builder.getInt64(0), "omp.affinity.entry");
+  Builder.CreateStore(Builder.getInt64(0),
+                      Builder.CreateStructGEP(AffInfoTy, Entry0, 0));
+  Builder.CreateStore(Builder.getInt64(64),
+                      Builder.CreateStructGEP(AffInfoTy, Entry0, 1));
+  Builder.CreateStore(Builder.getInt32(0),
+                      Builder.CreateStructGEP(AffInfoTy, Entry0, 2));
+
+  OpenMPIRBuilder::AffinityData Affinity{CountI32, AffArr};
+
+  BasicBlock *AllocaBB = Builder.GetInsertBlock();
+  BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "alloca.split");
+  OpenMPIRBuilder::LocationDescription Loc(
+      InsertPointTy(BodyBB, BodyBB->getFirstInsertionPt()), DL);
+
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP,
+      OMPBuilder.createTask(
+          Loc, InsertPointTy(AllocaBB, AllocaBB->getFirstInsertionPt()),
+          BodyGenCB,
+          /*Tied=*/true,
+          /*Final=*/nullptr,
+          /*IfCondition=*/nullptr,
+          /*Dependencies=*/{},
+          /*Affinity=*/Affinity,
+          /*Mergeable=*/false,
+          /*EventHandle=*/nullptr,
+          /*Priority=*/nullptr));
+
+  Builder.restoreIP(AfterIP);
+  OMPBuilder.finalize();
+  Builder.CreateRetVoid();
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  Function *TaskAllocFn =
+      OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_alloc);
+  Function *RegAffFn = OMPBuilder.getOrCreateRuntimeFunctionPtr(
+      OMPRTL___kmpc_omp_reg_task_with_affinity);
+
+  CallInst *TaskAllocCI = nullptr;
+  CallInst *RegAffCI = nullptr;
+
+  for (auto &I : instructions(F)) {
+    if (auto *CI = dyn_cast<CallInst>(&I)) {
+      if (CI->getCalledFunction() == TaskAllocFn)
+        TaskAllocCI = CI;
+      if (CI->getCalledFunction() == RegAffFn)
+        RegAffCI = CI;
+    }
+  }
+
+  ASSERT_NE(TaskAllocCI, nullptr) << "expected __kmpc_omp_task_alloc call";
+  ASSERT_NE(RegAffCI, nullptr)
+      << "expected __kmpc_omp_reg_task_with_affinity call";
+
+  // Check reg_task_with_affinity signature:
+  //   i32 __kmpc_omp_reg_task_with_affinity(ident_t*, i32 gtid,
+  //                                         kmp_task_t*, i32 naffins,
+  //                                         kmp_task_affinity_info_t*)
+  ASSERT_EQ(RegAffCI->arg_size(), 5u);
+  // naffins
+  EXPECT_TRUE(RegAffCI->getArgOperand(3)->getType()->isIntegerTy(32));
+  // kmp_task_affinity_info_t*
+  EXPECT_TRUE(RegAffCI->getArgOperand(4)->getType()->isPointerTy());
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoop) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  {
+    OpenMPIRBuilder OMPBuilder(*M);
+    OMPBuilder.initialize();
+    F->setName("func.unterminated");
+    IRBuilder<> Builder(BB);
+
+    auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+      Builder.restoreIP(BodyIP);
+      Builder.CreateAdd(LinearIV, Builder.getInt64(1));
+      return Error::success();
+    };
+
+    OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+    ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                         OMPBuilder.createIteratorLoop(Loc, Builder.getInt64(4),
+                                                       BodyGenCB, "iterator"));
+
+    Builder.restoreIP(AfterIP);
+    Builder.CreateRetVoid();
+
+    EXPECT_EQ(AfterIP.getBlock()->getName(), "omp.it.cont");
+    EXPECT_FALSE(verifyFunction(*F, &errs()));
+  }
+
+  {
+    Function *F2 =
+        Function::Create(F->getFunctionType(), Function::ExternalLinkage,
+                         "func.terminated", M.get());
+    BasicBlock *BB2 = BasicBlock::Create(Ctx, "", F2);
+    OpenMPIRBuilder OMPBuilder(*M);
+    OMPBuilder.initialize();
+    IRBuilder<> Builder(BB2);
+
+    BasicBlock *OrigSucc =
+        BasicBlock::Create(Builder.getContext(), "orig.succ", F2);
+    Builder.CreateBr(OrigSucc);
+
+    auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+      Builder.restoreIP(BodyIP);
+      Builder.CreateAdd(LinearIV, Builder.getInt64(1));
+      return Error::success();
+    };
+
+    OpenMPIRBuilder::LocationDescription Loc(InsertPointTy(BB2, BB2->end()),
+                                             DL);
+    ASSERT_EXPECTED_INIT(InsertPointTy, AfterIP,
+                         OMPBuilder.createIteratorLoop(Loc, Builder.getInt64(4),
+                                                       BodyGenCB, "iterator"));
+
+    EXPECT_EQ(AfterIP.getBlock()->getName(), "omp.it.cont");
+    auto *ContBr = dyn_cast<BranchInst>(AfterIP.getBlock()->getTerminator());
+    ASSERT_NE(ContBr, nullptr);
+    ASSERT_FALSE(ContBr->isConditional());
+    EXPECT_EQ(ContBr->getSuccessor(0), OrigSucc);
+
+    Builder.SetInsertPoint(OrigSucc);
+    Builder.CreateRetVoid();
+
+    EXPECT_FALSE(verifyFunction(*F2, &errs()));
+  }
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateIteratorLoopInvalidLoopBody) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+
+  auto BodyGenCB = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
+    Builder.restoreIP(BodyIP);
+    Builder.CreateAdd(LinearIV, Builder.getInt64(1));
+    BasicBlock *BadDest =
+        BasicBlock::Create(Builder.getContext(), "iterator.bad.dest", F);
+    Builder.CreateBr(BadDest);
+    Builder.SetInsertPoint(BadDest);
+    Builder.CreateUnreachable();
+    return Error::success();
+  };
+
+  OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
+  OpenMPIRBuilder::InsertPointOrErrorTy AfterIP = OMPBuilder.createIteratorLoop(
+      Loc, Builder.getInt64(4), BodyGenCB, "iterator");
+  ASSERT_TRUE(errorToBool(AfterIP.takeError()));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);

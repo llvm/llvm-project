@@ -2,6 +2,7 @@
 // RUN: -config="{CheckOptions: {readability-container-size-empty.ExcludedComparisonTypes: '::std::array;::IgnoredDummyType'}}" \
 // RUN: -- -fno-delayed-template-parsing
 #include <string>
+#include <memory>
 
 namespace std {
 template <typename T> struct vector {
@@ -681,14 +682,6 @@ void instantiator() {
   instantiatedTemplateWithSizeCall<TypeWithSize>();
   instantiatedTemplateWithSizeCall<std::vector<int>>();
 }
-
-namespace std {
-template <typename T>
-struct unique_ptr {
-  T *operator->() const;
-  T &operator*() const;
-};
-} // namespace std
 
 bool call_through_unique_ptr(const std::unique_ptr<std::vector<int>> &ptr) {
   return ptr->size() > 0;

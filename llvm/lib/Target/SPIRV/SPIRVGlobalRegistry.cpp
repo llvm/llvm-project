@@ -316,7 +316,6 @@ SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                      MachineIRBuilder &MIRBuilder) {
   auto EleOpc = ElemType->getOpcode();
-  (void)EleOpc;
   assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
 
   if (EleOpc == SPIRV::OpTypePointer) {

@@ -371,6 +371,8 @@ def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
                                  "Support zero-upper SETcc/IMUL">;
+def FeatureJMPABS : SubtargetFeature<"jmpabs", "HasJMPABS", "true",
+                                     "Support 64-bit absolute JMP">;
 def FeatureUseGPR32InInlineAsm
     : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
                        "Enable use of GPR32 in inline assembly for APX">;
@@ -1188,6 +1190,7 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
+                                                  FeatureJMPABS,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
                                                   FeatureAMXAVX512,
@@ -1361,6 +1364,7 @@ def ProcessorFeatures {
                                                   FeatureNF,
                                                   FeatureNDD,
                                                   FeatureZU,
+                                                  FeatureJMPABS,
                                                   FeatureCCMP,
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =

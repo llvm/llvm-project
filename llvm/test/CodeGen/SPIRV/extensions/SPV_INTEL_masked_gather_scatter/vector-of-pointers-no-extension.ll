@@ -1,3 +1,6 @@
+; Test that ptrtoint on a vector of pointers without the
+; SPV_INTEL_masked_gather_scatter extension produces an error.
+
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: error:{{.*}}Vector of pointers requires SPV_INTEL_masked_gather_scatter extension

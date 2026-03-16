@@ -78,7 +78,7 @@ namespace yaml {
 TEST(YAMLIO, TestMapRead) {
   FooBar doc;
   {
-    Input yin("---\nfoo:  3\nbar:  5\n...\n");
+    Input yin("---\nfoo:  3\nbar:  5\n...");
     yin >> doc;
 
     EXPECT_FALSE(yin.error());

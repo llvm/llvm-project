@@ -9,17 +9,16 @@
 #include "JSONFormatImpl.h"
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "llvm/Support/Registry.h"
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int SSAFJSONFormatAnchorSource = 0;
 LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
 
 static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
-    RegisterJSONFormat("JSON", "JSON serialization format");
+    RegisterJSONFormat("json", "JSON serialization format");
 
 namespace clang::ssaf {
-
-void initializeJSONFormat() {}
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer

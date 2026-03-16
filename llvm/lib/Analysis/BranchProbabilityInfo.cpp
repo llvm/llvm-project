@@ -1284,9 +1284,38 @@ void BPIConstruction::calculate(const Function &F, const LoopInfo &LoopI,
 
 } // end anonymous namespace
 
-void BranchProbabilityInfo::releaseMemory() {
-  Probs.clear();
-  Handles.clear();
+MutableArrayRef<BranchProbability>
+BranchProbabilityInfo::allocEdges(const BasicBlock *BB) {
+  assert(BB->getParent() == LastF);
+  assert(BlockNumberEpoch == LastF->getBlockNumberEpoch());
+  unsigned NumSuccs = succ_size(BB);
+  if (NumSuccs == 0) {
+    eraseBlock(BB);
+    return {};
+  }
+  if (EdgeStarts.size() <= BB->getNumber())
+    EdgeStarts.resize(LastF->getMaxBlockNumber(), 0);
+  unsigned EdgeStart = Probs.size();
+  EdgeStarts[BB->getNumber()] = EdgeStart + 1; // 0 = no edges.
+  Probs.append(NumSuccs, {});
+  return MutableArrayRef(&Probs[EdgeStart], NumSuccs);
+}
+
+ArrayRef<BranchProbability>
+BranchProbabilityInfo::getEdges(const BasicBlock *BB) const {
+  assert(BB->getParent() == LastF);
+  assert(BlockNumberEpoch == LastF->getBlockNumberEpoch());
+  if (EdgeStarts.size() <= BB->getNumber())
+    return {};
+  if (unsigned EdgeStart = EdgeStarts[BB->getNumber()]) {
+    const BranchProbability *Start = &Probs[EdgeStart - 1]; // 0 = no edges.
+    size_t Count = SIZE_MAX; // Avoid querying num successors in release builds.
+#ifndef NDEBUG
+    Count = succ_size(BB);
+#endif
+    return ArrayRef(Start, Count);
+  }
+  return {};
 }
 
 bool BranchProbabilityInfo::invalidate(Function &, const PreservedAnalyses &PA,
@@ -1323,15 +1352,8 @@ isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const {
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           unsigned IndexInSuccessors) const {
-  auto I = Probs.find(std::make_pair(Src, IndexInSuccessors));
-  assert((Probs.end() == Probs.find(std::make_pair(Src, 0))) ==
-             (Probs.end() == I) &&
-         "Probability for I-th successor must always be defined along with the "
-         "probability for the first successor");
-
-  if (I != Probs.end())
-    return I->second;
-
+  if (ArrayRef<BranchProbability> P = getEdges(Src); !P.empty())
+    return P[IndexInSuccessors];
   return {1, static_cast<uint32_t>(succ_size(Src))};
 }
 
@@ -1346,13 +1368,14 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 BranchProbability
 BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
                                           const BasicBlock *Dst) const {
-  if (!Probs.count(std::make_pair(Src, 0)))
+  ArrayRef<BranchProbability> P = getEdges(Src);
+  if (P.empty())
     return BranchProbability(llvm::count(successors(Src), Dst), succ_size(Src));
 
   auto Prob = BranchProbability::getZero();
   for (auto It : enumerate(successors(Src)))
     if (It.value() == Dst)
-      Prob += Probs.find(std::make_pair(Src, It.index()))->second;
+      Prob += P[It.index()];
 
   return Prob;
 }
@@ -1361,14 +1384,10 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 void BranchProbabilityInfo::setEdgeProbability(
     const BasicBlock *Src, const SmallVectorImpl<BranchProbability> &Probs) {
   assert(Src->getTerminator()->getNumSuccessors() == Probs.size());
-  eraseBlock(Src); // Erase stale data if any.
-  if (Probs.size() == 0)
-    return; // Nothing to set.
-
-  Handles.insert(BasicBlockCallbackVH(Src, this));
+  MutableArrayRef<BranchProbability> P = allocEdges(Src);
   uint64_t TotalNumerator = 0;
   for (unsigned SuccIdx = 0; SuccIdx < Probs.size(); ++SuccIdx) {
-    this->Probs[std::make_pair(Src, SuccIdx)] = Probs[SuccIdx];
+    P[SuccIdx] = Probs[SuccIdx];
     LLVM_DEBUG(dbgs() << "set edge " << Src->getName() << " -> " << SuccIdx
                       << " successor probability to " << Probs[SuccIdx]
                       << "\n");
@@ -1380,6 +1399,8 @@ void BranchProbabilityInfo::setEdgeProbability(
   // Instead, every single probability in Probs must be as accurate as possible.
   // This results in error 1/denominator at most, thus the total absolute error
   // should be within Probs.size / BranchProbability::getDenominator.
+  if (P.empty())
+    return; // If we store no probabilities, TotalNumerator is zero.
   assert(TotalNumerator <= BranchProbability::getDenominator() + Probs.size());
   assert(TotalNumerator >= BranchProbability::getDenominator() - Probs.size());
   (void)TotalNumerator;
@@ -1387,31 +1408,30 @@ void BranchProbabilityInfo::setEdgeProbability(
 
 void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
                                                   BasicBlock *Dst) {
-  eraseBlock(Dst); // Erase stale data if any.
-  unsigned NumSuccessors = Src->getTerminator()->getNumSuccessors();
-  assert(NumSuccessors == Dst->getTerminator()->getNumSuccessors());
-  if (NumSuccessors == 0)
-    return; // Nothing to set.
-  if (!this->Probs.contains(std::make_pair(Src, 0)))
-    return; // No probability is set for edges from Src. Keep the same for Dst.
-
-  Handles.insert(BasicBlockCallbackVH(Dst, this));
-  for (unsigned SuccIdx = 0; SuccIdx < NumSuccessors; ++SuccIdx) {
-    auto Prob = this->Probs[std::make_pair(Src, SuccIdx)];
-    this->Probs[std::make_pair(Dst, SuccIdx)] = Prob;
-    LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << SuccIdx
-                      << " successor probability to " << Prob << "\n");
+  assert(succ_size(Src) == succ_size(Dst));
+  // allocEdges can reallocate and must be called first.
+  MutableArrayRef<BranchProbability> DstP = allocEdges(Dst);
+  ArrayRef<BranchProbability> SrcP = getEdges(Src);
+  if (SrcP.empty()) {
+    // Nothing to copy from, erase again.
+    eraseBlock(Dst);
+    return;
+  }
+  for (unsigned i = 0; i != DstP.size(); ++i) {
+    DstP[i] = SrcP[i];
+    LLVM_DEBUG(dbgs() << "set edge " << Dst->getName() << " -> " << i
+                      << " successor probability to " << SrcP[i] << "\n");
   }
 }
 
 void BranchProbabilityInfo::swapSuccEdgesProbabilities(const BasicBlock *Src) {
   assert(Src->getTerminator()->getNumSuccessors() == 2);
-  auto It0 = Probs.find(std::make_pair(Src, 0));
-  if (It0 == Probs.end())
-    return; // No probability is set for edges from Src
-  auto It1 = Probs.find(std::make_pair(Src, 1));
-  assert(It1 != Probs.end());
-  std::swap(It0->second, It1->second);
+  ArrayRef<BranchProbability> P = getEdges(Src);
+  if (P.empty())
+    return;
+  MutableArrayRef<BranchProbability> MP(
+      const_cast<BranchProbability *>(P.data()), P.size());
+  std::swap(MP[0], MP[1]);
 }
 
 raw_ostream &
@@ -1431,24 +1451,10 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
 
 void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
   LLVM_DEBUG(dbgs() << "eraseBlock " << BB->getName() << "\n");
-
-  // Note that we cannot use successors of BB because the terminator of BB may
-  // have changed when eraseBlock is called as a BasicBlockCallbackVH callback.
-  // Instead we remove prob data for the block by iterating successors by their
-  // indices from 0 till the last which exists. There could not be prob data for
-  // a pair (BB, N) if there is no data for (BB, N-1) because the data is always
-  // set for all successors from 0 to M at once by the method
-  // setEdgeProbability().
-  Handles.erase(BasicBlockCallbackVH(BB, this));
-  for (unsigned I = 0;; ++I) {
-    auto MapI = Probs.find(std::make_pair(BB, I));
-    if (MapI == Probs.end()) {
-      assert(Probs.count(std::make_pair(BB, I + 1)) == 0 &&
-             "Must be no more successors");
-      return;
-    }
-    Probs.erase(MapI);
-  }
+  assert(BB->getParent() == LastF);
+  assert(BlockNumberEpoch == LastF->getBlockNumberEpoch());
+  if (EdgeStarts.size() > BB->getNumber())
+    EdgeStarts[BB->getNumber()] = 0;
 }
 
 void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
@@ -1458,6 +1464,9 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
   LLVM_DEBUG(dbgs() << "---- Branch Probability Info : " << F.getName()
                     << " ----\n\n");
   LastF = &F; // Store the last function we ran on for printing.
+  BlockNumberEpoch = F.getBlockNumberEpoch();
+  Probs.clear();
+  EdgeStarts.clear();
   BPIConstruction(*this).calculate(F, LoopI, TLI, DT, PDT);
 
   if (PrintBranchProb && (PrintBranchProbFuncName.empty() ||
@@ -1489,8 +1498,6 @@ bool BranchProbabilityInfoWrapperPass::runOnFunction(Function &F) {
   BPI.calculate(F, LI, &TLI, &DT, &PDT);
   return false;
 }
-
-void BranchProbabilityInfoWrapperPass::releaseMemory() { BPI.releaseMemory(); }
 
 void BranchProbabilityInfoWrapperPass::print(raw_ostream &OS,
                                              const Module *) const {

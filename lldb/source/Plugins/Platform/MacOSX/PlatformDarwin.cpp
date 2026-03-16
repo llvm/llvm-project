@@ -287,7 +287,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                              : "contains reserved characters";
       if (FileSystem::Instance().Exists(script_fspec))
         feedback_stream.Format(
-            "warning: the symbol file '{0}' contains a debug "
+            "the symbol file '{0}' contains a debug "
             "script. However, its name"
             " '{1}' {2} and as such cannot be loaded. LLDB will"
             " load '{3}' instead. Consider removing the file with "
@@ -297,7 +297,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
             reason_for_complaint, path_string.GetString());
       else
         feedback_stream.Format(
-            "warning: the symbol file '{0}' contains a debug "
+            "the symbol file '{0}' contains a debug "
             "script. However, its name"
             " {1} and as such cannot be loaded. If you intend"
             " to have this script loaded, please rename '{2}' to "

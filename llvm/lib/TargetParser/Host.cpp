@@ -2184,6 +2184,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["nf"] = HasAPXF;
   Features["cf"] = HasAPXF;
   Features["zu"] = HasAPXF;
+  Features["jmpabs"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

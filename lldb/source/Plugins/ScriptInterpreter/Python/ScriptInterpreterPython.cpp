@@ -25,6 +25,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
@@ -49,6 +50,7 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include <stdlib.h>
 #include <string>
 
 using namespace lldb;
@@ -289,6 +291,13 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 }
 
 void ScriptInterpreterPython::Initialize() {
+#if LLDB_ENABLE_MTE
+  // Python's allocator (pymalloc) is not aware of Memory Tagging Extension
+  // (MTE) and crashes.
+  // https://bugs.python.org/issue43593
+  setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
+#endif
+
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
   PluginManager::RegisterPlugin(

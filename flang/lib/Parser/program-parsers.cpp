@@ -68,9 +68,18 @@ static constexpr auto programUnit{
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
 
-static constexpr auto normalProgramUnit{!consumedAllInput >>
-    StartNewSubprogram{} >>
-    programUnit / recovery(endOfStmt, skipToNextLineIfAny)};
+// Note, F'23 6.3.1 states that "A Fortran program unit is a sequence of one or
+// more lines, organized as Fortran statements, comments, and INCLUDE lines."
+// which could be interpreted as implying program units must exist on mutually
+// exclusive lines. Nag interprets it this way. We have an extension to allow
+// multiple program units on the same line.
+static constexpr auto normalProgramUnit{
+    !consumedAllInput >> StartNewSubprogram{} >> programUnit /
+        recovery((maybe(semicolons) >> endOfLine) ||
+                (extension<LanguageFeature::MultipleProgramUnitsOnSameLine>(
+                    "nonstandard usage: end of program unit not terminated by new line"_port_en_US,
+                    semicolons >> not(endOfLine))),
+            skipToNextLineIfAny)};
 
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};

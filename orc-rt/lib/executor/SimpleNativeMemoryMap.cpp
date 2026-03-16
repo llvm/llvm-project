@@ -225,7 +225,7 @@ void SimpleNativeMemoryMap::deinitializeMultiple(
 void SimpleNativeMemoryMap::onDetach(Service::OnCompleteFn OnComplete) {
   // Detach is a noop for now: we just retain all actions to run at shutdown
   // time.
-  OnComplete(Error::success());
+  OnComplete();
 }
 
 void SimpleNativeMemoryMap::onShutdown(Service::OnCompleteFn OnComplete) {
@@ -304,7 +304,7 @@ void SimpleNativeMemoryMap::deinitializeNext(
 void SimpleNativeMemoryMap::shutdownNext(Service::OnCompleteFn OnComplete,
                                          std::vector<void *> Bases) {
   if (Bases.empty())
-    return OnComplete(Error::success());
+    return OnComplete();
 
   auto *Base = Bases.back();
   Bases.pop_back();

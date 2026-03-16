@@ -4,7 +4,6 @@ libclc_configure_source_list(CLC_PTX_NVIDIACL_SOURCES
   math/clc_rsqrt.cl
   math/clc_sinpi.cl
   math/clc_sqrt.cl
-  mem_fence/clc_mem_fence.cl
   relational/clc_isinf.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_global_id.cl

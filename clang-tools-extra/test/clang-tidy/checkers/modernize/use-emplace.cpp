@@ -8,6 +8,7 @@
 // RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
 
 #include <utility>
+#include <memory>
 
 namespace std {
 template <typename E>
@@ -313,12 +314,6 @@ tuple<typename remove_reference<Ts>::type...> make_tuple(Ts &&...) {
   return {};
 }
 
-template <typename T>
-class unique_ptr {
-public:
-  explicit unique_ptr(T *) {}
-  ~unique_ptr();
-};
 } // namespace std
 
 namespace llvm {

@@ -13,13 +13,9 @@
 #ifndef LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 #define LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
@@ -121,29 +117,8 @@ public:
     calculate(F, LI, TLI, DT, PDT);
   }
 
-  BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
-      : Handles(std::move(Arg.Handles)), Probs(std::move(Arg.Probs)),
-        LastF(Arg.LastF) {
-    for (auto &Handle : Handles)
-      Handle.setBPI(this);
-  }
-
-  BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
-  BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
-
-  BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
-    releaseMemory();
-    Handles = std::move(RHS.Handles);
-    Probs = std::move(RHS.Probs);
-    for (auto &Handle : Handles)
-      Handle.setBPI(this);
-    return *this;
-  }
-
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &);
-
-  LLVM_ABI void releaseMemory();
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
@@ -211,33 +186,17 @@ public:
   LLVM_ABI void eraseBlock(const BasicBlock *BB);
 
 private:
-  // We need to store CallbackVH's in order to correctly handle basic block
-  // removal.
-  class BasicBlockCallbackVH final : public CallbackVH {
-    BranchProbabilityInfo *BPI;
+  MutableArrayRef<BranchProbability> allocEdges(const BasicBlock *BB);
+  ArrayRef<BranchProbability> getEdges(const BasicBlock *BB) const;
 
-    void deleted() override {
-      assert(BPI != nullptr);
-      BPI->eraseBlock(cast<BasicBlock>(getValPtr()));
-    }
-
-  public:
-    void setBPI(BranchProbabilityInfo *BPI) { this->BPI = BPI; }
-
-    BasicBlockCallbackVH(const Value *V, BranchProbabilityInfo *BPI = nullptr)
-        : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
-  };
-
-  DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value*>> Handles;
-
-  // Since we allow duplicate edges from one basic block to another, we use
-  // a pair (PredBlock and an index in the successors) to specify an edge.
-  using Edge = std::pair<const BasicBlock *, unsigned>;
-
-  DenseMap<Edge, BranchProbability> Probs;
+  // Storage for branch probabilities.
+  SmallVector<BranchProbability> Probs;
+  // Map from block number to first edge.
+  SmallVector<unsigned> EdgeStarts;
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;
+  unsigned BlockNumberEpoch;
 };
 
 /// Analysis pass which computes \c BranchProbabilityInfo.
@@ -282,7 +241,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
-  void releaseMemory() override;
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
 };
 

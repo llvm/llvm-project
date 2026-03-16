@@ -246,10 +246,15 @@ public:
   // This implementation is a temporary measure to allow a gradual transition.
   void setCurrLocationContextAndBlock(const LocationContext *LC,
                                       const CFGBlock *B) {
-    // Note that there is a call to resetCurrLocationContextAndBlock at the
-    // beginning of dispatchWorkItem.
+    // The current LocationContext and Block is reset at the beginning of
+    // dispacthWorkItem. Ideally, this method should be called only once per
+    // dipatchWorkItem call (= elementary analysis step); so the following
+    // assertion is there to catch accidental repeated calls. If the current
+    // LocationContext and Block needs to change in the middle of a single step
+    // (which currently happens only once, in processCallExit), use an explicit
+    // call to resetCurrLocationContextAndBlock.
     assert(!currBldrCtx && !OwnedCurrBldrCtx &&
-           "This should be called at most once per call to dispatchWorkItem");
+           "The current LocationContext and Block is already set");
     OwnedCurrBldrCtx.emplace(Engine, B, LC);
     currBldrCtx = &*OwnedCurrBldrCtx;
   }

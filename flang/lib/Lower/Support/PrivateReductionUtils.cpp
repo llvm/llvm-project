@@ -32,6 +32,13 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> enableGPUHeapAlloc(
+    "enable-gpu-heap-alloc",
+    llvm::cl::desc(
+        "Allow the use of heap allocation for dynamically sized arrays on GPU"),
+    llvm::cl::init(false));
 
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   if (sym.has<Fortran::semantics::ObjectEntityDetails>())
@@ -391,7 +398,7 @@ private:
     return loadedMoldArg;
   }
 
-  bool shouldAllocateTempOnStack() const;
+  bool shouldAllocateTempOnStack(fir::BaseBoxType boxTy) const;
 };
 
 } // namespace
@@ -454,7 +461,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
     builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
   }
 
-  bool shouldAllocateOnStack = shouldAllocateTempOnStack();
+  bool shouldAllocateOnStack = shouldAllocateTempOnStack(boxTy);
   mlir::Value valAlloc =
       (shouldAllocateOnStack)
           ? builder.createTemporary(loc, innerTy, /*name=*/{},
@@ -485,12 +492,22 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedScalar(
   createYield(allocatedPrivVarArg);
 }
 
-bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack() const {
-  // On the GPU, always allocate on the stack since heap allocatins are very
-  // expensive.
+bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
+    fir::BaseBoxType boxTy) const {
   auto offloadMod =
       llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
-  return offloadMod && offloadMod.getIsGPU();
+  // On the GPU, always allocate on the stack unless the user explicitly
+  // specifies otherwise since heap allocatins are very expensive.
+  bool isGPU = offloadMod && offloadMod.getIsGPU();
+  if (isGPU && enableGPUHeapAlloc) {
+    // Check if it is adjustable array
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy())) {
+      if (seqTy.hasUnknownShape() || seqTy.hasDynamicExtents()) {
+        return false;
+      }
+    }
+  }
+  return isGPU;
 }
 
 void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
@@ -535,7 +552,7 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
   // Allocating on the heap in case the whole reduction/privatization is nested
   // inside of a loop
   auto temp = [&]() {
-    if (shouldAllocateTempOnStack())
+    if (shouldAllocateTempOnStack(boxTy))
       return createStackTempFromMold(loc, builder, source);
 
     // For CUDA device arrays that require special allocation (device,

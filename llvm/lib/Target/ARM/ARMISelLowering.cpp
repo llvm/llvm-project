@@ -5199,6 +5199,12 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 
       return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
     }
+
+    // (SELECT_CC setlt, x, 0, 1, 0) -> SRL(x, bw-1)
+    if (CC == ISD::SETLT && isNullConstant(RHS) && isOneConstant(TrueVal) &&
+        isNullConstant(FalseVal) && LHS.getValueType() == VT)
+      return DAG.getNode(ISD::SRL, dl, VT, LHS,
+                         DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
   }
 
   if (LHS.getValueType() == MVT::i32) {
