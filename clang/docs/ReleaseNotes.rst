@@ -327,6 +327,7 @@ Bug Fixes in This Version
 - Fixed a bug with multiple-include optimization (MIOpt) state not being preserved in some cases during lexing, which could suppress header-guard mismatch diagnostics and interfere with include-guard optimization. (#GH180155)
 - Fixed a crash when normalizing constraints involving concept template parameters whose index coincided with non-concept template parameters in the same parameter mapping.
 - Fixed a crash caused by accessing dependent diagnostics of a non-dependent context.
+- Fixed a crash when substituting into a non-type template parameter that has a type containing an undeduced placeholder type.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
