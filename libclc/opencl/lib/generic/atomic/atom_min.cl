@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/atomic/clc_atomic_fetch_min.h"
+#include <clc/atomic/clc_atomic_fetch_min.h>
 
 // Non-volatile overloads are for backward compatibility with OpenCL 1.0.
 

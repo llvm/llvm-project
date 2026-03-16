@@ -1643,7 +1643,7 @@ bool X86FastISel::X86SelectSExt(const Instruction *I) {
 bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // Unconditional branches are selected by tablegen-generated code.
   // Handle a conditional branch.
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TrueMBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FalseMBB = FuncInfo.getMBB(BI->getSuccessor(1));
 

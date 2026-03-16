@@ -1118,15 +1118,15 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp, "vW1024*W256V", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_dmsetdmrz, "vW1024*", false,
+UNALIASED_CUSTOM_BUILTIN(dmsetdmrz, "vW1024*", false,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_dmmr, "vW1024*W1024*", false,
+UNALIASED_CUSTOM_BUILTIN(dmmr, "vW1024*W1024*", false,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_dmxor, "vW1024*W1024*", true,
+UNALIASED_CUSTOM_BUILTIN(dmxor, "vW1024*W1024*", true,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_disassemble_dmr, "vv*W1024*", false,
+UNALIASED_CUSTOM_BUILTIN(disassemble_dmr, "vv*W1024*", false,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_build_dmr, "vW1024*VVVVVVVV", false,
+UNALIASED_CUSTOM_BUILTIN(build_dmr, "vW1024*VVVVVVVV", false,
                          "mma,isa-future-instructions")
 
 UNALIASED_CUSTOM_BUILTIN(mma_dmsha2hash, "vW1024*W1024*Ii", true,

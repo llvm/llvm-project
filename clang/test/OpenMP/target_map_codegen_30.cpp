@@ -34,12 +34,12 @@
 #ifdef CK31
 
 // CK31-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK31: [[SIZE00:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
-// CK31: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 1059]
+// CK31: [[SIZE00:@.+]] = private {{.*}}constant [2 x i[[Z:64|32]]] [i[[Z:64|32]] 4, i[[Z:64|32]] 0]
+// CK31: [[MTYPE00:@.+]] = private {{.*}}constant [2 x i64] [i64 1059, i64 288]
 
 // CK31-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK31: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
-// CK31: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 1063]
+// CK31: [[SIZE01:@.+]] = private {{.*}}constant [2 x i[[Z:64|32]]] [i[[Z:64|32]] 4, i[[Z:64|32]] 0]
+// CK31: [[MTYPE01:@.+]] = private {{.*}}constant [2 x i64] [i64 1063, i64 288]
 
 // CK31-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (int ii){
@@ -61,7 +61,7 @@ void explicit_maps_single (int ii){
 // CK31-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK31-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK31: call void [[CALL00:@.+]](ptr {{[^,]+}})
+// CK31: call void [[CALL00:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(close, tofrom \
                        : a)
   {
@@ -83,7 +83,7 @@ void explicit_maps_single (int ii){
 // CK31-DAG: store ptr [[VAR0:%.+]], ptr [[BP0]]
 // CK31-DAG: store ptr [[VAR0]], ptr [[P0]]
 
-// CK31: call void [[CALL01:@.+]](ptr {{[^,]+}})
+// CK31: call void [[CALL01:@.+]](ptr {{[^,]+}}, ptr null)
 #pragma omp target map(always close tofrom \
                        : a)
   {
