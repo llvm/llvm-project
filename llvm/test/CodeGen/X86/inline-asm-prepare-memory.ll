@@ -49,3 +49,14 @@ entry:
   store i32 %0, ptr %x_ptr
   ret void
 }
+
+define dso_local i64 @test4() local_unnamed_addr #0 {
+; CHECK-LABEL: define dso_local i64 @test4() local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 asm "movq $1, $0", "=r,irm,~{dirflag},~{fpsr},~{flags}"(i32 256)
+; CHECK-NEXT:    ret i64 [[TMP0]]
+;
+entry:
+  %0 = tail call i64 asm "movq $1, $0", "=r,irm,~{dirflag},~{fpsr},~{flags}"(i32 256)
+  ret i64 %0
+}
