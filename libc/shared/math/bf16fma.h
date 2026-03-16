@@ -1,4 +1,4 @@
-//===-- Implementation of bf16fma function --------------------------------===//
+//===-- Shared bf16fma function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/bf16fma.h"
+#ifndef LLVM_LIBC_SHARED_MATH_BF16FMA_H
+#define LLVM_LIBC_SHARED_MATH_BF16FMA_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/bf16fma.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, bf16fma, (double x, double y, double z)) {
-  return math::bf16fma(x, y, z);
-}
+using math::bf16fma;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_BF16FMA_H
