@@ -65,6 +65,12 @@ struct __llvm_profile_data {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+struct __llvm_profile_gpu_sections {
+#define INSTR_PROF_GPU_SECT(Type, LLVMType, Name, Initializer)                 \
+  std::remove_const<Type>::type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
+};
+
 extern "C" {
 extern int __attribute__((weak)) __llvm_write_custom_profile(
     const char *Target, const __llvm_profile_data *DataBegin,
@@ -72,11 +78,11 @@ extern int __attribute__((weak)) __llvm_write_custom_profile(
     const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
     const uint64_t *VersionOverride);
 }
-/// PGO profiling data extracted from a GPU device
+/// PGO profiling data extracted from a GPU device via __llvm_profile_sections.
 struct GPUProfGlobals {
-  SmallVector<int64_t> Counts;
-  SmallVector<__llvm_profile_data> Data;
-  SmallVector<uint8_t> NamesData;
+  SmallVector<char> NamesSection;
+  SmallVector<char> CountersSection;
+  SmallVector<char> DataSection;
   Triple TargetTriple;
   uint64_t Version = INSTR_PROF_RAW_VERSION;
 
