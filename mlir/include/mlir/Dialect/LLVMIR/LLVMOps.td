@@ -2588,6 +2588,12 @@ def LLVM_NamedMetadataOp
     metadata nodes are module-level metadata that associate a name string
     with a list of metadata nodes. Each operand must be an `#llvm.md_node`.
 
+    Note: cyclic metadata graphs are not supported. Because metadata attributes
+    are represented as MLIR attributes (which form a tree), there is no way to
+    express a metadata node that directly or transitively references itself.
+    LLVM IR permits such cycles (e.g. `!0 = !{!0}`), but they cannot be
+    represented here and will not round-trip through this op.
+
     Example:
     ```mlir
     llvm.named_metadata "foo.version" [
