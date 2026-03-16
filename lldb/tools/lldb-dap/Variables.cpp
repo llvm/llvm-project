@@ -18,6 +18,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -83,6 +84,17 @@ MakeVariablePresentationHints(bool is_readonly, bool is_internal) {
   return hint;
 }
 
+bool IsReservedName(llvm::StringRef name) {
+  if (name == "[raw]" || name.starts_with("std::__"))
+    return true;
+  auto last_namespace_component = name.rfind("::");
+  if (last_namespace_component != llvm::StringRef::npos)
+    name = name.substr(last_namespace_component + 2);
+  return /* c/c++ std reserves prefixes __ or _[A-Z] for internal use */
+      name.starts_with("__") ||
+      (name.size() >= 2 && name[0] == '_' && isUpper(name[1]));
+}
+
 class VariableStoreImpl : public VariableStore {
 public:
   using VariableStore::VariableStore;
@@ -134,7 +146,7 @@ public:
       }
     }
 
-    const bool is_internal = var.name == "[raw]" || m_is_internal;
+    const bool is_internal = IsReservedName(var.name) || m_is_internal;
     const bool is_readonly = is_internal || v.GetType().IsAggregateType() ||
                              v.GetValueType() == lldb::eValueTypeRegisterSet;
 

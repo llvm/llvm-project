@@ -244,7 +244,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
   const llvm::StringRef name = v.GetName();
-  return !name.empty() ? name : "<anonymous>";
+  return !name.empty() ? name : "(anonymous)";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,

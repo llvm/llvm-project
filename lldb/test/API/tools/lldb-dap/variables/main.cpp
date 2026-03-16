@@ -7,6 +7,7 @@ struct PointType {
 };
 #include <cstdio>
 #include <vector>
+extern int g_global;
 int g_global = 123;
 static int s_global = 234;
 int test_indexedVariables();
@@ -80,10 +81,9 @@ int test_anonymous_fields() {
 
 void test_unnamed_bitfields() {
   struct example {
-    unsigned int lo : 4; // Uses first 4 bits of the first allocation unit
-    unsigned int : 0;    // Forces the next bit-field to start a new allocation
-                         // unit
-    unsigned int hi : 4; // Starts in a new allocation unit
+    unsigned int lo : 4;
+    unsigned int : 0;
+    unsigned int hi : 4;
   };
   example e = {0xA, 0xB};
   printf("lo: %u, hi: %u\n", e.lo, e.hi); // breakpoint 8
