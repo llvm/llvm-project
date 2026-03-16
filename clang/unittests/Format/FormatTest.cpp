@@ -6701,6 +6701,13 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "\n"
                "#define FGHIJK",
                Style);
+
+  verifyFormat("#ifndef FOO_H\n"
+               "#define FOO_H\n"
+               "#include <iostream>\n"
+               "#endif\n"
+               "// comment",
+               Style);
 }
 
 TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
