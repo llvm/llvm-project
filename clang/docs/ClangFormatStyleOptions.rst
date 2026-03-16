@@ -4818,14 +4818,14 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       enum class Feature {
-        none,
+        NONE,
         #if PLATFORM_FULL
-          wifi,
+          WIFI,
           #ifdef HAS_BLE
-            ble,
+            BLE,
           #endif
         #endif
-        basic
+        BASIC
       };
 
   * ``PPDIS_Leave`` (in configuration: ``Leave``)

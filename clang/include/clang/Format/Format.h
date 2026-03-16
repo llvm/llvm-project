@@ -3358,14 +3358,14 @@ struct FormatStyle {
     /// one further level relative to the directive that guards it.
     /// \code
     ///   enum class Feature {
-    ///     none,
+    ///     NONE,
     ///     #if PLATFORM_FULL
-    ///       wifi,
+    ///       WIFI,
     ///       #ifdef HAS_BLE
-    ///         ble,
+    ///         BLE,
     ///       #endif
     ///     #endif
-    ///     basic
+    ///     BASIC
     ///   };
     /// \endcode
     PPDIS_BeforeHashWithCode,
