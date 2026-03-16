@@ -3922,11 +3922,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_openmp_assume_no_nested_parallelism);
 
-  if (Opts.OpenMPKernelIO)
-    GenerateArg(Consumer, OPT_fopenmp_allow_kernel_io);
-  else
-    GenerateArg(Consumer, OPT_fno_openmp_allow_kernel_io);
-
   if (Opts.OpenMPTargetDebug != 0)
     GenerateArg(Consumer, OPT_fopenmp_target_debug_EQ,
                 Twine(Opts.OpenMPTargetDebug));
@@ -4443,10 +4438,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPTargetXteamNoLoopScan =
       Args.hasFlag(options::OPT_fopenmp_target_xteam_no_loop_scan,
                    options::OPT_fno_openmp_target_xteam_no_loop_scan, false);
-
-  Opts.OpenMPKernelIO =
-      Args.hasFlag(options::OPT_fopenmp_allow_kernel_io,
-                   options::OPT_fno_openmp_allow_kernel_io, true);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

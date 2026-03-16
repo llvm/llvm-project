@@ -6961,13 +6961,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
         CmdArgs.push_back("-fopenmp-force-usm");
 
-      if (Args.hasFlag(options::OPT_fno_openmp_allow_kernel_io,
-                       options::OPT_fopenmp_allow_kernel_io,
-                       isTargetFastUsed(Args)))
-        CmdArgs.push_back("-fno-openmp-allow-kernel-io");
-      else
-        CmdArgs.push_back("-fopenmp-allow-kernel-io");
-
       break;
     default:
       // By default, if Clang doesn't know how to generate useful OpenMP code
@@ -9796,4 +9789,3 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   LinkCommand->replaceExecutable(Exec);
   LinkCommand->replaceArguments(CmdArgs);
 }
-
