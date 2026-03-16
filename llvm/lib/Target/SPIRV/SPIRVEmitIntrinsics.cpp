@@ -426,8 +426,7 @@ static bool isAggrConstForceInt32(const Value *V) {
   return isa<ConstantArray>(V) || isa<ConstantStruct>(V) ||
          isa<ConstantDataArray>(V) ||
          (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy()) ||
-         (isa<UndefValue>(V) && !isa<PoisonValue>(V) &&
-          V->getType()->isAggregateType());
+         (isa<UndefValue>(V) && V->getType()->isAggregateType());
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
@@ -2283,13 +2282,13 @@ Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
                        ? AggrTy->getContainedType(I)
                        : cast<ArrayType>(AggrTy)->getElementType();
     auto *UI = B.CreateIntrinsic(Intrinsic::spv_undef, {});
-    AggrConsts[UI] = UndefValue::get(ElemTy);
+    AggrConsts[UI] = PoisonValue::get(ElemTy);
     AggrConstTypes[UI] = ElemTy;
     Elems[I] = UI;
   }
   auto *Composite = B.CreateIntrinsic(Intrinsic::spv_const_composite,
                                       {B.getInt32Ty()}, Elems);
-  AggrConsts[Composite] = UndefValue::get(AggrTy);
+  AggrConsts[Composite] = PoisonValue::get(AggrTy);
   AggrConstTypes[Composite] = AggrTy;
   return Composite;
 }

@@ -350,7 +350,7 @@ inline bool hasInitializer(const GlobalVariable *GV) {
   if (!GV->hasInitializer())
     return false;
   if (const auto *Init = GV->getInitializer(); isa<UndefValue>(Init))
-    return !isa<PoisonValue>(Init) && Init->getType()->isAggregateType();
+    return GV->isConstant() && Init->getType()->isAggregateType();
   return true;
 }
 

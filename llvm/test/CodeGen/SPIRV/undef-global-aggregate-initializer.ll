@@ -5,16 +5,16 @@ target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:2
 target triple = "spir"
 
 %struct.simple = type { i8 }
-@g_simple = private unnamed_addr addrspace(2) constant %struct.simple undef, align 1
+@g_simple = private unnamed_addr addrspace(2) constant %struct.simple poison, align 1
 
 %struct.multi = type { i32, float, i8 }
-@g_multi = private addrspace(2) constant %struct.multi undef, align 4
+@g_multi = private addrspace(2) constant %struct.multi poison, align 4
 
-@g_arr = private addrspace(2) constant [3 x i32] undef, align 4
+@g_arr = private addrspace(2) constant [3 x i32] poison, align 4
 
 %struct.inner = type { i32 }
 %struct.outer = type { %struct.inner, float }
-@g_nested = private addrspace(2) constant %struct.outer undef, align 4
+@g_nested = private addrspace(2) constant %struct.outer poison, align 4
 
 define spir_kernel void @k() #0 !kernel_arg_addr_space !0 !kernel_arg_access_qual !0 !kernel_arg_type !0 !kernel_arg_base_type !0 !kernel_arg_type_qual !0 {
 entry:
