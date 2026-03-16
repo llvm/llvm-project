@@ -5050,6 +5050,21 @@ VPTESTM_CASE(v32i16, WZ##SUFFIX)
 #undef VPTESTM_CASE
 }
 
+static void orderRegForMul(SDValue &N0, SDValue &N1, const unsigned LoReg,
+                           const MachineRegisterInfo &MRI) {
+  auto GetPhysReg = [&](SDValue V) -> Register {
+    if (V.getOpcode() != ISD::CopyFromReg)
+      return Register();
+    Register Reg = cast<RegisterSDNode>(V.getOperand(1))->getReg();
+    if (Reg.isVirtual())
+      return MRI.getLiveInPhysReg(Reg);
+    return Reg;
+  };
+
+  if (GetPhysReg(N1) == LoReg && GetPhysReg(N0) != LoReg)
+    std::swap(N0, N1);
+}
+
 // Try to create VPTESTM instruction. If InMask is not null, it will be used
 // to form a masked operation.
 bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
@@ -5796,6 +5811,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         std::swap(N0, N1);
     }
 
+    // UMUL/SMUL have an implicit source in LoReg (AL/AX/EAX/RAX). Prefer the
+    // operand that's already there to avoid an extra register-to-register move.
+    if (!FoldedLoad)
+      orderRegForMul(N0, N1, LoReg, CurDAG->getMachineFunction().getRegInfo());
+
     SDValue InGlue = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);
 
@@ -5881,6 +5901,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       if (foldedLoad)
         std::swap(N0, N1);
     }
+
+    // UMUL/SMUL_LOHI has an implicit source in LoReg (RDX for MULX, RAX for
+    // MUL/IMUL). Prefer the operand that's already there.
+    if (!foldedLoad)
+      orderRegForMul(N0, N1, LoReg, CurDAG->getMachineFunction().getRegInfo());
 
     SDValue InGlue = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, LoReg,
                                           N0, SDValue()).getValue(1);

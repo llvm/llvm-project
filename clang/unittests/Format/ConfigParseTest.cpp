@@ -193,7 +193,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentExportBlock);
-  CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
@@ -232,6 +231,9 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AcrossComments);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseArrows);
   CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseColons);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Empty);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Inline);
+  CHECK_PARSE_NESTED_BOOL(AllowShortFunctionsOnASingleLine, Other);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
@@ -686,20 +688,29 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortBlocksOnASingleLine: true",
               AllowShortBlocksOnASingleLine, FormatStyle::SBS_Always);
 
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: None",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Inline",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Inline);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setEmptyAndInline());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: Empty",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_Empty);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setEmptyOnly());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: All",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setAll());
+  CHECK_PARSE("AllowShortFunctionsOnASingleLine: InlineOnly",
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setInlineOnly());
+
   // For backward compatibility:
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: false",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle());
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
-              AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+              AllowShortFunctionsOnASingleLine,
+              FormatStyle::ShortFunctionStyle::setAll());
 
   Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   CHECK_PARSE("AllowShortLambdasOnASingleLine: None",
@@ -715,6 +726,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_None);
   CHECK_PARSE("AllowShortLambdasOnASingleLine: true",
               AllowShortLambdasOnASingleLine, FormatStyle::SLS_All);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_EmptyAndAttached;
+  CHECK_PARSE("AllowShortRecordOnASingleLine: Never",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_Never);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: EmptyAndAttached",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_EmptyAndAttached);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: Empty",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_Empty);
+  CHECK_PARSE("AllowShortRecordOnASingleLine: Always",
+              AllowShortRecordOnASingleLine, FormatStyle::SRS_Always);
 
   Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Both;
   CHECK_PARSE("SpaceAroundPointerQualifiers: Default",
@@ -938,6 +959,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::IEBS_Indent);
   CHECK_PARSE("IndentExternBlock: false", IndentExternBlock,
               FormatStyle::IEBS_NoIndent);
+
+  Style.IndentGotoLabels = FormatStyle::IGLS_OuterIndent;
+  CHECK_PARSE("IndentGotoLabels: NoIndent", IndentGotoLabels,
+              FormatStyle::IGLS_NoIndent);
+  CHECK_PARSE("IndentGotoLabels: OuterIndent", IndentGotoLabels,
+              FormatStyle::IGLS_OuterIndent);
+  CHECK_PARSE("IndentGotoLabels: InnerIndent", IndentGotoLabels,
+              FormatStyle::IGLS_InnerIndent);
+  CHECK_PARSE("IndentGotoLabels: HalfIndent", IndentGotoLabels,
+              FormatStyle::IGLS_HalfIndent);
+  CHECK_PARSE("IndentGotoLabels: false", IndentGotoLabels,
+              FormatStyle::IGLS_NoIndent);
+  CHECK_PARSE("IndentGotoLabels: true", IndentGotoLabels,
+              FormatStyle::IGLS_OuterIndent);
 
   Style.BitFieldColonSpacing = FormatStyle::BFCS_None;
   CHECK_PARSE("BitFieldColonSpacing: Both", BitFieldColonSpacing,

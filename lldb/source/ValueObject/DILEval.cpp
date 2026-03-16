@@ -105,8 +105,8 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       bool resolved = valobj->ResolveValue(scalar);
       if (!resolved)
         return llvm::createStringError("invalid scalar value");
-      return ValueObject::CreateValueObjectFromScalar(m_target, scalar, in_type,
-                                                      "result");
+      return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
+                                                      in_type, "result");
     }
   }
 
@@ -507,7 +507,7 @@ Interpreter::Visit(const UnaryOpNode &node) {
     bool negated = scalar.UnaryNegate();
     if (negated)
       return ValueObject::CreateValueObjectFromScalar(
-          m_target, scalar, operand->GetCompilerType(), "result");
+          m_exe_ctx_scope, scalar, operand->GetCompilerType(), "result");
     break;
   }
   case UnaryOpKind::Plus: {
@@ -551,13 +551,15 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                                                 location);
 
   auto value_object = [this, result_type](Scalar scalar) {
-    return ValueObject::CreateValueObjectFromScalar(m_target, scalar,
+    return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
                                                     result_type, "result");
   };
 
   switch (kind) {
   case BinaryOpKind::Add:
     return value_object(l + r);
+  case BinaryOpKind::Sub:
+    return value_object(l - r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -577,6 +579,28 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
 
   if (result_type.IsScalarType())
     return EvaluateScalarOp(BinaryOpKind::Add, lhs, rhs, result_type, location);
+
+  std::string errMsg =
+      llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                    orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operation '-' works for:
+  //   {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  // TODO: Pointer arithmetics
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (result_type.IsScalarType())
+    return EvaluateScalarOp(BinaryOpKind::Sub, lhs, rhs, result_type, location);
 
   std::string errMsg =
       llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
@@ -609,6 +633,8 @@ Interpreter::Visit(const BinaryOpNode &node) {
   switch (node.GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Sub:
+    return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
@@ -984,8 +1010,8 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
   if (!type_bitsize)
     return type_bitsize.takeError();
   scalar.TruncOrExtendTo(*type_bitsize, false);
-  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
-                                                  "result");
+  return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
+                                                  *type, "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -1006,14 +1032,19 @@ Interpreter::Visit(const FloatLiteralNode &node) {
         m_expr, "unable to create a const literal", node.GetLocation());
 
   Scalar scalar = node.GetValue();
-  return ValueObject::CreateValueObjectFromScalar(m_target, scalar, type,
+  return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar, type,
                                                   "result");
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BooleanLiteralNode &node) {
   bool value = node.GetValue();
-  return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return type_system.takeError();
+  return ValueObject::CreateValueObjectFromBool(m_exe_ctx_scope, *type_system,
+                                                value, "result");
 }
 
 llvm::Expected<CastKind>

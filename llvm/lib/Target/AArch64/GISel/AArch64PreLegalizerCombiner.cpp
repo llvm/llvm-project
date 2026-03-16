@@ -462,7 +462,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT DstTy = MRI.getType(DstReg);
 
   // If SrcTy has more elements than expected, split them into multiple
-  // insructions and sum the results
+  // instructions and sum the results
   LLT MainTy;
   SmallVector<Register, 1> WorkingRegisters;
   unsigned SrcScalSize = SrcTy.getScalarSizeInBits();

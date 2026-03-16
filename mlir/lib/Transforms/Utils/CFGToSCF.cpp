@@ -1156,8 +1156,20 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     FailureOr<Operation *> result = interface.createStructuredBranchRegionOp(
         opBuilder, regionEntry->getTerminator(),
         continuation->getArgumentTypes(), conditionalRegions);
-    if (failed(result))
+    if (failed(result)) {
+      // Blocks were moved from the parent region into conditionalRegions before
+      // calling createStructuredBranchRegionOp. On failure, move them back to
+      // avoid use-after-free crashes: the moved blocks may still be referenced
+      // as successors by blocks remaining in the parent region, so destroying
+      // conditionalRegions with live uses would trigger an assertion.
+      // This patching does not undo the change, it barely makes it so that the
+      // pass can gracefully fail instead of crashing.
+      Region *parentRegion = regionEntry->getParent();
+      for (Region &conditionalRegion : conditionalRegions)
+        parentRegion->getBlocks().splice(parentRegion->getBlocks().end(),
+                                         conditionalRegion.getBlocks());
       return failure();
+    }
     structuredCondOp = *result;
     regionEntry->getTerminator()->erase();
   }

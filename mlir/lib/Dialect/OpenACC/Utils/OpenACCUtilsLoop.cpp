@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -47,28 +48,6 @@ static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
   Value add = b.createOrFold<arith::AddIOp>(loc, sub, step,
                                             arith::IntegerOverflowFlags::nsw);
   return b.createOrFold<arith::DivSIOp>(loc, add, step);
-}
-
-/// Get exclusive upper bound from acc.loop (add 1 if inclusive).
-/// The result is always in index type.
-static Value getExclusiveUpperBoundAsIndex(acc::LoopOp loopOp, size_t ivPos,
-                                           OpBuilder &b) {
-  bool isInclusive = false;
-  if (loopOp.getInclusiveUpperbound().has_value())
-    isInclusive = loopOp.getInclusiveUpperboundAttr().asArrayRef()[ivPos];
-
-  Value origUB = loopOp.getUpperbound()[ivPos];
-  Location loc = origUB.getLoc();
-  Type indexType = b.getIndexType();
-
-  // Cast to index first, then add if inclusive
-  Value ub = getValueOrCreateCastToIndexLike(b, loc, indexType, origUB);
-  if (isInclusive) {
-    Value one = arith::ConstantIndexOp::create(b, loc, 1);
-    ub = b.createOrFold<arith::AddIOp>(loc, ub, one,
-                                       arith::IntegerOverflowFlags::nsw);
-  }
-  return ub;
 }
 
 /// Handle differing types between SCF (index) and ACC loops.
@@ -170,27 +149,37 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
 /// Wrap a multi-block region with scf.execute_region.
 scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter) {
-  auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
+                                         Location loc, RewriterBase &rewriter,
+                                         bool convertFuncReturn) {
+  SmallVector<Operation *> terminators;
+  for (Block &block : region.getBlocks()) {
+    if (block.empty())
+      continue;
+    Operation *term = block.getTerminator();
+    if ((convertFuncReturn && isa<func::ReturnOp>(*term)) ||
+        isa<acc::YieldOp>(*term))
+      terminators.push_back(term);
+  }
+  SmallVector<Type> resultTypes;
+  if (!terminators.empty())
+    for (Value operand : terminators.front()->getOperands())
+      resultTypes.push_back(operand.getType());
+
+  auto exeRegionOp =
+      scf::ExecuteRegionOp::create(rewriter, loc, TypeRange(resultTypes));
 
   rewriter.cloneRegionBefore(region, exeRegionOp.getRegion(),
                              exeRegionOp.getRegion().end(), mapping);
 
-  // Find and replace the ACC terminator with scf.yield
-  Operation *terminator = exeRegionOp.getRegion().back().getTerminator();
-  if (auto yieldOp = dyn_cast<acc::YieldOp>(terminator)) {
-    if (yieldOp.getNumOperands() > 0) {
-      region.getParentOp()->emitError(
-          "acc.loop with results not yet supported");
-      return nullptr;
-    }
-  } else if (!isa<acc::TerminatorOp>(terminator)) {
-    llvm_unreachable("unexpected terminator in ACC region");
+  for (Operation *term : terminators) {
+    Operation *blockTerminator = mapping.lookup(term);
+    assert(blockTerminator && "expected terminator to be in mapping");
+    rewriter.setInsertionPoint(blockTerminator);
+    (void)scf::YieldOp::create(rewriter, blockTerminator->getLoc(),
+                               blockTerminator->getOperands());
+    rewriter.eraseOp(blockTerminator);
   }
 
-  rewriter.eraseOp(terminator);
-  rewriter.setInsertionPointToEnd(&exeRegionOp.getRegion().back());
-  scf::YieldOp::create(rewriter, loc);
   return exeRegionOp;
 }
 
@@ -201,42 +190,40 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
          "loops");
 
   Location loc = loopOp->getLoc();
-  Type indexType = rewriter.getIndexType();
 
-  // Create nested scf.for loops and build IR mapping for IVs
   IRMapping mapping;
   SmallVector<scf::ForOp> forOps;
 
-  // Save the original insertion point
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(loopOp);
 
-  // First, compute ALL loop bounds at the current insertion point (before
-  // any ForOp). This ensures all bounds are defined in the outer scope,
-  // which is required for coalesceLoops to work correctly.
-  SmallVector<Value> lowerBounds, upperBounds, steps;
-  for (BlockArgument iv : loopOp.getBody().getArguments()) {
-    size_t idx = iv.getArgNumber();
-    Value newLowerBound = getValueOrCreateCastToIndexLike(
-        rewriter, loc, indexType, loopOp.getLowerbound()[idx]);
-    Value newUpperBound = getExclusiveUpperBoundAsIndex(loopOp, idx, rewriter);
-    Value newStep = getValueOrCreateCastToIndexLike(rewriter, loc, indexType,
-                                                    loopOp.getStep()[idx]);
-    lowerBounds.push_back(newLowerBound);
-    upperBounds.push_back(newUpperBound);
-    steps.push_back(newStep);
+  // Normalize all loops: lb=0, step=1, ub=tripCount.
+  // scf.for requires a positive step, but acc.loop may have arbitrary steps
+  // (including negative). Normalizing unconditionally keeps this consistent
+  // with convertACCLoopToSCFParallel and lets later passes fold constants.
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+
+  SmallVector<Value> tripCounts;
+  for (auto [idx, iv] : llvm::enumerate(loopOp.getBody().getArguments())) {
+    bool inclusiveUpperbound = false;
+    if (loopOp.getInclusiveUpperbound().has_value())
+      inclusiveUpperbound =
+          loopOp.getInclusiveUpperboundAttr().asArrayRef()[idx];
+
+    Value tc = calculateTripCount(rewriter, loc, loopOp.getLowerbound()[idx],
+                                  loopOp.getUpperbound()[idx],
+                                  loopOp.getStep()[idx], inclusiveUpperbound);
+    tripCounts.push_back(tc);
   }
 
-  // Now create the nested ForOps using the pre-computed bounds
-  for (BlockArgument iv : loopOp.getBody().getArguments()) {
-    size_t idx = iv.getArgNumber();
-
+  for (auto [idx, iv] : llvm::enumerate(loopOp.getBody().getArguments())) {
     // For nested loops, insert inside the previous loop's body
     if (idx > 0)
       rewriter.setInsertionPointToStart(forOps.back().getBody());
 
-    scf::ForOp forOp = scf::ForOp::create(rewriter, loc, lowerBounds[idx],
-                                          upperBounds[idx], steps[idx]);
+    scf::ForOp forOp =
+        scf::ForOp::create(rewriter, loc, zero, tripCounts[idx], one);
     forOps.push_back(forOp);
     mapping.map(iv, forOp.getInductionVar());
   }
@@ -253,6 +240,16 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   // Clone the loop body into the innermost scf.for
   cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
                             rewriter.getInsertionPoint(), mapping, rewriter);
+
+  // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
+  for (size_t idx = 0; idx < forOps.size(); ++idx) {
+    Value iv = forOps[idx].getInductionVar();
+    if (!iv.use_empty()) {
+      rewriter.setInsertionPointToStart(forOps[idx].getBody());
+      normalizeIVUses(rewriter, loc, iv, loopOp.getLowerbound()[idx],
+                      loopOp.getStep()[idx]);
+    }
+  }
 
   // Optionally collapse nested loops
   if (enableCollapse && forOps.size() > 1)

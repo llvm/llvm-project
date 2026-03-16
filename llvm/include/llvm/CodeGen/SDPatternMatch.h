@@ -332,19 +332,29 @@ inline SwitchContext<MatchContext, Pattern> m_Context(const MatchContext &Ctx,
 }
 
 // === Value type ===
-struct ValueType_bind {
+
+template <typename Pattern> struct ValueType_bind {
   EVT &BindVT;
+  Pattern P;
 
-  explicit ValueType_bind(EVT &Bind) : BindVT(Bind) {}
+  explicit ValueType_bind(EVT &Bind, const Pattern &P) : BindVT(Bind), P(P) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     BindVT = N.getValueType();
-    return true;
+    return P.match(Ctx, N);
   }
 };
 
+template <typename Pattern>
+ValueType_bind(const Pattern &P) -> ValueType_bind<Pattern>;
+
 /// Retreive the ValueType of the current SDValue.
-inline ValueType_bind m_VT(EVT &VT) { return ValueType_bind(VT); }
+inline auto m_VT(EVT &VT) { return ValueType_bind(VT, m_Value()); }
+
+template <typename Pattern> inline auto m_VT(EVT &VT, const Pattern &P) {
+  return ValueType_bind(VT, P);
+}
 
 template <typename Pattern, typename PredFuncT> struct ValueType_match {
   PredFuncT PredFunc;
