@@ -925,6 +925,13 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     default: return false;
     // MLBI aliases
     case 0: {
+      if (Op1Val == 6 && Op2Val == 0) {
+        NeedsReg = true;
+        Ins = "apas";
+        Name = "";
+        break;
+      }
+
       const AArch64MLBI::MLBI *MLBI =
           AArch64MLBI::lookupMLBIByEncoding(Encoding);
       if (!MLBI || !MLBI->haveFeatures(STI.getFeatureBits()))
@@ -941,6 +948,41 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       case 0: goto Search_IC;
       case 3: goto Search_PRCTX;
       }
+    // BRB aliases.
+    case 2: {
+      switch (Op1Val) {
+      default:
+        return false;
+      case 1:
+        if (!(STI.hasFeature(AArch64::FeatureAll) ||
+              STI.hasFeature(AArch64::FeatureBRBE)))
+          return false;
+
+        NeedsReg = false;
+        switch (Op2Val) {
+        default:
+          return false;
+        case 4:
+          Ins = "brb\t";
+          Name = "iall";
+          break;
+        case 5:
+          Ins = "brb\t";
+          Name = "inj";
+          break;
+        }
+        break;
+      case 3:
+        if (Op2Val != 7 || !(STI.hasFeature(AArch64::FeatureAll) ||
+                             STI.hasFeature(AArch64::FeatureITE)))
+          return false;
+
+        NeedsReg = true;
+        Ins = "trcit";
+        Name = "";
+        break;
+      }
+    } break;
     // Prediction Restriction aliases
     case 3: {
       Search_PRCTX:
@@ -1014,6 +1056,47 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         return false;
       }
     } break;
+    // GCS aliases.
+    case 7: {
+      if (!(STI.hasFeature(AArch64::FeatureAll) ||
+            STI.hasFeature(AArch64::FeatureGCS)))
+        return false;
+
+      Name = "";
+      switch (Op1Val) {
+      default:
+        return false;
+      case 0:
+        NeedsReg = false;
+        switch (Op2Val) {
+        default:
+          return false;
+        case 4:
+          Ins = "gcspushx";
+          break;
+        case 5:
+          Ins = "gcspopcx";
+          break;
+        case 6:
+          Ins = "gcspopx";
+          break;
+        }
+        break;
+      case 3:
+        NeedsReg = true;
+        switch (Op2Val) {
+        default:
+          return false;
+        case 0:
+          Ins = "gcspushm";
+          break;
+        case 2:
+          Ins = "gcsss1";
+          break;
+        }
+        break;
+      }
+    } break;
     }
   } else if (CnVal == 8 || CnVal == 9) {
     // TLBI aliases
@@ -1071,6 +1154,13 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   if (NotXZR && !NeedsReg && !OptionalReg)
     return false;
 
+  if (Name.empty()) {
+    O << '\t' << Ins;
+    if (NeedsReg || (OptionalReg && NotXZR))
+      O << '\t' << Reg;
+    return true;
+  }
+
   std::string Str = Ins + Name;
   llvm::transform(Str, Str.begin(), ::tolower);
 
@@ -1110,6 +1200,7 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
 
   std::string Ins;
   std::string Name;
+  bool OptionalReg = false;
 
   if (CnVal == 12) {
     if (CmVal == 3) {
@@ -1123,8 +1214,33 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
       Name = std::string(GICR->Name);
     } else
       return false;
+  } else if (CnVal == 7 && CmVal == 7) {
+    if (!(STI.hasFeature(AArch64::FeatureAll) ||
+          STI.hasFeature(AArch64::FeatureGCS)) ||
+        Op1Val != 3)
+      return false;
+
+    Name = "";
+    switch (Op2Val) {
+    default:
+      return false;
+    case 1:
+      Ins = "gcspopm";
+      OptionalReg = true;
+      break;
+    case 3:
+      Ins = "gcsss2";
+      break;
+    }
   } else
     return false;
+
+  if (Name.empty()) {
+    O << '\t' << Ins;
+    if (!OptionalReg || Reg != "xzr")
+      O << '\t' << Reg.str();
+    return true;
+  }
 
   llvm::transform(Name, Name.begin(), ::tolower);
 

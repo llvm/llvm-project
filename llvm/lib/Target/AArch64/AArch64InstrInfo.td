@@ -1614,16 +1614,6 @@ def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
 
-// Branch Record Buffer two-word mnemonic instructions
-class BRBEI<bits<3> op2, string keyword>
-    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
-  let Inst{31-8} = 0b110101010000100101110010;
-  let Inst{7-5} = op2;
-  let Predicates = [HasBRBE];
-}
-def BRB_IALL: BRBEI<0b100, "\tiall">;
-def BRB_INJ:  BRBEI<0b101, "\tinj">;
-
 }
 
 // Allow uppercase and lowercase keyword arguments for BRB IALL and BRB INJ
@@ -1632,16 +1622,6 @@ def : TokenAlias<"IALL", "iall">;
 
 
 // ARMv9.4-A Guarded Control Stack
-class GCSNoOp<bits<3> op2, string mnemonic>
-    : SimpleSystemI<0, (ins), mnemonic, "">, Sched<[]> {
-  let Inst{20-8} = 0b0100001110111;
-  let Inst{7-5} = op2;
-  let Predicates = [HasGCS];
-}
-def GCSPUSHX : GCSNoOp<0b100, "gcspushx">;
-def GCSPOPCX : GCSNoOp<0b101, "gcspopcx">;
-def GCSPOPX  : GCSNoOp<0b110, "gcspopx">;
-
 class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
             list<dag> pattern = []>
     : RtSystemI<0, (outs), (ins GPR64:$Rt), mnemonic, "\t$Rt", pattern> {
@@ -2552,6 +2532,30 @@ def SYSLxt : SystemLXtI<1, "sysl">;
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt)>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR)>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR)>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt)>, Requires<[HasITE]>;
+def : InstAlias<"gcspushx",
+                (SYSxt 0, 7, 7, 4, XZR)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspopcx",
+                (SYSxt 0, 7, 7, 5, XZR)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspopx",
+                (SYSxt 0, 7, 7, 6, XZR)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspushm $Rt",
+                (SYSxt 3, 7, 7, 0, GPR64:$Rt)>, Requires<[HasGCS]>;
+def : InstAlias<"gcsss1 $Rt",
+                (SYSxt 3, 7, 7, 2, GPR64:$Rt)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspopm",
+                (SYSLxt XZR, 3, 7, 7, 1)>, Requires<[HasGCS]>;
+def : InstAlias<"gcspopm $Rt",
+                (SYSLxt GPR64:$Rt, 3, 7, 7, 1)>, Requires<[HasGCS]>;
+def : InstAlias<"gcsss2 $Rt",
+                (SYSLxt GPR64:$Rt, 3, 7, 7, 3)>, Requires<[HasGCS]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -3080,9 +3084,6 @@ let Predicates = [HasLSUI] in {
   defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
   defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
 }
-
-// v9.6-a FEAT_RME_GPC3
-def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;

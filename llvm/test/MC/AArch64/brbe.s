@@ -136,10 +136,14 @@ mrs x5, BRBTGT31_EL1
 
 brb iall
 brb inj
+sys #1, c7, c2, #4
+sys #1, c7, c2, #5
 // CHECK: brb iall  // encoding: [0x9f,0x72,0x09,0xd5]
 // CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
-// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
-// ERROR-NO-BRBE: [[@LINE-4]]:1: error: instruction requires: brbe
+// CHECK: brb iall  // encoding: [0x9f,0x72,0x09,0xd5]
+// CHECK: brb inj   // encoding: [0xbf,0x72,0x09,0xd5]
+// ERROR-NO-BRBE: [[@LINE-8]]:1: error: instruction requires: brbe
+// ERROR-NO-BRBE: [[@LINE-8]]:1: error: instruction requires: brbe
 
 brb IALL
 brb INJ
