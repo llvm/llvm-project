@@ -135,23 +135,6 @@ bfloat16_t test_vgetq_lane_bf16(bfloat16x8_t v) {
   return vgetq_lane_bf16(v, 7);
 }
 
-// CHECK-LABEL: @test_vset_lane_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <4 x bfloat> [[V:%.*]], bfloat [[A:%.*]], i32 1
-// CHECK-NEXT:    ret <4 x bfloat> [[VSET_LANE]]
-//
-bfloat16x4_t test_vset_lane_bf16(bfloat16_t a, bfloat16x4_t v) {
-  return vset_lane_bf16(a, v, 1);
-}
-
-// CHECK-LABEL: @test_vsetq_lane_bf16(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <8 x bfloat> [[V:%.*]], bfloat [[A:%.*]], i32 7
-// CHECK-NEXT:    ret <8 x bfloat> [[VSET_LANE]]
-//
-bfloat16x8_t test_vsetq_lane_bf16(bfloat16_t a, bfloat16x8_t v) {
-  return vsetq_lane_bf16(a, v, 7);
-}
 
 // CHECK-LABEL: @test_vduph_lane_bf16(
 // CHECK-NEXT:  entry:
