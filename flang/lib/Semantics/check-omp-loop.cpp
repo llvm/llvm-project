@@ -299,7 +299,7 @@ void OmpStructureChecker::CheckNestedConstruct(
       context_.Say(beginSpec.DirName().source,
           "This construct should contain a DO-loop or a loop-nest-generating OpenMP construct"_err_en_US);
     } else {
-      auto assoc{llvm::omp::getDirectiveAssociation(beginSpec.DirName().v)};
+      auto assoc{llvm::omp::getDirectiveAssociation(dir)};
       if (*numLoops > 1 && assoc == llvm::omp::Association::LoopNest) {
         context_.Say(beginSpec.DirName().source,
             "This construct applies to a loop nest, but has a loop sequence of "
