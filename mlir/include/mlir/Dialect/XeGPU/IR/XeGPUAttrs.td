@@ -352,7 +352,7 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     /*retTy=*/"bool",
                     /*methodName=*/"isCompatibleWith",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other,
-                                  "SmallVector<int64_t>: %shape",
+                                  "SmallVector<int64_t>": $shape,
                                   "xegpu::LayoutKind": $level)>,
     InterfaceMethod</*desc=*/[{Check if this layout is equal to another layout.
                      For LayoutAttr, this compares all fields.

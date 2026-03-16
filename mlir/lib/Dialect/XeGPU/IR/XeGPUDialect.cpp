@@ -238,15 +238,15 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                        << lane_layout.size();
   }
 
-  if ((sg_data && !sg_layout) || (!sg_data && sg_layout))
+  if ((sg_layout && !sg_data) || (!sg_layout && sg_data))
     return emitError() << "sg_layout and sg_data must be used together";
-  if (sg_data.size() != sg_layout.size())
+  if (sg_layout && sg_data && sg_layout.size() != sg_data.size())
     return emitError()
            << "expected sg_data and sg_layout to have the same rank";
 
-  if ((lane_data && !lane_layout) || (!lane_data && lane_layout))
+  if ((lane_layout && !lane_data) || (!lane_layout && lane_data))
     return emitError() << "lane_layout and lane_data must be used together";
-  if (lane_data.size() != lane_layout.size())
+  if (lane_layout && lane_data && lane_layout.size() != lane_data.size())
     return emitError()
            << "expected lane_data and lane_layout to have the same rank";
 
@@ -806,8 +806,9 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
                   other.getEffectiveSgLayoutAsInt() &&
               getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt());
     if (level == xegpu::LayoutKind::Lane)
-      return (getEffectiveLaneLayoutAsInt() == other.getEffectiveLaneLayoutAsInt() &&
-        getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt();
+      return (getEffectiveLaneLayoutAsInt() ==
+                  other.getEffectiveLaneLayoutAsInt() &&
+              getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt());
   }
   if (level == xegpu::LayoutKind::Subgroup) {
     int64_t wgSize = computeProduct(getEffectiveSgLayoutAsInt());
@@ -937,12 +938,13 @@ SliceAttr::computeStaticDistributedCoords(int64_t linearId,
 
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
+  SmallVector<int64_t> instData;
   if (isForWorkgroup()) {
     layout = getEffectiveSgLayoutAsInt();
     subShape = getEffectiveSgDataAsInt();
   } else if (isForSubgroup()) {
     instData = getEffectiveInstDataAsInt();
-    layoutVec = getEffectiveLaneLayoutAsInt();
+    layout = getEffectiveLaneLayoutAsInt();
     subShape = getEffectiveLaneDataAsInt();
   }
   if (!instData.empty()) {
@@ -1039,9 +1041,9 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
           (flattenedThis.getDims() == flattenedOther.getDims()));
 }
 
-bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
-                                  SmallVector<int64_t> shape,
-                                  xegpu::LayoutKind level) {
+bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
+                                 SmallVector<int64_t> shape,
+                                 xegpu::LayoutKind level) {
   if (!other)
     return false;
   if (getEffectiveOrderAsInt() == other.getEffectiveOrderAsInt()) {
@@ -1050,8 +1052,9 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
                   other.getEffectiveSgLayoutAsInt() &&
               getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt());
     if (level == xegpu::LayoutKind::Lane)
-      return (getEffectiveLaneLayoutAsInt() == other.getEffectiveLaneLayoutAsInt() &&
-        getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt();
+      return (getEffectiveLaneLayoutAsInt() ==
+                  other.getEffectiveLaneLayoutAsInt() &&
+              getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt());
   }
 
   auto flattenedThis = flatten();
