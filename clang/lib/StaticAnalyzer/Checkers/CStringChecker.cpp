@@ -475,7 +475,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     return nullptr;
   }
 
-  // We won't check whether the entire region is fully initialized -- lets just
+  // We won't check whether the entire region is fully initialized -- let's just
   // check that the first and the last element is. So, onto checking the last
   // element:
   const QualType IdxTy = SVB.getArrayIndexType();
@@ -576,9 +576,9 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
 
   auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
-    // FIXME: We detected a fatal error here, we should stop analysis even if we
-    // chose not to emit a report here. However, as long as our out-of-bounds
-    // checker is in alpha, lets just pretend nothing happened.
+    // FIXME: We detected a fatal error here, we should stop the analysis even
+    // if we choose not to emit a report here. However, as long as our
+    // out-of-bounds checker is in alpha, let's just pretend nothing happened.
     if (!OutOfBounds.isEnabled())
       return state;
 
@@ -703,9 +703,9 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
       emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
       return nullptr;
     }
-    // FIXME: We detected a fatal error here, we should stop analysis even if we
-    // chose not to emit a report here. However, as long as our overlap checker
-    // is in alpha, lets just pretend nothing happened.
+    // FIXME: We detected a fatal error here, we should stop the analysis even
+    // if we choose not to emit a report here. However, as long as our overlap
+    // checker is in alpha, let's just pretend nothing happened.
     return state;
   }
 
@@ -770,14 +770,13 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
   std::tie(stateTrue, stateFalse) = state->assume(*OverlapTest);
 
   if (stateTrue && !stateFalse) {
-    // Overlap!
     if (BufferOverlap.isEnabled()) {
       emitOverlapBug(C, stateTrue, First.Expression, Second.Expression);
       return nullptr;
     }
-    // FIXME: We detected a fatal error here, we should stop analysis even if we
-    // chose not to emit a report here. However, as long as our overlap checker
-    // is in alpha, lets just pretend nothing happened.
+    // FIXME: We detected a fatal error here, we should stop the analysis even
+    // if we choose not to emit a report here. However, as long as our overlap
+    // checker is in alpha, let's just pretend nothing happened.
     return state;
   }
 
