@@ -13,9 +13,11 @@
 // RUN:  -Wno-experimental-header-units -fmodule-file=hu-01.pcm -o hu-02-rel.pcm \
 // RUN:  -fmodule-file-home-is-cwd
 
-// RUN: %clang -module-file-info hu-02-abs.pcm | FileCheck %s --check-prefix=IMPORT
-// RUN: %clang -module-file-info hu-02-rel.pcm | FileCheck %s --check-prefix=IMPORT
-// IMPORT: Imports module 'hu-01': hu-01.pcm
+// RUN: %clang -module-file-info hu-02-abs.pcm | FileCheck %s --check-prefix=IMPORT-ABS -DPREFIX=%t
+// IMPORT-ABS: Imports module 'hu-01': [[PREFIX]]{{/|\\}}hu-01.pcm
+
+// RUN: %clang -module-file-info hu-02-rel.pcm | FileCheck %s --check-prefix=IMPORT-REL
+// IMPORT-REL: Imports module 'hu-01': hu-01.pcm
 
 // RUN: llvm-bcanalyzer --dump --disable-histogram %t/hu-02-abs.pcm \
 // RUN:   | FileCheck %s --check-prefix=INPUT-ABS -DPREFIX=%t

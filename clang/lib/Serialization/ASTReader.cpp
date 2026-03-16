@@ -3477,7 +3477,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
-      unsigned ModuleCacheLen = 0;
+      unsigned SuffixLength = 0;
       ASTFileSignature StoredSignature;
       ModuleFileName ImportedFile;
       std::string StoredFile;
@@ -3501,23 +3501,20 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
-        ModuleCacheLen = (unsigned)Record[Idx++];
+        SuffixLength = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
                                                    SignatureBytes.end());
         Blob = Blob.substr(ASTFileSignature::size);
 
-        StoredFile = ReadStringBlob(Record, Idx, Blob);
+        StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          if (ImportedKind == MK_ImplicitModule) {
-            assert(ModuleCacheLen != 0);
-            ImportedFile =
-                ModuleFileName::make_implicit(StoredFile, ModuleCacheLen);
-          } else {
-            assert(ModuleCacheLen == 0);
-            ImportedFile = ModuleFileName::make_explicit(StoredFile);
-          }
+          ImportedFile =
+              SuffixLength
+                  ? ModuleFileName::makeImplicit(StoredFile, SuffixLength)
+                  : ModuleFileName::makeExplicit(StoredFile);
+          assert((ImportedKind == MK_ImplicitModule) == (SuffixLength != 0));
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -6151,8 +6148,9 @@ bool ASTReader::readASTFileControlBlock(
       // Skip signature.
       Blob = Blob.substr(ASTFileSignature::size);
 
-      StringRef Filename = ReadStringBlob(Record, Idx, Blob);
-      Listener.visitImport(ModuleName, Filename);
+      StringRef FilenameStr = ReadStringBlob(Record, Idx, Blob);
+      auto Filename = ResolveImportedPath(PathBuf, FilenameStr, ModuleDir);
+      Listener.visitImport(ModuleName, *Filename);
       break;
     }
 

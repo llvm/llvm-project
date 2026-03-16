@@ -271,7 +271,7 @@ ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
   // order to be able to correctly construct ModuleFileName.
 
   SmallString<256> Result(CachePath);
-  unsigned Separator = CachePath.size();
+  unsigned SuffixBegin = Result.size();
 
   if (HSOpts.DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
@@ -295,7 +295,7 @@ ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
     llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);
     llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
   }
-  return ModuleFileName::makeImplicit(Result, Separator);
+  return ModuleFileName::makeImplicit(Result, Result.size() - SuffixBegin);
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName,

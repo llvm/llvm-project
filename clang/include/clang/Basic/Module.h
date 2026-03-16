@@ -105,7 +105,7 @@ public:
 /// other types of module files, this is just the file system path.
 class ModuleFileName {
   std::string Path;
-  std::optional<unsigned> Separator;
+  unsigned SuffixLength = 0;
 
 public:
   /// Creates an empty module file name.
@@ -124,17 +124,21 @@ public:
   }
 
   /// Creates a file name for an implicit module.
-  static ModuleFileName makeImplicit(std::string Name, unsigned Separator) {
+  static ModuleFileName makeImplicit(std::string Name, unsigned SuffixLength) {
+    assert(SuffixLength != 0 && "Empty suffix for implicit module file name");
     ModuleFileName File;
     File.Path = std::move(Name);
-    File.Separator = Separator;
+    File.SuffixLength = SuffixLength;
     return File;
   }
 
   /// Creates a file name for an implicit module.
-  static ModuleFileName makeImplicit(StringRef Name, unsigned Separator) {
-    return makeImplicit(Name.str(), Separator);
+  static ModuleFileName makeImplicit(StringRef Name, unsigned SuffixLength) {
+    return makeImplicit(Name.str(), SuffixLength);
   }
+
+  /// Returns the suffix length for an implicit module name, zero otherwise.
+  unsigned getSuffixLength() const { return SuffixLength; }
 
   /// Returns the plain module file name.
   StringRef str() const { return Path; }

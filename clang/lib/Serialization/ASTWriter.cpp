@@ -1603,15 +1603,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
         llvm::append_range(Blob, M.Signature);
 
-        StringRef NormalizedModuleCache =
-            PP.getHeaderSearchInfo().getNormalizedModuleCachePath();
-        unsigned ModuleCacheLen = 0;
-        if (M.Kind == MK_ImplicitModule &&
-            StringRef(M.FileName).starts_with(NormalizedModuleCache))
-          ModuleCacheLen = NormalizedModuleCache.size();
-        Record.push_back(ModuleCacheLen);
-
-        AddStringBlob(M.FileName, Record, Blob);
+        Record.push_back(M.FileName.getSuffixLength());
+        AddPathBlob(M.FileName, Record, Blob);
       }
 
       Stream.EmitRecordWithBlob(AbbrevCode, Record, Blob);

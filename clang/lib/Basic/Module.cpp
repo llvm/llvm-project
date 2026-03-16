@@ -35,9 +35,9 @@ using namespace clang;
 
 std::optional<ModuleFileKey>
 ModuleFileName::makeKey(FileManager &FileMgr) const {
-  if (Separator) {
-    StringRef ModuleCachePath = StringRef(Path).substr(0, *Separator);
-    StringRef ModuleFilePathSuffix = StringRef(Path).substr(*Separator);
+  if (SuffixLength) {
+    StringRef ModuleCachePath = StringRef(Path).drop_back(SuffixLength);
+    StringRef ModuleFilePathSuffix = StringRef(Path).take_back(SuffixLength);
     if (auto ModuleCache = FileMgr.getOptionalDirectoryRef(
             ModuleCachePath, /*CacheFailure=*/false))
       return ModuleFileKey(*ModuleCache, ModuleFilePathSuffix);
