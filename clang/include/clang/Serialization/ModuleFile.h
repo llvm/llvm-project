@@ -159,7 +159,7 @@ public:
   ModuleKind Kind;
 
   /// The file name of the module file.
-  std::string FileName;
+  ModuleFileName FileName;
 
   /// The key ModuleManager used for the module file.
   ModuleFileKey FileKey;

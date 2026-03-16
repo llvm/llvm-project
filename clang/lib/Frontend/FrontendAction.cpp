@@ -892,7 +892,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
       for (serialization::ModuleFile &MF : MM)
         if (&MF != &PrimaryModule)
-          CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
+          CI.getFrontendOpts().ModuleFiles.emplace_back(MF.FileName.str());
 
       ASTReader->visitTopLevelModuleMaps(PrimaryModule, [&](FileEntryRef FE) {
         CI.getFrontendOpts().ModuleMapFiles.push_back(

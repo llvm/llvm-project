@@ -231,7 +231,7 @@ ModuleManager::AddModuleResult ModuleManager::addModule(
   auto NewModule =
       std::make_unique<ModuleFile>(Type, *FileKey, *Entry, Generation);
   NewModule->Index = Chain.size();
-  NewModule->FileName = FileName.str();
+  NewModule->FileName = FileName;
   NewModule->ImportLoc = ImportLoc;
   NewModule->InputFilesValidationTimestamp = InputFilesValidationTimestamp;
   NewModule->Buffer = ModuleBuffer;
