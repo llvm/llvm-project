@@ -24,7 +24,7 @@ namespace orc_rt {
 /// detaches, and when the Session shuts down.
 class Service {
 public:
-  using OnCompleteFn = move_only_function<void(Error)>;
+  using OnCompleteFn = move_only_function<void()>;
 
   virtual ~Service();
 
