@@ -1775,6 +1775,15 @@ template <typename T, int N, template <typename> class C> void use() {
 
 }
 
+namespace instantiation_dependent {
+  template <class T> concept C = sizeof(T) >= 1;
+  template <class U> using X = int;
+  template <class V> requires C<X<V&>> struct Y {};
+  Y<void> y;
+  // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
+} // namespace instantiation_dependent
+
 namespace GH174667 {
 
 template<class T, class, class U>
