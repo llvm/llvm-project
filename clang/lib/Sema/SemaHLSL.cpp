@@ -4725,8 +4725,6 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
   Decl->setType(Type);
 }
 
-namespace {
-
 // Creates a global variable declaration for a resource field embedded in a
 // struct, assigns it a binding, initializes it, and associates it with the
 // struct declaration via an HLSLAssociatedResourceDeclAttr.
@@ -4748,7 +4746,7 @@ static void createGlobalResourceDeclForStruct(Sema &S, VarDecl *ParentVD,
   const HLSLAttributedResourceType *ResHandleTy = nullptr;
   if (const auto *AT = dyn_cast<ArrayType>(ResTy.getTypePtr())) {
     const auto *CAT = dyn_cast<ConstantArrayType>(AT);
-    Range = CAT ? CAT->getSize().getZExtValue() : -1;
+    Range = CAT ? CAT->getSize().getZExtValue() : ~0U;
     ResHandleTy = getResourceArrayHandleType(ResTy);
   } else {
     ResHandleTy = HLSLAttributedResourceType::findHandleTypeOnResource(
@@ -4849,8 +4847,6 @@ handleArrayOfStructWithResources(Sema &S, VarDecl *ParentVD,
   }
 }
 
-} // namespace
-
 // Scans all fields of a user-defined struct (or array of structs)
 // to find all embedded resources or resource arrays. For each resource
 // a global variable of the resource type is created and associated
@@ -4863,14 +4859,12 @@ void SemaHLSL::handleGlobalStructOrArrayOfWithResources(VarDecl *VD) {
   assert(VDTy->isHLSLIntangibleType() && !isResourceRecordTypeOrArrayOf(VD) &&
          "Expected non-resource struct or array type");
 
-  const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl();
-  if (RD) {
+  if (const CXXRecordDecl *RD = VDTy->getAsCXXRecordDecl()) {
     handleStructWithResources(SemaRef, VD, RD, NameBuilder);
     return;
   }
 
-  const auto *CAT = dyn_cast<ConstantArrayType>(VDTy);
-  if (CAT) {
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(VDTy)) {
     handleArrayOfStructWithResources(SemaRef, VD, CAT, NameBuilder);
     return;
   }
