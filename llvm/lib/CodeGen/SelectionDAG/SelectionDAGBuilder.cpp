@@ -1867,9 +1867,6 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       return DAG.getConstant(*CI, DL, VT);
     }
 
-    if (const ConstantByte *CB = dyn_cast<ConstantByte>(C))
-      return DAG.getConstant(CB->getValue(), getCurSDLoc(), VT);
-
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
       if (const GlobalVariable *GVB = dyn_cast<GlobalVariable>(GV)) {
         if (GVB->getSection() == "llvm.ptrauth") {

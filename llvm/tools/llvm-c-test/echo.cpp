@@ -89,8 +89,6 @@ struct TypeCloner {
         return LLVMPPCFP128TypeInContext(Ctx);
       case LLVMLabelTypeKind:
         return LLVMLabelTypeInContext(Ctx);
-      case LLVMByteTypeKind:
-        return LLVMByteTypeInContext(Ctx, LLVMGetByteTypeWidth(Src));
       case LLVMIntegerTypeKind:
         return LLVMIntTypeInContext(Ctx, LLVMGetIntTypeWidth(Src));
       case LLVMFunctionTypeKind: {
