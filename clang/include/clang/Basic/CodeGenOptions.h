@@ -274,6 +274,9 @@ public:
   /// file paths in coverage mapping.
   llvm::SmallVector<std::pair<std::string, std::string>, 0> CoveragePrefixMap;
 
+  /// Prefix replacement map for sanitizers to remap source file paths.
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> SanitizePrefixMap;
+
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
 

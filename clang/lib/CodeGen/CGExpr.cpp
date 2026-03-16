@@ -4050,6 +4050,15 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
   if (PLoc.isValid()) {
     StringRef FilenameString = PLoc.getFilename();
 
+    // Apply sanitize prefix map.
+    SmallString<256> RemappedName(FilenameString);
+    for (const auto &[Old, New] : CGM.getCodeGenOpts().SanitizePrefixMap) {
+      if (llvm::sys::path::replace_path_prefix(RemappedName, Old, New)) {
+        FilenameString = RemappedName;
+        break;
+      }
+    }
+
     int PathComponentsToStrip =
         CGM.getCodeGenOpts().EmitCheckPathComponentsToStrip;
     if (PathComponentsToStrip < 0) {

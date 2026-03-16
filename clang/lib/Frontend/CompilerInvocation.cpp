@@ -1598,6 +1598,10 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, OPT_fcoverage_prefix_map_EQ,
                 Prefix.first + "=" + Prefix.second);
 
+  for (const auto &Prefix : Opts.SanitizePrefixMap)
+    GenerateArg(Consumer, OPT_fsanitize_prefix_map_EQ,
+                Prefix.first + "=" + Prefix.second);
+
   if (Opts.NewStructPathTBAA)
     GenerateArg(Consumer, OPT_new_struct_path_tbaa);
 
@@ -1906,6 +1910,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   for (const auto &Arg : Args.getAllArgValues(OPT_fcoverage_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
     Opts.CoveragePrefixMap.emplace_back(Split.first, Split.second);
+  }
+
+  for (const auto &Arg : Args.getAllArgValues(OPT_fsanitize_prefix_map_EQ)) {
+    auto Split = StringRef(Arg).split('=');
+    Opts.SanitizePrefixMap.emplace_back(Split.first, Split.second);
   }
 
   const llvm::Triple::ArchType DebugEntryValueArchs[] = {

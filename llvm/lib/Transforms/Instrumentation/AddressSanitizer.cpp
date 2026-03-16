@@ -21,6 +21,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -72,6 +73,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
@@ -957,11 +959,13 @@ private:
 
 class ModuleAddressSanitizer {
 public:
-  ModuleAddressSanitizer(Module &M, bool InsertVersionCheck,
-                         bool CompileKernel = false, bool Recover = false,
-                         bool UseGlobalsGC = true, bool UseOdrIndicator = true,
-                         AsanDtorKind DestructorKind = AsanDtorKind::Global,
-                         AsanCtorKind ConstructorKind = AsanCtorKind::Global)
+  ModuleAddressSanitizer(
+      Module &M, bool InsertVersionCheck, bool CompileKernel = false,
+      bool Recover = false, bool UseGlobalsGC = true,
+      bool UseOdrIndicator = true,
+      AsanDtorKind DestructorKind = AsanDtorKind::Global,
+      AsanCtorKind ConstructorKind = AsanCtorKind::Global,
+      std::vector<std::pair<std::string, std::string>> PrefixMap = {})
       : M(M), Inserter(M),
         CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
                                                             : CompileKernel),
@@ -988,7 +992,8 @@ public:
         DestructorKind(DestructorKind),
         ConstructorKind(ClConstructorKind.getNumOccurrences() > 0
                             ? ClConstructorKind
-                            : ConstructorKind) {
+                            : ConstructorKind),
+        PrefixMap(std::move(PrefixMap)) {
     C = &(M.getContext());
     int LongSize = M.getDataLayout().getPointerSizeInBits();
     IntptrTy = Type::getIntNTy(*C, LongSize);
@@ -1052,6 +1057,7 @@ private:
   bool UseCtorComdat;
   AsanDtorKind DestructorKind;
   AsanCtorKind ConstructorKind;
+  std::vector<std::pair<std::string, std::string>> PrefixMap;
   Type *IntptrTy;
   PointerType *PtrTy;
   LLVMContext *C;
@@ -1339,7 +1345,8 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
 
   ModuleAddressSanitizer ModuleSanitizer(
       M, Options.InsertVersionCheck, Options.CompileKernel, Options.Recover,
-      UseGlobalGC, UseOdrIndicator, DestructorKind, ConstructorKind);
+      UseGlobalGC, UseOdrIndicator, DestructorKind, ConstructorKind,
+      Options.PrefixMap);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   const StackSafetyGlobalInfo *const SSGI =
@@ -2831,8 +2838,19 @@ GlobalVariable *ModuleAddressSanitizer::getOrCreateModuleName() {
   if (!ModuleName) {
     // We shouldn't merge same module names, as this string serves as unique
     // module ID in runtime.
+    std::string ModuleNameStr = M.getModuleIdentifier();
+
+    // Apply prefix map remapping.
+    SmallString<256> RemappedName(ModuleNameStr);
+    for (const auto &[Old, New] : PrefixMap) {
+      if (llvm::sys::path::replace_path_prefix(RemappedName, Old, New)) {
+        ModuleNameStr = std::string(RemappedName);
+        break;
+      }
+    }
+
     ModuleName =
-        createPrivateGlobalForString(M, M.getModuleIdentifier(),
+        createPrivateGlobalForString(M, ModuleNameStr,
                                      /*AllowMerging*/ false, genName("module"));
   }
   return ModuleName;

@@ -929,6 +929,10 @@ Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
 
+- Added ``-fsanitize-prefix-map=OLD=NEW`` option to remap source file paths
+  in sanitizer metadata, enabling reproducible builds. This flag is also
+  implied by ``-ffile-prefix-map``.
+
 Python Binding Changes
 ----------------------
 - Add deprecation warnings to ``CompletionChunk.isKind...`` methods.

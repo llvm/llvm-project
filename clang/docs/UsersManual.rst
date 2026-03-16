@@ -5634,6 +5634,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize-merge=<value>
                               Allow compiler to merge handlers for specified sanitizers
       -fsanitize-merge        Allow compiler to merge handlers for all sanitizers
+      -fsanitize-prefix-map=<old>=<new>
+                              Remap file source paths in sanitizer metadata.
       -fsanitize-recover=<value>
                               Enable recovery for specified sanitizers
       -fsanitize-skip-hot-cutoff=<value>

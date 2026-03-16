@@ -331,6 +331,21 @@ static void addCoveragePrefixMapArg(const Driver &D, const ArgList &Args,
   }
 }
 
+/// Add a CC1 option to specify the sanitizer file path prefix map.
+static void addSanitizePrefixMapArg(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  for (const Arg *A : Args.filtered(options::OPT_ffile_prefix_map_EQ,
+                                    options::OPT_fsanitize_prefix_map_EQ)) {
+    StringRef Map = A->getValue();
+    if (!Map.contains('='))
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Map << A->getOption().getName();
+    else
+      CmdArgs.push_back(Args.MakeArgString("-fsanitize-prefix-map=" + Map));
+    A->claim();
+  }
+}
+
 /// Add -x lang to \p CmdArgs for \p Input.
 static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
                              ArgStringList &CmdArgs) {
@@ -1192,6 +1207,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   addMacroPrefixMapArg(D, Args, CmdArgs);
   addCoveragePrefixMapArg(D, Args, CmdArgs);
+  addSanitizePrefixMapArg(D, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_ffile_reproducible,
                   options::OPT_fno_file_reproducible);

@@ -408,6 +408,28 @@ run-time performance, which leads to increased binary size. Using the
 flag forces all code instrumentation to be outlined, which reduces the size
 of the generated code, but also reduces the run-time performance.
 
+Remapping source paths
+----------------------
+
+AddressSanitizer embeds the source file path in global metadata. For
+reproducible builds, the option ``-fsanitize-prefix-map=OLD=NEW`` can be used
+to remap these paths. If a source path starts with ``OLD``, it will be replaced
+with ``NEW``.
+
+Example
+^^^^^^^
+
+.. code-block:: console
+
+  # Strip build directory prefix
+  $ clang -fsanitize=address -fsanitize-prefix-map=/build/dir/= source.c
+
+  # Remap to a canonical path
+  $ clang -fsanitize=address -fsanitize-prefix-map=/home/user/project=/src source.c
+
+Multiple ``-fsanitize-prefix-map`` options can be specified; the first matching
+prefix wins.
+
 Limitations
 ===========
 

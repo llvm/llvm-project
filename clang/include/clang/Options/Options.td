@@ -5010,6 +5010,11 @@ def fmacro_prefix_map_EQ
   Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"remap file source paths in predefined preprocessor macros and "
              "__builtin_FILE(). Implies -ffile-reproducible.">;
+def fsanitize_prefix_map_EQ
+  : Joined<["-"], "fsanitize-prefix-map=">, Group<f_Group>,
+    Visibility<[ClangOption, CC1Option]>,
+    MetaVarName<"<old>=<new>">,
+    HelpText<"Remap file source paths in sanitizer metadata">;
 defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
   CodeGenOpts<"ForceDwarfFrameSection">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
