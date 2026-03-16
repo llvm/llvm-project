@@ -889,8 +889,8 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
   case OL_EVENT_INFO_QUEUE:
     return Info.write<ol_queue_handle_t>(Queue);
   case OL_EVENT_INFO_IS_COMPLETE: {
-    // Some backends do not materialize backend event state. Treat such events as
-    // trivially complete.
+    // Some backends do not materialize backend event state. Treat such events
+    // as trivially complete.
     if (!Event->EventInfo)
       return Info.write<bool>(true);
 
