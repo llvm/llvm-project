@@ -1,4 +1,4 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux < %s | FileCheck %s
 
 ; CHECK:	.globl x
 ; CHECK: x:
