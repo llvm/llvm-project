@@ -17358,6 +17358,9 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     }
     SDValue Load = DAG.getLoad(VT, DL, LN0->getChain(), LN0->getBasePtr(),
                                LN0->getMemOperand());
+    // Preserve the original load's debug location, since the new load is
+    // semantically the same memory operation.
+    Load.getNode()->setDebugLoc(LN0->getDebugLoc());
     DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), Load.getValue(1));
     return Load;
   };
