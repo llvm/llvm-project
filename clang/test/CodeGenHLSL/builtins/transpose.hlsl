@@ -10,9 +10,7 @@
 // CHECK:       store <6 x i32> [[A_EXT]], ptr [[A_ADDR]], align 4
 // CHECK:       [[A:%.*]] = load <6 x i32>, ptr [[A_ADDR]], align 4
 // COLMAJOR:    [[TRANS:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[A]], i32 2, i32 3)
-// ROWMAJOR:    [[LAYOUT:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[A]], i32 3, i32 2)
-// ROWMAJOR:    [[TRANS:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[LAYOUT]], i32 2, i32 3)
-// ROWMAJOR:    {{.*}} = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[TRANS]], i32 3, i32 2)
+// ROWMAJOR:    [[TRANS:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[A]], i32 3, i32 2)
 bool3x2 test_transpose_bool2x3(bool2x3 a) {
   return transpose(a);
 }
@@ -23,11 +21,8 @@ bool3x2 test_transpose_bool2x3(bool2x3 a) {
 // CHECK:       store <12 x i32> %{{.*}}, ptr [[A_ADDR]], align 4
 // CHECK:       [[A:%.*]] = load <12 x i32>, ptr [[A_ADDR]], align 4
 // COLMAJOR:    [[TRANS:%.*]] = call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> [[A]], i32 4, i32 3)
-// COLMAJOR:    ret <12 x i32> [[TRANS]]
-// ROWMAJOR:    [[LAYOUT:%.*]] = call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> [[A]], i32 3, i32 4)
-// ROWMAJOR:    [[TRANS:%.*]] = call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> [[LAYOUT]], i32 4, i32 3)
-// ROWMAJOR:    [[RESULT:%.*]] = call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> [[TRANS]], i32 3, i32 4)
-// ROWMAJOR:    ret <12 x i32> [[RESULT]]
+// ROWMAJOR:    [[TRANS:%.*]] = call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> [[A]], i32 3, i32 4)
+// CHECK:       ret <12 x i32> [[TRANS]]
 int3x4 test_transpose_int4x3(int4x3 a) {
   return transpose(a);
 }
@@ -36,12 +31,8 @@ int3x4 test_transpose_int4x3(int4x3 a) {
 // CHECK:       [[A_ADDR:%.*]] = alloca [4 x <4 x float>], align 4
 // CHECK:       store <16 x float> %{{.*}}, ptr [[A_ADDR]], align 4
 // CHECK:       [[A:%.*]] = load <16 x float>, ptr [[A_ADDR]], align 4
-// COLMAJOR:    [[TRANS:%.*]] = call {{.*}}<16 x float> @llvm.matrix.transpose.v16f32(<16 x float> [[A]], i32 4, i32 4)
-// COLMAJOR:    ret <16 x float> [[TRANS]]
-// ROWMAJOR:    [[LAYOUT:%.*]] = call {{.*}} <16 x float> @llvm.matrix.transpose.v16f32(<16 x float> [[A]], i32 4, i32 4)
-// ROWMAJOR:    [[TRANS:%.*]] = call {{.*}} <16 x float> @llvm.matrix.transpose.v16f32(<16 x float> [[LAYOUT]], i32 4, i32 4)
-// ROWMAJOR:    [[RESULT:%.*]] = call {{.*}} <16 x float> @llvm.matrix.transpose.v16f32(<16 x float> [[TRANS]], i32 4, i32 4)
-// ROWMAJOR:    ret <16 x float> [[RESULT]]
+// CHECK:       [[TRANS:%.*]] = call {{.*}}<16 x float> @llvm.matrix.transpose.v16f32(<16 x float> [[A]], i32 4, i32 4)
+// CHECK:       ret <16 x float> [[TRANS]]
 float4x4 test_transpose_float4x4(float4x4 a) {
   return transpose(a);
 }
@@ -52,11 +43,8 @@ float4x4 test_transpose_float4x4(float4x4 a) {
 // CHECK:       store <4 x double> %{{.*}}, ptr [[A_ADDR]], align 8
 // CHECK:       [[A:%.*]] = load <4 x double>, ptr [[A_ADDR]], align 8
 // COLMAJOR:    [[TRANS:%.*]] = call {{.*}}<4 x double> @llvm.matrix.transpose.v4f64(<4 x double> [[A]], i32 1, i32 4)
-// COLMAJOR:    ret <4 x double> [[TRANS]]
-// ROWMAJOR:    [[LAYOUT:%.*]] = call {{.*}} <4 x double> @llvm.matrix.transpose.v4f64(<4 x double> [[A]], i32 4, i32 1)
-// ROWMAJOR:    [[TRANS:%.*]] = call {{.*}} <4 x double> @llvm.matrix.transpose.v4f64(<4 x double> [[LAYOUT]], i32 1, i32 4)
-// ROWMAJOR:    [[RESULT:%.*]] = call {{.*}} <4 x double> @llvm.matrix.transpose.v4f64(<4 x double> [[TRANS]], i32 4, i32 1)
-// ROWMAJOR:    ret <4 x double> [[RESULT]]
+// ROWMAJOR:    [[TRANS:%.*]] = call {{.*}}<4 x double> @llvm.matrix.transpose.v4f64(<4 x double> [[A]], i32 4, i32 1)
+// CHECK:       ret <4 x double> [[TRANS]]
 double4x1 test_transpose_double1x4(double1x4 a) {
   return transpose(a);
 }

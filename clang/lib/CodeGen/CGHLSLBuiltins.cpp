@@ -1174,17 +1174,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The matrix transpose intrinsic only operates on column-major order
-    // matrices. Therefore matrix memory layout transforms must be inserted
-    // before and after matrix transpose intrinsics.
+    // The matrix transpose intrinsic operates on column-major matrices.
+    // For row-major, a row-major RxC matrix is equivalent to a column-major
+    // CxR matrix, so transposing with swapped dimensions produces the correct
+    // row-major CxR result directly.
     bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
                       LangOptions::MatrixMemoryLayout::MatrixRowMajor;
     if (IsRowMajor)
-      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
-    Value *Result = MB.CreateMatrixTranspose(Op0, Rows, Cols);
-    if (IsRowMajor)
-      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Cols, Rows);
-    return Result;
+      return MB.CreateMatrixTranspose(Op0, Cols, Rows);
+    return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
