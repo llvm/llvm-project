@@ -3403,46 +3403,18 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
   return false;
 }
 
-/// Return the cost for a predicated load/store with loop-invariant address only
-/// masked by the header mask.
-static InstructionCost
-getPredicatedUniformLoadStoreCost(const VPReplicateRecipe *RepR,
-                                  const SCEV *PtrSCEV, ElementCount VF,
-                                  VPCostContext &Ctx) {
-  if (!Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
-    return InstructionCost::getInvalid();
-
-  const VPRegionBlock *ParentRegion = RepR->getParent()->getParent();
+/// Return true if \p R is a predicated load/store with a loop-invariant address
+/// only masked by the header mask.
+static bool isPredicatedUniformMemOpAfterTailFolding(const VPReplicateRecipe &R,
+                                                     const SCEV *PtrSCEV,
+                                                     VPCostContext &Ctx) {
+  const VPRegionBlock *ParentRegion = R.getRegion();
+  if (!ParentRegion || !ParentRegion->isReplicator() || !PtrSCEV ||
+      !Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
+    return false;
   auto *BOM =
       cast<VPBranchOnMaskRecipe>(&ParentRegion->getEntryBasicBlock()->front());
-  if (!vputils::isHeaderMask(BOM->getOperand(0), *ParentRegion->getPlan()))
-    return InstructionCost::getInvalid();
-
-  bool IsLoad = RepR->getOpcode() == Instruction::Load;
-  Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? RepR : RepR->getOperand(0));
-  const VPValue *PtrOp = RepR->getOperand(!IsLoad);
-  Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
-  const Align Alignment = getLoadStoreAlignment(RepR->getUnderlyingInstr());
-  unsigned AS = cast<PointerType>(ScalarPtrTy)->getAddressSpace();
-
-  // Uniform mem op cost, matches getUniformMemOpCost.
-  InstructionCost UniformCost =
-      Ctx.TTI.getAddressComputationCost(ScalarPtrTy, nullptr, nullptr,
-                                        Ctx.CostKind) +
-      Ctx.TTI.getMemoryOpCost(RepR->getOpcode(), ValTy, Alignment, AS,
-                              Ctx.CostKind);
-  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  if (IsLoad) {
-    // Load: scalar load + broadcast.
-    UniformCost += Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
-                                          VectorTy, VectorTy, {}, Ctx.CostKind);
-  } else {
-    VPValue *StoredVal = RepR->getOperand(0);
-    if (!StoredVal->isDefinedOutsideLoopRegions())
-      UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
-          Instruction::ExtractElement, VectorTy, Ctx.CostKind, 0);
-  }
-  return UniformCost;
+  return vputils::isHeaderMask(BOM->getOperand(0), *ParentRegion->getPlan());
 }
 
 InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
@@ -3589,6 +3561,27 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
         UsedByLoadStoreAddress ? UI : nullptr);
 
+    // Check if this is a predicated load/store with a loop-invariant address
+    // only masked by the header mask. If so, return the uniform mem op cost.
+    if (isPredicatedUniformMemOpAfterTailFolding(*this, PtrSCEV, Ctx)) {
+      InstructionCost UniformCost =
+          ScalarMemOpCost +
+          Ctx.TTI.getAddressComputationCost(ScalarPtrTy, /*SE=*/nullptr,
+                                            /*Ptr=*/nullptr, Ctx.CostKind);
+      auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
+      if (IsLoad) {
+        return UniformCost +
+               Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast,
+                                      VectorTy, VectorTy, {}, Ctx.CostKind);
+      }
+
+      VPValue *StoredVal = getOperand(0);
+      if (!StoredVal->isDefinedOutsideLoopRegions())
+        UniformCost += Ctx.TTI.getIndexedVectorInstrCostFromEnd(
+            Instruction::ExtractElement, VectorTy, Ctx.CostKind, 0);
+      return UniformCost;
+    }
+
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
         ScalarMemOpCost +
@@ -3625,10 +3618,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-      InstructionCost UniformCost =
-          getPredicatedUniformLoadStoreCost(this, PtrSCEV, VF, Ctx);
-      if (UniformCost.isValid())
-        return UniformCost;
 
       Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
