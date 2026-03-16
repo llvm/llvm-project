@@ -48,6 +48,8 @@ endfunction()
 #     Don't generate install targets for this project
 #   ALWAYS_CLEAN
 #     Always clean the sub-project before building
+#   FORCE_POSIX_TOOLCHAIN
+#     Use the clang driver and POSIX binutils (ar, ranlib) on MSVC targets.
 #   CMAKE_ARGS arguments...
 #     Optional cmake arguments to pass when configuring the project
 #   TOOLCHAIN_TOOLS targets...
@@ -67,7 +69,7 @@ endfunction()
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
-    "ENABLE_FORTRAN;USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
+    "ENABLE_FORTRAN;USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN;FORCE_POSIX_TOOLCHAIN"
     "SOURCE_DIR;FOLDER"
     "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE"
     ${ARGN})
@@ -91,7 +93,9 @@ function(llvm_ExternalProject_Add name source_dir)
     set(target_triple ${ARG_TARGET_TRIPLE})
   endif()
 
-  is_msvc_triple(is_msvc_target "${target_triple}")
+  if(NOT ARG_FORCE_POSIX_TOOLCHAIN)
+    is_msvc_triple(is_msvc_target "${target_triple}")
+  endif()
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
@@ -224,7 +228,7 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
-      if(is_msvc_target AND NOT ARG_PREFER_CLANG_DRIVER)
+      if(is_msvc_target)
         set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}
                           -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}
                           -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX})

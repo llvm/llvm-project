@@ -561,7 +561,7 @@ if(build_runtimes)
       endif()
     endforeach()
     list(APPEND extra_args TOOLCHAIN_TOOLS="${toolchain_tools}")
-    list(APPEND extra_args PREFER_CLANG_DRIVER)
+    list(APPEND extra_args FORCE_POSIX_TOOLCHAIN)
   endif()
   # Tools needed by build_symbolizer.sh.
   if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
