@@ -319,5 +319,5 @@ entry:
 }
 ;.
 ; CHECK: [[META0]] = !{}
-; CHECK: [[RNG1]] = !{i16 1, i16 1024}
+; CHECK: [[RNG1]] = !{i16 1, i16 1025}
 ;.

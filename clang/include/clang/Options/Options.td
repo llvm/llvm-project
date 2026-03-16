@@ -7610,6 +7610,11 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], [ClangOption], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], [ClangOption], "Allocate array temporaries on the heap (default)">>;
 
+defm safe_trampoline : BoolOptionWithoutMarshalling<"f",
+  "safe-trampoline",
+  PosFlag<SetTrue, [], [FlangOption], "Use W^X compliant runtime trampoline pool for internal procedures">,
+  NegFlag<SetFalse, [], [FlangOption], "Use stack-based trampolines for internal procedures (default, may require executable stack)">>;
+
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
