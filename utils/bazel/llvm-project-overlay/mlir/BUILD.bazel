@@ -57,7 +57,7 @@ expand_template(
         "#cmakedefine MLIR_GREEDY_REWRITE_RANDOMIZER_SEED ${MLIR_GREEDY_REWRITE_RANDOMIZER_SEED}": "/* #undef MLIR_GREEDY_REWRITE_RANDOMIZER_SEED */",
         "#cmakedefine01 MLIR_ENABLE_NVPTXCOMPILER": "#define MLIR_ENABLE_NVPTXCOMPILER 0",
         "#cmakedefine01 MLIR_ENABLE_PDL_IN_PATTERNMATCH": "#define MLIR_ENABLE_PDL_IN_PATTERNMATCH 1",
-        "#cmakedefine01 MLIR_ENABLE_ROCM_CONVERSIONS": "#define MLIR_ENABLE_ROCM_CONVERSIONS 0",
+        "#cmakedefine01 LLVM_HAS_AMDGPU_TARGET": "#define LLVM_HAS_AMDGPU_TARGET 0",
     },
     template = "include/mlir/Config/mlir-config.h.cmake",
 )
@@ -6511,12 +6511,15 @@ cc_library(
         ":Support",
         ":TargetLLVM",
         ":ToLLVMIRTranslation",
+        "//llvm:AMDGPUAsmParser",
+        "//llvm:AMDGPUCodeGen",
         "//llvm:Core",
         "//llvm:FrontendOffloading",
         "//llvm:MC",
         "//llvm:MCParser",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:config",
     ],
 )
 

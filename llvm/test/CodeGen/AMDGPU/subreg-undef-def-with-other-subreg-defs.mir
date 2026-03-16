@@ -41,9 +41,9 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 1179658 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 1179657 /* reguse:VGPR_32 */, %2
-    INLINEASM &"", 1 /* sideeffect attdialect */, 1179658 /* regdef:VGPR_32 */, def undef %0.sub0, 1179658 /* regdef:VGPR_32 */, def %0.sub1
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1114122 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1114121 /* reguse:VGPR_32 */, %2
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1114122 /* regdef:VGPR_32 */, def undef %0.sub0, 1114122 /* regdef:VGPR_32 */, def %0.sub1
     S_NOP 0, implicit %0.sub1
     $sgpr10 = S_MOV_B32 -1
     S_BRANCH %bb.1
@@ -82,9 +82,9 @@ body:             |
 
   bb.1:
     %2:vgpr_32 = DS_READ_B32_gfx9 %1, 0, 0, implicit $exec :: (load (s32), addrspace 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 1179658 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
-    INLINEASM &"", 1 /* sideeffect attdialect */, 1179657 /* reguse:VGPR_32 */, %2
-    INLINEASM &"", 1 /* sideeffect attdialect */, 1179658 /* regdef:VGPR_32 */, def %0.sub1, 1179658 /* regdef:VGPR_32 */, def undef %0.sub0
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1114122 /* regdef:VGPR_32 */, def %0, 2147483657 /* reguse tiedto:$0 */, %0(tied-def 3)
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1114121 /* reguse:VGPR_32 */, %2
+    INLINEASM &"", 1 /* sideeffect attdialect */, 1114122 /* regdef:VGPR_32 */, def %0.sub1, 1114122 /* regdef:VGPR_32 */, def undef %0.sub0
     S_NOP 0, implicit %0.sub1
     $sgpr10 = S_MOV_B32 -1
     S_BRANCH %bb.1

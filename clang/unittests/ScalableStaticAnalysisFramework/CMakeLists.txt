@@ -8,6 +8,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityLinkerTest.cpp
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
+  Frontend/TUSummaryExtractorFrontendActionTest.cpp
   ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
@@ -29,6 +30,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   clangBasic
   clangFrontend
   clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkFrontend
   clangSerialization
   clangTooling
 
@@ -36,4 +38,6 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   LLVMTestingSupport
 
   LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
   )

@@ -166,6 +166,12 @@ public:
     return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
   }
 
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return Lattice(Factory.remove(In.LiveOrigins, *OID));
+    return In;
+  }
+
   LivenessMap getLiveOriginsAt(ProgramPoint P) const {
     return getState(P).LiveOrigins;
   }
