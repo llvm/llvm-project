@@ -64,7 +64,6 @@ enum RelExpr {
   R_RELAX_GOT_PC,
   R_RELAX_GOT_PC_NOPIC,
   R_RELAX_TLS_GD_TO_IE,
-  R_RELAX_TLS_GD_TO_IE_ABS,
   R_RELAX_TLS_GD_TO_IE_GOT_OFF,
   R_RELAX_TLS_GD_TO_IE_GOTPLT,
   R_RELAX_TLS_GD_TO_LE,
@@ -94,15 +93,9 @@ enum RelExpr {
   // of a relocation type, there are some relocations whose semantics are
   // unique to a target. Such relocation are marked with RE_<TARGET_NAME>.
   RE_AARCH64_GOT_PAGE_PC,
-  RE_AARCH64_AUTH_GOT_PAGE_PC,
   RE_AARCH64_GOT_PAGE,
-  RE_AARCH64_AUTH_GOT,
-  RE_AARCH64_AUTH_GOT_PC,
   RE_AARCH64_PAGE_PC,
-  RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   RE_AARCH64_TLSDESC_PAGE,
-  RE_AARCH64_AUTH_TLSDESC_PAGE,
-  RE_AARCH64_AUTH_TLSDESC,
   RE_AARCH64_AUTH,
   RE_ARM_PCA,
   RE_ARM_SBREL,
@@ -133,7 +126,6 @@ enum RelExpr {
   RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
-  RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
 };
 
 // Architecture-neutral representation of relocation.
@@ -349,27 +341,6 @@ static inline int64_t getAddend(const typename ELFT::Rela &rel) {
 template <class ELFT>
 static inline int64_t getAddend(const typename ELFT::Crel &rel) {
   return rel.r_addend;
-}
-
-template <typename RelTy>
-inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
-                              SmallVector<RelTy, 0> &storage) {
-  auto cmp = [](const RelTy &a, const RelTy &b) {
-    return a.r_offset < b.r_offset;
-  };
-  if (!llvm::is_sorted(rels, cmp)) {
-    storage.assign(rels.begin(), rels.end());
-    llvm::stable_sort(storage, cmp);
-    rels = Relocs<RelTy>(storage);
-  }
-  return rels;
-}
-
-template <bool is64>
-inline Relocs<llvm::object::Elf_Crel_Impl<is64>>
-sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
-         SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
-  return {};
 }
 
 RelocationBaseSection &getIRelativeSection(Ctx &ctx);

@@ -1113,29 +1113,6 @@ LogicalResult ConvertLayoutOp::verify() {
   return mlir::success();
 }
 
-OpFoldResult ConvertLayoutOp::fold(FoldAdaptor adaptor) {
-  if (getInputLayout() == getTargetLayout())
-    return getSource();
-  return {};
-}
-
-struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getInputLayout() == op.getTargetLayout()) {
-      rewriter.replaceOp(op, op.getSource());
-      return success();
-    }
-    return failure();
-  }
-};
-
-void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                  MLIRContext *context) {
-  patterns.add<FoldConvertLayoutOp>(context);
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadMatrixOp
 //===----------------------------------------------------------------------===//
@@ -1185,6 +1162,32 @@ LogicalResult StoreMatrixOp::verify() {
   MemDescType mdescTy = getMemDesc().getType();
   return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
                                getLayoutAttr(), [&]() { return emitError(); });
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_TruncfOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TruncfOp::verify() {
+  auto sourceVecType = dyn_cast<VectorType>(getSource().getType());
+  auto resultVecType = dyn_cast<VectorType>(getResult().getType());
+
+  if (sourceVecType.getElementTypeBitWidth() <=
+      resultVecType.getElementTypeBitWidth())
+    return emitOpError("input type must be wider than result type.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_DpasMxOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DpasMxOp::verify() {
+  if (getAcc() && getAcc().getType() != getResultType())
+    return emitOpError("Expecting the acc type to be the same as result.");
+
+  return success();
 }
 
 namespace mlir {

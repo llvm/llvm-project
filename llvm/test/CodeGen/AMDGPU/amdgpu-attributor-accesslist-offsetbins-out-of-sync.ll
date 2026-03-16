@@ -30,7 +30,7 @@ define internal fastcc void @foo(ptr %kg) {
 ; CHECK-NEXT:    [[SHFL:%.*]] = shufflevector <3 x float> [[SPLAT_SPLATINSERT_I]], <3 x float> zeroinitializer, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[NUM_CLOSURE_I26_I]], align 4
 ; CHECK-NEXT:    [[IDXPROM_I27_I:%.*]] = sext i32 [[LOAD]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_I28_I:%.*]] = getelementptr [64 x %struct.ShaderClosure], ptr [[CLOSURE_I25_I]], i64 0, i64 [[IDXPROM_I27_I]]
+; CHECK-NEXT:    [[ARRAYIDX_I28_I:%.*]] = getelementptr [64 x [[STRUCT_SHADERCLOSURE:%.*]]], ptr [[CLOSURE_I25_I]], i64 0, i64 [[IDXPROM_I27_I]]
 ; CHECK-NEXT:    store <4 x float> [[SHFL]], ptr [[ARRAYIDX_I28_I]], align 16
 ; CHECK-NEXT:    [[INC_I30_I:%.*]] = or i32 [[LOAD]], 1
 ; CHECK-NEXT:    store i32 [[INC_I30_I]], ptr [[NUM_CLOSURE_I26_I]], align 4

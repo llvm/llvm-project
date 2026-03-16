@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
+#include "X86AsmPrinter.h"
 #include "X86ISelDAGToDAG.h"
 #include "X86TargetMachine.h"
 
@@ -55,7 +56,12 @@ public:
   void addPreEmitPass2(PassManagerWrapper &PMW) const;
   // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
   // once it is available to support AMX.
-  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW,
+                          CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinter(PassManagerWrapper &PMW,
+                     CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW,
+                        CreateMCStreamer CreateStreamer) const;
 };
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -125,8 +131,7 @@ void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add X86DomainReassignmentPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86DomainReassignmentPass(), PMW);
   Base::addMachineSSAOptimization(PMW);
 }
 
@@ -250,9 +255,20 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   }
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
-                                          CreateMCStreamer) const {
-  // TODO: Add AsmPrinter.
+void X86CodeGenPassBuilder::addAsmPrinterBegin(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  addModulePass(X86AsmPrinterBeginPass(TM, CreateStreamer), PMW,
+                /*Force=*/true);
+}
+
+void X86CodeGenPassBuilder::addAsmPrinter(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  addMachineFunctionPass(X86AsmPrinterPass(TM, CreateStreamer), PMW);
+}
+
+void X86CodeGenPassBuilder::addAsmPrinterEnd(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  addModulePass(X86AsmPrinterEndPass(TM, CreateStreamer), PMW, /*Force=*/true);
 }
 
 } // namespace
@@ -260,12 +276,21 @@ void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
 void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
+  // targets that currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(X86AsmPrinterBeginPass::name(),
+                            "x86-asm-printer-begin");
+    PIC->addClassToPassName(X86AsmPrinterPass::name(), "x86-asm-printer");
+    PIC->addClassToPassName(X86AsmPrinterEndPass::name(),
+                            "x86-asm-printer-end");
+  }
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opt,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opt, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   auto CGPB = X86CodeGenPassBuilder(*this, Opt, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }

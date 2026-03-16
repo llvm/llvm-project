@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
 
 /* WG14 N1311: Yes
  * Initializing static or external variables

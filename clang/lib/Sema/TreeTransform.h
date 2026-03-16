@@ -7757,6 +7757,27 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
 }
 
 template <typename Derived>
+QualType TreeTransform<Derived>::TransformOverflowBehaviorType(
+    TypeLocBuilder &TLB, OverflowBehaviorTypeLoc TL) {
+  const OverflowBehaviorType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getWrappedLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->getUnderlyingType()) {
+    Result = SemaRef.Context.getOverflowBehaviorType(OldTy->getBehaviorKind(),
+                                                     InnerTy);
+    if (Result.isNull())
+      return QualType();
+  }
+
+  OverflowBehaviorTypeLoc NewTL = TLB.push<OverflowBehaviorTypeLoc>(Result);
+  NewTL.initializeLocal(SemaRef.Context, TL.getAttrLoc());
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
 
@@ -13056,6 +13077,31 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *S) {
+  auto *FD = cast<FunctionDecl>(SemaRef.CurContext);
+  const auto *SKEPAttr = FD->template getAttr<SYCLKernelEntryPointAttr>();
+  if (!SKEPAttr || SKEPAttr->isInvalidAttr())
+    return StmtError();
+
+  ExprResult IdExpr = getDerived().TransformExpr(S->getKernelLaunchIdExpr());
+  if (IdExpr.isInvalid())
+    return StmtError();
+
+  StmtResult Body = getDerived().TransformStmt(S->getOriginalStmt());
+  if (Body.isInvalid())
+    return StmtError();
+
+  StmtResult SR = SemaRef.SYCL().BuildSYCLKernelCallStmt(
+      cast<FunctionDecl>(SemaRef.CurContext), cast<CompoundStmt>(Body.get()),
+      IdExpr.get());
+  if (SR.isInvalid())
+    return StmtError();
+
+  return SR;
+}
+
+template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
   assert(false && "not implemented yet");
@@ -14545,10 +14591,17 @@ TreeTransform<Derived>::TransformCXXTypeidExpr(CXXTypeidExpr *E) {
   // semantic processing can re-transform an already transformed operand.
   Expr *Op = E->getExprOperand();
   auto EvalCtx = Sema::ExpressionEvaluationContext::Unevaluated;
-  if (E->isGLValue())
-    if (auto *RD = Op->getType()->getAsCXXRecordDecl();
-        RD && RD->isPolymorphic())
-      EvalCtx = SemaRef.ExprEvalContexts.back().Context;
+  if (E->isGLValue()) {
+    QualType OpType = Op->getType();
+    if (auto *RD = OpType->getAsCXXRecordDecl()) {
+      if (SemaRef.RequireCompleteType(E->getBeginLoc(), OpType,
+                                      diag::err_incomplete_typeid))
+        return ExprError();
+
+      if (RD->isPolymorphic())
+        EvalCtx = SemaRef.ExprEvalContexts.back().Context;
+    }
+  }
 
   EnterExpressionEvaluationContext Unevaluated(SemaRef, EvalCtx,
                                                Sema::ReuseLambdaContextDecl);

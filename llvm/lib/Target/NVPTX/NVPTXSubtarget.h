@@ -184,6 +184,14 @@ public:
     return hasPTXWithAccelSMs(87, {120, 121});
   }
 
+  bool hasMMAWithMXF4NVF4Scale4xE8M0() const {
+    return hasPTXWithFamilySMs(91, {120});
+  }
+
+  bool hasMMASparseWithMXF4NVF4Scale4xE8M0() const {
+    return hasPTXWithAccelSMs(91, {120, 121});
+  }
+
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
@@ -217,6 +225,20 @@ public:
     return hasPTXWithFamilySMs(90, {100, 110, 120}) ||
            hasPTXWithFamilySMs(88, {100, 101, 120}) ||
            hasPTXWithAccelSMs(86, {100, 101, 120});
+  }
+
+  // Checks support for conversions involving the following types:
+  // - bf16x2 -> f8x2
+  // - f16x2 -> f6x2
+  // - bf16x2 -> f6x2
+  // - f16x2 -> f4x2
+  // - bf16x2 -> f4x2
+  bool hasFP16X2ToNarrowFPConversionSupport() const {
+    return hasPTXWithFamilySMs(91, {100, 110, 120});
+  }
+
+  bool hasS2F6X2ConversionSupport() const {
+    return hasPTXWithAccelSMs(91, {100, 103, 110, 120, 121});
   }
 
   bool hasTensormapReplaceSupport() const {

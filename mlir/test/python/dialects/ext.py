@@ -3,6 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects.ext import *
+from mlir import ir
 from typing import Any, Optional, Sequence, TypeVar, Union
 import sys
 
@@ -24,7 +25,7 @@ def testMyInt():
         value: IntegerAttr
         cst: Result[i32]
 
-    class AddOp(MyInt.Operation, name="add"):
+    class AddOp(Operation, dialect=MyInt, name="add"):
         lhs: Operand[i32]
         rhs: Operand[i32]
         res: Result[i32]
@@ -42,7 +43,7 @@ def testMyInt():
     # CHECK:     irdl.results(res: %0)
     # CHECK:   }
     # CHECK: }
-    with Context(), Location.unknown():
+    with Context():
         MyInt.load()
         print(MyInt._mlir_module)
 
@@ -50,13 +51,14 @@ def testMyInt():
         print([i._op_name for i in MyInt.operations])
         i32 = IntegerType.get_signless(32)
 
-        module = Module.create()
-        with InsertionPoint(module.body):
-            two = ConstantOp(IntegerAttr.get(i32, 2))
-            three = ConstantOp(IntegerAttr.get(i32, 3))
-            add1 = AddOp(two, three)
-            add2 = AddOp(add1, two)
-            add3 = AddOp(add2, three)
+        with Location.unknown():
+            module = Module.create()
+            with InsertionPoint(module.body):
+                two = ConstantOp(IntegerAttr.get(i32, 2))
+                three = ConstantOp(IntegerAttr.get(i32, 3))
+                add1 = AddOp(two, three)
+                add2 = AddOp(add1, two)
+                add3 = AddOp(add2, three)
 
         # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
         # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
@@ -90,6 +92,16 @@ def testMyInt():
         print(AddOp.__init__.__signature__)
         # CHECK: (self, /, value, *, loc=None, ip=None)
         print(ConstantOp.__init__.__signature__)
+
+        # CHECK: True
+        print(issubclass(AddOp.Adaptor, OpAdaptor))
+        adaptor1 = AddOp.Adaptor(list(add1.operands), add1)
+        # CHECK: myint.add
+        print(adaptor1.OPERATION_NAME)
+        # CHECK: OpResult(%0 = "myint.constant"() {value = 2 : i32} : () -> i32)
+        print(adaptor1.lhs)
+        # CHECK: OpResult(%1 = "myint.constant"() {value = 3 : i32} : () -> i32)
+        print(adaptor1.rhs)
 
 
 # CHECK: TEST: testExtDialect
@@ -519,3 +531,167 @@ def testExtDialectWithRegion():
             # CHECK: Verification failed:
             # CHECK: result type mismatch
             print(e)
+
+
+# CHECK: TEST: testExtDialectWithType
+@run
+def testExtDialectWithType():
+    class TestType(Dialect, name="ext_type"):
+        pass
+
+    class Array(TestType.Type, name="array"):
+        elem_type: IntegerType[32] | IntegerType[64]
+        length: IntegerAttr
+
+    class MakeArrayOp(TestType.Operation, name="make_array"):
+        arr: Result[Array]
+
+    class MakeArray3Op(TestType.Operation, name="make_array3"):
+        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]]
+
+    with Context(), Location.unknown():
+        TestType.load()
+        # CHECK: irdl.dialect @ext_type {
+        # CHECK:   irdl.type @array {
+        # CHECK:     %0 = irdl.is i32
+        # CHECK:     %1 = irdl.is i64
+        # CHECK:     %2 = irdl.any_of(%0, %1)
+        # CHECK:     %3 = irdl.base "#builtin.integer"
+        # CHECK:     irdl.parameters(elem_type: %2, length: %3)
+        # CHECK:   }
+        # CHECK:   irdl.operation @make_array {
+        # CHECK:     %0 = irdl.base @ext_type::@array
+        # CHECK:     irdl.results(arr: %0)
+        # CHECK:   }
+        # CHECK:   irdl.operation @make_array3 {
+        # CHECK:     %0 = irdl.is i32
+        # CHECK:     %1 = irdl.is 3 : i32
+        # CHECK:     %2 = irdl.parametric @ext_type::@array<%0, %1>
+        # CHECK:     irdl.results(arr: %2)
+        # CHECK:   }
+        # CHECK: }
+        print(TestType._mlir_module)
+
+        # CHECK: ext_type.array
+        print(Array.type_name)
+
+        i32 = IntegerType.get_signless(32)
+        i64 = IntegerType.get_signless(64)
+        a4 = Array.get(i32, IntegerAttr.get(i32, 4))
+        a6 = Array.get(i64, IntegerAttr.get(i32, 6))
+        # CHECK: !ext_type.array<i32, 4 : i32>
+        print(a4)
+        # CHECK: !ext_type.array<i64, 6 : i32>
+        print(a6)
+
+        # CHECK: i32
+        print(a4.elem_type)
+        # CHECK: 4 : i32
+        print(a4.length)
+        # CHECK: i64
+        print(a6.elem_type)
+        # CHECK: 6 : i32
+        print(a6.length)
+
+        # CHECK: <locals>.Array
+        print(type(Type(a4).maybe_downcast()))
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            MakeArrayOp(a4)
+            MakeArrayOp(a6)
+            MakeArray3Op()
+
+        # CHECK: %0 = "ext_type.make_array"() : () -> !ext_type.array<i32, 4 : i32>
+        # CHECK: %1 = "ext_type.make_array"() : () -> !ext_type.array<i64, 6 : i32>
+        # CHECK: %2 = "ext_type.make_array3"() : () -> !ext_type.array<i32, 3 : i32>
+        assert module.operation.verify()
+        print(module)
+
+
+# CHECK: TEST: testExtDialectWithAttr
+@run
+def testExtDialectWithAttr():
+    class TestAttr(Dialect, name="ext_attr"):
+        pass
+
+    class IntPair(TestAttr.Attribute, name="pair"):
+        first: IntegerAttr
+        second: IntegerAttr
+
+    class StrPair(TestAttr.Attribute, name="str_pair"):
+        first: StringAttr
+        second: StringAttr
+
+    class Op1(TestAttr.Operation, name="op1"):
+        pair: IntPair
+
+    class Op2(TestAttr.Operation, name="op2"):
+        pair: StrPair
+        pair2: StrPair[StringAttr["a"], StringAttr["b"]]
+
+    with Context(), Location.unknown():
+        TestAttr.load()
+        # CHECK: irdl.dialect @ext_attr {
+        # CHECK:   irdl.attribute @pair {
+        # CHECK:     %0 = irdl.base "#builtin.integer"
+        # CHECK:     %1 = irdl.base "#builtin.integer"
+        # CHECK:     irdl.parameters(first: %0, second: %1)
+        # CHECK:   }
+        # CHECK:   irdl.attribute @str_pair {
+        # CHECK:     %0 = irdl.base "#builtin.string"
+        # CHECK:     %1 = irdl.base "#builtin.string"
+        # CHECK:     irdl.parameters(first: %0, second: %1)
+        # CHECK:   }
+        # CHECK:   irdl.operation @op1 {
+        # CHECK:     %0 = irdl.base @ext_attr::@pair
+        # CHECK:     irdl.attributes {"pair" = %0}
+        # CHECK:   }
+        # CHECK:   irdl.operation @op2 {
+        # CHECK:     %0 = irdl.base @ext_attr::@str_pair
+        # CHECK:     %1 = irdl.is "a"
+        # CHECK:     %2 = irdl.is "b"
+        # CHECK:     %3 = irdl.parametric @ext_attr::@str_pair<%1, %2>
+        # CHECK:     irdl.attributes {"pair" = %0, "pair2" = %3}
+        # CHECK:   }
+        # CHECK: }
+        print(TestAttr._mlir_module)
+
+        # CHECK: ext_attr.pair
+        print(IntPair.attr_name)
+
+        # CHECK: ext_attr.str_pair
+        print(StrPair.attr_name)
+
+        ip = IntPair.get(
+            IntegerAttr.get(IntegerType.get_signless(32), 1),
+            IntegerAttr.get(IntegerType.get_signless(32), 2),
+        )
+        sp = StrPair.get(StringAttr.get("hello"), StringAttr.get("world"))
+        # CHECK: #ext_attr.pair<1 : i32, 2 : i32>
+        print(ip)
+        # CHECK: #ext_attr.str_pair<"hello", "world">
+        print(sp)
+
+        # CHECK: "hello"
+        print(sp.first)
+        # CHECK: "world"
+        print(sp.second)
+
+        sp2 = ir.Attribute(sp).maybe_downcast()
+        # CHECK: <locals>.StrPair
+        print(type(sp2))
+        # CHECK: #ext_attr.str_pair<"hello", "world">
+        print(str(sp2))
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            Op1(ip)
+            p2 = StrPair.get(StringAttr.get("a"), StringAttr.get("b"))
+            Op2(sp, p2)
+
+        assert module.operation.verify()
+
+        # CHECK: "ext_attr.op1"() {pair = #ext_attr.pair<1 : i32, 2 : i32>} : () -> ()
+        # CHECK: "ext_attr.op2"() {pair = #ext_attr.str_pair<"hello", "world">, pair2 = #ext_attr.str_pair<"a", "b">} : () -> ()
+        print(module)

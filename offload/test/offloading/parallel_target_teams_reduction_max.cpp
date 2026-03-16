@@ -3,7 +3,8 @@
 
 // FIXME: This is a bug in host offload, this should run fine.
 // REQUIRES: gpu
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 // This test validates that the OpenMP target reductions to find a maximum work
 // as intended for a few common data types.

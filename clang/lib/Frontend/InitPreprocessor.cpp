@@ -1509,6 +1509,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
     Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
 
+  if (LangOpts.PointerFieldProtectionABI)
+    Builder.defineMacro("__POINTER_FIELD_PROTECTION_ABI__");
+  if (LangOpts.PointerFieldProtectionTagged)
+    Builder.defineMacro("__POINTER_FIELD_PROTECTION_TAGGED__");
+
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {
     const llvm::Triple &Triple = TI.getTriple();

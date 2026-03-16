@@ -1,0 +1,39 @@
+# REQUIRES: python, system-darwin
+
+# Tests that LLDB prints warning messages that occur while locating scripts in dSYMs.
+
+# RUN: split-file %s %t
+
+## Module name contains reserved characters but no script with a corrected
+## name exists.
+
+# RUN: %clang_host -g %t/main.c -o "%t/Test-Module.out"
+# RUN: mkdir -p "%t/Test-Module.out.dSYM/Contents/Resources/Python"
+# RUN: touch "%t/Test-Module.out.dSYM/Contents/Resources/Python/Test-Module.py"
+# RUN: %lldb -b \
+# RUN:   -o 'target create "%t/Test-Module.out"' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-RENAME
+
+# CHECK-RENAME:      warning: the symbol file {{.*}} contains reserved characters
+# CHECK-RENAME-SAME: If you intend to have this script loaded, please rename
+
+## Module name contains reserved characters but a script with a corrected
+## name does exists.
+
+# RUN: %clang_host -g %t/main.c -o "%t/Test-Module2.out"
+# RUN: mkdir -p "%t/Test-Module2.out.dSYM/Contents/Resources/Python"
+# RUN: touch "%t/Test-Module2.out.dSYM/Contents/Resources/Python/Test_Module2.py"
+# RUN: touch "%t/Test-Module2.out.dSYM/Contents/Resources/Python/Test-Module2.py"
+# RUN: %lldb -b \
+# RUN:   -o 'target create "%t/Test-Module2.out"' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-REMOVE
+
+# CHECK-REMOVE:      warning: the symbol file {{.*}} contains reserved characters
+# CHECK-REMOVE-SAME: Consider removing the file with the malformed name to eliminate this warning
+
+## Also confirm that the warning message about auto-loading scripts is printed afterwards.
+
+# CHECK-REMOVE: warning: 'Test-Module2' contains a debug script. To run this script in this
+
+#--- main.c
+int main() { return 0; }

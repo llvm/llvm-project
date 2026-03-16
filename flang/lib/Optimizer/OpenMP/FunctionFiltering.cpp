@@ -122,8 +122,9 @@ public:
       // offloading can be supported.
       bool hasTargetRegion =
           funcOp
-              ->walk<WalkOrder::PreOrder>(
-                  [&](omp::TargetOp) { return WalkResult::interrupt(); })
+              ->walk<WalkOrder::PreOrder>([&](omp::TargetOp targetOp) {
+                return WalkResult::interrupt();
+              })
               .wasInterrupted();
 
       omp::DeclareTargetDeviceType declareType =

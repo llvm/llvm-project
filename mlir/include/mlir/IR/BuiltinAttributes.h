@@ -32,7 +32,7 @@ class Operation;
 class RankedTensorType;
 
 namespace detail {
-struct DenseIntOrFPElementsAttrStorage;
+struct DenseTypedElementsAttrStorage;
 struct DenseStringElementsAttrStorage;
 struct StringAttrStorage;
 } // namespace detail
@@ -702,6 +702,12 @@ using DenseResourceElementsHandle = DialectResourceBlobHandle<BuiltinDialect>;
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
+/// DenseIntOrFPElementsAttr was renamed to DenseTypedElementsAttr. This alias
+/// is provided for backwards compatibility. It will be removed in the future.
+using DenseIntOrFPElementsAttr [[deprecated(
+    "DenseIntOrFPElementsAttr has been renamed to DenseTypedElementsAttr")]] =
+    DenseTypedElementsAttr;
+
 //===----------------------------------------------------------------------===//
 // DenseArrayAttr
 //===----------------------------------------------------------------------===//
@@ -897,11 +903,11 @@ private:
 
 /// An attribute that represents a reference to a dense float vector or tensor
 /// object. Each element is stored as a double.
-class DenseFPElementsAttr : public DenseIntOrFPElementsAttr {
+class DenseFPElementsAttr : public DenseTypedElementsAttr {
 public:
   using iterator = DenseElementsAttr::FloatElementIterator;
 
-  using DenseIntOrFPElementsAttr::DenseIntOrFPElementsAttr;
+  using DenseTypedElementsAttr::DenseTypedElementsAttr;
 
   /// Get an instance of a DenseFPElementsAttr with the given arguments. This
   /// simply wraps the DenseElementsAttr::get calls.
@@ -936,13 +942,13 @@ public:
 
 /// An attribute that represents a reference to a dense integer vector or tensor
 /// object.
-class DenseIntElementsAttr : public DenseIntOrFPElementsAttr {
+class DenseIntElementsAttr : public DenseTypedElementsAttr {
 public:
   /// DenseIntElementsAttr iterates on APInt, so we can use the raw element
   /// iterator directly.
   using iterator = DenseElementsAttr::IntElementIterator;
 
-  using DenseIntOrFPElementsAttr::DenseIntOrFPElementsAttr;
+  using DenseTypedElementsAttr::DenseTypedElementsAttr;
 
   /// Get an instance of a DenseIntElementsAttr with the given arguments. This
   /// simply wraps the DenseElementsAttr::get calls.
