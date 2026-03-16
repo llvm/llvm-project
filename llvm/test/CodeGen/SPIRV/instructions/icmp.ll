@@ -26,6 +26,10 @@
 ; CHECK-DAG: OpName [[v16NE:%.*]] "test_boolean_v16_ne"
 ; CHECK-DAG: OpName [[v16EQ:%.*]] "test_boolean_v16_eq"
 
+; CHECK-DAG: [[Bool:%.*]] = OpTypeBool
+; CHECK-DAG: [[v16:%.*]] = OpTypeVector [[Bool]] 16
+; CHECK-DAG: [[Null:%.*]] = OpConstantNull [[v16]]
+
 ; CHECK:      [[EQ]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
@@ -268,10 +272,9 @@ define <3 x i1> @test_v3_sge(<3 x i32> %a, <3 x i32> %b) {
 
 ; CHECK:      [[v16NE]] = OpFunction
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[R:%.*]] = OpLogicalNotEqual {{%.+}} {{%.*}} {{%.*}}
+; CHECK-NEXT: [[R:%.*]] = OpLogicalNotEqual {{%.+}} [[Null]] [[Null]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
-
 define spir_func <16 x i1> @test_boolean_v16_ne() {
   %A = icmp ne <16 x i1> zeroinitializer, zeroinitializer
   ret <16 x i1> %A
@@ -279,11 +282,10 @@ define spir_func <16 x i1> @test_boolean_v16_ne() {
 
 ; CHECK:      [[v16EQ]] = OpFunction
 ; CHECK-NEXT: OpLabel
-; CHECK-NEXT: [[R:%.*]] = OpLogicalEqual {{%.+}} {{%.*}} {{%.*}}
+; CHECK-NEXT: [[R:%.*]] = OpLogicalEqual {{%.+}} [[Null]] [[Null]]
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
 define spir_func <16 x i1> @test_boolean_v16_eq() {
-entry:
   %A = icmp eq <16 x i1> zeroinitializer, zeroinitializer
   ret <16 x i1> %A
 }
