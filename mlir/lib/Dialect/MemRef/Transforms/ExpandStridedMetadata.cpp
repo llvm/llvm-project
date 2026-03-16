@@ -279,12 +279,13 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
   uint64_t productOfAllStaticSizes = 1;
   std::optional<unsigned> dynSizeIdx;
   MemRefType expandShapeType = expandShape.getResultType();
+  unsigned numDynamicDims = 0;
 
   // Fill up all the statically known sizes.
   for (unsigned i = 0; i < groupSize; ++i) {
     uint64_t dimSize = expandShapeType.getDimSize(reassocGroup[i]);
     if (ShapedType::isDynamic(dimSize)) {
-      assert(!dynSizeIdx && "There must be at most one dynamic size per group");
+      ++numDynamicDims;
       dynSizeIdx = i;
       continue;
     }
@@ -292,8 +293,18 @@ getExpandedSizes(memref::ExpandShapeOp expandShape, OpBuilder &builder,
     expandedSizes[i] = builder.getIndexAttr(dimSize);
   }
 
-  // Compute the dynamic size using the original size and all the other known
-  // static sizes:
+  // If there are multiple dynamic dims in this group, we cannot derive them
+  // from the source size alone. Use the output_shape operands directly.
+  if (numDynamicDims > 1) {
+    SmallVector<OpFoldResult> mixedOutputShape =
+        expandShape.getMixedOutputShape();
+    for (unsigned i = 0; i < groupSize; ++i)
+      expandedSizes[i] = mixedOutputShape[reassocGroup[i]];
+    return expandedSizes;
+  }
+
+  // Compute the single dynamic size using the original size and all the other
+  // known static sizes:
   // expandSize = origSize / productOfAllStaticSizes.
   if (dynSizeIdx) {
     AffineExpr s0 = builder.getAffineSymbolExpr(0);
@@ -342,6 +353,41 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
   unsigned groupSize = reassocGroup.size();
   MemRefType expandShapeType = expandShape.getResultType();
 
+  // Collect the statically known information about the original stride.
+  Value source = expandShape.getSrc();
+  auto sourceType = cast<MemRefType>(source.getType());
+  auto [strides, offset] = sourceType.getStridesAndOffset();
+
+  OpFoldResult origStride = ShapedType::isDynamic(strides[groupId])
+                                ? origStrides[groupId]
+                                : builder.getIndexAttr(strides[groupId]);
+
+  // Count the number of dynamic dims in this group.
+  unsigned numDynamicDims = 0;
+  for (unsigned i = 0; i < groupSize; ++i) {
+    if (ShapedType::isDynamic(expandShapeType.getDimSize(reassocGroup[i])))
+      ++numDynamicDims;
+  }
+
+  // If there are multiple dynamic dims, compute strides directly from
+  // output_shape sizes:
+  //   stride[last] = origStride
+  //   stride[i]    = stride[i+1] * outputShape[reassocGroup[i+1]]
+  if (numDynamicDims > 1) {
+    SmallVector<OpFoldResult> mixedOutputShape =
+        expandShape.getMixedOutputShape();
+    SmallVector<OpFoldResult> expandedStrides(groupSize);
+    expandedStrides[groupSize - 1] = origStride;
+    AffineExpr s0 = builder.getAffineSymbolExpr(0);
+    AffineExpr s1 = builder.getAffineSymbolExpr(1);
+    for (int i = groupSize - 2; i >= 0; --i) {
+      expandedStrides[i] = makeComposedFoldedAffineApply(
+          builder, expandShape.getLoc(), s0 * s1,
+          {expandedStrides[i + 1], mixedOutputShape[reassocGroup[i + 1]]});
+    }
+    return expandedStrides;
+  }
+
   std::optional<int64_t> dynSizeIdx;
 
   // Fill up the expanded strides, with the information we can deduce from the
@@ -352,22 +398,12 @@ SmallVector<OpFoldResult> getExpandedStrides(memref::ExpandShapeOp expandShape,
     expandedStrides[i] = builder.getIndexAttr(currentStride);
     uint64_t dimSize = expandShapeType.getDimSize(reassocGroup[i]);
     if (ShapedType::isDynamic(dimSize)) {
-      assert(!dynSizeIdx && "There must be at most one dynamic size per group");
       dynSizeIdx = i;
       continue;
     }
 
     currentStride *= dimSize;
   }
-
-  // Collect the statically known information about the original stride.
-  Value source = expandShape.getSrc();
-  auto sourceType = cast<MemRefType>(source.getType());
-  auto [strides, offset] = sourceType.getStridesAndOffset();
-
-  OpFoldResult origStride = ShapedType::isDynamic(strides[groupId])
-                                ? origStrides[groupId]
-                                : builder.getIndexAttr(strides[groupId]);
 
   // Apply the original stride to all the strides.
   int64_t doneStrideIdx = 0;

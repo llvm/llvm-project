@@ -1582,3 +1582,25 @@ func.func @extract_strided_metadata_of_memory_space_cast_no_base(%base: memref<2
 
 // CHECK-LABEL:  func @extract_strided_metadata_of_memory_space_cast_no_base
 //   CHECK-NOT:  memref.memory_space_cast
+
+// -----
+
+// Verify that expand_shape with multiple dynamic dims in one reassociation
+// group does not crash and produces correct reinterpret_cast.
+//
+// CHECK-DAG: #[[$EXPAND_STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * s1)>
+// CHECK-LABEL: func @simplify_expand_shape_multiple_dynamic_dims_per_group
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?x?xf32>, %[[SZ0:.*]]: index, %[[SZ1:.*]]: index, %[[SZ2:.*]]: index, %[[SZ3:.*]]: index)
+//
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
+//   CHECK-DAG: %[[STRIDE0:.*]] = affine.apply #[[$EXPAND_STRIDE_MAP]]()[%[[STRIDES]]#0, %[[SZ1]]]
+//       CHECK: %[[REINTERPRET_CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [0], sizes: [%[[SZ0]], %[[SZ1]], %[[SIZES]]#1, %[[SIZES]]#2], strides: [%[[STRIDE0]], %[[STRIDES]]#0, %[[STRIDES]]#1, 1]
+//       CHECK: return %[[REINTERPRET_CAST]]
+func.func @simplify_expand_shape_multiple_dynamic_dims_per_group(
+    %base: memref<?x?x?xf32>,
+    %sz0: index, %sz1: index, %sz2: index, %sz3: index) -> memref<?x?x?x?xf32> {
+  %expand = memref.expand_shape %base [[0, 1], [2], [3]]
+      output_shape [%sz0, %sz1, %sz2, %sz3]
+      : memref<?x?x?xf32> into memref<?x?x?x?xf32>
+  return %expand : memref<?x?x?x?xf32>
+}
