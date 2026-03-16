@@ -448,10 +448,10 @@
 # CHECK-NEXT:  1      2     1.00                        crc32ch	w25, w26, w16
 # CHECK-NEXT:  1      2     1.00                        crc32cw	w27, w12, w23
 # CHECK-NEXT:  1      2     1.00                        crc32cx	w21, w28, x5
-# CHECK-NEXT:  1      5     3.00                        smulh	x30, x29, x28
-# CHECK-NEXT:  1      5     3.00                        smulh	xzr, x27, x26
-# CHECK-NEXT:  1      5     3.00                        umulh	x30, x29, x28
-# CHECK-NEXT:  1      5     3.00                        umulh	x23, x30, xzr
+# CHECK-NEXT:  1      5     4.00                        smulh	x30, x29, x28
+# CHECK-NEXT:  1      5     4.00                        smulh	xzr, x27, x26
+# CHECK-NEXT:  1      5     4.00                        umulh	x30, x29, x28
+# CHECK-NEXT:  1      5     4.00                        umulh	x23, x30, xzr
 # CHECK-NEXT:  1      2     1.00                        madd	w1, w3, w7, w4
 # CHECK-NEXT:  1      2     1.00                        madd	wzr, w0, w9, w11
 # CHECK-NEXT:  1      2     1.00                        madd	w13, wzr, w4, w4
@@ -490,8 +490,8 @@
 # CHECK-NEXT:  1      2     1.00                        umsubl	x3, w5, w2, x9
 # CHECK-NEXT:  1      2     1.00                        umsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  1      2     1.00                        umnegl	x19, w20, w21
-# CHECK-NEXT:  1      5     3.00                        smulh	x23, x22, xzr
-# CHECK-NEXT:  1      5     3.00                        umulh	x23, x22, xzr
+# CHECK-NEXT:  1      5     4.00                        smulh	x23, x22, xzr
+# CHECK-NEXT:  1      5     4.00                        umulh	x23, x22, xzr
 # CHECK-NEXT:  1      4     3.00                        mul	x19, x20, xzr
 # CHECK-NEXT:  1      2     1.00                        mneg	w21, w22, w23
 # CHECK-NEXT:  1      2     1.00                        smull	x11, w13, w17
@@ -1264,7 +1264,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [3]    [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT: 26.00  34.00  34.00  252.50 252.50 483.33 197.33 197.33 293.00 161.00
+# CHECK-NEXT: 26.00  34.00  34.00  252.50 252.50 489.33 197.33 197.33 293.00 161.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [3]    [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1706,10 +1706,10 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     crc32ch	w25, w26, w16
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     crc32cw	w27, w12, w23
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     crc32cx	w21, w28, x5
-# CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     smulh	x30, x29, x28
-# CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     smulh	xzr, x27, x26
-# CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     umulh	x30, x29, x28
-# CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     umulh	x23, x30, xzr
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -     smulh	x30, x29, x28
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -     smulh	xzr, x27, x26
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -     umulh	x30, x29, x28
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -     umulh	x23, x30, xzr
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     madd	w1, w3, w7, w4
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     madd	wzr, w0, w9, w11
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     madd	w13, wzr, w4, w4
@@ -1748,8 +1748,8 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     umsubl	x3, w5, w2, x9
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     umsubl	x16, w17, wzr, x18
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     umnegl	x19, w20, w21
-# CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     smulh	x23, x22, xzr
-# CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     umulh	x23, x22, xzr
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -     smulh	x23, x22, xzr
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -      -      -     umulh	x23, x22, xzr
 # CHECK-NEXT:  -      -      -      -      -     3.00    -      -      -      -     mul	x19, x20, xzr
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     mneg	w21, w22, w23
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -     smull	x11, w13, w17

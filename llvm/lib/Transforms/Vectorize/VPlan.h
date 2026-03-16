@@ -199,6 +199,11 @@ public:
   const VPBlocksTy &getSuccessors() const { return Successors; }
   VPBlocksTy &getSuccessors() { return Successors; }
 
+  /// Returns true if this block has any successors.
+  bool hasSuccessors() const { return !Successors.empty(); }
+  /// Returns true if this block has any predecessors.
+  bool hasPredecessors() const { return !Predecessors.empty(); }
+
   iterator_range<VPBlockBase **> successors() { return Successors; }
   iterator_range<VPBlockBase **> predecessors() { return Predecessors; }
 
@@ -219,9 +224,6 @@ public:
 
   size_t getNumSuccessors() const { return Successors.size(); }
   size_t getNumPredecessors() const { return Predecessors.size(); }
-
-  /// Returns true if this block has any predecessors.
-  bool hasPredecessors() const { return !Predecessors.empty(); }
 
   /// An Enclosing Block of a block B is any block containing B, including B
   /// itself. \return the closest enclosing block starting from "this", which
@@ -668,6 +670,7 @@ public:
 };
 
 /// Class to record and manage LLVM IR flags.
+LLVM_PACKED_START
 class VPIRFlags {
   enum class OperationType : unsigned char {
     Cmp,
@@ -1070,6 +1073,7 @@ public:
   void printFlags(raw_ostream &O) const;
 #endif
 };
+LLVM_PACKED_END
 
 static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
 
@@ -1294,9 +1298,11 @@ public:
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,
-    /// Extracts the lane from the first operand corresponding to the last
-    /// active (non-zero) lane in the mask (second operand), or if no lanes
-    /// were active in the mask, returns the default value (third operand).
+    /// Extracts the last active lane from a set of vectors. The first operand
+    /// is the default value if no lanes in the masks are active. Conceptually,
+    /// this concatenates all data vectors (odd operands), concatenates all
+    /// masks (even operands -- ignoring the default value), and returns the
+    /// last active value from the combined data vector using the combined mask.
     ExtractLastActive,
 
     /// Returns the value for vscale.
@@ -1387,7 +1393,8 @@ public:
     // Conservatively return calls have results for now.
     switch (getOpcode()) {
     case Instruction::Ret:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Store:
     case Instruction::Switch:
     case Instruction::IndirectBr:
@@ -1718,6 +1725,11 @@ struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
   static inline bool classof(const VPRecipeBase *U) {
     auto *R = dyn_cast<VPIRInstruction>(U);
     return R && isa<PHINode>(R->getInstruction());
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
   }
 
   PHINode &getIRPhi() { return cast<PHINode>(getInstruction()); }
@@ -2561,8 +2573,9 @@ public:
   }
 
   VPWidenPHIRecipe *clone() override {
-    auto *C = new VPWidenPHIRecipe(cast<PHINode>(getUnderlyingValue()),
-                                   getOperand(0), getDebugLoc(), Name);
+    auto *C =
+        new VPWidenPHIRecipe(cast_if_present<PHINode>(getUnderlyingValue()),
+                             getOperand(0), getDebugLoc(), Name);
     for (VPValue *Op : llvm::drop_begin(operands()))
       C->addOperand(Op);
     return C;
@@ -4051,9 +4064,12 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
-                                     getOperand(2), InductionOpcode,
-                                     getFastMathFlags(), getDebugLoc());
+    auto *NewR = new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                           getOperand(2), InductionOpcode,
+                                           getFastMathFlags(), getDebugLoc());
+    if (VPValue *StartIndex = getStartIndex())
+      NewR->setStartIndex(StartIndex);
+    return NewR;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPScalarIVStepsSC)
@@ -4080,12 +4096,22 @@ public:
     return getNumOperands() == 4 ? getOperand(3) : nullptr;
   }
 
+  /// Set or add the StartIndex operand.
+  void setStartIndex(VPValue *StartIndex) {
+    if (getNumOperands() == 4)
+      setOperand(3, StartIndex);
+    else
+      addOperand(StartIndex);
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
   }
+
+  Instruction::BinaryOps getInductionOpcode() const { return InductionOpcode; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -4417,14 +4443,14 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
         IsReplicator(IsReplicator) {
-    assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
-    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
-    Entry->setParent(this);
-    Exiting->setParent(this);
+    if (Entry) {
+      assert(!Entry->hasPredecessors() && "Entry block has predecessors.");
+      assert(Exiting && "Must also pass Exiting if Entry is passed.");
+      assert(!Exiting->hasSuccessors() && "Exit block has successors.");
+      Entry->setParent(this);
+      Exiting->setParent(this);
+    }
   }
-  VPRegionBlock(const std::string &Name = "", bool IsReplicator = false)
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
-        IsReplicator(IsReplicator) {}
 
 public:
   ~VPRegionBlock() override = default;
@@ -4440,7 +4466,7 @@ public:
   /// Set \p EntryBlock as the entry VPBlockBase of this VPRegionBlock. \p
   /// EntryBlock must have no predecessors.
   void setEntry(VPBlockBase *EntryBlock) {
-    assert(EntryBlock->getPredecessors().empty() &&
+    assert(!EntryBlock->hasPredecessors() &&
            "Entry block cannot have predecessors.");
     Entry = EntryBlock;
     EntryBlock->setParent(this);
@@ -4452,7 +4478,7 @@ public:
   /// Set \p ExitingBlock as the exiting VPBlockBase of this VPRegionBlock. \p
   /// ExitingBlock must have no successors.
   void setExiting(VPBlockBase *ExitingBlock) {
-    assert(ExitingBlock->getSuccessors().empty() &&
+    assert(!ExitingBlock->hasSuccessors() &&
            "Exit block cannot have successors.");
     Exiting = ExitingBlock;
     ExitingBlock->setParent(this);
@@ -4710,17 +4736,21 @@ public:
   VPSymbolicValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns the VF of the vector loop region.
-  VPValue &getVF() { return VF; };
-  const VPValue &getVF() const { return VF; };
+  VPSymbolicValue &getVF() { return VF; };
+  const VPSymbolicValue &getVF() const { return VF; };
 
   /// Returns the UF of the vector loop region.
-  VPValue &getUF() { return UF; };
+  VPSymbolicValue &getUF() { return UF; };
 
   /// Returns VF * UF of the vector loop region.
-  VPValue &getVFxUF() { return VFxUF; }
+  VPSymbolicValue &getVFxUF() { return VFxUF; }
 
   LLVMContext &getContext() const {
     return getScalarHeader()->getIRBasicBlock()->getContext();
+  }
+
+  const DataLayout &getDataLayout() const {
+    return getScalarHeader()->getIRBasicBlock()->getDataLayout();
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
@@ -4871,8 +4901,7 @@ public:
   VPRegionBlock *createLoopRegion(const std::string &Name = "",
                                   VPBlockBase *Entry = nullptr,
                                   VPBlockBase *Exiting = nullptr) {
-    auto *VPB = Entry ? new VPRegionBlock(Entry, Exiting, Name)
-                      : new VPRegionBlock(Name);
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

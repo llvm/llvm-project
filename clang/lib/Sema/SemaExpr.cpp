@@ -406,6 +406,9 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
           targetDiag(*Locs.begin(), diag::err_thread_unsupported);
   }
 
+  if (LangOpts.SYCLIsDevice && isa<FunctionDecl>(D))
+    SYCL().CheckDeviceUseOfDecl(D, Loc);
+
   return false;
 }
 
@@ -18452,9 +18455,9 @@ HandleImmediateInvocations(Sema &SemaRef,
   if (SemaRef.getLangOpts().CPlusPlus23 &&
       Rec.ExprContext ==
           Sema::ExpressionEvaluationContextRecord::EK_VariableInit) {
-    auto *VD = cast<VarDecl>(Rec.ManglingContextDecl);
-    if (VD->isUsableInConstantExpressions(SemaRef.Context) ||
-        VD->hasConstantInitialization()) {
+    auto *VD = dyn_cast<VarDecl>(Rec.ManglingContextDecl);
+    if (VD && (VD->isUsableInConstantExpressions(SemaRef.Context) ||
+               VD->hasConstantInitialization())) {
       // An expression or conversion is in an 'immediate function context' if it
       // is potentially evaluated and either:
       // [...]

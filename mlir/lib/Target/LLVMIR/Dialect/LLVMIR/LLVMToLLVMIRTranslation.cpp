@@ -430,6 +430,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (callOp.getSaveRegParamsAttr())
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "save-reg-params"));
+    if (callOp.getBuiltinAttr())
+      call->addFnAttr(llvm::Attribute::Builtin);
     if (callOp.getNobuiltinAttr())
       call->addFnAttr(llvm::Attribute::NoBuiltin);
     if (callOp.getReturnsTwiceAttr())
