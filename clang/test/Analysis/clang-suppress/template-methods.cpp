@@ -36,7 +36,7 @@ void test_nontpl_class() {
 // ============================================================================
 
 template <typename T>
-struct TemplateClassWithTemplateMethod {
+struct TemplateClassWithTemplateInlineMethod {
   template <typename U>
   [[clang::suppress]] void suppressed(U) {
     clang_analyzer_warnIfReached(); // no-warning
@@ -49,8 +49,8 @@ struct TemplateClassWithTemplateMethod {
 };
 
 void test_tpl_class_tpl_inline_method() {
-  TemplateClassWithTemplateMethod<TypeA>().suppressed(TypeB{});
-  TemplateClassWithTemplateMethod<TypeA>().unsuppressed(TypeB{});
+  TemplateClassWithTemplateInlineMethod<TypeA>().suppressed(TypeB{});
+  TemplateClassWithTemplateInlineMethod<TypeA>().unsuppressed(TypeB{});
 }
 
 // ============================================================================
