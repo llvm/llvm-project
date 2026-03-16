@@ -455,7 +455,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
-        if (auto *DefR = U->getDefiningRecipe()) {
+        if (isa<VPRecipeValue>(U)) {
           // Overwrite previous end points.
           EndPoint[U] = Idx2Recipe.size();
           Ends.insert(U);
