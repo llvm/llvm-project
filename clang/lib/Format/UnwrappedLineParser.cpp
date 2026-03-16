@@ -2546,7 +2546,7 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
     // PP directive and returned the first post-PP token (AtEndOfPPLine ==
     // true), flush the accumulated pre-PP body tokens as their own
     // UnwrappedLine. This gives each PP-separated segment its own line so the
-    // IsACodeLineInsidePPBlock level-boost in addUnwrappedLine can apply the 
+    // IsACodeLineInsidePPBlock level-boost in addUnwrappedLine can apply the
     // correct indentation.
     if (IsEnum && !IsAngleBracket &&
         Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
