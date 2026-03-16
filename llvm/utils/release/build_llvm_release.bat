@@ -157,6 +157,10 @@ set zlib_version=1.3.2
 curl -LO https://github.com/madler/zlib/releases/download/v%zlib_version%/zlib-%zlib_version%.tar.gz || exit /b 1
 tar zxf zlib-%zlib_version%.tar.gz
 
+set zstd_version=1.5.7
+curl -LO https://github.com/facebook/zstd/releases/download/v%zstd_version%/zstd-%zstd_version%.tar.gz || exit /b 1
+tar zxf zstd-%zstd_version%.tar.gz
+
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
 REM Common flags for all builds.
 set common_compiler_flags=-DLIBXML_STATIC
@@ -172,6 +176,7 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
   -DLLVM_ENABLE_ZLIB=FORCE_ON ^
+  -DLLVM_ENABLE_ZSTD=FORCE_ON ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
@@ -223,6 +228,7 @@ mkdir build32_stage0
 cd build32_stage0
 call :do_build_libxml || exit /b 1
 call :do_build_zlib || exit /b 1
+call :do_build_zstd || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
@@ -233,7 +239,9 @@ set cmake_flags=^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
-  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -Dzstd_INCLUDE_DIR=%zstddir%/include ^
+  -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
@@ -287,6 +295,7 @@ mkdir build_%arch%_stage0
 cd build_%arch%_stage0
 call :do_build_libxml || exit /b 1
 call :do_build_zlib || exit /b 1
+call :do_build_zstd || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
@@ -297,6 +306,8 @@ set cmake_flags=^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
   -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -Dzstd_INCLUDE_DIR=%zstddir%/include ^
+  -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib ^
   -DCLANG_DEFAULT_LINKER=lld
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
@@ -435,6 +446,22 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
 ninja install || exit /b 1
 set zlibdir=%cd%\install
 set "zlibdir=%zlibdir:\=/%"
+cd ..
+exit /b 0
+
+::==============================================================================
+:: Build zstd.
+::==============================================================================
+:do_build_zstd
+mkdir zstdbuild
+cd zstdbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
+  -DZSTD_BUILD_PROGRAMS=OFF -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
+  -DZSTD_BUILD_SHARED=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  ../../zstd-%zstd_version%/build/cmake || exit /b 1
+ninja install || exit /b 1
+set zstddir=%cd%\install
+set "zstddir=%zstddir:\=/%"
 cd ..
 exit /b 0
 
