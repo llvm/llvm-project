@@ -321,6 +321,11 @@ Changes in existing checks
 
   - Fixes false negatives when using ``std::set`` from ``libstdc++``.
 
+- Improved :doc:`performance-inefficient-string-concatenation
+  <clang-tidy/checks/performance/inefficient-string-concatenation>` check by
+  adding support for detecting inefficient string concatenation in ``do-while``
+  loops.
+
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by
   correctly handling vector-like classes when ``push_back``/``emplace_back`` are
@@ -357,6 +362,13 @@ Changes in existing checks
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
+
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by fixing a
+  false positive where `AllowPointerConditions` and `AllowIntegerConditions`
+  options did not suppress warnings when the condition expression involved
+  temporaries (e.g. passing a string literal to a ``const std::string&``
+  parameter)
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false

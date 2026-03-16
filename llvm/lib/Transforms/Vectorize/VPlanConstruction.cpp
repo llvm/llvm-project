@@ -751,9 +751,9 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
-    if (isa<VPCanonicalIVPHIRecipe>(&R))
-      continue;
+  assert(isa<VPCanonicalIVPHIRecipe>(HeaderVPBB->front()) &&
+         "first recipe must be canonical IV phi");
+  for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);
     HeaderPhiR->insertBefore(PhiR);

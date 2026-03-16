@@ -27,70 +27,81 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_type: Debug
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: Release
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
+            build_fuzzing_tests: ON
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04-arm
             build_type: Debug
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
+            build_fuzzing_tests: ON
           - os: ubuntu-24.04
             build_type: Debug
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: x86_64-unknown-uefi-llvm
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: armv6m-none-eabi
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: armv7m-none-eabi
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: armv7em-none-eabi
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: armv8.1m.main-none-eabi
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-21
-            cpp_compiler: clang++-21
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
             target: riscv32-unknown-elf
             include_scudo: OFF
+            build_fuzzing_tests: OFF
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
@@ -118,7 +129,6 @@ jobs:
         echo "build-install-dir=/__w/llvm-project/llvm-project/install" >> "$GITHUB_OUTPUT"
     
     # Configure libc fullbuild with scudo.
-    # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
       run: |
         export RUNTIMES="libc"
@@ -135,8 +145,11 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}"
 
-        if [[ ${{ matrix.include_scudo}} == "ON" ]]; then
+        if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
+        fi
+
+        if [[ "${{ matrix.include_scudo }}" == "ON" ]]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS
             -DLLVM_LIBC_INCLUDE_SCUDO=ON
             -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
@@ -158,11 +171,17 @@ jobs:
         esac
 
     - name: Build
-      run: >
-        cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
-        --parallel
-        --target install
+      shell: bash
+      run: |
+        TARGETS="install"
+        if [[ "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
+          TARGETS="$TARGETS libc-fuzzer"
+        fi
+
+        cmake \
+          --build ${{ steps.strings.outputs.build-output-dir }} \
+          --parallel \
+          --target $TARGETS
 
     - name: Test
       # Skip UEFI and baremetal tests until we have testing set up.

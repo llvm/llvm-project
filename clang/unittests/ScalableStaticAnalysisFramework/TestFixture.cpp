@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestFixture.h"
+#include "SSAFBuiltinTestForceLinker.h" // IWYU pragma: keep
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"

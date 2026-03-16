@@ -14,6 +14,8 @@
 namespace std {
   using ::ptrdiff_t;
   using ::size_t;
+
+  using nullptr_t = decltype(nullptr);
 }
 
 #endif // _CSTDDEF_

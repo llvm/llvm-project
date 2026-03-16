@@ -451,6 +451,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCF = true;
     } else if (Feature == "+zu") {
       HasZU = true;
+    } else if (Feature == "+jmpabs") {
+      HasJMPABS = true;
     } else if (Feature == "+branch-hint") {
       HasBranchHint = true;
     }
@@ -975,7 +977,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CF__");
   if (HasZU)
     Builder.defineMacro("__ZU__");
-  if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU)
+  if (HasJMPABS)
+    Builder.defineMacro("__JMPABS__");
+  if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU && HasJMPABS)
     if (getTriple().isOSWindows() || (HasPush2Pop2 && HasPPX))
       Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
@@ -1177,6 +1181,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("nf", true)
       .Case("cf", true)
       .Case("zu", true)
+      .Case("jmpabs", true)
       .Default(false);
 }
 
@@ -1300,6 +1305,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("nf", HasNF)
       .Case("cf", HasCF)
       .Case("zu", HasZU)
+      .Case("jmpabs", HasJMPABS)
       .Case("branch-hint", HasBranchHint)
       .Default(false);
 }
