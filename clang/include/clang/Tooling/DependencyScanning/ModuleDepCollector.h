@@ -159,6 +159,10 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
+  /// Whether this module is defined in a private module map
+  /// (i.e. a module.private.modulemap file).
+  bool ModuleMapIsPrivate;
+
   /// Whether current working directory is ignored.
   bool IgnoreCWD;
 

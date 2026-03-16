@@ -361,6 +361,7 @@ static constexpr uint16_t ModuleFlagInferInferExportWildcard = 1 << 6;
 static constexpr uint16_t ModuleFlagHasExports = 1 << 7;
 static constexpr uint16_t ModuleFlagHasLinkLibraries = 1 << 8;
 static constexpr uint16_t ModuleFlagUseExportAsModuleLinkName = 1 << 9;
+static constexpr uint16_t ModuleFlagModuleMapIsPrivate = 1 << 10;
 
 IncludeTree::Module::ModuleFlags IncludeTree::Module::getFlags() const {
   uint16_t Raw = rawFlags();
@@ -373,6 +374,7 @@ IncludeTree::Module::ModuleFlags IncludeTree::Module::getFlags() const {
   Flags.InferExplicitSubmodules = Raw & ModuleFlagInferExplicitSubmodules;
   Flags.InferExportWildcard = Raw & ModuleFlagInferInferExportWildcard;
   Flags.UseExportAsModuleLinkName = Raw & ModuleFlagUseExportAsModuleLinkName;
+  Flags.ModuleMapIsPrivate = Raw & ModuleFlagModuleMapIsPrivate;
   return Flags;
 }
 
@@ -435,6 +437,8 @@ IncludeTree::Module::create(ObjectStore &DB, StringRef ModuleName,
     RawFlags |= ModuleFlagHasLinkLibraries;
   if (Flags.UseExportAsModuleLinkName)
     RawFlags |= ModuleFlagUseExportAsModuleLinkName;
+  if (Flags.ModuleMapIsPrivate)
+    RawFlags |= ModuleFlagModuleMapIsPrivate;
 
   SmallString<64> Buffer;
   llvm::raw_svector_ostream BufOS(Buffer);
@@ -761,6 +765,8 @@ llvm::Error IncludeTree::Module::print(llvm::raw_ostream &OS, unsigned Indent) {
     OS << " (extern_c)";
   if (Flags.IsSystem)
     OS << " (system)";
+  if (Flags.ModuleMapIsPrivate)
+    OS << " (private)";
   OS << '\n';
   auto ExportAs = getExportAsModule();
   if (!ExportAs.empty())

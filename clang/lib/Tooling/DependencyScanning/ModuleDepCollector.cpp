@@ -824,6 +824,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
+  MD.ModuleMapIsPrivate = M->ModuleMapIsPrivate;
 
   // Start off with the assumption that this module is shareable when there
   // are stable directories. As more dependencies are discovered, check if those
