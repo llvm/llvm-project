@@ -10932,9 +10932,39 @@ static SDValue lowerShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
                       DAG.getBuildVector(I8VT, DL, PSHUFBMask)));
 }
 
+/// Return Mask with the necessary casting or extending
+/// for \p Mask according to \p MaskVT when lowering masking intrinsics
 static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
                            const X86Subtarget &Subtarget, SelectionDAG &DAG,
-                           const SDLoc &dl);
+                           const SDLoc &dl) {
+  MVT SrcVT = Mask.getSimpleValueType();
+  assert(SrcVT.isScalarInteger() && "Expected scalar integer mask source!");
+  assert(MaskVT.bitsLE(Mask.getSimpleValueType()) && "Unexpected mask size!");
+  assert(MaskVT.getVectorElementType() == MVT::i1 && "Bool vector expected!");
+
+  if (isAllOnesConstant(Mask))
+    return DAG.getConstant(1, dl, MaskVT);
+  if (X86::isZeroNode(Mask))
+    return DAG.getConstant(0, dl, MaskVT);
+
+  if (SrcVT == MVT::i64 && Subtarget.is32Bit()) {
+    assert(MaskVT == MVT::v64i1 && "Expected v64i1 mask!");
+    assert(Subtarget.hasBWI() && "Expected AVX512BW target!");
+    // In case 32bit mode, bitcast i64 is illegal, extend/split it.
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitScalar(Mask, dl, MVT::i32, MVT::i32);
+    Lo = DAG.getBitcast(MVT::v32i1, Lo);
+    Hi = DAG.getBitcast(MVT::v32i1, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lo, Hi);
+  }
+
+  MVT BitcastVT = MVT::getVectorVT(MVT::i1, SrcVT.getSizeInBits());
+  // In case when MaskVT equals v2i1 or v4i1, low 2 or 4 elements
+  // are extracted by EXTRACT_SUBVECTOR.
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MaskVT,
+                     DAG.getBitcast(BitcastVT, Mask),
+                     DAG.getVectorIdxConstant(0, dl));
+}
 
 // X86 has dedicated shuffle that can be lowered to VEXPAND
 static SDValue lowerShuffleWithEXPAND(const SDLoc &DL, MVT VT, SDValue V1,
@@ -26724,39 +26754,6 @@ static SDValue LowerVACOPY(SDValue Op, const X86Subtarget &Subtarget,
       Align(Subtarget.isTarget64BitLP64() ? 8 : 4), /*isVolatile*/ false, false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
       MachinePointerInfo(SrcSV));
-}
-
-/// Return Mask with the necessary casting or extending
-/// for \p Mask according to \p MaskVT when lowering masking intrinsics
-static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
-                           const X86Subtarget &Subtarget, SelectionDAG &DAG,
-                           const SDLoc &dl) {
-
-  if (isAllOnesConstant(Mask))
-    return DAG.getConstant(1, dl, MaskVT);
-  if (X86::isZeroNode(Mask))
-    return DAG.getConstant(0, dl, MaskVT);
-
-  assert(MaskVT.bitsLE(Mask.getSimpleValueType()) && "Unexpected mask size!");
-
-  if (Mask.getSimpleValueType() == MVT::i64 && Subtarget.is32Bit()) {
-    assert(MaskVT == MVT::v64i1 && "Expected v64i1 mask!");
-    assert(Subtarget.hasBWI() && "Expected AVX512BW target!");
-    // In case 32bit mode, bitcast i64 is illegal, extend/split it.
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitScalar(Mask, dl, MVT::i32, MVT::i32);
-    Lo = DAG.getBitcast(MVT::v32i1, Lo);
-    Hi = DAG.getBitcast(MVT::v32i1, Hi);
-    return DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, Lo, Hi);
-  } else {
-    MVT BitcastVT = MVT::getVectorVT(MVT::i1,
-                                     Mask.getSimpleValueType().getSizeInBits());
-    // In case when MaskVT equals v2i1 or v4i1, low 2 or 4 elements
-    // are extracted by EXTRACT_SUBVECTOR.
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, MaskVT,
-                       DAG.getBitcast(BitcastVT, Mask),
-                       DAG.getVectorIdxConstant(0, dl));
-  }
 }
 
 /// Return (and \p Op, \p Mask) for compare instructions or
@@ -60062,6 +60059,33 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           EVT NewSrcVT = SrcVT.getDoubleNumVectorElementsVT(Ctx);
           return DAG.getNode(ISD::TRUNCATE, DL, VT,
                              ConcatSubOperand(NewSrcVT, Ops, 0));
+        }
+      }
+      break;
+    case X86ISD::VTRUNCS:
+    case X86ISD::VTRUNCUS:
+      if (!IsSplat && NumOps == 2 && VT.is512BitVector() &&
+          Subtarget.useBWIRegs()) {
+        MVT SrcVT = Ops[0].getOperand(0).getSimpleValueType();
+        if (SrcVT.is512BitVector() &&
+            SrcVT == Ops[1].getOperand(0).getSimpleValueType() &&
+            SrcVT.getScalarSizeInBits() <= 32 &&
+            (VT.getScalarSizeInBits() * 2 == SrcVT.getScalarSizeInBits())) {
+          using namespace SDPatternMatch;
+          SDValue N0 = Ops[0].getOperand(0), N1 = Ops[1].getOperand(0);
+          if (Opcode == X86ISD::VTRUNCS ||
+              (sd_match(N0, m_SMaxLike(m_Value(N0), m_Zero())) &&
+               sd_match(N1, m_SMaxLike(m_Value(N1), m_Zero())))) {
+            N0 = DAG.getBitcast(MVT::v8i64, N0);
+            N1 = DAG.getBitcast(MVT::v8i64, N1);
+            SDValue LHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
+                                               {0, 1, 4, 5, 8, 9, 12, 13});
+            SDValue RHS = DAG.getVectorShuffle(MVT::v8i64, DL, N0, N1,
+                                               {2, 3, 6, 7, 10, 11, 14, 15});
+            return DAG.getNode(
+                Opcode == X86ISD::VTRUNCS ? X86ISD::PACKSS : X86ISD::PACKUS, DL,
+                VT, DAG.getBitcast(SrcVT, LHS), DAG.getBitcast(SrcVT, RHS));
+          }
         }
       }
       break;

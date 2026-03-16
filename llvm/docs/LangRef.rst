@@ -18309,15 +18309,15 @@ support all types however.
 
       declare i32 @llvm.lround.i32.f32(float %Val)
       declare i32 @llvm.lround.i32.f64(double %Val)
-      declare i32 @llvm.lround.i32.f80(float %Val)
-      declare i32 @llvm.lround.i32.f128(double %Val)
-      declare i32 @llvm.lround.i32.ppcf128(double %Val)
+      declare i32 @llvm.lround.i32.f80(x86_fp80 %Val)
+      declare i32 @llvm.lround.i32.f128(fp128 %Val)
+      declare i32 @llvm.lround.i32.ppcf128(ppc_fp128 %Val)
 
       declare i64 @llvm.lround.i64.f32(float %Val)
       declare i64 @llvm.lround.i64.f64(double %Val)
-      declare i64 @llvm.lround.i64.f80(float %Val)
-      declare i64 @llvm.lround.i64.f128(double %Val)
-      declare i64 @llvm.lround.i64.ppcf128(double %Val)
+      declare i64 @llvm.lround.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.lround.i64.f128(fp128 %Val)
+      declare i64 @llvm.lround.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18353,9 +18353,9 @@ floating-point type. Not all targets support all types however.
 
       declare i64 @llvm.llround.i64.f32(float %Val)
       declare i64 @llvm.llround.i64.f64(double %Val)
-      declare i64 @llvm.llround.i64.f80(float %Val)
-      declare i64 @llvm.llround.i64.f128(double %Val)
-      declare i64 @llvm.llround.i64.ppcf128(double %Val)
+      declare i64 @llvm.llround.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.llround.i64.f128(fp128 %Val)
+      declare i64 @llvm.llround.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18393,15 +18393,15 @@ support all types however.
 
       declare i32 @llvm.lrint.i32.f32(float %Val)
       declare i32 @llvm.lrint.i32.f64(double %Val)
-      declare i32 @llvm.lrint.i32.f80(float %Val)
-      declare i32 @llvm.lrint.i32.f128(double %Val)
-      declare i32 @llvm.lrint.i32.ppcf128(double %Val)
+      declare i32 @llvm.lrint.i32.f80(x86_fp80 %Val)
+      declare i32 @llvm.lrint.i32.f128(fp128 %Val)
+      declare i32 @llvm.lrint.i32.ppcf128(ppc_fp128 %Val)
 
       declare i64 @llvm.lrint.i64.f32(float %Val)
       declare i64 @llvm.lrint.i64.f64(double %Val)
-      declare i64 @llvm.lrint.i64.f80(float %Val)
-      declare i64 @llvm.lrint.i64.f128(double %Val)
-      declare i64 @llvm.lrint.i64.ppcf128(double %Val)
+      declare i64 @llvm.lrint.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.lrint.i64.f128(fp128 %Val)
+      declare i64 @llvm.lrint.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
@@ -18440,9 +18440,9 @@ support all types however.
 
       declare i64 @llvm.llrint.i64.f32(float %Val)
       declare i64 @llvm.llrint.i64.f64(double %Val)
-      declare i64 @llvm.llrint.i64.f80(float %Val)
-      declare i64 @llvm.llrint.i64.f128(double %Val)
-      declare i64 @llvm.llrint.i64.ppcf128(double %Val)
+      declare i64 @llvm.llrint.i64.f80(x86_fp80 %Val)
+      declare i64 @llvm.llrint.i64.f128(fp128 %Val)
+      declare i64 @llvm.llrint.i64.ppcf128(ppc_fp128 %Val)
 
 Overview:
 """""""""
