@@ -420,7 +420,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
-  case Stmt::CapturedStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
@@ -433,6 +432,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
     return mlir::failure();
+  case Stmt::CapturedStmtClass:
+    llvm_unreachable("CapturedStmt should be handled by the parent directive");
   }
 
   llvm_unreachable("Unexpected statement class");
