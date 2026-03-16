@@ -8,11 +8,14 @@
 
 #include "UseAfterMoveCheck.h"
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -323,7 +326,32 @@ void UseAfterMoveFinder::getUsesAndReinits(
   });
 }
 
-static bool isStandardSmartPointer(const ValueDecl *VD) {
+static std::optional<StringRef> getStringLiteral(const Expr *E) {
+  if (!E)
+    return std::nullopt;
+  if (const auto *SL = dyn_cast<StringLiteral>(E->IgnoreParenImpCasts()))
+    return SL->getString();
+  return std::nullopt;
+}
+
+// User defined types can use [[clang::annotate]] to mark smart-pointer-like
+// types with a specified move from state that matches the standard smart
+// pointer's moved-from state (nullptr).
+static bool isNullAfterMoveAnnotate(const AnnotateAttr *Attr) {
+  if (Attr->getAnnotation() != "clang-tidy")
+    return false;
+
+  if (Attr->args_size() != 2)
+    return false;
+
+  std::optional<StringRef> Plugin = getStringLiteral(Attr->args_begin()[0]);
+  std::optional<StringRef> Annotation = getStringLiteral(Attr->args_begin()[1]);
+
+  return Plugin && Annotation && *Plugin == "bugprone-use-after-move" &&
+         *Annotation == "null_after_move";
+}
+
+static bool isSpecifiedAfterMove(const ValueDecl *VD) {
   const Type *TheType = VD->getType().getNonReferenceType().getTypePtrOrNull();
   if (!TheType)
     return false;
@@ -332,6 +360,16 @@ static bool isStandardSmartPointer(const ValueDecl *VD) {
   if (!RecordDecl)
     return false;
 
+  // Use the definition for the declaration, as it is the expected place to add
+  // the annotations.
+  const CXXRecordDecl *DefinitionDecl = RecordDecl->getDefinition();
+  if (DefinitionDecl != nullptr) {
+    for (const auto *Attr : DefinitionDecl->specific_attrs<AnnotateAttr>())
+      if (isNullAfterMoveAnnotate(Attr))
+        return true;
+  }
+
+  // Standard smart pointers have a well-specified moved-from state (nullptr).
   const IdentifierInfo *ID = RecordDecl->getIdentifier();
   if (!ID)
     return false;
@@ -358,9 +396,10 @@ void UseAfterMoveFinder::getDeclRefs(
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
         const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
-          // Ignore uses of a standard smart pointer that don't dereference the
-          // pointer.
-          if (Operator || !isStandardSmartPointer(DeclRef->getDecl()))
+          // Ignore uses of a standard smart pointer or classes annotated as
+          // "null_after_move" (smart-pointer-like behavior) that don't
+          // dereference the pointer.
+          if (Operator || !isSpecifiedAfterMove(DeclRef->getDecl()))
             DeclRefs->insert(DeclRef);
         }
       }
