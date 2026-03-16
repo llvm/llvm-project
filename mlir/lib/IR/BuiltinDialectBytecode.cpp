@@ -33,7 +33,7 @@ namespace {
 
 // TODO: Move these to separate file.
 
-// Returns the bitwidth if known, else return 0.
+// Returns the bitwidth if known, else return std::nullopt.
 static std::optional<unsigned> getIntegerBitWidth(DialectBytecodeReader &reader,
                                                   Type type) {
   if (auto intType = dyn_cast<IntegerType>(type))
@@ -48,8 +48,9 @@ static std::optional<unsigned> getIntegerBitWidth(DialectBytecodeReader &reader,
 static LogicalResult readAPIntWithKnownWidth(DialectBytecodeReader &reader,
                                              Type type, FailureOr<APInt> &val) {
   std::optional<unsigned> bitWidth = getIntegerBitWidth(reader, type);
-  // getIntegerBitWidth returns 0 and emits an error for unsupported types.
-  // Bail out early to avoid creating a zero-width APInt with a non-zero value.
+  // getIntegerBitWidth returns std::nullopt and emits an error for unsupported
+  // types. Bail out early to avoid creating a zero-width APInt with a non-zero
+  // value.
   if (!bitWidth)
     return failure();
   val = reader.readAPIntWithKnownWidth(*bitWidth);
