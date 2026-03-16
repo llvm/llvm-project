@@ -1911,7 +1911,8 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     } else if (isTodoType(Pointer)) {
       eraseTodoType(Pointer);
-      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer)) {
+      if (!isa<CallInst>(Pointer) && !isaGEP(Pointer) &&
+          !isa<AllocaInst>(Pointer)) {
         //  If this wouldn't be the first spv_ptrcast but existing type info is
         //  uncomplete, update spv_assign_ptr_type arguments.
         if (CallInst *AssignCI = GR->findAssignPtrTypeInstr(Pointer)) {
@@ -2710,7 +2711,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       continue;
     unsigned OpNo = Op.getOperandNo();
     if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+               (!II->isBundleOperand(OpNo) &&
+                II->paramHasAttr(OpNo, Attribute::ImmArg))))
       continue;
 
     if (!BPrepared) {
@@ -3304,7 +3306,7 @@ bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
     Value *Mask = I.getArgOperand(1);
     Value *Passthru = I.getArgOperand(2);
 
-    // Alignment is stored as a parameter attribute, not as a regular parameter
+    // Alignment is stored as a parameter attribute, not as a regular parameter.
     uint32_t Alignment = I.getParamAlign(0).valueOrOne().value();
 
     SmallVector<Value *, 4> Args = {Ptrs, B.getInt32(Alignment), Mask,
@@ -3336,7 +3338,7 @@ bool SPIRVEmitIntrinsics::processMaskedMemIntrinsic(IntrinsicInst &I) {
     Value *Mask = I.getArgOperand(2);
 
     // Alignment is stored as a parameter attribute on the ptrs parameter (arg
-    // 1)
+    // 1).
     uint32_t Alignment = I.getParamAlign(1).valueOrOne().value();
 
     SmallVector<Value *, 4> Args = {Values, Ptrs, B.getInt32(Alignment), Mask};

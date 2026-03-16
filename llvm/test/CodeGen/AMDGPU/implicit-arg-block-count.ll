@@ -155,7 +155,7 @@ define i32 @bad_offset() {
 ; CHECK-LABEL: define i32 @bad_offset() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[D_GEP_Y:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 16
+; CHECK-NEXT:    [[D_GEP_Y:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 16
 ; CHECK-NEXT:    [[GRID_SIZE_Y:%.*]] = load i32, ptr addrspace(4) [[D_GEP_Y]], align 4
 ; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
@@ -180,7 +180,7 @@ define i32 @dangling() {
 ; CHECK-LABEL: define i32 @dangling() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
 ; CHECK-NEXT:    ret i32 [[GRID_SIZE_X]]
 ;
@@ -199,7 +199,7 @@ define i32 @wrong_cast() {
 ; CHECK-LABEL: define i32 @wrong_cast() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
 ; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
@@ -224,7 +224,7 @@ define i32 @wrong_size() {
 ; CHECK-LABEL: define i32 @wrong_size() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
 ; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NEXT:    [[I_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPLICITARG]], i64 12
@@ -274,7 +274,7 @@ define i16 @empty_use() {
 ; CHECK-LABEL: define i16 @empty_use() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DISPATCH:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[DISPATCH]], i64 12
+; CHECK-NEXT:    [[D_GEP_X:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[DISPATCH]], i64 12
 ; CHECK-NEXT:    [[GRID_SIZE_X:%.*]] = load i32, ptr addrspace(4) [[D_GEP_X]], align 4
 ; CHECK-NEXT:    [[TRUNC_X:%.*]] = trunc i32 [[GRID_SIZE_X]] to i16
 ; CHECK-NEXT:    [[IMPLICITARG:%.*]] = call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
