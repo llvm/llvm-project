@@ -184,6 +184,8 @@ function InstallDotNet {
   local version=$2
   local runtime=$4
 
+  # For performance this check is duplicated in src/Microsoft.DotNet.Arcade.Sdk/src/InstallDotNetCore.cs
+  # if you are making changes here, consider if you need to make changes there as well.
   local dotnetVersionLabel="'$runtime v$version'"
   if [[ -n "${4:-}" ]] && [ "$4" != 'sdk' ]; then
     runtimePath="$root"

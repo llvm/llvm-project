@@ -295,6 +295,8 @@ function InstallDotNet([string] $dotnetRoot,
 
   $dotnetVersionLabel = "'sdk v$version'"
 
+  # For performance this check is duplicated in src/Microsoft.DotNet.Arcade.Sdk/src/InstallDotNetCore.cs
+  # if you are making changes here, consider if you need to make changes there as well.
   if ($runtime -ne '' -and $runtime -ne 'sdk') {
     $runtimePath = $dotnetRoot
     $runtimePath = $runtimePath + "\shared"

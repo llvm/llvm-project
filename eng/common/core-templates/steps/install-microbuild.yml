@@ -73,7 +73,7 @@ steps:
     # YAML expansion, and Windows vs. Linux/Mac uses different service connections. However,
     # we can avoid including the MB install step if not enabled at all. This avoids a bunch of
     # extra pipeline authorizations, since most pipelines do not sign on non-Windows.
-    - template: /eng/common/core-templates/steps/install-microbuild-impl.yml@self
+    - template: /eng/common/core-templates/steps/install-microbuild-impl.yml
       parameters:
         enablePreviewMicrobuild: ${{ parameters.enablePreviewMicrobuild }}
         microbuildTaskInputs:
@@ -95,7 +95,7 @@ steps:
         condition: and(succeeded(), eq(variables['Agent.Os'], 'Windows_NT'), in(variables['_SignType'], 'real', 'test'))
 
     - ${{ if eq(parameters.enableMicrobuildForMacAndLinux, true) }}:
-      - template: /eng/common/core-templates/steps/install-microbuild-impl.yml@self
+      - template: /eng/common/core-templates/steps/install-microbuild-impl.yml
         parameters:
           enablePreviewMicrobuild: ${{ parameters.enablePreviewMicrobuild }}
           microbuildTaskInputs:

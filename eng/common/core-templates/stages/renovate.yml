@@ -76,7 +76,7 @@ extends:
     - stage: Renovate
       displayName: Run Renovate
       jobs:
-      - template: /eng/common/core-templates/job/renovate.yml@self
+      - template: /eng/common/core-templates/job/renovate.yml
         parameters:
           renovateConfigPath: ${{ parameters.renovateConfigPath }}
           gitHubRepo: ${{ parameters.gitHubRepo }}
