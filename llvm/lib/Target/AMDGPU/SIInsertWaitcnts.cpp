@@ -745,7 +745,7 @@ private:
 
   unsigned getSGPRScore(MCRegUnit RU, InstCounterType T) const {
     auto It = SGPRs.find(RU);
-    return It != SGPRs.end() ? It->second.get(T, *this) : 0;
+    return It != SGPRs.end() ? It->second.get(T) : 0;
   }
 
   unsigned getVMemScore(VMEMID TID, InstCounterType T) const {
@@ -919,7 +919,7 @@ private:
         VMem[toVMEMID(RU)].Scores[T] = Val;
     } else if (TRI.isSGPRReg(Context->MRI, Reg)) {
       for (MCRegUnit RU : regunits(Reg))
-        SGPRs[RU].get(T, *this) = Val;
+        SGPRs[RU].get(T) = Val;
     } else {
       llvm_unreachable("Register cannot be tracked/unknown register!");
     }
@@ -967,22 +967,21 @@ private:
   /// Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
   /// pre-gfx12) or KM_CNT (gfx12+ only), and X_CNT (gfx1250) are relevant.
   class SGPRInfo {
-    /// ScoreDsCnt represents the score for either DS_CNT or KM_CNT.
-    unsigned ScoreDsCnt = 0;
-    /// ScoreXCnt keeps the X_CNT score.
+    /// Either DS_CNT or KM_CNT score.
+    unsigned ScoreDsKmCnt = 0;
     unsigned ScoreXCnt = 0;
 
   public:
-    unsigned get(InstCounterType T, const WaitcntBrackets &Ctx) const {
-      assert(Ctx.isSmemCounter(T) && "Invalid SMEM counter");
-      return T == X_CNT ? ScoreXCnt : ScoreDsCnt;
+    unsigned get(InstCounterType T) const {
+      assert((T == DS_CNT || T == KM_CNT || T == X_CNT) && "Invalid counter");
+      return T == X_CNT ? ScoreXCnt : ScoreDsKmCnt;
     }
-    unsigned &get(InstCounterType T, const WaitcntBrackets &Ctx) {
-      assert(Ctx.isSmemCounter(T) && "Invalid SMEM counter");
-      return T == X_CNT ? ScoreXCnt : ScoreDsCnt;
+    unsigned &get(InstCounterType T) {
+      assert((T == DS_CNT || T == KM_CNT || T == X_CNT) && "Invalid counter");
+      return T == X_CNT ? ScoreXCnt : ScoreDsKmCnt;
     }
 
-    bool empty() const { return ScoreDsCnt == 0 && ScoreXCnt == 0; }
+    bool empty() const { return ScoreDsKmCnt == 0 && ScoreXCnt == 0; }
   };
 
   DenseMap<VMEMID, VMEMInfo> VMem; // VGPR + LDS DMA
@@ -1357,7 +1356,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
         SmallVector<MCRegUnit> SortedSMEMIDs(SGPRs.keys());
         sort(SortedSMEMIDs);
         for (auto ID : SortedSMEMIDs) {
-          unsigned RegScore = SGPRs.at(ID).get(T, *this);
+          unsigned RegScore = SGPRs.at(ID).get(T);
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
@@ -3079,9 +3078,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     if (isSmemCounter(T)) {
       for (auto &[RegID, Info] : SGPRs) {
         auto It = Other.SGPRs.find(RegID);
-        unsigned OtherScore =
-            (It != Other.SGPRs.end()) ? It->second.get(T, *this) : 0;
-        StrictDom |= mergeScore(M, Info.get(T, *this), OtherScore);
+        unsigned OtherScore = (It != Other.SGPRs.end()) ? It->second.get(T) : 0;
+        StrictDom |= mergeScore(M, Info.get(T), OtherScore);
       }
     }
   }
