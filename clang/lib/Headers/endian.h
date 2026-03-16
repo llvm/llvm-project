@@ -29,15 +29,21 @@
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 
-#define htobe16(x) __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
-#define htobe32(x) __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
-#define htobe64(x) __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
+#define htobe16(x)                                                             \
+  __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
+#define htobe32(x)                                                             \
+  __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
+#define htobe64(x)                                                             \
+  __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
 #define htole16(x) __CLANG_ENDIAN_CAST(static_cast, uint16_t, x)
 #define htole32(x) __CLANG_ENDIAN_CAST(static_cast, uint32_t, x)
 #define htole64(x) __CLANG_ENDIAN_CAST(static_cast, uint64_t, x)
-#define be16toh(x) __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
-#define be32toh(x) __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
-#define be64toh(x) __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
+#define be16toh(x)                                                             \
+  __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
+#define be32toh(x)                                                             \
+  __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
+#define be64toh(x)                                                             \
+  __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
 #define le16toh(x) __CLANG_ENDIAN_CAST(static_cast, uint16_t, x)
 #define le32toh(x) __CLANG_ENDIAN_CAST(static_cast, uint32_t, x)
 #define le64toh(x) __CLANG_ENDIAN_CAST(static_cast, uint64_t, x)
@@ -47,15 +53,21 @@
 #define htobe16(x) __CLANG_ENDIAN_CAST(static_cast, uint16_t, x)
 #define htobe32(x) __CLANG_ENDIAN_CAST(static_cast, uint32_t, x)
 #define htobe64(x) __CLANG_ENDIAN_CAST(static_cast, uint64_t, x)
-#define htole16(x) __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
-#define htole32(x) __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
-#define htole64(x) __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
+#define htole16(x)                                                             \
+  __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
+#define htole32(x)                                                             \
+  __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
+#define htole64(x)                                                             \
+  __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
 #define be16toh(x) __CLANG_ENDIAN_CAST(static_cast, uint16_t, x)
 #define be32toh(x) __CLANG_ENDIAN_CAST(static_cast, uint32_t, x)
 #define be64toh(x) __CLANG_ENDIAN_CAST(static_cast, uint64_t, x)
-#define le16toh(x) __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
-#define le32toh(x) __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
-#define le64toh(x) __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
+#define le16toh(x)                                                             \
+  __builtin_bswap16(__CLANG_ENDIAN_CAST(static_cast, uint16_t, x))
+#define le32toh(x)                                                             \
+  __builtin_bswap32(__CLANG_ENDIAN_CAST(static_cast, uint32_t, x))
+#define le64toh(x)                                                             \
+  __builtin_bswap64(__CLANG_ENDIAN_CAST(static_cast, uint64_t, x))
 
 #endif
 #endif // __has_include_next
