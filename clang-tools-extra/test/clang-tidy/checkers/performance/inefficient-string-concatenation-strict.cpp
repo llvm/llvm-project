@@ -1,7 +1,5 @@
 // RUN: %check_clang_tidy %s performance-inefficient-string-concatenation %t -- \
-// RUN:   -config="{CheckOptions: {performance-inefficient-string-concatenation.StrictMode: true}}" -- \
-// RUN:   -isystem %clang_tidy_headers
-
+// RUN:   -config="{CheckOptions: {performance-inefficient-string-concatenation.StrictMode: true}}"
 #include <string>
 
 void f(std::string) {}

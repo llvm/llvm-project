@@ -9,6 +9,7 @@
 #include <cassert>
 #include <string>
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -180,6 +181,20 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
   if (isGslPointerType(CCE->getType())) {
     handleGSLPointerConstruction(CCE);
     return;
+  }
+  // Implicit copy/move constructors of lambda closures lack
+  // [[clang::lifetimebound]], so `handleFunctionCall` cannot propagate origins.
+  // Handle them directly to keep the origin chain intact (e.g., `return
+  // lambda;` copies the closure).
+  if (const auto *RD = CCE->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda() &&
+      CCE->getConstructor()->isCopyOrMoveConstructor() &&
+      CCE->getNumArgs() == 1) {
+    const Expr *Arg = CCE->getArg(0);
+    if (OriginList *ArgList = getRValueOrigins(Arg, getOriginsList(*Arg))) {
+      flow(getOriginsList(*CCE), ArgList, /*Kill=*/true);
+      return;
+    }
   }
   handleFunctionCall(CCE, CCE->getConstructor(),
                      {CCE->getArgs(), CCE->getNumArgs()},
@@ -431,6 +446,30 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   }
 }
 
+void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
+  // The lambda gets a single merged origin that aggregates all captured
+  // pointer-like origins. Currently we only need to detect whether the lambda
+  // outlives any capture.
+  OriginList *LambdaList = getOriginsList(*LE);
+  if (!LambdaList)
+    return;
+  bool Kill = true;
+  for (const Expr *Init : LE->capture_inits()) {
+    if (!Init)
+      continue;
+    OriginList *InitList = getOriginsList(*Init);
+    if (!InitList)
+      continue;
+    // FIXME: Consider flowing all origin levels once lambdas support more than
+    // one origin. Currently only the outermost origin is flowed, so by-ref
+    // captures like `[&p]` (where p is string_view) miss inner-level
+    // invalidation.
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        LambdaList->getOuterOriginID(), InitList->getOuterOriginID(), Kill));
+    Kill = false;
+  }
+}
+
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
@@ -469,11 +508,19 @@ void FactsGenerator::handleFullExprCleanup(
 }
 
 void FactsGenerator::handleExitBlock() {
-  // Creates FieldEscapeFacts for all field origins that remain live at exit.
   for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
     if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl()))
+      // Create FieldEscapeFacts for all field origins that remain live at exit.
       EscapesInCurrentBlock.push_back(
           FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
+    else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl())) {
+      // Create GlobalEscapeFacts for all origins with global-storage that
+      // remain live at exit.
+      if (VD->hasGlobalStorage()) {
+        EscapesInCurrentBlock.push_back(
+            FactMgr.createFact<GlobalEscapeFact>(O.ID, VD));
+      }
+    }
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {

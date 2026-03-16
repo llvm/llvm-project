@@ -20,7 +20,7 @@
 // CHECK-NEXT:    store ptr addrspace(1) [[OUT_COERCE:%.*]], ptr [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    [[OUT1:%.*]] = load ptr, ptr [[OUT_ASCAST]], align 8
 // CHECK-NEXT:    store ptr [[OUT1]], ptr [[OUT_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK-NEXT:    [[TMP0:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[DISPATCH_PTR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DISPATCH_PTR_ASCAST]], align 8
@@ -150,7 +150,7 @@ __global__ void test_ds_fmin(float src, float *shared) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[X_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X]] to ptr
-// CHECK-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK-NEXT:    [[TMP0:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[X_ASCAST]], align 8
 // CHECK-NEXT:    ret void
@@ -241,7 +241,7 @@ __device__ void func(float *x);
 // CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw fmin ptr addrspace(3) [[TMP1]], float [[TMP2]] monotonic, align 4
 // CHECK-NEXT:    store volatile float [[TMP3]], ptr [[X_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[SHARED_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    call void @_Z4funcPf(ptr noundef [[TMP4]]) #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    call void @_Z4funcPf(ptr noundef [[TMP4]]) #[[ATTR8:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 __global__ void test_ds_fmin_func(float src, float *__restrict shared) {

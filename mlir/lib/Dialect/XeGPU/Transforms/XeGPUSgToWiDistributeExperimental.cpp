@@ -901,17 +901,11 @@ struct SgToWiVectorShapeCast : public OpConversionPattern<vector::ShapeCastOp> {
   LogicalResult
   matchAndRewrite(vector::ShapeCastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    xegpu::DistributeLayoutAttr sourceLayout =
-        xegpu::getTemporaryLayout(op->getOpOperand(0));
     xegpu::DistributeLayoutAttr resultLayout =
         xegpu::getTemporaryLayout(op->getOpResult(0));
-    if (!sourceLayout || !resultLayout)
+    if (!resultLayout || !resultLayout.isForSubgroup())
       return rewriter.notifyMatchFailure(
-          op,
-          "the source or result of shape_cast op lacks distribution layout");
-    if (!sourceLayout.isForSubgroup() || !resultLayout.isForSubgroup())
-      return rewriter.notifyMatchFailure(
-          op, "the source or result layout is not for subgroup");
+          op, "the result vector of the shape_cast op lacks subgroup layout");
 
     auto resultDistTypeOrFailure = xegpu::getDistVecTypeBasedOnLaneLayout(
         resultLayout, op.getResultVectorType());
@@ -923,6 +917,127 @@ struct SgToWiVectorShapeCast : public OpConversionPattern<vector::ShapeCastOp> {
     auto newShapeCast = vector::ShapeCastOp::create(
         rewriter, op.getLoc(), resultDistTypeOrFailure.value(), source);
     rewriter.replaceOp(op, newShapeCast);
+    return success();
+  }
+};
+
+/// This pattern distributes a subgroup-level `vector.broadcast` op to
+/// workitem-level. The pattern supports three cases:
+///
+/// 1) Broadcast a low-rank vector to high-rank vector: The low-rank input
+///    vector must have a slice layout of the result. If the distributed source
+///    and target vector types are identical, this lowers to a no-op; otherwise,
+///    it remains a broadcast but operates on distributed vectors.
+///
+/// 2) Broadcast a same-rank vector with identical layouts for source and
+///    target: The source vector must have unit dimensions, and lane_data must
+///    be unit size for those unit dims. This always lowers to a no-op.
+///
+/// 3) Broadcast a scalar with no layout: This always lowers to a broadcast
+///    from scalar to distributed result type.
+///
+/// Example 1 (low-rank to high-rank broadcast):
+/// ```
+///   %0 = "some_op"() {layout_result_0 =
+///     #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+///     dims = [0]>} : () -> vector<16xf16>
+///   %1 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : vector<16xf16> to vector<16x16xf16>
+/// ```
+/// is distributed to:
+/// ```
+///   %0 = "some_op"() : () -> vector<1xf16>
+///   %1 = vector.broadcast %0 : vector<1xf16> to vector<16x1xf16>
+/// ```
+///
+/// Example 2 (same-rank broadcast, no-op):
+/// ```
+///   %0 = "some_op"() {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : () -> vector<16x1xf16>
+///   %1 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : vector<16x1xf16> to vector<16x16xf16>
+/// ```
+/// is distributed to (no-op, source already matches distributed result type):
+/// ```
+///   %0 = "some_op"() : () -> vector<16x1xf16>
+///   // broadcast is eliminated, %0 is used directly
+/// ```
+///
+/// Example 3 (scalar to vector broadcast):
+/// ```
+///   %0 = "some_op"() : () -> f16
+///   %1 = vector.broadcast %0 {layout_result_0 =
+///     #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+///     : f16 to vector<16x16xf16>
+/// ```
+/// is distributed to:
+/// ```
+///   %0 = "some_op"() : f16
+///   %1 = vector.broadcast %0 : f16 to vector<16x1xf16>
+/// ```
+struct SgToWiBroadcast : public OpConversionPattern<vector::BroadcastOp> {
+  using OpConversionPattern<vector::BroadcastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(cast<OpResult>(op.getResult()));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return rewriter.notifyMatchFailure(
+          op, "result does not have subgroup distribute layout");
+
+    VectorType destType = op.getResultVectorType();
+    VectorType sourceType = dyn_cast<VectorType>(op.getSourceType());
+
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getTemporaryLayout(op->getOpOperand(0));
+
+    if (sourceType) {
+      int64_t rankDiff = destType.getRank() - sourceType.getRank();
+      if (rankDiff > 0) {
+        // Case 1: Low-rank to high-rank broadcast.
+        if (!sourceLayout || !sourceLayout.isSliceOf(resultLayout))
+          op.emitWarning(
+              "broadcast source layout must be a slice of result layout");
+      } else if (rankDiff == 0) {
+        // Case 2: Same-rank broadcast.
+        if (!sourceLayout || !sourceLayout.isEqualTo(resultLayout))
+          return rewriter.notifyMatchFailure(
+              op, "for same-rank broadcast, source layout must be equal to "
+                  "result layout");
+        auto broadcastUnitDimsSet = op.computeBroadcastedUnitDims();
+        SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
+                                               broadcastUnitDimsSet.end());
+        resultLayout = resultLayout.setUnitDimData(broadcastUnitDims);
+        sourceLayout = sourceLayout.setUnitDimLayout(broadcastUnitDims);
+      }
+    } else {
+      // Case 3: Scalar to vector broadcast.
+      if (sourceLayout)
+        return rewriter.notifyMatchFailure(
+            op, "broadcast from scalar must not have a layout attribute");
+    }
+
+    auto destDistType =
+        xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
+    if (failed(destDistType))
+      return rewriter.notifyMatchFailure(
+          op, "failed to distribute the result vector type");
+
+    Value source = adaptor.getSource();
+    // If the adapted source already matches the dest dist type, it's a no-op.
+    if (source.getType() == destDistType.value()) {
+      rewriter.replaceOp(op, source);
+      return success();
+    }
+
+    auto newOp = vector::BroadcastOp::create(rewriter, op.getLoc(),
+                                             destDistType.value(), source);
+    rewriter.replaceOp(op, newOp);
     return success();
   }
 };
@@ -1132,11 +1247,15 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](Operation *op) -> bool {
         return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
       });
+  target.addDynamicallyLegalOp<vector::BroadcastOp>(
+      [=](vector::BroadcastOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getResult(0));
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
                SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
                SgToWiMultiDimReduction, SgToWiLoadMatrix, SgToWiStoreMatrix,
-               SgToWiVectorStep, SgToWiVectorShapeCast>(typeConverter,
-                                                        patterns.getContext());
+               SgToWiVectorStep, SgToWiVectorShapeCast, SgToWiBroadcast>(
+      typeConverter, patterns.getContext());
 }

@@ -575,7 +575,6 @@ gpu.func @vector_shapecast_rank_increasing() {
     : () -> (vector<16xf32>)
   %cast = vector.shape_cast %cst
     {
-      layout_operand_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16xf32> to vector<1x16xf32>
@@ -593,7 +592,6 @@ gpu.func @vector_shapecast_rank_reducing() {
     : () -> (vector<1x16xf32>)
   %cast = vector.shape_cast %cst
     {
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
       layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
     }
     : vector<1x16xf32> to vector<16xf32>
@@ -611,10 +609,79 @@ gpu.func @vector_shapecast_rank_increasing_without_slicing_layout() {
     : () -> (vector<16xf32>)
   %cast = vector.shape_cast %cst
     {
-      layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }
     : vector<16xf32> to vector<1x16xf32>
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_broadcast_1d_to_2d
+// CHECK: %[[SRC:.*]] = "some_op"()
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16xf16> to vector<1xf16>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[CAST]] : vector<1xf16> to vector<16x1xf16>
+gpu.func @vector_broadcast_1d_to_2d(%laneid: index) {
+  %0 = "some_op"() {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} : () -> vector<16xf16>
+  %1 = vector.broadcast %0 {layout_operand_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16xf16> to vector<16x16xf16>
+  "some_use"(%1) : (vector<16x16xf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_broadcast_2d_to_3d
+// CHECK: %[[SRC:.*]] = "some_op"()
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16x16xf16> to vector<16x1xf16>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[CAST]] : vector<16x1xf16> to vector<1x16x1xf16>
+gpu.func @vector_broadcast_2d_to_3d(%laneid: index) {
+  %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : () -> vector<16x16xf16>
+  %1 = vector.broadcast %0 {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} : vector<16x16xf16> to vector<1x16x16xf16>
+  "some_use"(%1) : (vector<1x16x16xf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_broadcast_2d_to_2d_noop
+// CHECK: %[[SRC:.*]] = "some_op"()
+// CHECK-NOT: vector.broadcast
+gpu.func @vector_broadcast_2d_to_2d_noop(%laneid: index) {
+  %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : () -> vector<16x1xf16>
+  %1 = vector.broadcast %0 {layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x1xf16> to vector<16x16xf16>
+  "some_use"(%1) : (vector<16x16xf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+// Scalar to vector broadcast (with layout)
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_broadcast_scalar_to_vector
+// CHECK: %[[SRC:.*]] = "some_op"()
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[SRC]] : f16 to vector<16x1xf16>
+gpu.func @vector_broadcast_scalar_to_vector(%laneid: index) {
+  %0 = "some_op"() : () -> f16
+  %1 = vector.broadcast %0 {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : f16 to vector<16x16xf16>
+  "some_use"(%1) : (vector<16x16xf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
+// Scalar to vector broadcast (no layout - uniform, should remain unchanged)
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @vector_broadcast_scalar_to_vector_uniform
+// CHECK: %[[SRC:.*]] = "some_op"()
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[SRC]] : f16 to vector<16x16xf16>
+// CHECK: "some_use"(%[[BCAST]])
+gpu.func @vector_broadcast_scalar_to_vector_uniform(%laneid: index) {
+  %0 = "some_op"() : () -> f16
+  %1 = vector.broadcast %0 : f16 to vector<16x16xf16>
+  "some_use"(%1) : (vector<16x16xf16>) -> ()
   gpu.return
 }
 }
