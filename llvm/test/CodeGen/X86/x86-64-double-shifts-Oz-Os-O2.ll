@@ -14,8 +14,10 @@
 define i64 @_Z8lshift10mm(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: _Z8lshift10mm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shldq $10, %rsi, %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shlq $10, %rdi
+; CHECK-NEXT:    shrq $54, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shl = shl i64 %a, 10
@@ -40,8 +42,10 @@ attributes #0 = { minsize nounwind readnone uwtable "less-precise-fpmad"="false"
 define i64 @_Z8lshift11mm(i64 %a, i64 %b) #1 {
 ; CHECK-LABEL: _Z8lshift11mm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shldq $11, %rsi, %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shlq $11, %rdi
+; CHECK-NEXT:    shrq $53, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shl = shl i64 %a, 11
@@ -53,8 +57,10 @@ entry:
 define i64 @_Z8lshift11mm_pgso(i64 %a, i64 %b) !prof !14 {
 ; CHECK-LABEL: _Z8lshift11mm_pgso:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shldq $11, %rsi, %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shlq $11, %rdi
+; CHECK-NEXT:    shrq $53, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shl = shl i64 %a, 11
@@ -78,8 +84,10 @@ attributes #1 = { nounwind optsize readnone uwtable "less-precise-fpmad"="false"
 define i64 @_Z8lshift12mm(i64 %a, i64 %b) #2 {
 ; CHECK-LABEL: _Z8lshift12mm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shldq $12, %rsi, %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shlq $12, %rdi
+; CHECK-NEXT:    shrq $52, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %shl = shl i64 %a, 12

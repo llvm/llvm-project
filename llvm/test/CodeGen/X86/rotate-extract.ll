@@ -12,13 +12,23 @@
 define i64 @rolq_extract_shl(i64 %i) nounwind {
 ; X86-LABEL: rolq_extract_shl:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shldl $3, %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $3, %eax
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    shrl $29, %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    shll $3, %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shldl $7, %ecx, %eax
-; X86-NEXT:    shrdl $25, %ecx, %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll $7, %esi
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $25, %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll $7, %ecx
+; X86-NEXT:    shrl $25, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rolq_extract_shl:
@@ -110,7 +120,9 @@ define i64 @rolq_extract_mul_with_mask(i64 %i) nounwind {
 ; X86-NEXT:    movl $9, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    shrdl $25, %eax, %edx
+; X86-NEXT:    shll $7, %eax
+; X86-NEXT:    shrl $25, %edx
+; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    movzbl %dl, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -133,14 +145,19 @@ define i64 @rolq_extract_mul_with_mask(i64 %i) nounwind {
 define i64 @no_extract_shl(i64 %i) nounwind {
 ; X86-LABEL: no_extract_shl:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shldl $10, %ecx, %edx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    shll $10, %esi
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    shrl $22, %edx
+; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    shll $10, %ecx
 ; X86-NEXT:    shrl $20, %eax
 ; X86-NEXT:    andl $127, %eax
 ; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: no_extract_shl:

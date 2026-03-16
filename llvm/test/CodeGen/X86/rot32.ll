@@ -189,16 +189,32 @@ entry:
 define i32 @xbar(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: xbar:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    shldl $7, %ecx, %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    shll $7, %ecx
+; CHECK32-NEXT:    shrl $25, %eax
+; CHECK32-NEXT:    orl %ecx, %eax
 ; CHECK32-NEXT:    retl
 ;
-; CHECK64-LABEL: xbar:
-; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    shrdl $25, %esi, %eax
-; CHECK64-NEXT:    retq
+; X64-LABEL: xbar:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrdl $25, %esi, %eax
+; X64-NEXT:    retq
+;
+; SHLD64-LABEL: xbar:
+; SHLD64:       # %bb.0: # %entry
+; SHLD64-NEXT:    movl %edi, %eax
+; SHLD64-NEXT:    shrdl $25, %esi, %eax
+; SHLD64-NEXT:    retq
+;
+; BMI264-LABEL: xbar:
+; BMI264:       # %bb.0: # %entry
+; BMI264-NEXT:    movl %edi, %eax
+; BMI264-NEXT:    shll $7, %esi
+; BMI264-NEXT:    shrl $25, %eax
+; BMI264-NEXT:    orl %esi, %eax
+; BMI264-NEXT:    retq
 entry:
 	%0 = shl i32 %y, 7
 	%1 = lshr i32 %x, 25
@@ -295,16 +311,32 @@ entry:
 define i32 @xbu(i32 %x, i32 %y, i32 %z) nounwind readnone {
 ; CHECK32-LABEL: xbu:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    shldl $25, %ecx, %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    shll $25, %ecx
+; CHECK32-NEXT:    shrl $7, %eax
+; CHECK32-NEXT:    orl %ecx, %eax
 ; CHECK32-NEXT:    retl
 ;
-; CHECK64-LABEL: xbu:
-; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    shldl $25, %esi, %eax
-; CHECK64-NEXT:    retq
+; X64-LABEL: xbu:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shldl $25, %esi, %eax
+; X64-NEXT:    retq
+;
+; SHLD64-LABEL: xbu:
+; SHLD64:       # %bb.0: # %entry
+; SHLD64-NEXT:    movl %edi, %eax
+; SHLD64-NEXT:    shldl $25, %esi, %eax
+; SHLD64-NEXT:    retq
+;
+; BMI264-LABEL: xbu:
+; BMI264:       # %bb.0: # %entry
+; BMI264-NEXT:    movl %esi, %eax
+; BMI264-NEXT:    shll $25, %edi
+; BMI264-NEXT:    shrl $7, %eax
+; BMI264-NEXT:    orl %edi, %eax
+; BMI264-NEXT:    retq
 entry:
 	%0 = lshr i32 %y, 7
 	%1 = shl i32 %x, 25

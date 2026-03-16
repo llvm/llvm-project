@@ -32,18 +32,22 @@ define i64 @test_mul_by_1(i64 %x) nounwind {
 define i64 @test_mul_by_2(i64 %x) {
 ; X86-LABEL: test_mul_by_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $1, %eax, %edx
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%edx,%edx), %eax
+; X86-NEXT:    shll %ecx
+; X86-NEXT:    shrl $31, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X86-NOOPT-LABEL: test_mul_by_2:
 ; X86-NOOPT:       # %bb.0:
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOOPT-NEXT:    shldl $1, %eax, %edx
-; X86-NOOPT-NEXT:    addl %eax, %eax
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOOPT-NEXT:    leal (%edx,%edx), %eax
+; X86-NOOPT-NEXT:    shll %ecx
+; X86-NOOPT-NEXT:    shrl $31, %edx
+; X86-NOOPT-NEXT:    orl %ecx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_2:
@@ -83,18 +87,22 @@ define i64 @test_mul_by_3(i64 %x) {
 define i64 @test_mul_by_4(i64 %x) {
 ; X86-LABEL: test_mul_by_4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $2, %eax, %edx
-; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (,%edx,4), %eax
+; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    shrl $30, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X86-NOOPT-LABEL: test_mul_by_4:
 ; X86-NOOPT:       # %bb.0:
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOOPT-NEXT:    shldl $2, %eax, %edx
-; X86-NOOPT-NEXT:    shll $2, %eax
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOOPT-NEXT:    leal (,%edx,4), %eax
+; X86-NOOPT-NEXT:    shll $2, %ecx
+; X86-NOOPT-NEXT:    shrl $30, %edx
+; X86-NOOPT-NEXT:    orl %ecx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_4:
@@ -198,18 +206,22 @@ define i64 @test_mul_by_7(i64 %x) {
 define i64 @test_mul_by_8(i64 %x) {
 ; X86-LABEL: test_mul_by_8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $3, %eax, %edx
-; X86-NEXT:    shll $3, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (,%edx,8), %eax
+; X86-NEXT:    shll $3, %ecx
+; X86-NEXT:    shrl $29, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X86-NOOPT-LABEL: test_mul_by_8:
 ; X86-NOOPT:       # %bb.0:
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOOPT-NEXT:    shldl $3, %eax, %edx
-; X86-NOOPT-NEXT:    shll $3, %eax
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOOPT-NEXT:    leal (,%edx,8), %eax
+; X86-NOOPT-NEXT:    shll $3, %ecx
+; X86-NOOPT-NEXT:    shrl $29, %edx
+; X86-NOOPT-NEXT:    orl %ecx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_8:
@@ -470,18 +482,24 @@ define i64 @test_mul_by_15(i64 %x) {
 define i64 @test_mul_by_16(i64 %x) {
 ; X86-LABEL: test_mul_by_16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $4, %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    shrl $28, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X86-NOOPT-LABEL: test_mul_by_16:
 ; X86-NOOPT:       # %bb.0:
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOOPT-NEXT:    shldl $4, %eax, %edx
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOOPT-NEXT:    movl %edx, %eax
 ; X86-NOOPT-NEXT:    shll $4, %eax
+; X86-NOOPT-NEXT:    shll $4, %ecx
+; X86-NOOPT-NEXT:    shrl $28, %edx
+; X86-NOOPT-NEXT:    orl %ecx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_16:
@@ -1111,18 +1129,24 @@ define i64 @test_mul_by_31(i64 %x) {
 define i64 @test_mul_by_32(i64 %x) {
 ; X86-LABEL: test_mul_by_32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $5, %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    shrl $27, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X86-NOOPT-LABEL: test_mul_by_32:
 ; X86-NOOPT:       # %bb.0:
-; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOOPT-NEXT:    shldl $5, %eax, %edx
+; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOOPT-NEXT:    movl %edx, %eax
 ; X86-NOOPT-NEXT:    shll $5, %eax
+; X86-NOOPT-NEXT:    shll $5, %ecx
+; X86-NOOPT-NEXT:    shrl $27, %edx
+; X86-NOOPT-NEXT:    orl %ecx, %edx
 ; X86-NOOPT-NEXT:    retl
 ;
 ; X64-LABEL: test_mul_by_32:

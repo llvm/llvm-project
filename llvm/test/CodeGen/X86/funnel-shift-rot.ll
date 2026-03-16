@@ -70,11 +70,17 @@ define i8 @rotl_i8_const_shift7(i8 %x) nounwind {
 define i64 @rotl_i64_const_shift(i64 %x) nounwind {
 ; X86-SSE2-LABEL: rotl_i64_const_shift:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    leal (,%edx,8), %esi
 ; X86-SSE2-NEXT:    movl %ecx, %eax
-; X86-SSE2-NEXT:    shldl $3, %edx, %eax
-; X86-SSE2-NEXT:    shldl $3, %ecx, %edx
+; X86-SSE2-NEXT:    shrl $29, %eax
+; X86-SSE2-NEXT:    orl %esi, %eax
+; X86-SSE2-NEXT:    shll $3, %ecx
+; X86-SSE2-NEXT:    shrl $29, %edx
+; X86-SSE2-NEXT:    orl %ecx, %edx
+; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: rotl_i64_const_shift:

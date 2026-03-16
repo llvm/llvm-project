@@ -113,11 +113,18 @@ define i64 @rotr64(i64 %A, i8 %Amt) nounwind {
 define i64 @rotli64(i64 %A) nounwind {
 ; X86-LABEL: rotli64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll $5, %esi
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shldl $5, %edx, %eax
-; X86-NEXT:    shldl $5, %ecx, %edx
+; X86-NEXT:    shrl $27, %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    shrl $27, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotli64:
@@ -134,11 +141,18 @@ define i64 @rotli64(i64 %A) nounwind {
 define i64 @rotri64(i64 %A) nounwind {
 ; X86-LABEL: rotri64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll $27, %esi
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shldl $27, %edx, %eax
-; X86-NEXT:    shldl $27, %ecx, %edx
+; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll $27, %ecx
+; X86-NEXT:    shrl $5, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotri64:
@@ -155,11 +169,17 @@ define i64 @rotri64(i64 %A) nounwind {
 define i64 @rotl1_64(i64 %A) nounwind {
 ; X86-LABEL: rotl1_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (,%edx,2), %esi
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shldl $1, %edx, %eax
-; X86-NEXT:    shldl $1, %ecx, %edx
+; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll %ecx
+; X86-NEXT:    shrl $31, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotl1_64:
@@ -176,11 +196,18 @@ define i64 @rotl1_64(i64 %A) nounwind {
 define i64 @rotr1_64(i64 %A) nounwind {
 ; X86-LABEL: rotr1_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll $31, %esi
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shldl $31, %edx, %eax
-; X86-NEXT:    shldl $31, %ecx, %edx
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll $31, %ecx
+; X86-NEXT:    shrl %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotr1_64:
@@ -565,16 +592,23 @@ define i8 @rotr1_8(i8 %A) nounwind {
 define void @rotr1_64_mem(ptr %Aptr) nounwind {
 ; X86-LABEL: rotr1_64_mem:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    movl 4(%eax), %edx
 ; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    shldl $31, %edx, %esi
-; X86-NEXT:    shldl $31, %ecx, %edx
-; X86-NEXT:    movl %edx, (%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    shll $31, %esi
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    shrl %edi
+; X86-NEXT:    orl %esi, %edi
+; X86-NEXT:    shll $31, %edx
+; X86-NEXT:    shrl %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: rotr1_64_mem:

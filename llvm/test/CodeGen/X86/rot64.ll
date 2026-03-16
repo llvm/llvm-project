@@ -117,11 +117,25 @@ entry:
 }
 
 define i64 @xbar(i64 %x, i64 %y, i64 %z) nounwind readnone {
-; ALL-LABEL: xbar:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movq %rdi, %rax
-; ALL-NEXT:    shrdq $57, %rsi, %rax
-; ALL-NEXT:    retq
+; X64-LABEL: xbar:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrdq $57, %rsi, %rax
+; X64-NEXT:    retq
+;
+; SHLD-LABEL: xbar:
+; SHLD:       # %bb.0: # %entry
+; SHLD-NEXT:    movq %rdi, %rax
+; SHLD-NEXT:    shrdq $57, %rsi, %rax
+; SHLD-NEXT:    retq
+;
+; BMI2-LABEL: xbar:
+; BMI2:       # %bb.0: # %entry
+; BMI2-NEXT:    movq %rdi, %rax
+; BMI2-NEXT:    shlq $7, %rsi
+; BMI2-NEXT:    shrq $57, %rax
+; BMI2-NEXT:    orq %rsi, %rax
+; BMI2-NEXT:    retq
 entry:
 	%0 = shl i64 %y, 7
 	%1 = lshr i64 %x, 57
@@ -179,11 +193,25 @@ entry:
 }
 
 define i64 @xbu(i64 %x, i64 %y, i64 %z) nounwind readnone {
-; ALL-LABEL: xbu:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    movq %rdi, %rax
-; ALL-NEXT:    shldq $57, %rsi, %rax
-; ALL-NEXT:    retq
+; X64-LABEL: xbu:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shldq $57, %rsi, %rax
+; X64-NEXT:    retq
+;
+; SHLD-LABEL: xbu:
+; SHLD:       # %bb.0: # %entry
+; SHLD-NEXT:    movq %rdi, %rax
+; SHLD-NEXT:    shldq $57, %rsi, %rax
+; SHLD-NEXT:    retq
+;
+; BMI2-LABEL: xbu:
+; BMI2:       # %bb.0: # %entry
+; BMI2-NEXT:    movq %rsi, %rax
+; BMI2-NEXT:    shlq $57, %rdi
+; BMI2-NEXT:    shrq $7, %rax
+; BMI2-NEXT:    orq %rdi, %rax
+; BMI2-NEXT:    retq
 entry:
 	%0 = lshr i64 %y, 7
 	%1 = shl i64 %x, 57

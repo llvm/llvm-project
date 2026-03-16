@@ -243,7 +243,9 @@ entry:
 define void @shld32mri8_legacy(ptr %ptr, i32 noundef %b) {
 ; CHECK-LABEL: shld32mri8_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shldl $12, %esi, (%rdi)
+; CHECK-NEXT:    shll $12, (%rdi)
+; CHECK-NEXT:    shrl $20, %esi
+; CHECK-NEXT:    orl %esi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i32, ptr %ptr
@@ -255,7 +257,9 @@ entry:
 define void @shld64mri8_legacy(ptr %ptr, i64 noundef %b) {
 ; CHECK-LABEL: shld64mri8_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shldq $12, %rsi, (%rdi)
+; CHECK-NEXT:    shlq $12, (%rdi)
+; CHECK-NEXT:    shrq $52, %rsi
+; CHECK-NEXT:    orq %rsi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i64, ptr %ptr

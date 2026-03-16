@@ -5,11 +5,18 @@
 define i64 @test1(i64 %x) nounwind  {
 ; X86-LABEL: test1:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll $9, %esi
 ; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shldl $9, %edx, %eax
-; X86-NEXT:    shldl $9, %ecx, %edx
+; X86-NEXT:    shrl $23, %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll $9, %ecx
+; X86-NEXT:    shrl $23, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:

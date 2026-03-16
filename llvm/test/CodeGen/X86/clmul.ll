@@ -1905,10 +1905,12 @@ define i64 @clmulr_i64(i64 %a, i64 %b) nounwind {
 ; SSE2-PCLMUL-NEXT:    movq %rsi, %xmm0
 ; SSE2-PCLMUL-NEXT:    movq %rdi, %xmm1
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE2-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE2-PCLMUL-NEXT:    movq %xmm1, %rax
 ; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-PCLMUL-NEXT:    movq %xmm0, %rax
-; SSE2-PCLMUL-NEXT:    shldq $1, %rcx, %rax
+; SSE2-PCLMUL-NEXT:    movq %xmm0, %rcx
+; SSE2-PCLMUL-NEXT:    shlq %rcx
+; SSE2-PCLMUL-NEXT:    shrq $63, %rax
+; SSE2-PCLMUL-NEXT:    orq %rcx, %rax
 ; SSE2-PCLMUL-NEXT:    retq
 ;
 ; SSE42-PCLMUL-LABEL: clmulr_i64:
@@ -1916,9 +1918,11 @@ define i64 @clmulr_i64(i64 %a, i64 %b) nounwind {
 ; SSE42-PCLMUL-NEXT:    movq %rsi, %xmm0
 ; SSE42-PCLMUL-NEXT:    movq %rdi, %xmm1
 ; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE42-PCLMUL-NEXT:    movq %xmm1, %rcx
-; SSE42-PCLMUL-NEXT:    pextrq $1, %xmm1, %rax
-; SSE42-PCLMUL-NEXT:    shldq $1, %rcx, %rax
+; SSE42-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE42-PCLMUL-NEXT:    pextrq $1, %xmm1, %rcx
+; SSE42-PCLMUL-NEXT:    shlq %rcx
+; SSE42-PCLMUL-NEXT:    shrq $63, %rax
+; SSE42-PCLMUL-NEXT:    orq %rcx, %rax
 ; SSE42-PCLMUL-NEXT:    retq
 ;
 ; AVX-LABEL: clmulr_i64:
@@ -1926,9 +1930,11 @@ define i64 @clmulr_i64(i64 %a, i64 %b) nounwind {
 ; AVX-NEXT:    vmovq %rsi, %xmm0
 ; AVX-NEXT:    vmovq %rdi, %xmm1
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rcx
-; AVX-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX-NEXT:    shldq $1, %rcx, %rax
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
+; AVX-NEXT:    shlq %rcx
+; AVX-NEXT:    shrq $63, %rax
+; AVX-NEXT:    orq %rcx, %rax
 ; AVX-NEXT:    retq
   %a.ext = zext i64 %a to i128
   %b.ext = zext i64 %b to i128

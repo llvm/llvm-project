@@ -693,17 +693,22 @@ define i32 @shl_imm1_i32(i32 %a) {
 define i64 @shl_imm1_i64(i64 %a) {
 ; SDAG-X86-LABEL: shl_imm1_i64:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-X86-NEXT:    shldl $1, %eax, %edx
-; SDAG-X86-NEXT:    addl %eax, %eax
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    leal (%edx,%edx), %eax
+; SDAG-X86-NEXT:    shll %ecx
+; SDAG-X86-NEXT:    shrl $31, %edx
+; SDAG-X86-NEXT:    orl %ecx, %edx
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: shl_imm1_i64:
 ; FASTISEL-X86:       ## %bb.0:
-; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FASTISEL-X86-NEXT:    shldl $1, %eax, %edx
+; FASTISEL-X86-NEXT:    shll %ecx
+; FASTISEL-X86-NEXT:    movl %eax, %edx
+; FASTISEL-X86-NEXT:    shrl $31, %edx
+; FASTISEL-X86-NEXT:    orl %ecx, %edx
 ; FASTISEL-X86-NEXT:    addl %eax, %eax
 ; FASTISEL-X86-NEXT:    retl
 ;
@@ -993,17 +998,23 @@ define i32 @shl_imm4_i32(i32 %a) {
 define i64 @shl_imm4_i64(i64 %a) {
 ; SDAG-X86-LABEL: shl_imm4_i64:
 ; SDAG-X86:       ## %bb.0:
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-X86-NEXT:    shldl $4, %eax, %edx
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movl %edx, %eax
 ; SDAG-X86-NEXT:    shll $4, %eax
+; SDAG-X86-NEXT:    shll $4, %ecx
+; SDAG-X86-NEXT:    shrl $28, %edx
+; SDAG-X86-NEXT:    orl %ecx, %edx
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: shl_imm4_i64:
 ; FASTISEL-X86:       ## %bb.0:
-; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FASTISEL-X86-NEXT:    shldl $4, %eax, %edx
+; FASTISEL-X86-NEXT:    shll $4, %ecx
+; FASTISEL-X86-NEXT:    movl %eax, %edx
+; FASTISEL-X86-NEXT:    shrl $28, %edx
+; FASTISEL-X86-NEXT:    orl %ecx, %edx
 ; FASTISEL-X86-NEXT:    shll $4, %eax
 ; FASTISEL-X86-NEXT:    retl
 ;

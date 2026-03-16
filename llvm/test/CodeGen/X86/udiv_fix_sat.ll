@@ -172,10 +172,12 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq %rsi, %rdx
-; X64-NEXT:    leaq (%rdi,%rdi), %rax
-; X64-NEXT:    movq %rdi, %rsi
-; X64-NEXT:    shrq $63, %rsi
-; X64-NEXT:    shldq $31, %rax, %rsi
+; X64-NEXT:    leaq (%rdi,%rdi), %rsi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $63, %rax
+; X64-NEXT:    shlq $31, %rax
+; X64-NEXT:    shrq $33, %rsi
+; X64-NEXT:    orq %rax, %rsi
 ; X64-NEXT:    shlq $32, %rdi
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    callq __udivti3@PLT
@@ -204,8 +206,11 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    shrl %edx
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    shldl $31, %eax, %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    shll $31, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    shll $31, %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax

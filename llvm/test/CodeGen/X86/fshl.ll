@@ -338,15 +338,19 @@ define i16 @const_shift_i16(i16 %x, i16 %y) nounwind {
 define i32 @const_shift_i32(i32 %x, i32 %y) nounwind {
 ; X86-LABEL: const_shift_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shldl $7, %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shll $7, %ecx
+; X86-NEXT:    shrl $25, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: const_shift_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shldl $7, %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    shll $7, %edi
+; X64-NEXT:    shrl $25, %eax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq
   %tmp = tail call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
   ret i32 %tmp
@@ -355,17 +359,26 @@ define i32 @const_shift_i32(i32 %x, i32 %y) nounwind {
 define i64 @const_shift_i64(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: const_shift_i64:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrdl $25, %ecx, %eax
-; X86-NEXT:    shldl $7, %ecx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll $7, %esi
+; X86-NEXT:    shrl $25, %eax
+; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    shll $7, %ecx
+; X86-NEXT:    shrl $25, %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: const_shift_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shldq $7, %rsi, %rax
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    shlq $7, %rdi
+; X64-NEXT:    shrq $57, %rax
+; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
   %tmp = tail call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 7)
   ret i64 %tmp

@@ -10663,9 +10663,97 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     }
     break;
   }
+  // We do not support CL variant,
+  // as requires a lot of bookeeping
+  case X86::SHLD32rri8:
+  case X86::SHLD32mri8:
+  case X86::SHLD64rri8:
+  case X86::SHLD64mri8: {
+    Patterns.push_back(X86MachineCombinerPattern::USHLD);
+    return true;
+  }
   }
   return TargetInstrInfo::getMachineCombinerPatterns(Root,
                                                      Patterns, DoRegPressureReduce);
+}
+
+static void
+genAlternativeShldSequence(MachineInstr &Root, const TargetInstrInfo &TII,
+                           SmallVectorImpl<MachineInstr *> &InsInstrs,
+                           SmallVectorImpl<MachineInstr *> &DelInstrs,
+                           DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  auto *MF = Root.getMF();
+  auto OpCode = Root.getOpcode();
+
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  auto GetRC = [&](Register Reg) {
+    return Reg.isVirtual() ? RegInfo.getRegClass(Reg)
+                           : TRI->getMinimalPhysRegClass(Reg);
+  };
+
+  unsigned BW = 0;
+  if (OpCode == X86::SHLD32rri8 || OpCode == X86::SHLD32mri8)
+    BW = 32;
+  else
+    BW = 64;
+
+  if (OpCode == X86::SHLD32rri8 || OpCode == X86::SHLD64rri8) {
+    const TargetRegisterClass *RC = GetRC(Root.getOperand(0).getReg());
+    Register ShlReg = RegInfo.createVirtualRegister(RC);
+    Register ShrReg = RegInfo.createVirtualRegister(RC);
+    unsigned ShlOpc = (BW == 64) ? X86::SHL64ri : X86::SHL32ri;
+    unsigned ShrOpc = (BW == 64) ? X86::SHR64ri : X86::SHR32ri;
+    unsigned OrOpc = (BW == 64) ? X86::OR64rr : X86::OR32rr;
+    int64_t Imm = Root.getOperand(3).getImm();
+    MachineInstr *Shl = BuildMI(*MF, MIMetadata(Root), TII.get(ShlOpc), ShlReg)
+                            .addReg(Root.getOperand(1).getReg())
+                            .addImm(Imm);
+    MachineInstr *Shr = BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), ShrReg)
+                            .addReg(Root.getOperand(2).getReg())
+                            .addImm(BW - Imm);
+    MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc),
+                               Root.getOperand(0).getReg())
+                           .addReg(ShlReg)
+                           .addReg(ShrReg);
+    InsInstrs.push_back(Shl);
+    InsInstrs.push_back(Shr);
+    InsInstrs.push_back(Or);
+    DelInstrs.push_back(&Root);
+    return;
+  }
+
+  if (OpCode == X86::SHLD32mri8 || OpCode == X86::SHLD64mri8) {
+    const TargetRegisterClass *RC = GetRC(Root.getOperand(5).getReg());
+    Register ShrReg = RegInfo.createVirtualRegister(RC);
+    unsigned ShlOpc = (BW == 64) ? X86::SHL64mi : X86::SHL32mi;
+    unsigned ShrOpc = (BW == 64) ? X86::SHR64ri : X86::SHR32ri;
+    unsigned OrOpc = (BW == 64) ? X86::OR64mr : X86::OR32mr;
+    int64_t Imm = Root.getOperand(6).getImm();
+    MachineInstr *Shl = BuildMI(*MF, MIMetadata(Root), TII.get(ShlOpc))
+                            .add(Root.getOperand(0 + X86::AddrBaseReg))
+                            .add(Root.getOperand(0 + X86::AddrScaleAmt))
+                            .add(Root.getOperand(0 + X86::AddrIndexReg))
+                            .add(Root.getOperand(0 + X86::AddrDisp))
+                            .add(Root.getOperand(0 + X86::AddrSegmentReg))
+                            .addImm(Imm);
+    MachineInstr *Shr = BuildMI(*MF, MIMetadata(Root), TII.get(ShrOpc), ShrReg)
+                            .addReg(Root.getOperand(5).getReg())
+                            .addImm(BW - Imm);
+    MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc))
+                           .add(Root.getOperand(0 + X86::AddrBaseReg))
+                           .add(Root.getOperand(0 + X86::AddrScaleAmt))
+                           .add(Root.getOperand(0 + X86::AddrIndexReg))
+                           .add(Root.getOperand(0 + X86::AddrDisp))
+                           .add(Root.getOperand(0 + X86::AddrSegmentReg))
+                           .addReg(ShrReg);
+    InsInstrs.push_back(Shl);
+    InsInstrs.push_back(Shr);
+    InsInstrs.push_back(Or);
+    DelInstrs.push_back(&Root);
+    return;
+  }
+  llvm_unreachable("Unexpected opcode in genAlternativeShldSequence");
 }
 
 static void
@@ -10772,6 +10860,10 @@ void X86InstrInfo::genAlternativeCodeSequence(
   case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
+    return;
+  case X86MachineCombinerPattern::USHLD:
+    genAlternativeShldSequence(Root, *this, InsInstrs, DelInstrs,
+                               InstrIdxForVirtReg);
     return;
   }
 }

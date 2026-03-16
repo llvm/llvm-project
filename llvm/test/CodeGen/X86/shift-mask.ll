@@ -259,8 +259,11 @@ define i64 @test_i64_shl_lshr_1(i64 %a0) {
 ; X86-LABEL: test_i64_shl_lshr_1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $2, %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $30, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    andl $-32, %eax
 ; X86-NEXT:    retl
@@ -611,10 +614,12 @@ define i64 @test_i64_lshr_lshr_1(i64 %a0) {
 define i64 @test_i64_lshr_lshr_2(i64 %a0) {
 ; X86-LABEL: test_i64_lshr_lshr_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $2, %eax, %edx
-; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (,%edx,4), %eax
+; X86-NEXT:    shll $2, %ecx
+; X86-NEXT:    shrl $30, %edx
+; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    andl $536870911, %edx # imm = 0x1FFFFFFF
 ; X86-NEXT:    retl
 ;

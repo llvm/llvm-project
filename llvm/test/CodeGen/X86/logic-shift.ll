@@ -858,9 +858,11 @@ define i64 @mix_logic_shl(i64 %x0, i64 %x1, i64 %y, i64 %z) {
 define i32 @or_fshl_commute0(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_fshl_commute0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    orl %edi, %eax
-; CHECK-NEXT:    shldl $5, %edi, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    shll $5, %esi
+; CHECK-NEXT:    shrl $27, %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %or1 = or i32 %x, %y
   %sh1 = shl i32 %or1, 5
@@ -874,7 +876,9 @@ define i64 @or_fshl_commute1(i64 %x, i64 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    shldq $35, %rdi, %rax
+; CHECK-NEXT:    shlq $35, %rax
+; CHECK-NEXT:    shrq $29, %rdi
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
   %or1 = or i64 %y, %x
   %sh1 = shl i64 %or1, 35
@@ -938,7 +942,9 @@ define i64 @or_fshr_commute0(i64 %x, i64 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    orq %rdi, %rax
-; CHECK-NEXT:    shrdq $24, %rdi, %rax
+; CHECK-NEXT:    shlq $40, %rdi
+; CHECK-NEXT:    shrq $24, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    retq
   %or1 = or i64 %x, %y
   %sh1 = shl i64 %x, 40
@@ -950,9 +956,11 @@ define i64 @or_fshr_commute0(i64 %x, i64 %y) {
 define i32 @or_fshr_commute1(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_fshr_commute1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    orl %edi, %eax
-; CHECK-NEXT:    shrdl $29, %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    leal (,%rdi,8), %eax
+; CHECK-NEXT:    shrl $29, %esi
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %or1 = or i32 %y, %x
   %sh1 = shl i32 %x, 3

@@ -163,8 +163,11 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    shrl %edx
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; X86-NEXT:    shldl $31, %eax, %ecx
-; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    shll $31, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl %edx
+; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    shll $31, %eax
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax

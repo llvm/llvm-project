@@ -763,17 +763,21 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i32 @freeze_fshl(i32 %a0, i32 %a1, i32 %a2) nounwind {
 ; X86-LABEL: freeze_fshl:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $27, %eax
-; X86-NEXT:    shldl $27, %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $27, %ecx
+; X86-NEXT:    shll $27, %ecx
+; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_fshl:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    shrl $27, %eax
-; X64-NEXT:    shldl $27, %edx, %eax
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    shrl $27, %esi
+; X64-NEXT:    shll $27, %esi
+; X64-NEXT:    shrl $5, %eax
+; X64-NEXT:    orl %esi, %eax
 ; X64-NEXT:    retq
   %f1 = freeze i32 %a1
   %f2 = freeze i32 %a2

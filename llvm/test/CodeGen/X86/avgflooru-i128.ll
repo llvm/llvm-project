@@ -10,7 +10,9 @@ define i128 @avgflooru_i128(i128 %x, i128 %y) {
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    shrdq $1, %rsi, %rax
 ; CHECK-NEXT:    movzbl %cl, %edx
-; CHECK-NEXT:    shldq $63, %rsi, %rdx
+; CHECK-NEXT:    shlq $63, %rdx
+; CHECK-NEXT:    shrq %rsi
+; CHECK-NEXT:    orq %rsi, %rdx
 ; CHECK-NEXT:    retq
 start:
   %xor = xor i128 %y, %x
@@ -32,10 +34,10 @@ define i128 @avgflooru_i128_multi_use(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movq %rcx, %rbx
-; CHECK-NEXT:    movq %rdx, %r14
-; CHECK-NEXT:    movq %rsi, %r15
-; CHECK-NEXT:    movq %rdi, %r12
+; CHECK-NEXT:    movq %rcx, %r15
+; CHECK-NEXT:    movq %rdx, %r12
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    movq %rdx, %r13
 ; CHECK-NEXT:    xorq %rdi, %r13
 ; CHECK-NEXT:    movq %rcx, %rbp
@@ -48,13 +50,16 @@ define i128 @avgflooru_i128_multi_use(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    movq %rbp, %rsi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    addq %r14, %r12
-; CHECK-NEXT:    adcq %rbx, %r15
+; CHECK-NEXT:    addq %r12, %r14
+; CHECK-NEXT:    adcq %r15, %rbx
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    shrdq $1, %r15, %r12
-; CHECK-NEXT:    movzbl %al, %edx
-; CHECK-NEXT:    shldq $63, %r15, %rdx
-; CHECK-NEXT:    movq %r12, %rax
+; CHECK-NEXT:    shrdq $1, %rbx, %r14
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    shlq $63, %rax
+; CHECK-NEXT:    shrq %rbx
+; CHECK-NEXT:    orq %rax, %rbx
+; CHECK-NEXT:    movq %r14, %rax
+; CHECK-NEXT:    movq %rbx, %rdx
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
@@ -123,18 +128,22 @@ define <2 x i128> @avgflooru_i128_vec(<2 x i128> %x, <2 x i128> %y) {
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    movzbl %dil, %edi
-; CHECK-NEXT:    shldq $63, %rdx, %rdi
+; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    shrdq $1, %rdx, %rsi
+; CHECK-NEXT:    shrq %rdx
+; CHECK-NEXT:    orq %rdi, %rdx
 ; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %r8
-; CHECK-NEXT:    setb %r9b
-; CHECK-NEXT:    movzbl %r9b, %r9d
-; CHECK-NEXT:    shldq $63, %r8, %r9
-; CHECK-NEXT:    shldq $63, %rsi, %rdx
-; CHECK-NEXT:    shldq $63, %rcx, %r8
-; CHECK-NEXT:    movq %r8, 16(%rax)
-; CHECK-NEXT:    movq %rdx, (%rax)
-; CHECK-NEXT:    movq %r9, 24(%rax)
-; CHECK-NEXT:    movq %rdi, 8(%rax)
+; CHECK-NEXT:    setb %dil
+; CHECK-NEXT:    movzbl %dil, %edi
+; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    shrdq $1, %r8, %rcx
+; CHECK-NEXT:    shrq %r8
+; CHECK-NEXT:    orq %rdi, %r8
+; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rsi, (%rax)
+; CHECK-NEXT:    movq %r8, 24(%rax)
+; CHECK-NEXT:    movq %rdx, 8(%rax)
 ; CHECK-NEXT:    retq
 start:
   %xor = xor <2 x i128> %y, %x
