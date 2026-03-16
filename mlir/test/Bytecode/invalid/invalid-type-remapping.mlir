@@ -40,3 +40,16 @@ module {
     return
   }
 }
+
+// -----
+
+// CHECK: DenseTypedElementsAttr element type must implement DenseElementTypeInterface, but got: '!test.i32'
+// CHECK: failed to read bytecode
+// DenseTypedElementsAttr whose element type is replaced by one that does not
+// implement DenseElementTypeInterface — previously crashed with an assertion.
+module {
+  func.func @dense_elem_unsupported_type() -> tensor<10xi32> {
+    %0 = arith.constant dense<42> : tensor<10xi32>
+    return %0 : tensor<10xi32>
+  }
+}
