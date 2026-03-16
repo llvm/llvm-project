@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <deque>
+
 #include "PassDetail.h"
 #include "TargetLowering/LowerModule.h"
 
