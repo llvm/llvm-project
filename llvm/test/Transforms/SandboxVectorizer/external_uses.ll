@@ -47,7 +47,34 @@ define void @external_user_of_constant(ptr %ptr, ptr %ptrX) {
   ret void
 }
 
+define void @vector_external_users(ptr %ptr) {
+; CHECK-LABEL: define void @vector_external_users(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <3 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META2:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <3 x float> [[VECL]], zeroinitializer, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[UNPACKEXT:%.*]] = extractelement <3 x float> [[VEC]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[UNPACKINS:%.*]] = insertelement <2 x float> poison, float [[UNPACKEXT]], i32 0, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[UNPACKEXT1:%.*]] = extractelement <3 x float> [[VEC]], i32 2, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[UNPACKINS2:%.*]] = insertelement <2 x float> [[UNPACKINS]], float [[UNPACKEXT1]], i32 1, !sandboxvec [[META2]]
+; CHECK-NEXT:    store <3 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META2]]
+; CHECK-NEXT:    [[USER:%.*]] = fneg <2 x float> [[UNPACKINS2]]
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load <2 x float>, ptr %ptr1
+  %sub0 = fsub float %ld0, 0.0
+  %sub1 = fsub <2 x float> %ld1, <float 0.0, float 0.0>
+  store float %sub0, ptr %ptr0
+  store <2 x float> %sub1, ptr %ptr1
+  %user = fneg <2 x float> %sub1
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+; CHECK: [[META2]] = distinct !{!"sandboxregion"}
 ;.

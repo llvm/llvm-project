@@ -262,6 +262,59 @@ public:
     return Pack;
   }
 
+  /// Emits the necessary instruction sequence to extract element of type \p
+  /// ExtrTy at \p Lane from \p FromVec. Emits instructions before \p WhereIt.
+  /// Returns the extracted value.
+  /// Note: This handles both vectors and scalars.
+  static Value *unpack(Value *FromVec, Type *ExtrTy, unsigned Lane,
+                       BasicBlock::iterator WhereIt) {
+    assert(isa<FixedVectorType>(FromVec->getType()) && "Expected vector!");
+    auto &Ctx = FromVec->getContext();
+    if (!ExtrTy->isVectorTy()) {
+      // For scalar elements we emit a single ExtractElementInst.
+      assert(Lane <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      assert(ExtrTy ==
+                 cast<FixedVectorType>(FromVec->getType())->getElementType() &&
+             "Expected same element type!");
+      Constant *ExtractLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane);
+      // This may be folded into a Constant if LastInsert is a Constant. In
+      // that case we only collect the last constant.
+      return ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt, Ctx,
+                                        "UnPack");
+    }
+    // For vector elements we emit a sequence of Extracts and Inserts.
+    // For example, extracting lanes 2 and 3 of a <4 x i32> vector %vec:
+    //   %extr0 = extractelementinst <4 x i32> %vec,   i32 2
+    //   %ins0  = insertelementinst  <2 x i32> poison, i32 %extr0, i32 0
+    //   %extr1 = extractelementisnt <4 x i32> %vec,   i32 3
+    //   %ins1  = insertelementinst  <2 x i32> %ins0,  i32 %extr1, i32 1
+    auto *ExtrVecTy = cast<FixedVectorType>(ExtrTy);
+    assert(ExtrVecTy->getElementType() ==
+               cast<FixedVectorType>(FromVec->getType())->getElementType() &&
+           "Expected same element type!");
+    Value *ExtractedVec = PoisonValue::get(ExtrVecTy);
+    Value *LastIns = nullptr;
+    for (unsigned Idx = 0, E = ExtrVecTy->getNumElements(); Idx != E; ++Idx) {
+      assert(Lane + Idx <
+                 cast<FixedVectorType>(FromVec->getType())->getNumElements() &&
+             "Out of bounds!");
+      Constant *ExtractLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Lane + Idx);
+      auto *Elm = ExtractElementInst::create(FromVec, ExtractLaneC, WhereIt,
+                                             Ctx, "UnPackExt");
+
+      Constant *InsertLaneC =
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), Idx);
+      LastIns = InsertElementInst::create(ExtractedVec, Elm, InsertLaneC,
+                                          WhereIt, Ctx, "UnPackIns");
+      ExtractedVec = LastIns;
+    }
+    return LastIns;
+  }
+
 #ifndef NDEBUG
   /// Helper dump function for debugging.
   LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);

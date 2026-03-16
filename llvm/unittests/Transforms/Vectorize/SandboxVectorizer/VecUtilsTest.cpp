@@ -617,3 +617,81 @@ bb1:
       EXPECT_FALSE(sandboxir::VecUtils::matchPack(NotPack));
   }
 }
+
+TEST_F(VecUtilsTest, Unpack) {
+  parseIR(R"IR(
+define void @foo(<4 x i32> %vec, i32 %scalar) {
+bb0:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = getBasicBlockByName(F, "bb0");
+  auto It = BB.begin();
+  sandboxir::Value *Vec = F.getArg(0);
+  sandboxir::Value *Scalar = F.getArg(1);
+
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);;
+
+  // Check unpacking scalars.
+  auto WhereIt = It;
+  for (unsigned Lane = 0; Lane != 4; ++Lane) {
+    auto *ExtrI = cast<sandboxir::ExtractElementInst>(
+        sandboxir::VecUtils::unpack(Vec, Int32Ty, Lane, WhereIt));
+    EXPECT_EQ(ExtrI->getOperand(0), Vec);
+    EXPECT_EQ(ExtrI->getOperand(1), sandboxir::ConstantInt::get(Int32Ty, Lane));
+    ExtrI->eraseFromParent();
+  }
+  // Check assertions.
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Scalar, Int32Ty, 0, WhereIt),
+                     ".*vector.*");
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Int32Ty, 4, WhereIt),
+                     "Out of bounds.*");
+  auto *Int8Ty = sandboxir::Type::getInt8Ty(Ctx);
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Int8Ty, 0, WhereIt),
+                     ".*element type.*");
+
+  // Check unpacking vectors.
+  auto *ExtrTy = sandboxir::FixedVectorType::get(Int32Ty, 2);
+  for (unsigned Lane = 0; Lane != 2; ++Lane) {
+    auto *InsI1 = cast<sandboxir::InsertElementInst>(
+        sandboxir::VecUtils::unpack(Vec, ExtrTy, Lane, WhereIt));
+    auto *ExtrI1 = cast<sandboxir::ExtractElementInst>(InsI1->getPrevNode());
+    auto *InsI0 = cast<sandboxir::InsertElementInst>(ExtrI1->getPrevNode());
+    auto *ExtrI0 = cast<sandboxir::ExtractElementInst>(InsI0->getPrevNode());
+
+    EXPECT_EQ(ExtrI0->getOperand(0), Vec);
+    EXPECT_EQ(ExtrI0->getOperand(1), sandboxir::ConstantInt::get(Int32Ty, Lane));
+
+    EXPECT_EQ(InsI0->getOperand(0), sandboxir::PoisonValue::get(ExtrTy));
+    EXPECT_EQ(InsI0->getOperand(1), ExtrI0);
+    EXPECT_EQ(
+        cast<sandboxir::ConstantInt>(InsI0->getOperand(2))->getZExtValue(), 0u);
+
+    EXPECT_EQ(ExtrI1->getOperand(0), Vec);
+    EXPECT_EQ(
+        cast<sandboxir::ConstantInt>(ExtrI1->getOperand(1))->getZExtValue(),
+        Lane + 1u);
+
+    EXPECT_EQ(InsI1->getOperand(0), InsI0);
+    EXPECT_EQ(InsI1->getOperand(1), ExtrI1);
+    EXPECT_EQ(InsI1->getOperand(2), sandboxir::ConstantInt::get(Int32Ty, 1));
+
+    InsI1->eraseFromParent();
+    ExtrI1->eraseFromParent();
+    InsI0->eraseFromParent();
+    ExtrI0->eraseFromParent();
+  }
+  // Check out of bounds!.
+  auto *Ty2xi32 = sandboxir::FixedVectorType::get(Int32Ty, 2);
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi32, 3, WhereIt),
+                     "Out of bounds.*");
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi32, 4, WhereIt),
+                     "Out of bounds.*");
+  auto *Ty2xi8 = sandboxir::FixedVectorType::get(Int8Ty, 2);
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::unpack(Vec, Ty2xi8, 4, WhereIt),
+                     ".*type.*");
+}

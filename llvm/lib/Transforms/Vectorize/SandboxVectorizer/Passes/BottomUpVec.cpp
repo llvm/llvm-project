@@ -360,28 +360,13 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
             : std::next(
                   VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
   }
-  Context &Ctx = Bndl[0]->getContext();
   for (auto [Idx, Elm] : enumerate(Bndl)) {
     for (User *U : Elm->users()) {
       // Skip users that we just vectorized.
       if (IMaps->isVectorized(U))
         continue;
-      // An element can be either scalar or vector. We need to generate
-      // different IR for each case.
-      if (Elm->getType()->isVectorTy()) {
-        llvm_unreachable("Unimplemented");
-      } else {
-        Constant *ExtractLaneC =
-            ConstantInt::getSigned(Type::getInt32Ty(Ctx), Idx++);
-        // This may be folded into a Constant if LastInsert is a Constant. In
-        // that case we only collect the last constant.
-        auto *Extract = ExtractElementInst::create(Vec, ExtractLaneC, WhereIt,
-                                                   Ctx, "UnPack");
-        // Move WhereIt to prepare for the next Extract.
-        if (auto *ExtractI = dyn_cast<Instruction>(Extract))
-          WhereIt = std::next(ExtractI->getIterator());
-        Elm->replaceAllUsesWith(Extract);
-      }
+      auto *LastUnpackV = VecUtils::unpack(Vec, Elm->getType(), Idx, WhereIt);
+      Elm->replaceAllUsesWith(LastUnpackV);
     }
   }
 }
