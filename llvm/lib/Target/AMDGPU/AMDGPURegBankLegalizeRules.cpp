@@ -1479,6 +1479,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_barrier_wait, amdgcn_wave_barrier})
       .Any({{}, {{}, {IntrId}}});
 
+  addRulesForIOpcs({amdgcn_s_wait_event_export_ready}).Any({{}, {{}, {}}});
+
+  addRulesForIOpcs({amdgcn_s_waitcnt, amdgcn_s_wait_event, amdgcn_s_wait_bvhcnt,
+                    amdgcn_s_wait_dscnt, amdgcn_s_wait_expcnt,
+                    amdgcn_s_wait_kmcnt, amdgcn_s_wait_loadcnt,
+                    amdgcn_s_wait_samplecnt, amdgcn_s_wait_storecnt,
+                    amdgcn_s_wait_asynccnt, amdgcn_s_wait_tensorcnt})
+      .Any({{}, {{}, {IntrId, Imm}}});
+
   addRulesForIOpcs({amdgcn_bitop3}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
