@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import {MLIRContext} from '../mlirContext';
 import {registerMLIRBytecodeExtensions} from './bytecodeProvider';
-import {RunLitWithIRDumpCommand} from './commands/runLitWithIRDump';
+import {RunTestCommand} from './commands/runTest';
 
 /**
  *  Register the necessary extensions for supporting MLIR.
@@ -10,5 +10,5 @@ import {RunLitWithIRDumpCommand} from './commands/runLitWithIRDump';
 export function registerMLIRExtensions(context: vscode.ExtensionContext,
                                        mlirContext: MLIRContext) {
   registerMLIRBytecodeExtensions(context, mlirContext);
-  context.subscriptions.push(new RunLitWithIRDumpCommand(mlirContext));
+  context.subscriptions.push(new RunTestCommand(mlirContext));
 }
