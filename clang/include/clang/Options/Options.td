@@ -62,7 +62,7 @@ def LinkOption : OptionFlag;
 // target will lead to an err_drv_unsupported_opt_for_target error.
 def TargetSpecific : OptionFlag;
 
-// Indicates that this warning is ignored, but accepted with a warning for
+// Indicates that this option is ignored, but accepted with a warning for
 // GCC compatibility.
 class IgnoredGCCCompat : Flags<[HelpHidden]> {}
 
@@ -273,6 +273,10 @@ def g_flags_Group : OptionGroup<"<g flags group>">, Group<DebugInfo_Group>,
 def StaticAnalyzer_Group : OptionGroup<"<Static analyzer group>">,
                            DocName<"Static analyzer options">, DocBrief<[{
 Flags controlling the behavior of the Clang Static Analyzer.}]>;
+
+def SSAF_Group : OptionGroup<"<ssaf options>">,
+                 DocName<"SSAF options">, DocBrief<[{
+Flags controlling the behavior of the Scalable Static Analysis Framework (SSAF).}]>;
 
 // gfortran options that we recognize in the driver and pass along when
 // invoking GCC to compile Fortran code.
@@ -784,7 +788,7 @@ def fshow_skipped_includes : Flag<["-"], "fshow-skipped-includes">,
              or #pragma once. This flag makes -H show also such includes.}]>,
   MarshallingInfoFlag<DependencyOutputOpts<"ShowSkippedHeaderIncludes">>;
 
-def I_ : Flag<["-"], "I-">, Group<I_Group>,
+def I_ : Flag<["-"], "I-">, Group<I_Group>, IgnoredGCCCompat,
     HelpText<"Restrict all prior -I flags to double-quoted inclusion and "
              "remove current directory from include path">;
 def I : JoinedOrSeparate<["-"], "I">, Group<I_Group>,
@@ -941,6 +945,22 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
+def _ssaf_extract_summaries :
+  CommaJoined<["--"], "ssaf-extract-summaries=">,
+  MetaVarName<"<summary-names>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Comma-separated list of summary names to extract">,
+  MarshallingInfoStringVector<FrontendOpts<"SSAFExtractSummaries">>;
+def _ssaf_tu_summary_file :
+  Joined<["--"], "ssaf-tu-summary-file=">,
+  MetaVarName<"<path>.<format>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "The output file for the extracted summaries. "
+    "The extension selects which file format to use.">,
+  MarshallingInfoString<FrontendOpts<"SSAFTUSummaryFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
