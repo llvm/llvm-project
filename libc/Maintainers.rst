@@ -41,19 +41,13 @@ Math
 | Nicolas Celik
 | its.overmighty\@gmail.com (email), `OverMighty <https://github.com/overmighty>`_ (github)
 
-| Muhammad Bassiouni
-| muhammad.m.bassiouni\@gmail.com (email), `bassiounix <https://github.com/bassiounix>`_ (github)
-
 Threading
 ---------
 | Yifan Zhu
 | yifanzhu\@rochester.edu (email), `Schrodinger ZHU Yifan <https://github.com/schrodingerzhu>`_ (github)
 
-| Muhammad Bassiouni
-| muhammad.m.bassiouni\@gmail.com (email), `bassiounix <https://github.com/bassiounix>`_ (github)
-
-Runtime Safety
---------------
+Runtime Safety, Threading, Math
+-------------------------------
 | Muhammad Bassiouni
 | muhammad.m.bassiouni\@gmail.com (email), `bassiounix <https://github.com/bassiounix>`_ (github)
 
