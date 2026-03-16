@@ -563,12 +563,14 @@ Interpreter::PointerOffset(lldb::ValueObjectSP ptr, lldb::ValueObjectSP offset,
           m_exe_ctx_scope.get());
   if (!byte_size)
     return byte_size.takeError();
+  uint64_t ptr_addr = ptr->GetValueAsUnsigned(0);
   if (operation == BinaryOpKind::Sub)
-    offset_int = -offset_int;
-  uintptr_t addr = ptr->GetValueAsUnsigned(0) + offset_int * (*byte_size);
+    ptr_addr -= offset_int * (*byte_size);
+  else
+    ptr_addr += offset_int * (*byte_size);
 
   ExecutionContext exe_ctx(m_target.get(), false);
-  Scalar scalar(addr);
+  Scalar scalar(ptr_addr);
   return ValueObject::CreateValueObjectFromScalar(
       m_exe_ctx_scope, scalar, ptr->GetCompilerType(), "result");
 }
