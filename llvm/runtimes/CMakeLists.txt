@@ -554,14 +554,11 @@ if(build_runtimes)
 
   # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
   if("libclc" IN_LIST LLVM_ENABLE_RUNTIMES)
-    set(toolchain_tools clang llvm-ar llvm-ranlib)
-    foreach(dep llvm-as llvm-link opt ${toolchain_tools})
+    foreach(dep clang llvm-as llvm-link opt)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
-    list(APPEND extra_args TOOLCHAIN_TOOLS="${toolchain_tools}")
-    list(APPEND extra_args FORCE_POSIX_TOOLCHAIN)
   endif()
   # Tools needed by build_symbolizer.sh.
   if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
