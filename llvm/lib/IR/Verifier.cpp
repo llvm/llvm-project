@@ -1601,8 +1601,12 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawImportedEntities()) {
     CheckDI(isa<MDTuple>(Array), "invalid imported entity list", &N, Array);
     for (Metadata *Op : N.getImportedEntities()->operands()) {
-      CheckDI(Op && isa<DIImportedEntity>(Op), "invalid imported entity ref",
-              &N, Op);
+      auto *IE = dyn_cast_or_null<DIImportedEntity>(Op);
+      CheckDI(IE, "invalid imported entity ref", &N, Op);
+      CheckDI(
+          !isa_and_nonnull<DILocalScope>(IE->getScope()),
+          "function-local import in a DICompileUnit's imported entities list",
+          &N, Op);
     }
   }
   if (auto *Array = N.getRawMacros()) {
