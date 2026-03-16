@@ -218,7 +218,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
   // Unary &
   if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
-    // TODO(cir): maybe we should use cir.unary for pointers here instead.
+    // TODO(cir): maybe we should use a CIR unary op for pointers here instead.
     if (uo->getOpcode() == UO_AddrOf) {
       LValue lv = emitLValue(uo->getSubExpr());
       if (baseInfo)
@@ -236,9 +236,11 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case Builtin::BIaddressof:
     case Builtin::BI__addressof:
     case Builtin::BI__builtin_addressof: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: builtin addressof");
-      return Address::invalid();
+      LValue lv = emitLValue(call->getArg(0));
+      if (baseInfo)
+        *baseInfo = lv.getBaseInfo();
+      assert(!cir::MissingFeatures::opTBAA());
+      return lv.getAddress();
     }
     }
   }
@@ -900,8 +902,17 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
           addr = addr.withElementType(builder, varTy);
         }
       } else {
-        cgm.errorNYI(e->getSourceRange(),
-                     "emitDeclRefLValue: non-odr reference type");
+        // Should we be using the alignment of the constant pointer we emitted?
+        CharUnits alignment =
+            cgm.getNaturalTypeAlignment(e->getType(),
+                                        /*BaseInfo=*/nullptr,
+                                        /*forPointeeType=*/true);
+        // Classic codegen passes TBAA as null-ptr to the above function, so it
+        // probably needs to deal with that.
+        assert(!cir::MissingFeatures::opTBAA());
+        mlir::Value ptrVal = getBuilder().getConstant(
+            getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(val));
+        addr = makeNaturalAddressForPointer(ptrVal, ty, alignment);
       }
       return makeAddrLValue(addr, ty, AlignmentSource::Decl);
     }
@@ -1052,17 +1063,14 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   }
   case UO_PreInc:
   case UO_PreDec: {
-    cir::UnaryOpKind kind =
-        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
     LValue lv = emitLValue(e->getSubExpr());
 
     assert(e->isPrefix() && "Prefix operator in unexpected state!");
 
-    if (e->getType()->isAnyComplexType()) {
-      emitComplexPrePostIncDec(e, lv, kind, /*isPre=*/true);
-    } else {
-      emitScalarPrePostIncDec(e, lv, kind, /*isPre=*/true);
-    }
+    if (e->getType()->isAnyComplexType())
+      emitComplexPrePostIncDec(e, lv);
+    else
+      emitScalarPrePostIncDec(e, lv);
 
     return lv;
   }

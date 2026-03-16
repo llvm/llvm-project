@@ -953,7 +953,8 @@ static bool isIIFE(const UnwrappedLine &Line,
 
 static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
                                    const FormatToken &InitialToken,
-                                   const bool IsJavaRecord) {
+                                   bool IsEmptyBlock,
+                                   bool IsJavaRecord = false) {
   if (IsJavaRecord)
     return Style.BraceWrapping.AfterClass;
 
@@ -961,15 +962,20 @@ static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
   if (InitialToken.is(TT_NamespaceMacro))
     Kind = tok::kw_namespace;
 
+  const bool WrapRecordAllowed =
+      !IsEmptyBlock ||
+      Style.AllowShortRecordOnASingleLine < FormatStyle::SRS_Empty ||
+      Style.BraceWrapping.SplitEmptyRecord;
+
   switch (Kind) {
   case tok::kw_namespace:
     return Style.BraceWrapping.AfterNamespace;
   case tok::kw_class:
-    return Style.BraceWrapping.AfterClass;
+    return Style.BraceWrapping.AfterClass && WrapRecordAllowed;
   case tok::kw_union:
-    return Style.BraceWrapping.AfterUnion;
+    return Style.BraceWrapping.AfterUnion && WrapRecordAllowed;
   case tok::kw_struct:
-    return Style.BraceWrapping.AfterStruct;
+    return Style.BraceWrapping.AfterStruct && WrapRecordAllowed;
   case tok::kw_enum:
     return Style.BraceWrapping.AfterEnum;
   default:
@@ -1141,12 +1147,6 @@ void UnwrappedLineParser::parsePPElse() {
 void UnwrappedLineParser::parsePPEndIf() {
   conditionalCompilationEnd();
   parsePPUnknown();
-  // If the #endif of a potential include guard is the last thing in the file,
-  // then we found an include guard.
-  if (IncludeGuard == IG_Defined && PPBranchLevel == -1 && Tokens->isEOF() &&
-      getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited) {
-    IncludeGuard = IG_Found;
-  }
 }
 
 void UnwrappedLineParser::parsePPDefine() {
@@ -3208,8 +3208,10 @@ void UnwrappedLineParser::parseNamespace() {
   if (FormatTok->is(tok::l_brace)) {
     FormatTok->setFinalizedType(TT_NamespaceLBrace);
 
-    if (ShouldBreakBeforeBrace(Style, InitialToken, /*IsJavaRecord=*/false))
+    if (ShouldBreakBeforeBrace(Style, InitialToken,
+                               Tokens->peekNextToken()->is(tok::r_brace))) {
       addUnwrappedLine();
+    }
 
     unsigned AddLevels =
         Style.NamespaceIndentation == FormatStyle::NI_All ||
@@ -3872,7 +3874,8 @@ bool UnwrappedLineParser::parseEnum() {
   }
 
   if (!Style.AllowShortEnumsOnASingleLine &&
-      ShouldBreakBeforeBrace(Style, InitialToken, /*IsJavaRecord=*/false)) {
+      ShouldBreakBeforeBrace(Style, InitialToken,
+                             Tokens->peekNextToken()->is(tok::r_brace))) {
     addUnwrappedLine();
   }
   // Parse enum body.
@@ -4167,8 +4170,11 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
-      if (ShouldBreakBeforeBrace(Style, InitialToken, IsJavaRecord))
+      if (ShouldBreakBeforeBrace(Style, InitialToken,
+                                 Tokens->peekNextToken()->is(tok::r_brace),
+                                 IsJavaRecord)) {
         addUnwrappedLine();
+      }
 
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
@@ -4940,10 +4946,20 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       assert(Line->Level >= Line->UnbracedBodyLevel);
       Line->Level -= Line->UnbracedBodyLevel;
       flushComments(isOnNewLine(*FormatTok));
+      const bool IsEndIf = Tokens->peekNextToken()->is(tok::pp_endif);
       parsePPDirective();
       PreviousWasComment = FormatTok->is(tok::comment);
       FirstNonCommentOnLine = IsFirstNonCommentOnLine(
           FirstNonCommentOnLine, *FormatTok, PreviousWasComment);
+      // If the #endif of a potential include guard is the last thing in the
+      // file, then we found an include guard.
+      if (IsEndIf && IncludeGuard == IG_Defined && PPBranchLevel == -1 &&
+          getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited &&
+          (eof() ||
+           (PreviousWasComment &&
+            Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof)))) {
+        IncludeGuard = IG_Found;
+      }
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&

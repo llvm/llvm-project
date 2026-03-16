@@ -436,7 +436,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   // the loop (not including non-recipe values such as arguments and
   // constants).
   SmallSetVector<VPValue *, 8> LoopInvariants;
-  LoopInvariants.insert(&Plan.getVectorTripCount());
+  if (Plan.getVectorTripCount().getNumUsers() > 0)
+    LoopInvariants.insert(&Plan.getVectorTripCount());
 
   // We scan the loop in a topological order in order and assign a number to
   // each recipe. We use RPO to ensure that defs are met before their users. We
@@ -454,25 +455,21 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
-        auto *DefR = U->getDefiningRecipe();
-
-        // Ignore non-recipe values such as arguments, constants, etc.
-        // FIXME: Might need some motivation why these values are ignored. If
-        // for example an argument is used inside the loop it will increase the
-        // register pressure (so shouldn't we add it to LoopInvariants).
-        auto *IRV = dyn_cast<VPIRValue>(U);
-        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
-          continue;
-
-        // If this recipe is outside the loop then record it and continue.
-        if (!DefR) {
+        if (isa<VPRecipeValue>(U)) {
+          // Overwrite previous end points.
+          EndPoint[U] = Idx2Recipe.size();
+          Ends.insert(U);
+        } else if (auto *IRV = dyn_cast<VPIRValue>(U)) {
+          // Ignore non-recipe values such as arguments, constants, etc.
+          // FIXME: Might need some motivation why these values are ignored. If
+          // for example an argument is used inside the loop it will increase
+          // the register pressure (so shouldn't we add it to LoopInvariants).
+          if (!isa<Instruction>(IRV->getValue()))
+            continue;
+          // This recipe is outside the loop, record it and continue.
           LoopInvariants.insert(U);
-          continue;
         }
-
-        // Overwrite previous end points.
-        EndPoint[U] = Idx2Recipe.size();
-        Ends.insert(U);
+        // Other types of VPValue are currently not tracked.
       }
     }
     if (VPBB == LoopRegion->getExiting()) {
