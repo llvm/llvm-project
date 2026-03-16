@@ -1,0 +1,143 @@
+//===- ExecutorAPI.cpp - Interface of InstExecutor ---------------*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "ExecutorAPI.h"
+
+namespace llvm::ubi {
+void ExecutorAPI::reportImmediateUB(StringRef Msg) {
+  // Check if we have already reported an immediate UB.
+  if (!Status)
+    return;
+  Status = false;
+  // TODO: Provide stack trace information.
+  Handler.onImmediateUB(Msg);
+}
+void ExecutorAPI::reportError(StringRef Msg) {
+  // Check if we have already reported an error message.
+  if (!Status)
+    return;
+  Status = false;
+  Handler.onError(Msg);
+}
+
+const AnyValue &ExecutorAPI::getValue(Value *V) {
+  if (auto *C = dyn_cast<Constant>(V))
+    return Ctx.getConstantValue(C);
+  return CurrentFrame->ValueMap.at(V);
+}
+void ExecutorAPI::setResult(Instruction &I, AnyValue V) {
+  if (Status)
+    Status &= Handler.onInstructionExecuted(I, V);
+  CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
+}
+
+void ExecutorAPI::jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
+  if (!Handler.onBBJump(Terminator, *DestBB)) {
+    Status = false;
+    return;
+  }
+  BasicBlock *From = CurrentFrame->BB;
+  CurrentFrame->BB = DestBB;
+  CurrentFrame->PC = DestBB->begin();
+  // Update PHI nodes in batch to avoid the interference between PHI nodes.
+  // We need to store the incoming values into a temporary buffer.
+  // Otherwise, the incoming value may be overwritten before it is
+  // used by other PHI nodes.
+  SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
+  PHINode *PHI = nullptr;
+  while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
+    Value *Incoming = PHI->getIncomingValueForBlock(From);
+    // TODO: handle fast-math flags.
+    IncomingValues.emplace_back(PHI, getValue(Incoming));
+    ++CurrentFrame->PC;
+  }
+  for (auto &[K, V] : IncomingValues)
+    setResult(*K, std::move(V));
+}
+
+std::optional<uint64_t> ExecutorAPI::verifyMemAccess(const MemoryObject &MO,
+                                                     const APInt &Address,
+                                                     uint64_t AccessSize,
+                                                     Align Alignment,
+                                                     bool IsStore) {
+  // Loading from a stack object outside its lifetime is not undefined
+  // behavior and returns a poison value instead. Storing to it is still
+  // undefined behavior.
+  if (IsStore ? MO.getState() != MemoryObjectState::Alive
+              : MO.getState() == MemoryObjectState::Freed) {
+    reportImmediateUB("Try to access a dead memory object.");
+    return std::nullopt;
+  }
+
+  if (Address.countr_zero() < Log2(Alignment)) {
+    reportImmediateUB("Misaligned memory access.");
+    return std::nullopt;
+  }
+
+  if (AccessSize > MO.getSize() || Address.ult(MO.getAddress())) {
+    reportImmediateUB("Memory access is out of bounds.");
+    return std::nullopt;
+  }
+
+  APInt Offset = Address - MO.getAddress();
+
+  if (Offset.ugt(MO.getSize() - AccessSize)) {
+    reportImmediateUB("Memory access is out of bounds.");
+    return std::nullopt;
+  }
+
+  return Offset.getZExtValue();
+}
+
+AnyValue ExecutorAPI::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
+  if (Ptr.isPoison()) {
+    reportImmediateUB("Invalid memory access with a poison pointer.");
+    return AnyValue::getPoisonValue(Ctx, ValTy);
+  }
+  auto &PtrVal = Ptr.asPointer();
+  auto *MO = PtrVal.getMemoryObject();
+  if (!MO) {
+    reportImmediateUB(
+        "Invalid memory access via a pointer with nullary provenance.");
+    return AnyValue::getPoisonValue(Ctx, ValTy);
+  }
+  // TODO: pointer capability check
+  if (auto Offset =
+          verifyMemAccess(*MO, PtrVal.address(),
+                          Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+                          /*IsStore=*/false)) {
+    // Load from a dead stack object yields poison value.
+    if (MO->getState() == MemoryObjectState::Dead)
+      return AnyValue::getPoisonValue(Ctx, ValTy);
+
+    return Ctx.load(*MO, *Offset, ValTy);
+  }
+  return AnyValue::getPoisonValue(Ctx, ValTy);
+}
+void ExecutorAPI::store(const AnyValue &Ptr, Align Alignment,
+                        const AnyValue &Val, Type *ValTy) {
+  if (Ptr.isPoison()) {
+    reportImmediateUB("Invalid memory access with a poison pointer.");
+    return;
+  }
+  auto &PtrVal = Ptr.asPointer();
+  auto *MO = PtrVal.getMemoryObject();
+  if (!MO) {
+    reportImmediateUB(
+        "Invalid memory access via a pointer with nullary provenance.");
+    return;
+  }
+  // TODO: pointer capability check
+  if (auto Offset =
+          verifyMemAccess(*MO, PtrVal.address(),
+                          Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+                          /*IsStore=*/true))
+    Ctx.store(*MO, *Offset, Val, ValTy);
+}
+} // namespace llvm::ubi
