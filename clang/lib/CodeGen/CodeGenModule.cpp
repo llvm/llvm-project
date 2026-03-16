@@ -8568,8 +8568,8 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
   GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
   StringRef MangledName = getMangledName(ScalarDtorGD);
   llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+  GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
   if (Entry && !Entry->isDeclaration()) {
-    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
     StringRef VDName = getMangledName(VectorDtorGD);
     llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
     // It exists and it should be an alias.
@@ -8584,6 +8584,9 @@ void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
     VDEntry->eraseFromParent();
     Entry->replaceAllUsesWith(NewFn);
     Entry->eraseFromParent();
-    addDeferredDeclToEmit(VectorDtorGD);
   }
+  // Always add a deferred decl to emit once we confirmed that vector deleting
+  // destructor definition is required. That helps to enforse its generation
+  // even if destructor is only declared.
+  addDeferredDeclToEmit(VectorDtorGD);
 }

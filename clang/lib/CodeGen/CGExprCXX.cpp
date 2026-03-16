@@ -1204,10 +1204,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
     if (getContext().getTargetInfo().emitVectorDeletingDtors(
             getContext().getLangOpts())) {
       CXXDestructorDecl *Dtor = Ctor->getParent()->getDestructor();
-      if (Dtor && Dtor->isVirtual()) {
-        CGM.addDeferredDeclToEmit(GlobalDecl(Dtor, Dtor_VectorDeleting));
+      if (Dtor && Dtor->isVirtual())
         CGM.requireVectorDestructorDefinition(Ctor->getParent());
-      }
     }
     return;
   }
