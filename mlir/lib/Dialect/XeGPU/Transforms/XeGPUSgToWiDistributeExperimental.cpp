@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -395,6 +396,105 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+/// Distributes a subgroup-level LoadGather (xegpu.load) op to workitem-level.
+///
+/// Example 1 (1D, no chunk size):
+///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+///   %mask = producer_op : vector<16xi1>
+///   %offset = producer_op : vector<16xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<16xindex>, vector<16xi1> -> vector<16xf16>
+/// Distributed to:
+///   %mask = producer_op : vector<1xi1>
+///   %offset = producer_op : vector<1xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<1xindex>, vector<1xi1> -> vector<1xf16>
+///
+/// Example 2 (2D with chunk size, same mask & offset):
+///   layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+///   %0 = xegpu.load %src[%offset], %mask <{chunk_size=8}> :
+///     memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
+/// Distributed to:
+///   %0 = xegpu.load %src[%offset], %mask <{chunk_size=8}> :
+///     memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+///
+/// Example 3 (3D with leading unit dims):
+///   layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+///   %mask = producer_op : vector<1x1x16xi1>
+///   %offset = producer_op : vector<1x1x16xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<1x1x16xindex>, vector<1x1x16xi1> -> vector<1x1x16xf16>
+/// Distributed to:
+///   %mask = producer_op : vector<1x1x1xi1>
+///   %offset = producer_op : vector<1x1x1xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<1xindex>, vector<1xi1> -> vector<1xf16>
+struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
+  using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::LoadGatherOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    if (!layout)
+      return failure();
+
+    VectorType origResultTy = op.getValueType();
+    if (!origResultTy)
+      return failure();
+
+    // Check that leading dimensions are unit.
+    int chunkSize = op.getChunkSize().value_or(1);
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    ArrayRef<int64_t> shape = origResultTy.getShape();
+    if (llvm::any_of(
+            shape.take_front(origResultTy.getRank() - effectiveVecRank),
+            [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Only unit dimensions allowed for the leading "
+              "dimensions of the load vector!");
+
+    auto distResultTyOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, origResultTy);
+    if (failed(distResultTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op,
+          "unable to compute expected workitem vector type from lane layout");
+
+    VectorType distResultTy = distResultTyOrFailure.value();
+    VectorType distResultTy1D = VectorType::get({distResultTy.getNumElements()},
+                                                distResultTy.getElementType());
+
+    // Flatten offsets and mask to 1D to match the 1D result type.
+    Value distOffsets = adaptor.getOffsets();
+    auto distOffsetsTy = cast<VectorType>(distOffsets.getType());
+    VectorType offsetsTy1D = VectorType::get({distOffsetsTy.getNumElements()},
+                                             distOffsetsTy.getElementType());
+    distOffsets = castValueTo(
+        rewriter, cast<TypedValue<VectorType>>(distOffsets), offsetsTy1D);
+
+    Value distMask = adaptor.getMask();
+    auto distMaskTy = cast<VectorType>(distMask.getType());
+    VectorType maskTy1D = VectorType::get({distMaskTy.getNumElements()},
+                                          distMaskTy.getElementType());
+    distMask =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
+
+    Value distSource = adaptor.getSource();
+    auto newOp = xegpu::LoadGatherOp::create(
+        rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
+        distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
+        op.getL3HintAttr(), /*layout=*/nullptr);
+
+    Value result = newOp->getResult(0);
+    if (distResultTy1D != distResultTy)
+      result = castValueTo(rewriter, cast<TypedValue<VectorType>>(result),
+                           distResultTy);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// This pattern distributes a subgroup-level vector.reduction op to
 /// workitem-level. This require shuffling the data across the workitems (using
 /// gpu::ShuffleOp) and reducing in stages until all workitems have the final
@@ -423,7 +523,7 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
 
     // Get the subgroup size from the layout.
     int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
-    const auto *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           op, "xegpu::ReductionOp require target attribute attached to "
@@ -469,55 +569,281 @@ struct SgToWiMultiDimReduction
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only lane-local reduction is handled here.
-    if (!isReductionLaneLocal(op))
+    Value result;
+    ArrayRef<int64_t> reductionDims = op.getReductionDims();
+    assert(reductionDims.size() == 1 &&
+           "Expecting single reduction dimension for subgroup multi "
+           "reduction op");
+    if (isReductionLaneLocal(op)) {
+      auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+      VectorType resVecTy = dyn_cast<VectorType>(op.getType());
+      auto resDistVecTyOrFailure =
+          getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
+      // For lane local reduction, simply create a new MultiDimReductionOp using
+      // adaptor operands and the new result type.
+      result = vector::MultiDimReductionOp::create(
+          rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
+          adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+    } else {
+      auto reductionDim = reductionDims[0];
+      VectorType sourceType = op.getSourceVectorType();
+      int64_t reductionDimSize = sourceType.getShape()[reductionDim];
+      result = xegpu::lowerCrossLaneReductionToShuffles(
+          cast<TypedValue<VectorType>>(adaptor.getSource()),
+          cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
+          reductionDim, reductionDimSize, op.getLoc(), rewriter);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Helper to compute distributed coordinates for matrix ops.
+/// When not using subgroup_block_io, each workitem computes its own
+/// coordinates based on the layout and lane ID.
+static SmallVector<Value> computeDistributedCoordsForMatrixOp(
+    ConversionPatternRewriter &rewriter, Location loc,
+    xegpu::DistributeLayoutAttr layout, ArrayRef<int64_t> payloadShape,
+    ValueRange origOffsets) {
+  Value laneId = gpu::LaneIdOp::create(rewriter, loc, rewriter.getIndexType(),
+                                       /*upperBound=*/mlir::IntegerAttr());
+  auto maybeCoords =
+      layout.computeDistributedCoords(rewriter, loc, laneId, payloadShape);
+  if (failed(maybeCoords))
+    return {};
+  assert(maybeCoords.value().size() == 1 &&
+         "Expected one set of distributed offsets");
+  SmallVector<OpFoldResult> ofrVec = xegpu::addWithRightAligned(
+      rewriter, loc, getAsOpFoldResult(maybeCoords.value()[0]),
+      getAsOpFoldResult(origOffsets));
+  return llvm::map_to_vector(ofrVec, llvm::CastTo<Value>);
+}
+
+/// This pattern distributes a subgroup-level LoadMatrix op to workitem-level.
+struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
+  using OpConversionPattern<xegpu::LoadMatrixOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::LoadMatrixOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto layout = op.getLayoutAttr();
+    // If no layout, nothing to do.
+    if (!layout)
+      return failure();
+
+    VectorType sgPayloadTy = dyn_cast<VectorType>(op.getResult().getType());
+    if (!sgPayloadTy)
       return rewriter.notifyMatchFailure(
-          op, "Only lane-local reduction is supported, expected reduction "
-              "dimension to be "
-              "not distributed.");
-    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-    VectorType resVecTy = dyn_cast<VectorType>(op.getType());
-    auto resDistVecTyOrFailure =
-        getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-    // Simply create a new MultiDimReductionOp using adaptor operands and the
-    // new result type.
-    auto newOp = vector::MultiDimReductionOp::create(
-        rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
-        adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+          op, "the matrix op payload must be a vector type");
+
+    auto loc = op.getLoc();
+    auto offsets = op.getMixedOffsets();
+    if (offsets.empty())
+      return rewriter.notifyMatchFailure(op, "the load op must have offsets");
+
+    FailureOr<VectorType> distPayloadTyOrFailure =
+        getDistVecTypeBasedOnLaneLayout(layout, sgPayloadTy);
+    if (failed(distPayloadTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to distribute matrix op payload based on layout.");
+
+    SmallVector<Value> offsetsAsValues =
+        vector::getAsValues(rewriter, loc, offsets);
+
+    SmallVector<Value> newCoords = offsetsAsValues;
+    if (!op.getSubgroupBlockIoAttr()) {
+      newCoords = computeDistributedCoordsForMatrixOp(
+          rewriter, loc, layout, sgPayloadTy.getShape(), offsetsAsValues);
+      if (newCoords.empty())
+        return rewriter.notifyMatchFailure(
+            op, "Failed to compute distributed coordinates.");
+    }
+
+    SmallVector<int64_t> newConstOffsets(op.getConstOffsets().size(),
+                                         ShapedType::kDynamic);
+    DenseI64ArrayAttr newConstOffsetsAttr =
+        rewriter.getDenseI64ArrayAttr(newConstOffsets);
+
+    auto newOp = xegpu::LoadMatrixOp::create(
+        rewriter, loc, *distPayloadTyOrFailure, adaptor.getMemDesc(),
+        ValueRange(newCoords), newConstOffsetsAttr, op.getSubgroupBlockIoAttr(),
+        xegpu::DistributeLayoutAttr{});
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }
 };
 
-/// This pattern rewrites a subgroup-level vector.multi_reduction op to a series
-/// of vector.extract_strided_slice, vector.reduction and
-/// vector.insert_strided_slice ops. This is used when the reduction dimension
-/// is distributed to lanes and a naive (lane-local) distribution is not
-/// possible. Then later on, these partially lowered subgroup-level ops are
-/// further lowered to workitem-level by respective patterns.
-struct LowerVectorMultiReductionPattern
-    : public OpConversionPattern<vector::MultiDimReductionOp> {
-  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+/// This pattern distributes a subgroup-level StoreMatrix op to workitem-level.
+struct SgToWiStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
+  using OpConversionPattern<xegpu::StoreMatrixOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
+  matchAndRewrite(xegpu::StoreMatrixOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only non-lane-local reduction is handled here.
-    if (isReductionLaneLocal(op))
+    auto layout = op.getLayoutAttr();
+    // If no layout, nothing to do.
+    if (!layout)
+      return failure();
+
+    VectorType sgPayloadTy = dyn_cast<VectorType>(op.getData().getType());
+    if (!sgPayloadTy)
       return rewriter.notifyMatchFailure(
-          op, "Reduction is lane-local, it does not require rewrite.");
-    ArrayRef<int64_t> reductionDims = op.getReductionDims();
-    assert(
-        reductionDims.size() == 1 &&
-        "Expecting single reduction dimension for subgroup multi reduction op");
+          op, "the matrix op payload must be a vector type");
 
-    // Rewrite MultiDimReductionOp into a sequence of ReductionOps.
-    Value result = xegpu::lowerToVectorReductions(
-        cast<TypedValue<VectorType>>(op.getSource()),
-        cast<TypedValue<VectorType>>(op.getAcc()), op.getKind(),
-        reductionDims[0], op.getLoc(), rewriter);
+    auto loc = op.getLoc();
+    auto offsets = op.getMixedOffsets();
+    if (offsets.empty())
+      return rewriter.notifyMatchFailure(op, "the store op must have offsets");
 
-    rewriter.replaceOp(op, result);
+    FailureOr<VectorType> distPayloadTyOrFailure =
+        getDistVecTypeBasedOnLaneLayout(layout, sgPayloadTy);
+    if (failed(distPayloadTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to distribute matrix op payload based on layout.");
+
+    SmallVector<Value> offsetsAsValues =
+        vector::getAsValues(rewriter, loc, offsets);
+
+    SmallVector<Value> newCoords = offsetsAsValues;
+    if (!op.getSubgroupBlockIoAttr()) {
+      newCoords = computeDistributedCoordsForMatrixOp(
+          rewriter, loc, layout, sgPayloadTy.getShape(), offsetsAsValues);
+      if (newCoords.empty())
+        return rewriter.notifyMatchFailure(
+            op, "Failed to compute distributed coordinates.");
+    }
+
+    SmallVector<int64_t> newConstOffsets(op.getConstOffsets().size(),
+                                         ShapedType::kDynamic);
+    DenseI64ArrayAttr newConstOffsetsAttr =
+        rewriter.getDenseI64ArrayAttr(newConstOffsets);
+
+    xegpu::StoreMatrixOp::create(
+        rewriter, loc, TypeRange{},
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptor.getData()),
+                    distPayloadTyOrFailure.value()),
+        adaptor.getMemDesc(), ValueRange(newCoords), newConstOffsetsAttr,
+        op.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{});
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level StoreScatter (xegpu.store) op to
+/// workitem-level.
+///
+/// Example 1 (1D, no chunk size):
+///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+///   %mask = producer_op : vector<16xi1>
+///   %offset = producer_op : vector<16xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<16xf16>,
+///     memref<256xf16>, vector<16xindex>, vector<16xi1>
+/// Distributed to:
+///   %mask = producer_op : vector<1xi1>
+///   %offset = producer_op : vector<1xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<1xf16>,
+///     memref<256xf16>, vector<1xindex>, vector<1xi1>
+///
+/// Example 2 (2D with chunk size, same mask & offset):
+///   layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+///   xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
+///     vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+/// Distributed to:
+///   xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
+///     vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+///
+/// Example 3 (3D with leading unit dims):
+///   layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+///   %mask = producer_op : vector<1x1x16xi1>
+///   %offset = producer_op : vector<1x1x16xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<1x1x16xf16>,
+///     memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1>
+/// Distributed to:
+///   %mask = producer_op : vector<1x1x1xi1>
+///   %offset = producer_op : vector<1x1x1xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<1xf16>,
+///     memref<256xf16>, vector<1xindex>, vector<1xi1>
+struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
+  using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::StoreScatterOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    if (!layout)
+      return failure();
+
+    VectorType origValueTy = op.getValueType();
+    if (!origValueTy)
+      return failure();
+
+    // Check that all leading dimensions are unit dimensions.
+    int chunkSize = op.getChunkSize().value_or(1);
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    ArrayRef<int64_t> shape = origValueTy.getShape();
+    if (llvm::any_of(shape.take_front(origValueTy.getRank() - effectiveVecRank),
+                     [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Only unit dimensions allowed for the leading "
+              "dimensions of the store vector!");
+
+    auto distValueTyOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, origValueTy);
+    if (failed(distValueTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op,
+          "unable to compute expected workitem vector type from lane layout");
+
+    VectorType distValueTy = distValueTyOrFailure.value();
+    VectorType distValueTy1D = VectorType::get({distValueTy.getNumElements()},
+                                               distValueTy.getElementType());
+
+    Value distValue = adaptor.getValue();
+    if (distValue.getType() != distValueTy1D)
+      distValue = castValueTo(rewriter, cast<TypedValue<VectorType>>(distValue),
+                              distValueTy1D);
+
+    // Flatten offsets and mask to 1D to match the 1D value type.
+    Value distOffsets = adaptor.getOffsets();
+    auto distOffsetsTy = cast<VectorType>(distOffsets.getType());
+    VectorType offsetsTy1D = VectorType::get({distOffsetsTy.getNumElements()},
+                                             distOffsetsTy.getElementType());
+    distOffsets = castValueTo(
+        rewriter, cast<TypedValue<VectorType>>(distOffsets), offsetsTy1D);
+
+    Value distMask = adaptor.getMask();
+    auto distMaskTy = cast<VectorType>(distMask.getType());
+    VectorType maskTy1D = VectorType::get({distMaskTy.getNumElements()},
+                                          distMaskTy.getElementType());
+    distMask =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
+
+    Value distDest = adaptor.getDest();
+    xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
+                                  distOffsets, distMask, op.getChunkSizeAttr(),
+                                  op.getL1HintAttr(), op.getL2HintAttr(),
+                                  op.getL3HintAttr(), /*layout=*/nullptr);
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+/// Folds a subgroup-level ConvertLayout op with compatible lane layouts.
+struct SgToWiConvertLayout
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto inputLayout = op.getInputLayoutAttr();
+    auto targetLayout = op.getTargetLayoutAttr();
+
+    if (!inputLayout.isCompatibleWith(targetLayout, xegpu::LayoutKind::Lane)) {
+      return rewriter.notifyMatchFailure(
+          op, "lowering incompatible convert_layout not yet supported");
+    }
+    rewriter.replaceOp(op, adaptor.getSource());
     return success();
   }
 };
@@ -721,34 +1047,12 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
   // vector::MultiDimReductionOp op legality.
   target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
       [=](vector::MultiDimReductionOp op) -> bool {
-        // Check common conditions for subgroup multi reduction op.
-        if (!isValidSubgroupMultiReductionOp(op))
-          return true;
-        // Lane local reductions are illegal at this point and must be lowered.
-        return !isReductionLaneLocal(op);
+        return !isValidSubgroupMultiReductionOp(op);
       });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiVectorReduction, SgToWiMultiDimReduction>(
-      typeConverter, patterns.getContext());
-}
-
-void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
-    RewritePatternSet &patterns, ConversionTarget &target) {
-  // vector::MultiDimReductionOp legality.
-  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
-      [&](vector::MultiDimReductionOp op) {
-        // Check common conditions for subgroup multi reduction op.
-        if (!isValidSubgroupMultiReductionOp(op))
-          return true;
-        // Lane local reductions are legal. We only rewrite non-lane-local
-        // reductions.
-        return isReductionLaneLocal(op);
-      });
-  // vector::ReductionOp is legal.
-  target.addDynamicallyLegalOp<vector::ReductionOp>(
-      [&](vector::ReductionOp op) { return true; });
-  target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
-  patterns.add<LowerVectorMultiReductionPattern>(patterns.getContext());
+               SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
+               SgToWiMultiDimReduction, SgToWiLoadMatrix, SgToWiStoreMatrix,
+               SgToWiConvertLayout>(typeConverter, patterns.getContext());
 }

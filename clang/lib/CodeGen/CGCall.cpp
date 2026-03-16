@@ -2107,8 +2107,6 @@ static void getTrivialDefaultFunctionAttributes(
 
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
-    if (LangOpts.NoHonorNaNs)
-      FuncAttrs.addAttribute("no-nans-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
       FuncAttrs.addAttribute("use-soft-float", "true");
     FuncAttrs.addAttribute("stack-protector-buffer-size",
@@ -2611,30 +2609,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (DeviceKernelAttr::isOpenCLSpelling(
-            TargetDecl->getAttr<DeviceKernelAttr>()) &&
-        CallingConv != CallingConv::CC_C &&
-        CallingConv != CallingConv::CC_SpirFunction) {
-      // Check CallingConv to avoid adding uniform-work-group-size attribute to
-      // OpenCL Kernel Stub
-      if (getLangOpts().OpenCLVersion <= 120) {
-        // OpenCL v1.2 Work groups are always uniform
-        FuncAttrs.addAttribute("uniform-work-group-size", "true");
-      } else {
-        // OpenCL v2.0 Work groups may be whether uniform or not.
-        // '-cl-uniform-work-group-size' compile option gets a hint
-        // to the compiler that the global work-size be a multiple of
-        // the work-group size specified to clEnqueueNDRangeKernel
-        // (i.e. work groups are uniform).
-        FuncAttrs.addAttribute(
-            "uniform-work-group-size",
-            llvm::toStringRef(getLangOpts().OffloadUniformBlock));
-      }
-    }
-
-    if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
-        getLangOpts().OffloadUniformBlock)
-      FuncAttrs.addAttribute("uniform-work-group-size", "true");
+    // OpenCL v2.0 Work groups may be whether uniform or not.
+    // '-cl-uniform-work-group-size' compile option gets a hint
+    // to the compiler that the global work-size be a multiple of
+    // the work-group size specified to clEnqueueNDRangeKernel
+    // (i.e. work groups are uniform).
+    if (getLangOpts().OffloadUniformBlock)
+      FuncAttrs.addAttribute("uniform-work-group-size");
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
@@ -6438,6 +6419,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       DI->EmitFuncDeclForCallSite(
           CI, DI->getFunctionType(CalleeDecl, ResTy, Args), CalleeGlobalDecl);
     }
+    // Generate call site target information.
+    DI->addCallTargetIfVirtual(CalleeDecl, CI);
   }
 
   return Ret;

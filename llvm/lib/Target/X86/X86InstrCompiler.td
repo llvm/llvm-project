@@ -876,7 +876,8 @@ let Predicates = [UseIncDec, In64BitMode] in {
   def : Pat<(X86lock_sub addr:$dst, (i64 -1)), (LOCK_INC64m addr:$dst)>;
 }
 
-// Atomic bit test.
+/// LOCK-prefixed arithmetic read-modify-write instructions.
+/// EFLAGS, OUTCHAIN = LADD(INCHAIN, PTR, RHS)
 def X86LBTest : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>,
                                      SDTCisVT<2, i8>, SDTCisVT<3, i32>]>;
 def x86bts : SDNode<"X86ISD::LBTS", X86LBTest,
@@ -1424,6 +1425,14 @@ def : Pat<(X86tcret (i64 tglobaladdr:$dst), timm:$off),
 def : Pat<(X86tcret (i64 texternalsym:$dst), timm:$off),
           (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
           Requires<[IsLP64]>;
+
+def : Pat<(X86tcret (i64 (X86Wrapper tglobaladdr:$dst)), timm:$off),
+          (TCRETURNdi64 tglobaladdr:$dst, timm:$off)>,
+          Requires<[IsNotPIC, HasJMPABS]>;
+
+def : Pat<(X86tcret (i64 (X86Wrapper texternalsym:$dst)), timm:$off),
+          (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
+          Requires<[IsNotPIC, HasJMPABS]>;
 
 // Normal calls, with various flavors of addresses.
 def : Pat<(X86call (i32 tglobaladdr:$dst)),

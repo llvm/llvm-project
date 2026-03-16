@@ -49,6 +49,14 @@ MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {
 
 MlirStringRef mlirLLVMVoidTypeGetName(void) { return wrap(LLVMVoidType::name); }
 
+bool mlirTypeIsALLVMArrayType(MlirType type) {
+  return isa<LLVM::LLVMArrayType>(unwrap(type));
+}
+
+MlirTypeID mlirLLVMArrayTypeGetTypeID() {
+  return wrap(LLVM::LLVMArrayType::getTypeID());
+}
+
 MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
 }
@@ -59,6 +67,10 @@ MlirStringRef mlirLLVMArrayTypeGetName(void) {
 
 MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
   return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType());
+}
+
+unsigned mlirLLVMArrayTypeGetNumElements(MlirType type) {
+  return cast<LLVM::LLVMArrayType>(unwrap(type)).getNumElements();
 }
 
 MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
@@ -250,17 +262,17 @@ MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void) {
   return wrap(DICompositeTypeAttr::name);
 }
 
-MlirAttribute
-mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
-                             MlirAttribute name, MlirAttribute baseType,
-                             uint64_t sizeInBits, uint32_t alignInBits,
-                             uint64_t offsetInBits, int64_t dwarfAddressSpace,
-                             int64_t flags, MlirAttribute extraData) {
+MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute name, MlirAttribute file,
+    uint32_t line, MlirAttribute scope, MlirAttribute baseType,
+    uint64_t sizeInBits, uint32_t alignInBits, uint64_t offsetInBits,
+    int64_t dwarfAddressSpace, int64_t flags, MlirAttribute extraData) {
   std::optional<unsigned> addressSpace = std::nullopt;
   if (dwarfAddressSpace >= 0)
     addressSpace = (unsigned)dwarfAddressSpace;
   return wrap(DIDerivedTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
+      cast<DIFileAttr>(unwrap(file)), line, cast<DIScopeAttr>(unwrap(scope)),
       cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
       addressSpace, DIFlags(flags), cast<DINodeAttr>(unwrap(extraData))));
 }

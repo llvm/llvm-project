@@ -13,8 +13,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -62,8 +61,7 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1111, [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1111, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -114,8 +112,7 @@ define void @narrow_interleave_tc_16_vf_4_if_4(ptr noalias %data) vscale_range(2
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 16, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 16, [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 16, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -406,6 +403,171 @@ loop.latch:
   %dst.iv.next = getelementptr i8, ptr %dst.iv, i64 16
   %ec = icmp eq i32 %iv, %N
   br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+; Shared wide load (scales) feeds all members of the store interleave group
+; through fmul. With scalable VF, we currently cannot narrow the shared load
+; because we would need to load vscale values.
+; Test case for https://github.com/llvm/llvm-project/issues/185860.
+define void @shared_wide_load_not_narrowed(ptr noalias %src, ptr noalias %scales, ptr noalias %dst, i64 %n) {
+; CHECK-LABEL: define void @shared_wide_load_not_narrowed(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[SCALES:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [16 x i8], ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x i8], ptr [[SCALES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [16 x i8], ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %struct.ptr = getelementptr inbounds [16 x i8], ptr %src, i64 %iv
+  %x = load double, ptr %struct.ptr, align 8
+  %y.ptr = getelementptr inbounds nuw i8, ptr %struct.ptr, i64 8
+  %y = load double, ptr %y.ptr, align 8
+  %scale.ptr = getelementptr inbounds [8 x i8], ptr %scales, i64 %iv
+  %scale = load double, ptr %scale.ptr, align 8
+  %ax = fmul double %x, %scale
+  %ay = fmul double %y, %scale
+  %out.ptr = getelementptr inbounds [16 x i8], ptr %dst, i64 %iv
+  store double %ax, ptr %out.ptr, align 8
+  %out.y.ptr = getelementptr inbounds nuw i8, ptr %out.ptr, i64 8
+  store double %ay, ptr %out.y.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as shared_wide_load_not_narrowed, but with an fpext cast between the
+; shared wide load and the fmul.
+define void @shared_wide_load_with_cast_not_narrowed(ptr noalias %src, ptr noalias %scales, ptr noalias %dst, i64 %n) {
+; CHECK-LABEL: define void @shared_wide_load_with_cast_not_narrowed(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[SCALES:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [16 x i8], ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[SCALES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[BROADCAST_SPLAT]] to <2 x double>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[WIDE_LOAD]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [16 x i8], ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %struct.ptr = getelementptr inbounds [16 x i8], ptr %src, i64 %iv
+  %x = load double, ptr %struct.ptr, align 8
+  %y.ptr = getelementptr inbounds nuw i8, ptr %struct.ptr, i64 8
+  %y = load double, ptr %y.ptr, align 8
+  %scale.ptr = getelementptr inbounds [4 x i8], ptr %scales, i64 %iv
+  %scale = load float, ptr %scale.ptr, align 4
+  %scale.ext = fpext float %scale to double
+  %ax = fmul double %x, %scale.ext
+  %ay = fmul double %y, %scale.ext
+  %out.ptr = getelementptr inbounds [16 x i8], ptr %dst, i64 %iv
+  store double %ax, ptr %out.ptr, align 8
+  %out.y.ptr = getelementptr inbounds nuw i8, ptr %out.ptr, i64 8
+  store double %ay, ptr %out.y.ptr, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Test case for https://github.com/llvm/llvm-project/issues/183345.
+define void @interleave_group_with_gather(ptr %indices, ptr %src, i64 %n) {
+; CHECK-LABEL: define void @interleave_group_with_gather(
+; CHECK-SAME: ptr [[INDICES:%.*]], ptr [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OUT_GEP:%.*]] = getelementptr { double, double }, ptr null, i64 [[IV]]
+; CHECK-NEXT:    [[IDX_GEP:%.*]] = getelementptr i32, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[IDX:%.*]] = load i32, ptr [[IDX_GEP]], align 4
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[SRC_VAL:%.*]] = load double, ptr [[SRC_GEP]], align 8
+; CHECK-NEXT:    [[OUT_M1_0_GEP:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -16
+; CHECK-NEXT:    [[OUT_M1_0:%.*]] = load double, ptr [[OUT_M1_0_GEP]], align 8
+; CHECK-NEXT:    [[ADD_0:%.*]] = fadd double 1.000000e+01, [[SRC_VAL]]
+; CHECK-NEXT:    store double [[ADD_0]], ptr [[OUT_M1_0_GEP]], align 8
+; CHECK-NEXT:    [[OUT_M1_1_GEP:%.*]] = getelementptr i8, ptr [[OUT_GEP]], i64 -8
+; CHECK-NEXT:    [[OUT_M1_1:%.*]] = load double, ptr [[OUT_M1_1_GEP]], align 8
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double 1.000000e+01, [[SRC_VAL]]
+; CHECK-NEXT:    store double [[ADD_1]], ptr [[OUT_M1_1_GEP]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %out.gep = getelementptr { double, double }, ptr null, i64 %iv
+  %idx.gep = getelementptr i32, ptr %indices, i64 %iv
+  %idx = load i32, ptr %idx.gep, align 4
+  %idx.ext = sext i32 %idx to i64
+  %src.gep = getelementptr double, ptr %src, i64 %idx.ext
+  %src.val = load double, ptr %src.gep, align 8
+  %out.m1.0.gep = getelementptr i8, ptr %out.gep, i64 -16
+  %out.m1.0 = load double, ptr %out.m1.0.gep, align 8
+  %add.0 = fadd double 10.0, %src.val
+  store double %add.0, ptr %out.m1.0.gep, align 8
+  %out.m1.1.gep = getelementptr i8, ptr %out.gep, i64 -8
+  %out.m1.1 = load double, ptr %out.m1.1.gep, align 8
+  %add.1 = fadd double 10.0, %src.val
+  store double %add.1, ptr %out.m1.1.gep, align 8
+  %iv.next = add i64 %iv, 1
+  %exit.cond = icmp eq i64 %iv, %n
+  br i1 %exit.cond, label %exit, label %loop
 
 exit:
   ret void

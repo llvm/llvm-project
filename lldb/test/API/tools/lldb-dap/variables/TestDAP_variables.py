@@ -133,21 +133,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
 
-        locals = self.dap_server.get_local_variables()
-
-        verify_locals = {
-            "<error>": {
-                "equals": {"type": "const char *"},
-                "contains": {
-                    "value": [
-                        "debug map object file ",
-                        'main.o" containing debug info does not exist, debug info will not be loaded',
-                    ]
-                },
-            },
-        }
-        varref_dict = {}
-        self.verify_variables(verify_locals, locals, varref_dict)
+        resp = self.dap_server.get_local_variables()
+        self.assertFalse(resp["success"], "Expected to fail")
+        self.assertEqual(
+            f'debug map object file "{main_obj}" containing debug info does not exist, debug info will not be loaded',
+            resp["body"]["error"]["format"],
+        )
+        self.assertTrue(resp["body"]["error"]["showUser"])
 
     def do_test_scopes_variables_setVariable_evaluate(
         self, enableAutoVariableSummaries: bool
@@ -707,14 +699,29 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         }
         if enableSyntheticChildDebugging:
             verify_children["[raw]"] = {
-                "contains": {"type": ["vector"]},
+                "equals": {"type": "std::vector<int>", "value": "size=5"},
                 "readOnly": True,
             }
 
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
         ]["variables"]
-        self.verify_variables(verify_children, children)
+        varref_dict = {}
+        self.verify_variables(verify_children, children, varref_dict)
+
+        if enableSyntheticChildDebugging:
+            self.assertIn(
+                "small_vector",
+                varref_dict,
+                "'evaluateName' for '[raw]' field should be the original variable name.",
+            )
+            raw_children = self.dap_server.request_variables(
+                varref_dict["small_vector"]
+            )
+            self.assertTrue(
+                len(raw_children["body"]["variables"]) > 0,
+                "Expected std::vector to contain a raw underlying value with internal properties.",
+            )
 
     @skipIfWindows
     def test_return_variables(self):
@@ -726,7 +733,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         return_name = "(Return Value)"
         verify_locals = {
-            return_name: {"equals": {"type": "int", "value": "300"}},
+            return_name: {"equals": {"type": "int", "value": "300"}, "readOnly": True},
             "argc": {},
             "argv": {},
             "pt": {"readOnly": True},

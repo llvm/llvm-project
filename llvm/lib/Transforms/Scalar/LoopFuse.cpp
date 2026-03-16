@@ -166,7 +166,7 @@ struct FusionCandidate {
   /// Are all of the members of this fusion candidate still valid
   bool Valid;
   /// Guard branch of the loop, if it exists
-  BranchInst *GuardBranch;
+  CondBrInst *GuardBranch;
   /// Peeling Paramaters of the Loop.
   TTI::PeelingPreferences PP;
   /// Can you Peel this Loop?
@@ -252,8 +252,7 @@ struct FusionCandidate {
   BasicBlock *getEntryBlock() const {
     if (GuardBranch)
       return GuardBranch->getParent();
-    else
-      return Preheader;
+    return Preheader;
   }
 
   /// After Peeling the loop is modified quite a bit, hence all of the Blocks
@@ -276,8 +275,6 @@ struct FusionCandidate {
   /// This method is only valid for guarded loops.
   BasicBlock *getNonLoopBlock() const {
     assert(GuardBranch && "Only valid on guarded loops.");
-    assert(GuardBranch->isConditional() &&
-           "Expecting guard to be a conditional branch.");
     if (Peeled)
       return GuardBranch->getSuccessor(1);
     return (GuardBranch->getSuccessor(0) == Preheader)
@@ -545,17 +542,15 @@ public:
 
         collectFusionCandidates(LV);
         Changed |= fuseCandidates();
+        // All loops in the candidate sets have a common parent (or no parent).
+        // Next loop vector will correspond to a different parent. It is safe
+        // to remove all the candidates currently in the set.
+        FusionCandidates.clear();
       }
 
-      // Finished analyzing candidates at this level.
-      // Descend to the next level and clear all of the candidates currently
-      // collected. Note that it will not be possible to fuse any of the
-      // existing candidates with new candidates because the new candidates will
-      // be at a different nest level and thus not be control flow equivalent
-      // with all of the candidates collected so far.
+      // Finished analyzing candidates at this level. Descend to the next level.
       LLVM_DEBUG(dbgs() << "Descend one level!\n");
       LDT.descend();
-      FusionCandidates.clear();
     }
 
     if (Changed)
@@ -745,7 +740,7 @@ private:
         BasicBlock *Succ = CurrentBranch->getSuccessor(0);
         if (Succ == BB)
           Succ = CurrentBranch->getSuccessor(1);
-        ReplaceInstWithInst(CurrentBranch, BranchInst::Create(Succ));
+        ReplaceInstWithInst(CurrentBranch, UncondBrInst::Create(Succ));
       }
 
       DTU.applyUpdates(TreeUpdates);
@@ -1135,7 +1130,7 @@ private:
 
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       const Loop *ExprL = Expr->getLoop();
-      SmallVector<const SCEV *, 2> Operands;
+      SmallVector<SCEVUse, 2> Operands;
       if (ExprL == &OldL) {
         append_range(Operands, Expr->operands());
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
@@ -1150,7 +1145,7 @@ private:
         return visit(Expr->getStart());
       }
 
-      for (const SCEV *Op : Expr->operands())
+      for (SCEVUse Op : Expr->operands())
         Operands.push_back(visit(Op));
       return SE.getAddRecExpr(Operands, ExprL, Expr->getNoWrapFlags());
     }
@@ -1271,6 +1266,13 @@ private:
 
       assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
+      if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
+                             "dependency\n");
+        NumDA++;
+        return true;
+      }
+
       unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
 
       // Check if the direction vector does not include greater direction. In
@@ -1291,7 +1293,6 @@ private:
         LLVM_DEBUG(
             dbgs() << "TODO: Implement pred/succ dependence handling!\n");
 
-      // TODO: Can we actually use the dependence info analysis here?
       return false;
     }
 
@@ -1379,8 +1380,7 @@ private:
     if (FC0.GuardBranch)
       return DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()) &&
              FC0.ExitBlock->getSingleSuccessor() == FC1.getEntryBlock();
-    else
-      return FC0.ExitBlock == FC1.getEntryBlock();
+    return FC0.ExitBlock == FC1.getEntryBlock();
   }
 
   bool isEmptyPreheader(const FusionCandidate &FC) const {
@@ -1471,13 +1471,12 @@ private:
   /// Modify the latch branch of FC to be unconditional since successors of the
   /// branch are the same.
   void simplifyLatchBranch(const FusionCandidate &FC) const {
-    BranchInst *FCLatchBranch = dyn_cast<BranchInst>(FC.Latch->getTerminator());
+    CondBrInst *FCLatchBranch = dyn_cast<CondBrInst>(FC.Latch->getTerminator());
     if (FCLatchBranch) {
-      assert(FCLatchBranch->isConditional() &&
-             FCLatchBranch->getSuccessor(0) == FCLatchBranch->getSuccessor(1) &&
+      assert(FCLatchBranch->getSuccessor(0) == FCLatchBranch->getSuccessor(1) &&
              "Expecting the two successors of FCLatchBranch to be the same");
-      BranchInst *NewBranch =
-          BranchInst::Create(FCLatchBranch->getSuccessor(0));
+      UncondBrInst *NewBranch =
+          UncondBrInst::Create(FCLatchBranch->getSuccessor(0));
       ReplaceInstWithInst(FCLatchBranch, NewBranch);
     }
   }
