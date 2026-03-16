@@ -20,7 +20,7 @@ from difflib import unified_diff
 #   error: foo.f90:10: There is a problem here         # line 10
 #   because: foo.f90:12: This thing is invalid         # line 12 (attached)
 #   error: foo.f90:11: There is another problem here   # line 11
-# There is no way to represent that in the source flle via ERROR annotations,
+# There is no way to represent that in the source file via ERROR annotations,
 # so before running unified_diff "canonicalize" the list of messages into an
 # order that corresponds to the line numbers.
 #
