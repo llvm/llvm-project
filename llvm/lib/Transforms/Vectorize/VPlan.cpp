@@ -1245,11 +1245,11 @@ VPlan *VPlan::duplicate() {
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
   if (auto *LoopRegion = getVectorLoopRegion()) {
-    assert(LoopRegion->getCanonicalIV() &&
-           NewPlan->getVectorLoopRegion()->getCanonicalIV() &&
+    auto *OldCanIV = LoopRegion->getCanonicalIV();
+    auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
+    assert(OldCanIV && NewCanIV &&
            "Loop regions of both plans must have canonical IVs.");
-    Old2NewVPValues[LoopRegion->getCanonicalIV()] =
-        NewPlan->getVectorLoopRegion()->getCanonicalIV();
+    Old2NewVPValues[OldCanIV] = NewCanIV;
   }
 
   remapOperands(Entry, NewEntry, Old2NewVPValues);
@@ -1418,6 +1418,16 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
      << Indent << "label=\""
      << DOT::EscapeString(Region->isReplicator() ? "<xVFxUF> " : "<x1> ")
      << DOT::EscapeString(Region->getName()) << "\"\n";
+
+  if (auto *CanIV = Region->getCanonicalIV()) {
+    OS << Indent << "\"";
+    std::string Op;
+    raw_string_ostream S(Op);
+    CanIV->printAsOperand(S, SlotTracker);
+    OS << DOT::EscapeString(Op);
+    OS << " = CANONICAL-IV\"\n";
+  }
+
   // Dump the blocks of the region.
   assert(Region->getEntry() && "Region contains no inner blocks.");
   for (const VPBlockBase *Block : vp_depth_first_shallow(Region->getEntry()))

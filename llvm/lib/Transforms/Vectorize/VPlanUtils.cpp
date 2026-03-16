@@ -395,7 +395,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  // Live-ins and canonical IVs are uniform.
+  // Live-ins and region values are uniform.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
     return true;
 
@@ -660,13 +660,6 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV,
   auto *ExitingLatch = cast<VPBasicBlock>(Region->getExiting());
   auto *ExitingTerm = ExitingLatch->getTerminator();
   VPInstruction *CanIVInc = nullptr;
-  if (match(ExitingTerm,
-            m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue())) &&
-      match(CanIVInc,
-            m_c_Add(m_Specific(CanIV),
-                    m_Specific(&Region->getPlan()->getVectorTripCount()))))
-    return CanIVInc;
-
   VPValue *Cond = nullptr;
   if (match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
       match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),

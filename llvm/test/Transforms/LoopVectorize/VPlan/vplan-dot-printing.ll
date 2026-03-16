@@ -35,9 +35,10 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  subgraph cluster_N5 {
 ; CHECK-NEXT:    fontname=Courier
 ; CHECK-NEXT:    label="\<x1\> vector loop"
+; CHECK-NEXT:    "vp\<[[CAN_IV:%.+]]\> = CANONICAL-IV"
 ; CHECK-NEXT:    N4 [label =
 ; CHECK-NEXT:    "vector.body:\l" +
-; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV:%.+]]\>, ir\<1\>, vp\<[[VF]]\>\l" +
+; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<1\>, vp\<[[VF]]\>\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr inbounds ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR:%.+]]\> = vector-pointer inbounds ir\<%arrayidx\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load vp\<[[VEC_PTR]]\>\l" +

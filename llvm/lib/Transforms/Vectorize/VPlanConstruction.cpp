@@ -431,17 +431,17 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // Get type info and debug location from the scalar phi corresponding to the
   // canonical IV of the outermost (to be vectorized) loop. Only the outermost
-  // header will have a canonical IV. Use its type for the canonical IVs for all
-  // regions.
+  // header will have a canonical IV. Other, nested loops are assigned a
+  // canonical IV of null type and debug location.
+  Type *CanIVTy = nullptr;
+  DebugLoc DL = DebugLoc::getUnknown();
   auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  auto *ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
-  Type *CanIVTy =
-      OutermostHeaderVPBB == HeaderVPB
-          ? ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType()
-          : nullptr;
-  DebugLoc DL = OutermostHeaderVPBB == HeaderVPB ? ScalarCanIV->getDebugLoc()
-                                                 : DebugLoc::getUnknown();
+  auto *OutermostVPPhi = cast<VPPhi>(&OutermostHeaderVPBB->front());
+  if (HeaderVPB == OutermostHeaderVPBB) {
+    CanIVTy = OutermostVPPhi->getOperand(0)->getLiveInIRValue()->getType();
+    DL = OutermostVPPhi->getDebugLoc();
+  }
 
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
@@ -465,8 +465,8 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   // Update canonical IV users for the outermost loop only.
   if (HeaderVPB == OutermostHeaderVPBB) {
-    ScalarCanIV->replaceAllUsesWith(R->getCanonicalIV());
-    ScalarCanIV->eraseFromParent();
+    OutermostVPPhi->replaceAllUsesWith(R->getCanonicalIV());
+    OutermostVPPhi->eraseFromParent();
   }
 
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
@@ -769,6 +769,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
+  assert(isa<VPPhi>(HeaderVPBB->front()) && "first recipe must be VPPhi");
   for (VPRecipeBase &R : make_early_inc_range(drop_begin(HeaderVPBB->phis()))) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);

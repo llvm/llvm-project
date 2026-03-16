@@ -141,8 +141,8 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
-/// Find the canonical IV increment (CanIV + VFxUF) among users of \p CanIV.
-/// Returns nullptr if not found.
+/// Find the canonical IV increment (CanIV + VFxUF) among users of \p CanIV or
+/// based on region's exiting terminator. Returns nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPValue *CanIV, VPValue *VFxUF);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects

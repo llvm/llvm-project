@@ -4355,6 +4355,7 @@ public:
 };
 
 /// Track information about the canonical IV value of a region.
+/// TODO: Have it also track the canonical IV increment, subject of NUW flag.
 class VPCanonicalIVInfo {
   /// VPRegionValue for the canonical IV, whose allocation is managed by
   /// VPCanonicalIVInfo.
@@ -4509,11 +4510,6 @@ public:
   /// Return the type of the canonical IV for loop regions.
   Type *getCanonicalIVType() const {
     return CanIVInfo->getRegionValue()->getType();
-  }
-
-  /// Return the debug location of the canonical IV for loop regions.
-  DebugLoc getCanonicalIVDebugLoc() const {
-    return CanIVInfo->getRegionValue()->getDebugLoc();
   }
 
   /// Indicates if NUW is set for the canonical IV increment, for loop regions.

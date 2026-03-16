@@ -136,6 +136,7 @@ compound=true
   subgraph cluster_N5 {
     fontname=Courier
     label="\<x1\> vector loop"
+    "vp\<%2\> = CANONICAL-IV"
     N4 [label =
       "vector.body:\l" +
       "  EMIT-SCALAR ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
@@ -302,6 +303,7 @@ compound=true
   subgraph cluster_N5 {
     fontname=Courier
     label="\<x1\> vector loop"
+    "vp\<%2\> = CANONICAL-IV"
     N4 [label =
       "vector.body:\l" +
       "  EMIT-SCALAR ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
