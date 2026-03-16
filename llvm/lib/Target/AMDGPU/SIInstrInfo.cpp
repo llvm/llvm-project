@@ -5549,6 +5549,27 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "VOP3 instruction uses literal";
       return false;
     }
+
+    // Verify VOP3/VOP3P source modifiers.
+    if (isVOP3(MI) || isVOP3P(MI)) {
+      int Src0ModIdx =
+          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0_modifiers);
+      int Src1ModIdx =
+          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1_modifiers);
+      int Src2ModIdx =
+          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2_modifiers);
+
+      for (int ModIdx : {Src0ModIdx, Src1ModIdx, Src2ModIdx}) {
+        if (ModIdx == -1)
+          continue;
+
+        const MachineOperand &MO = MI.getOperand(ModIdx);
+        if (!MO.isImm()) {
+          ErrInfo = "Source modifier of VOP3/VOP3P instruction should be immediate";
+          return false;
+        }
+      }
+    }
   }
 
   // Special case for writelane - this can break the multiple constant bus rule,
