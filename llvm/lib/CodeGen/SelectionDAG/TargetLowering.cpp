@@ -8211,7 +8211,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                         DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl)),
             DAG.getNode(ISD::SHL, dl, HiLoVT, LH,
                         DAG.getShiftAmountConstant(HBitWidth - TrailingZeros,
-                                                 HiLoVT, dl)));
+                                                   HiLoVT, dl)));
       LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     }
