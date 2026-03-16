@@ -141,7 +141,7 @@ public:
       Instruction *T = Exit->getTerminator();
       for (auto I = succ_begin(T), E = succ_end(T); I != E; ++I)
         if (ExitTargets.contains(*I))
-          T->setSuccessor(I.getSuccessorIndex(), NewExitTarget);
+          I.getUse()->set(NewExitTarget);
     }
 
     CR = CR->Parent;

@@ -1470,6 +1470,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_sleep}).Any({{_, _}, {{}, {IntrId, Imm}}});
 
+  addRulesForIOpcs({amdgcn_s_barrier, amdgcn_s_barrier_signal,
+                    amdgcn_s_barrier_wait, amdgcn_wave_barrier})
+      .Any({{}, {{}, {IntrId}}});
+
   addRulesForIOpcs({amdgcn_bitop3}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})

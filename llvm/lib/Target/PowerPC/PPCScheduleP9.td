@@ -43,7 +43,8 @@ def P9Model : SchedMachineModel {
   // instructions introduced after ISA 3.0.
   let UnsupportedFeatures = [HasSPE, PrefixInstrs, MMA,
                              PairedVectorMemops, IsBookE,
-                             PCRelativeMemops, IsISA3_1, IsISAFuture];
+                             PCRelativeMemops, IsISA3_1, IsISAFuture,
+                             HasFutureVector];
 }
 
 let SchedModel = P9Model in {

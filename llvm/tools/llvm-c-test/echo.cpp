@@ -568,10 +568,10 @@ struct FunCloner {
       }
       case LLVMCondBr: {
         LLVMValueRef Cond = LLVMGetCondition(Src);
-        LLVMValueRef Else = LLVMGetOperand(Src, 1);
-        LLVMBasicBlockRef ElseBB = DeclareBB(LLVMValueAsBasicBlock(Else));
-        LLVMValueRef Then = LLVMGetOperand(Src, 2);
+        LLVMValueRef Then = LLVMGetOperand(Src, 1);
         LLVMBasicBlockRef ThenBB = DeclareBB(LLVMValueAsBasicBlock(Then));
+        LLVMValueRef Else = LLVMGetOperand(Src, 2);
+        LLVMBasicBlockRef ElseBB = DeclareBB(LLVMValueAsBasicBlock(Else));
         Dst = LLVMBuildCondBr(Builder, CloneValue(Cond), ThenBB, ElseBB);
         break;
       }
