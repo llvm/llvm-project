@@ -1714,6 +1714,17 @@ void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
          "emitExplicitCastExprType");
 }
 
+mlir::TypedAttr CIRGenModule::emitNullMemberAttr(QualType destTy,
+                                                 const MemberPointerType *mpt) {
+  if (mpt->isMemberFunctionPointerType()) {
+    auto ty = mlir::cast<cir::MethodType>(convertType(destTy));
+    return builder.getNullMethodAttr(ty);
+  }
+
+  auto ty = mlir::cast<cir::DataMemberType>(convertType(destTy));
+  return builder.getNullDataMemberAttr(ty);
+}
+
 mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   assert(!cir::MissingFeatures::cxxABI());
 
