@@ -936,7 +936,9 @@ uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 // LLVM-NEXT:    ret <4 x i32> [[ADD_I]]
   return vabaq_u32(v1, v2, v3);
 }
-
+//===------------------------------------------------------===//
+// 2.1.3.1.1. Vector Shift Left
+//===------------------------------------------------------===//
 // LLVM-LABEL: @test_vshld_n_s64
 // CIR-LABEL: @test_vshld_n_s64
 int64_t test_vshld_n_s64(int64_t a) {
