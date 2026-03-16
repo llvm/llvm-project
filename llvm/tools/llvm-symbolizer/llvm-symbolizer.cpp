@@ -28,6 +28,7 @@
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -48,6 +49,11 @@
 
 using namespace llvm;
 using namespace symbolize;
+
+// Cache for XCOFF section base addresses to avoid re-opening binaries.
+// Key: (ModulePath, SectionTypeFlag), Value: SectionBaseAddress
+static std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>
+    XCOFFSectionBaseCache;
 
 namespace {
 enum ID {

@@ -20,7 +20,7 @@
 # TEXT-BAR-NEXT: ??:0:0
 
 ## Test 3: Symbolize global constant using TEXT section-relative offset.
-## .my_const is at 0x100 (TEXT base) + 0x8 offset = 0x108 (XMC_RO data in text).
+## .my_const is at 0x100 (TEXT base) + 0x8 offset = 0x108.
 # RUN: llvm-symbolizer --obj=%t.xcoff 'DATA (TEXT)(+0x8)' | FileCheck %s --check-prefix=TEXT-CONST
 
 # TEXT-CONST: .my_const
@@ -42,16 +42,12 @@ Sections:
   - Name:            .text
     Address:         0x100
     Flags:           [ STYP_TEXT ]
-    # Two blr instructions (4 bytes each) at 0x100 and 0x104, then 4 bytes of
-    # read-only constant data (.my_const) at 0x108.
     SectionData:     "4E8000204E8000200000002A"
   - Name:            .data
     Address:         0x200
     Flags:           [ STYP_DATA ]
-    # 4 bytes of padding then global_var at 0x204.
     SectionData:     "000000000000002A"
 Symbols:
-  # .foo csect (XTY_SD): the function itself, as produced by -ffunction-sections.
   - Name:            .foo
     Value:           0x100
     Section:         .text
@@ -61,7 +57,6 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
-  # .bar csect (XTY_SD): second function in its own csect.
   - Name:            .bar
     Value:           0x104
     Section:         .text
@@ -71,7 +66,6 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
-  # .my_const csect (XTY_SD, XMC_RO): read-only constant in TEXT section.
   - Name:            .my_const
     Value:           0x108
     Section:         .text
@@ -81,7 +75,6 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_RO
-  # global_var csect at DATA+0x4 (non-zero offset to show DATA offsets work).
   - Name:            global_var
     Value:           0x204
     Section:         .data

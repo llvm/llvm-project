@@ -79,7 +79,6 @@
 # NO-SECTION: error: '(DATA)(+0x0)': no 'DATA' section found in XCOFF object
 
 ## Test error: multiple sections of the same type.
-## Reuse Document 1 with -D SECT2_FLAGS=STYP_TEXT to add a second TEXT section.
 # RUN: yaml2obj %s --docnum=1 -D SECT2_FLAGS=STYP_TEXT -o %t.multi.xcoff
 # RUN: llvm-symbolizer --obj=%t.multi.xcoff '(TEXT)(+0x0)' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MULTI-SECTION
