@@ -136,8 +136,6 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
   unsigned I;
   for (I = 0; Value; ++I, Value >>= 7)
     Data[I] |= uint8_t(Value & 0x7f);
-  if (Value)
-    Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,

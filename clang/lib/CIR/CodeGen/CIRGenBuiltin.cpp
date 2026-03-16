@@ -191,8 +191,7 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   result = BinOp::create(builder, result.getLoc(), result, emittedArgValue);
 
   if (invert)
-    result = cir::UnaryOp::create(builder, result.getLoc(),
-                                  cir::UnaryOpKind::Not, result);
+    result = builder.createNot(result);
 
   result = emitFromInt(cgf, result, typ, originalArgType);
   return RValue::get(result);
@@ -1094,8 +1093,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIconjf:
   case Builtin::BIconjl: {
     mlir::Value complex = emitComplexExpr(e->getArg(0));
-    mlir::Value conj = builder.createUnaryOp(getLoc(e->getExprLoc()),
-                                             cir::UnaryOpKind::Not, complex);
+    mlir::Value conj = builder.createNot(complex);
     return RValue::getComplex(conj);
   }
 
