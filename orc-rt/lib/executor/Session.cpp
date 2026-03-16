@@ -16,6 +16,12 @@ namespace orc_rt {
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
+Session::Session(std::unique_ptr<TaskDispatcher> Dispatcher,
+                 ErrorReporterFn ReportError)
+    : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
+  ControllerInterface["orc_rt_SessionInstance"] = static_cast<void *>(this);
+}
+
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
@@ -53,7 +59,7 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   // OnShutdownComplete is _not_ set (i.e. was moved into the list of pending
   // handlers), and we didn't return under the lock above, so we must be
   // responsible for the shutdown. Call shutdownNext.
-  shutdownNext(Error::success());
+  shutdownNext();
 }
 
 void Session::waitForShutdown() {
@@ -78,17 +84,14 @@ void Session::detachFromController() {
   }
 }
 
-void Session::shutdownNext(Error Err) {
-  if (Err)
-    reportError(std::move(Err));
-
+void Session::shutdownNext() {
   if (SI->Services.empty())
     return shutdownComplete();
 
   // Get the next Service to shut down.
   auto NextSrv = std::move(SI->Services.back());
   SI->Services.pop_back();
-  NextSrv->onShutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+  NextSrv->onShutdown([this]() { shutdownNext(); });
 }
 
 void Session::shutdownComplete() {

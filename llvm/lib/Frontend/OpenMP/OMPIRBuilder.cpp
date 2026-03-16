@@ -5585,11 +5585,19 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   Constant *One = ConstantInt::get(InternalIVTy, 1);
 
   Function *F = CLI->getFunction();
+  // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return DominatorTreeAnalysis(); });
   FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
   LoopAnalysis LIA;
   LoopInfo &&LI = LIA.run(*F, FAM);
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
   Loop *L = LI.getLoopFor(CLI->getHeader());
   SmallVector<Metadata *> LoopMDList;
   if (ChunkSize || DistScheduleChunkSize)
@@ -6874,6 +6882,13 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   Function *F = CanonicalLoop->getFunction();
 
+  // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
+
   // TODO: We should not rely on pass manager. Currently we use pass manager
   // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
   // object. We should have a method  which returns all blocks between
@@ -6885,6 +6900,9 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   LoopAnalysis LIA;
   LoopInfo &&LI = LIA.run(*F, FAM);
+
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
 
   Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
   if (AlignedVars.size()) {
@@ -7003,6 +7021,13 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   CodeGenOptLevel OptLevel = CodeGenOptLevel::Aggressive;
   std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
 
+  // Blocks must have terminators.
+  // FIXME: Don't run analyses on incomplete/invalid IR.
+  SmallVector<Instruction *> UIs;
+  for (BasicBlock &BB : *F)
+    if (!BB.getTerminator())
+      UIs.push_back(new UnreachableInst(F->getContext(), &BB));
+
   FunctionAnalysisManager FAM;
   FAM.registerPass([]() { return TargetLibraryAnalysis(); });
   FAM.registerPass([]() { return AssumptionAnalysis(); });
@@ -7026,6 +7051,9 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   AssumptionAnalysis ACT;
   AssumptionCache &&AC = ACT.run(*F, FAM);
   OptimizationRemarkEmitter ORE{F};
+
+  for (Instruction *I : UIs)
+    I->eraseFromParent();
 
   Loop *L = LI.getLoopFor(CLI->getHeader());
   assert(L && "Expecting CanonicalLoopInfo to be recognized as a loop");

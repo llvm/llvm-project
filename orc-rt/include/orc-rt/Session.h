@@ -14,6 +14,7 @@
 #define ORC_RT_SESSION_H
 
 #include "orc-rt/Error.h"
+#include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
 #include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/WrapperFunction.h"
@@ -49,6 +50,8 @@ public:
   using HandlerTag = void *;
   using OnCallHandlerCompleteFn =
       move_only_function<void(WrapperFunctionBuffer)>;
+
+  using SymbolMap = std::unordered_map<std::string, void *>;
 
   /// Provides access to the controller.
   class ControllerAccess {
@@ -116,9 +119,7 @@ public:
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
   Session(std::unique_ptr<TaskDispatcher> Dispatcher,
-          ErrorReporterFn ReportError)
-      : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
-  }
+          ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
@@ -133,6 +134,12 @@ public:
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
+
+  /// Controller interface symbols map.
+  auto controllerInterface() { return LockedAccess(ControllerInterface, M); }
+  auto controllerInterface() const {
+    return LockedAccess(ControllerInterface, M);
+  }
 
   /// Initiate session shutdown.
   ///
@@ -182,7 +189,7 @@ private:
     std::vector<OnShutdownCompleteFn> OnCompletes;
   };
 
-  void shutdownNext(Error Err);
+  void shutdownNext();
   void shutdownComplete();
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
@@ -204,8 +211,9 @@ private:
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 
-  std::mutex M;
+  mutable std::mutex M;
   std::vector<std::unique_ptr<Service>> Services;
+  SymbolMap ControllerInterface;
   std::unique_ptr<ShutdownInfo> SI;
 };
 
