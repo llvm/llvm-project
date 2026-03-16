@@ -32,13 +32,6 @@ else
   fc=LLVM
 fi
 
-if test -n "${CHANGE_TARGET}"
-then
-  actual_target="${CHANGE_TARGET}"
-else
-  actual_target="${BRANCH_NAME}"
-fi
-
 build_args=(
   --build_mode=All
   --fc="${fc}"
@@ -52,7 +45,7 @@ then
     build_args+=(--branch="${BRANCH_NAME}")
   fi
 fi
-if test "${actual_target}" != "amd-staging" -a "${actual_target}" != "upstream-main"
+if test "${LLVM_VERSION_MAJOR}" -le 21
 then
   build_args+=(--enable_how=PROJECTS)
 fi

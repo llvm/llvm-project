@@ -16,6 +16,7 @@
 ^prj-essentials/devo/aocc/CODEOWNERS\.AOCC\.m4
 ^\.github/\.ai_pr_platform/
 ^\.github/copilot-instructions\.md
+^\.github/instructions/
 ^\.github/workflows/amd-.*\.yml
 ^\.github/workflows/amd-.*\.yaml
 ^CODEOWNERS

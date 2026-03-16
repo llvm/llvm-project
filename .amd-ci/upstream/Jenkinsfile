@@ -173,6 +173,7 @@ def gitVars // groovylint-disable-line NoDef,VariableTypeRequired
 Integer fullTimeoutH = 15
 
 String compilerTar
+String mainBranchName = 'main'
 
 try {
     timeout(time: fullTimeoutH, unit: 'HOURS') {
@@ -194,7 +195,7 @@ try {
                             changelog: false,
                             scm: scmGit(
                                 gitTool: gitTool,
-                                branches: [[name: 'main']],
+                                branches: [[name: mainBranchName]],
                                 extensions: [
                                     cloneOption(
                                         reference: referenceRepo + '/aocc-devops.git'
@@ -383,29 +384,47 @@ try {
                 Map allTasks = [
                     failFast: false,
                 ]
-                List<String> downstreamSuites = ['GFortran', 'NAGLLVM']
+                String fujitsuSuiteName = 'Fujitsu'
+                String gfortranSuiteName = 'GFortran'
+                List<String> downstreamSuites = [gfortranSuiteName, 'NAGLLVM']
                 if (timerTrigger) {
-                    downstreamSuites.addAll(['Fujitsu', 'Polyhedron'])
+                    downstreamSuites.addAll([fujitsuSuiteName, 'Polyhedron'])
                 }
                 for (suite in downstreamSuites) {
                     String suiteName = suite
+                    List suiteParams = [
+                        string(
+                            name: 'CUT',
+                            value: env.BUILD_URL + 'artifact/' + compilerTar
+                        ),
+                        string(name: 'BRANCH_CONTEXT', value: actualTarget),
+                        string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
+                        string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
+                    ]
+                    if (suite == gfortranSuiteName) {
+                        String sBr = mainBranchName
+                        if (actualTarget == 'aocc_llvm21') {
+                            /*
+                             * Thirumalai notes
+                             * "21.x had some issues with tests.py (LLVM-LIT), so I switched to 22.x,
+                             * and there were no issues there with LIT."
+                             */
+                            sBr = 'release/22.x'
+                        }
+                        suiteParams += string(
+                            name: 'SUITE_BRANCH',
+                            value: sBr
+                        )
+                    }
                     allTasks[suiteName] = {
                         stage('downstream-suite-' + suiteName) {
                             def result = build( // groovylint-disable-line NoDef,VariableTypeRequired
                                 propagate: false,
                                 wait: true,
                                 job: 'AOCC-Workloads/TestSuites/' + suiteName,
-                                parameters: [
-                                    string(
-                                        name: 'CUT',
-                                        value: env.BUILD_URL + 'artifact/' + compilerTar
-                                    ),
-                                    string(name: 'BRANCH_CONTEXT', value: actualTarget),
-                                    string(name: 'CHANGE_ID', value: env.CHANGE_ID ?: ''),
-                                    string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
-                                ]
+                                parameters: suiteParams
                             )
-                            handleBuildResult(result, true)
+                            handleBuildResult(result, suite != fujitsuSuiteName)
                         }
                     }
                 }
