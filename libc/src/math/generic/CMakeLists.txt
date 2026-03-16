@@ -3201,7 +3201,7 @@ add_entrypoint_object(
   HDRS
     ../hypot.h
   DEPENDS
-    libc.src.__support.FPUtil.hypot
+    libc.src.__support.math.hypot
 )
 
 add_entrypoint_object(
@@ -4201,6 +4201,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  atan2f16
+  SRCS
+    atan2f16.cpp
+  HDRS
+    ../atan2f16.h
+  DEPENDS
+    libc.src.__support.math.atan2f16
+)
+
+add_entrypoint_object(
   atan2
   SRCS
     atan2.cpp
@@ -5101,11 +5111,7 @@ add_entrypoint_object(
   HDRS
     ../bf16div.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.div
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16div
 )
 
 add_entrypoint_object(

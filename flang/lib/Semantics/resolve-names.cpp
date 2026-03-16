@@ -1510,7 +1510,7 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // clause. These new symbols have the CUDA Fortran device
   // attribute.
   if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name->symbol) {
+      name && name->symbol) {
     if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
       name->symbol = copy;
       if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
@@ -1913,11 +1913,12 @@ void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
     auto &ultimate{symbol->GetUltimate()};
     auto *misc{ultimate.detailsIf<MiscDetails>()};
     auto *md{ultimate.detailsIf<MapperDetails>()};
-    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
+    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName)) {
       context().Say(mapper.v.source,
           "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
-    else
+    } else {
       mapper.v.symbol = symbol;
+    }
   } else {
     // Allow the special 'default' mapper identifier without prior
     // declaration so lowering can recognize and handle it. Emit an
