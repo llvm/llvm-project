@@ -179,9 +179,9 @@ define i32 @clmul_i32(i32 %x, i32 %y) {
 ;
 ; CHECK-AES-LABEL: clmul_i32:
 ; CHECK-AES:       // %bb.0:
-; CHECK-AES-NEXT:    fmov s0, w1
-; CHECK-AES-NEXT:    fmov s1, w0
-; CHECK-AES-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-AES-NEXT:    fmov s0, w0
+; CHECK-AES-NEXT:    fmov s1, w1
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    fmov w0, s0
 ; CHECK-AES-NEXT:    ret
   %a = call i32 @llvm.clmul.i32(i32 %x, i32 %y)
@@ -573,9 +573,9 @@ define i32 @clmul_i32_zext(i16 %x, i16 %y) {
 ; CHECK-AES:       // %bb.0:
 ; CHECK-AES-NEXT:    and w8, w0, #0xffff
 ; CHECK-AES-NEXT:    and w9, w1, #0xffff
-; CHECK-AES-NEXT:    fmov s0, w9
-; CHECK-AES-NEXT:    fmov s1, w8
-; CHECK-AES-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-AES-NEXT:    fmov s0, w8
+; CHECK-AES-NEXT:    fmov s1, w9
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    fmov w0, s0
 ; CHECK-AES-NEXT:    ret
   %zextx = zext i16 %x to i32
@@ -689,9 +689,9 @@ define i64 @clmul_i64_zext(i32 %x, i32 %y) {
 ; CHECK-AES:       // %bb.0:
 ; CHECK-AES-NEXT:    mov w8, w0
 ; CHECK-AES-NEXT:    mov w9, w1
-; CHECK-AES-NEXT:    fmov d0, x9
-; CHECK-AES-NEXT:    fmov d1, x8
-; CHECK-AES-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-AES-NEXT:    fmov d0, x8
+; CHECK-AES-NEXT:    fmov d1, x9
+; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-AES-NEXT:    fmov x0, d0
 ; CHECK-AES-NEXT:    ret
   %zextx = zext i32 %x to i64

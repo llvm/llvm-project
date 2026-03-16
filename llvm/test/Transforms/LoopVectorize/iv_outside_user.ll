@@ -1131,9 +1131,8 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], 2
-; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 2
-; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; VEC-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; VEC-NEXT:    store i16 0, ptr [[TMP3]], align 2

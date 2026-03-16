@@ -357,7 +357,7 @@ def FuncOp : Func_Op<"func", [
     bool isDeclaration() { return isExternal(); }
   }];
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

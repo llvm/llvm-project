@@ -31,10 +31,10 @@ TEST_F(LlvmLibcAcospifTest, SpecialNumbers) {
   EXPECT_FP_EQ(0.5f, LIBC_NAMESPACE::acospif(-0.0f));
   EXPECT_MATH_ERRNO(0);
   // acospif(1) = 0
-  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::acospif(1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::acospif(1.0f));
   EXPECT_MATH_ERRNO(0);
   // acospif(-1) = 1
-  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::acospif(-1.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::acospif(-1.0f));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acospif(inf));

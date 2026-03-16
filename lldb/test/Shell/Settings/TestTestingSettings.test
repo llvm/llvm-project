@@ -1,0 +1,7 @@
+# REQUIRES: asserts
+#
+# Tests that the global 'testing.XXX' settings are available when building with asserts.
+#
+# RUN: %lldb -o 'settings show testing.inject-variable-location-error' -b | FileCheck %s
+#
+# CHECK: testing.inject-variable-location-error (boolean) = false
