@@ -18,10 +18,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_tan(__CLC_GENTYPE x) {
   __CLC_GENTYPE t = __clc_tanf_piby4(r0 + r1, regn);
   t = __CLC_AS_GENTYPE(__CLC_AS_UINTN(t) ^ x_signbit);
 
-  t = __clc_select(t, __CLC_GENTYPE_NAN, __clc_isnan(x) || __clc_isinf(x));
-  // Take care of subnormals
-  t = (x == 0.0f) ? x : t;
-  return t;
+  return __clc_select(t, __CLC_GENTYPE_NAN, __clc_isnan(x) || __clc_isinf(x));
 }
 
 #elif __CLC_FPSIZE == 64

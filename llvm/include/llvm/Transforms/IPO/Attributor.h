@@ -5469,15 +5469,7 @@ struct AANoFPClass
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    Type *Ty = IRP.getAssociatedType();
-    do {
-      if (Ty->isFPOrFPVectorTy())
-        return IRAttribute::isValidIRPositionForInit(A, IRP);
-      if (!Ty->isArrayTy())
-        break;
-      Ty = Ty->getArrayElementType();
-    } while (true);
-    return false;
+    return AttributeFuncs::isNoFPClassCompatibleType(IRP.getAssociatedType());
   }
 
   /// Return the underlying assumed nofpclass.
@@ -6593,7 +6585,7 @@ struct AAIndirectCallInfo
 };
 
 /// An abstract Attribute for specializing "dynamic" components of
-/// "denormal-fp-math" and "denormal-fp-math-f32" to a known denormal mode.
+/// denormal_fpenv to a known denormal mode.
 struct AADenormalFPMath
     : public StateWrapper<DenormalFPMathState, AbstractAttribute> {
   using Base = StateWrapper<DenormalFPMathState, AbstractAttribute>;

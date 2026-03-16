@@ -149,7 +149,7 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-HTML-NEXT:             <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt; Incrementable requires (T a) { a++; }</code></pre> 
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
-// CHECK-HTML-NEXT:             <p> Concept for an incrementable value</p>
+// CHECK-HTML-NEXT:             <p>Concept for an incrementable value</p>
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <h3>Template Parameters</h3>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
@@ -164,7 +164,7 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-HTML-NEXT:             <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt; Decrementable requires (T a) { a--; }</code></pre> 
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
-// CHECK-HTML-NEXT:             <p> Concept for a decrementable value</p>
+// CHECK-HTML-NEXT:             <p>Concept for a decrementable value</p>
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <h3>Template Parameters</h3>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
@@ -179,7 +179,7 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-HTML-NEXT:             <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt; PreIncrementable requires (T a) { ++a; }</code></pre> 
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
-// CHECK-HTML-NEXT:             <p> Concept for a pre-incrementable value</p>
+// CHECK-HTML-NEXT:             <p>Concept for a pre-incrementable value</p>
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <h3>Template Parameters</h3>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
@@ -194,7 +194,7 @@ template<typename T> requires (Incrementable<T> && Decrementable<T>) || PreIncre
 // CHECK-HTML-NEXT:             <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt; PreDecrementable requires (T a) { --a; }</code></pre> 
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">
-// CHECK-HTML-NEXT:             <p> Concept for a -pre-decrementable value</p>
+// CHECK-HTML-NEXT:             <p>Concept for a -pre-decrementable value</p>
 // CHECK-HTML-NEXT:         </div>
 // CHECK-HTML-NEXT:         <h3>Template Parameters</h3>
 // CHECK-HTML-NEXT:         <div class="nested-delimiter-container">

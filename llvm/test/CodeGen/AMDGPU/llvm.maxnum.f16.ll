@@ -1115,4 +1115,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }

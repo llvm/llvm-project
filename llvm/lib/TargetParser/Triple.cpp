@@ -341,10 +341,14 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case Vulkan: return "vulkan";
   case CheriotRTOS:
     return "cheriotrtos";
+  case OpenCL:
+    return "opencl";
   case ChipStar:
     return "chipstar";
   case Firmware:
     return "firmware";
+  case QURT:
+    return "qurt";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -407,8 +411,6 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Amplification: return "amplification";
   case RootSignature:
     return "rootsignature";
-  case OpenCL:
-    return "opencl";
   case OpenHOS: return "ohos";
   case PAuthTest:
     return "pauthtest";
@@ -758,8 +760,10 @@ static Triple::OSType parseOS(StringRef OSName) {
       .StartsWith("serenity", Triple::Serenity)
       .StartsWith("vulkan", Triple::Vulkan)
       .StartsWith("cheriotrtos", Triple::CheriotRTOS)
+      .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("chipstar", Triple::ChipStar)
       .StartsWith("firmware", Triple::Firmware)
+      .StartsWith("qurt", Triple::QURT)
       .Default(Triple::UnknownOS);
 }
 
@@ -813,7 +817,6 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
       .StartsWith("rootsignature", Triple::RootSignature)
-      .StartsWith("opencl", Triple::OpenCL)
       .StartsWith("ohos", Triple::OpenHOS)
       .StartsWith("pauthtest", Triple::PAuthTest)
       .StartsWith("llvm", Triple::LLVM)
@@ -2162,6 +2165,16 @@ bool Triple::isLittleEndian() const {
   default:
     return false;
   }
+}
+
+unsigned Triple::getDefaultWCharSize() const {
+  if (getArch() == Triple::xcore)
+    return 1;
+  if (isOSWindows() || isWindowsCygwinEnvironment() || isPS() || isUEFI())
+    return 2;
+  if (isOSAIX() && isArch32Bit())
+    return 2;
+  return 4;
 }
 
 bool Triple::isCompatibleWith(const Triple &Other) const {

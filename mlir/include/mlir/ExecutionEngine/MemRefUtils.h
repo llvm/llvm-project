@@ -186,12 +186,11 @@ public:
   }
   OwningMemRef(const OwningMemRef &) = delete;
   OwningMemRef &operator=(const OwningMemRef &) = delete;
-  OwningMemRef &operator=(OwningMemRef &&other) {
+  OwningMemRef &operator=(const OwningMemRef &&other) {
     freeFunc = other.freeFunc;
     descriptor = other.descriptor;
     other.freeFunc = nullptr;
     memset(&other.descriptor, 0, sizeof(other.descriptor));
-    return *this;
   }
   OwningMemRef(OwningMemRef &&other) { *this = std::move(other); }
 

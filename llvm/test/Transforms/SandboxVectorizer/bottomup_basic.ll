@@ -254,9 +254,9 @@ define void @cant_vectorize_seeds(ptr %ptr) {
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META7:![0-9]+]]
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META7]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @cant_vectorize_seeds(
@@ -265,9 +265,9 @@ define void @cant_vectorize_seeds(ptr %ptr) {
 ; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
 ; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META7:![0-9]+]]
 ; REVERT-NEXT:    call void @foo()
-; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4
+; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META7]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr float, ptr %ptr, i32 0
@@ -286,22 +286,22 @@ define void @pack_vectors(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8
 ; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
-; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x float> [[LD0]], i32 0, !sandboxvec [[META7:![0-9]+]]
-; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <3 x float> poison, float [[VPACK]], i32 0, !sandboxvec [[META7]]
-; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x float> [[LD0]], i32 1, !sandboxvec [[META7]]
-; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <3 x float> [[VPACK1]], float [[VPACK2]], i32 1, !sandboxvec [[META7]]
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <3 x float> [[VPACK3]], float [[LD1]], i32 2, !sandboxvec [[META7]]
-; CHECK-NEXT:    store <3 x float> [[PACK]], ptr [[PTR0]], align 8, !sandboxvec [[META7]]
+; CHECK-NEXT:    [[VPACK:%.*]] = extractelement <2 x float> [[LD0]], i32 0, !sandboxvec [[META8:![0-9]+]]
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <3 x float> poison, float [[VPACK]], i32 0, !sandboxvec [[META8]]
+; CHECK-NEXT:    [[VPACK2:%.*]] = extractelement <2 x float> [[LD0]], i32 1, !sandboxvec [[META8]]
+; CHECK-NEXT:    [[VPACK3:%.*]] = insertelement <3 x float> [[VPACK1]], float [[VPACK2]], i32 1, !sandboxvec [[META8]]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <3 x float> [[VPACK3]], float [[LD1]], i32 2, !sandboxvec [[META8]]
+; CHECK-NEXT:    store <3 x float> [[PACK]], ptr [[PTR0]], align 8, !sandboxvec [[META8]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @pack_vectors(
 ; REVERT-SAME: ptr [[PTR:%.*]], ptr [[PTR2:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 2, !sandboxvec [[META7:![0-9]+]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 2, !sandboxvec [[META8:![0-9]+]]
 ; REVERT-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8
 ; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR2]], align 4
-; REVERT-NEXT:    store <2 x float> [[LD0]], ptr [[PTR0]], align 8, !sandboxvec [[META7]]
-; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META7]]
+; REVERT-NEXT:    store <2 x float> [[LD0]], ptr [[PTR0]], align 8, !sandboxvec [[META8]]
+; REVERT-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META8]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
@@ -317,21 +317,21 @@ define void @diamond(ptr %ptr) {
 ; CHECK-LABEL: define void @diamond(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META8:![0-9]+]]
-; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VECL]], !sandboxvec [[META8]]
-; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META8]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META9:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VECL]], !sandboxvec [[META9]]
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META9]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @diamond(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META8:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META8]]
-; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META8]]
-; REVERT-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], [[LD0]], !sandboxvec [[META8]]
-; REVERT-NEXT:    [[SUB1:%.*]] = fsub float [[LD1]], [[LD1]], !sandboxvec [[META8]]
-; REVERT-NEXT:    store float [[SUB0]], ptr [[PTR0]], align 4, !sandboxvec [[META8]]
-; REVERT-NEXT:    store float [[SUB1]], ptr [[PTR1]], align 4, !sandboxvec [[META8]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META9:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META9]]
+; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META9]]
+; REVERT-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], [[LD0]], !sandboxvec [[META9]]
+; REVERT-NEXT:    [[SUB1:%.*]] = fsub float [[LD1]], [[LD1]], !sandboxvec [[META9]]
+; REVERT-NEXT:    store float [[SUB0]], ptr [[PTR0]], align 4, !sandboxvec [[META9]]
+; REVERT-NEXT:    store float [[SUB1]], ptr [[PTR1]], align 4, !sandboxvec [[META9]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr float, ptr %ptr, i32 0
@@ -349,22 +349,22 @@ define void @diamondWithShuffle(ptr %ptr) {
 ; CHECK-LABEL: define void @diamondWithShuffle(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META9:![0-9]+]]
-; CHECK-NEXT:    [[VSHUF:%.*]] = shufflevector <2 x float> [[VECL]], <2 x float> [[VECL]], <2 x i32> <i32 1, i32 0>, !sandboxvec [[META9]]
-; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VSHUF]], !sandboxvec [[META9]]
-; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META9]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META10:![0-9]+]]
+; CHECK-NEXT:    [[VSHUF:%.*]] = shufflevector <2 x float> [[VECL]], <2 x float> [[VECL]], <2 x i32> <i32 1, i32 0>, !sandboxvec [[META10]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VSHUF]], !sandboxvec [[META10]]
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META10]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @diamondWithShuffle(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META9:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META9]]
-; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META9]]
-; REVERT-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], [[LD1]], !sandboxvec [[META9]]
-; REVERT-NEXT:    [[SUB1:%.*]] = fsub float [[LD1]], [[LD0]], !sandboxvec [[META9]]
-; REVERT-NEXT:    store float [[SUB0]], ptr [[PTR0]], align 4, !sandboxvec [[META9]]
-; REVERT-NEXT:    store float [[SUB1]], ptr [[PTR1]], align 4, !sandboxvec [[META9]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META10:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META10]]
+; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META10]]
+; REVERT-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], [[LD1]], !sandboxvec [[META10]]
+; REVERT-NEXT:    [[SUB1:%.*]] = fsub float [[LD1]], [[LD0]], !sandboxvec [[META10]]
+; REVERT-NEXT:    store float [[SUB0]], ptr [[PTR0]], align 4, !sandboxvec [[META10]]
+; REVERT-NEXT:    store float [[SUB1]], ptr [[PTR1]], align 4, !sandboxvec [[META10]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr float, ptr %ptr, i32 0
@@ -383,22 +383,22 @@ define void @diamondWithShuffleFromVec(ptr %ptr) {
 ; CHECK-LABEL: define void @diamondWithShuffleFromVec(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META10:![0-9]+]]
-; CHECK-NEXT:    [[VSHUF:%.*]] = shufflevector <4 x float> [[VECL]], <4 x float> [[VECL]], <4 x i32> <i32 2, i32 3, i32 0, i32 1>, !sandboxvec [[META10]]
-; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], [[VSHUF]], !sandboxvec [[META10]]
-; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8, !sandboxvec [[META10]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META11:![0-9]+]]
+; CHECK-NEXT:    [[VSHUF:%.*]] = shufflevector <4 x float> [[VECL]], <4 x float> [[VECL]], <4 x i32> <i32 2, i32 3, i32 0, i32 1>, !sandboxvec [[META11]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], [[VSHUF]], !sandboxvec [[META11]]
+; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8, !sandboxvec [[META11]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @diamondWithShuffleFromVec(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 1, !sandboxvec [[META10:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META10]]
-; REVERT-NEXT:    [[LD1:%.*]] = load <2 x float>, ptr [[PTR1]], align 8, !sandboxvec [[META10]]
-; REVERT-NEXT:    [[SUB0:%.*]] = fsub <2 x float> [[LD0]], [[LD1]], !sandboxvec [[META10]]
-; REVERT-NEXT:    [[SUB1:%.*]] = fsub <2 x float> [[LD1]], [[LD0]], !sandboxvec [[META10]]
-; REVERT-NEXT:    store <2 x float> [[SUB0]], ptr [[PTR0]], align 8, !sandboxvec [[META10]]
-; REVERT-NEXT:    store <2 x float> [[SUB1]], ptr [[PTR1]], align 8, !sandboxvec [[META10]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 1, !sandboxvec [[META11:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META11]]
+; REVERT-NEXT:    [[LD1:%.*]] = load <2 x float>, ptr [[PTR1]], align 8, !sandboxvec [[META11]]
+; REVERT-NEXT:    [[SUB0:%.*]] = fsub <2 x float> [[LD0]], [[LD1]], !sandboxvec [[META11]]
+; REVERT-NEXT:    [[SUB1:%.*]] = fsub <2 x float> [[LD1]], [[LD0]], !sandboxvec [[META11]]
+; REVERT-NEXT:    store <2 x float> [[SUB0]], ptr [[PTR0]], align 8, !sandboxvec [[META11]]
+; REVERT-NEXT:    store <2 x float> [[SUB1]], ptr [[PTR1]], align 8, !sandboxvec [[META11]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
@@ -417,25 +417,25 @@ define void @diamondMultiInput(ptr %ptr, ptr %ptrX) {
 ; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[LDX:%.*]] = load float, ptr [[PTRX]], align 4
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META11:![0-9]+]]
-; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x float> poison, float [[LDX]], i32 0, !sandboxvec [[META11]]
-; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[VECL]], i32 0, !sandboxvec [[META11]]
-; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x float> [[VINS]], float [[VEXT]], i32 1, !sandboxvec [[META11]]
-; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VINS1]], !sandboxvec [[META11]]
-; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META11]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META12:![0-9]+]]
+; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x float> poison, float [[LDX]], i32 0, !sandboxvec [[META12]]
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[VECL]], i32 0, !sandboxvec [[META12]]
+; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x float> [[VINS]], float [[VEXT]], i32 1, !sandboxvec [[META12]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VINS1]], !sandboxvec [[META12]]
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META12]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @diamondMultiInput(
 ; REVERT-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META11:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META11]]
-; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META11]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1, !sandboxvec [[META12:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4, !sandboxvec [[META12]]
+; REVERT-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4, !sandboxvec [[META12]]
 ; REVERT-NEXT:    [[LDX:%.*]] = load float, ptr [[PTRX]], align 4
-; REVERT-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], [[LDX]], !sandboxvec [[META11]]
-; REVERT-NEXT:    [[SUB1:%.*]] = fsub float [[LD1]], [[LD0]], !sandboxvec [[META11]]
-; REVERT-NEXT:    store float [[SUB0]], ptr [[PTR0]], align 4, !sandboxvec [[META11]]
-; REVERT-NEXT:    store float [[SUB1]], ptr [[PTR1]], align 4, !sandboxvec [[META11]]
+; REVERT-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], [[LDX]], !sandboxvec [[META12]]
+; REVERT-NEXT:    [[SUB1:%.*]] = fsub float [[LD1]], [[LD0]], !sandboxvec [[META12]]
+; REVERT-NEXT:    store float [[SUB0]], ptr [[PTR0]], align 4, !sandboxvec [[META12]]
+; REVERT-NEXT:    store float [[SUB1]], ptr [[PTR1]], align 4, !sandboxvec [[META12]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr float, ptr %ptr, i32 0
@@ -458,30 +458,30 @@ define void @diamondMultiInputVector(ptr %ptr, ptr %ptrX) {
 ; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
 ; CHECK-NEXT:    [[LDX:%.*]] = load <2 x float>, ptr [[PTRX]], align 8
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META12:![0-9]+]]
-; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[LDX]], i32 0, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VINS:%.*]] = insertelement <4 x float> poison, float [[VEXT]], i32 0, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VEXT1:%.*]] = extractelement <2 x float> [[LDX]], i32 1, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VINS2:%.*]] = insertelement <4 x float> [[VINS]], float [[VEXT1]], i32 1, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VEXT3:%.*]] = extractelement <4 x float> [[VECL]], i32 0, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VINS4:%.*]] = insertelement <4 x float> [[VINS2]], float [[VEXT3]], i32 2, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VEXT5:%.*]] = extractelement <4 x float> [[VECL]], i32 1, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VINS6:%.*]] = insertelement <4 x float> [[VINS4]], float [[VEXT5]], i32 3, !sandboxvec [[META12]]
-; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], [[VINS6]], !sandboxvec [[META12]]
-; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8, !sandboxvec [[META12]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META13:![0-9]+]]
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[LDX]], i32 0, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VINS:%.*]] = insertelement <4 x float> poison, float [[VEXT]], i32 0, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VEXT1:%.*]] = extractelement <2 x float> [[LDX]], i32 1, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VINS2:%.*]] = insertelement <4 x float> [[VINS]], float [[VEXT1]], i32 1, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VEXT3:%.*]] = extractelement <4 x float> [[VECL]], i32 0, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VINS4:%.*]] = insertelement <4 x float> [[VINS2]], float [[VEXT3]], i32 2, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VEXT5:%.*]] = extractelement <4 x float> [[VECL]], i32 1, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VINS6:%.*]] = insertelement <4 x float> [[VINS4]], float [[VEXT5]], i32 3, !sandboxvec [[META13]]
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <4 x float> [[VECL]], [[VINS6]], !sandboxvec [[META13]]
+; CHECK-NEXT:    store <4 x float> [[VEC]], ptr [[PTR0]], align 8, !sandboxvec [[META13]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @diamondMultiInputVector(
 ; REVERT-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 1, !sandboxvec [[META12:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META12]]
-; REVERT-NEXT:    [[LD1:%.*]] = load <2 x float>, ptr [[PTR1]], align 8, !sandboxvec [[META12]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr <2 x float>, ptr [[PTR]], i32 1, !sandboxvec [[META13:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load <2 x float>, ptr [[PTR0]], align 8, !sandboxvec [[META13]]
+; REVERT-NEXT:    [[LD1:%.*]] = load <2 x float>, ptr [[PTR1]], align 8, !sandboxvec [[META13]]
 ; REVERT-NEXT:    [[LDX:%.*]] = load <2 x float>, ptr [[PTRX]], align 8
-; REVERT-NEXT:    [[SUB0:%.*]] = fsub <2 x float> [[LD0]], [[LDX]], !sandboxvec [[META12]]
-; REVERT-NEXT:    [[SUB1:%.*]] = fsub <2 x float> [[LD1]], [[LD0]], !sandboxvec [[META12]]
-; REVERT-NEXT:    store <2 x float> [[SUB0]], ptr [[PTR0]], align 8, !sandboxvec [[META12]]
-; REVERT-NEXT:    store <2 x float> [[SUB1]], ptr [[PTR1]], align 8, !sandboxvec [[META12]]
+; REVERT-NEXT:    [[SUB0:%.*]] = fsub <2 x float> [[LD0]], [[LDX]], !sandboxvec [[META13]]
+; REVERT-NEXT:    [[SUB1:%.*]] = fsub <2 x float> [[LD1]], [[LD0]], !sandboxvec [[META13]]
+; REVERT-NEXT:    store <2 x float> [[SUB0]], ptr [[PTR0]], align 8, !sandboxvec [[META13]]
+; REVERT-NEXT:    store <2 x float> [[SUB1]], ptr [[PTR1]], align 8, !sandboxvec [[META13]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x float>, ptr %ptr, i32 0
@@ -503,24 +503,24 @@ define void @diamondWithConstantVector(ptr %ptr) {
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr i32, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[GEPB0:%.*]] = getelementptr i32, ptr [[PTR]], i64 10
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPA0]], align 4, !sandboxvec [[META13:![0-9]+]]
-; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPB0]], align 4, !sandboxvec [[META14:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPA0]], align 4, !sandboxvec [[META14:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPB0]], align 4, !sandboxvec [[META15:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @diamondWithConstantVector(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[GEPA0:%.*]] = getelementptr i32, ptr [[PTR]], i64 0
-; REVERT-NEXT:    [[GEPA1:%.*]] = getelementptr i32, ptr [[PTR]], i64 1, !sandboxvec [[META13:![0-9]+]]
+; REVERT-NEXT:    [[GEPA1:%.*]] = getelementptr i32, ptr [[PTR]], i64 1, !sandboxvec [[META14:![0-9]+]]
 ; REVERT-NEXT:    [[GEPB0:%.*]] = getelementptr i32, ptr [[PTR]], i64 10
-; REVERT-NEXT:    [[GEPB1:%.*]] = getelementptr i32, ptr [[PTR]], i64 11, !sandboxvec [[META14:![0-9]+]]
+; REVERT-NEXT:    [[GEPB1:%.*]] = getelementptr i32, ptr [[PTR]], i64 11, !sandboxvec [[META15:![0-9]+]]
 ; REVERT-NEXT:    [[ZEXT0:%.*]] = zext i16 0 to i32
 ; REVERT-NEXT:    [[ZEXT1:%.*]] = zext i16 0 to i32
-; REVERT-NEXT:    store i32 [[ZEXT0]], ptr [[GEPA0]], align 4, !sandboxvec [[META13]]
-; REVERT-NEXT:    store i32 [[ZEXT1]], ptr [[GEPA1]], align 4, !sandboxvec [[META13]]
-; REVERT-NEXT:    [[ORB0:%.*]] = or i32 0, [[ZEXT0]], !sandboxvec [[META14]]
-; REVERT-NEXT:    [[ORB1:%.*]] = or i32 0, [[ZEXT1]], !sandboxvec [[META14]]
-; REVERT-NEXT:    store i32 [[ORB0]], ptr [[GEPB0]], align 4, !sandboxvec [[META14]]
-; REVERT-NEXT:    store i32 [[ORB1]], ptr [[GEPB1]], align 4, !sandboxvec [[META14]]
+; REVERT-NEXT:    store i32 [[ZEXT0]], ptr [[GEPA0]], align 4, !sandboxvec [[META14]]
+; REVERT-NEXT:    store i32 [[ZEXT1]], ptr [[GEPA1]], align 4, !sandboxvec [[META14]]
+; REVERT-NEXT:    [[ORB0:%.*]] = or i32 0, [[ZEXT0]], !sandboxvec [[META15]]
+; REVERT-NEXT:    [[ORB1:%.*]] = or i32 0, [[ZEXT1]], !sandboxvec [[META15]]
+; REVERT-NEXT:    store i32 [[ORB0]], ptr [[GEPB0]], align 4, !sandboxvec [[META15]]
+; REVERT-NEXT:    store i32 [[ORB1]], ptr [[GEPB1]], align 4, !sandboxvec [[META15]]
 ; REVERT-NEXT:    ret void
 ;
   %gepA0 = getelementptr i32, ptr %ptr, i64 0
@@ -547,29 +547,29 @@ define void @diamondWithConstantVector(ptr %ptr) {
 define void @vecInstrsPlacement(ptr %ptr0) {
 ; CHECK-LABEL: define void @vecInstrsPlacement(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x double>, ptr [[PTR0]], align 8, !sandboxvec [[META15:![0-9]+]]
-; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x double>, ptr [[PTR0]], align 8, !sandboxvec [[META15]]
-; CHECK-NEXT:    [[VEC2:%.*]] = fmul <2 x double> [[VECL]], [[VECL1]], !sandboxvec [[META15]]
-; CHECK-NEXT:    [[VEC:%.*]] = fmul <2 x double> [[VECL]], [[VECL1]], !sandboxvec [[META15]]
-; CHECK-NEXT:    [[VEC3:%.*]] = fadd <2 x double> [[VEC]], [[VEC2]], !sandboxvec [[META15]]
-; CHECK-NEXT:    store <2 x double> [[VEC3]], ptr [[PTR0]], align 8, !sandboxvec [[META15]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x double>, ptr [[PTR0]], align 8, !sandboxvec [[META16:![0-9]+]]
+; CHECK-NEXT:    [[VECL1:%.*]] = load <2 x double>, ptr [[PTR0]], align 8, !sandboxvec [[META16]]
+; CHECK-NEXT:    [[VEC2:%.*]] = fmul <2 x double> [[VECL]], [[VECL1]], !sandboxvec [[META16]]
+; CHECK-NEXT:    [[VEC:%.*]] = fmul <2 x double> [[VECL]], [[VECL1]], !sandboxvec [[META16]]
+; CHECK-NEXT:    [[VEC3:%.*]] = fadd <2 x double> [[VEC]], [[VEC2]], !sandboxvec [[META16]]
+; CHECK-NEXT:    store <2 x double> [[VEC3]], ptr [[PTR0]], align 8, !sandboxvec [[META16]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @vecInstrsPlacement(
 ; REVERT-SAME: ptr [[PTR0:%.*]]) {
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr inbounds double, ptr [[PTR0]], i64 1, !sandboxvec [[META15:![0-9]+]]
-; REVERT-NEXT:    [[LDA_0:%.*]] = load double, ptr [[PTR0]], align 8, !sandboxvec [[META15]]
-; REVERT-NEXT:    [[LDA_1:%.*]] = load double, ptr [[PTR1]], align 8, !sandboxvec [[META15]]
-; REVERT-NEXT:    [[LDB_0:%.*]] = load double, ptr [[PTR0]], align 8, !sandboxvec [[META15]]
-; REVERT-NEXT:    [[LDB_1:%.*]] = load double, ptr [[PTR1]], align 8, !sandboxvec [[META15]]
-; REVERT-NEXT:    [[MUL0:%.*]] = fmul double [[LDA_0]], [[LDB_0]], !sandboxvec [[META15]]
-; REVERT-NEXT:    [[MUL1:%.*]] = fmul double [[LDA_1]], [[LDB_1]], !sandboxvec [[META15]]
-; REVERT-NEXT:    [[MUL2:%.*]] = fmul double [[LDA_0]], [[LDB_0]], !sandboxvec [[META15]]
-; REVERT-NEXT:    [[MUL3:%.*]] = fmul double [[LDA_1]], [[LDB_1]], !sandboxvec [[META15]]
-; REVERT-NEXT:    [[ADD0:%.*]] = fadd double [[MUL0]], [[MUL2]], !sandboxvec [[META15]]
-; REVERT-NEXT:    [[ADD1:%.*]] = fadd double [[MUL1]], [[MUL3]], !sandboxvec [[META15]]
-; REVERT-NEXT:    store double [[ADD0]], ptr [[PTR0]], align 8, !sandboxvec [[META15]]
-; REVERT-NEXT:    store double [[ADD1]], ptr [[PTR1]], align 8, !sandboxvec [[META15]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr inbounds double, ptr [[PTR0]], i64 1, !sandboxvec [[META16:![0-9]+]]
+; REVERT-NEXT:    [[LDA_0:%.*]] = load double, ptr [[PTR0]], align 8, !sandboxvec [[META16]]
+; REVERT-NEXT:    [[LDA_1:%.*]] = load double, ptr [[PTR1]], align 8, !sandboxvec [[META16]]
+; REVERT-NEXT:    [[LDB_0:%.*]] = load double, ptr [[PTR0]], align 8, !sandboxvec [[META16]]
+; REVERT-NEXT:    [[LDB_1:%.*]] = load double, ptr [[PTR1]], align 8, !sandboxvec [[META16]]
+; REVERT-NEXT:    [[MUL0:%.*]] = fmul double [[LDA_0]], [[LDB_0]], !sandboxvec [[META16]]
+; REVERT-NEXT:    [[MUL1:%.*]] = fmul double [[LDA_1]], [[LDB_1]], !sandboxvec [[META16]]
+; REVERT-NEXT:    [[MUL2:%.*]] = fmul double [[LDA_0]], [[LDB_0]], !sandboxvec [[META16]]
+; REVERT-NEXT:    [[MUL3:%.*]] = fmul double [[LDA_1]], [[LDB_1]], !sandboxvec [[META16]]
+; REVERT-NEXT:    [[ADD0:%.*]] = fadd double [[MUL0]], [[MUL2]], !sandboxvec [[META16]]
+; REVERT-NEXT:    [[ADD1:%.*]] = fadd double [[MUL1]], [[MUL3]], !sandboxvec [[META16]]
+; REVERT-NEXT:    store double [[ADD0]], ptr [[PTR0]], align 8, !sandboxvec [[META16]]
+; REVERT-NEXT:    store double [[ADD1]], ptr [[PTR1]], align 8, !sandboxvec [[META16]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds double, ptr %ptr0, i64 1
@@ -602,26 +602,26 @@ define void @instrsInMultipleBundles(ptr noalias %ptr) {
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 2
 ; CHECK-NEXT:    [[LDA2:%.*]] = load i8, ptr [[GEP2]], align 1
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i8>, ptr [[GEP0]], align 1, !sandboxvec [[META16:![0-9]+]]
-; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x i8> [[VECL]], i32 1, !sandboxvec [[META16]]
-; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x i8> poison, i8 [[VEXT]], i32 0, !sandboxvec [[META16]]
-; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x i8> [[VINS]], i8 [[LDA2]], i32 1, !sandboxvec [[META16]]
-; CHECK-NEXT:    [[VEC:%.*]] = add <2 x i8> [[VECL]], [[VINS1]], !sandboxvec [[META16]]
-; CHECK-NEXT:    store <2 x i8> [[VEC]], ptr [[GEP0]], align 1, !sandboxvec [[META16]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i8>, ptr [[GEP0]], align 1, !sandboxvec [[META17:![0-9]+]]
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x i8> [[VECL]], i32 1, !sandboxvec [[META17]]
+; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x i8> poison, i8 [[VEXT]], i32 0, !sandboxvec [[META17]]
+; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x i8> [[VINS]], i8 [[LDA2]], i32 1, !sandboxvec [[META17]]
+; CHECK-NEXT:    [[VEC:%.*]] = add <2 x i8> [[VECL]], [[VINS1]], !sandboxvec [[META17]]
+; CHECK-NEXT:    store <2 x i8> [[VEC]], ptr [[GEP0]], align 1, !sandboxvec [[META17]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @instrsInMultipleBundles(
 ; REVERT-SAME: ptr noalias [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
-; REVERT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 1, !sandboxvec [[META16:![0-9]+]]
+; REVERT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 1, !sandboxvec [[META17:![0-9]+]]
 ; REVERT-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 2
-; REVERT-NEXT:    [[LDA0:%.*]] = load i8, ptr [[GEP0]], align 1, !sandboxvec [[META16]]
-; REVERT-NEXT:    [[LDA1:%.*]] = load i8, ptr [[GEP1]], align 1, !sandboxvec [[META16]]
+; REVERT-NEXT:    [[LDA0:%.*]] = load i8, ptr [[GEP0]], align 1, !sandboxvec [[META17]]
+; REVERT-NEXT:    [[LDA1:%.*]] = load i8, ptr [[GEP1]], align 1, !sandboxvec [[META17]]
 ; REVERT-NEXT:    [[LDA2:%.*]] = load i8, ptr [[GEP2]], align 1
-; REVERT-NEXT:    [[ADD0:%.*]] = add i8 [[LDA0]], [[LDA1]], !sandboxvec [[META16]]
-; REVERT-NEXT:    [[ADD1:%.*]] = add i8 [[LDA1]], [[LDA2]], !sandboxvec [[META16]]
-; REVERT-NEXT:    store i8 [[ADD0]], ptr [[GEP0]], align 1, !sandboxvec [[META16]]
-; REVERT-NEXT:    store i8 [[ADD1]], ptr [[GEP1]], align 1, !sandboxvec [[META16]]
+; REVERT-NEXT:    [[ADD0:%.*]] = add i8 [[LDA0]], [[LDA1]], !sandboxvec [[META17]]
+; REVERT-NEXT:    [[ADD1:%.*]] = add i8 [[LDA1]], [[LDA2]], !sandboxvec [[META17]]
+; REVERT-NEXT:    store i8 [[ADD0]], ptr [[GEP0]], align 1, !sandboxvec [[META17]]
+; REVERT-NEXT:    store i8 [[ADD1]], ptr [[GEP1]], align 1, !sandboxvec [[META17]]
 ; REVERT-NEXT:    ret void
 ;
   %gep0 = getelementptr i8, ptr %ptr, i64 0
@@ -641,21 +641,21 @@ define void @vectorize_constants(ptr %ptr) {
 ; CHECK-LABEL: define void @vectorize_constants(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META17:![0-9]+]]
-; CHECK-NEXT:    [[VEC:%.*]] = add <2 x i8> [[VECL]], <i8 0, i8 1>, !sandboxvec [[META17]]
-; CHECK-NEXT:    store <2 x i8> [[VEC]], ptr [[PTR0]], align 1, !sandboxvec [[META17]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i8>, ptr [[PTR0]], align 1, !sandboxvec [[META18:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = add <2 x i8> [[VECL]], <i8 0, i8 1>, !sandboxvec [[META18]]
+; CHECK-NEXT:    store <2 x i8> [[VEC]], ptr [[PTR0]], align 1, !sandboxvec [[META18]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @vectorize_constants(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr [[PTR]], i32 1, !sandboxvec [[META17:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load i8, ptr [[PTR0]], align 1, !sandboxvec [[META17]]
-; REVERT-NEXT:    [[LD1:%.*]] = load i8, ptr [[PTR1]], align 1, !sandboxvec [[META17]]
-; REVERT-NEXT:    [[ADD0:%.*]] = add i8 [[LD0]], 0, !sandboxvec [[META17]]
-; REVERT-NEXT:    [[ADD1:%.*]] = add i8 [[LD1]], 1, !sandboxvec [[META17]]
-; REVERT-NEXT:    store i8 [[ADD0]], ptr [[PTR0]], align 1, !sandboxvec [[META17]]
-; REVERT-NEXT:    store i8 [[ADD1]], ptr [[PTR1]], align 1, !sandboxvec [[META17]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr [[PTR]], i32 1, !sandboxvec [[META18:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load i8, ptr [[PTR0]], align 1, !sandboxvec [[META18]]
+; REVERT-NEXT:    [[LD1:%.*]] = load i8, ptr [[PTR1]], align 1, !sandboxvec [[META18]]
+; REVERT-NEXT:    [[ADD0:%.*]] = add i8 [[LD0]], 0, !sandboxvec [[META18]]
+; REVERT-NEXT:    [[ADD1:%.*]] = add i8 [[LD1]], 1, !sandboxvec [[META18]]
+; REVERT-NEXT:    store i8 [[ADD0]], ptr [[PTR0]], align 1, !sandboxvec [[META18]]
+; REVERT-NEXT:    store i8 [[ADD1]], ptr [[PTR1]], align 1, !sandboxvec [[META18]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
@@ -673,21 +673,21 @@ define void @vectorize_constant_vectors(ptr %ptr) {
 ; CHECK-LABEL: define void @vectorize_constant_vectors(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr <2 x i8>, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 2, !sandboxvec [[META18:![0-9]+]]
-; CHECK-NEXT:    [[VEC:%.*]] = sub <4 x i8> [[VECL]], <i8 0, i8 0, i8 1, i8 1>, !sandboxvec [[META18]]
-; CHECK-NEXT:    store <4 x i8> [[VEC]], ptr [[PTR0]], align 2, !sandboxvec [[META18]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i8>, ptr [[PTR0]], align 2, !sandboxvec [[META19:![0-9]+]]
+; CHECK-NEXT:    [[VEC:%.*]] = sub <4 x i8> [[VECL]], <i8 0, i8 0, i8 1, i8 1>, !sandboxvec [[META19]]
+; CHECK-NEXT:    store <4 x i8> [[VEC]], ptr [[PTR0]], align 2, !sandboxvec [[META19]]
 ; CHECK-NEXT:    ret void
 ;
 ; REVERT-LABEL: define void @vectorize_constant_vectors(
 ; REVERT-SAME: ptr [[PTR:%.*]]) {
 ; REVERT-NEXT:    [[PTR0:%.*]] = getelementptr <2 x i8>, ptr [[PTR]], i32 0
-; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr <2 x i8>, ptr [[PTR]], i32 1, !sandboxvec [[META18:![0-9]+]]
-; REVERT-NEXT:    [[LD0:%.*]] = load <2 x i8>, ptr [[PTR0]], align 2, !sandboxvec [[META18]]
-; REVERT-NEXT:    [[LD1:%.*]] = load <2 x i8>, ptr [[PTR1]], align 2, !sandboxvec [[META18]]
-; REVERT-NEXT:    [[SUB0:%.*]] = sub <2 x i8> [[LD0]], zeroinitializer, !sandboxvec [[META18]]
-; REVERT-NEXT:    [[SUB1:%.*]] = sub <2 x i8> [[LD1]], splat (i8 1), !sandboxvec [[META18]]
-; REVERT-NEXT:    store <2 x i8> [[SUB0]], ptr [[PTR0]], align 2, !sandboxvec [[META18]]
-; REVERT-NEXT:    store <2 x i8> [[SUB1]], ptr [[PTR1]], align 2, !sandboxvec [[META18]]
+; REVERT-NEXT:    [[PTR1:%.*]] = getelementptr <2 x i8>, ptr [[PTR]], i32 1, !sandboxvec [[META19:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load <2 x i8>, ptr [[PTR0]], align 2, !sandboxvec [[META19]]
+; REVERT-NEXT:    [[LD1:%.*]] = load <2 x i8>, ptr [[PTR1]], align 2, !sandboxvec [[META19]]
+; REVERT-NEXT:    [[SUB0:%.*]] = sub <2 x i8> [[LD0]], zeroinitializer, !sandboxvec [[META19]]
+; REVERT-NEXT:    [[SUB1:%.*]] = sub <2 x i8> [[LD1]], splat (i8 1), !sandboxvec [[META19]]
+; REVERT-NEXT:    store <2 x i8> [[SUB0]], ptr [[PTR0]], align 2, !sandboxvec [[META19]]
+; REVERT-NEXT:    store <2 x i8> [[SUB1]], ptr [[PTR1]], align 2, !sandboxvec [[META19]]
 ; REVERT-NEXT:    ret void
 ;
   %ptr0 = getelementptr <2 x i8>, ptr %ptr, i32 0
@@ -720,6 +720,7 @@ define void @vectorize_constant_vectors(ptr %ptr) {
 ; CHECK: [[META16]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META17]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META18]] = distinct !{!"sandboxregion"}
+; CHECK: [[META19]] = distinct !{!"sandboxregion"}
 ;.
 ; REVERT: [[META0]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META1]] = distinct !{!"sandboxregion"}
@@ -740,4 +741,5 @@ define void @vectorize_constant_vectors(ptr %ptr) {
 ; REVERT: [[META16]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META17]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META18]] = distinct !{!"sandboxregion"}
+; REVERT: [[META19]] = distinct !{!"sandboxregion"}
 ;.

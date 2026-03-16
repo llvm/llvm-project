@@ -122,4 +122,4 @@ private:
   std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H

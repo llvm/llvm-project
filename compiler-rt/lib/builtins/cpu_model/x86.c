@@ -105,6 +105,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
+  AMDFAM1AH_ZNVER6,
   INTEL_COREI7_DIAMONDRAPIDS,
   INTEL_COREI7_NOVALAKE,
   CPU_SUBTYPE_MAX
@@ -837,19 +838,26 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   case 26:
     CPU = "znver5";
     Type = AMDFAM1AH;
-    if (Model <= 0x77) {
+    if (Model <= 0x4f || (Model >= 0x60 && Model <= 0x77) ||
+        (Model >= 0xd0 && Model <= 0xd7)) {
       // Models 00h-0Fh (Breithorn).
       // Models 10h-1Fh (Breithorn-Dense).
       // Models 20h-2Fh (Strix 1).
       // Models 30h-37h (Strix 2).
       // Models 38h-3Fh (Strix 3).
       // Models 40h-4Fh (Granite Ridge).
-      // Models 50h-5Fh (Weisshorn).
       // Models 60h-6Fh (Krackan1).
       // Models 70h-77h (Sarlak).
+      // Models D0h-D7h (Annapurna).
       CPU = "znver5";
       Subtype = AMDFAM1AH_ZNVER5;
       break; //  "znver5"
+    }
+    if ((Model >= 0x50 && Model <= 0x5f) || (Model >= 0x80 && Model <= 0xcf) ||
+        (Model >= 0xd8 && Model <= 0xe7)) {
+      CPU = "znver6";
+      Subtype = AMDFAM1AH_ZNVER6;
+      break; //  "znver6"
     }
     break;
   default:

@@ -2,10 +2,10 @@
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-SICIVI %s
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-SICIVI %s
 ; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalarize-global-loads=false -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalarize-global-loads=false -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
 ; OPT-CI-NOT: getelementptr i32, ptr addrspace(1) %in

@@ -18,7 +18,7 @@ class HostInfoAIX : public HostInfoPosix {
   friend class HostInfoBase;
 
 public:
-  static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
+  static void Initialize();
   static void Terminate();
 
   static FileSpec GetProgramFileSpec();

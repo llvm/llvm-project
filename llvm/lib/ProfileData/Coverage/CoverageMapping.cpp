@@ -923,8 +923,11 @@ Error CoverageMapping::loadFunctionRecord(
 
   // Emit CountedRegions into FunctionRecord.
   if (auto E = CountedRegionEmitter(Record, Ctx, Function, IsVersion11)
-                   .emitCountedRegions())
-    return E;
+                   .emitCountedRegions()) {
+    errs() << "warning: " << Record.FunctionName << ": ";
+    logAllUnhandledErrors(std::move(E), errs());
+    return Error::success();
+  }
 
   // Don't create records for (filenames, function) pairs we've already seen.
   auto FilenamesHash = hash_combine_range(Record.Filenames);

@@ -219,6 +219,7 @@ public:
   void VisitSectionAttr(const SectionAttr *SA);
   void VisitVisibilityAttr(const VisibilityAttr *VA);
   void VisitTLSModelAttr(const TLSModelAttr *TA);
+  void VisitAvailabilityAttr(const AvailabilityAttr *AA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
@@ -61,9 +62,9 @@ void buildPreGPUCommonPassPipeline(
 void buildGPUPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToXeVMPipelineOptions &options) {
   xegpu::XeGPUPropagateLayoutOptions laneLayoutOptions;
+  laneLayoutOptions.indexBitWidth = options.use64bitIndex ? 64 : 32;
   laneLayoutOptions.layoutKind = "lane";
   pm.addNestedPass<ModuleOp>(createCSEPass());
-  pm.addNestedPass<ModuleOp>(createGpuXeVMAttachTarget());
   if (options.xegpuOpLevel == "workgroup") {
     xegpu::XeGPUPropagateLayoutOptions sgLayoutOptions;
     sgLayoutOptions.layoutKind = "subgroup";
@@ -78,7 +79,6 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(instDataOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUBlocking());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   }
   if (options.xegpuOpLevel == "subgroup" ||
@@ -86,7 +86,6 @@ void buildGPUPassPipeline(OpPassManager &pm,
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
     pm.addNestedPass<gpu::GPUModuleOp>(xegpu::createXeGPUPeepHoleOptimizer());
-    pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
     pm.addNestedPass<gpu::GPUModuleOp>(
         xegpu::createXeGPUPropagateLayout(laneLayoutOptions));
@@ -129,6 +128,8 @@ void buildPostGPUCommonPassPipeline(
   pm.addPass(createReconcileUnrealizedCastsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  // XeVM-to-LLVM must be the last pass before gpu-module-to-binary.
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertXeVMToLLVMPass());
   // gpu-module-to-binary
   {
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;

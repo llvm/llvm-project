@@ -50,6 +50,7 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
   }
   void writeOwnedBlob(ArrayRef<char> blob) override {}
   void writeOwnedBool(bool value) override {}
+  void writeUnownedBlob(ArrayRef<char> blob) override {}
 
   int64_t getBytecodeVersion() const override {
     return state.getDesiredBytecodeVersion();

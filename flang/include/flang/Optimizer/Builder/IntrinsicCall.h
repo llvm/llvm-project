@@ -56,49 +56,6 @@ genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
 
-/// Enums used to templatize and share lowering of MIN and MAX.
-enum class Extremum { Min, Max };
-
-// There are different ways to deal with NaNs in MIN and MAX.
-// Known existing behaviors are listed below and can be selected for
-// f18 MIN/MAX implementation.
-enum class ExtremumBehavior {
-  // Note: the Signaling/quiet aspect of NaNs in the behaviors below are
-  // not described because there is no way to control/observe such aspect in
-  // MLIR/LLVM yet. The IEEE behaviors come with requirements regarding this
-  // aspect that are therefore currently not enforced. In the descriptions
-  // below, NaNs can be signaling or quite. Returned NaNs may be signaling
-  // if one of the input NaN was signaling but it cannot be guaranteed either.
-  // Existing compilers using an IEEE behavior (gfortran) also do not fulfill
-  // signaling/quiet requirements.
-  IeeeMinMaximumNumber,
-  // IEEE minimumNumber/maximumNumber behavior (754-2019, section 9.6):
-  // If one of the argument is and number and the other is NaN, return the
-  // number. If both arguements are NaN, return NaN.
-  // Compilers: gfortran.
-  IeeeMinMaximum,
-  // IEEE minimum/maximum behavior (754-2019, section 9.6):
-  // If one of the argument is NaN, return NaN.
-  MinMaxss,
-  // x86 minss/maxss behavior:
-  // If the second argument is a number and the other is NaN, return the number.
-  // In all other cases where at least one operand is NaN, return NaN.
-  // Compilers: xlf (only for MAX), ifort, pgfortran -nollvm, and nagfor.
-  PgfortranLlvm,
-  // "Opposite of" x86 minss/maxss behavior:
-  // If the first argument is a number and the other is NaN, return the
-  // number.
-  // In all other cases where at least one operand is NaN, return NaN.
-  // Compilers: xlf (only for MIN), and pgfortran (with llvm).
-  IeeeMinMaxNum
-  // IEEE minNum/maxNum behavior (754-2008, section 5.3.1):
-  // TODO: Not implemented.
-  // It is the only behavior where the signaling/quiet aspect of a NaN argument
-  // impacts if the result should be NaN or the argument that is a number.
-  // LLVM/MLIR do not provide ways to observe this aspect, so it is not
-  // possible to implement it without some target dependent runtime.
-};
-
 /// Enum specifying how intrinsic argument evaluate::Expr should be
 /// lowered to fir::ExtendedValue to be passed to genIntrinsicCall.
 enum class LowerIntrinsicArgAs {
@@ -231,6 +188,7 @@ struct IntrinsicLibrary {
                             llvm::ArrayRef<mlir::Value> args);
   void genCFPointer(llvm::ArrayRef<fir::ExtendedValue>);
   void genCFProcPointer(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCFStrPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
@@ -259,8 +217,10 @@ struct IntrinsicLibrary {
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genExtendsTypeOf(mlir::Type,
                                       llvm::ArrayRef<fir::ExtendedValue>);
-  template <Extremum, ExtremumBehavior>
+  template <bool isMax>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genFCString(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genFlush(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genFraction(mlir::Type resultType,
@@ -401,6 +361,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
                            llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genRtc(mlir::Type resultType, llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSameTypeAs(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -443,6 +404,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genTeamNumber(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genTokenize(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);

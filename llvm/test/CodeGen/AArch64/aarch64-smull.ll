@@ -1573,13 +1573,29 @@ entry:
 }
 
 define <8 x i16> @umull_and256_v8i16(<8 x i8> %src1, <8 x i16> %src2) {
-; CHECK-LABEL: umull_and256_v8i16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: umull_and256_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umull_and256_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-SVE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SVE-NEXT:    and z1.h, z1.h, #0x100
+; CHECK-SVE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: umull_and256_v8i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.8h, #1, lsl #8
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <8 x i8> %src1 to <8 x i16>
   %in2 = and <8 x i16> %src2, <i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256, i16 256>
@@ -2074,14 +2090,13 @@ define void @smlsl_smlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ;
 ; CHECK-GI-LABEL: smlsl_smlsl2_v8i16_uzp1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q4, q2, [x1]
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    mov d4, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.8b, v2.8h
-; CHECK-GI-NEXT:    xtn v4.8b, v4.8h
-; CHECK-GI-NEXT:    smull v2.8h, v3.8b, v2.8b
-; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v4.8b
-; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    xtn v3.8b, v3.8h
+; CHECK-GI-NEXT:    smlsl v1.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    smlsl v1.8h, v4.8b, v3.8b
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %5 = load <8 x i16>, ptr %3, align 4
@@ -2120,14 +2135,13 @@ define void @umlsl_umlsl2_v8i16_uzp1(<16 x i8> %0, <8 x i16> %1, ptr %2, ptr %3,
 ;
 ; CHECK-GI-LABEL: umlsl_umlsl2_v8i16_uzp1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q4, q2, [x1]
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    mov d4, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.8b, v2.8h
-; CHECK-GI-NEXT:    xtn v4.8b, v4.8h
-; CHECK-GI-NEXT:    umull v2.8h, v3.8b, v2.8b
-; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v4.8b
-; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    xtn v3.8b, v3.8h
+; CHECK-GI-NEXT:    umlsl v1.8h, v0.8b, v2.8b
+; CHECK-GI-NEXT:    umlsl v1.8h, v4.8b, v3.8b
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %5 = load <8 x i16>, ptr %3, align 4
@@ -2166,14 +2180,13 @@ define void @smlsl_smlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3,
 ;
 ; CHECK-GI-LABEL: smlsl_smlsl2_v4i32_uzp1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q4, q2, [x1]
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    mov d4, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
-; CHECK-GI-NEXT:    xtn v4.4h, v4.4s
-; CHECK-GI-NEXT:    smull v2.4s, v3.4h, v2.4h
-; CHECK-GI-NEXT:    smlal v2.4s, v0.4h, v4.4h
-; CHECK-GI-NEXT:    sub v0.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    xtn v3.4h, v3.4s
+; CHECK-GI-NEXT:    smlsl v1.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    smlsl v1.4s, v4.4h, v3.4h
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %5 = load <4 x i32>, ptr %3, align 4
@@ -2212,14 +2225,13 @@ define void @umlsl_umlsl2_v4i32_uzp1(<8 x i16> %0, <4 x i32> %1, ptr %2, ptr %3,
 ;
 ; CHECK-GI-LABEL: umlsl_umlsl2_v4i32_uzp1:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q4, q2, [x1]
-; CHECK-GI-NEXT:    mov d3, v0.d[1]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    mov d4, v0.d[1]
 ; CHECK-GI-NEXT:    xtn v2.4h, v2.4s
-; CHECK-GI-NEXT:    xtn v4.4h, v4.4s
-; CHECK-GI-NEXT:    umull v2.4s, v3.4h, v2.4h
-; CHECK-GI-NEXT:    umlal v2.4s, v0.4h, v4.4h
-; CHECK-GI-NEXT:    sub v0.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    str q0, [x0]
+; CHECK-GI-NEXT:    xtn v3.4h, v3.4s
+; CHECK-GI-NEXT:    umlsl v1.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    umlsl v1.4s, v4.4h, v3.4h
+; CHECK-GI-NEXT:    str q1, [x0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %5 = load <4 x i32>, ptr %3, align 4

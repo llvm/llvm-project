@@ -215,6 +215,102 @@ func.func @test_scatter_bool_i32(%arg0: tensor<13x52x3xi1>, %arg1: tensor<13x26x
 
 // -----
 
+// CHECK-LABEL: test_gather_i8_i32_indices
+func.func @test_gather_i8_i32_indices(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi8> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi8>, tensor<13x26xi32>) -> tensor<13x26x3xi8>
+  return %0 : tensor<13x26x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i8_i32_indices
+func.func @test_scatter_i8_i32_indices(%arg0: tensor<13x27x3xi8>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi8>) -> tensor<13x27x3xi8> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi8>, tensor<13x26xi32>, tensor<13x26x3xi8>) -> tensor<13x27x3xi8>
+  return %0 : tensor<13x27x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i16_i32_indices
+func.func @test_gather_i16_i32_indices(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi16> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi16>, tensor<13x26xi32>) -> tensor<13x26x3xi16>
+  return %0 : tensor<13x26x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i16_i32_indices
+func.func @test_scatter_i16_i32_indices(%arg0: tensor<13x27x3xi16>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi16>) -> tensor<13x27x3xi16> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi16>, tensor<13x26xi32>, tensor<13x26x3xi16>) -> tensor<13x27x3xi16>
+  return %0 : tensor<13x27x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i32_i32_indices
+func.func @test_gather_i32_i32_indices(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi32> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x26xi32>) -> tensor<13x26x3xi32>
+  return %0 : tensor<13x26x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i32_i32_indices
+func.func @test_scatter_i32_i32_indices(%arg0: tensor<13x27x3xi32>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi32>) -> tensor<13x27x3xi32> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi32>, tensor<13x26xi32>, tensor<13x26x3xi32>) -> tensor<13x27x3xi32>
+  return %0 : tensor<13x27x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i8_i64_indices
+func.func @test_gather_i8_i64_indices(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi8> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi8>, tensor<13x26xi64>) -> tensor<13x26x3xi8>
+  return %0 : tensor<13x26x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i8_i64_indices
+func.func @test_scatter_i8_i64_indices(%arg0: tensor<13x27x3xi8>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi8>) -> tensor<13x27x3xi8> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi8>, tensor<13x26xi64>, tensor<13x26x3xi8>) -> tensor<13x27x3xi8>
+  return %0 : tensor<13x27x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i16_i64_indices
+func.func @test_gather_i16_i64_indices(%arg0: tensor<13x21x3xi16>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi16> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi16>, tensor<13x26xi64>) -> tensor<13x26x3xi16>
+  return %0 : tensor<13x26x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i16_i64_indices
+func.func @test_scatter_i16_i64_indices(%arg0: tensor<13x27x3xi16>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi16>) -> tensor<13x27x3xi16> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi16>, tensor<13x26xi64>, tensor<13x26x3xi16>) -> tensor<13x27x3xi16>
+  return %0 : tensor<13x27x3xi16>
+}
+
+// -----
+
+// CHECK-LABEL: test_gather_i32_i64_indices
+func.func @test_gather_i32_i64_indices(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi32> {
+  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x26xi64>) -> tensor<13x26x3xi32>
+  return %0 : tensor<13x26x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_scatter_i32_i64_indices
+func.func @test_scatter_i32_i64_indices(%arg0: tensor<13x27x3xi32>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi32>) -> tensor<13x27x3xi32> {
+  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi32>, tensor<13x26xi64>, tensor<13x26x3xi32>) -> tensor<13x27x3xi32>
+  return %0 : tensor<13x27x3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: test_cast_bool_fp32
 func.func @test_cast_bool_fp32(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xf32> {
   %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xf32>
@@ -272,6 +368,14 @@ func.func @test_dim(%arg0: tensor<1x2x3x4xi32>) -> !tosa.shape<1> {
 }
 
 // -----
+
+// CHECK-LABEL: test_dim_bf16
+func.func @test_dim_bf16(%0: tensor<6x4x6x9xbf16>) {
+  %1 = tosa.dim %0 {axis = 1 : i32} : (tensor<6x4x6x9xbf16>) -> !tosa.shape<1>
+  return
+}
+
+// -----
 // CHECK-LABEL: test_exp2_shape
 func.func @test_exp2_shape() -> !tosa.shape<4> {
   %a = tosa.const_shape {values = dense<[5, 7, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
@@ -307,6 +411,8 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<1x4x4x64xf4E2M1FN>, %arg1: ten
   %0 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %pad, %stride, %dilation {block_size = BLOCK_SIZE_32} : (tensor<1x4x4x64xf4E2M1FN>, tensor<1x4x4x2xf8E8M0FNU>, tensor<8x1x1x64xf4E2M1FN>, tensor<8x1x1x2xf8E8M0FNU>, tensor<1xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x4x4x8xf32>
   return %0 : tensor<1x4x4x8xf32>
 }
+
+// -----
 
 // CHECK-LABEL: test_assert_equal_shape
 func.func @test_assert_equal_shape() {

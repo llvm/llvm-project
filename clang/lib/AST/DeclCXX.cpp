@@ -109,9 +109,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
-      HasODRHash(false), Definition(D) {}
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsPFPType(false),
+      IsLambda(false), IsParsingBaseSpecifiers(false),
+      ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -455,6 +455,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
     if (!BaseClassDecl->allowConstDefaultInit())
       data().HasUninitializedFields = true;
+
+    if (BaseClassDecl->isPFPType())
+      data().IsPFPType = true;
 
     addedClassSubobject(BaseClassDecl);
   }
@@ -1408,6 +1411,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (FieldRec->hasVariantMembers() &&
             Field->isAnonymousStructOrUnion())
           data().HasVariantMembers = true;
+
+        if (FieldRec->isPFPType())
+          data().IsPFPType = true;
       }
     } else {
       // Base element type of field is a non-class type.
@@ -1831,6 +1837,11 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
+void CXXRecordDecl::setLambdaContextDecl(Decl *ContextDecl) {
+  assert(isLambda() && "Not a lambda closure type!");
+  getLambdaData().ContextDecl = ContextDecl;
+}
+
 void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
   getLambdaData().ManglingNumber = Numbering.ManglingNumber;
@@ -1838,7 +1849,6 @@ void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
     getASTContext().DeviceLambdaManglingNumbers[this] =
         Numbering.DeviceManglingNumber;
   getLambdaData().IndexInContext = Numbering.IndexInContext;
-  getLambdaData().ContextDecl = Numbering.ContextDecl;
   getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
@@ -2304,6 +2314,14 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
             << AT << Context.getCanonicalTagType(this);
     }
     setHasUninitializedExplicitInitFields(false);
+  }
+
+  if (getLangOpts().PointerFieldProtectionABI && !isStandardLayout()) {
+    data().IsPFPType = true;
+  } else if (hasAttr<PointerFieldProtectionAttr>()) {
+    data().IsPFPType = true;
+    data().IsStandardLayout = false;
+    data().IsCXX11StandardLayout = false;
   }
 }
 

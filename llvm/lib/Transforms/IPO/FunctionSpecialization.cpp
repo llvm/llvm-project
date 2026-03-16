@@ -229,8 +229,8 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
   Cost CodeSize = 0;
   if (auto *I = dyn_cast<SwitchInst>(User)) {
     CodeSize = estimateSwitchInst(*I);
-  } else if (auto *I = dyn_cast<BranchInst>(User)) {
-    CodeSize = estimateBranchInst(*I);
+  } else if (auto *I = dyn_cast<CondBrInst>(User)) {
+    CodeSize = estimateCondBrInst(*I);
   } else {
     C = visit(*User);
     if (!C)
@@ -280,7 +280,7 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
   return estimateBasicBlocks(WorkList);
 }
 
-Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
+Cost InstCostVisitor::estimateCondBrInst(CondBrInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
   if (I.getCondition() != LastVisited->first)
@@ -455,13 +455,13 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
   if (I.getCondition() == LastVisited->first) {
-    Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
+    Value *V = LastVisited->second->isNullValue() ? I.getFalseValue()
                                                   : I.getTrueValue();
     return findConstantFor(V);
   }
   if (Constant *Condition = findConstantFor(I.getCondition()))
     if ((I.getTrueValue() == LastVisited->first && Condition->isOneValue()) ||
-        (I.getFalseValue() == LastVisited->first && Condition->isZeroValue()))
+        (I.getFalseValue() == LastVisited->first && Condition->isNullValue()))
       return LastVisited->second;
   return nullptr;
 }

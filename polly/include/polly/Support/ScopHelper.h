@@ -14,6 +14,7 @@
 #define POLLY_SUPPORT_IRHELPER_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
@@ -37,7 +38,7 @@ class Scop;
 class ScopStmt;
 
 /// Same as llvm/Analysis/ScalarEvolutionExpressions.h
-using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, const llvm::SCEV *>;
+using LoopToScevMapT = llvm::DenseMap<const llvm::Loop *, llvm::SCEVUse>;
 
 /// Enumeration of assumptions Polly can take.
 enum AssumptionKind {

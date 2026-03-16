@@ -655,7 +655,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   }
 
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
+  if (LC == RTLIB::UNKNOWN_LIBCALL) {
+    DAG.getContext()->emitError("do not know how to soften fp_extend");
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), Chain);
+    return DAG.getPOISON(NVT);
+  }
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
   CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
@@ -2763,6 +2768,9 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_UINT_TO_FP:
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:  R = SoftPromoteHalfRes_XINT_TO_FP(N); break;
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    R = SoftPromoteHalfRes_CONVERT_FROM_ARBITRARY_FP(N);
+    break;
   case ISD::POISON:
   case ISD::UNDEF:       R = SoftPromoteHalfRes_UNDEF(N); break;
   case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
@@ -3045,6 +3053,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
   }
 
   SDValue Res = DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+
+  // Round the value to the softened type.
+  return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
+}
+
+SDValue
+DAGTypeLegalizer::SoftPromoteHalfRes_CONVERT_FROM_ARBITRARY_FP(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+  SDLoc dl(N);
+
+  SDValue Res = DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, dl, NVT,
+                            N->getOperand(0), N->getOperand(1));
 
   // Round the value to the softened type.
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);

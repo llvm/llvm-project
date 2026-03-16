@@ -748,6 +748,29 @@ bool Sharding::operator==(const Sharding &rhs) const {
 
 bool Sharding::operator!=(const Sharding &rhs) const { return !(*this == rhs); }
 
+llvm::raw_ostream &mlir::shard::operator<<(llvm::raw_ostream &os,
+                                           const Sharding &sharding) {
+  os << "Sharding<grid=" << sharding.getGrid() << ", split_axes=[";
+  llvm::interleaveComma(sharding.getSplitAxes(), os, [&](GridAxesAttr axes) {
+    os << "[";
+    llvm::interleaveComma(axes.asArrayRef(), os);
+    os << "]";
+  });
+  os << "]";
+  if (!sharding.getStaticHaloSizes().empty()) {
+    os << ", halo_sizes=[";
+    llvm::interleaveComma(sharding.getStaticHaloSizes(), os);
+    os << "]";
+  }
+  if (!sharding.getStaticShardedDimsOffsets().empty()) {
+    os << ", sharded_dims_offsets=[";
+    llvm::interleaveComma(sharding.getStaticShardedDimsOffsets(), os);
+    os << "]";
+  }
+  os << ">";
+  return os;
+}
+
 Sharding::Sharding(::mlir::FlatSymbolRefAttr grid) : grid(grid) {}
 
 Sharding::Sharding(Value rhs) {
@@ -1393,7 +1416,7 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getScatterAxis().getSExtValue(), getGridAxes(),
+      getOperand(), getResult(), getScatterDim().getSExtValue(), getGridAxes(),
       grid.value().getShape());
 }
 
@@ -1422,9 +1445,9 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
 
-  auto scatterAxis = getScatterAxis().getSExtValue();
+  auto scatterDim = getScatterDim().getSExtValue();
   return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
-                                                   scatterAxis, getGridAxes(),
+                                                   scatterDim, getGridAxes(),
                                                    grid.value().getShape());
 }
 

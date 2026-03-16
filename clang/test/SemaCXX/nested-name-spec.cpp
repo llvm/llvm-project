@@ -476,7 +476,8 @@ namespace A {
 class B {
   typedef C D; // expected-error{{unknown type name 'C'}}
   A::D::F;
-  // expected-error@-1{{'A::D' (aka 'int') is not a class, namespace, or enumeration}}
+  // expected-error@-1{{'D' is not a class, namespace, or enumeration}}
+  // expected-note@-3 {{'D' declared here}}
 };
 }
 }
@@ -515,4 +516,11 @@ struct S : V<> {
   using S::V; // expected-error {{using declaration refers to its own class}}
   V<> v; // no crash
 };
+}
+
+namespace GH181470 {
+namespace N {}
+bar;                           // expected-error {{a type specifier is required for all declarations}}
+template <class T> N::T::bar;  // expected-error {{'T' is not a class, namespace, or enumeration}} \
+                               // expected-note {{'T' declared here}}
 }

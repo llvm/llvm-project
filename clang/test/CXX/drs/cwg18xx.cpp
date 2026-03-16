@@ -213,8 +213,8 @@ namespace cwg1815 { // cwg1815: 20
 
   struct B { int &&r = 0; }; // #cwg1815-B
   // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
-  //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   //   since-cxx14-note@#cwg1815-b {{in implicit default constructor for 'cwg1815::B' first required here}}
+  //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   B b; // #cwg1815-b
 
 #if __cplusplus >= 201703L
@@ -569,7 +569,7 @@ struct Bar {
   };
   static_assert(__is_constructible(Baz), "");
   // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(cwg1890::ex2::Bar::Baz)':}}
-  // since-cxx11-note@#cwg1890-Baz {{'Baz' defined here}}
+  //   since-cxx11-note@#cwg1890-Baz {{'Baz' defined here}}
 };
 #endif
 } // namespace ex2
@@ -584,16 +584,16 @@ void cwg1891() { // cwg1891: 4
   typedef decltype(b) B;
 
   static_assert(!__is_trivially_constructible(A), "");
-  // since-cxx20-error@-1 {{failed}}
+  // since-cxx20-error-re@-1 {{static assertion failed due to requirement '!__is_trivially_constructible((lambda at {{.+}}))':}}
   static_assert(!__is_trivially_constructible(B), "");
 
   // C++20 allows default construction for non-capturing lambdas (P0624R2).
   A x;
-  // cxx11-17-error@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at}}
+  // cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}
   //   cxx11-17-note@#cwg1891-a {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
   //   cxx11-17-note@#cwg1891-a {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   B y;
-  // since-cxx11-error@-1 {{no matching constructor for initialization of 'B' (aka '(lambda at}}
+  // since-cxx11-error-re@-1 {{no matching constructor for initialization of 'B' (aka '(lambda at {{.+}})')}}
   //   since-cxx11-note@#cwg1891-b {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
   //   since-cxx11-note@#cwg1891-b {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 

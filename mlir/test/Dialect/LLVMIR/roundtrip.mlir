@@ -161,6 +161,30 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
   llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
 
+// CHECK: llvm.call @baz() {minsize} : () -> ()
+  llvm.call @baz() {minsize} : () -> ()
+
+// CHECK: llvm.call @baz() {optsize} : () -> ()
+  llvm.call @baz() {optsize} : () -> ()
+
+// CHECK: llvm.call @baz() {builtin} : () -> ()
+  llvm.call @baz() {builtin} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltin} : () -> ()
+  llvm.call @baz() {nobuiltin} : () -> ()
+
+// CHECK: llvm.call @baz() {save_reg_params} : () -> ()
+  llvm.call @baz() {save_reg_params} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "all"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="all"} : () -> ()
+
+// CHECK: llvm.call @baz() {zero_call_used_regs = "thing"} : () -> ()
+  llvm.call @baz() {zero_call_used_regs="thing"} : () -> ()
+
+// CHECK: llvm.call @baz() {default_func_attrs = {justKey, key = "value"}} : () -> ()
+  llvm.call @baz() {default_func_attrs={justKey, key = "value"}} : () -> ()
+
 // Terminator operations and their successors.
 //
 // CHECK: llvm.br ^[[BB1:.*]]
@@ -222,8 +246,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 //
 // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[I32]] : i32 to !llvm.ptr
 // CHECK: %{{.*}} = llvm.ptrtoint %[[PTR]] : !llvm.ptr to i32
+// CHECK: %{{.*}} = llvm.ptrtoaddr %[[PTR]] : !llvm.ptr to i64
   %25 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %26 = llvm.ptrtoint %25 : !llvm.ptr to i32
+  %a26 = llvm.ptrtoaddr %25 : !llvm.ptr to i64
+  %vp = llvm.mlir.poison : vector<3 x !llvm.ptr>
+  %va26 = llvm.ptrtoaddr %vp : vector<3 x !llvm.ptr> to vector<3 x i64>
 
 // Extended and Quad floating point
 //

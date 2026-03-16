@@ -209,6 +209,22 @@ LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
                     APInt(NumBits, ArrayRef(UpperWords, NumWords)))));
 }
 
+LLVMAttributeRef LLVMCreateDenormalFPEnvAttribute(
+    LLVMContextRef C, LLVMDenormalModeKind DefaultModeOutput,
+    LLVMDenormalModeKind DefaultModeInput, LLVMDenormalModeKind FloatModeOutput,
+    LLVMDenormalModeKind FloatModeInput) {
+  auto &Ctx = *unwrap(C);
+
+  DenormalFPEnv Env(
+      DenormalMode(
+          static_cast<DenormalMode::DenormalModeKind>(DefaultModeOutput),
+          static_cast<DenormalMode::DenormalModeKind>(DefaultModeInput)),
+      DenormalMode(
+          static_cast<DenormalMode::DenormalModeKind>(FloatModeOutput),
+          static_cast<DenormalMode::DenormalModeKind>(FloatModeInput)));
+  return wrap(Attribute::get(Ctx, Attribute::DenormalFPEnv, Env.toIntValue()));
+}
+
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
                                            const char *K, unsigned KLength,
                                            const char *V, unsigned VLength) {
@@ -3236,15 +3252,15 @@ void LLVMSetSuccessor(LLVMValueRef Term, unsigned i, LLVMBasicBlockRef block) {
 /*--.. Operations on branch instructions (only) ............................--*/
 
 LLVMBool LLVMIsConditional(LLVMValueRef Branch) {
-  return unwrap<BranchInst>(Branch)->isConditional();
+  return isa<CondBrInst>(unwrap<Instruction>(Branch));
 }
 
 LLVMValueRef LLVMGetCondition(LLVMValueRef Branch) {
-  return wrap(unwrap<BranchInst>(Branch)->getCondition());
+  return wrap(unwrap<CondBrInst>(Branch)->getCondition());
 }
 
 void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond) {
-  return unwrap<BranchInst>(Branch)->setCondition(unwrap(Cond));
+  return unwrap<CondBrInst>(Branch)->setCondition(unwrap(Cond));
 }
 
 /*--.. Operations on switch instructions (only) ............................--*/
@@ -3470,7 +3486,7 @@ LLVMValueRef LLVMBuildRet(LLVMBuilderRef B, LLVMValueRef V) {
 
 LLVMValueRef LLVMBuildAggregateRet(LLVMBuilderRef B, LLVMValueRef *RetVals,
                                    unsigned N) {
-  return wrap(unwrap(B)->CreateAggregateRet(unwrap(RetVals), N));
+  return wrap(unwrap(B)->CreateAggregateRet({unwrap(RetVals), N}));
 }
 
 LLVMValueRef LLVMBuildBr(LLVMBuilderRef B, LLVMBasicBlockRef Dest) {
@@ -4433,8 +4449,10 @@ LLVMValueRef LLVMBuildIsNotNull(LLVMBuilderRef B, LLVMValueRef Val,
 LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef B, LLVMTypeRef ElemTy,
                                LLVMValueRef LHS, LLVMValueRef RHS,
                                const char *Name) {
-  return wrap(unwrap(B)->CreatePtrDiff(unwrap(ElemTy), unwrap(LHS),
-                                       unwrap(RHS), Name));
+  IRBuilderBase *Builder = unwrap(B);
+  Value *Diff =
+      Builder->CreatePtrDiff(unwrap(ElemTy), unwrap(LHS), unwrap(RHS), Name);
+  return wrap(Builder->CreateSExtOrTrunc(Diff, Builder->getInt64Ty()));
 }
 
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,

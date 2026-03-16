@@ -815,6 +815,7 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
     Size = CGF.Builder.CreatePtrDiff(ElemType,
                                      OrigAddresses[N].second.getPointer(CGF),
                                      OrigAddresses[N].first.getPointer(CGF));
+    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
     Size = CGF.Builder.CreateNUWAdd(
         Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
     SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
@@ -3728,9 +3729,7 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
         /*Idx0=*/1);
-    llvm::Value *LowIntPtr = CGF.Builder.CreatePtrToInt(Addr, CGF.SizeTy);
-    llvm::Value *UpIntPtr = CGF.Builder.CreatePtrToInt(UpAddr, CGF.SizeTy);
-    SizeVal = CGF.Builder.CreateNUWSub(UpIntPtr, LowIntPtr);
+    SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
   }
@@ -7656,8 +7655,7 @@ private:
     void copyUntilField(const FieldDecl *FD, Address ComponentLB) {
       llvm::Value *ComponentLBPtr = ComponentLB.emitRawPointer(CGF);
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
-      llvm::Value *Size =
-          CGF.Builder.CreatePtrDiff(CGF.Int8Ty, ComponentLBPtr, LBPtr);
+      llvm::Value *Size = CGF.Builder.CreatePtrDiff(ComponentLBPtr, LBPtr);
       copySizedChunk(LBPtr, Size);
     }
 
@@ -7670,8 +7668,7 @@ private:
       }
       llvm::Value *LBPtr = LB.emitRawPointer(CGF);
       llvm::Value *Size = CGF.Builder.CreatePtrDiff(
-          CGF.Int8Ty, CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF),
-          LBPtr);
+          CGF.Builder.CreateConstGEP(HB, 1).emitRawPointer(CGF), LBPtr);
       copySizedChunk(LBPtr, Size);
     }
 
@@ -7682,7 +7679,7 @@ private:
       CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
       CombinedInfo.Pointers.push_back(Base);
       CombinedInfo.Sizes.push_back(
-          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/true));
+          CGF.Builder.CreateIntCast(Size, CGF.Int64Ty, /*isSigned=*/false));
       CombinedInfo.Types.push_back(Flags);
       CombinedInfo.Mappers.push_back(nullptr);
       CombinedInfo.NonContigInfo.Dims.push_back(IsNonContiguous ? DimSize : 1);
@@ -8057,11 +8054,17 @@ private:
           if (!StrideExpr)
             return false;
 
+          assert(StrideExpr->getType()->isIntegerType() &&
+                 "Stride expression must be of integer type");
+
+          // If stride is not evaluatable as a constant, treat as
+          // non-contiguous.
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
-            return false;
+            return true;
 
+          // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();
         });
 
@@ -9434,7 +9437,7 @@ public:
           HBAddr.getElementType(), HB, /*Idx0=*/1);
       llvm::Value *CLAddr = CGF.Builder.CreatePointerCast(LB, CGF.VoidPtrTy);
       llvm::Value *CHAddr = CGF.Builder.CreatePointerCast(HAddr, CGF.VoidPtrTy);
-      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CGF.Int8Ty, CHAddr, CLAddr);
+      llvm::Value *Diff = CGF.Builder.CreatePtrDiff(CHAddr, CLAddr);
       llvm::Value *Size = CGF.Builder.CreateIntCast(Diff, CGF.Int64Ty,
                                                     /*isSigned=*/false);
       CombinedInfo.Sizes.push_back(Size);
@@ -10636,8 +10639,11 @@ emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
       CapturedVars.clear();
       CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
     }
+    llvm::SmallVector<llvm::Value *, 16> Args(CapturedVars.begin(),
+                                              CapturedVars.end());
+    Args.push_back(llvm::Constant::getNullValue(CGF.Builder.getPtrTy()));
     OMPRuntime->emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn,
-                                         CapturedVars);
+                                         Args);
   }
 }
 
@@ -10873,6 +10879,22 @@ static void emitTargetCallKernelLaunch(
   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
   CGOpenMPRuntime::TargetDataInfo Info;
   genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
+
+  // Append a null entry for the implicit dyn_ptr argument.
+  using OpenMPOffloadMappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
+  auto *NullPtr = llvm::Constant::getNullValue(CGF.Builder.getPtrTy());
+  CombinedInfo.BasePointers.push_back(NullPtr);
+  CombinedInfo.Pointers.push_back(NullPtr);
+  CombinedInfo.DevicePointers.push_back(
+      llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+  CombinedInfo.Sizes.push_back(CGF.Builder.getInt64(0));
+  CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
+                               OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+  if (!CombinedInfo.Names.empty())
+    CombinedInfo.Names.push_back(NullPtr);
+  CombinedInfo.Exprs.push_back(nullptr);
+  CombinedInfo.Mappers.push_back(nullptr);
+  CombinedInfo.DevicePtrDecls.push_back(nullptr);
 
   emitOffloadingArraysAndArgs(CGF, CombinedInfo, Info, OMPBuilder,
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);

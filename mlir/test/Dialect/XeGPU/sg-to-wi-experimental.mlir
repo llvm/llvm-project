@@ -6,8 +6,8 @@
 // CHECK-DAG  : %[[C16:.*]] = arith.constant 16 : index
 // CHECK-DAG  : %[[C8:.*]] = arith.constant 8 : index
 // CHECK-DAG  : %[[C1024:.*]] = arith.constant 1024 : index
-// CHECK-DAG  : %[[BID_X:.*]] = gpu.block_id  x
-// CHECK-DAG  : %[[BID_Y:.*]] = gpu.block_id  y
+// CHECK-DAG  : %[[BID_X:.*]] = gpu.block_id x
+// CHECK-DAG  : %[[BID_Y:.*]] = gpu.block_id y
 // CHECK-DAG  : %[[MUL_X:.*]] = arith.muli %[[BID_X]], %[[C8]] : index
 // CHECK-DAG  : %[[MUL_Y:.*]] = arith.muli %[[BID_Y]], %[[C16]] : index
 // CHECK      : %[[TD_C:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -32,8 +32,8 @@ gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %ar
   %c16 = arith.constant 16 : index
   %c8 = arith.constant 8 : index
   %c1024 = arith.constant 1024 : index
-  %block_id_x = gpu.block_id  x
-  %block_id_y = gpu.block_id  y
+  %block_id_x = gpu.block_id x
+  %block_id_y = gpu.block_id y
   %0 = arith.muli %block_id_x, %c8 : index
   %1 = arith.muli %block_id_y, %c16 : index
   %2 = xegpu.create_nd_tdesc %arg2 : memref<1024x1024xf32> ->
@@ -77,8 +77,8 @@ gpu.func @gemm(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024xbf16>, %ar
 // CHECK-DAG  : %[[C8:.*]] = arith.constant 8 : index
 // CHECK-DAG  : %[[C1024:.*]] = arith.constant 1024 : index
 // CHECK      : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xbf16>
-// CHECK-DAG  : %[[BID_X:.*]] = gpu.block_id  x
-// CHECK-DAG  : %[[BID_Y:.*]] = gpu.block_id  y
+// CHECK-DAG  : %[[BID_X:.*]] = gpu.block_id x
+// CHECK-DAG  : %[[BID_Y:.*]] = gpu.block_id y
 // CHECK-DAG  : %[[MUL_X:.*]] = arith.muli %[[BID_X]], %[[C8]] : index
 // CHECK-DAG  : %[[MUL_Y:.*]] = arith.muli %[[BID_Y]], %[[C16]] : index
 // CHECK      : %[[TD_C:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -106,8 +106,8 @@ gpu.func @gemm_with_preop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024
   %c8 = arith.constant 8 : index
   %c1024 = arith.constant 1024 : index
   %cst = arith.constant  {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<1.0> : vector<8x16xbf16>
-  %block_id_x = gpu.block_id  x
-  %block_id_y = gpu.block_id  y
+  %block_id_x = gpu.block_id x
+  %block_id_y = gpu.block_id y
   %0 = arith.muli %block_id_x, %c8 : index
   %1 = arith.muli %block_id_y, %c16 : index
   %2 = xegpu.create_nd_tdesc %arg2 : memref<1024x1024xf32> ->
@@ -151,8 +151,8 @@ gpu.func @gemm_with_preop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x1024
 // CHECK-DAG  : %[[C16:.*]] = arith.constant 16 : index
 // CHECK-DAG  : %[[C8:.*]] = arith.constant 8 : index
 // CHECK-DAG  : %[[C1024:.*]] = arith.constant 1024 : index
-// CHECK-DAG  : %[[BID_X:.*]] = gpu.block_id  x
-// CHECK-DAG  : %[[BID_Y:.*]] = gpu.block_id  y
+// CHECK-DAG  : %[[BID_X:.*]] = gpu.block_id x
+// CHECK-DAG  : %[[BID_Y:.*]] = gpu.block_id y
 // CHECK-DAG  : %[[MUL_X:.*]] = arith.muli %[[BID_X]], %[[C8]] : index
 // CHECK-DAG  : %[[MUL_Y:.*]] = arith.muli %[[BID_Y]], %[[C16]] : index
 // CHECK      : %[[TD_C:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<1024x1024xf32> -> !xegpu.tensor_desc<8x16xf32>
@@ -176,8 +176,8 @@ gpu.func @gemm_with_postop(%arg0: memref<1024x1024xbf16>, %arg1: memref<1024x102
   %c16 = arith.constant 16 : index
   %c8 = arith.constant 8 : index
   %c1024 = arith.constant 1024 : index
-  %block_id_x = gpu.block_id  x
-  %block_id_y = gpu.block_id  y
+  %block_id_x = gpu.block_id x
+  %block_id_y = gpu.block_id y
   %0 = arith.muli %block_id_x, %c8 : index
   %1 = arith.muli %block_id_y, %c16 : index
   %2 = xegpu.create_nd_tdesc %arg2 : memref<1024x1024xf32> ->

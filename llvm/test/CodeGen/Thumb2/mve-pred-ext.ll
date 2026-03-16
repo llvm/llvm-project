@@ -420,6 +420,7 @@ define arm_aapcs_vfpcc <2 x i64> @zext_v2i1_v2f64(<2 x double> %src) {
 ; CHECK-MVE-NEXT:    cmp r0, #0
 ; CHECK-MVE-NEXT:    csetm r0, eq
 ; CHECK-MVE-NEXT:    vmov q0[2], q0[0], r0, r6
+; CHECK-MVE-NEXT:    vmov q0[3], q0[1], r0, r6
 ; CHECK-MVE-NEXT:    vand q0, q0, q4
 ; CHECK-MVE-NEXT:    vpop {d8, d9}
 ; CHECK-MVE-NEXT:    pop {r4, r5, r6, pc}

@@ -40,7 +40,6 @@
       "value": false,
       "doc": "Use an alternative printf float implementation based on 320-bit floats"
     },
-
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
@@ -56,6 +55,10 @@
     "LIBC_CONF_PRINTF_DISABLE_WIDE": {
       "value": false,
       "doc": "Disable handling wide characters for printf and friends."
+    },
+    "LIBC_COPT_PRINTF_DISABLE_BITINT": {
+      "value": false,
+      "doc": "Disable bitint length modifiers to reduce code size. Specifically the wNUM and wfNUM modifiers."
     }
   },
   "scanf": {
@@ -123,7 +126,7 @@
   "math": {
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
       "value": 0,
-      "doc": "Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST."
+      "doc": "Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, LIBC_MATH_FAST, and LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT."
     },
     "LIBC_CONF_FREXP_INF_NAN_EXPONENT": {
       "value": "",

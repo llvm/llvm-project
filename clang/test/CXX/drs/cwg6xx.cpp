@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11,cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,cxx98-14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx11-20,cxx98-17,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx20,cxx11-20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx20,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -269,7 +269,8 @@ namespace cwg625 { // cwg625: 2.9
   void f(int);
   void (*p)(auto) = f;
   // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
-  // expected-error@-2 {{'auto' not allowed in function prototype}}
+  // cxx98-17-error@-2 {{'auto' not allowed in function prototype}}
+  // since-cxx20-error@-3 {{'auto' not allowed in function prototype that is not a function declaration}}
 } // namespace cwg625
 
 namespace cwg626 { // cwg626: 2.7
@@ -839,12 +840,12 @@ namespace cwg662 { // cwg662: 2.7
     T &tr = t;
     T *tp = &t;
     // expected-error@-1 {{'tp' declared as a pointer to a reference of type 'int &'}}
-    //   expected-note@#cwg662-f-call {{in instantiation of function template specialization 'cwg662::f<int &>' requested here}}
+    //   expected-note@#cwg662-inst {{in instantiation of function template specialization 'cwg662::f<int &>' requested here}}
 #if __cplusplus >= 201103L
     auto *ap = &t;
 #endif
   }
-  void g(int n) { f<int&>(n); } // #cwg662-f-call
+  template void f<int&>(int&);  // #cwg662-inst
 } // namespace cwg662
 
 namespace cwg663 { // cwg663: sup P1949
@@ -904,8 +905,8 @@ namespace cwg666 { // cwg666: 2.8
   }
   struct X { static const int type = 0; };
   struct Y { typedef int type; };
-  int a = f<X>();
-  int b = f<Y>(); // #cwg666-f-Y
+  template int f<X>();
+  template int f<Y>();  // #cwg666-f-Y
 } // namespace cwg666
 
 // Triviality is entirely different in C++98.
@@ -1005,25 +1006,25 @@ namespace cwg674 { // cwg674: 8
 
   class X {
     friend int cwg674::f(int);
-    friend int cwg674::g(int);
-    friend int cwg674::h<>(int);
+    friend int cwg674::g<>(int);
+    friend int cwg674::h(int);
     int n; // #cwg674-X-n
   };
 
   template<typename T> int f(T) { return X().n; }
   int g(int) { return X().n; }
+  // expected-error@-1 {{'n' is a private member of 'cwg674::X'}}
+  //   expected-note@#cwg674-X-n {{implicitly declared private here}}
   template<typename T> int g(T) { return X().n; }
-  // expected-error@-1 {{'n' is a private member of 'cwg674::X'}}
-  //   expected-note@#cwg674-g-int {{in instantiation of function template specialization 'cwg674::g<int>' requested here}}
-  //   expected-note@#cwg674-X-n {{implicitly declared private here}}
   int h(int) { return X().n; }
-  // expected-error@-1 {{'n' is a private member of 'cwg674::X'}}
-  //   expected-note@#cwg674-X-n {{implicitly declared private here}}
   template<typename T> int h(T) { return X().n; }
+  // expected-error@-1 {{'n' is a private member of 'cwg674::X'}}
+  //   expected-note@#cwg674-h-int {{in instantiation of function template specialization 'cwg674::h<int>' requested here}}
+  //   expected-note@#cwg674-X-n {{implicitly declared private here}}
 
   template int f(int);
-  template int g(int); // #cwg674-g-int
-  template int h(int);
+  template int g(int);
+  template int h(int); // #cwg674-h-int
 
 
   struct Y {
@@ -1038,26 +1039,26 @@ namespace cwg674 { // cwg674: 8
 
   class Z {
     friend int Y::f(int);
-    friend int Y::g(int);
-    friend int Y::h<>(int);
+    friend int Y::g<>(int);
+    friend int Y::h(int);
     int n; // #cwg674-Z-n
   };
 
   template<typename T> int Y::f(T) { return Z().n; }
   int Y::g(int) { return Z().n; }
+  // expected-error@-1 {{'n' is a private member of 'cwg674::Z'}}
+  //   expected-note@#cwg674-Z-n {{implicitly declared private here}}
   template<typename T> int Y::g(T) { return Z().n; }
-  // expected-error@-1 {{'n' is a private member of 'cwg674::Z'}}
-  //   expected-note@#cwg674-Y-g-int {{in instantiation of function template specialization 'cwg674::Y::g<int>' requested here}}
-  //   expected-note@#cwg674-Z-n {{implicitly declared private here}}
   int Y::h(int) { return Z().n; }
-  // expected-error@-1 {{'n' is a private member of 'cwg674::Z'}}
-  //   expected-note@#cwg674-Z-n {{implicitly declared private here}}
   template<typename T> int Y::h(T) { return Z().n; }
+  // expected-error@-1 {{'n' is a private member of 'cwg674::Z'}}
+  //   expected-note@#cwg674-Y-h-int {{in instantiation of function template specialization 'cwg674::Y::h<int>' requested here}}
+  //   expected-note@#cwg674-Z-n {{implicitly declared private here}}
 
   // FIXME: Should the <> be required here?
   template int Y::f<>(int);
-  template int Y::g<>(int); // #cwg674-Y-g-int
-  template int Y::h<>(int);
+  template int Y::g<>(int);
+  template int Y::h<>(int); // #cwg674-Y-h-int
 } // namespace cwg674
 
 namespace cwg675 { // cwg675: dup 739

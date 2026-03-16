@@ -386,6 +386,11 @@ public:
     return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
   }
 
+  bool TraverseDependentNameType(const DependentNameType *T,
+                                 bool /*TraverseQualifier*/) {
+    return TraverseNestedNameSpecifier(T->getQualifier());
+  }
+
   bool TraverseTagType(const TagType *T, bool TraverseQualifier) {
     // T's parent can be dependent while T doesn't have any template arguments.
     // We should have already traversed its qualifier.
@@ -476,6 +481,11 @@ class ConstraintSatisfactionChecker {
   UnsignedOrNone PackSubstitutionIndex;
   ConstraintSatisfaction &Satisfaction;
   bool BuildExpression;
+
+  // The most closest concept declaration when evaluating atomic constriants.
+  // This is to make sure that lambdas in the atomic expression live in the
+  // right context.
+  ConceptDecl *ParentConcept = nullptr;
 
 private:
   ExprResult
@@ -621,8 +631,11 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const MultiLevelTemplateArgumentList &MLTAL,
     llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
 
-  if (!Constraint.hasParameterMapping())
-    return std::move(MLTAL);
+  if (!Constraint.hasParameterMapping()) {
+    if (MLTAL.getNumSubstitutedLevels())
+      SubstitutedOutermost.assign(MLTAL.getOutermost());
+    return MLTAL;
+  }
 
   // The mapping is empty, meaning no template arguments are needed for
   // evaluation.
@@ -693,7 +706,8 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
-  EnterExpressionEvaluationContext ConstantEvaluated(
+  std::optional<EnterExpressionEvaluationContext> EvaluationContext;
+  EvaluationContext.emplace(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
       Sema::ReuseLambdaContextDecl);
 
@@ -703,6 +717,20 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
+  }
+
+  // Note that generic lambdas inside requires body require a lambda context
+  // decl from which to fetch correct template arguments. But we don't have any
+  // proper decls because the constraints are already normalized.
+  if (ParentConcept) {
+    // FIXME: the evaluation context should learn to track template arguments
+    // separately from a Decl.
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        ImplicitConceptSpecializationDecl::Create(
+            S.Context, ParentConcept->getDeclContext(),
+            ParentConcept->getBeginLoc(), SubstitutedOutermost));
   }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
@@ -1027,6 +1055,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (InstTemplate.isInvalid())
     return ExprError();
 
+  llvm::SaveAndRestore PushConceptDecl(
+      ParentConcept, cast<ConceptDecl>(ConceptId->getNamedConcept()));
+
   unsigned Size = Satisfaction.Details.size();
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
@@ -1154,7 +1185,7 @@ static bool CheckConstraintSatisfaction(
     return false;
   }
 
-  if (TemplateArgsLists.isAnyArgInstantiationDependent()) {
+  if (TemplateArgsLists.isAnyArgInstantiationDependent(S.Context)) {
     // No need to check satisfaction for dependent constraint expressions.
     Satisfaction.IsSatisfied = true;
     return false;
