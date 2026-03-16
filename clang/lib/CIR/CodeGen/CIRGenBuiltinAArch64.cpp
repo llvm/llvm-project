@@ -2787,6 +2787,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vrshrd_n_s64:
   case NEON::BI__builtin_neon_vrsrad_n_u64:
   case NEON::BI__builtin_neon_vrsrad_n_s64:
+      cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vshld_n_s64:
   case NEON::BI__builtin_neon_vshld_n_u64: {
     auto loc = getLoc(expr->getExprLoc());

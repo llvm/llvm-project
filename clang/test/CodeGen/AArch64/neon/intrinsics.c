@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -939,8 +939,8 @@ uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 //===------------------------------------------------------===//
 // 2.1.3.1.1. Vector Shift Left
 //===------------------------------------------------------===//
-// LLVM-LABEL: @test_vshld_n_s64
-// CIR-LABEL: @test_vshld_n_s64
+
+// ALL-LABEL: test_vshld_n_s64
 int64_t test_vshld_n_s64(int64_t a) {
   // CIR: cir.shift(left, {{.*}})
 
@@ -950,33 +950,35 @@ int64_t test_vshld_n_s64(int64_t a) {
   return (int64_t)vshld_n_s64(a, 1);
 }
 
-// LLVM-LABEL: @test_vshld_n_u64
-// CIR-LABEL: @test_vshld_n_u64
+// ALL-LABEL: test_vshld_n_u64
 int64_t test_vshld_n_u64(int64_t a) {
   // CIR: cir.shift(left, {{.*}})
 
-  // LLVM-SAME: i64 noundef [[A:%.*]])
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]])
   // LLVM: [[SHL_N:%.*]] = shl i64 [[A]], 1
   // LLVM: ret i64 [[SHL_N]]
   return (int64_t)vshld_n_u64(a, 1);
 }
 
-// LLVM-LABEL: @test_vshld_s64
-// CIR-LABEL: @test_vshld_s64
+// LLVM-LABEL: test_vshld_s64
+// CIR-LABEL: vshld_s64
 int64_t test_vshld_s64(int64_t a,int64_t b) {
+ // CIR:  cir.call_llvm_intrinsic "aarch64.neon.sshl" %{{.*}}, %{{.*}} : (!s64i, !s64i) -> !s64i
 
- // LLVM-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+ // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]]) #[[ATTR0:[0-9]+]] {
  // LLVM:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.sshl.i64(i64 [[A]], i64 [[B]])
  // LLVM:    ret i64 [[VSHLD_S64_I]]
   return (int64_t)vshld_s64(a, b);
 }
 
-// LLVM-LABEL: @test_vshld_u64
-// CIR-LABEL: @test_vshld_u64
+// LLVM-LABEL: test_vshld_u64
+// CIR-LABEL: vshld_u64
 int64_t test_vshld_u64(int64_t a,int64_t b) {
+ // CIR:  cir.call_llvm_intrinsic "aarch64.neon.ushl" %{{.*}}, %{{.*}} : (!u64i, !s64i) -> !u64i
 
- // LLVM-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
+ // LLVM-SAME: i64 {{.*}} [[A:%.*]], i64 {{.*}} [[B:%.*]]) #[[ATTR0:[0-9]+]] {
  // LLVM:    [[VSHLD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.ushl.i64(i64 [[A]], i64 [[B]])
  // LLVM:    ret i64 [[VSHLD_S64_I]]
   return (int64_t)vshld_u64(a, b);
 }
+
