@@ -714,16 +714,32 @@ using AMDGPUSignalManagerTy = GenericDeviceResourceManagerTy<AMDGPUSignalRef>;
 /// Class holding an HSA queue to submit kernel and barrier packets.
 struct AMDGPUQueueTy {
   /// Create an empty queue.
-  AMDGPUQueueTy() : Queue(nullptr), Mutex(), NumUsers(0) {}
+  AMDGPUQueueTy()
+      : Queue(nullptr), ProfilingEnabled(false), Mutex(), NumUsers(0) {}
 
   /// Lazily initialize a new queue belonging to a specific agent.
   Error init(GenericDeviceTy &Device, hsa_agent_t Agent, int32_t QueueSize) {
     if (Queue)
       return Plugin::success();
+
     hsa_status_t Status =
         hsa_queue_create(Agent, QueueSize, HSA_QUEUE_TYPE_MULTI, callbackError,
                          &Device, UINT32_MAX, UINT32_MAX, &Queue);
-    return Plugin::check(Status, "error in hsa_queue_create: %s");
+    if (auto Err = Plugin::check(Status, "error in hsa_queue_create: %s"))
+      return Err;
+
+    // Keep queue profiling enabled from creation time onward, as HIP/ROCclr
+    // does. Elapsed-time queries rely on queue-level hardware profiling support
+    // to retrieve packet timing.
+    //
+    // If enabling profiling fails, leave the queue usable and preserve existing
+    // event behavior; only elapsed-time queries will later report that timing
+    // is unavailable.
+    Status = hsa_amd_profiling_set_profiler_enabled(Queue, 1);
+    if (Status == HSA_STATUS_SUCCESS)
+      ProfilingEnabled = true;
+
+    return Plugin::success();
   }
 
   /// Deinitialize the queue and destroy its resources.
@@ -731,9 +747,15 @@ struct AMDGPUQueueTy {
     std::lock_guard<std::mutex> Lock(Mutex);
     if (!Queue)
       return Plugin::success();
+
+    ProfilingEnabled = false;
+
     hsa_status_t Status = hsa_queue_destroy(Queue);
     return Plugin::check(Status, "error in hsa_queue_destroy: %s");
   }
+
+  /// Returns whether profiling is enabled on the underlying HSA queue.
+  bool isProfilingEnabled() const { return ProfilingEnabled; }
 
   /// Returns the number of streams, this queue is currently assigned to.
   bool getUserCount() const { return NumUsers; }
@@ -916,6 +938,9 @@ private:
 
   /// The HSA queue.
   hsa_queue_t *Queue;
+
+  /// Indicates whether profiling is enabled on the underlying HSA queue.
+  bool ProfilingEnabled;
 
   /// Mutex to protect the acquiring and publishing of packets. For the moment,
   /// we need this mutex to prevent publishing packets that are not ready to be
@@ -1142,6 +1167,18 @@ private:
     Slots[Curr].Signal = OutputSignal;
 
     return {Curr, InputSignal};
+  }
+
+  /// Roll back the last consumed slot after a submission failure so the stream
+  /// does not retain a slot for an operation that was never enqueued.
+  void rollbackConsumedSlot(uint32_t Slot) {
+    assert(NextSlot > 0 && "cannot roll back an empty stream");
+    assert(Slot + 1 == NextSlot && "can only roll back the last consumed slot");
+
+    Slots[Slot].Signal = nullptr;
+    Slots[Slot].Callbacks.clear();
+    Slots[Slot].ActionArgs.clear();
+    --NextSlot;
   }
 
   /// Complete all pending post actions and reset the stream after synchronizing
@@ -1643,8 +1680,8 @@ public:
 
   const AMDGPUQueueTy *getQueue() const { return Queue; }
 
-  /// Record the state of the stream on an event.
-  Error recordEvent(AMDGPUEventTy &Event) const;
+  /// Record an event by enqueuing a barrier marker packet on the stream.
+  Error recordEvent(AMDGPUEventTy &Event);
 
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
@@ -1652,25 +1689,47 @@ public:
   friend struct AMDGPUStreamManagerTy;
 };
 
-/// Class representing an event on AMDGPU. The event basically stores some
-/// information regarding the state of the recorded stream.
+/// Class representing an event on AMDGPU. The event stores the recorded stream
+/// point and retained timing state.
 struct AMDGPUEventTy {
   /// Create an empty event.
   AMDGPUEventTy(AMDGPUDeviceTy &Device)
-      : RecordedStream(nullptr), RecordedSlot(-1), RecordedSyncCycle(-1) {}
+      : Device(Device), RecordedStream(nullptr), RecordedSlot(-1),
+        RecordedSyncCycle(-1), TimingSignal(nullptr), TimingAgent({0}) {}
 
   /// Initialize and deinitialize.
-  Error init() { return Plugin::success(); }
-  Error deinit() { return Plugin::success(); }
+  Error init() { return resetState(); }
+  Error deinit() { return resetState(); }
+
+  /// Clear the current recording and retained timing state.
+  Error resetState() {
+    if (auto Err = releaseTimingSignal())
+      return Err;
+
+    RecordedStream = nullptr;
+    RecordedSlot = -1;
+    RecordedSyncCycle = -1;
+    TimingAgent = {0};
+
+    return Plugin::success();
+  }
 
   /// Record the state of a stream on the event.
   Error record(AMDGPUStreamTy &Stream) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // Ignore the last recorded stream.
+    if (auto Err = resetState())
+      return Err;
+
     RecordedStream = &Stream;
 
-    return Stream.recordEvent(*this);
+    if (auto Err = Stream.recordEvent(*this)) {
+      llvm::consumeError(resetState());
+      return Err;
+    }
+
+    return Plugin::success();
   }
 
   /// Make a stream wait on the current event.
@@ -1708,15 +1767,32 @@ struct AMDGPUEventTy {
     return RecordedStream->synchronizeOn(*this);
   }
 
+  /// Return the elapsed time in milliseconds between this event and EndEvent.
+  Error elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime);
+
 protected:
+  /// Release the retained timing signal, if any, back to the signal manager.
+  Error releaseTimingSignal();
+
+  /// The device that owns this event.
+  AMDGPUDeviceTy &Device;
+
   /// The stream registered in this event.
   AMDGPUStreamTy *RecordedStream;
 
-  /// The recordered operation on the recorded stream.
+  /// The recorded operation on the recorded stream.
   int64_t RecordedSlot;
 
   /// The sync cycle when the stream was recorded. Used to detect stale events.
   int64_t RecordedSyncCycle;
+
+  /// The signal of the recorded barrier marker used for timing. Null means
+  /// timing is unavailable for the current recording.
+  AMDGPUSignalTy *TimingSignal;
+
+  /// The agent that owns the queue where the timing marker was recorded. A zero
+  /// handle means timing is unavailable for the current recording.
+  hsa_agent_t TimingAgent;
 
   /// Mutex to safely access event fields.
   mutable std::mutex Mutex;
@@ -1724,22 +1800,47 @@ protected:
   friend struct AMDGPUStreamTy;
 };
 
-Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) const {
-  std::lock_guard<std::mutex> Lock(Mutex);
+Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event) {
+  if (Queue == nullptr)
+    return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
+                         "target queue was nullptr");
 
-  if (size() > 0) {
-    // Record the synchronize identifier (to detect stale recordings) and
-    // the last valid stream's operation.
-    Event.RecordedSyncCycle = SyncCycle;
-    Event.RecordedSlot = last();
+  // Retrieve an available signal for the operation's output.
+  AMDGPUSignalTy *OutputSignal = nullptr;
+  if (auto Err = SignalManager.getResource(OutputSignal))
+    return Err;
+  OutputSignal->reset();
+  OutputSignal->increaseUseCount();
 
-    assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
-    assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
-  } else {
-    // The stream is empty, everything already completed, record nothing.
-    Event.RecordedSyncCycle = -1;
-    Event.RecordedSlot = -1;
+  std::lock_guard<std::mutex> StreamLock(Mutex);
+
+  // Consume stream slot and compute dependencies.
+  auto [Curr, InputSignal] = consume(OutputSignal);
+
+  // Materialize the event as a real marker on the queue. Elapsed-time queries
+  // need a packet-backed completion signal to retrieve dispatch timing.
+  if (auto Err = Queue->pushBarrier(OutputSignal, InputSignal, nullptr)) {
+    rollbackConsumedSlot(Curr);
+    if (OutputSignal->decreaseUseCount())
+      llvm::consumeError(SignalManager.returnResource(OutputSignal));
+    return Err;
   }
+
+  Event.RecordedSyncCycle = SyncCycle;
+  Event.RecordedSlot = Curr;
+
+  if (Queue->isProfilingEnabled()) {
+    OutputSignal->increaseUseCount();
+    Event.TimingSignal = OutputSignal;
+    Event.TimingAgent = Agent;
+  } else {
+    Event.TimingSignal = nullptr;
+    Event.TimingAgent = {0};
+  }
+
+  assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
+  assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
+
   return Plugin::success();
 }
 
@@ -2124,6 +2225,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                          ClockFrequency) != HSA_STATUS_SUCCESS)
       ClockFrequency = 0;
 
+    // Retrieve the HSA system timestamp frequency for this runtime. A zero
+    // value means the frequency is unavailable.
+    if (hsa_system_get_info(HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY,
+                            &SystemTimestampFrequency) != HSA_STATUS_SUCCESS)
+      SystemTimestampFrequency = 0;
+
     // Load the grid values depending on the wavefront.
     if (WavefrontSize == 32)
       GridValues = getAMDGPUGridValues<32>();
@@ -2332,6 +2439,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }
+
+  /// Returns the HSA system timestamp frequency. Zero means unavailable.
+  uint64_t getSystemTimestampFrequency() const {
+    return SystemTimestampFrequency;
+  }
 
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy &> constructKernel(const char *Name) override {
@@ -2813,12 +2925,19 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Create an event.
   Error createEventImpl(void **EventPtrStorage) override {
     AMDGPUEventTy **Event = reinterpret_cast<AMDGPUEventTy **>(EventPtrStorage);
-    return AMDGPUEventManager.getResource(*Event);
+    if (auto Err = AMDGPUEventManager.getResource(*Event))
+      return Err;
+    return (*Event)->resetState();
   }
 
   /// Destroy a previously created event.
   Error destroyEventImpl(void *EventPtr) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
+    assert(Event && "Invalid event");
+
+    if (auto Err = Event->resetState())
+      return Err;
+
     return AMDGPUEventManager.returnResource(Event);
   }
 
@@ -2874,8 +2993,18 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the elapsed time in milliseconds between two events.
   Error getEventElapsedTimeImpl(void *StartEventPtr, void *EndEventPtr,
                                 float *ElapsedTime) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet",
-                         __func__);
+    if (!ElapsedTime)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "elapsed time output pointer is null");
+
+    AMDGPUEventTy *StartEvent =
+        reinterpret_cast<AMDGPUEventTy *>(StartEventPtr);
+    AMDGPUEventTy *EndEvent = reinterpret_cast<AMDGPUEventTy *>(EndEventPtr);
+
+    if (!StartEvent || !EndEvent)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT, "invalid event handle");
+
+    return StartEvent->elapsedTime(*EndEvent, *ElapsedTime);
   }
 
   /// Print information about the device.
@@ -3354,6 +3483,10 @@ private:
   /// The frequency of the steady clock inside the device.
   uint64_t ClockFrequency;
 
+  /// The HSA system timestamp frequency reported by the runtime. Zero means
+  /// unavailable.
+  uint64_t SystemTimestampFrequency = 0;
+
   /// The total number of concurrent work items that can be running on the GPU.
   uint64_t HardwareParallelism;
 
@@ -3459,6 +3592,79 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       Slots(32), NextSlot(0), SyncCycle(0),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
       UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()) {}
+
+Error AMDGPUEventTy::releaseTimingSignal() {
+  if (!TimingSignal)
+    return Plugin::success();
+
+  AMDGPUSignalTy *Signal = TimingSignal;
+  TimingSignal = nullptr;
+
+  if (Signal->decreaseUseCount())
+    return Device.getSignalManager().returnResource(Signal);
+
+  return Plugin::success();
+}
+
+Error AMDGPUEventTy::elapsedTime(AMDGPUEventTy &EndEvent, float &ElapsedTime) {
+  if (this == &EndEvent) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    if (!TimingSignal)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "event timing is not available");
+
+    if (TimingSignal->load())
+      return Plugin::error(ErrorCode::UNKNOWN, "event timing is not ready");
+
+    ElapsedTime = 0.0f;
+    return Plugin::success();
+  }
+
+  std::scoped_lock<std::mutex, std::mutex> Lock(Mutex, EndEvent.Mutex);
+
+  if (&Device != &EndEvent.Device)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "events belong to different devices");
+
+  if (!TimingSignal || !EndEvent.TimingSignal)
+    return Plugin::error(
+        ErrorCode::INVALID_ARGUMENT,
+        "timing information is not available for one or both events");
+
+  if (TimingSignal->load() || EndEvent.TimingSignal->load())
+    return Plugin::error(
+        ErrorCode::UNKNOWN,
+        "timing information is not ready for one or both events");
+
+  const uint64_t Frequency = Device.getSystemTimestampFrequency();
+  if (Frequency == 0)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "HSA system timestamp frequency is unavailable");
+
+  hsa_amd_profiling_dispatch_time_t StartTime = {};
+  hsa_amd_profiling_dispatch_time_t StopTime = {};
+
+  hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
+      TimingAgent, TimingSignal->get(), &StartTime);
+  if (auto Err = Plugin::check(
+          Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
+    return Err;
+
+  Status = hsa_amd_profiling_get_dispatch_time(
+      EndEvent.TimingAgent, EndEvent.TimingSignal->get(), &StopTime);
+  if (auto Err = Plugin::check(
+          Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
+    return Err;
+
+  const int64_t DeltaTicks =
+      static_cast<int64_t>(StopTime.end) - static_cast<int64_t>(StartTime.end);
+
+  ElapsedTime = static_cast<float>(static_cast<double>(DeltaTicks) * 1000.0 /
+                                   static_cast<double>(Frequency));
+
+  return Plugin::success();
+}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
