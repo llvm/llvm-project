@@ -4715,9 +4715,6 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     return New->setInvalidDecl();
   }
 
-  if (Old->isInvalidDecl())
-    return New->setInvalidDecl();
-
   // If the old declaration was found in an inline namespace and the new
   // declaration was qualified, update the DeclContext to match.
   adjustDeclContextForDeclaratorDecl(New, Old);
