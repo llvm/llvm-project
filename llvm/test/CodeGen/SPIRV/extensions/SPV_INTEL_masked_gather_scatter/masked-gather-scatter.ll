@@ -1,3 +1,7 @@
+; Test that llvm.masked.gather and llvm.masked.scatter intrinsics are correctly
+; lowered to OpMaskedGatherINTEL and OpMaskedScatterINTEL SPIR-V instructions
+; when the SPV_INTEL_masked_gather_scatter extension is enabled.
+
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_masked_gather_scatter %s -o - | FileCheck %s
 ; TODO: spirv-val does not support vector operands in OpConvertPtrToU and OpConvertUToPtr with SPV_INTEL_masked_gather_scatter
 ; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_masked_gather_scatter %s -o - -filetype=obj | spirv-val %}
