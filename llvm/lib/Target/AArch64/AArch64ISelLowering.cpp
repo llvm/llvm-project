@@ -1509,7 +1509,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    if (Subtarget->hasF16F32DOT()) {
+    if (Subtarget->hasF16F32DOT() || Subtarget->hasFP16FML()) {
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v2f32,
                                 MVT::v4f16, Legal);
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
