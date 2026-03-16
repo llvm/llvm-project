@@ -129,8 +129,6 @@ public:
         A.push_back(I.FrameIndex);
   }
 
-  size_t getNumScavengingFrameIndices() const { return Scavenged.size(); }
-
   /// Make a register of the specific register class available from the current
   /// position backwards to the place before \p To. If \p RestoreAfter is true
   /// this includes the instruction following the current position.
