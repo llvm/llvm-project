@@ -503,8 +503,8 @@ dependencies::createDependencyOutputOptions(
   return Opts;
 }
 
-static std::shared_ptr<ModuleDepCollector>
-initializeScanInstanceDependencyCollector(
+std::shared_ptr<ModuleDepCollector>
+dependencies::initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
     DependencyConsumer &Consumer, DependencyScanningService &Service,
