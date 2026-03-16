@@ -413,4 +413,3 @@ entry:
   store i16 %add3, ptr %s3
   ret void
 }
-
