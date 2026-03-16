@@ -421,12 +421,9 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
   c.def_prop_ro("value", toPyInt, "Returns the value of the integer attribute");
   c.def("__int__", toPyInt,
         "Converts the value of the integer attribute to a Python int");
-  c.def_prop_ro_static(
-      "static_typeid",
-      [](nb::object & /*class*/) {
-        return PyTypeID(mlirIntegerAttrGetTypeID());
-      },
-      nb::sig("def static_typeid(/) -> TypeID"));
+  c.def_prop_ro_static("static_typeid", [](nb::object & /*class*/) {
+    return PyTypeID(mlirIntegerAttrGetTypeID());
+  });
 }
 
 nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
@@ -514,14 +511,13 @@ void PySymbolRefAttribute::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "value",
       [](PySymbolRefAttribute &self) {
-        MlirStringRef rootRef = mlirSymbolRefAttrGetRootReference(self);
-        std::vector<std::string> symbols = {
-            std::string(rootRef.data, rootRef.length)};
-        for (int i = 0; i < mlirSymbolRefAttrGetNumNestedReferences(self);
-             ++i) {
-          MlirStringRef nestedRef = mlirSymbolRefAttrGetRootReference(
-              mlirSymbolRefAttrGetNestedReference(self, i));
-          symbols.push_back(std::string(nestedRef.data, nestedRef.length));
+        intptr_t numNested = mlirSymbolRefAttrGetNumNestedReferences(self);
+        std::vector<MlirStringRef> symbols;
+        symbols.reserve(numNested + 1);
+        symbols.push_back(mlirSymbolRefAttrGetRootReference(self));
+        for (intptr_t i = 0; i < numNested; ++i) {
+          symbols.push_back(mlirSymbolRefAttrGetRootReference(
+              mlirSymbolRefAttrGetNestedReference(self, i)));
         }
         return symbols;
       },
@@ -774,27 +770,48 @@ std::unique_ptr<nb_buffer_info> PyDenseElementsAttribute::accessBuffer() {
       "unsupported data type for conversion to Python buffer");
 }
 
-void PyDenseElementsAttribute::bindDerived(ClassTy &c) {
-  c.def("__len__", &PyDenseElementsAttribute::dunderLen)
-      .def_static(
-          "get", PyDenseElementsAttribute::getFromBuffer, nb::arg("array"),
-          nb::arg("signless") = true, nb::arg("type") = nb::none(),
-          nb::arg("shape") = nb::none(), nb::arg("context") = nb::none(),
-          // clang-format off
-            nb::sig("def get(array: typing_extensions.Buffer, signless: bool = True, type: Type | None = None, shape: Sequence[int] | None = None, context: Context | None = None) -> DenseElementsAttr"),
-          // clang-format on
-          kDenseElementsAttrGetDocstring)
+template <typename ClassT>
+void PyDenseElementsAttribute::bindFactoryMethods(ClassT &c,
+                                                  const char *pyClassName) {
+  std::string getSig1 =
+      // clang-format off
+      "def get(array: typing_extensions.Buffer, signless: bool = True, type: Type | None = None, shape: Sequence[int] | None = None, context: Context | None = None) -> " +
+      // clang-format on
+      std::string(pyClassName);
+  std::string getSig2 =
+      // clang-format off
+      "def get(attrs: Sequence[Attribute], type: Type | None = None, context: Context | None = None) -> " +
+      // clang-format on
+      std::string(pyClassName);
+  std::string getSplatSig =
+      // clang-format off
+      "def get_splat(shaped_type: Type, element_attr: Attribute) -> " +
+      // clang-format on
+      std::string(pyClassName);
+
+  c.def_static("get", PyDenseElementsAttribute::getFromBuffer, nb::arg("array"),
+               nb::arg("signless") = true, nb::arg("type") = nb::none(),
+               nb::arg("shape") = nb::none(), nb::arg("context") = nb::none(),
+               nb::sig(getSig1.c_str()), kDenseElementsAttrGetDocstring)
       .def_static("get", PyDenseElementsAttribute::getFromList,
                   nb::arg("attrs"), nb::arg("type") = nb::none(),
-                  nb::arg("context") = nb::none(),
+                  nb::arg("context") = nb::none(), nb::sig(getSig2.c_str()),
                   kDenseElementsAttrGetFromListDocstring)
       .def_static("get_splat", PyDenseElementsAttribute::getSplat,
                   nb::arg("shaped_type"), nb::arg("element_attr"),
-                  "Gets a DenseElementsAttr where all values are the same")
-      .def_prop_ro("is_splat",
-                   [](PyDenseElementsAttribute &self) -> bool {
-                     return mlirDenseElementsAttrIsSplat(self);
-                   })
+                  nb::sig(getSplatSig.c_str()),
+                  ("Gets a " + std::string(pyClassName) +
+                   " where all values are the same")
+                      .c_str());
+}
+
+void PyDenseElementsAttribute::bindDerived(ClassTy &c) {
+  c.def("__len__", &PyDenseElementsAttribute::dunderLen);
+  bindFactoryMethods(c, pyClassName);
+  c.def_prop_ro("is_splat",
+                [](PyDenseElementsAttribute &self) -> bool {
+                  return mlirDenseElementsAttrIsSplat(self);
+                })
       .def("get_splat_value",
            [](PyDenseElementsAttribute &self)
                -> nb::typed<nb::object, PyAttribute> {
@@ -1037,6 +1054,7 @@ nb::int_ PyDenseIntElementsAttribute::dunderGetItem(intptr_t pos) const {
 }
 
 void PyDenseIntElementsAttribute::bindDerived(ClassTy &c) {
+  PyDenseElementsAttribute::bindFactoryMethods(c, pyClassName);
   c.def("__getitem__", &PyDenseIntElementsAttribute::dunderGetItem);
 }
 
@@ -1215,6 +1233,7 @@ nb::float_ PyDenseFPElementsAttribute::dunderGetItem(intptr_t pos) const {
 }
 
 void PyDenseFPElementsAttribute::bindDerived(ClassTy &c) {
+  PyDenseElementsAttribute::bindFactoryMethods(c, pyClassName);
   c.def("__getitem__", &PyDenseFPElementsAttribute::dunderGetItem);
 }
 
@@ -1309,14 +1328,13 @@ nb::object denseArrayAttributeCaster(PyAttribute &pyAttribute) {
   throw nb::type_error(msg.c_str());
 }
 
-nb::object denseIntOrFPElementsAttributeCaster(PyAttribute &pyAttribute) {
+nb::object denseTypedElementsAttributeCaster(PyAttribute &pyAttribute) {
   if (PyDenseFPElementsAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseFPElementsAttribute(pyAttribute));
   if (PyDenseIntElementsAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseIntElementsAttribute(pyAttribute));
   std::string msg =
-      std::string(
-          "Can't cast unknown element type DenseIntOrFPElementsAttr (") +
+      std::string("Can't cast unknown element type DenseTypedElementsAttr (") +
       nb::cast<std::string>(nb::repr(nb::cast(pyAttribute))) + ")";
   throw nb::type_error(msg.c_str());
 }
@@ -1492,10 +1510,9 @@ void populateIRAttributes(nb::module_ &m) {
   PyDenseElementsAttribute::bind(m, PyDenseElementsAttribute::slots);
   PyDenseFPElementsAttribute::bind(m);
   PyDenseIntElementsAttribute::bind(m);
-  PyGlobals::get().registerTypeCaster(
-      mlirDenseIntOrFPElementsAttrGetTypeID(),
-      nb::cast<nb::callable>(
-          nb::cpp_function(denseIntOrFPElementsAttributeCaster)));
+  PyGlobals::get().registerTypeCaster(mlirDenseTypedElementsAttrGetTypeID(),
+                                      nb::cast<nb::callable>(nb::cpp_function(
+                                          denseTypedElementsAttributeCaster)));
   PyDenseResourceElementsAttribute::bind(m);
 
   PyDictAttribute::bind(m);

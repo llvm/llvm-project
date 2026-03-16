@@ -102,6 +102,46 @@ def testStructType():
     assert isinstance(typ, llvm.StructType)
 
 
+# CHECK-LABEL: testArrayType
+@constructAndPrintInModule
+def testArrayType():
+    i32 = IntegerType.get_signless(32)
+    i8 = IntegerType.get_signless(8)
+
+    arr = llvm.ArrayType.get(i32, 4)
+    # CHECK: !llvm.array<4 x i32>
+    print(arr)
+    assert arr.element_type == i32
+    assert arr.num_elements == 4
+
+    arr2 = llvm.ArrayType.get(i8, 12)
+    # CHECK: !llvm.array<12 x i8>
+    print(arr2)
+    assert arr2.element_type == i8
+    assert arr2.num_elements == 12
+
+    typ = Type.parse("!llvm.array<4 x i32>")
+    assert isinstance(typ, llvm.ArrayType)
+    assert typ == arr
+
+
+# CHECK-LABEL: testArrayTypeOps
+@constructAndPrintInModule
+def testArrayTypeOps():
+    i32 = IntegerType.get_signless(32)
+    arr_t = llvm.ArrayType.get(i32, 4)
+
+    undef = llvm.UndefOp(arr_t)
+    c_42 = llvm.mlir_constant(IntegerAttr.get(i32, 42))
+    inserted = llvm.insertvalue(undef, c_42, [0])
+    llvm.extractvalue(i32, inserted, [0])
+
+    # CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : !llvm.array<4 x i32>
+    # CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i32) : i32
+    # CHECK: %[[INS:.*]] = llvm.insertvalue %[[C42]], %[[UNDEF]][0] : !llvm.array<4 x i32>
+    # CHECK: %{{.*}} = llvm.extractvalue %[[INS]][0] : !llvm.array<4 x i32>
+
+
 # CHECK-LABEL: testSmoke
 @constructAndPrintInModule
 def testSmoke():

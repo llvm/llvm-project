@@ -148,8 +148,7 @@ public:
 constexpr unsigned SmallCallStackSize = 16;
 constexpr unsigned SmallSCCSize = 32;
 
-using CallStackTy =
-    llvm::SmallVector<CallGraphNode::CallRecord, SmallCallStackSize>;
+using CallStackTy = SmallVector<CallGraphNode::CallRecord, SmallCallStackSize>;
 
 } // namespace
 

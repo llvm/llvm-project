@@ -402,10 +402,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
       }
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback =
-              PluginManager::GetProcessCreateCallbackAtIndex(idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback : PluginManager::GetProcessCreateCallbacks()) {
       process_sp = create_callback(target_sp, listener_sp, crash_file_path,
                                    can_connect);
       if (process_sp) {
@@ -1282,10 +1279,7 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOGF(log, "(plugin = %s, state = %s, restarted = %i)",
            GetPluginName().data(), StateAsCString(new_state), restarted);
-  // This is one instance where we don't want to obey the "who sees what state"
-  // decisions, we just want to see what's in the public state field.
-  const StateType old_state =
-      m_current_private_state_thread->m_public_state.GetValue();
+  const StateType old_state = GetPublicState();
   m_current_private_state_thread->SetPublicState(new_state);
 
   // On the transition from Run to Stopped, we unlock the writer end of the run
@@ -1299,8 +1293,7 @@ void Process::SetPublicState(StateType new_state, bool restarted) {
       SetPublicRunLockToStopped();
     } else {
       const bool old_state_is_stopped = StateIsStoppedState(old_state, false);
-      if ((old_state_is_stopped != new_state_is_stopped) ||
-          (new_state_is_stopped && GetRunLock().IsRunning())) {
+      if ((old_state_is_stopped != new_state_is_stopped)) {
         if (new_state_is_stopped && !restarted) {
           LLDB_LOGF(log, "(plugin = %s, state = %s) -- unlocking run lock",
                    GetPluginName().data(), StateAsCString(new_state));
@@ -3905,7 +3898,7 @@ bool Process::PrivateStateThread::StartupThread() {
   return true;
 }
 
-bool Process::PrivateStateThread::IsOnThread(lldb::thread_t thread) const {
+bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
   return m_private_state_thread.EqualsThread(thread);
 }
 
@@ -4395,14 +4388,7 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
         this_thread_wants_to_stop =
             stop_info_sp->GetOverriddenShouldStopValue();
       } else {
-        // PerformAction can call arbitrary Python code but we're still in
-        // ShouldStop so we haven't switched the public state yet.  So we need
-        // to let this thread see the private state:
-        process_sp->m_current_private_state_thread->PushUsePrivateState(
-            Host::GetCurrentThread());
         stop_info_sp->PerformAction(event_ptr);
-        process_sp->m_current_private_state_thread->PopUsePrivateState();
-
         // The stop action might restart the target.  If it does, then we
         // want to mark that in the event so that whoever is receiving it
         // will know to wait for the running event and reflect that state
@@ -4466,6 +4452,9 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   if (m_update_state != 1)
     return;
 
+  process_sp->SetPublicState(
+      m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
+
   if (m_state == eStateStopped && !m_restarted) {
     // Let process subclasses know we are about to do a public stop and do
     // anything they might need to in order to speed up register and memory
@@ -4477,18 +4466,16 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   // than a plain interrupt (e.g. we had already stopped for a breakpoint when
   // the halt request came through) don't do the StopInfo actions, as they may
   // end up restarting the process.
-  if (m_interrupted || m_state != eStateStopped || m_restarted) {
-    process_sp->SetPublicState(
-        m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
+  if (m_interrupted)
+    return;
+
+  // If we're not stopped or have restarted, then skip the StopInfo actions:
+  if (m_state != eStateStopped || m_restarted) {
     return;
   }
 
   bool does_anybody_have_an_opinion = false;
   bool still_should_stop = ShouldStop(event_ptr, does_anybody_have_an_opinion);
-
-  // And now tell the world about the new state:
-  process_sp->SetPublicState(
-      m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
 
   if (GetRestarted()) {
     return;
@@ -6458,15 +6445,12 @@ void Process::MapSupportedStructuredDataPlugins(
   // we've consumed all the type names.
   // FIXME: should we return an error if there are type names nobody
   // supports?
-  for (uint32_t plugin_index = 0; !type_names.empty(); plugin_index++) {
-    auto create_instance =
-        PluginManager::GetStructuredDataPluginCreateCallbackAtIndex(
-            plugin_index);
-    if (!create_instance)
+  for (auto &cbs : PluginManager::GetStructuredDataPluginCallbacks()) {
+    if (type_names.empty())
       break;
 
     // Create the plugin.
-    StructuredDataPluginSP plugin_sp = (*create_instance)(*this);
+    StructuredDataPluginSP plugin_sp = (*cbs.create_callback)(*this);
     if (!plugin_sp) {
       // This plugin doesn't think it can work with the process. Move on to the
       // next.

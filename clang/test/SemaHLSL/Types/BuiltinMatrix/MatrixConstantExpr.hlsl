@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -fmatrix-memory-layout=column-major -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -fmatrix-memory-layout=row-major -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -fmatrix-memory-layout=column-major -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -std=hlsl202x -fmatrix-memory-layout=row-major -fexperimental-new-constant-interpreter -verify %s
 
 // expected-no-diagnostics
 
@@ -43,6 +45,8 @@ export void fn() {
     _Static_assert(FA4[1] == 2.5, "Woo!");
     _Static_assert(FA4[2] == 3.5, "Woo!");
     _Static_assert(FA4[3] == 4.5, "Woo!");
+    constexpr float F = (float)FA4;
+    _Static_assert(F == 1.5, "Woo!");
   }
 
   // Array cast to matrix to vector
