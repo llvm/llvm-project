@@ -175,16 +175,12 @@ define i64 @ctlz_i64(i64 %x) {
 ;
 ; X86-CLZ-LABEL: ctlz_i64:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB3_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    jae .LBB3_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
-; X86-CLZ-NEXT:    xorl %edx, %edx
-; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB3_1:
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:  .LBB3_2:
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
 ;
@@ -200,16 +196,12 @@ define i64 @ctlz_i64(i64 %x) {
 ;
 ; X86-FASTLZCNT-LABEL: ctlz_i64:
 ; X86-FASTLZCNT:       # %bb.0:
-; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    testl %eax, %eax
-; X86-FASTLZCNT-NEXT:    jne .LBB3_1
-; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    jae .LBB3_2
+; X86-FASTLZCNT-NEXT:  # %bb.1:
 ; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-FASTLZCNT-NEXT:    addl $32, %eax
-; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
-; X86-FASTLZCNT-NEXT:    retl
-; X86-FASTLZCNT-NEXT:  .LBB3_1:
-; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:  .LBB3_2:
 ; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
 ; X86-FASTLZCNT-NEXT:    retl
   %tmp = call i64 @llvm.ctlz.i64( i64 %x, i1 true )
@@ -450,16 +442,12 @@ define i64 @ctlz_i64_zero_test(i64 %n) nounwind {
 ;
 ; X86-CLZ-LABEL: ctlz_i64_zero_test:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB7_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    jae .LBB7_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
-; X86-CLZ-NEXT:    xorl %edx, %edx
-; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB7_1:
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:  .LBB7_2:
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
 ;
@@ -475,16 +463,12 @@ define i64 @ctlz_i64_zero_test(i64 %n) nounwind {
 ;
 ; X86-FASTLZCNT-LABEL: ctlz_i64_zero_test:
 ; X86-FASTLZCNT:       # %bb.0:
-; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    testl %eax, %eax
-; X86-FASTLZCNT-NEXT:    jne .LBB7_1
-; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    jae .LBB7_2
+; X86-FASTLZCNT-NEXT:  # %bb.1:
 ; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-FASTLZCNT-NEXT:    addl $32, %eax
-; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
-; X86-FASTLZCNT-NEXT:    retl
-; X86-FASTLZCNT-NEXT:  .LBB7_1:
-; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:  .LBB7_2:
 ; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
 ; X86-FASTLZCNT-NEXT:    retl
   %tmp1 = call i64 @llvm.ctlz.i64(i64 %n, i1 false)
@@ -755,18 +739,14 @@ define i64 @ctlz_i64_zero_test_knownneverzero(i64 %n) {
 ;
 ; X86-CLZ-LABEL: ctlz_i64_zero_test_knownneverzero:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB12_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    jae .LBB12_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    orl $1, %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
 ; X86-CLZ-NEXT:    orl $32, %eax
-; X86-CLZ-NEXT:    xorl %edx, %edx
-; X86-CLZ-NEXT:    retl
-; X86-CLZ-NEXT:  .LBB12_1:
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
+; X86-CLZ-NEXT:  .LBB12_2:
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
 ;
@@ -784,18 +764,14 @@ define i64 @ctlz_i64_zero_test_knownneverzero(i64 %n) {
 ;
 ; X86-FASTLZCNT-LABEL: ctlz_i64_zero_test_knownneverzero:
 ; X86-FASTLZCNT:       # %bb.0:
-; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    testl %eax, %eax
-; X86-FASTLZCNT-NEXT:    jne .LBB12_1
-; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    jae .LBB12_2
+; X86-FASTLZCNT-NEXT:  # %bb.1:
 ; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-FASTLZCNT-NEXT:    orl $1, %eax
 ; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
 ; X86-FASTLZCNT-NEXT:    orl $32, %eax
-; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
-; X86-FASTLZCNT-NEXT:    retl
-; X86-FASTLZCNT-NEXT:  .LBB12_1:
-; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
+; X86-FASTLZCNT-NEXT:  .LBB12_2:
 ; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
 ; X86-FASTLZCNT-NEXT:    retl
   %o = or i64 %n, 1
@@ -1164,16 +1140,12 @@ define i64 @ctlz_xor63_i64_true(i64 %x) {
 ;
 ; X86-CLZ-LABEL: ctlz_xor63_i64_true:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    testl %eax, %eax
-; X86-CLZ-NEXT:    jne .LBB19_1
-; X86-CLZ-NEXT:  # %bb.2:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    jae .LBB19_2
+; X86-CLZ-NEXT:  # %bb.1:
 ; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    addl $32, %eax
-; X86-CLZ-NEXT:    jmp .LBB19_3
-; X86-CLZ-NEXT:  .LBB19_1:
-; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:  .LBB19_3:
+; X86-CLZ-NEXT:  .LBB19_2:
 ; X86-CLZ-NEXT:    xorl $63, %eax
 ; X86-CLZ-NEXT:    xorl %edx, %edx
 ; X86-CLZ-NEXT:    retl
@@ -1191,16 +1163,12 @@ define i64 @ctlz_xor63_i64_true(i64 %x) {
 ;
 ; X86-FASTLZCNT-LABEL: ctlz_xor63_i64_true:
 ; X86-FASTLZCNT:       # %bb.0:
-; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    testl %eax, %eax
-; X86-FASTLZCNT-NEXT:    jne .LBB19_1
-; X86-FASTLZCNT-NEXT:  # %bb.2:
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    jae .LBB19_2
+; X86-FASTLZCNT-NEXT:  # %bb.1:
 ; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
 ; X86-FASTLZCNT-NEXT:    addl $32, %eax
-; X86-FASTLZCNT-NEXT:    jmp .LBB19_3
-; X86-FASTLZCNT-NEXT:  .LBB19_1:
-; X86-FASTLZCNT-NEXT:    lzcntl %eax, %eax
-; X86-FASTLZCNT-NEXT:  .LBB19_3:
+; X86-FASTLZCNT-NEXT:  .LBB19_2:
 ; X86-FASTLZCNT-NEXT:    xorl $63, %eax
 ; X86-FASTLZCNT-NEXT:    xorl %edx, %edx
 ; X86-FASTLZCNT-NEXT:    retl
