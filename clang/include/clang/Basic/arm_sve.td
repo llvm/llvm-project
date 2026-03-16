@@ -1001,6 +1001,28 @@ def SVCVTLT_Z_F32_F16  : SInst<"svcvtlt_f32[_f16]", "dPh", "f", MergeZeroExp, "a
 def SVCVTLT_Z_F64_F32  : SInst<"svcvtlt_f64[_f32]", "dPh", "d", MergeZeroExp, "aarch64_sve_fcvtlt_f64f32",  [IsOverloadNone, VerifyRuntimeMode]>;
 
 }
+
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+def SVCVTZN_S : SInst<"svcvtzn_{0}[_{1}_x2]", "y2.d", "hfd", MergeNone, "aarch64_sve_fcvtzsn_x2", [IsReductionQV, VerifyRuntimeMode]>;
+def SVCVTZN_U : SInst<"svcvtzn_{0}[_{1}_x2]", "e2.d", "hfd", MergeNone, "aarch64_sve_fcvtzun_x2", [IsReductionQV, VerifyRuntimeMode]>;
+
+def SVCVTT_F16_S8  : SInst<"svcvtt_f16[_s8]",  "Od", "c", MergeNone, "aarch64_sve_scvtflt_f16i8", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTT_F32_S16  : SInst<"svcvtt_f32[_s16]",  "Md", "s", MergeNone, "aarch64_sve_scvtflt_f32i16", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTT_F64_S32  : SInst<"svcvtt_f64[_s32]",  "Nd", "i", MergeNone, "aarch64_sve_scvtflt_f64i32", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTT_F16_U8  : SInst<"svcvtt_f16[_u8]",  "Od", "Uc", MergeNone, "aarch64_sve_ucvtflt_f16i8", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTT_F32_U16  : SInst<"svcvtt_f32[_u16]",  "Md", "Us", MergeNone, "aarch64_sve_ucvtflt_f32i16", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTT_F64_U32  : SInst<"svcvtt_f64[_u32]",  "Nd", "Ui", MergeNone, "aarch64_sve_ucvtflt_f64i32", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTB_F16_S8  : SInst<"svcvtb_f16[_s8]",  "Od", "c", MergeNone, "aarch64_sve_scvtfb_f16i8", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTB_F32_S16  : SInst<"svcvtb_f32[_s16]",  "Md", "s", MergeNone, "aarch64_sve_scvtfb_f32i16", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTB_F64_S32  : SInst<"svcvtb_f64[_s32]",  "Nd", "i", MergeNone, "aarch64_sve_scvtfb_f64i32", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTB_F16_U8  : SInst<"svcvtb_f16[_u8]",  "Od", "Uc", MergeNone, "aarch64_sve_ucvtfb_f16i8", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTB_F32_U16  : SInst<"svcvtb_f32[_u16]",  "Md", "Us", MergeNone, "aarch64_sve_ucvtfb_f32i16", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTB_F64_U32  : SInst<"svcvtb_f64[_u32]",  "Nd", "Ui", MergeNone, "aarch64_sve_ucvtfb_f64i32", [IsOverloadNone, VerifyRuntimeMode]>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 

@@ -78,6 +78,7 @@ include "arm_immcheck_incl.td"
 // R: scalar of 1/2 width element type (splat to vector type)
 // r: scalar of 1/4 width element type (splat to vector type)
 // @: unsigned scalar of 1/4 width element type (splat to vector type)
+// y: 1/2 width signed elements, 2x element count
 // e: 1/2 width unsigned elements, 2x element count
 // b: 1/4 width unsigned elements, 4x element count
 // h: 1/2 width elements, 2x element count
