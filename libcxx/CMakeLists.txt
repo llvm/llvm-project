@@ -8,7 +8,7 @@ set(LLVM_SUBPROJECT_TITLE "libc++")
 # is incompatible with libc++ (since we set our own standard via other means).
 # TODO: Figure out which other part of the build is setting this and resolve the issue
 #       at the root.
-unset(CMAKE_CXX_STANDARD)
+unset(CMAKE_CXX_STANDARD CACHE)
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
