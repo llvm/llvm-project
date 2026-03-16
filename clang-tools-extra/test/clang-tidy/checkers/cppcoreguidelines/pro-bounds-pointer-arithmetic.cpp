@@ -3,6 +3,7 @@
 // RUN:   -config="{CheckOptions: {cppcoreguidelines-pro-bounds-pointer-arithmetic.AllowIncrementDecrementOperators: true}}"
 
 #include <utility>
+#include <map>
 
 enum E {
   ENUM_LITERAL = 1
@@ -123,19 +124,8 @@ void okay() {
 
 namespace gh126424 {
 
-namespace std {
-
-template <typename Key, typename Value>
-class map {
-  public:
-   using value_type = ::std::pair<Key, Value>;
-   value_type& operator[](const Key& key);
-   value_type& operator[](Key&& key);
- };
-}
-
 template <typename R>
-int f(std::map<R*, int>& map, R* r) {
+int f(::std::map<R*, int>& map, R* r) {
   return map[r]; // OK
 }
 

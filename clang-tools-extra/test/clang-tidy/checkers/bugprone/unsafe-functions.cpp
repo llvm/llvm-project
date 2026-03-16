@@ -1,9 +1,9 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-unsafe-functions %t
 
 #include <utility>
+#include <cstddef>
 
 namespace std {
-using ptrdiff_t = long long;
 
 template<class T>
 std::pair<T*, std::ptrdiff_t>
