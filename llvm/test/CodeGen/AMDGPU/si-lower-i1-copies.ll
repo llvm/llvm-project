@@ -130,17 +130,17 @@ define void @foo(i32 %0) #0 {
 entry:
   br label %for.cond
 
-for.cond:                                         ; preds = %for.body, %for.cond, %entry
+for.cond:
   %cmp1 = icmp slt i32 %0, 0
   br i1 %cmp1, label %for.cond, label %BB
 
-BB:                                               ; preds = %for.cond
+BB:
   br i1 %cmp1, label %for.body, label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %BB
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %BB
+for.body:
   call void @bar(ptr poison)
   br label %for.cond
 }
