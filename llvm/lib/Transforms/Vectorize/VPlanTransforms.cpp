@@ -230,7 +230,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-// Collect either Loads or Stores grouped by their address SCEV.
+/// Collect either Loads or Stores grouped by their address SCEV.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
@@ -264,10 +264,6 @@ collectGroupedReplicateMemOps(
       return VPDT.properlyDominates(A, B);
     });
   }
-  // Sort groups by leader dominance order.
-  stable_sort(Groups, [&VPDT](auto A, auto B) {
-    return VPDT.properlyDominates(A[0], B[0]);
-  });
   return Groups;
 }
 
