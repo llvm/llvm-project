@@ -10663,14 +10663,16 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     }
     break;
   }
-  // We do not support CL variant,
-  // as requires a lot of bookeeping
+  // We do not support CL variant, as it requires a lot of bookkeeping.
+  // Only expand when SHLD is slow; on CPUs with fast SHLD the replacement
+  // sequence (SHL + SHR + OR) is not profitable.
   case X86::SHLD32rri8:
   case X86::SHLD32mri8:
   case X86::SHLD64rri8:
   case X86::SHLD64mri8: {
     Patterns.push_back(X86MachineCombinerPattern::USHLD);
     return true;
+    break;
   }
   }
   return TargetInstrInfo::getMachineCombinerPatterns(Root,
@@ -10716,6 +10718,8 @@ genAlternativeShldSequence(MachineInstr &Root, const TargetInstrInfo &TII,
                                Root.getOperand(0).getReg())
                            .addReg(ShlReg)
                            .addReg(ShrReg);
+    InstrIdxForVirtReg.insert({ShlReg, 0});
+    InstrIdxForVirtReg.insert({ShrReg, 1});
     InsInstrs.push_back(Shl);
     InsInstrs.push_back(Shr);
     InsInstrs.push_back(Or);
@@ -10747,6 +10751,7 @@ genAlternativeShldSequence(MachineInstr &Root, const TargetInstrInfo &TII,
                            .add(Root.getOperand(0 + X86::AddrDisp))
                            .add(Root.getOperand(0 + X86::AddrSegmentReg))
                            .addReg(ShrReg);
+    InstrIdxForVirtReg.insert({ShrReg, 1});
     InsInstrs.push_back(Shl);
     InsInstrs.push_back(Shr);
     InsInstrs.push_back(Or);

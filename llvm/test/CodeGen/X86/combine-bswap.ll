@@ -411,13 +411,10 @@ define i32 @bs_and_rhs_bs32_multiuse2(i32 %a, i32 %b) #0 {
 define i64 @test_bswap64_shift17(i64 %a0) {
 ; X86-LABEL: test_bswap64_shift17:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shldl $17, %edx, %eax
 ; X86-NEXT:    shll $17, %edx
-; X86-NEXT:    shll $17, %ecx
-; X86-NEXT:    shrl $15, %eax
-; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    bswapl %eax
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    retl

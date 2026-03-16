@@ -6,13 +6,11 @@ define ptr @PR49162(ptr %base, ptr %ptr160) {
 ; X86-LABEL: PR49162:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl 8(%eax), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    movl 8(%eax), %ecx
 ; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    shrl $16, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    shldl $16, %ecx, %eax
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl

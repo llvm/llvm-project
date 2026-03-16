@@ -262,12 +262,9 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rdi, %r14
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    shlq $31, %rax
 ; X64-NEXT:    movq %rdi, %r15
-; X64-NEXT:    shrq $33, %r15
-; X64-NEXT:    orq %rax, %r15
+; X64-NEXT:    sarq $63, %r15
+; X64-NEXT:    shldq $31, %rdi, %r15
 ; X64-NEXT:    shlq $31, %r14
 ; X64-NEXT:    movq %rsi, %r12
 ; X64-NEXT:    sarq $63, %r12

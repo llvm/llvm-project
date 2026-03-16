@@ -33,9 +33,7 @@ define i128 @opt_setcc_lt_power_of_2(i128 %a) nounwind {
 ; X86-NEXT:    movl %edi, %esi
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    shll $4, %ebx
-; X86-NEXT:    shrl $28, %esi
-; X86-NEXT:    orl %ebx, %esi
+; X86-NEXT:    shrdl $28, %ebx, %esi
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %exit
@@ -206,32 +204,23 @@ define i1 @opt_setcc_shl_eq_zero_multiple_shl_users(i128 %a) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl 12(%ebp), %esi
-; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl 16(%ebp), %edx
+; X86-NEXT:    movl 20(%ebp), %esi
+; X86-NEXT:    shldl $17, %edx, %esi
+; X86-NEXT:    shldl $17, %ecx, %edx
+; X86-NEXT:    shldl $17, %eax, %ecx
+; X86-NEXT:    shll $17, %eax
 ; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    shll $17, %edi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrl $15, %edx
-; X86-NEXT:    orl %edi, %edx
-; X86-NEXT:    movl 20(%ebp), %edi
-; X86-NEXT:    shll $17, %edi
-; X86-NEXT:    shrl $15, %ecx
-; X86-NEXT:    orl %edi, %ecx
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    shll $17, %edi
-; X86-NEXT:    shll $17, %esi
-; X86-NEXT:    shrl $15, %eax
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    movl %edi, %ebx
+; X86-NEXT:    orl %esi, %edi
+; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    orl %edx, %ebx
-; X86-NEXT:    orl %esi, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    sete %bl
-; X86-NEXT:    pushl %ecx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %ebx, %eax
@@ -245,10 +234,7 @@ define i1 @opt_setcc_shl_eq_zero_multiple_shl_users(i128 %a) nounwind {
 ; X64-LABEL: opt_setcc_shl_eq_zero_multiple_shl_users:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    shlq $17, %rsi
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $47, %rax
-; X64-NEXT:    orq %rax, %rsi
+; X64-NEXT:    shldq $17, %rdi, %rsi
 ; X64-NEXT:    shlq $17, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    orq %rsi, %rax
@@ -297,41 +283,27 @@ define i1 @opt_setcc_expanded_shl_correct_shifts(i64 %a, i64 %b) nounwind {
 define i1 @opt_setcc_expanded_shl_wrong_shifts(i64 %a, i64 %b) nounwind {
 ; X86-LABEL: opt_setcc_expanded_shl_wrong_shifts:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    shll $17, %edi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrl $15, %edx
-; X86-NEXT:    orl %edi, %edx
-; X86-NEXT:    shll $17, %esi
-; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    shrl $15, %edi
-; X86-NEXT:    orl %esi, %edi
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    shll $18, %esi
-; X86-NEXT:    orl %edi, %esi
-; X86-NEXT:    shll $18, %ecx
-; X86-NEXT:    shrl $14, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    shldl $17, %edx, %esi
+; X86-NEXT:    shldl $17, %ecx, %edx
+; X86-NEXT:    shldl $18, %eax, %ecx
+; X86-NEXT:    shll $18, %eax
 ; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    orl %esi, %ecx
+; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: opt_setcc_expanded_shl_wrong_shifts:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlq $17, %rdi
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    shrq $47, %rax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    shldq $17, %rsi, %rdi
 ; X64-NEXT:    shlq $18, %rsi
-; X64-NEXT:    orq %rax, %rsi
+; X64-NEXT:    orq %rdi, %rsi
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
   %shl.a = shl i64 %a, 17

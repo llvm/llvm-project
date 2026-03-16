@@ -50,17 +50,11 @@ define double @main(i224 %0) #0 {
 ; CHECK-NEXT:    sbbq %rax, %rdx
 ; CHECK-NEXT:    sbbq %rax, %rcx
 ; CHECK-NEXT:    movq %rcx, %r8
-; CHECK-NEXT:    shlq $32, %r8
-; CHECK-NEXT:    movq %rdx, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    orq %rax, %r8
+; CHECK-NEXT:    shldq $32, %rdx, %r8
 ; CHECK-NEXT:    bsrq %r8, %rax
 ; CHECK-NEXT:    xorl $63, %eax
 ; CHECK-NEXT:    movq %rdx, %r10
-; CHECK-NEXT:    shlq $32, %r10
-; CHECK-NEXT:    movq %rsi, %r11
-; CHECK-NEXT:    shrq $32, %r11
-; CHECK-NEXT:    orq %r11, %r10
+; CHECK-NEXT:    shldq $32, %rsi, %r10
 ; CHECK-NEXT:    bsrq %r10, %r11
 ; CHECK-NEXT:    xorl $63, %r11d
 ; CHECK-NEXT:    orl $64, %r11d

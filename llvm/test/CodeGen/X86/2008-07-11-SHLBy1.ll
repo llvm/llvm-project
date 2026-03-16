@@ -4,11 +4,9 @@
 define i128 @sl(i128 %x) {
 ; CHECK-LABEL: sl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    leaq (,%rsi,2), %rcx
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    shldq $1, %rdi, %rdx
 ; CHECK-NEXT:    leaq (%rdi,%rdi), %rax
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    shrq $63, %rdx
-; CHECK-NEXT:    orq %rcx, %rdx
 ; CHECK-NEXT:    retq
         %t = shl i128 %x, 1
         ret i128 %t

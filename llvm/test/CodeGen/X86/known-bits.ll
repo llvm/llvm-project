@@ -91,20 +91,18 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl $-1024, %esi # imm = 0xFC00
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    andl %esi, %edi
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    addl %edi, %esi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    adcl $0, %edx
-; X86-NEXT:    shll $22, %edx
-; X86-NEXT:    shrdl $10, %ecx, %esi
-; X86-NEXT:    shrl $10, %ecx
-; X86-NEXT:    orl %edx, %ecx
-; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    shldl $22, %edx, %ecx
+; X86-NEXT:    shldl $22, %esi, %edx
+; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)
 ; X86-NEXT:    movl $0, (%eax)
@@ -118,9 +116,7 @@ define i128 @knownbits_mask_addc_shl(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X64-NEXT:    andq $-1024, %rsi # imm = 0xFC00
 ; X64-NEXT:    addq %rdi, %rsi
 ; X64-NEXT:    adcl $0, %edx
-; X64-NEXT:    shlq $54, %rdx
-; X64-NEXT:    shrq $10, %rsi
-; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shldq $54, %rsi, %rdx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %1 = and i64 %a0, -1024

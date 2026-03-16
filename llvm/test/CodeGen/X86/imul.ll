@@ -29,12 +29,10 @@ define i64 @mul4_64(i64 %A) {
 ;
 ; X86-LABEL: mul4_64:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal (,%edx,4), %eax
-; X86-NEXT:    shll $2, %ecx
-; X86-NEXT:    shrl $30, %edx
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    shldl $2, %eax, %edx
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    retl
     %mul = mul i64 %A, 4
     ret i64 %mul
@@ -65,13 +63,10 @@ define i64 @mul4096_64(i64 %A) {
 ;
 ; X86-LABEL: mul4096_64:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shldl $12, %eax, %edx
 ; X86-NEXT:    shll $12, %eax
-; X86-NEXT:    shll $12, %ecx
-; X86-NEXT:    shrl $20, %edx
-; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    retl
     %mul = mul i64 %A, 4096
     ret i64 %mul

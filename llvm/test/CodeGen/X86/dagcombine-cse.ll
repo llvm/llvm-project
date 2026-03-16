@@ -120,10 +120,7 @@ define i96 @square_high(i96 %x) nounwind {
 ; X64-NEXT:    adcq %rsi, %rax
 ; X64-NEXT:    imulq %rcx, %rcx
 ; X64-NEXT:    addq %rax, %rcx
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    shlq $32, %rax
-; X64-NEXT:    shrq $32, %r8
-; X64-NEXT:    orq %rax, %r8
+; X64-NEXT:    shrdq $32, %rcx, %r8
 ; X64-NEXT:    shrq $32, %rcx
 ; X64-NEXT:    movq %r8, %rax
 ; X64-NEXT:    movq %rcx, %rdx

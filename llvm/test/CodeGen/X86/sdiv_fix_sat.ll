@@ -307,20 +307,18 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    pushq %r12
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    movq %rdi, %r15
-; X64-NEXT:    leaq (%rdi,%rdi), %r14
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    shlq $31, %rax
-; X64-NEXT:    shrq $33, %r14
-; X64-NEXT:    orq %rax, %r14
-; X64-NEXT:    shlq $32, %r15
 ; X64-NEXT:    movq %rsi, %rdx
 ; X64-NEXT:    movq %rsi, (%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rdi, %r14
+; X64-NEXT:    leaq (%rdi,%rdi), %rax
+; X64-NEXT:    movq %rdi, %r15
+; X64-NEXT:    sarq $63, %r15
+; X64-NEXT:    shldq $31, %rax, %r15
+; X64-NEXT:    shlq $32, %r14
 ; X64-NEXT:    movq %rsi, %r12
 ; X64-NEXT:    sarq $63, %r12
-; X64-NEXT:    movq %r15, %rdi
-; X64-NEXT:    movq %r14, %rsi
+; X64-NEXT:    movq %r14, %rdi
+; X64-NEXT:    movq %r15, %rsi
 ; X64-NEXT:    movq %r12, %rcx
 ; X64-NEXT:    callq __divti3@PLT
 ; X64-NEXT:    movq %rax, %r13
@@ -329,13 +327,13 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    subq $1, %r13
 ; X64-NEXT:    sbbq $0, %rbp
-; X64-NEXT:    testq %r14, %r14
+; X64-NEXT:    testq %r15, %r15
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    testq %r12, %r12
 ; X64-NEXT:    sets %bl
 ; X64-NEXT:    xorb %al, %bl
-; X64-NEXT:    movq %r15, %rdi
-; X64-NEXT:    movq %r14, %rsi
+; X64-NEXT:    movq %r14, %rdi
+; X64-NEXT:    movq %r15, %rsi
 ; X64-NEXT:    movq (%rsp), %rdx # 8-byte Reload
 ; X64-NEXT:    movq %r12, %rcx
 ; X64-NEXT:    callq __modti3@PLT
@@ -581,12 +579,9 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; X64-NEXT:    movdqa %xmm3, (%rsp) # 16-byte Spill
 ; X64-NEXT:    movq %xmm3, %r15
-; X64-NEXT:    movq %r15, %rax
-; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    shlq $31, %rax
 ; X64-NEXT:    movq %r15, %rbx
-; X64-NEXT:    shrq $33, %rbx
-; X64-NEXT:    orq %rax, %rbx
+; X64-NEXT:    sarq $63, %rbx
+; X64-NEXT:    shldq $31, %r15, %rbx
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; X64-NEXT:    pxor %xmm0, %xmm0
 ; X64-NEXT:    pcmpgtd %xmm1, %xmm0

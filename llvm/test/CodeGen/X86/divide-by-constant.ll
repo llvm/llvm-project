@@ -699,10 +699,9 @@ define i64 @urem_i64_65537(i64 %x) nounwind {
 ; X86-NEXT:    movl $-65535, %edx # imm = 0xFFFF0001
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
-; X86-NEXT:    shrl $16, %edx
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    shrl $16, %eax
+; X86-NEXT:    shldl $16, %edx, %eax
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
@@ -730,14 +729,11 @@ define i64 @urem_i64_12(i64 %x) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    shrl $2, %edx
-; X86-NEXT:    shll $30, %eax
-; X86-NEXT:    movl %esi, %ecx
-; X86-NEXT:    shrl $2, %ecx
-; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    addl %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    shldl $30, %esi, %ecx
+; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl $-1431655765, %edx # imm = 0xAAAAAAAB
 ; X86-NEXT:    movl %ecx, %eax
@@ -1088,10 +1084,9 @@ define i64 @udiv_i64_65537(i64 %x) nounwind {
 ; X86-NEXT:    movl $-65535, %ebx # imm = 0xFFFF0001
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebx
-; X86-NEXT:    shrl $16, %edx
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    orl %edx, %eax
+; X86-NEXT:    shrl $16, %eax
+; X86-NEXT:    shldl $16, %edx, %eax
 ; X86-NEXT:    subl %eax, %esi
 ; X86-NEXT:    subl %esi, %ecx
 ; X86-NEXT:    sbbl $0, %edi
@@ -1128,12 +1123,9 @@ define i64 @udiv_i64_12(i64 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    shrdl $2, %edi, %ecx
 ; X86-NEXT:    shrl $2, %edi
-; X86-NEXT:    shll $30, %eax
-; X86-NEXT:    shrl $2, %ecx
-; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    addl %edi, %esi
 ; X86-NEXT:    adcl $0, %esi

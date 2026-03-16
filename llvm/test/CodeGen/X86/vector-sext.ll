@@ -3692,24 +3692,22 @@ define <4 x i32> @sext_4i17_to_4i32(ptr %ptr) {
 ;
 ; X86-SSE2-LABEL: sext_4i17_to_4i32:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%ecx), %eax
-; X86-SSE2-NEXT:    movl 4(%ecx), %edx
-; X86-SSE2-NEXT:    movl 8(%ecx), %ecx
-; X86-SSE2-NEXT:    shll $13, %ecx
-; X86-SSE2-NEXT:    movd %edx, %xmm1
-; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    shrdl $17, %edx, %eax
-; X86-SSE2-NEXT:    shrl $19, %edx
-; X86-SSE2-NEXT:    orl %ecx, %edx
-; X86-SSE2-NEXT:    movd %edx, %xmm2
-; X86-SSE2-NEXT:    pslld $15, %xmm2
-; X86-SSE2-NEXT:    psrad $15, %xmm2
-; X86-SSE2-NEXT:    pslld $13, %xmm1
-; X86-SSE2-NEXT:    psrad $15, %xmm1
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl (%edx), %eax
+; X86-SSE2-NEXT:    movl 4(%edx), %ecx
+; X86-SSE2-NEXT:    movl 8(%edx), %edx
+; X86-SSE2-NEXT:    shldl $13, %ecx, %edx
+; X86-SSE2-NEXT:    movd %edx, %xmm0
 ; X86-SSE2-NEXT:    pslld $15, %xmm0
 ; X86-SSE2-NEXT:    psrad $15, %xmm0
+; X86-SSE2-NEXT:    movd %ecx, %xmm1
+; X86-SSE2-NEXT:    pslld $13, %xmm1
+; X86-SSE2-NEXT:    psrad $15, %xmm1
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    pslld $15, %xmm0
+; X86-SSE2-NEXT:    psrad $15, %xmm0
+; X86-SSE2-NEXT:    shrdl $17, %ecx, %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm2
 ; X86-SSE2-NEXT:    pslld $15, %xmm2
 ; X86-SSE2-NEXT:    psrad $15, %xmm2

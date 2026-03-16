@@ -221,14 +221,9 @@ define i64 @test_rotl_udiv_special_case(i64 %i) {
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    imull $-1431655765, %edi, %ecx # imm = 0xAAAAAAAB
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    shll $28, %esi
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $4, %ecx
-; X86-NEXT:    orl %esi, %ecx
-; X86-NEXT:    shll $28, %eax
-; X86-NEXT:    shrl $4, %edx
-; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    shldl $28, %eax, %ecx
+; X86-NEXT:    shrdl $4, %eax, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 12
@@ -283,9 +278,7 @@ define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 ; X86-NEXT:    movl $9, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    shll $7, %eax
-; X86-NEXT:    shrl $25, %edx
-; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    shrdl $25, %eax, %edx
 ; X86-NEXT:    movzbl %dl, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -311,12 +304,10 @@ define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 define i32 @test_fshl_with_mask_special_case(i32 %x) {
 ; X86-LABEL: test_fshl_with_mask_special_case:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    orl $1, %ecx
-; X86-NEXT:    shll $5, %ecx
-; X86-NEXT:    shrl $27, %eax
-; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    shldl $5, %ecx, %eax
 ; X86-NEXT:    andl $-31, %eax
 ; X86-NEXT:    retl
 ;
@@ -324,9 +315,7 @@ define i32 @test_fshl_with_mask_special_case(i32 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    orl $1, %eax
-; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    shrl $27, %edi
-; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    shldl $5, %edi, %eax
 ; X64-NEXT:    andl $-31, %eax
 ; X64-NEXT:    retq
   %or1 = or i32 %x, 1

@@ -8,14 +8,11 @@ define i129 @v_sdiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-LABEL: v_sdiv_i129_v_pow2k:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    andl $1, %eax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    movl %eax, %edx
 ; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    shlq $32, %rdx
-; X64-NEXT:    shrq $32, %rax
-; X64-NEXT:    orq %rdx, %rax
+; X64-NEXT:    negq %rdx
+; X64-NEXT:    movl %edx, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    shldq $32, %rdx, %rax
 ; X64-NEXT:    addq %rdi, %rax
 ; X64-NEXT:    adcq $0, %rsi
 ; X64-NEXT:    adcq $0, %rcx
@@ -23,9 +20,7 @@ define i129 @v_sdiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    negq %rdx
 ; X64-NEXT:    shrdq $33, %rsi, %rax
-; X64-NEXT:    shlq $31, %rdx
-; X64-NEXT:    shrq $33, %rsi
-; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shldq $31, %rsi, %rdx
 ; X64-NEXT:    retq
 ;
 ; X64-O0-LABEL: v_sdiv_i129_v_pow2k:
@@ -156,9 +151,7 @@ define i129 @v_sdiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    negq %rdx
 ; X64-NEXT:    shrdq $33, %rsi, %rax
-; X64-NEXT:    shlq $31, %rdx
-; X64-NEXT:    shrq $33, %rsi
-; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shldq $31, %rsi, %rdx
 ; X64-NEXT:    retq
 ;
 ; X64-O0-LABEL: v_sdiv_exact_i129_v_pow2k:
@@ -251,9 +244,7 @@ define i129 @v_udiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    andl $1, %edx
 ; X64-NEXT:    shrdq $33, %rsi, %rax
-; X64-NEXT:    shlq $31, %rdx
-; X64-NEXT:    shrq $33, %rsi
-; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shldq $31, %rsi, %rdx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    retq
 ;
@@ -271,33 +262,23 @@ define i129 @v_udiv_i129_v_pow2k(i129 %lhs) nounwind {
 ;
 ; X86-LABEL: v_udiv_i129_v_pow2k:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    shll $31, %ebx
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    orl %ebx, %ecx
-; X86-NEXT:    shll $31, %edi
-; X86-NEXT:    movl %esi, %ebx
-; X86-NEXT:    shrl %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    shll $31, %esi
-; X86-NEXT:    shrl %edx
-; X86-NEXT:    orl %esi, %edx
-; X86-NEXT:    movl %ebx, 8(%eax)
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    shrdl $1, %esi, %edx
+; X86-NEXT:    shldl $31, %edi, %ecx
+; X86-NEXT:    shldl $31, %esi, %edi
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movb $0, 16(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X86-O0-LABEL: v_udiv_i129_v_pow2k:
@@ -334,9 +315,7 @@ define i129 @v_udiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    andl $1, %edx
 ; X64-NEXT:    shrdq $33, %rsi, %rax
-; X64-NEXT:    shlq $31, %rdx
-; X64-NEXT:    shrq $33, %rsi
-; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shldq $31, %rsi, %rdx
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    retq
 ;
@@ -354,33 +333,23 @@ define i129 @v_udiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ;
 ; X86-LABEL: v_udiv_exact_i129_v_pow2k:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    shll $31, %ebx
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    orl %ebx, %ecx
-; X86-NEXT:    shll $31, %edi
-; X86-NEXT:    movl %esi, %ebx
-; X86-NEXT:    shrl %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    shll $31, %esi
-; X86-NEXT:    shrl %edx
-; X86-NEXT:    orl %esi, %edx
-; X86-NEXT:    movl %ebx, 8(%eax)
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    shrdl $1, %esi, %edx
+; X86-NEXT:    shldl $31, %edi, %ecx
+; X86-NEXT:    shldl $31, %esi, %edi
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movb $0, 16(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X86-O0-LABEL: v_udiv_exact_i129_v_pow2k:
