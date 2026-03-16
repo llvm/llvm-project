@@ -701,9 +701,8 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
         &LocalAddrs,
     llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>>
         &VLASizes,
-    llvm::Value *&CXXThisValue, llvm::Value *&ContextV,
-    unsigned &AggregateFieldCount, const CapturedStmt &CS, SourceLocation Loc,
-    StringRef FunctionName) {
+    llvm::Value *&CXXThisValue, llvm::Value *&ContextV, const CapturedStmt &CS,
+    SourceLocation Loc, StringRef FunctionName) {
   const CapturedDecl *CD = CS.getCapturedDecl();
   const RecordDecl *RD = CS.getCapturedRecordDecl();
 
@@ -734,17 +733,17 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   llvm::Align PtrAlign = CGM.getDataLayout().getPointerABIAlignment(0);
   CharUnits SlotAlign = CharUnits::fromQuantity(PtrAlign.value());
 
-  unsigned FieldIdx = 0;
-  auto I = CS.captures().begin();
-  for (const FieldDecl *FD : RD->fields()) {
+  for (auto [FD, C, FieldIdx] :
+       llvm::zip(RD->fields(), CS.captures(),
+                 llvm::seq<unsigned>(RD->getNumFields()))) {
     llvm::Value *Slot =
         CGF.Builder.CreateConstInBoundsGEP1_32(IntPtrTy, ContextV, FieldIdx);
 
     // Generate the appropriate load from the GEP into the __context struct.
     // This includes all of the user arguments as well as the implicit kernel
     // argument pointer.
-    if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
-      const VarDecl *CurVD = I->getCapturedVar();
+    if (C.capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
+      const VarDecl *CurVD = C.getCapturedVar();
       Slot->setName(CurVD->getName());
       Address SlotAddr(Slot, PtrTy, SlotAlign);
       LocalAddrs.insert({FD, {CurVD, SlotAddr}});
@@ -753,11 +752,11 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
       Address SlotAddr(Slot, CGF.ConvertTypeForMem(FD->getType()), SlotAlign);
       LValue ArgLVal =
           CGF.MakeAddrLValue(SlotAddr, FD->getType(), AlignmentSource::Decl);
-      llvm::Value *ExprArg = CGF.EmitLoadOfScalar(ArgLVal, I->getLocation());
+      llvm::Value *ExprArg = CGF.EmitLoadOfScalar(ArgLVal, C.getLocation());
       const VariableArrayType *VAT = FD->getCapturedVLAType();
       VLASizes.try_emplace(FD, VAT->getSizeExpr(), ExprArg);
-    } else if (I->capturesVariable()) {
-      const VarDecl *Var = I->getCapturedVar();
+    } else if (C.capturesVariable()) {
+      const VarDecl *Var = C.getCapturedVar();
       QualType VarTy = Var->getType();
 
       if (VarTy->isVariablyModifiedType() && VarTy->isPointerType()) {
@@ -771,10 +770,10 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
                            {Var, Address(VarAddr, CGF.ConvertTypeForMem(VarTy),
                                          Ctx.getDeclAlign(Var))}});
       }
-    } else if (I->capturesVariableByCopy()) {
+    } else if (C.capturesVariableByCopy()) {
       assert(!FD->getType()->isAnyPointerType() &&
              "Not expecting a captured pointer.");
-      const VarDecl *Var = I->getCapturedVar();
+      const VarDecl *Var = C.getCapturedVar();
       QualType FieldTy = FD->getType();
 
       // Scalar values are promoted and stored directly in the slot.
@@ -786,22 +785,19 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
       LValue CopyLVal =
           CGF.MakeAddrLValue(CopyAddr, FieldTy, AlignmentSource::Decl);
 
-      RValue ArgRVal = CGF.EmitLoadOfLValue(SrcLVal, I->getLocation());
+      RValue ArgRVal = CGF.EmitLoadOfLValue(SrcLVal, C.getLocation());
       CGF.EmitStoreThroughLValue(ArgRVal, CopyLVal);
 
       LocalAddrs.insert({FD, {Var, CopyAddr}});
     } else {
-      assert(I->capturesThis());
+      assert(C.capturesThis());
       CXXThisValue =
           CGF.Builder.CreateAlignedLoad(PtrTy, Slot, PtrAlign, "this");
       Address SlotAddr(Slot, PtrTy, SlotAlign);
       LocalAddrs.insert({FD, {nullptr, SlotAddr}});
     }
-    ++FieldIdx;
-    ++I;
   }
 
-  AggregateFieldCount = FieldIdx;
   return F;
 }
 
@@ -921,11 +917,9 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
         WrapperLocalAddrs;
     llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>>
         WrapperVLASizes;
-    unsigned WrapperFieldIdx = 0;
     WrapperF = emitOutlinedFunctionPrologueAggregate(
         WrapperCGF, WrapperArgs, WrapperLocalAddrs, WrapperVLASizes,
-        WrapperCGF.CXXThisValue, WrapperContextV, WrapperFieldIdx, S, Loc,
-        FunctionName);
+        WrapperCGF.CXXThisValue, WrapperContextV, S, Loc, FunctionName);
   }
 
   FunctionArgList Args;
@@ -945,11 +939,12 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
                                      CXXThisValue, FO);
   } else {
     llvm::Value *ContextV = nullptr;
-    unsigned FieldIdx = 0;
     F = emitOutlinedFunctionPrologueAggregate(*this, Args, LocalAddrs, VLASizes,
-                                              CXXThisValue, ContextV, FieldIdx,
-                                              S, Loc, FunctionName);
+                                              CXXThisValue, ContextV, S, Loc,
+                                              FunctionName);
 
+    const RecordDecl *RD = S.getCapturedRecordDecl();
+    unsigned FieldIdx = RD->getNumFields();
     for (unsigned I = 0; I < CD->getNumParams(); ++I) {
       const ImplicitParamDecl *Param = CD->getParam(I);
       if (Param == CD->getContextParam())
@@ -990,35 +985,29 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunctionAggregate(
 
   llvm::Align PtrAlign = CGM.getDataLayout().getPointerABIAlignment(0);
   llvm::SmallVector<llvm::Value *, 16> CallArgs;
-  unsigned SlotIdx = 0;
-  auto *InnerParam = F->arg_begin();
-
   assert(CD->getContextParamPosition() == 0 &&
          "Expected context param at position 0 for target regions");
+  assert(RD->getNumFields() + 1 == F->getNumOperands() &&
+         "Argument count mismatch");
 
-  for (const FieldDecl *FD : RD->fields()) {
-    (void)FD;
+  for (auto [FD, InnerParam, SlotIdx] : llvm::zip(
+           RD->fields(), F->args(), llvm::seq<unsigned>(RD->getNumFields()))) {
     llvm::Value *Slot = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
         WrapperCGF.IntPtrTy, WrapperContextV, SlotIdx);
     llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
-        InnerParam->getType(), Slot, PtrAlign, InnerParam->getName());
+        InnerParam.getType(), Slot, PtrAlign, InnerParam.getName());
     CallArgs.push_back(Val);
-    ++SlotIdx;
-    ++InnerParam;
   }
 
-  for (unsigned I = CD->getContextParamPosition() + 1; I < CD->getNumParams();
-       ++I) {
-    llvm::Value *Slot = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
-        WrapperCGF.IntPtrTy, WrapperContextV, SlotIdx);
-    llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
-        InnerParam->getType(), Slot, PtrAlign, InnerParam->getName());
-    CallArgs.push_back(Val);
-    ++SlotIdx;
-    ++InnerParam;
-  }
+  // Handle the load from the implicit dyn_ptr at the end of the __context.
+  unsigned SlotIdx = RD->getNumFields();
+  auto InnerParam = F->arg_begin() + SlotIdx;
+  llvm::Value *Slot = WrapperCGF.Builder.CreateConstInBoundsGEP1_32(
+      WrapperCGF.IntPtrTy, WrapperContextV, SlotIdx);
+  llvm::Value *Val = WrapperCGF.Builder.CreateAlignedLoad(
+      InnerParam->getType(), Slot, PtrAlign, InnerParam->getName());
+  CallArgs.push_back(Val);
 
-  assert(InnerParam == F->arg_end() && "Argument count mismatch");
   CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, Loc, F, CallArgs);
   WrapperCGF.FinishFunction();
   return WrapperF;
