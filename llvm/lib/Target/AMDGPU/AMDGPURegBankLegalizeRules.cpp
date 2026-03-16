@@ -1463,9 +1463,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_wave_barrier})
       .Any({{}, {{}, {}}});
 
-  addRulesForIOpcs({amdgcn_kernarg_segment_ptr})
-      .Any({{UniP4}, {{SgprP4}, {IntrId}}});
-
   // This is "intrinsic lane mask" it was set to i32/i64 in llvm-ir.
   addRulesForIOpcs({amdgcn_end_cf})
       .Any({{_, UniS32}, {{}, {IntrId, Sgpr32}}})
