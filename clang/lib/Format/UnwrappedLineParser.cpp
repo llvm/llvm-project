@@ -1004,9 +1004,9 @@ void UnwrappedLineParser::parseChildBlock() {
 
 void UnwrappedLineParser::parsePPDirective() {
   assert(FormatTok->is(tok::hash) && "'#' expected");
-  // For BeforeHashWithCode, PP directives are indented at the surrounding code
-  // level. Preserving Line->Level allows ScopedMacroState to keep the code
-  // context level instead of resetting it to 0.
+  // PP directives are indented at the surrounding code level. Preserving
+  // Line->Level allows ScopedMacroState to keep the code context level
+  // instead of resetting it to 0.
   const bool PreserveLevel =
       Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
   ScopedMacroState MacroState(*Line, Tokens, FormatTok, PreserveLevel);
@@ -1245,13 +1245,13 @@ void UnwrappedLineParser::parsePPUnknown() {
     Line->Level += PPBranchLevel + 1;
   if (Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode &&
       !PPStack.empty() && PPStack.back().Kind == PP_Unreachable) {
-    // PP directives inside unreachable branches must
-    // not be emitted: in multi-pass formatting the surrounding C++ braces may
-    // have been skipped (PP_Unreachable code is not parsed), leaving
-    // Line->Level too low. The resulting incorrect replacement would conflict
-    // with the correct one produced by the reachable pass, causing an
-    // "overlapping replacement" error and an empty output. Simply discard the
-    // accumulated tokens so the reachable pass wins.
+    // PP directives inside unreachable branches must not be emitted: in
+    // multi-pass formatting the surrounding C++ braces may have been skipped
+    // (PP_Unreachable code is not parsed), leaving Line->Level too low. The
+    // resulting incorrect replacement would conflict with the correct one
+    // produced by the reachable pass, causing an "overlapping replacement"
+    // error and an empty output. Simply discard the accumulated tokens so
+    // the reachable pass wins.
     Line->Tokens.clear();
     return;
   }
