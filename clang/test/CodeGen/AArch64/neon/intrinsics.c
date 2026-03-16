@@ -944,7 +944,7 @@ uint32x4_t test_vabaq_u32(uint32x4_t v1, uint32x4_t v2, uint32x4_t v3) {
 int64_t test_vshld_n_s64(int64_t a) {
   // CIR: cir.shift(left, {{.*}})
 
-  // LLVM-SAME: i64 noundef [[A:%.*]])
+  // LLVM-SAME: i64 {{.*}} [[A:%.*]])
   // LLVM: [[SHL_N:%.*]] = shl i64 [[A]], 1
   // LLVM: ret i64 [[SHL_N]]
   return (int64_t)vshld_n_s64(a, 1);
