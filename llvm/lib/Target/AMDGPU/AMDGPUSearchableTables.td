@@ -315,6 +315,8 @@ def : SourceOfDivergence<int_amdgcn_live_mask>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
+def : SourceOfDivergence<int_amdgcn_ds_add_gs_reg_rtn>;
+def : SourceOfDivergence<int_amdgcn_ds_sub_gs_reg_rtn>;
 def : SourceOfDivergence<int_amdgcn_permlane16>;
 def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_permlane16_var>;
