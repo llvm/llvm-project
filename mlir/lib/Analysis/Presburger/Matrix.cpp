@@ -557,7 +557,7 @@ std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
 // col) of the element with smallest non-zero absolute value. When all elements
 // in the submatrix are zero, returns std::nullopt.
 static std::optional<std::pair<unsigned, unsigned>>
-nonZeroMinInSubmatrix(const IntMatrix &mat, unsigned from) {
+findNonZeroMinInSubmatrix(const IntMatrix &mat, unsigned from) {
   unsigned numRows = mat.getNumRows();
   unsigned numCols = mat.getNumColumns();
   unsigned minRow = from, minCol = from;
@@ -582,16 +582,16 @@ nonZeroMinInSubmatrix(const IntMatrix &mat, unsigned from) {
 }
 
 // Finds the first row in submatrix `mat(from:, from:)` that contains an element
-// `d` such that `d` is not a multiple of `pivot`. When there is no such row,
+// `d` such that `d` is not a multiple of `divisor`. When there is no such row,
 // returns std::nullopt.
 static std::optional<unsigned> findNonMultipleRow(const IntMatrix &mat,
                                                   unsigned from,
-                                                  const DynamicAPInt &pivot) {
+                                                  const DynamicAPInt &divisor) {
   unsigned numRows = mat.getNumRows();
   unsigned numCols = mat.getNumColumns();
   for (unsigned row = from; row < numRows; ++row) {
     for (unsigned col = from; col < numCols; ++col) {
-      if (mat(row, col) % pivot == 0)
+      if (mat(row, col) % divisor != 0)
         return row;
     }
   }
@@ -628,9 +628,9 @@ IntMatrix::computeSmithNormalForm() const {
       // Find the entry in the submatrix d(i:, i:) with the smallest non-zero
       // absolute value.
       // The element is the pivot, and we record its current row and column.
-      auto pivotPos = nonZeroMinInSubmatrix(d, i);
+      auto pivotPos = findNonZeroMinInSubmatrix(d, i);
       if (!pivotPos)
-        continue;
+        break;
       auto [pvtRow, pvtCol] = *pivotPos;
 
       // The remaining submatrix is zero.
