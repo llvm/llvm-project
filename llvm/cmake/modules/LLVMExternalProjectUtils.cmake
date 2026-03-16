@@ -224,7 +224,7 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
-      if(is_msvc_target)
+      if(is_msvc_target AND NOT ARG_PREFER_CLANG_DRIVER)
         set(compiler_args -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}
                           -DCMAKE_CXX_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX}
                           -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-cl${CMAKE_EXECUTABLE_SUFFIX})
