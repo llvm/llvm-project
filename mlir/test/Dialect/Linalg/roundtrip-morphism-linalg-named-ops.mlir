@@ -5,7 +5,7 @@
 // RUN: | mlir-opt -split-input-file -linalg-morph-ops=generic-to-named \
 // RUN: | FileCheck %s
 
-func.func @unary(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
+func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
   linalg.exp ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.log ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.abs ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
@@ -22,22 +22,48 @@ func.func @unary(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
   return
 }
 
-// CHECK-LABEL: unary
-// CHECK-SAME: %[[A:.+]]: memref<7x14x21xf32>, %[[Out:.+]]: memref<7x14x21xf32>)
+// CHECK-LABEL: unary_ops
+// CHECK-SAME: %[[A:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
 // CHECK-NOT: linalg.generic
-// CHECK: linalg.exp ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.log ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.abs ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.ceil ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.floor ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.negf ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.reciprocal ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.round ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.sqrt ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.rsqrt ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.square ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.tanh ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
-// CHECK: linalg.erf ins(%[[A]] : memref<7x14x21xf32>) outs(%[[Out]] : memref<7x14x21xf32>)
+// CHECK: linalg.exp
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.log
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.abs
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.ceil
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.floor
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.negf
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.reciprocal
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.round
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.sqrt
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.rsqrt
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.square
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.tanh
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.erf
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 
 // -----
 
