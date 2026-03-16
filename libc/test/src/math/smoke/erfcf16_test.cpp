@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/math/erfcf16.h"
@@ -23,6 +24,20 @@ TEST_F(LlvmLibcErfcTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(2.0f16, LIBC_NAMESPACE::erfcf16(neg_inf));
   EXPECT_FP_EQ_ALL_ROUNDING(1.0f16, LIBC_NAMESPACE::erfcf16(zero));
   EXPECT_FP_EQ_ALL_ROUNDING(1.0f16, LIBC_NAMESPACE::erfcf16(neg_zero));
+}
+
+TEST_F(LlvmLibcErfcTest, Underflow) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::erfcf16(4.0f16),
+                              FE_UNDERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::erfcf16(5.75f16),
+                              FE_UNDERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::erfcf16(11.25f16),
+                              FE_UNDERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
 }
 
 #ifdef LIBC_TEST_FTZ_DAZ

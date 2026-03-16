@@ -5176,6 +5176,7 @@ add_fp_unittest(
   SRCS
     erfcf16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.math.erfcf16
 )
 
