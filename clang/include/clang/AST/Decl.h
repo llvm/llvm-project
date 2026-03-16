@@ -1214,7 +1214,15 @@ public:
 
   /// Returns true if this is a file-scope variable with internal linkage.
   bool isInternalLinkageFileVar() const {
-    return isFileVarDecl() && !isExternallyVisible();
+    // Calling isExternallyVisible() can trigger linkage computation/caching,
+    // which may produce stale results when a decl's DeclContext changes after
+    // creation (e.g., OpenMP declare mapper variables), so here we determine
+    // it syntactically instead.
+    if (!isFileVarDecl())
+      return false;
+    if (getStorageClass() == SC_Static)
+      return true;
+    return isInAnonymousNamespace();
   }
 
   /// Returns true if a variable has extern or __private_extern__
