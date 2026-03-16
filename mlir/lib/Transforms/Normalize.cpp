@@ -43,21 +43,22 @@ SmallVector<Operation *> collectOutputs(Operation *root) {
 
 /// The function returns the operation that dominates all other operations in
 /// the given list.
-Operation *getDominateOp(SmallVectorImpl<Operation *> &ops) {
+Operation *getDominateOp(const SmallVectorImpl<Operation *> &ops) {
   if (ops.empty())
     return {};
   Operation *curDomOp = ops.front();
   DominanceInfo domInfo(curDomOp);
   for (size_t i = 1, e = ops.size(); i < e; ++i) {
     bool dominateA = domInfo.dominates(ops[i], curDomOp);
-    bool dominateB = domInfo.dominates(curDomOp, ops[i]);
     if (dominateA) {
       LDBG() << OpWithFlags(ops[i], OpPrintingFlags().skipRegions())
              << "\ndominate\n"
              << OpWithFlags(curDomOp, OpPrintingFlags().skipRegions());
       curDomOp = ops[i];
+      continue;
     }
-    if (!dominateA && !dominateB) {
+    bool dominateB = domInfo.dominates(curDomOp, ops[i]);
+    if (!dominateB) {
       LDBG() << OpWithFlags(ops[i], OpPrintingFlags().skipRegions())
              << "\nand\n"
              << OpWithFlags(curDomOp, OpPrintingFlags().skipRegions())
@@ -70,13 +71,13 @@ Operation *getDominateOp(SmallVectorImpl<Operation *> &ops) {
 
 /// Move used to its nearest user and recursively perform the same process on
 /// the defining operations of its operands.
-void reorderOutput(IRRewriter &rewriter, Operation *used) {
-  if (!isPure(used))
+void reorderOutput(IRRewriter &rewriter, Operation *producer) {
+  if (!isPure(producer))
     return;
-  SmallVector<Operation *> users(used->getUsers());
+  SmallVector<Operation *> users(producer->getUsers());
   if (Operation *domOp = getDominateOp(users)) {
-    rewriter.moveOpBefore(used, domOp);
-    for (Value operand : used->getOperands())
+    rewriter.moveOpBefore(producer, domOp);
+    for (Value operand : producer->getOperands())
       if (Operation *defineOp = operand.getDefiningOp())
         reorderOutput(rewriter, defineOp);
   }
@@ -87,12 +88,13 @@ void reorderOutput(IRRewriter &rewriter, Operation *used) {
 /// collected top-down, otherwise the def-use chain may be broken. This method
 /// is a wrapper for recursive reorderOutput().
 void reorderOutputs(IRRewriter &rewriter,
-                    SmallVectorImpl<Operation *> &outputs) {
+                    const SmallVectorImpl<Operation *> &outputs) {
   SmallPtrSet<Operation *, 16> visited;
   for (Operation *output : outputs) {
     for (Value operand : output->getOperands()) {
       if (Operation *defineOp = operand.getDefiningOp();
           defineOp && !visited.contains(defineOp)) {
+        visited.insert(defineOp);
         reorderOutput(rewriter, defineOp);
       }
     }
