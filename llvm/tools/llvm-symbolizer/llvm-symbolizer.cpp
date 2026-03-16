@@ -192,9 +192,8 @@ resolveXCOFFSectionAddress(StringRef ModulePath, StringRef SectionType,
                              SectionType.str() +
                              "\" in section-relative address");
 
-  Expected<uint64_t> SectionBaseOrErr =
-      Symbolizer.getXCOFFSectionAddress(ModulePath, *SectionTypeFlag,
-                                        SectionType);
+  Expected<uint64_t> SectionBaseOrErr = Symbolizer.getXCOFFSectionAddress(
+      ModulePath, *SectionTypeFlag, SectionType);
   if (!SectionBaseOrErr)
     return SectionBaseOrErr.takeError();
 
@@ -312,9 +311,8 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
 
         // The offset must start with '+'.
         if (!OffsetStr.starts_with("+"))
-          return makeStringError(
-              "section-relative offset \"" + OffsetStr +
-              "\" must start with '+'");
+          return makeStringError("section-relative offset \"" + OffsetStr +
+                                 "\" must start with '+'");
 
         StringRef OffsetValue = OffsetStr.drop_front(1);
         // Parse the offset value; auto-detect base (0x prefix = hex,
@@ -370,8 +368,8 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
                     bool ShouldInline, OutputStyle Style,
                     LLVMSymbolizer &Symbolizer, DIPrinter &Printer,
                     uint64_t SectionIndex) {
-   uint64_t AdjustedOffset = Offset - AdjustVMA;
-   object::SectionedAddress Address = {AdjustedOffset, SectionIndex};
+  uint64_t AdjustedOffset = Offset - AdjustVMA;
+  object::SectionedAddress Address = {AdjustedOffset, SectionIndex};
 
   Request SymRequest = {
       ModuleName, Symbol.empty() ? std::make_optional(Offset) : std::nullopt,
@@ -453,10 +451,9 @@ static void symbolizeInput(const opt::InputArgList &Args,
     auto AbsoluteVMAOrErr =
         resolveXCOFFSectionAddress(ModuleName, SectionType, Offset, Symbolizer);
     if (!AbsoluteVMAOrErr) {
-      handleAllErrors(AbsoluteVMAOrErr.takeError(),
-                      [&](const ErrorInfoBase &EI) {
-                        printError(EI, InputString);
-                      });
+      handleAllErrors(
+          AbsoluteVMAOrErr.takeError(),
+          [&](const ErrorInfoBase &EI) { printError(EI, InputString); });
       printUnknownLineInfo(ModuleName, Printer);
       return;
     }

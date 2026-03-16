@@ -54,8 +54,8 @@ LLVMSymbolizer::~LLVMSymbolizer() = default;
 
 Expected<uint64_t>
 LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModuleName,
-                                        XCOFF::SectionTypeFlags SectionTypeFlag,
-                                        StringRef SectionTypeName) {
+                                       XCOFF::SectionTypeFlags SectionTypeFlag,
+                                       StringRef SectionTypeName) {
   // Check the cache first.
   auto CacheKey = std::make_pair(ModuleName.str(), SectionTypeFlag);
   auto It = XCOFFSectionBaseCache.find(CacheKey);
