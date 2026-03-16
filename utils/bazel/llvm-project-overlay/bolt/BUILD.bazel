@@ -161,6 +161,7 @@ cc_library(
 cc_library(
     name = "ProfileHeaders",
     hdrs = glob(["include/bolt/Profile/*.h"]),
+    features = ["-parse_headers"],  # Otherwise would cause circular dependency
     includes = ["include"],
     visibility = ["//visibility:private"],
 )
@@ -301,6 +302,7 @@ cc_library(
         "//llvm:DebugInfoDWARFLowLevel",
         "//llvm:Demangle",
         "//llvm:ExecutionEngine",
+        "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:MCParser",

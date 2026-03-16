@@ -27,37 +27,20 @@ llvm.func @rocdl_special_regs() -> i32 {
   // CHECK: call range(i32 0, 16) i32 @llvm.amdgcn.cluster.workgroup.id.z()
   %12 = rocdl.cluster.workgroup.id.z range <i32, 0, 16> : i32
 
-  // CHECK: call i64 @__ockl_get_local_size(i32 0)
-  %13 = rocdl.workgroup.dim.x : i64
-  // CHECK: call i64 @__ockl_get_local_size(i32 1)
-  %14 = rocdl.workgroup.dim.y : i64
-  // CHECK: call i64 @__ockl_get_local_size(i32 2)
-  %15 = rocdl.workgroup.dim.z : i64
-
-  // CHECK: call i64 @__ockl_get_num_groups(i32 0)
-  %16 = rocdl.grid.dim.x : i64
-  // CHECK: call i64 @__ockl_get_num_groups(i32 1)
-  %17 = rocdl.grid.dim.y : i64
-  // CHECK: call i64 @__ockl_get_num_groups(i32 2)
-  %18 = rocdl.grid.dim.z : i64
-
   // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
-  %19 = rocdl.workitem.id.x range <i32, 0, 64> : i32
-
-  // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
-  %20 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
+  %13 = rocdl.workitem.id.x range <i32, 0, 64> : i32
 
   // CHECK: call i32 @llvm.amdgcn.wave.id()
-  %21 = rocdl.wave.id : i32
+  %14 = rocdl.wave.id : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wave.id()
-  %22 = rocdl.wave.id range <i32, 32, 65> : i32
+  %15 = rocdl.wave.id range <i32, 32, 65> : i32
 
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
-  %23 = rocdl.wavefrontsize : i32
+  %16 = rocdl.wavefrontsize : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize()
-  %24 = rocdl.wavefrontsize range <i32, 32, 65> : i32
+  %17 = rocdl.wavefrontsize range <i32, 32, 65> : i32
 
   llvm.return %1 : i32
 }
@@ -2115,10 +2098,10 @@ llvm.func @rocdl.cvt.scalef32.sr.pk16(%v16xf32: vector<16xf32>,
   llvm.return
 }
 
-// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="true" }
+// CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
-// CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "uniform-work-group-size"="false" }
+// CHECK-DAG: attributes #[[$KERNEL_NO_UNIFORM_WORK_GROUPS_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" }
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
-// CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size"="true" }
-// CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size"="true" }
+// CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size" }
+// CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size" }

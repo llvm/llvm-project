@@ -226,23 +226,6 @@ class ROCDL_SpecialIdRegisterOp<string mnemonic> :
   }];
 }
 
-// TODO(krzysz00): This should be a lowering pattern, not an op.
-class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
-                             int parameter, list<Trait> traits = []> :
-  ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
-  string llvmBuilder = "$res = createDimGetterFunctionCall(builder, op, \""
-  # device_function # "\", " # parameter # ");";
-  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
-
-  // Temporaly builder until Nvidia ops also support range attributes.
-  let builders = [
-    OpBuilder<(ins "Type":$resultType), [{
-      build($_builder, $_state, resultType, ::mlir::LLVM::ConstantRangeAttr{});
-    }]>
-  ];
-}
-
 //===----------------------------------------------------------------------===//
 // ROCDL vector types definitions
 //===----------------------------------------------------------------------===//
@@ -450,28 +433,6 @@ def ROCDL_ClusterWorkgroupIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.i
 
 def ROCDL_WaveId : ROCDL_SpecialIdRegisterOp<"wave.id">;
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
-
-//===----------------------------------------------------------------------===//
-// Thread range and Block range
-//===----------------------------------------------------------------------===//
-
-def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
-                                               "__ockl_get_local_size", 0>;
-
-def ROCDL_BlockDimYOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.y",
-                                               "__ockl_get_local_size", 1>;
-
-def ROCDL_BlockDimZOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.z",
-                                               "__ockl_get_local_size", 2>;
-
-def ROCDL_GridDimXOp : ROCDL_DimGetterFunctionOp<"grid.dim.x",
-                                               "__ockl_get_num_groups", 0>;
-
-def ROCDL_GridDimYOp : ROCDL_DimGetterFunctionOp<"grid.dim.y",
-                                               "__ockl_get_num_groups", 1>;
-
-def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
-                                               "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
@@ -2092,7 +2053,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 
 def ROCDL_GlobalPrefetchOp :
   ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemRead, MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemWrite, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{
@@ -2116,7 +2077,7 @@ def ROCDL_GlobalPrefetchOp :
 
 def ROCDL_FlatPrefetchOp :
   ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 1, 0, [1], ["scope"]> {
-  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemRead, MemRead]>:$ptr,
+  dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemWrite, MemRead]>:$ptr,
                   I32Attr:$scope);
   let arguments = !con(args, baseArgs);
   let description = [{

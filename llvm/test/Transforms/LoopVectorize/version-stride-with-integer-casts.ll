@@ -157,11 +157,10 @@ define void @versioned_sext_use_in_gep(i32 %scale, ptr %dst, i64 %scale.2) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP16]]
@@ -235,11 +234,10 @@ define void @test_versioned_with_different_uses(i32 %offset, ptr noalias %dst.1,
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[INDEX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX2]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[OFFSET_IDX2]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[OFFSET_IDX2]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[OFFSET_IDX2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP7]]

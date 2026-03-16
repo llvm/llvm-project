@@ -1491,6 +1491,66 @@ func.func @float_scalar(%arg0: f16) {
   return
 }
 
+// When i8 is emulated as i32 (no Int8 capability), uitofp from i8 needs a
+// bitmask to clear upper bits that may contain garbage from sign-extension
+// during packed byte extraction.
+// CHECK-LABEL: @uitofp_i8_emulated_f32
+func.func @uitofp_i8_emulated_f32(%arg0: i8) -> f32 {
+  // CHECK: %[[MASK:.+]] = spirv.Constant 255 : i32
+  // CHECK: %[[MASKED:.+]] = spirv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
+  // CHECK: spirv.ConvertUToF %[[MASKED]] : i32 to f32
+  %0 = arith.uitofp %arg0 : i8 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @uitofp_i16_emulated_f32
+func.func @uitofp_i16_emulated_f32(%arg0: i16) -> f32 {
+  // CHECK: %[[MASK:.+]] = spirv.Constant 65535 : i32
+  // CHECK: %[[MASKED:.+]] = spirv.BitwiseAnd %{{.*}}, %[[MASK]] : i32
+  // CHECK: spirv.ConvertUToF %[[MASKED]] : i32 to f32
+  %0 = arith.uitofp %arg0 : i16 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @uitofp_vec_i8_emulated_f32
+func.func @uitofp_vec_i8_emulated_f32(%arg0: vector<4xi8>) -> vector<4xf32> {
+  // CHECK: %[[MASK:.+]] = spirv.Constant dense<255> : vector<4xi32>
+  // CHECK: %[[MASKED:.+]] = spirv.BitwiseAnd %{{.*}}, %[[MASK]] : vector<4xi32>
+  // CHECK: spirv.ConvertUToF %[[MASKED]] : vector<4xi32> to vector<4xf32>
+  %0 = arith.uitofp %arg0 : vector<4xi8> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: @sitofp_i8_emulated_f32
+func.func @sitofp_i8_emulated_f32(%arg0: i8) -> f32 {
+  // CHECK: %[[SHIFT:.+]] = spirv.Constant 24 : i32
+  // CHECK: %[[SHL:.+]] = spirv.ShiftLeftLogical %{{.*}}, %[[SHIFT]] : i32, i32
+  // CHECK: %[[SHR:.+]] = spirv.ShiftRightArithmetic %[[SHL]], %[[SHIFT]] : i32, i32
+  // CHECK: spirv.ConvertSToF %[[SHR]] : i32 to f32
+  %0 = arith.sitofp %arg0 : i8 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @sitofp_i16_emulated_f32
+func.func @sitofp_i16_emulated_f32(%arg0: i16) -> f32 {
+  // CHECK: %[[SHIFT:.+]] = spirv.Constant 16 : i32
+  // CHECK: %[[SHL:.+]] = spirv.ShiftLeftLogical %{{.*}}, %[[SHIFT]] : i32, i32
+  // CHECK: %[[SHR:.+]] = spirv.ShiftRightArithmetic %[[SHL]], %[[SHIFT]] : i32, i32
+  // CHECK: spirv.ConvertSToF %[[SHR]] : i32 to f32
+  %0 = arith.sitofp %arg0 : i16 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @sitofp_vec_i8_emulated_f32
+func.func @sitofp_vec_i8_emulated_f32(%arg0: vector<4xi8>) -> vector<4xf32> {
+  // CHECK: %[[SHIFT:.+]] = spirv.Constant dense<24> : vector<4xi32>
+  // CHECK: %[[SHL:.+]] = spirv.ShiftLeftLogical %{{.*}}, %[[SHIFT]] : vector<4xi32>, vector<4xi32>
+  // CHECK: %[[SHR:.+]] = spirv.ShiftRightArithmetic %[[SHL]], %[[SHIFT]] : vector<4xi32>, vector<4xi32>
+  // CHECK: spirv.ConvertSToF %[[SHR]] : vector<4xi32> to vector<4xf32>
+  %0 = arith.sitofp %arg0 : vector<4xi8> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 } // end module
 
 // -----
