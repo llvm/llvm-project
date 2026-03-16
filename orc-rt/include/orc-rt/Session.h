@@ -182,7 +182,7 @@ private:
     std::vector<OnShutdownCompleteFn> OnCompletes;
   };
 
-  void shutdownNext(Error Err);
+  void shutdownNext();
   void shutdownComplete();
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
