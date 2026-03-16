@@ -11,6 +11,9 @@
 double
 MATH_MANGLE(sincospi)(double x, __private double * cp)
 {
+    if (!FINITE_ONLY_OPT())
+        x = BUILTIN_ISINF_F64(x) ? QNAN_F64 : x;
+
     struct redret r = MATH_PRIVATE(trigpired)(BUILTIN_ABS_F64(x));
     struct scret sc = MATH_PRIVATE(sincospired)(r.hi);
 
@@ -24,12 +27,6 @@ MATH_MANGLE(sincospi)(double x, __private double * cp)
 
     double c = odd ? sc.s : sc.c;
     c = AS_DOUBLE(AS_LONG(c) ^ flip);
-
-    if (!FINITE_ONLY_OPT()) {
-        bool finite = BUILTIN_ISFINITE_F64(x);
-        s = finite ? s : QNAN_F64;
-        c = finite ? c : QNAN_F64;
-    }
 
     *cp = c;
     return s;

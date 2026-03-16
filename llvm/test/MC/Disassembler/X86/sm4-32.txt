@@ -1,0 +1,114 @@
+# RUN: llvm-mc --disassemble %s -triple=i386-unknown-unknown | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=i386-unknown-unknown --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:        vsm4key4 %ymm4, %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymm4
+0xc4,0xe2,0x66,0xda,0xd4
+
+# ATT:        vsm4key4 %xmm4, %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmm4
+0xc4,0xe2,0x62,0xda,0xd4
+
+# ATT:        vsm4key4  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x66,0xda,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:        vsm4key4  291(%edi,%eax,4), %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymmword ptr [edi + 4*eax + 291]
+0xc4,0xe2,0x66,0xda,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:        vsm4key4  (%eax), %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymmword ptr [eax]
+0xc4,0xe2,0x66,0xda,0x10
+
+# ATT:        vsm4key4  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x66,0xda,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:        vsm4key4  4064(%ecx), %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymmword ptr [ecx + 4064]
+0xc4,0xe2,0x66,0xda,0x91,0xe0,0x0f,0x00,0x00
+
+# ATT:        vsm4key4  -4096(%edx), %ymm3, %ymm2
+# INTEL:      vsm4key4 ymm2, ymm3, ymmword ptr [edx - 4096]
+0xc4,0xe2,0x66,0xda,0x92,0x00,0xf0,0xff,0xff
+
+# ATT:        vsm4key4  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x62,0xda,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:        vsm4key4  291(%edi,%eax,4), %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmmword ptr [edi + 4*eax + 291]
+0xc4,0xe2,0x62,0xda,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:        vsm4key4  (%eax), %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmmword ptr [eax]
+0xc4,0xe2,0x62,0xda,0x10
+
+# ATT:        vsm4key4  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x62,0xda,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:        vsm4key4  2032(%ecx), %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmmword ptr [ecx + 2032]
+0xc4,0xe2,0x62,0xda,0x91,0xf0,0x07,0x00,0x00
+
+# ATT:        vsm4key4  -2048(%edx), %xmm3, %xmm2
+# INTEL:      vsm4key4 xmm2, xmm3, xmmword ptr [edx - 2048]
+0xc4,0xe2,0x62,0xda,0x92,0x00,0xf8,0xff,0xff
+
+# ATT:        vsm4rnds4 %ymm4, %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymm4
+0xc4,0xe2,0x67,0xda,0xd4
+
+# ATT:        vsm4rnds4 %xmm4, %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmm4
+0xc4,0xe2,0x63,0xda,0xd4
+
+# ATT:        vsm4rnds4  268435456(%esp,%esi,8), %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x67,0xda,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:        vsm4rnds4  291(%edi,%eax,4), %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymmword ptr [edi + 4*eax + 291]
+0xc4,0xe2,0x67,0xda,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:        vsm4rnds4  (%eax), %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymmword ptr [eax]
+0xc4,0xe2,0x67,0xda,0x10
+
+# ATT:        vsm4rnds4  -1024(,%ebp,2), %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymmword ptr [2*ebp - 1024]
+0xc4,0xe2,0x67,0xda,0x14,0x6d,0x00,0xfc,0xff,0xff
+
+# ATT:        vsm4rnds4  4064(%ecx), %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymmword ptr [ecx + 4064]
+0xc4,0xe2,0x67,0xda,0x91,0xe0,0x0f,0x00,0x00
+
+# ATT:        vsm4rnds4  -4096(%edx), %ymm3, %ymm2
+# INTEL:      vsm4rnds4 ymm2, ymm3, ymmword ptr [edx - 4096]
+0xc4,0xe2,0x67,0xda,0x92,0x00,0xf0,0xff,0xff
+
+# ATT:        vsm4rnds4  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x63,0xda,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:        vsm4rnds4  291(%edi,%eax,4), %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmmword ptr [edi + 4*eax + 291]
+0xc4,0xe2,0x63,0xda,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:        vsm4rnds4  (%eax), %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmmword ptr [eax]
+0xc4,0xe2,0x63,0xda,0x10
+
+# ATT:        vsm4rnds4  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x63,0xda,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:        vsm4rnds4  2032(%ecx), %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmmword ptr [ecx + 2032]
+0xc4,0xe2,0x63,0xda,0x91,0xf0,0x07,0x00,0x00
+
+# ATT:        vsm4rnds4  -2048(%edx), %xmm3, %xmm2
+# INTEL:      vsm4rnds4 xmm2, xmm3, xmmword ptr [edx - 2048]
+0xc4,0xe2,0x63,0xda,0x92,0x00,0xf8,0xff,0xff

@@ -5,13 +5,20 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "oclc.h"
 #include "device_amd_hsa.h"
+#include "oclc.h"
+#include <amdhsa_abi.h>
 
 #define ATTR __attribute__((const))
 #define OLD_ABI __oclc_ABI_version < 500
 
 #define IMPLICITARG(T) ((__constant T *)__builtin_amdgcn_implicitarg_ptr())
+
+static __constant amdhsa_implicit_kernarg_v5 *
+get_v5_implicitarg_ptr()
+{
+    return (__constant amdhsa_implicit_kernarg_v5 *)__builtin_amdgcn_implicitarg_ptr();
+}
 
 ATTR static size_t
 get_global_offset_x(void)
@@ -19,7 +26,7 @@ get_global_offset_x(void)
     if (OLD_ABI) {
         return IMPLICITARG(ulong)[0];
     } else {
-        return IMPLICITARG(ulong)[5];
+        return get_v5_implicitarg_ptr()->global_offset[0];
     }
 }
 
@@ -29,7 +36,7 @@ get_global_offset_y(void)
     if (OLD_ABI) {
         return IMPLICITARG(ulong)[1];
     } else {
-        return IMPLICITARG(ulong)[6];
+        return get_v5_implicitarg_ptr()->global_offset[1];
     }
 }
 
@@ -39,7 +46,7 @@ get_global_offset_z(void)
     if (OLD_ABI) {
         return IMPLICITARG(ulong)[2];
     } else {
-        return IMPLICITARG(ulong)[7];
+        return get_v5_implicitarg_ptr()->global_offset[2];
     }
 }
 
@@ -50,8 +57,8 @@ get_global_size_x(void)
         __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
         return p->grid_size_x;
     } else {
-        return IMPLICITARG(uint)[0]*IMPLICITARG(ushort)[6] + IMPLICITARG(ushort)[9];
-        return 0;
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return args->block_count[0] * (uint)args->group_size[0] + (uint)args->remainder[0];
     }
 }
 
@@ -62,7 +69,8 @@ get_global_size_y(void)
         __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
         return p->grid_size_y;
     } else {
-        return IMPLICITARG(uint)[1]*IMPLICITARG(ushort)[7] + IMPLICITARG(ushort)[10];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return args->block_count[1] * (uint)args->group_size[1] + (uint)args->remainder[1];
     }
 }
 
@@ -73,8 +81,8 @@ get_global_size_z(void)
         __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
         return p->grid_size_z;
     } else {
-        return IMPLICITARG(uint)[2]*IMPLICITARG(ushort)[8] + IMPLICITARG(ushort)[11];
-        return 0;
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return args->block_count[2] * (uint)args->group_size[2] + (uint)args->remainder[2];
     }
 }
 
@@ -87,7 +95,8 @@ get_global_id_x(void)
     if (OLD_ABI) {
         s = __builtin_amdgcn_workgroup_size_x();
     } else {
-        s = IMPLICITARG(ushort)[6];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        s = (uint)args->group_size[0];
     }
     return (g*s + l) + get_global_offset_x();
 }
@@ -101,7 +110,8 @@ get_global_id_y(void)
     if (OLD_ABI) {
         s = __builtin_amdgcn_workgroup_size_y();
     } else {
-        s = IMPLICITARG(ushort)[7];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        s = (uint)args->group_size[1];
     }
     return (g*s + l) + get_global_offset_y();
 }
@@ -115,7 +125,8 @@ get_global_id_z(void)
     if (OLD_ABI) {
         s = __builtin_amdgcn_workgroup_size_z();
     } else {
-        s = IMPLICITARG(ushort)[8];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        s = (uint)args->group_size[2];
     }
     return (g*s + l) + get_global_offset_z();
 }
@@ -131,7 +142,9 @@ get_local_size_x(void)
         uint r = grid_size - group_id * group_size;
         return (r < group_size) ? r : group_size;
     } else {
-        return __builtin_amdgcn_workgroup_id_x() < IMPLICITARG(uint)[0] ? IMPLICITARG(ushort)[6] : IMPLICITARG(ushort)[9];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return __builtin_amdgcn_workgroup_id_x() < args->block_count[0] ? (size_t)args->group_size[0]
+                                                                        : (size_t)args->remainder[0];
     }
 }
 
@@ -146,7 +159,9 @@ get_local_size_y(void)
         uint r = grid_size - group_id * group_size;
         return (r < group_size) ? r : group_size;
     } else {
-        return __builtin_amdgcn_workgroup_id_y() < IMPLICITARG(uint)[1] ? IMPLICITARG(ushort)[7] : IMPLICITARG(ushort)[10];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return __builtin_amdgcn_workgroup_id_y() < args->block_count[1] ? (size_t)args->group_size[1]
+                                                                        : (size_t)args->remainder[1];
     }
 }
 
@@ -161,7 +176,9 @@ get_local_size_z(void)
         uint r = grid_size - group_id * group_size;
         return (r < group_size) ? r : group_size;
     } else {
-        return __builtin_amdgcn_workgroup_id_z() < IMPLICITARG(uint)[2] ? IMPLICITARG(ushort)[8] : IMPLICITARG(ushort)[11];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return __builtin_amdgcn_workgroup_id_z() < args->block_count[2] ? (size_t)args->group_size[2]
+                                                                        : (size_t)args->remainder[2];
     }
 }
 
@@ -171,7 +188,7 @@ get_enqueued_local_size_x(void)
     if (OLD_ABI) {
         return __builtin_amdgcn_workgroup_size_x();
     } else {
-        return IMPLICITARG(ushort)[6];
+        return (size_t)get_v5_implicitarg_ptr()->group_size[0];
     }
 }
 
@@ -181,7 +198,7 @@ get_enqueued_local_size_y(void)
     if (OLD_ABI) {
         return __builtin_amdgcn_workgroup_size_y();
     } else {
-        return IMPLICITARG(ushort)[7];
+        return (size_t)get_v5_implicitarg_ptr()->group_size[1];
     }
 }
 
@@ -191,7 +208,7 @@ get_enqueued_local_size_z(void)
     if (OLD_ABI) {
         return __builtin_amdgcn_workgroup_size_z();
     } else {
-        return IMPLICITARG(ushort)[8];
+        return (size_t)get_v5_implicitarg_ptr()->group_size[2];
     }
 }
 
@@ -205,7 +222,8 @@ get_num_groups_x(void)
         uint q = n / d;
         return q + (n > q*d);
     } else {
-        return IMPLICITARG(uint)[0] + (IMPLICITARG(ushort)[9] > 0);
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return args->block_count[0] + (args->remainder[0] > 0);
     }
 }
 
@@ -219,7 +237,8 @@ get_num_groups_y(void)
         uint q = n / d;
         return q + (n > q*d);
     } else {
-        return IMPLICITARG(uint)[1] + (IMPLICITARG(ushort)[10] > 0);
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return args->block_count[1] + (args->remainder[1] > 0);
     }
 }
 
@@ -233,7 +252,8 @@ get_num_groups_z(void)
         uint q = n / d;
         return q + (n > q*d);
     } else {
-        return IMPLICITARG(uint)[2] + (IMPLICITARG(ushort)[11] > 0);
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        return args->block_count[2] + (args->remainder[2] > 0);
     }
 }
 
@@ -244,7 +264,7 @@ get_work_dim_(void)
         __constant hsa_kernel_dispatch_packet_t *p = __builtin_amdgcn_dispatch_ptr();
         return p->setup;
     } else {
-        return IMPLICITARG(ushort)[32];
+        return (uint)get_v5_implicitarg_ptr()->grid_dims;
     }
 }
 
@@ -257,7 +277,7 @@ get_global_linear_id_x(void)
     if (OLD_ABI) {
         s0 = __builtin_amdgcn_workgroup_size_x();
     } else {
-        s0 = IMPLICITARG(ushort)[6];
+        s0 = (uint)get_v5_implicitarg_ptr()->group_size[0];
     }
     return g0*s0 + l0;
 }
@@ -278,9 +298,10 @@ get_global_linear_id_y(void)
         s1 = __builtin_amdgcn_workgroup_size_y();
         n0 = p->grid_size_x;
     } else {
-        s0 = IMPLICITARG(ushort)[6];
-        s1 = IMPLICITARG(ushort)[7];
-        n0 = IMPLICITARG(uint)[0]*s0 + IMPLICITARG(ushort)[9];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        s0 = args->group_size[0];
+        s1 = args->group_size[1];
+        n0 = args->block_count[0] * s0 + (uint)args->remainder[0];
     }
     uint i0 = g0*s0 + l0;
     uint i1 = g1*s1 + l1;
@@ -307,11 +328,12 @@ get_global_linear_id_z(void)
         n0 = p->grid_size_x;
         n1 = p->grid_size_y;
     } else {
-        s0 = IMPLICITARG(ushort)[6];
-        s1 = IMPLICITARG(ushort)[7];
-        s2 = IMPLICITARG(ushort)[8];
-        n0 = IMPLICITARG(uint)[0]*s0 + IMPLICITARG(ushort)[9];
-        n1 = IMPLICITARG(uint)[1]*s1 + IMPLICITARG(ushort)[10];
+        __constant amdhsa_implicit_kernarg_v5 *args = get_v5_implicitarg_ptr();
+        s0 = args->group_size[0];
+        s1 = args->group_size[1];
+        s2 = args->group_size[2];
+        n0 = args->block_count[0] * s0 + args->remainder[0];
+        n1 = args->block_count[1] * s1 + args->remainder[1];
     }
     uint i0 = g0*s0 + l0;
     uint i1 = g1*s1 + l1;

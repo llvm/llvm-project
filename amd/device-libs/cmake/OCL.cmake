@@ -32,7 +32,7 @@ endif()
 # potential mis-aligned atomic ops detected by clang
 set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-error=atomic-alignment -x cl -Xclang
   -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=hidden -fomit-frame-pointer
-  -Xclang -finclude-default-header -Xclang -fexperimental-strict-floating-point
+  -Xclang -finclude-default-header -nostdlibinc -Xclang -fexperimental-strict-floating-point
   -Xclang -fdenormal-fp-math=dynamic
   -nogpulib -cl-no-stdinc "${CLANG_OPTIONS_APPEND}")
 
@@ -55,8 +55,15 @@ if (NOT ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW STREQUAL "")
   set(INSTALL_ROOT_SUFFIX "${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW}/bitcode")
 endif()
 
-if (ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_CLANG_RESOURCE_DIR AND DEFINED LLVM_VERSION_MAJOR)
-  set(INSTALL_ROOT_SUFFIX "lib/clang/${LLVM_VERSION_MAJOR}/lib/amdgcn/bitcode")
+if (ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_CLANG_RESOURCE_DIR)
+  if(NOT ROCM_DEVICELIB_STANDALONE_BUILD)
+    include(GetClangResourceDir)
+    get_clang_resource_dir( CLANG_RSRC_DIR )
+  else()
+    set(CLANG_RSRC_DIR "lib/clang/${LLVM_VERSION_MAJOR}")
+  endif()
+
+  set(INSTALL_ROOT_SUFFIX "${CLANG_RSRC_DIR}/lib/amdgcn/bitcode")
 endif()
 
 # Set `inc_options` to contain Clang command-line for include directories for
@@ -211,7 +218,6 @@ endfunction()
 
 set(OCLC_DEFAULT_LIBS
   oclc_correctly_rounded_sqrt_off
-  oclc_daz_opt_off
   oclc_finite_only_off
   oclc_isa_version_803
   oclc_unsafe_math_off)

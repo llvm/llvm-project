@@ -102,16 +102,31 @@
     _f;                                                         \
 })
 
-#define BUILTIN_FRACTION_F64(X) ({                                      \
-    const double _x = X;                                                \
-    const double _floor_x = BUILTIN_FLOOR_F64(_x);                       \
-    double _f = BUILTIN_MIN_F64(_x - _floor_x, 0x1.fffffffffffffp-1);   \
-    if (!FINITE_ONLY_OPT()) {                                           \
-        _f = BUILTIN_ISNAN_F64(_x) ? _x : _f;                            \
-        _f = BUILTIN_ISINF_F64(_x) ? 0.0 : _f;                           \
-    }                                                                   \
-    _f;                                                                 \
-})
+// Perform the non-finite component of fract
+#define BUILTIN_FRACTION_F64_IMPL(X)                                                                                   \
+    ({                                                                                                                 \
+        const double _x = X;                                                                                           \
+        const double _floor_x = BUILTIN_FLOOR_F64(_x);                                                                 \
+        double _f = BUILTIN_MIN_F64(_x - _floor_x, 0x1.fffffffffffffp-1);                                              \
+        _f;                                                                                                            \
+    })
+
+// Apply the edge case fixups of BUILTIN_FRACTION_F64. \p F should be the result
+// of BUILTIN_FRACTION_F64_IMPL, \p X should be a value that is known to have
+// the same finiteness as \p F. i.e., if isnan(X) == isnan(F), and isinf(X) ==
+// isinf(F).
+#define BUILTIN_FRACTION_F64_FIXUP(F, X)                                                                               \
+    ({                                                                                                                 \
+        const double _x = X;                                                                                           \
+        double _f = F;                                                                                                 \
+        if (!FINITE_ONLY_OPT()) {                                                                                      \
+            _f = BUILTIN_ISNAN_F64(_x) ? _x : _f;                                                                      \
+            _f = BUILTIN_ISINF_F64(_x) ? 0.0 : _f;                                                                     \
+        }                                                                                                              \
+        _f;                                                                                                            \
+    })
+
+#define BUILTIN_FRACTION_F64(X) BUILTIN_FRACTION_F64_FIXUP(BUILTIN_FRACTION_F64_IMPL(X), X)
 
 #define BUILTIN_FRACTION_F16(X) ({                                      \
     const half _x = X;                                                  \
