@@ -449,10 +449,7 @@ private:
 // Helper to handle cases for LWG4366 Heterogeneous comparison of ``expected`` may be ill-formed
 // Where the comparison may produce a value that is a type that is not bool, and is implicitly
 // convertible to bool, but not explicitly.
-template <typename _ImplictlyBool>
-constexpr bool __into_bool(_ImplictlyBool&& __b)
-  requires __core_convertible_to<_ImplictlyBool, bool>
-{
+constexpr bool __into_bool(bool __b) noexcept {
   return __b;
 }
 
