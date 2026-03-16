@@ -431,8 +431,7 @@ public:
   std::optional<bool> Subsumes(const NamedDecl *DP,
                                ArrayRef<AssociatedConstraint> P,
                                const NamedDecl *DQ,
-                               ArrayRef<AssociatedConstraint> Q,
-                               bool DepthAdjusted);
+                               ArrayRef<AssociatedConstraint> Q);
 
   bool Subsumes(const NormalizedConstraint *P, const NormalizedConstraint *Q);
 

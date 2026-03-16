@@ -14,6 +14,7 @@
 #include "TreeTransform.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -2544,8 +2545,15 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
   }
 
   SubsumptionChecker SC(*this);
-  std::optional<bool> Subsumes =
-      SC.Subsumes(D1, AC1, D2, AC2, /*DepthAdjusted=*/Depth1 != Depth2);
+  // Associated declarations are used as a cache key in the event they were
+  // normalized earlier during concept checking. However we cannot reuse these
+  // cached results if any of the template depths have been adjusted.
+  const NamedDecl *DeclAC1 = D1, *DeclAC2 = D2;
+  if (Depth2 > Depth1)
+    DeclAC1 = nullptr;
+  else if (Depth1 > Depth2)
+    DeclAC2 = nullptr;
+  std::optional<bool> Subsumes = SC.Subsumes(DeclAC1, AC1, DeclAC2, AC2);
   if (!Subsumes) {
     // Normalization failed
     return true;
@@ -2779,16 +2787,14 @@ void SubsumptionChecker::AddUniqueClauseToFormula(Formula &F, Clause C) {
 
 std::optional<bool> SubsumptionChecker::Subsumes(
     const NamedDecl *DP, ArrayRef<AssociatedConstraint> P, const NamedDecl *DQ,
-    ArrayRef<AssociatedConstraint> Q, bool DepthAdjusted) {
+    ArrayRef<AssociatedConstraint> Q) {
   const NormalizedConstraint *PNormalized =
-      SemaRef.getNormalizedAssociatedConstraints(DepthAdjusted ? nullptr : DP,
-                                                 P);
+      SemaRef.getNormalizedAssociatedConstraints(DP, P);
   if (!PNormalized)
     return std::nullopt;
 
   const NormalizedConstraint *QNormalized =
-      SemaRef.getNormalizedAssociatedConstraints(DepthAdjusted ? nullptr : DQ,
-                                                 Q);
+      SemaRef.getNormalizedAssociatedConstraints(DQ, Q);
   if (!QNormalized)
     return std::nullopt;
 
