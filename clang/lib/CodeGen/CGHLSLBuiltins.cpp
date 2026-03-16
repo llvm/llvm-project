@@ -1142,6 +1142,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    MatTy0->getNumColumns(),
                                    MatTy1->getNumColumns(), "hlsl.mul");
   }
+  case Builtin::BI__builtin_hlsl_transpose: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    auto *MatTy = E->getArg(0)->getType()->castAs<ConstantMatrixType>();
+    llvm::MatrixBuilder MB(Builder);
+    return MB.CreateMatrixTranspose(Op0, MatTy->getNumRows(),
+                                    MatTy->getNumColumns());
+  }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
@@ -1253,13 +1260,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     Value *Op = EmitScalarExpr(E->getArg(0));
     assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
-           "Intrinsic WaveActiveBitOr operand must have a unsigned integer "
+           "Intrinsic WaveActiveBitOr operand must have an unsigned integer "
            "representation");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitOrIntrinsic();
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), ID, {Op->getType()}),
                            ArrayRef{Op}, "hlsl.wave.active.bit.or");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_xor: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation() &&
+           "Intrinsic WaveActiveBitXor operand must have an unsigned integer "
+           "representation");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitXorIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), ID, {Op->getType()}),
+                           ArrayRef{Op}, "hlsl.wave.active.bit.xor");
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));

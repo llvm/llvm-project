@@ -82,7 +82,7 @@ bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
 bool objdump::IsOtool;
 bool objdump::SymbolicOperands;
-static std::vector<std::string> ArchFlags;
+std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
 static std::string ThumbTripleName;
