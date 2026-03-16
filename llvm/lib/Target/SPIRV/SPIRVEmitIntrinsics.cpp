@@ -255,6 +255,7 @@ class SPIRVEmitIntrinsics
   bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void insertConstantsForFPFastMathDefault(Module &M);
+  Value *buildSpvUndefComposite(Type *AggrTy, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -424,7 +425,9 @@ static bool isMemInstrToReplace(Instruction *I) {
 static bool isAggrConstForceInt32(const Value *V) {
   return isa<ConstantArray>(V) || isa<ConstantStruct>(V) ||
          isa<ConstantDataArray>(V) ||
-         (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy());
+         (isa<ConstantAggregateZero>(V) && !V->getType()->isVectorTy()) ||
+         (isa<UndefValue>(V) && !isa<PoisonValue>(V) &&
+          V->getType()->isAggregateType());
 }
 
 static void setInsertPointSkippingPhis(IRBuilder<> &B, Instruction *I) {
@@ -2269,6 +2272,28 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
   return F == &FirstDefinition;
 }
 
+Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
+                                                   IRBuilder<> &B) {
+  unsigned NumElems = isa<StructType>(AggrTy)
+                          ? cast<StructType>(AggrTy)->getNumElements()
+                          : cast<ArrayType>(AggrTy)->getNumElements();
+  SmallVector<Value *, 4> Elems(NumElems);
+  for (unsigned I = 0; I < NumElems; ++I) {
+    Type *ElemTy = isa<StructType>(AggrTy)
+                       ? AggrTy->getContainedType(I)
+                       : cast<ArrayType>(AggrTy)->getElementType();
+    auto *UI = B.CreateIntrinsic(Intrinsic::spv_undef, {});
+    AggrConsts[UI] = UndefValue::get(ElemTy);
+    AggrConstTypes[UI] = ElemTy;
+    Elems[I] = UI;
+  }
+  auto *Composite = B.CreateIntrinsic(Intrinsic::spv_const_composite,
+                                      {B.getInt32Ty()}, Elems);
+  AggrConsts[Composite] = UndefValue::get(AggrTy);
+  AggrConstTypes[Composite] = AggrTy;
+  return Composite;
+}
+
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
 
@@ -2282,11 +2307,14 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
     // by llvm IR general logic.
     deduceElementTypeHelper(&GV, false);
     Init = GV.getInitializer();
+    Value *InitOp = Init;
+    if (isa<UndefValue>(Init) && Init->getType()->isAggregateType())
+      InitOp = buildSpvUndefComposite(Init->getType(), B);
     Type *Ty = isAggrConstForceInt32(Init) ? B.getInt32Ty() : Init->getType();
     Constant *Const = isAggrConstForceInt32(Init) ? B.getInt32(1) : Init;
     auto *InitInst = B.CreateIntrinsic(Intrinsic::spv_init_global,
                                        {GV.getType(), Ty}, {&GV, Const});
-    InitInst->setArgOperand(1, Init);
+    InitInst->setArgOperand(1, InitOp);
   }
   if (!Init && GV.use_empty())
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
