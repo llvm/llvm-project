@@ -183,7 +183,8 @@ walkInstantiatedFromChain(const ClassTemplateDecl *Tmpl) {
   //     };
   //   }
   // /code
-  while (auto *MemberTmpl = Tmpl->getInstantiatedFromMemberTemplate()) {
+  const ClassTemplateDecl *MemberTmpl;
+  while ((MemberTmpl = Tmpl->getInstantiatedFromMemberTemplate())) {
     if (Tmpl->isMemberSpecialization())
       break;
     Tmpl = MemberTmpl;
@@ -193,7 +194,8 @@ walkInstantiatedFromChain(const ClassTemplateDecl *Tmpl) {
 
 static const ClassTemplatePartialSpecializationDecl *walkInstantiatedFromChain(
     const ClassTemplatePartialSpecializationDecl *PartialSpec) {
-  while (auto *MemberPS = PartialSpec->getInstantiatedFromMember()) {
+  const ClassTemplatePartialSpecializationDecl *MemberPS;
+  while ((MemberPS = PartialSpec->getInstantiatedFromMember())) {
     if (PartialSpec->isMemberSpecialization())
       break;
     PartialSpec = MemberPS;
@@ -201,11 +203,11 @@ static const ClassTemplatePartialSpecializationDecl *walkInstantiatedFromChain(
   return PartialSpec;
 }
 
-template <class T> static const auto *chooseDefinitionRedecl(const T *Tmpl) {
+template <class T> static const T *chooseDefinitionRedecl(const T *Tmpl) {
   static_assert(llvm::is_one_of<T, ClassTemplateDecl,
                                 ClassTemplatePartialSpecializationDecl>::value);
   for (const auto *Redecl : Tmpl->redecls()) {
-    if (const auto *D = cast<T>(Redecl); D->isThisDeclarationADefinition()) {
+    if (const T *D = cast<T>(Redecl); D->isThisDeclarationADefinition()) {
       return D;
     }
   }
@@ -226,11 +228,8 @@ template <class T> static const auto *chooseDefinitionRedecl(const T *Tmpl) {
 // back to the primary template definition, allowing us to find the suppression
 // attribute.
 //
-// The function handles two cases:
-// 1. Class template specializations.
-// 2. Class template partial specializations.
-//
-// For non-template-specialization decls, returns the input unchanged.
+// The function handles specializations (and partial specializations) of
+// class templates. For any other decl, it returns the input unchagned.
 static const Decl *
 preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
   const auto *SpecializationDecl = dyn_cast<ClassTemplateSpecializationDecl>(D);
