@@ -3926,12 +3926,12 @@ bool UnwrappedLineParser::parseEnum() {
   const bool UpdateLevel =
       !Style.AllowShortEnumsOnASingleLine ||
       Style.IndentPPDirectives == FormatStyle::PPDIS_BeforeHashWithCode;
-  if (updateLevel) {
+  if (UpdateLevel) {
     addUnwrappedLine();
     Line->Level += 1;
   }
   bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
-  if (updateLevel)
+  if (UpdateLevel)
     Line->Level -= 1;
   if (HasError) {
     if (FormatTok->is(tok::semi))
