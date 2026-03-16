@@ -1252,6 +1252,15 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   return nullptr;
 }
 
+// Returns the loop hint metadata node with the given name (for example,
+// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
+// returned.
+MDNode *llvm::getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
+  if (MDNode *LoopID = L->getLoopID())
+    return GetUnrollMetadata(LoopID, Name);
+  return nullptr;
+}
+
 std::optional<RecurrenceDescriptor>
 llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
                                            ScalarEvolution *SE) {

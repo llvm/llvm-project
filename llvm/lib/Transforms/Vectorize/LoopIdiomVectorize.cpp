@@ -1213,7 +1213,6 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
     Value *SearchStart, Value *SearchEnd, Value *NeedleStart,
     Value *NeedleEnd) {
   // Set up some types and constants that we intend to reuse.
-  auto *PtrTy = Builder.getPtrTy();
   auto *I64Ty = Builder.getInt64Ty();
   auto *PredVTy = ScalableVectorType::get(Builder.getInt1Ty(), VF);
   auto *CharVTy = ScalableVectorType::get(CharTy, VF);
@@ -1396,7 +1395,8 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
 
   // (4) We found a match. Compute the index of its location and exit.
   Builder.SetInsertPoint(BB4);
-  PHINode *MatchLCSSA = Builder.CreatePHI(PtrTy, 1, "match_start");
+  PHINode *MatchLCSSA =
+      Builder.CreatePHI(SearchStart->getType(), 1, "match_start");
   PHINode *MatchPredLCSSA = Builder.CreatePHI(PredVTy, 1, "match_vec");
   Value *MatchCnt = Builder.CreateIntrinsic(
       Intrinsic::experimental_cttz_elts, {I64Ty, PredVTy},

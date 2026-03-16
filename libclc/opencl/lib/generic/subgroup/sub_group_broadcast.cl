@@ -8,8 +8,8 @@
 
 #include "clc/subgroup/clc_sub_group_broadcast.h"
 
-#define __CLC_BODY "sub_group_broadcast.inc"
-#include "clc/integer/gentype.inc"
+#define __CLC_BODY <sub_group_broadcast.inc>
+#include <clc/integer/gentype.inc>
 
-#define __CLC_BODY "sub_group_broadcast.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <sub_group_broadcast.inc>
+#include <clc/math/gentype.inc>

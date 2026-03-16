@@ -641,6 +641,8 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
+  if (ST.hasFeature(AMDGPU::FeatureGFX11_7Insts))
+    return SIEncodingFamily::GFX1170;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
     return SIEncodingFamily::GFX11;
   llvm_unreachable("Subtarget generation does not support VOPD!");
@@ -3589,23 +3591,36 @@ MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
   return RC->getRegister(Idx);
 }
 
-std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
-                                                   bool HasSetregVGPRMSBFixup) {
-  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
-
+static std::optional<unsigned>
+convertSetRegImmToVgprMSBs(unsigned Imm, unsigned Simm16,
+                           bool HasSetregVGPRMSBFixup) {
   constexpr unsigned VGPRMSBShift =
       llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
 
-  auto [HwRegId, Offset, Size] =
-      Hwreg::HwregEncoding::decode(MI.getOperand(1).getImm());
+  auto [HwRegId, Offset, Size] = Hwreg::HwregEncoding::decode(Simm16);
   if (HwRegId != Hwreg::ID_MODE ||
       (!HasSetregVGPRMSBFixup && (Offset + Size) <= VGPRMSBShift))
     return {};
-  unsigned Imm = MI.getOperand(0).getImm();
   Imm = ((Imm >> Offset) & Hwreg::VGPR_MSB_MASK) >> VGPRMSBShift;
   if (!HasSetregVGPRMSBFixup)
     Imm &= llvm::maskTrailingOnes<unsigned>(Size);
   return llvm::rotr<uint8_t>(static_cast<uint8_t>(Imm), /*R=*/2);
+}
+
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MachineInstr &MI,
+                                                   bool HasSetregVGPRMSBFixup) {
+  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
+  return convertSetRegImmToVgprMSBs(MI.getOperand(0).getImm(),
+                                    MI.getOperand(1).getImm(),
+                                    HasSetregVGPRMSBFixup);
+}
+
+std::optional<unsigned> convertSetRegImmToVgprMSBs(const MCInst &MI,
+                                                   bool HasSetregVGPRMSBFixup) {
+  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_gfx12);
+  return convertSetRegImmToVgprMSBs(MI.getOperand(0).getImm(),
+                                    MI.getOperand(1).getImm(),
+                                    HasSetregVGPRMSBFixup);
 }
 
 std::pair<const AMDGPU::OpName *, const AMDGPU::OpName *>
