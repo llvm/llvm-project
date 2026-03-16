@@ -127,10 +127,10 @@ void b0(int a, int b) {
 // OGCG:         ret void
 
 void testFloatingPointBinOps(float a, float b) {
-  a * b;
-  a / b;
-  a + b;
-  a - b;
+  float x = a * b;
+  x = x / b;
+  x = x + b;
+  x = x - b;
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
@@ -144,48 +144,58 @@ void testFloatingPointBinOps(float a, float b) {
 // LLVM-SAME: float {{.*}} %[[A:.*]], float {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
 // LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
+// LLVM:         %[[X_ADDR:.*]] = alloca float, i64 1
 // LLVM:         store float %[[A]], ptr %[[A_ADDR]]
 // LLVM:         store float %[[B]], ptr %[[B_ADDR]]
 
 // LLVM:         %[[A1:.*]] = load float, ptr %[[A_ADDR]]
 // LLVM:         %[[B1:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fmul float %[[A1]], %[[B1]]
+// LLVM:         %[[MUL:.*]] = fmul float %[[A1]], %[[B1]]
+// LLVM:         store float %[[MUL]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A2:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X1:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B2:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fdiv float %[[A2]], %[[B2]]
+// LLVM:         %[[DIV:.*]] = fdiv float %[[X1]], %[[B2]]
+// LLVM:         store float %[[DIV]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A3:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X2:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B3:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fadd float %[[A3]], %[[B3]]
+// LLVM:         %[[ADD:.*]] = fadd float %[[X2]], %[[B3]]
+// LLVM:         store float %[[ADD]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A4:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X3:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B4:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fsub float %[[A4]], %[[B4]]
+// LLVM:         %[[SUB:.*]] = fsub float %[[X3]], %[[B4]]
+// LLVM:         store float %[[SUB]], ptr %[[X_ADDR]]
 
 // LLVM:         ret void
 
 // OGCG-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(float {{.*}} %a, float {{.*}} %b)
 // OGCG:         %a.addr = alloca float
 // OGCG:         %b.addr = alloca float
+// OGCG:         %x = alloca float
 // OGCG:         store float %a, ptr %a.addr
 // OGCG:         store float %b, ptr %b.addr
 
 // OGCG:         %[[A1:.*]] = load float, ptr %a.addr
 // OGCG:         %[[B1:.*]] = load float, ptr %b.addr
-// OGCG:         fmul float %[[A1]], %[[B1]]
+// OGCG:         %[[MUL:.*]] = fmul float %[[A1]], %[[B1]]
+// OGCG:         store float %[[MUL]], ptr %x
 
-// OGCG:         %[[A2:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X1:.*]] = load float, ptr %x
 // OGCG:         %[[B2:.*]] = load float, ptr %b.addr
-// OGCG:         fdiv float %[[A2]], %[[B2]]
+// OGCG:         %[[DIV:.*]] = fdiv float %[[X1]], %[[B2]]
+// OGCG:         store float %[[DIV]], ptr %x
 
-// OGCG:         %[[A3:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X2:.*]] = load float, ptr %x
 // OGCG:         %[[B3:.*]] = load float, ptr %b.addr
-// OGCG:         fadd float %[[A3]], %[[B3]]
+// OGCG:         %[[ADD:.*]] = fadd float %[[X2]], %[[B3]]
+// OGCG:         store float %[[ADD]], ptr %x
 
-// OGCG:         %[[A4:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X3:.*]] = load float, ptr %x
 // OGCG:         %[[B4:.*]] = load float, ptr %b.addr
-// OGCG:         fsub float %[[A4]], %[[B4]]
+// OGCG:         %[[SUB:.*]] = fsub float %[[X3]], %[[B4]]
+// OGCG:         store float %[[SUB]], ptr %x
 
 // OGCG:         ret void
 
