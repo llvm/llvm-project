@@ -207,6 +207,16 @@
             "Automatically restart the server",
             "Do nothing"
           ]
+        },
+        "mlir.litBuildDirectory": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The build directory path for running lit tests. Can be absolute or relative to workspace root. If not set, user will be prompted."
+        },
+        "mlir.litExecutablePath": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The path to llvm-lit or lit executable, or path to a virtual environment containing lit. If not set, user will be prompted or a venv will be auto-created."
         }
       }
     },
@@ -220,8 +230,8 @@
         "title": "mlir-pdll: View PDLL output"
       },
       {
-        "command": "mlir.runLitWithIRDump",
-        "title": "mlir:Run with IR Dump"
+        "command": "mlir.runTest",
+        "title": "mlir:Run Test"
       }
     ],
     "menus": {
@@ -232,7 +242,7 @@
           "when": "editorLangId == pdll"
         },
         {
-          "command": "mlir.runLitWithIRDump",
+          "command": "mlir.runTest",
           "group": "z_commands",
           "when": "editorLangId == mlir"
         }
