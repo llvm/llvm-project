@@ -166,10 +166,6 @@ RUNTIMES = {
     "libclc",
 }
 
-LIBCLC_TARGETS = {
-    "amdgcn-amd-amdhsa-llvm",
-}
-
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path
 # for the metaproject should be mapped to the name of the project below.
@@ -352,7 +348,6 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
             sorted(runtimes_check_targets_needs_reconfig)
         ),
         "enable_cir": enable_cir,
-        "libclc_targets": ";".join(LIBCLC_TARGETS),
     }
 
 
