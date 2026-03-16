@@ -1949,8 +1949,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVVectorType(
     const SPIRVInstrInfo &TII) {
   // At this point of time all 1-element vectors are resolved. Add assertion
   // to fire if anything changes.
-  assert(NumElements >= 2 &&
-         "SPIR-V vectors must have at least 2 components");
+  assert(NumElements >= 2 && "SPIR-V vectors must have at least 2 components");
   Type *Ty = FixedVectorType::get(
       const_cast<Type *>(getTypeForSPIRVType(BaseType)), NumElements);
   if (const MachineInstr *MI = findMI(Ty, false, CurMF))
