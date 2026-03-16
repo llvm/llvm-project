@@ -161,7 +161,7 @@ public:
   static bool check(const Value *V) {
     if (isa<UndefValue>(V))
       return true;
-    if (const auto *CA = dyn_cast<ConstantAggregate>(V); LLVM_UNLIKELY(CA))
+    if (const auto *CA = dyn_cast<ConstantAggregate>(V))
       return checkAggregate(CA);
     return false;
   }
