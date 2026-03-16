@@ -11,9 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/JSON.h"
 #include <OffloadAPI.h>
 #include <iostream>
 #include <vector>
+
+using namespace llvm;
+
+static cl::opt<bool> JSON("json",
+                          cl::desc("Dump device information as a JSON map"),
+                          cl::init(false));
 
 #define OFFLOAD_ERR(X)                                                         \
   if (auto Err = X) {                                                          \
@@ -30,43 +38,43 @@ void doWrite(std::ostream &S, T &&Val) {
   S << Val;
 }
 
+std::string toString(ol_platform_backend_t Val) {
+  switch (Val) {
+  case OL_PLATFORM_BACKEND_UNKNOWN:
+    return "UNKNOWN";
+  case OL_PLATFORM_BACKEND_CUDA:
+    return "CUDA";
+  case OL_PLATFORM_BACKEND_AMDGPU:
+    return "AMDGPU";
+  case OL_PLATFORM_BACKEND_HOST:
+    return "HOST";
+  default:
+    return "INVALID";
+  }
+}
+
+std::string toString(ol_device_type_t Val) {
+  switch (Val) {
+  case OL_DEVICE_TYPE_GPU:
+    return "GPU";
+  case OL_DEVICE_TYPE_CPU:
+    return "CPU";
+  case OL_DEVICE_TYPE_HOST:
+    return "HOST";
+  default:
+    return "INVALID";
+  }
+}
+
 template <>
 void doWrite<ol_platform_backend_t>(std::ostream &S,
                                     ol_platform_backend_t &&Val) {
-  switch (Val) {
-  case OL_PLATFORM_BACKEND_UNKNOWN:
-    S << "UNKNOWN";
-    break;
-  case OL_PLATFORM_BACKEND_CUDA:
-    S << "CUDA";
-    break;
-  case OL_PLATFORM_BACKEND_AMDGPU:
-    S << "AMDGPU";
-    break;
-  case OL_PLATFORM_BACKEND_HOST:
-    S << "HOST";
-    break;
-  default:
-    S << "<< INVALID >>";
-    break;
-  }
+  S << toString(Val);
 }
+
 template <>
 void doWrite<ol_device_type_t>(std::ostream &S, ol_device_type_t &&Val) {
-  switch (Val) {
-  case OL_DEVICE_TYPE_GPU:
-    S << "GPU";
-    break;
-  case OL_DEVICE_TYPE_CPU:
-    S << "CPU";
-    break;
-  case OL_DEVICE_TYPE_HOST:
-    S << "HOST";
-    break;
-  default:
-    S << "<< INVALID >>";
-    break;
-  }
+  S << toString(Val);
 }
 template <>
 void doWrite<ol_dimensions_t>(std::ostream &S, ol_dimensions_t &&Val) {
@@ -103,6 +111,31 @@ void doWrite<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
   }
 
   S << " }";
+}
+
+json::Object toJSON(ol_dimensions_t Val) {
+  return json::Object{{"x", Val.x}, {"y", Val.y}, {"z", Val.z}};
+}
+
+std::vector<std::string> toJSON(ol_device_fp_capability_flags_t Val) {
+  std::vector<std::string> Flags;
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT)
+    Flags.push_back("CORRECTLY_ROUNDED_DIVIDE_SQRT");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST)
+    Flags.push_back("ROUND_TO_NEAREST");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO)
+    Flags.push_back("ROUND_TO_ZERO");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF)
+    Flags.push_back("ROUND_TO_INF");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN)
+    Flags.push_back("INF_NAN");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_DENORM)
+    Flags.push_back("DENORM");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_FMA)
+    Flags.push_back("FMA");
+  if (Val & OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT)
+    Flags.push_back("SOFT_FLOAT");
+  return Flags;
 }
 
 template <typename T>
@@ -245,6 +278,190 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
   return OL_SUCCESS;
 }
 
+template <typename T>
+ol_result_t getPlatformValue(ol_platform_handle_t Plat, ol_platform_info_t Info,
+                             T &Val) {
+  OFFLOAD_ERR(olGetPlatformInfo(Plat, Info, sizeof(Val), &Val));
+  return OL_SUCCESS;
+}
+
+template <typename T>
+ol_result_t getDeviceValue(ol_device_handle_t Dev, ol_device_info_t Info,
+                           T &Val) {
+  OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, sizeof(Val), &Val));
+  return OL_SUCCESS;
+}
+
+template <typename T>
+ol_result_t getPlatformValueStr(ol_platform_handle_t Plat,
+                                ol_platform_info_t Info, std::string &Val) {
+  size_t Size;
+  OFFLOAD_ERR(olGetPlatformInfoSize(Plat, Info, &Size));
+  std::vector<char> Bytes(Size);
+  OFFLOAD_ERR(olGetPlatformInfo(Plat, Info, Size, Bytes.data()));
+  Val = std::string(Bytes.data());
+  return OL_SUCCESS;
+}
+
+template <typename T>
+ol_result_t getDeviceValueStr(ol_device_handle_t Dev, ol_device_info_t Info,
+                              std::string &Val) {
+  size_t Size;
+  OFFLOAD_ERR(olGetDeviceInfoSize(Dev, Info, &Size));
+  std::vector<char> Bytes(Size);
+  OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, Size, Bytes.data()));
+  Val = std::string(Bytes.data());
+  return OL_SUCCESS;
+}
+
+json::Object printDeviceJSON(ol_device_handle_t D, uint32_t ID) {
+  json::Object Device;
+  Device["Device ID"] = ID;
+  ol_platform_handle_t Platform = nullptr;
+  if (olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform))
+    return Device;
+
+  std::string PlatformName;
+  getPlatformValueStr<const char *>(Platform, OL_PLATFORM_INFO_NAME,
+                                    PlatformName);
+  Device["Platform Name"] = PlatformName;
+
+  std::string PlatformVendor;
+  getPlatformValueStr<const char *>(Platform, OL_PLATFORM_INFO_VENDOR_NAME,
+                                    PlatformVendor);
+  Device["Platform Vendor Name"] = PlatformVendor;
+
+  std::string PlatformVersion;
+  getPlatformValueStr<const char *>(Platform, OL_PLATFORM_INFO_VERSION,
+                                    PlatformVersion);
+  Device["Platform Version"] = PlatformVersion;
+
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+  getPlatformValue(Platform, OL_PLATFORM_INFO_BACKEND, Backend);
+  Device["Platform Backend"] = toString(Backend);
+
+  std::string Name;
+  getDeviceValueStr<const char *>(D, OL_DEVICE_INFO_NAME, Name);
+  Device["Name"] = Name;
+
+  std::string ProductName;
+  getDeviceValueStr<const char *>(D, OL_DEVICE_INFO_PRODUCT_NAME, ProductName);
+  Device["Product Name"] = ProductName;
+
+  std::string UID;
+  getDeviceValueStr<const char *>(D, OL_DEVICE_INFO_UID, UID);
+  Device["UID"] = UID;
+
+  ol_device_type_t Type = OL_DEVICE_TYPE_GPU; // Default or unknown
+  getDeviceValue(D, OL_DEVICE_INFO_TYPE, Type);
+  Device["Type"] = toString(Type);
+
+  std::string DriverVersion;
+  getDeviceValueStr<const char *>(D, OL_DEVICE_INFO_DRIVER_VERSION,
+                                  DriverVersion);
+  Device["Driver Version"] = DriverVersion;
+
+  uint32_t MaxWorkGroupSize = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, MaxWorkGroupSize);
+  Device["Max Work Group Size"] = MaxWorkGroupSize;
+
+  ol_dimensions_t MaxWorkGroupSizePerDim = {0, 0, 0};
+  getDeviceValue(D, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION,
+                 MaxWorkGroupSizePerDim);
+  Device["Max Work Group Size Per Dimension"] = toJSON(MaxWorkGroupSizePerDim);
+
+  uint32_t MaxWorkSize = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_MAX_WORK_SIZE, MaxWorkSize);
+  Device["Max Work Size"] = MaxWorkSize;
+
+  ol_dimensions_t MaxWorkSizePerDim = {0, 0, 0};
+  getDeviceValue(D, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION,
+                 MaxWorkSizePerDim);
+  Device["Max Work Size Per Dimension"] = toJSON(MaxWorkSizePerDim);
+
+  uint32_t VendorID = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_VENDOR_ID, VendorID);
+  Device["Vendor ID"] = VendorID;
+
+  uint32_t NumComputeUnits = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NUM_COMPUTE_UNITS, NumComputeUnits);
+  Device["Num Compute Units"] = NumComputeUnits;
+
+  uint32_t MaxClockFrequency = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, MaxClockFrequency);
+  Device["Max Clock Frequency"] = MaxClockFrequency;
+
+  uint32_t MemoryClockRate = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_MEMORY_CLOCK_RATE, MemoryClockRate);
+  Device["Memory Clock Rate"] = MemoryClockRate;
+
+  uint32_t AddressBits = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_ADDRESS_BITS, AddressBits);
+  Device["Address Bits"] = AddressBits;
+
+  uint64_t MaxMemAllocSize = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, MaxMemAllocSize);
+  Device["Max Mem Allocation Size"] = MaxMemAllocSize;
+
+  uint64_t GlobalMemSize = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_GLOBAL_MEM_SIZE, GlobalMemSize);
+  Device["Global Mem Size"] = GlobalMemSize;
+
+  uint64_t WorkGroupSharedMemSize = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                 WorkGroupSharedMemSize);
+  Device["Work Group Shared Mem Size"] = WorkGroupSharedMemSize;
+
+  ol_device_fp_capability_flags_t SingleFPConfig = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_SINGLE_FP_CONFIG, SingleFPConfig);
+  Device["Single Precision Floating Point Capability"] = toJSON(SingleFPConfig);
+
+  ol_device_fp_capability_flags_t DoubleFPConfig = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_DOUBLE_FP_CONFIG, DoubleFPConfig);
+  Device["Double Precision Floating Point Capability"] = toJSON(DoubleFPConfig);
+
+  ol_device_fp_capability_flags_t HalfFPConfig = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_HALF_FP_CONFIG, HalfFPConfig);
+  Device["Half Precision Floating Point Capability"] = toJSON(HalfFPConfig);
+
+  uint32_t NativeVectorWidthChar = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR,
+                 NativeVectorWidthChar);
+  Device["Native Vector Width For Char"] = NativeVectorWidthChar;
+
+  uint32_t NativeVectorWidthShort = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT,
+                 NativeVectorWidthShort);
+  Device["Native Vector Width For Short"] = NativeVectorWidthShort;
+
+  uint32_t NativeVectorWidthInt = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT,
+                 NativeVectorWidthInt);
+  Device["Native Vector Width For Int"] = NativeVectorWidthInt;
+
+  uint32_t NativeVectorWidthLong = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG,
+                 NativeVectorWidthLong);
+  Device["Native Vector Width For Long"] = NativeVectorWidthLong;
+
+  uint32_t NativeVectorWidthFloat = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT,
+                 NativeVectorWidthFloat);
+  Device["Native Vector Width For Float"] = NativeVectorWidthFloat;
+
+  uint32_t NativeVectorWidthDouble = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE,
+                 NativeVectorWidthDouble);
+  Device["Native Vector Width For Double"] = NativeVectorWidthDouble;
+
+  uint32_t NativeVectorWidthHalf = 0;
+  getDeviceValue(D, OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF,
+                 NativeVectorWidthHalf);
+  Device["Native Vector Width For Half"] = NativeVectorWidthHalf;
+
+  return Device;
+}
+
 ol_result_t printRoot(std::ostream &S) {
   OFFLOAD_ERR(olInit(nullptr));
   S << "Liboffload Version: " << OL_VERSION_MAJOR << "." << OL_VERSION_MINOR
@@ -260,9 +477,31 @@ ol_result_t printRoot(std::ostream &S) {
 
   S << "Num Devices: " << Devices.size() << "\n";
 
-  for (auto &D : Devices) {
-    S << "\n";
-    OFFLOAD_ERR(printDevice(S, D));
+  if (JSON) {
+    json::Object Root;
+    std::string Version = std::to_string(OL_VERSION_MAJOR) + "." +
+                          std::to_string(OL_VERSION_MINOR) + "." +
+                          std::to_string(OL_VERSION_PATCH);
+    Root["Liboffload Version"] = Version;
+    Root["Num Devices"] = (int64_t)Devices.size();
+
+    json::Array JsonDevices;
+    for (uint32_t DevIdx = 0; DevIdx < Devices.size(); ++DevIdx) {
+      JsonDevices.push_back(printDeviceJSON(Devices[DevIdx], DevIdx));
+    }
+    Root["Devices"] = std::move(JsonDevices);
+
+    std::string Processed;
+    {
+      llvm::raw_string_ostream OS(Processed);
+      OS << json::Value(std::move(Root));
+    }
+    S << Processed << "\n";
+  } else {
+    for (auto &D : Devices) {
+      S << "\n";
+      OFFLOAD_ERR(printDevice(S, D));
+    }
   }
 
   OFFLOAD_ERR(olShutDown());
@@ -270,6 +509,7 @@ ol_result_t printRoot(std::ostream &S) {
 }
 
 int main(int argc, char **argv) {
+  cl::ParseCommandLineOptions(argc, argv, "llvm-offload-device-info");
   auto Err = printRoot(std::cout);
 
   if (Err) {
