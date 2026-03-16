@@ -84,9 +84,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
 # Cleans up the output from the compilation process to be easier to process
 actual_per_line = dict()
 for line in log.split("\n"):
-    m = re.search(
-        r"[^:]*:(\d+:).*(?:error|warning|portability|because):(.*)", line
-    )
+    m = re.search(r"[^:]*:(\d+:).*(?:error|warning|portability|because):(.*)", line)
     if m:
         if re.search(r"warning: .*fold.*host", line):
             continue  # ignore host-dependent folding warnings
