@@ -1187,7 +1187,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32SExt:
   case Sgpr32ZExt:
   case UniInVgprS32:
-  case ForceVgpr32Dst:
+  case Sgpr32ToVgprDst:
   case Vgpr32:
   case Vgpr32AExt:
   case Vgpr32SExt:
@@ -1196,7 +1196,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr64:
   case Vgpr64:
   case UniInVgprS64:
-  case ForceVgpr64Dst:
+  case Sgpr64ToVgprDst:
     return LLT::scalar(64);
   case Sgpr128:
   case Vgpr128:
@@ -1415,8 +1415,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
-  case ForceVgpr32Dst:
-  case ForceVgpr64Dst:
+  case Sgpr32ToVgprDst:
+  case Sgpr64ToVgprDst:
     return VgprRB;
   default:
     return nullptr;
@@ -1560,8 +1560,8 @@ bool RegBankLegalizeHelper::applyMappingDst(
         B.buildTrunc(Reg, NewDst);
       break;
     }
-    case ForceVgpr32Dst:
-    case ForceVgpr64Dst: {
+    case Sgpr32ToVgprDst:
+    case Sgpr64ToVgprDst: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == VgprRB);
       Op.setReg(MRI.createVirtualRegister({SgprRB, Ty}));
