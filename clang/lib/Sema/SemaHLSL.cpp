@@ -5317,8 +5317,8 @@ class InitListTransformer {
     if (auto *RD = Ty->getAsCXXRecordDecl()) {
       llvm::SmallVector<CXXRecordDecl *> RecordDecls;
       RecordDecls.push_back(RD);
-      // if this is a pr value create an xvalue so the member accesses
-      // will be xvalues
+      // If this is a prvalue create an xvalue so the member accesses
+      // will be xvalues.
       if (E->isPRValue())
         E = new (Ctx)
             MaterializeTemporaryExpr(Ty, E, /*BoundToLvalueReference=*/false);
