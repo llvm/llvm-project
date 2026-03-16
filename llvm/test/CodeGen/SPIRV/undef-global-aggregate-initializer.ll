@@ -16,6 +16,11 @@
 %struct.mixed = type { i32, float }
 @g_mixed = private addrspace(2) constant %struct.mixed { i32 poison, float 1.0 }, align 4
 
+%struct.with_arr = type { [2 x i32], float }
+@g_struct_with_arr = private addrspace(2) constant %struct.with_arr poison, align 4
+
+@g_arr_of_struct = private addrspace(2) constant [2 x %struct.with_arr] poison, align 4
+
 define spir_kernel void @k() {
 entry:
   ret void
@@ -24,14 +29,19 @@ entry:
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#I32_ARR2:]] = OpTypeArray %[[#I32]] %[[#]]
 ; CHECK-DAG: %[[#MULTI:]] = OpTypeStruct %[[#I32]] %[[#F32]] %[[#I8]]
 ; CHECK-DAG: %[[#SIMPLE:]] = OpTypeStruct %[[#I8]]{{$}}
 ; CHECK-DAG: %[[#ARR:]] = OpTypeArray %[[#I32]] %[[#]]
 ; CHECK-DAG: %[[#INNER:]] = OpTypeStruct %[[#I32]]{{$}}
+; CHECK-DAG: %[[#WITH_ARR:]] = OpTypeStruct %[[#I32_ARR2]] %[[#F32]]
 
 ; CHECK-DAG: %[[#OUTER:]] = OpTypeStruct %[[#INNER]] %[[#F32]]
 ; CHECK-DAG: %[[#MIXED:]] = OpTypeStruct %[[#I32]] %[[#F32]]{{$}}
+; CHECK-DAG: %[[#ARR_OF_STRUCT:]] = OpTypeArray %[[#WITH_ARR]] %[[#]]
 
+; CHECK-DAG: %[[#ARR_OF_STRUCT_PTR:]] = OpTypePointer UniformConstant %[[#ARR_OF_STRUCT]]
+; CHECK-DAG: %[[#WITH_ARR_PTR:]] = OpTypePointer UniformConstant %[[#WITH_ARR]]
 ; CHECK-DAG: %[[#MIXED_PTR:]] = OpTypePointer UniformConstant %[[#MIXED]]
 ; CHECK-DAG: %[[#OUTER_PTR:]] = OpTypePointer UniformConstant %[[#OUTER]]
 ; CHECK-DAG: %[[#ARR_PTR:]] = OpTypePointer UniformConstant %[[#ARR]]
@@ -43,6 +53,8 @@ entry:
 ; CHECK-DAG: %[[#UNDEF_I32:]] = OpUndef %[[#I32]]
 ; CHECK-DAG: %[[#UNDEF_F32:]] = OpUndef %[[#F32]]
 ; CHECK-DAG: %[[#UNDEF_INNER:]] = OpUndef %[[#INNER]]
+; CHECK-DAG: %[[#UNDEF_I32_ARR2:]] = OpUndef %[[#I32_ARR2]]
+; CHECK-DAG: %[[#UNDEF_WITH_ARR:]] = OpUndef %[[#WITH_ARR]]
 
 ; CHECK-DAG: OpConstantComposite %[[#SIMPLE]] %[[#UNDEF_I8]]
 ; CHECK-DAG: OpVariable %[[#SIMPLE_PTR]] UniformConstant
@@ -54,3 +66,7 @@ entry:
 ; CHECK-DAG: OpVariable %[[#OUTER_PTR]] UniformConstant
 ; CHECK-DAG: OpConstantComposite %[[#MIXED]] %[[#UNDEF_I32]] %[[#CONST_F32]]
 ; CHECK-DAG: OpVariable %[[#MIXED_PTR]] UniformConstant
+; CHECK-DAG: OpConstantComposite %[[#WITH_ARR]] %[[#UNDEF_I32_ARR2]] %[[#UNDEF_F32]]
+; CHECK-DAG: OpVariable %[[#WITH_ARR_PTR]] UniformConstant
+; CHECK-DAG: OpConstantComposite %[[#ARR_OF_STRUCT]] %[[#UNDEF_WITH_ARR]] %[[#UNDEF_WITH_ARR]]
+; CHECK-DAG: OpVariable %[[#ARR_OF_STRUCT_PTR]] UniformConstant
