@@ -14,9 +14,9 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_WPASUITE_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_WPASUITE_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisTraits.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisTraits.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "llvm/Support/Error.h"

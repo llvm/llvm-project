@@ -17,7 +17,7 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisBase.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisTraits.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisTraits.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"

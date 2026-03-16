@@ -16,9 +16,9 @@
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_DERIVEDANALYSIS_H
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisBase.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisTraits.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisTraits.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <memory>

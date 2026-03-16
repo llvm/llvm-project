@@ -22,9 +22,9 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISREGISTRY_H
 
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/DerivedAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Support/ErrorBuilder.h"
 #include "llvm/Support/Registry.h"
 #include <memory>

@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_MODEL_ANALYSISTRAITS_H
-#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_MODEL_ANALYSISTRAITS_H
+#ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H
+#define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include <type_traits>
 
 namespace clang::ssaf {
@@ -30,4 +30,4 @@ struct HasAnalysisName<T, std::void_t<decltype(T::analysisName())>>
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_MODEL_ANALYSISTRAITS_H
+#endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISTRAITS_H

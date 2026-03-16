@@ -8,12 +8,12 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisDriver.h"
 #include "../TestFixture.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisResult.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/SummaryAnalysis.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Analysis/WPASuite.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"

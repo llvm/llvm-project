@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISBASE_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_ANALYSIS_ANALYSISBASE_H
 
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/AnalysisName.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Analysis/AnalysisName.h"
 #include <vector>
 
 namespace clang::ssaf {
