@@ -39,13 +39,15 @@ void t6(void) {
 
 void t7(int a) {
   __asm__ volatile("T7 NAMED: %[input]" : "+r"(a): [input] "i" (4));
-  // CHECK: @t7(i32
+
+  // CHECK-LABEL: @t7(i32
   // CHECK: T7 NAMED: $1
 }
 
 void t8(void) {
   __asm__ volatile("T8 NAMED MODIFIER: %c[input]" :: [input] "i" (4));
-  // CHECK: @t8()
+
+  // CHECK-LABEL: @t8()
   // CHECK: T8 NAMED MODIFIER: ${0:c}
 }
 
@@ -59,8 +61,8 @@ unsigned t9(unsigned int a) {
 void t10(int r) {
   __asm__("PR3908 %[lf] %[xx] %[li] %[r]" : [r] "+r" (r) : [lf] "mx" (0), [li] "mr" (0), [xx] "x" ((double)(0)));
 
-// CHECK: @t10(
-// CHECK:PR3908 $1 $3 $2 $0
+  // CHECK-LABEL: @t10(
+  // CHECK:PR3908 $1 $3 $2 $0
 }
 
 // PR3373
@@ -124,8 +126,8 @@ void t17(void) {
   int i;
   __asm__ ( "nop": "=m"(i));
 
-// CHECK: @t17()
-// CHECK: call void asm "nop", "=*m,
+  // CHECK-LABEL: @t17()
+  // CHECK: call void asm "nop", "=*m,
 }
 
 int t18(unsigned data) {
@@ -133,10 +135,11 @@ int t18(unsigned data) {
 
   asm("xyz" :"=a"(a), "=d"(b) : "a"(data));
   return a + b;
-// CHECK: t18(i32
-// CHECK: = call {{.*}}asm "xyz"
-// CHECK-NEXT: extractvalue
-// CHECK-NEXT: extractvalue
+
+  // CHECK-LABEL: @t18(i32
+  // CHECK: = call {{.*}}asm "xyz"
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
 }
 
 // PR6780
@@ -145,7 +148,8 @@ int t19(unsigned data) {
 
   asm("x{abc|def|ghi}z" :"=r"(a): "r"(data));
   return a + b;
-  // CHECK: t19(i32
+
+  // CHECK-LABEL: @t19(i32
   // CHECK: = call {{.*}}asm "x$(abc$|def$|ghi$)z"
 }
 
@@ -155,7 +159,7 @@ double t20(double x) {
   __asm __volatile ("frndint"  : "=t" (result) : "0" (x));
   return result;
 
-  // CHECK: @t20
+  // CHECK-LABEL: @t20
   // CHECK: fpext double {{.*}} to x86_fp80
   // CHECK-NEXT: call x86_fp80 asm sideeffect "frndint"
   // CHECK: fptrunc x86_fp80 {{.*}} to double
@@ -165,7 +169,8 @@ float t21(long double x) {
   register float result;
   __asm __volatile ("frndint"  : "=t" (result) : "0" (x));
   return result;
-  // CHECK: @t21
+
+  // CHECK-LABEL: @t21
   // CHECK: call x86_fp80 asm sideeffect "frndint"
   // CHECK-NEXT: fptrunc x86_fp80 {{.*}} to float
 }
@@ -194,11 +199,12 @@ unsigned char t23(unsigned char a, unsigned char b) {
 
 void *t24(char c) {
   void *addr;
-  // CHECK: @t24
-  // CHECK: zext i8 {{.*}} to i32
-  // CHECK-NEXT: call ptr asm "foobar"
   __asm__ ("foobar" : "=a" (addr) : "0" (c));
   return addr;
+
+  // CHECK-LABEL: @t24
+  // CHECK: zext i8 {{.*}} to i32
+  // CHECK-NEXT: call ptr asm "foobar"
 }
 
 // PR10299 - fpsr, fpcr
@@ -224,18 +230,20 @@ void t26 (__m256i *p) {
 // emitted.
 void t27(void) {
   asm volatile("nop");
-// CHECK: @t27
-// CHECK: call void asm sideeffect "nop"
-// CHECK-NOT: ia_nsdialect
-// CHECK: ret void
+
+  // CHECK-LABEL: @t27
+  // CHECK: call void asm sideeffect "nop"
+  // CHECK-NOT: ia_nsdialect
+  // CHECK: ret void
 }
 
 // Check handling of '*' and '#' constraint modifiers.
 void t28(void)
 {
   asm volatile ("/* %0 */" : : "i#*X,*r" (1));
-// CHECK: @t28
-// CHECK: call void asm sideeffect "/* $0 */", "i|r,~{dirflag},~{fpsr},~{flags}"(i32 1)
+
+  // CHECK-LABEL: @t28
+  // CHECK: call void asm sideeffect "/* $0 */", "i|r,~{dirflag},~{fpsr},~{flags}"(i32 1)
 }
 
 static unsigned t29_var[1];
@@ -244,49 +252,73 @@ void t29(void) {
   asm volatile("movl %%eax, %0"
                :
                : "m"(t29_var));
+
   // CHECK: @t29
   // CHECK: call void asm sideeffect "movl %eax, $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype([1 x i32]) @t29_var)
 }
 
-void t30(int len) {
+int t30(void) {
+  int len1, len2;
+  __asm__ volatile(""
+                   : "=rm"(len1), "=rm"(len2));
+  return len1 + len2;
+
+  // CHECK-LABEL: @t30
+  // CHECK: call { i32, i32 } asm sideeffect "", "=rm,=rm,~{dirflag},~{fpsr},~{flags}"
+}
+
+void t31(int len1, int len2) {
+  __asm__ volatile(""
+                   :
+                   : "rm"(len1), "rm"(len2));
+
+  // CHECK-LABEL: @t31
+  // CHECK: call void asm sideeffect "", "rm,rm,~{dirflag},~{fpsr},~{flags}"
+}
+
+void t32(int len) {
   __asm__ volatile(""
                    : "+&&rm"(len));
-  // CHECK: @t30
+
+  // CHECK-LABEL: @t32
   // CHECK: call void asm sideeffect "", "=*&rm,0,~{dirflag},~{fpsr},~{flags}"
 }
 
-void t31(int len) {
+void t33(int len) {
   __asm__ volatile(""
                    : "+%%rm"(len), "+rm"(len));
-  // CHECK: @t31
+
+  // CHECK-LABEL: @t33
   // CHECK: call i32 asm sideeffect "", "=*%rm,=rm,0,1,~{dirflag},~{fpsr},~{flags}"
 }
 
-// CHECK: @t32
-int t32(int cond)
+int t34(int cond)
 {
   asm goto("testl %0, %0; jne %l1;" :: "r"(cond)::label_true, loop);
-  // CHECK: callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) #1
-  // CHECK-NEXT: to label %asm.fallthrough [label %label_true, label %loop]
   return 0;
 loop:
   return 0;
 label_true:
   return 1;
+
+  // CHECK-LABEL: @t34
+  // CHECK: callbr void asm sideeffect "testl $0, $0; jne ${1:l};", "r,!i,!i,~{dirflag},~{fpsr},~{flags}"(i32 %0) #1
+  // CHECK-NEXT: to label %asm.fallthrough [label %label_true, label %loop]
 }
 
-void *t33(void *ptr)
+void *t35(void *ptr)
 {
   void *ret;
   asm ("lea %1, %0" : "=r" (ret) : "p" (ptr));
   return ret;
 
-  // CHECK: @t33
+  // CHECK-LABEL: @t35
   // CHECK: %1 = call ptr asm "lea $1, $0", "=r,p,~{dirflag},~{fpsr},~{flags}"(ptr %0)
 }
 
-void t34(void) {
+void t36(void) {
   __asm__ volatile("T34 CC NAMED MODIFIER: %cc[input]" :: [input] "i" (4));
-  // CHECK: @t34()
+
+  // CHECK-LABEL: @t36()
   // CHECK: T34 CC NAMED MODIFIER: ${0:c}
 }
