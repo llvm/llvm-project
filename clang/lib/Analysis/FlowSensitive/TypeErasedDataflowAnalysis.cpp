@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstddef>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -479,6 +481,27 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
+// Returns the number of blocks that would be visited if we only visit each
+// reachable block once. This provides a lower bound on the number of block
+// visits. This is a light version of the main analysis loop (keep in sync).
+size_t NumBlockVisitsIfVisitEachReachableOnce(const CFG &CFG) {
+  PostOrderCFGView POV(&CFG);
+  ForwardDataflowWorklist Worklist(CFG, &POV);
+  llvm::BitVector VisitedBlocks(CFG.size());
+  const CFGBlock &Entry = CFG.getEntry();
+  Worklist.enqueueSuccessors(&Entry);
+  while (const CFGBlock *Block = Worklist.dequeue()) {
+    if (VisitedBlocks[Block->getBlockID()])
+      continue;
+    // Do not add unreachable successor blocks to `Worklist`.
+    if (Block->hasNoReturnElement())
+      continue;
+    VisitedBlocks[Block->getBlockID()] = true;
+    Worklist.enqueueSuccessors(Block);
+  }
+  return VisitedBlocks.count();
+}
+
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
@@ -496,6 +519,14 @@ runTypeErasedDataflowAnalysis(
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
   const clang::CFG &CFG = ACFG.getCFG();
+  if (CFG.size() > MaxBlockVisits) {
+    if (CFG.size() > NumBlockVisitsIfVisitEachReachableOnce(CFG)) {
+      return llvm::createStringError(
+          std::errc::timed_out, "number of blocks in cfg will lead to "
+                                "exceeding maximum number of block visits");
+    }
+  }
+
   PostOrderCFGView POV(&CFG);
   ForwardDataflowWorklist Worklist(CFG, &POV);
   llvm::SmallDenseSet<const CFGBlock *> NonStructLoopBackedgeNodes =
