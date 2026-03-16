@@ -63,21 +63,16 @@ std::optional<std::string> LocateSourceFile(
   if (name == "-" || llvm::sys::path::is_absolute(name)) {
     return name;
   }
-  // Check if file exists at original path to preserve user's format.
-  bool isDir{false};
-  const auto er = llvm::sys::fs::is_directory(name, isDir);
-  if (!er && !isDir) {
-    return name;
-  }
-  // Normalize: strip leading "./" to avoid "././file" with "." search paths.
-  llvm::StringRef nameRef(name);
-  if (nameRef.starts_with("./")) {
-    nameRef = nameRef.substr(2);
-  }
-  std::string normalizedName = nameRef.str();
   for (const std::string &dir : searchPath) {
-    llvm::SmallString<128> path{dir};
-    llvm::sys::path::append(path, normalizedName);
+    llvm::SmallString<128> path;
+    // If the file is found in the current directory, don't append the
+    // directory path. This preserves the user's format.
+    if (dir == ".") {
+      path = name;
+    } else {
+      path = dir;
+      llvm::sys::path::append(path, name);
+    }
     bool isDir{false};
     auto er = llvm::sys::fs::is_directory(path, isDir);
     if (!er && !isDir) {
@@ -93,15 +88,16 @@ std::vector<std::string> LocateSourceFileAll(
     return {name};
   }
   std::vector<std::string> result;
-  // Normalize: strip leading "./" to avoid "././file" with "." search paths.
-  llvm::StringRef nameRef(name);
-  if (nameRef.starts_with("./")) {
-    nameRef = nameRef.substr(2);
-  }
-  std::string normalizedName = nameRef.str();
   for (const std::string &dir : searchPath) {
-    llvm::SmallString<128> path{dir};
-    llvm::sys::path::append(path, normalizedName);
+    llvm::SmallString<128> path;
+    // If the file is found in the current directory, don't append the
+    // directory path. This preserves the user's format.
+    if (dir == ".") {
+      path = name;
+    } else {
+      path = dir;
+      llvm::sys::path::append(path, name);
+    }
     bool isDir{false};
     auto er = llvm::sys::fs::is_directory(path, isDir);
     if (!er && !isDir) {
