@@ -148,7 +148,8 @@ public:
 
     const bool is_internal = IsReservedName(var.name) || m_is_internal;
     const bool is_readonly = is_internal || v.GetType().IsAggregateType() ||
-                             v.GetValueType() == lldb::eValueTypeRegisterSet;
+                             v.GetValueType() == lldb::eValueTypeRegisterSet ||
+                             var.name == "(Return Value)";
 
     var.presentationHint =
         MakeVariablePresentationHints(is_readonly, is_internal);
