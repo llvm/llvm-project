@@ -58,9 +58,8 @@ static cl::opt<unsigned> CallWithManyArgumentsThreshold(
 namespace {
 int64_t getNumBlocksFromCond(const BasicBlock &BB) {
   int64_t Ret = 0;
-  if (const auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
-    if (BI->isConditional())
-      Ret += BI->getNumSuccessors();
+  if (const auto *BI = dyn_cast<CondBrInst>(BB.getTerminator())) {
+    Ret += BI->getNumSuccessors();
   } else if (const auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
     Ret += (SI->getNumCases() + (nullptr != SI->getDefaultDest()));
   }
@@ -133,18 +132,17 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     ControlFlowEdgeCount += Direction * SuccessorCount;
 
     const Instruction *TI = BB.getTerminator();
-    const int64_t InstructionSuccessorCount = TI->getNumSuccessors();
-    if (isa<BranchInst>(TI)) {
+    if (isa<UncondBrInst>(TI)) {
       BranchInstructionCount += Direction;
-      BranchSuccessorCount += Direction * InstructionSuccessorCount;
-      const auto *BI = dyn_cast<BranchInst>(TI);
-      if (BI->isConditional())
-        ConditionalBranchCount += Direction;
-      else
-        UnconditionalBranchCount += Direction;
-    } else if (isa<SwitchInst>(TI)) {
+      BranchSuccessorCount += Direction;
+      UnconditionalBranchCount += Direction;
+    } else if (isa<CondBrInst>(TI)) {
+      BranchInstructionCount += Direction;
+      BranchSuccessorCount += Direction * 2;
+      ConditionalBranchCount += Direction;
+    } else if (const auto *SI = dyn_cast<SwitchInst>(TI)) {
       SwitchInstructionCount += Direction;
-      SwitchSuccessorCount += Direction * InstructionSuccessorCount;
+      SwitchSuccessorCount += Direction * SI->getNumSuccessors();
     }
 
     for (const Instruction &I : BB.instructionsWithoutDebug()) {

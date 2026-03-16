@@ -39,6 +39,11 @@ MLIR_CAPI_EXPORTED MlirType mlirLLVMVoidTypeGet(MlirContext ctx);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMVoidTypeGetName(void);
 
+/// Returns `true` if the type is an LLVM dialect array type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMArrayType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMArrayTypeGetTypeID(void);
+
 /// Creates an llvm.array type.
 MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGet(MlirType elementType,
                                                  unsigned numElements);
@@ -47,6 +52,9 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMArrayTypeGetName(void);
 
 /// Returns the element type of the llvm.array type.
 MLIR_CAPI_EXPORTED MlirType mlirLLVMArrayTypeGetElementType(MlirType type);
+
+/// Returns the number of elements in the llvm.array type.
+MLIR_CAPI_EXPORTED unsigned mlirLLVMArrayTypeGetNumElements(MlirType type);
 
 /// Creates an llvm.func type.
 MLIR_CAPI_EXPORTED MlirType
@@ -294,10 +302,10 @@ MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void);
 /// optional field, where `MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL` indicates null
 /// and non-negative values indicate a value present.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute name,
-    MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits, int64_t dwarfAddressSpace, int64_t flags,
-    MlirAttribute extraData);
+    MlirContext ctx, unsigned int tag, MlirAttribute name, MlirAttribute file,
+    uint32_t line, MlirAttribute scope, MlirAttribute baseType,
+    uint64_t sizeInBits, uint32_t alignInBits, uint64_t offsetInBits,
+    int64_t dwarfAddressSpace, int64_t flags, MlirAttribute extraData);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDIDerivedTypeAttrGetName(void);
 

@@ -6,14 +6,12 @@
 ## been placed inside an executable output section via a linker script.
 ## Synthetic sections do not have relaxAux data structures initialized.
 
-# RUN: ld.lld -pie -T %t/a.ld %t/a.o -o %t/a.out
+# RUN: ld.lld -T %t/a.ld %t/a.o -o %t/a.out
 # RUN: llvm-objdump -s %t/a.out | FileCheck %s
 
 # CHECK:      Contents of section .text:
-# CHECK-NEXT: 17050000 03350501 78000000 00000000
-# CHECK-NEXT: 00000000 00000000
-# CHECK-NEXT: Contents of section .dynamic:
-# CHECK-NEXT: fbffff6f 00000000 00000008 00000000
+# CHECK-NEXT: 17050000 03350501 00000000 00000000
+# CHECK-NEXT: 18000000 00000000
 
 #--- a.s
 .global _start

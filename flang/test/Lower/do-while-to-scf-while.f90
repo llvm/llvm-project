@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -lower-do-while-to-scf-while %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPsimple_do_while()
 ! CHECK: scf.while

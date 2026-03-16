@@ -1176,39 +1176,38 @@ public:
     return Insert(ReturnInst::Create(Context, V));
   }
 
-  /// Create a sequence of N insertvalue instructions,
-  /// with one Value from the retVals array each, that build a aggregate
-  /// return value one value at a time, and a ret instruction to return
-  /// the resulting aggregate value.
+  /// Create a sequence of N insertvalue instructions, with one Value from the
+  /// RetVals array each, that build a aggregate return value one value at a
+  /// time, and a ret instruction to return the resulting aggregate value.
   ///
   /// This is a convenience function for code that uses aggregate return values
   /// as a vehicle for having multiple return values.
-  ReturnInst *CreateAggregateRet(Value *const *retVals, unsigned N) {
+  ReturnInst *CreateAggregateRet(ArrayRef<Value *> RetVals) {
     Value *V = PoisonValue::get(getCurrentFunctionReturnType());
-    for (unsigned i = 0; i != N; ++i)
-      V = CreateInsertValue(V, retVals[i], i, "mrv");
+    for (size_t i = 0, N = RetVals.size(); i != N; ++i)
+      V = CreateInsertValue(V, RetVals[i], i, "mrv");
     return Insert(ReturnInst::Create(Context, V));
   }
 
   /// Create an unconditional 'br label X' instruction.
-  BranchInst *CreateBr(BasicBlock *Dest) {
-    return Insert(BranchInst::Create(Dest));
+  UncondBrInst *CreateBr(BasicBlock *Dest) {
+    return Insert(UncondBrInst::Create(Dest));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
                            MDNode *Unpredictable = nullptr) {
-    return Insert(addBranchMetadata(BranchInst::Create(True, False, Cond),
+    return Insert(addBranchMetadata(CondBrInst::Create(Cond, True, False),
                                     BranchWeights, Unpredictable));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
   /// instruction. Copy branch meta data if available.
-  BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
+  CondBrInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            Instruction *MDSrc) {
-    BranchInst *Br = BranchInst::Create(True, False, Cond);
+    CondBrInst *Br = CondBrInst::Create(Cond, True, False);
     if (MDSrc) {
       unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
                         LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};

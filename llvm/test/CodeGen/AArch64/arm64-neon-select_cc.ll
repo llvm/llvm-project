@@ -114,9 +114,9 @@ define <8x i16> @test_select_cc_v8i16(i16 %a, i16 %b, <8x i16> %c, <8x i16> %d )
 define <2x i32> @test_select_cc_v2i32(i32 %a, i32 %b, <2x i32> %c, <2x i32> %d ) {
 ; CHECK-LABEL: test_select_cc_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s2, w1
-; CHECK-NEXT:    fmov s3, w0
-; CHECK-NEXT:    cmeq v2.2s, v3.2s, v2.2s
+; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s3, w1
+; CHECK-NEXT:    cmeq v2.2s, v2.2s, v3.2s
 ; CHECK-NEXT:    dup v2.2s, v2.s[0]
 ; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -128,9 +128,9 @@ define <2x i32> @test_select_cc_v2i32(i32 %a, i32 %b, <2x i32> %c, <2x i32> %d )
 define <4x i32> @test_select_cc_v4i32(i32 %a, i32 %b, <4x i32> %c, <4x i32> %d ) {
 ; CHECK-LABEL: test_select_cc_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s2, w1
-; CHECK-NEXT:    fmov s3, w0
-; CHECK-NEXT:    cmeq v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s3, w1
+; CHECK-NEXT:    cmeq v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    dup v2.4s, v2.s[0]
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -155,9 +155,9 @@ define <1x i64> @test_select_cc_v1i64(i64 %a, i64 %b, <1x i64> %c, <1x i64> %d )
 define <2x i64> @test_select_cc_v2i64(i64 %a, i64 %b, <2x i64> %c, <2x i64> %d ) {
 ; CHECK-LABEL: test_select_cc_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d2, x1
-; CHECK-NEXT:    fmov d3, x0
-; CHECK-NEXT:    cmeq v2.2d, v3.2d, v2.2d
+; CHECK-NEXT:    fmov d2, x0
+; CHECK-NEXT:    fmov d3, x1
+; CHECK-NEXT:    cmeq v2.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    dup v2.2d, v2.d[0]
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -210,9 +210,9 @@ define <4x float> @test_select_cc_v4f32(float %a, float %b, <4x float> %c, <4x f
 define <4x float> @test_select_cc_v4f32_icmp(i32 %a, i32 %b, <4x float> %c, <4x float> %d ) {
 ; CHECK-LABEL: test_select_cc_v4f32_icmp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s2, w1
-; CHECK-NEXT:    fmov s3, w0
-; CHECK-NEXT:    cmeq v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s3, w1
+; CHECK-NEXT:    cmeq v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    dup v2.4s, v2.s[0]
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret

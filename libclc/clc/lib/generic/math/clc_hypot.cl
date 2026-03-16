@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_abs.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/clc_sqrt.h>
-#include <clc/math/clc_subnormal_config.h>
-#include <clc/math/math.h>
-#include <clc/relational/clc_isnan.h>
-#include <clc/shared/clc_clamp.h>
+#include "clc/clc_convert.h"
+#include "clc/float/definitions.h"
+#include "clc/internal/clc.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fmax.h"
+#include "clc/math/clc_frexp_exp.h"
+#include "clc/math/clc_ldexp.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/clc_sqrt_fast.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isunordered.h"
 
 #define __CLC_BODY <clc_hypot.inc>
 #include <clc/math/gentype.inc>

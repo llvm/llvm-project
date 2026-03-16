@@ -10,8 +10,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include <optional>
 
 namespace clang {
