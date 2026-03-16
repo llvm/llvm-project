@@ -24,8 +24,9 @@ namespace NVVM {
 // Struct to store and check compatibility of SM versions.
 struct NVVMCheckSMVersion {
   struct SMVersion {
+    // Base SM version (e.g., sm_100)
     unsigned version;
-    // Set to true if the SM version is accelerated (e.g., sm_90a).
+    // Set to true if the SM version is accelerated (e.g., sm_100a).
     bool archAccelerated;
     // Set to true if the SM version is family-specific (e.g., sm_100f).
     bool familySpecific;
@@ -39,9 +40,9 @@ struct NVVMCheckSMVersion {
 
   // List of SM versions.
   // Typically only has one version except for cases where multiple
-  // arch-accelerated versions are supported.
+  // arch-accelerated or family-conditional versions are supported.
   // For example, tcgen05.shift is supported on sm_100a, sm_101a, and sm_103a.
-  llvm::SmallVector<SMVersion, 1> smVersionList;
+  llvm::SmallVector<SMVersion> smVersionList;
 
   template <typename... Versions>
   NVVMCheckSMVersion(bool archAccelerated, bool familySpecific,
@@ -55,22 +56,22 @@ struct NVVMCheckSMVersion {
 
   bool isCompatibleWith(const NVVMCheckSMVersion &targetSM) const {
     assert(targetSM.smVersionList.size() == 1 &&
-           "target SM version list must be a single version!");
+           "target SM version list must have a single version!");
 
     SMVersion targetSMVersion = targetSM.smVersionList[0];
 
     return llvm::any_of(smVersionList, [&](const SMVersion &RequiredSMVersion) {
-      if (RequiredSMVersion.archAccelerated) {
+      if (RequiredSMVersion.archAccelerated)
         return targetSMVersion.archAccelerated &&
                (RequiredSMVersion.version == targetSMVersion.version);
-      } else if (RequiredSMVersion.familySpecific) {
+
+      if (RequiredSMVersion.familySpecific)
         return targetSMVersion.hasFamilySpecificFeatures() &&
                (RequiredSMVersion.getSmFamilyVersion() ==
                 targetSMVersion.getSmFamilyVersion()) &&
                (targetSMVersion.version >= RequiredSMVersion.version);
-      } else {
-        return targetSMVersion.version >= RequiredSMVersion.version;
-      }
+
+      return targetSMVersion.version >= RequiredSMVersion.version;
     });
   }
 
@@ -91,9 +92,8 @@ struct NVVMCheckSMVersion {
     return NVVMCheckSMVersion(isAA, isFS, smVersionInt);
   }
 
-  NVVMCheckSMVersion &append(const NVVMCheckSMVersion &other) {
+  void append(const NVVMCheckSMVersion &other) {
     smVersionList.append(other.smVersionList);
-    return *this;
   }
 };
 
@@ -156,17 +156,18 @@ public:
   }
 };
 
-template <typename T, typename U>
+template <typename SMVersionsA, typename SMVersionsF>
 class NVVMRequiresSMaOrf {
 public:
   template <typename ConcreteOp>
   class Impl
-      : public OpTrait::TraitBase<ConcreteOp, NVVMRequiresSMaOrf<T, U>::Impl>,
+      : public OpTrait::TraitBase<
+            ConcreteOp, NVVMRequiresSMaOrf<SMVersionsA, SMVersionsF>::Impl>,
         public mlir::NVVM::RequiresSMInterface::Trait<ConcreteOp> {
   public:
     NVVM::NVVMCheckSMVersion getRequiredMinSMVersion() const {
-      auto result = T::getRequiredMinSMVersion();
-      result.append(U::getRequiredMinSMVersion());
+      auto result = SMVersionsA::getRequiredMinSMVersion();
+      result.append(SMVersionsF::getRequiredMinSMVersion());
       return result;
     }
   };
