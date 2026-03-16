@@ -121,9 +121,10 @@ private:
   initialize(const std::map<AnalysisName, const AnalysisResult *> &Map) final {
     auto lookup = [&Map](const AnalysisName &Name) -> const AnalysisResult * {
       auto It = Map.find(Name);
-      if (It == Map.end())
+      if (It == Map.end()) {
         llvm_unreachable("dependency missing from DepResults map; "
                          "dependency graph is not topologically sorted");
+      }
       return It->second;
     };
     return initialize(*static_cast<const DepResultTs *>(

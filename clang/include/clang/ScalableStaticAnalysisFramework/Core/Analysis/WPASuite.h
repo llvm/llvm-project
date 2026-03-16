@@ -60,20 +60,6 @@ public:
     return Data.find(Name) != Data.end();
   }
 
-  /// Returns a reference to the result for \p ResultT, or an error if absent.
-  template <typename ResultT> [[nodiscard]] llvm::Expected<ResultT &> get() {
-    static_assert(std::is_base_of_v<AnalysisResult, ResultT>,
-                  "ResultT must derive from AnalysisResult");
-    static_assert(HasAnalysisName<ResultT>::value,
-                  "ResultT must have a static analysisName() method");
-
-    auto Result = get(ResultT::analysisName());
-    if (!Result) {
-      return Result.takeError();
-    }
-    return static_cast<ResultT &>(*Result);
-  }
-
   /// Returns a const reference to the result for \p ResultT, or an error if
   /// absent.
   template <typename ResultT>
@@ -88,18 +74,6 @@ public:
       return Result.takeError();
     }
     return static_cast<const ResultT &>(*Result);
-  }
-
-  /// Returns a reference to the result for \p Name, or an error if absent.
-  [[nodiscard]] llvm::Expected<AnalysisResult &> get(AnalysisName Name) {
-    auto It = Data.find(Name);
-    if (It == Data.end()) {
-      return ErrorBuilder::create(std::errc::invalid_argument,
-                                  "no result for analysis '{0}' in WPASuite",
-                                  Name.str())
-          .build();
-    }
-    return *It->second;
   }
 
   /// Returns a const reference to the result for \p Name, or an error if
