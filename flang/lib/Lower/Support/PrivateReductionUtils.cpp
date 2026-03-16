@@ -14,6 +14,7 @@
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -21,12 +22,14 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 
@@ -39,11 +42,11 @@ static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
   return false;
 }
 
-static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
-                                mlir::Location loc, mlir::Type argType,
-                                mlir::Region &cleanupRegion,
-                                const Fortran::semantics::Symbol *sym,
-                                bool isDoConcurrent) {
+static void createCleanupRegion(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    mlir::Type argType, mlir::Region &cleanupRegion,
+    const Fortran::semantics::Symbol *sym, bool isDoConcurrent,
+    std::optional<cuf::DataAttributeAttr> cudaDataAttr = std::nullopt) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   assert(cleanupRegion.empty());
   mlir::Block *block = builder.createBlock(&cleanupRegion, cleanupRegion.end(),
@@ -89,20 +92,27 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
-    // Deallocate box
-    // The FIR type system doesn't nesecarrily know that this is a mutable box
-    // if we allocated the thread local array on the heap to avoid looped stack
-    // allocations.
+    // Extract address from the box for deallocation.
+    // The FIR type system doesn't necessarily know that this is a mutable
+    // box if we allocated the thread local array on the heap to avoid looped
+    // stack allocations.
     mlir::Value addr =
         hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
+
+    // Deallocate if allocated
     mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
     fir::IfOp ifOp =
         fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
-    mlir::Value cast = builder.createConvert(
-        loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())), addr);
-    fir::FreeMemOp::create(builder, loc, cast);
+    if (cudaDataAttr) {
+      cuf::FreeOp::create(builder, loc, addr, *cudaDataAttr);
+    } else {
+      mlir::Value cast = builder.createConvert(
+          loc, fir::HeapType::get(fir::dyn_cast_ptrEleTy(addr.getType())),
+          addr);
+      fir::FreeMemOp::create(builder, loc, cast);
+    }
 
     builder.setInsertionPointAfter(ifOp);
     if (isDoConcurrent)
@@ -112,6 +122,10 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     return;
   }
 
+  // Handle !fir.boxchar (passed by VALUE for runtime-length characters).
+  // Note: This is distinct from !fir.box<!fir.char<>> which is handled above.
+  // BoxChar is a special tuple type (addr, len) used when character length
+  // is only known at runtime.
   if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
     auto [addr, len] =
         fir::factory::CharacterExprHelper{builder, loc}.createUnboxChar(
@@ -524,6 +538,31 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
     if (shouldAllocateTempOnStack())
       return createStackTempFromMold(loc, builder, source);
 
+    // For CUDA device arrays that require special allocation (device,
+    // managed, unified, etc.), use cuf.alloc instead of fir.allocmem so
+    // that the private copy lives in device memory.
+    if (sym && Fortran::semantics::NeedCUDAAlloc(sym->GetUltimate())) {
+      cuf::DataAttributeAttr dataAttr =
+          Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
+                                                          sym->GetUltimate());
+      mlir::Type sequenceType =
+          hlfir::getFortranElementOrSequenceType(source.getType());
+      mlir::Value shape = hlfir::genShape(loc, builder, source);
+      auto extents = hlfir::getIndexExtents(loc, builder, shape);
+      mlir::Value alloc = Fortran::lower::genCUFAlloc(
+          builder, loc, sequenceType, /*uniqName=*/"", /*bindcName=*/".tmp",
+          dataAttr, lenParams, extents);
+      auto declareOp = hlfir::DeclareOp::create(
+          builder, loc, alloc, ".tmp", shape, lenParams,
+          /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0,
+          fir::FortranVariableFlagsAttr{}, dataAttr);
+      hlfir::Entity temp{declareOp.getBase()};
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
+                          isDoConcurrent, dataAttr);
+      return temp;
+    }
+
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
     // if needsDealloc, add cleanup region. Always
     // do this for allocatable boxes because they might have been re-allocated
@@ -620,7 +659,9 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     assert(sym && "Symbol information is required to privatize derived types");
     assert(!scalarInitValue && "ScalarInitvalue is unused for privatization");
   }
-  if (hlfir::Entity{moldArg}.isAssumedRank())
+  // Only check for assumed rank if moldArg is a valid Fortran entity.
+  // Boxed types (like allocatable characters) may not be valid entities yet.
+  if (hlfir::isFortranEntity(moldArg) && hlfir::Entity{moldArg}.isAssumedRank())
     TODO(loc, "Privatization of assumed rank variable");
   mlir::Type valTy = fir::unwrapRefType(argType);
 
@@ -649,8 +690,10 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     bool isChar = fir::isa_char(innerTy);
     if (fir::isa_trivial(innerTy) || isDerived || isChar) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
-      if ((isDerived || isChar) && (isReduction(kind) || scalarInitValue))
-        TODO(loc, "Reduction of an unsupported boxed type");
+      // Character types in reductions are supported, but derived types are not
+      // yet.
+      if (isDerived && (isReduction(kind) || scalarInitValue))
+        TODO(loc, "Reduction of an unsupported boxed derived type");
       initAndCleanupBoxedScalar(boxTy, needsInitialization);
       return;
     }
@@ -663,8 +706,17 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
   }
 
   // Unboxed types:
-  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
+  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(valTy)) {
     initAndCleanupBoxchar(boxCharTy);
+    return;
+  }
+  // Handle unboxed character types (e.g., !fir.char<1,1>).
+  // For fixed-length character types, we just need to initialize the value.
+  if (fir::isa_char(valTy)) {
+    builder.setInsertionPointToEnd(initBlock);
+    if (scalarInitValue)
+      builder.createStoreWithConvert(loc, scalarInitValue, allocatedPrivVarArg);
+    createYield(allocatedPrivVarArg);
     return;
   }
   if (fir::isa_derived(valType)) {

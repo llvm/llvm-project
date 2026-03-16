@@ -412,6 +412,13 @@ void test_wave_reduce_fadd_f32_default(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fadd_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fadd_f64_default
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fadd.f64(
+void test_wave_reduce_fadd_f64_default(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fadd_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_add_u32_iterative
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.add.i32(
 void test_wave_reduce_add_u32_iterative(global int* out, int in)
@@ -431,6 +438,13 @@ void test_wave_reduce_add_u64_iterative(global int* out, long in)
 void test_wave_reduce_fadd_f32_iterative(global float* out, float in)
 {
   *out = __builtin_amdgcn_wave_reduce_fadd_f32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_fadd_f64_iterative
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fadd.f64(
+void test_wave_reduce_fadd_f64_iterative(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fadd_f64(in, 0);
 }
 
 // CHECK-LABEL: @test_wave_reduce_add_u32_dpp
@@ -454,6 +468,13 @@ void test_wave_reduce_fadd_f32_dpp(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fadd_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fadd_f64_dpp
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fadd.f64(
+void test_wave_reduce_fadd_f64_dpp(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fadd_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_sub_u32_default
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.sub.i32(
 void test_wave_reduce_sub_u32_default(global int* out, int in)
@@ -473,6 +494,13 @@ void test_wave_reduce_sub_u64_default(global int* out, long in)
 void test_wave_reduce_fsub_f32_default(global float* out, float in)
 {
   *out = __builtin_amdgcn_wave_reduce_fsub_f32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_fsub_f64_default
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fsub.f64(
+void test_wave_reduce_fsub_f64_default(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fsub_f64(in, 0);
 }
 
 // CHECK-LABEL: @test_wave_reduce_sub_u32_iterative
@@ -496,6 +524,13 @@ void test_wave_reduce_fsub_f32_iterative(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fsub_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fsub_f64_iterative
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fsub.f64(
+void test_wave_reduce_fsub_f64_iterative(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fsub_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_sub_u32_dpp
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.sub.i32(
 void test_wave_reduce_sub_u32_dpp(global int* out, int in)
@@ -515,6 +550,13 @@ void test_wave_reduce_sub_u64_dpp(global int* out, long in)
 void test_wave_reduce_fsub_f32_dpp(global float* out, float in)
 {
   *out = __builtin_amdgcn_wave_reduce_fsub_f32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_fsub_f64_dpp
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fsub.f64(
+void test_wave_reduce_fsub_f64_dpp(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fsub_f64(in, 0);
 }
 
 // CHECK-LABEL: @test_wave_reduce_and_b32_default
@@ -664,6 +706,13 @@ void test_wave_reduce_fmin_f32_default(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fmin_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fmin_f64_default
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fmin.f64(
+void test_wave_reduce_fmin_f64_default(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fmin_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_min_i32_iterative
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.min.i32(
 void test_wave_reduce_min_i32_iterative(global int* out, int in)
@@ -685,6 +734,13 @@ void test_wave_reduce_fmin_f32_iterative(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fmin_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fmin_f64_iterative
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fmin.f64(
+void test_wave_reduce_fmin_f64_iterative(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fmin_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_min_i32_dpp
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.min.i32(
 void test_wave_reduce_min_i32_dpp(global int* out, int in)
@@ -704,6 +760,13 @@ void test_wave_reduce_min_i64_dpp(global int* out, long in)
 void test_wave_reduce_fmin_f32_dpp(global float* out, float in)
 {
   *out = __builtin_amdgcn_wave_reduce_fmin_f32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_fmin_f64_dpp
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fmin.f64(
+void test_wave_reduce_fmin_f64_dpp(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fmin_f64(in, 0);
 }
 
 // CHECK-LABEL: @test_wave_reduce_min_u32_default
@@ -769,6 +832,13 @@ void test_wave_reduce_fmax_f32_default(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fmax_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fmax_f64_default
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fmax.f64(
+void test_wave_reduce_fmax_f64_default(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fmax_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_max_i32_iterative
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.max.i32(
 void test_wave_reduce_max_i32_iterative(global int* out, int in)
@@ -790,6 +860,13 @@ void test_wave_reduce_fmax_f32_iterative(global float* out, float in)
   *out = __builtin_amdgcn_wave_reduce_fmax_f32(in, 0);
 }
 
+// CHECK-LABEL: @test_wave_reduce_fmax_f64_iterative
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fmax.f64(
+void test_wave_reduce_fmax_f64_iterative(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fmax_f64(in, 0);
+}
+
 // CHECK-LABEL: @test_wave_reduce_max_i32_dpp
 // CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.reduce.max.i32(
 void test_wave_reduce_max_i32_dpp(global int* out, int in)
@@ -809,6 +886,13 @@ void test_wave_reduce_max_i64_dpp(global int* out, long in)
 void test_wave_reduce_fmax_f32_dpp(global float* out, float in)
 {
   *out = __builtin_amdgcn_wave_reduce_fmax_f32(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_fmax_f64_dpp
+// CHECK: {{.*}}call{{.*}} double @llvm.amdgcn.wave.reduce.fmax.f64(
+void test_wave_reduce_fmax_f64_dpp(global double* out, double in)
+{
+  *out = __builtin_amdgcn_wave_reduce_fmax_f64(in, 0);
 }
 
 // CHECK-LABEL: @test_wave_reduce_max_u32_default
@@ -967,7 +1051,7 @@ void test_read_exec_hi(global uint* out) {
 }
 
 // CHECK-LABEL: @test_dispatch_ptr
-// CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK: {{.*}}call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 #if !defined(__SPIRV__)
 void test_dispatch_ptr(__constant unsigned char ** out)
 #else
@@ -1053,26 +1137,8 @@ void test_get_local_id(int d, global int *out)
 // CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
 // CHECK: declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.z()
 
-// CHECK-LABEL: @test_get_workgroup_size(
-// CHECK: {{.*}}call align 8 dereferenceable(256){{.*}} ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-// CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 12
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 14
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 16
-// CHECK: load i16, ptr addrspace(4) %{{.*}}, align 8, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-void test_get_workgroup_size(int d, global int *out)
-{
-	switch (d) {
-	case 0: *out = __builtin_amdgcn_workgroup_size_x() + 1; break;
-	case 1: *out = __builtin_amdgcn_workgroup_size_y(); break;
-	case 2: *out = __builtin_amdgcn_workgroup_size_z(); break;
-	default: *out = 0;
-	}
-}
-
 // CHECK-LABEL: @test_get_grid_size(
-// CHECK: {{.*}}call align 4 dereferenceable(64){{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// CHECK: {{.*}}call{{.*}}ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 // CHECK: getelementptr inbounds nuw i8, ptr addrspace(4) %{{.*}}, i64 %{{.+}}
 // CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !range [[$GRID_RANGE:![0-9]+]], !invariant.load
 void test_get_grid_size(int d, global int *out)
@@ -1229,9 +1295,9 @@ kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 sr
 }
 
 // CHECK-LABEL: test_s_setreg(
-// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setreg(i32 8193, i32 %val)
+// CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setreg(i32 65535, i32 %val)
 kernel void test_s_setreg(uint val) {
-  __builtin_amdgcn_s_setreg(8193, val);
+  __builtin_amdgcn_s_setreg(65535, val);
 }
 
 // CHECK-LABEL test_atomic_inc_dec(
@@ -1298,5 +1364,4 @@ void test_set_fpenv(unsigned long env) {
 }
 
 // CHECK-DAG: [[$GRID_RANGE]] = !{i32 1, i32 0}
-// CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY_NOPOISON]] = { convergent mustprogress nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }

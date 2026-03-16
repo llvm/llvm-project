@@ -73,6 +73,7 @@ char Legalizer::ID = 0;
 INITIALIZE_PASS_BEGIN(Legalizer, DEBUG_TYPE,
                       "Legalize the Machine IR a function's Machine IR", false,
                       false)
+INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
@@ -83,6 +84,7 @@ INITIALIZE_PASS_END(Legalizer, DEBUG_TYPE,
 Legalizer::Legalizer() : MachineFunctionPass(ID) { }
 
 void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<LibcallLoweringInfoWrapper>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
@@ -172,12 +174,11 @@ public:
 };
 } // namespace
 
-Legalizer::MFResult
-Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
-                                   ArrayRef<GISelChangeObserver *> AuxObservers,
-                                   LostDebugLocObserver &LocObserver,
-                                   MachineIRBuilder &MIRBuilder,
-                                   GISelValueTracking *VT) {
+Legalizer::MFResult Legalizer::legalizeMachineFunction(
+    MachineFunction &MF, const LegalizerInfo &LI,
+    ArrayRef<GISelChangeObserver *> AuxObservers,
+    LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
+    const LibcallLoweringInfo *Libcalls, GISelValueTracking *VT) {
   MIRBuilder.setMF(MF);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
@@ -216,7 +217,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   // Now install the observer as the delegate to MF.
   // This will keep all the observers notified about new insertions/deletions.
   RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
-  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder, VT);
+  LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder, Libcalls, VT);
   LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI, VT);
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
@@ -339,13 +340,19 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
   if (VerifyDebugLocs > DebugLocVerifyLevel::None)
     AuxObservers.push_back(&LocObserver);
 
+  const TargetSubtargetInfo &Subtarget = MF.getSubtarget();
+
+  const LibcallLoweringInfo &Libcalls =
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *MF.getFunction().getParent(), Subtarget);
+
   // This allows Known Bits Analysis in the legalizer.
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
-  const LegalizerInfo &LI = *MF.getSubtarget().getLegalizerInfo();
+  const LegalizerInfo &LI = *Subtarget.getLegalizerInfo();
   MFResult Result = legalizeMachineFunction(MF, LI, AuxObservers, LocObserver,
-                                            *MIRBuilder, VT);
+                                            *MIRBuilder, &Libcalls, VT);
 
   if (Result.FailedOn) {
     reportGISelFailure(MF, MORE, "gisel-legalize",

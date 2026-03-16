@@ -11,10 +11,10 @@ define half @exp10_f16(half %x) #0 {
 
 ; CHECK-LABEL: exp10_v2f16:
 ; CHECK: bl __extendhfsf2
-; CHECK: bl __extendhfsf2
-; CHECK: bl exp10f
 ; CHECK: bl exp10f
 ; CHECK: bl __truncsfhf2
+; CHECK: bl __extendhfsf2
+; CHECK: bl exp10f
 ; CHECK: bl __truncsfhf2
 define <2 x half> @exp10_v2f16(<2 x half> %x) #0 {
   %r = call <2 x half> @llvm.exp10.v2f16(<2 x half> %x)

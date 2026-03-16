@@ -1,5 +1,5 @@
 ! Test the names created for globals holding constant literal values
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 type someType
   integer :: i

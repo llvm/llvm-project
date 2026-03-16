@@ -21,9 +21,9 @@ body:             |
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vr = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:vrm2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; CHECK-NEXT: [[PseudoVSLIDEDOWN_VI_M8_:%[0-9]+]]:vrm8 = PseudoVSLIDEDOWN_VI_M8 $noreg, [[DEF2]], 26, 2, 5 /* e32 */, 3 /* ta, ma */
-    ; CHECK-NEXT: [[PseudoVADD_VV_MF2_:%[0-9]+]]:vr = PseudoVADD_VV_MF2 $noreg, [[DEF2]].sub_vrm1_0, killed [[DEF3]], 2, 5 /* e32 */, 1 /* ta, mu */
-    ; CHECK-NEXT: [[PseudoVADD_VV_MF2_1:%[0-9]+]]:vr = PseudoVADD_VV_MF2 $noreg, [[PseudoVSLIDEDOWN_VI_M8_]].sub_vrm1_0, killed [[PseudoVADD_VV_MF2_]], 2, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: [[PseudoVSLIDEDOWN_VI_M8_:%[0-9]+]]:vrm8 = PseudoVSLIDEDOWN_VI_M8 $noreg, [[DEF2]], 26, 2 /* vl */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVADD_VV_MF2_:%[0-9]+]]:vr = PseudoVADD_VV_MF2 $noreg, [[DEF2]].sub_vrm1_0, killed [[DEF3]], 2 /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: [[PseudoVADD_VV_MF2_1:%[0-9]+]]:vr = PseudoVADD_VV_MF2 $noreg, [[PseudoVSLIDEDOWN_VI_M8_]].sub_vrm1_0, killed [[PseudoVADD_VV_MF2_]], 2 /* vl */, 5 /* e32 */, 1 /* ta, mu */
     ; CHECK-NEXT: PseudoRET implicit $v8
     %0:vrm4 = IMPLICIT_DEF
     %1:gprnox0 = IMPLICIT_DEF

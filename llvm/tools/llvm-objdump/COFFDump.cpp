@@ -837,7 +837,6 @@ void objdump::printCOFFSymbolTable(const object::COFFImportFile &i) {
     raw_string_ostream NS(Name);
 
     cantFail(Sym.printName(NS));
-    NS.flush();
 
     outs() << "[" << format("%2d", Index) << "]"
            << "(sec " << format("%2d", 0) << ")"

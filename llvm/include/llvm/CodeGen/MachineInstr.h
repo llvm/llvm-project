@@ -22,6 +22,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -123,8 +124,9 @@ public:
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
     SameSign = 1 << 21,      // Both operands have the same sign.
-    InBounds = 1 << 22       // Pointer arithmetic remains inbounds.
+    InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
+    LRSplit = 1 << 23        // Instruction for live range split.
   };
 
 private:
@@ -135,7 +137,7 @@ private:
   MachineOperand *Operands = nullptr;   // Pointer to the first operand.
 
 #define LLVM_MI_NUMOPERANDS_BITS 24
-#define LLVM_MI_FLAGS_BITS 24
+#define LLVM_MI_FLAGS_BITS 32
 #define LLVM_MI_ASMPRINTERFLAGS_BITS 8
 
   /// Number of operands on instruction.
@@ -147,12 +149,19 @@ private:
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
   /// Various bits of additional information about the machine instruction.
-  uint32_t Flags : LLVM_MI_FLAGS_BITS;
+  uint32_t Flags;
 
   /// Various bits of information used by the AsmPrinter to emit helpful
   /// comments.  This is *not* semantic information.  Do not use this for
   /// anything other than to convey comment information to AsmPrinter.
-  uint32_t AsmPrinterFlags : LLVM_MI_ASMPRINTERFLAGS_BITS;
+  uint8_t AsmPrinterFlags;
+
+  /// Cached opcode from MCID.
+  uint32_t Opcode;
+
+  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
+  /// defined by this instruction.
+  unsigned DebugInstrNum;
 
   /// Internal implementation detail class that provides out-of-line storage for
   /// extra info used by the machine instruction when this info cannot be stored
@@ -316,13 +325,6 @@ private:
       Info;
 
   DebugLoc DbgLoc; // Source line information.
-
-  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
-  /// defined by this instruction.
-  unsigned DebugInstrNum;
-
-  /// Cached opcode from MCID.
-  uint16_t Opcode;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -671,7 +673,7 @@ public:
       return true;
     if (isRegSequence() && OpIdx > 1 && (OpIdx % 2) == 0)
       return true;
-    if (isSubregToReg() && OpIdx == 3)
+    if (isSubregToReg() && OpIdx == 2)
       return true;
     return false;
   }
@@ -1328,7 +1330,10 @@ public:
   /// If this instruction is the header of a bundle, the whole bundle is erased.
   /// This function can not be used for instructions inside a bundle, use
   /// eraseFromBundle() to erase individual bundled instructions.
-  LLVM_ABI void eraseFromParent();
+  /// \returns the iterator following the erased instruction. If this is the
+  /// header of a bundle it returns the iterator following the erased bundle
+  /// iterator.
+  LLVM_ABI MachineInstrBundleIterator<MachineInstr> eraseFromParent();
 
   /// Unlink 'this' from its basic block and delete it.
   ///

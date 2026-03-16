@@ -646,7 +646,7 @@ static bool IsInterestingCmp(ICmpInst *CMP, const DominatorTree &DT,
                              const SanitizerCoverageOptions &Options) {
   if (!Options.NoPrune)
     if (CMP->hasOneUse())
-      if (auto BR = dyn_cast<BranchInst>(CMP->user_back()))
+      if (auto BR = dyn_cast<CondBrInst>(CMP->user_back()))
         for (BasicBlock *B : BR->successors())
           if (IsBackEdge(BR->getParent(), B, DT))
             return false;
@@ -1124,17 +1124,11 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
           InsertBefore = AI->getNextNode();
 
           // Make an estimate on the stack usage.
-          if (AI->isStaticAlloca()) {
-            uint32_t Bytes = DL.getTypeAllocSize(AI->getAllocatedType());
-            if (AI->isArrayAllocation()) {
-              if (const ConstantInt *arraySize =
-                      dyn_cast<ConstantInt>(AI->getArraySize())) {
-                Bytes *= arraySize->getZExtValue();
-              } else {
-                HasDynamicAlloc = true;
-              }
-            }
-            EstimatedStackSize += Bytes;
+          if (auto AllocaSize = AI->getAllocationSize(DL)) {
+            if (AllocaSize->isFixed())
+              EstimatedStackSize += AllocaSize->getFixedValue();
+            else
+              HasDynamicAlloc = true;
           } else {
             HasDynamicAlloc = true;
           }

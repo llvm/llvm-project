@@ -19,11 +19,6 @@
     {{/.}}
 </div>
 {{/ParagraphComments}}
-{{#ParagraphComment}}
-{{#Children}}
-{{TextComment}}
-{{/Children}}
-{{/ParagraphComment}}
 {{#HasParamComments}}
 <div class="nested-delimiter-container">
     <h3>Parameters</h3>
@@ -42,7 +37,7 @@
         <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{TextComment}}{{/Children}}
     </div>
 </div>
-{{/#TParamComments}}
+{{/TParamComments}}
 {{/HasTParamComments}}
 {{#HasReturnComments}}
 <div class="nested-delimiter-container">
@@ -78,15 +73,3 @@
     {{/ThrowsComments}}
 </div>
 {{/HasThrowsComments}}
-{{#BlockCommandComment}}
-    <div class="block-command-comment__command">
-        <div class="block-command-command">
-            {{Command}}
-        </div>
-        <div>
-            {{#Children}}
-                {{>Comments}}
-            {{/Children}}
-        </div>
-    </div>
-{{/BlockCommandComment}}

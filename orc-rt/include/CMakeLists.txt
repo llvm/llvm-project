@@ -1,5 +1,6 @@
 set(ORC_RT_HEADERS
     orc-rt-c/CoreTyspe.h
+    orc-rt-c/Error.h
     orc-rt-c/ExternC.h
     orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h
@@ -13,9 +14,9 @@ set(ORC_RT_HEADERS
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/QueueingTaskDispatcher.h
-    orc-rt/ResourceManager.h
     orc-rt/RTTI.h
     orc-rt/ScopeExit.h
+    orc-rt/Service.h
     orc-rt/Session.h
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h

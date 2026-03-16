@@ -115,7 +115,8 @@ define i32 @lexical_block_file(i32 %arg1) {
 ; CHECK-DAG: #[[NULL:.+]] = #llvm.di_null_type
 ; CHECK-DAG: #[[INT1:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int1">
 ; CHECK-DAG: #[[INT2:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int2", sizeInBits = 32, encoding = DW_ATE_signed>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[NULL]], #[[INT1]], #[[INT2]]>
+; CHECK-DAG: #[[INT3:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[NULL]], #[[INT1]], #[[INT2]], #[[INT3]]>
 
 define void @basic_type() !dbg !3 {
   ret void
@@ -128,15 +129,17 @@ define void @basic_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "basic_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{null, !6, !7}
+!5 = !{null, !6, !7, !8}
 !6 = !DIBasicType(name: "int1")
 !7 = !DIBasicType(name: "int2", encoding: DW_ATE_signed, size: 32)
+!8 = !DIBasicType()
 
 ; // -----
 
+; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
 ; CHECK: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK: #[[PTR1:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]]>
-; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
+; CHECK: #[[PTR2:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, name = "mypointer", file = #[[FILE]], line = 42, scope = #[[FILE]], baseType = #[[INT]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT]]>
 ; CHECK: #[[PTR3:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT]], dwarfAddressSpace = 3>
 ; CHECK: #llvm.di_subroutine_type<types = #[[PTR1]], #[[PTR2]], #[[PTR3]]>
 
@@ -154,7 +157,7 @@ define void @derived_type() !dbg !3 {
 !5 = !{!7, !8, !9}
 !6 = !DIBasicType(name: "int")
 !7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6)
-!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
+!8 = !DIDerivedType(name: "mypointer", tag: DW_TAG_pointer_type, file: !2, line: 42, scope: !2, baseType: !6, size: 64, align: 32, offset: 4, extraData: !6)
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, dwarfAddressSpace: 3)
 
 ; // -----
@@ -316,7 +319,7 @@ define void @class_method() {
 ; Verify the cyclic subprogram is handled correctly.
 ; CHECK-DAG: #[[SP_SELF:.+]] = #llvm.di_subprogram<recId = [[REC_ID:.+]], isRecSelf = true>
 ; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<tag = DW_TAG_class_type, name = "class_name", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[SP_SELF]]>
-; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64>
+; CHECK-DAG: #[[COMP_PTR:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], sizeInBits = 64, flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[SP_TYPE:.+]] = #llvm.di_subroutine_type<types = #{{.*}}, #[[COMP_PTR]]>
 ; CHECK-DAG: #[[SP:.+]] = #llvm.di_subprogram<recId = [[REC_ID]], id = [[SP_ID:.+]], compileUnit = #{{.*}}, scope = #[[COMP]], name = "class_method", file = #{{.*}}, subprogramFlags = Definition, type = #[[SP_TYPE]]>
 ; CHECK-DAG: #[[LOC]] = loc(fused<#[[SP]]>
@@ -338,10 +341,10 @@ define void @class_method() {
 
 ; Verify the cyclic composite type is handled correctly.
 ; CHECK-DAG: #[[COMP_SELF:.+]] = #llvm.di_composite_type<recId = [[REC_ID:.+]], isRecSelf = true>
-; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]]>
-; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", baseType = #[[COMP_PTR_INNER]]>
+; CHECK-DAG: #[[COMP_PTR_INNER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP_SELF]], flags = "Artificial|ObjectPointer">
+; CHECK-DAG: #[[FIELD:.+]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "call_field", file = #{{.*}}, baseType = #[[COMP_PTR_INNER]]>
 ; CHECK-DAG: #[[COMP:.+]] = #llvm.di_composite_type<recId = [[REC_ID]], tag = DW_TAG_class_type, name = "class_field", file = #{{.*}}, line = 42, flags = "TypePassByReference|NonTrivial", elements = #[[FIELD]]>
-; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]]>
+; CHECK-DAG: #[[COMP_PTR_OUTER:.+]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[COMP]], flags = "Artificial|ObjectPointer">
 ; CHECK-DAG: #[[VAR0:.+]] = #llvm.di_local_variable<scope = #{{.*}}, name = "class_field", file = #{{.*}}, type = #[[COMP_PTR_OUTER]]>
 
 ; CHECK: @class_field
@@ -634,12 +637,12 @@ declare !dbg !1 void @declaration()
 ; +--> B:B2 ----+
 ; This should result in only one B instance.
 
-; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_SELF:.+]]>
-; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_SELF]]>
+; CHECK-DAG: #[[B1_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", file = #{{.*}}, baseType = #[[B_SELF:.+]]>
+; CHECK-DAG: #[[B2_INNER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", file = #{{.*}}, baseType = #[[B_SELF]]>
 ; CHECK-DAG: #[[B_INNER:.+]] = #llvm.di_composite_type<recId = [[B_RECID:.+]], tag = DW_TAG_class_type, name = "B", {{.*}}elements = #[[B1_INNER]], #[[B2_INNER]]
 
-; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", baseType = #[[B_INNER]]>
-; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[B1_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B1", file = #{{.*}}, baseType = #[[B_INNER]]>
+; CHECK-DAG: #[[B2_OUTER:.+]] = #llvm.di_derived_type<{{.*}}name = "B:B2", file = #{{.*}}, baseType = #[[B_INNER]]>
 ; CHECK-DAG: #[[A_OUTER:.+]] = #llvm.di_composite_type<recId = [[A_RECID:.+]], tag = DW_TAG_class_type, name = "A", {{.*}}elements = #[[B1_OUTER]], #[[B2_OUTER]]
 
 ; CHECK-DAG: #[[A_SELF:.+]] = #llvm.di_composite_type<recId = [[A_RECID]]
@@ -767,9 +770,7 @@ define void @class_field(ptr %arg1) !dbg !18 {
 
 ; Verify the string type is handled correctly
 
-define void @string_type(ptr %arg1) {
-  call void @llvm.dbg.value(metadata ptr %arg1, metadata !4, metadata !DIExpression()), !dbg !10
-  call void @llvm.dbg.value(metadata ptr %arg1, metadata !9, metadata !DIExpression()), !dbg !10
+define void @string_type() !dbg !3 {
   ret void
 }
 
@@ -778,23 +779,20 @@ define void @string_type(ptr %arg1) {
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
-!3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!4 = !DILocalVariable(scope: !5, name: "string_size", file: !2, type: !3);
-!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
-!6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
-!7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!3 = distinct !DISubprogram(name: "string_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!6, !9}
+!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10)
+!7 = !DILocalVariable(scope: !3, name: "string_size", file: !2, type: !11)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
-!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6, flags: 64);
-!10 = !DILocation(line: 1, column: 2, scope: !5)
+!9 = !DIStringType()
+!10 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 
-; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
-; CHECK: #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)"
-; CHECK-SAME: sizeInBits = 32
-; CHECK-SAME: alignInBits = 8
-; CHECK-SAME: stringLength = #[[VAR]]
-; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
-; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
-; CHECK: #di_local_variable1 = #llvm.di_local_variable<scope = #di_subprogram, name = "str", file = #di_file, type = #di_string_type, flags = Artificial>
+; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
+; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK-DAG: #[[STR2:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[STR1]], #[[STR2]]>
 
 ; // -----
 

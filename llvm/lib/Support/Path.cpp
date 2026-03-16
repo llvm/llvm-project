@@ -559,7 +559,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       SmallString<128> PathHome;
       home_directory(PathHome);
       PathHome.append(Path.begin() + 1, Path.end());
-      Path = PathHome;
+      Path = std::move(PathHome);
     }
   } else {
     llvm::replace(Path, '\\', '/');
@@ -760,8 +760,6 @@ StringRef remove_leading_dotslash(StringRef Path, Style style) {
   return Path;
 }
 
-// Remove path traversal components ("." and "..") when possible, and
-// canonicalize slashes.
 bool remove_dots(SmallVectorImpl<char> &the_path, bool remove_dot_dot,
                  Style style) {
   style = real_style(style);
@@ -849,6 +847,9 @@ void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
                       bool MakeAbsolute) {
   SmallString<128> ModelStorage;
   Model.toVector(ModelStorage);
+
+  assert(llvm::is_contained(ModelStorage, '%') &&
+         "createUniquePath: Model must contain at least one '%'");
 
   if (MakeAbsolute) {
     // Make model absolute by prepending a temp directory if it's not already.

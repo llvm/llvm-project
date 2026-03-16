@@ -1400,3 +1400,73 @@ a void Bar(this int) { // expected-note {{candidate function}}
 }
 
 }
+
+namespace ConstexprBacktrace {
+  struct S {
+    constexpr int foo(this const S& self, int b) {
+      (void)(1/b); // expected-note {{division by zero}}
+      return 0;
+    }
+    constexpr int foo2(this const S& self) {
+      (void)(1/0); // expected-note {{division by zero}} \
+                   // expected-warning {{division by zero is undefined}}
+      return 0;
+    }
+  };
+
+  constexpr bool test() {
+    S s;
+    s.foo(0); // expected-note {{in call to 's.foo(0)'}}
+    return true;
+  }
+  static_assert(test()); // expected-error {{not an integral constant expression}} \
+                         // expected-note {{in call to}}
+
+  constexpr bool test2() {
+    S s;
+    s.foo2(); // expected-note {{in call to 's.foo2()'}}
+    return true;
+  }
+  static_assert(test2()); // expected-error {{not an integral constant expression}} \
+                          // expected-note {{in call to}}
+}
+
+namespace GH176639 {
+
+struct S {
+  void operator()(this S =) // expected-error {{the explicit object parameter cannot have a default argument}}
+          // expected-error@-1 {{expected ';' at end of declaration list}}
+          // expected-error@-2 {{expected expression}}
+};
+
+void foo() {
+  S s{};
+  s(0); // expected-error {{no matching function for call to object of type 'S'}}
+}
+
+struct S2 {
+  void operator()(this S2 = S2 {}){} // expected-error {{the explicit object parameter cannot have a default argument}}
+};
+
+void foo2() {
+  S2 s{};
+  s(0); // expected-error {{no matching function for call to object of type 'S2'}}
+}
+
+}
+
+namespace GH177741 {
+
+struct S {
+  static int operator()(this S) { return 0; }
+  // expected-error@-1 {{an explicit object parameter cannot appear in a static function}}
+  // expected-note@-2 {{candidate function not viable}}
+};
+
+void foo() {
+  S s{};
+  s(0);
+  // expected-error@-1 {{no matching function for call to object of type 'S'}}
+}
+
+}

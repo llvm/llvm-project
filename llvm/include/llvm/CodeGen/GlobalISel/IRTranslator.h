@@ -299,7 +299,7 @@ private:
 
   bool translateIntrinsic(
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
-      const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+      ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
 
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
@@ -380,7 +380,8 @@ private:
 
   /// Translate branch (br) instruction.
   /// \pre \p U is a branch instruction.
-  bool translateBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateUncondBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCondBr(const User &U, MachineIRBuilder &MIRBuilder);
 
   // Begin switch lowering functions.
   bool emitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -635,6 +636,7 @@ private:
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
   const TargetLowering *TLI = nullptr;
   FunctionLoweringInfo FuncInfo;
 

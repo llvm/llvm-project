@@ -6,7 +6,6 @@
 ; RUN: llc < %s -mtriple=i686-- -mcpu=slm | FileCheck %s -check-prefix=X86-PRFCHWSSE
 ; RUN: llc < %s -mtriple=i686-- -mcpu=btver2 | FileCheck %s -check-prefix=X86-PRFCHWSSE
 ; RUN: llc < %s -mtriple=i686-- -mcpu=btver2 -mattr=-prfchw | FileCheck %s -check-prefix=X86-SSE
-; RUN: llc < %s -mtriple=i686-- -mattr=+prfchw | FileCheck %s -check-prefix=X86-PRFCHWSSE
 
 ; Rules:
 ; sse provides prefetch0/1/2/nta

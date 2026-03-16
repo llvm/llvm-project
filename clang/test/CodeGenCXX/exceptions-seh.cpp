@@ -4,6 +4,16 @@
 // RUN: %clang_cc1 -std=c++11 -fblocks -fms-extensions %s -triple=x86_64-windows-msvc -emit-llvm \
 // RUN:         -o - -mconstructor-aliases -O1 -disable-llvm-passes | \
 // RUN:         FileCheck %s --check-prefix=CHECK --check-prefix=NOCXX
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR1
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR2
+// RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR3
+// RUN: %clang_cc1 -triple x86_64-windows -fcxx-exceptions -fexceptions \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR4
+// RUN: %clang_cc1 -triple x86_64-windows \
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DNOERR
 
 extern "C" unsigned long _exception_code();
 extern "C" void might_throw();
@@ -175,3 +185,40 @@ void use_inline() {
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }
 
 void seh_in_noexcept() noexcept { __try {} __finally {} }
+
+#if defined(ERR1)
+void seh_unwinding() {
+  __try {
+    HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
+  } __except (1) {
+  }
+}
+#elif defined(ERR2)
+void seh_unwinding() {
+  __try {
+  } __except (1) {
+    HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
+  }
+}
+#elif defined(ERR3)
+void seh_unwinding() {
+  HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
+  __try {
+  } __except (1) {
+  }
+}
+#elif defined(ERR4)
+void seh_unwinding() {
+  __try {
+    HasCleanup x; // expected-error{{'__try' is not permitted in functions that require object unwinding}}
+  } __except (1) {
+  }
+}
+#elif defined(NOERR)
+void seh_unwinding() {
+  __try {
+    HasCleanup x; // expected-no-diagnostics
+  } __except (1) {
+  }
+}
+#endif

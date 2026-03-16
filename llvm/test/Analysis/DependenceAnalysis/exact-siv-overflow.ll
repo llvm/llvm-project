@@ -34,11 +34,11 @@ define void @exactsiv_const_ovfl(ptr %A) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'exactsiv_const_ovfl'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.header
@@ -87,11 +87,11 @@ define void @exactsiv_param_ovfl(ptr %A, i64 %n) {
 ;
 ; CHECK-EXACT-SIV-LABEL: 'exactsiv_param_ovfl'
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-EXACT-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-EXACT-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-EXACT-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-EXACT-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   %bound = sdiv i64 %n, 6

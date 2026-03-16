@@ -645,7 +645,7 @@ class NonVirtualDiamondInheritanceTest6 : public First6, public Second6 {
 public:
   NonVirtualDiamondInheritanceTest6() // expected-warning{{2 uninitialized fields}}
       : First6(int{}) {
-    // 'z' and 'Second::x' unintialized
+    // 'z' and 'Second::x' uninitialized
   }
 };
 

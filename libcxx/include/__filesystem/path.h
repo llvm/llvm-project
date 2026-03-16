@@ -23,6 +23,7 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
+#include <__type_traits/void_t.h>
 #include <__utility/move.h>
 #include <string>
 #include <string_view>
@@ -93,15 +94,12 @@ typedef string __u8_string;
 
 struct _NullSentinel {};
 
-template <class _Tp>
-using _Void _LIBCPP_NODEBUG = void;
-
 template <class _Tp, class = void>
 struct __is_pathable_string : public false_type {};
 
 template <class _ECharT, class _Traits, class _Alloc>
 struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
-                             _Void<typename __can_convert_char<_ECharT>::__char_type> >
+                             void_t<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str _LIBCPP_NODEBUG = basic_string<_ECharT, _Traits, _Alloc>;
 
@@ -114,7 +112,7 @@ struct __is_pathable_string< basic_string<_ECharT, _Traits, _Alloc>,
 
 template <class _ECharT, class _Traits>
 struct __is_pathable_string< basic_string_view<_ECharT, _Traits>,
-                             _Void<typename __can_convert_char<_ECharT>::__char_type> >
+                             void_t<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str _LIBCPP_NODEBUG = basic_string_view<_ECharT, _Traits>;
 
@@ -154,7 +152,7 @@ template <class _Iter>
 struct __is_pathable_iter<
     _Iter,
     true,
-    _Void<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
+    void_t<typename __can_convert_char< typename iterator_traits<_Iter>::value_type>::__char_type> >
     : __can_convert_char<typename iterator_traits<_Iter>::value_type> {
   using _ECharT _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::value_type;
 
@@ -261,15 +259,14 @@ struct _PathCVT {
 
 template <>
 struct _PathCVT<__path_value> {
-  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
+  template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    for (; __b != __e; ++__b)
-      __dest.push_back(*__b);
-  }
-
-  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    __dest.append(__b, __e);
+    if constexpr (__has_forward_iterator_category<_Iter>::value) {
+      __dest.append(__b, __e);
+    } else {
+      for (; __b != __e; ++__b)
+        __dest.push_back(*__b);
+    }
   }
 
   template <class _Iter>
@@ -296,13 +293,7 @@ struct _PathCVT<char> {
     __char_to_wide(__str, const_cast<__path_value*>(__dest.data()) + __pos, __size);
   }
 
-  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
-    basic_string<char> __tmp(__b, __e);
-    __append_string(__dest, __tmp);
-  }
-
-  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
+  template <class _Iter>
   _LIBCPP_HIDE_FROM_ABI static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     basic_string<char> __tmp(__b, __e);
     __append_string(__dest, __tmp);
@@ -449,7 +440,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI path& assign(string_type&& __s) noexcept {
+  _LIBCPP_HIDE_FROM_ABI path& assign(string_type&& __s) noexcept _LIBCPP_LIFETIMEBOUND {
     __pn_ = std::move(__s);
     return *this;
   }
@@ -460,14 +451,14 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> assign(const _Source& __src) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> assign(const _Source& __src) _LIBCPP_LIFETIMEBOUND {
     __pn_.clear();
     _SourceCVT<_Source>::__append_source(__pn_, __src);
     return *this;
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& assign(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& assign(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     __pn_.clear();
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
@@ -501,12 +492,12 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) _LIBCPP_LIFETIMEBOUND {
     return operator/=(path(__src));
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     return operator/=(path(__first, __last));
   }
 #  else
@@ -530,7 +521,7 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> append(const _Source& __src) _LIBCPP_LIFETIMEBOUND {
     using _Traits             = __is_pathable<_Source>;
     using _CVT                = _PathCVT<_SourceChar<_Source> >;
     bool __source_is_absolute = filesystem::__is_separator(_Traits::__first_or_null(__src));
@@ -543,7 +534,7 @@ public:
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& append(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
     using _CVT = _PathCVT<_ItVal>;
@@ -594,13 +585,13 @@ public:
   }
 
   template <class _Source>
-  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> concat(const _Source& __x) {
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source> concat(const _Source& __x) _LIBCPP_LIFETIMEBOUND {
     _SourceCVT<_Source>::__append_source(__pn_, __x);
     return *this;
   }
 
   template <class _InputIt>
-  _LIBCPP_HIDE_FROM_ABI path& concat(_InputIt __first, _InputIt __last) {
+  _LIBCPP_HIDE_FROM_ABI path& concat(_InputIt __first, _InputIt __last) _LIBCPP_LIFETIMEBOUND {
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
     return *this;
@@ -609,26 +600,26 @@ public:
   // modifiers
   _LIBCPP_HIDE_FROM_ABI void clear() noexcept { __pn_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI path& make_preferred() {
+  _LIBCPP_HIDE_FROM_ABI path& make_preferred() _LIBCPP_LIFETIMEBOUND {
 #  if defined(_LIBCPP_WIN32API)
     std::replace(__pn_.begin(), __pn_.end(), L'/', L'\\');
 #  endif
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI path& remove_filename() {
+  _LIBCPP_HIDE_FROM_ABI path& remove_filename() _LIBCPP_LIFETIMEBOUND {
     auto __fname = __filename();
     if (!__fname.empty())
       __pn_.erase(__fname.data() - __pn_.data());
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI path& replace_filename(const path& __replacement) {
+  _LIBCPP_HIDE_FROM_ABI path& replace_filename(const path& __replacement) _LIBCPP_LIFETIMEBOUND {
     remove_filename();
     return (*this /= __replacement);
   }
 
-  path& replace_extension(const path& __replacement = path());
+  path& replace_extension(const path& __replacement = path()) _LIBCPP_LIFETIMEBOUND;
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const path& __lhs, const path& __rhs) noexcept {
     return __lhs.__compare(__rhs.__pn_) == 0;
@@ -667,9 +658,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __s) { __pn_.reserve(__s); }
 
   // native format observers
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept { return __pn_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const string_type& native() const noexcept _LIBCPP_LIFETIMEBOUND { return __pn_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept { return __pn_.c_str(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const value_type* c_str() const noexcept _LIBCPP_LIFETIMEBOUND {
+    return __pn_.c_str();
+  }
 
   _LIBCPP_HIDE_FROM_ABI operator string_type() const { return __pn_; }
 
@@ -874,23 +867,13 @@ public:
   [[nodiscard]] iterator end() const;
 
 #  if _LIBCPP_HAS_LOCALIZATION
-  template <
-      class _CharT,
-      class _Traits,
-      __enable_if_t<is_same<_CharT, value_type>::value && is_same<_Traits, char_traits<value_type> >::value, int> = 0>
+  template <class _CharT, class _Traits>
   _LIBCPP_HIDE_FROM_ABI friend basic_ostream<_CharT, _Traits>&
   operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.native());
-    return __os;
-  }
-
-  template <
-      class _CharT,
-      class _Traits,
-      __enable_if_t<!is_same<_CharT, value_type>::value || !is_same<_Traits, char_traits<value_type> >::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI friend basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
-    __os << std::__quoted(__p.string<_CharT, _Traits>());
+    if constexpr (is_same<_CharT, value_type>::value && is_same<_Traits, char_traits<value_type> >::value)
+      __os << std::quoted(__p.native());
+    else
+      __os << std::quoted(__p.string<_CharT, _Traits>());
     return __os;
   }
 
@@ -898,7 +881,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, path& __p) {
     basic_string<_CharT, _Traits> __tmp;
-    __is >> std::__quoted(__tmp);
+    __is >> std::quoted(__tmp);
     __p = __tmp;
     return __is;
   }

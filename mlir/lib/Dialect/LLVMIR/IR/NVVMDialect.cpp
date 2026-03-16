@@ -164,7 +164,7 @@ static LogicalResult verifyTMALoadParams(size_t tensorDims, size_t numIm2colOff,
                                 size_t expectedIm2colOff) -> LogicalResult {
     if (isIm2col && (tensorDims < 3))
       return emitError(loc)
-             << "to use " << stringifyEnum(mode)
+             << "to use " << mode
              << " mode, the tensor has to be at least 3-dimensional";
 
     if (numIm2colOff != expectedIm2colOff)
@@ -493,16 +493,15 @@ LogicalResult PermuteOp::verify() {
   case Mode::F4E:
   case Mode::B4E:
     if (!hasHi)
-      return emitError("mode '")
-             << stringifyPermuteMode(getMode()) << "' requires 'hi' operand.";
+      return emitError("mode '") << getMode() << "' requires 'hi' operand.";
     break;
   case Mode::RC8:
   case Mode::ECL:
   case Mode::ECR:
   case Mode::RC16:
     if (hasHi)
-      return emitError("mode '") << stringifyPermuteMode(getMode())
-                                 << "' does not accept 'hi' operand.";
+      return emitError("mode '")
+             << getMode() << "' does not accept 'hi' operand.";
     break;
   }
 
@@ -944,8 +943,8 @@ LogicalResult MmaOp::verify() {
       kFactor = 16;
       break;
     default:
-      return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(getMultiplicandAPtxType().value()));
+      return emitError("invalid shape or multiplicand type: ")
+             << getMultiplicandAPtxType().value();
     }
 
     if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
@@ -1077,9 +1076,8 @@ LogicalResult MmaOp::verify() {
       return emitOpError("requires layoutA = #nvvm.mma_layout<row> and "
                          "layoutB = #nvvm.mma_layout<col> for shape <")
              << mmaShape[0] << ", " << mmaShape[1] << ", " << mmaShape[2]
-             << "> with element types "
-             << stringifyEnum(*getMultiplicandAPtxType()) << " and "
-             << stringifyEnum(*getMultiplicandBPtxType())
+             << "> with element types " << *getMultiplicandAPtxType() << " and "
+             << *getMultiplicandBPtxType()
              << ". Only m8n8k4 with f16 supports other layouts.";
     }
   }
@@ -1425,7 +1423,7 @@ LogicalResult MmaSpOp::verify() {
     case MMATypes::e3m2:
     case MMATypes::e2m3:
     case MMATypes::e2m1:
-      kFactor = 32;
+      kFactor = 16;
       multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
@@ -1433,8 +1431,8 @@ LogicalResult MmaSpOp::verify() {
       allowedShapes.push_back({16, 8, 64});
       break;
     default:
-      return emitError("invalid shape or multiplicand type: " +
-                       stringifyEnum(getMultiplicandAPtxType().value()));
+      return emitError("invalid shape or multiplicand type: ")
+             << getMultiplicandAPtxType().value();
     }
 
     if (isIntegerPtxType(getMultiplicandAPtxType().value())) {
@@ -1919,7 +1917,8 @@ LogicalResult MmaBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k64.mxf4nvf4");
     } else {
@@ -2187,7 +2186,8 @@ LogicalResult MmaSpBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k128.mxf4nvf4");
     } else {
@@ -2579,8 +2579,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
 
   if (typeD != WGMMATypes::f32 && typeD != WGMMATypes::f16 &&
       typeD != WGMMATypes::s32) {
-    return emitOpError() << "does not support the given output type "
-                         << NVVM::stringifyWGMMATypes(typeD);
+    return emitOpError() << "does not support the given output type " << typeD;
   }
   if (typeD == WGMMATypes::s32 &&
       (getScaleA() == WGMMAScaleIn::neg || getScaleB() == WGMMAScaleIn::neg)) {
@@ -2588,9 +2587,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   }
 
   if (failed(isAllowedWGMMADataType(typeD, typeA, typeB))) {
-    return emitOpError() << NVVM::stringifyWGMMATypes(typeD)
-                         << " += " << NVVM::stringifyWGMMATypes(typeA) << " * "
-                         << NVVM::stringifyWGMMATypes(typeB)
+    return emitOpError() << typeD << " += " << typeA << " * " << typeB
                          << ", it is not supported.";
   }
 
@@ -2602,13 +2599,11 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   FailureOr<int> allowedK = getAllowedSizeK(typeA);
   if (failed(allowedK) || allowedK.value() != getShape().getK())
     return emitOpError() << "shape 'k' must be " << allowedK.value()
-                         << " for input type "
-                         << NVVM::stringifyWGMMATypes(typeA);
+                         << " for input type " << typeA;
 
   // Check N
   if (failed(isAllowedSizeN(getShape().getN(), typeA))) {
-    return emitOpError() << "has input type "
-                         << NVVM::stringifyWGMMATypes(typeA) << " n is set to "
+    return emitOpError() << "has input type " << typeA << " n is set to "
                          << getShape().getN() << ", it is not supported.";
   }
 
@@ -2620,13 +2615,11 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
       (getLayoutA() == mlir::NVVM::MMALayout::col ||
        getLayoutB() == mlir::NVVM::MMALayout::row)) {
     return emitOpError()
-           << "given layouts layout_a = " << stringifyMMALayout(getLayoutA())
-           << " and layout_b = " << stringifyMMALayout(getLayoutB())
-           << " for input types " << stringifyWGMMATypes(typeA) << " and "
-           << stringifyWGMMATypes(typeB)
+           << "given layouts layout_a = " << getLayoutA()
+           << " and layout_b = " << getLayoutB() << " for input types " << typeA
+           << " and " << typeB
            << " requires transpose. However, this is only supported for: "
-           << stringifyMMATypes(MMATypes::f16) << " and "
-           << stringifyMMATypes(MMATypes::bf16);
+           << MMATypes::f16 << " and " << MMATypes::bf16;
   }
 
   // Check result registers
@@ -2647,7 +2640,7 @@ LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
     return emitOpError()
            << " `satfinite` can be only used with s32 accumulator, however "
               "the current accumulator is "
-           << NVVM::stringifyWGMMATypes(typeD);
+           << typeD;
   }
 
   return success();
@@ -2675,9 +2668,8 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
      << ((expectedOutputRegisters * 2) + 2)
      << ", 0;\n"
         "wgmma.mma_async.sync.aligned.m"
-     << m << "n" << n << "k" << k << "." << outputTypeName << "."
-     << stringifyWGMMATypes(getTypeA()) << "."
-     << stringifyWGMMATypes(getTypeB());
+     << m << "n" << n << "k" << k << "." << outputTypeName << "." << getTypeA()
+     << "." << getTypeB();
   if (getSatfinite().value_or(NVVM::MMAIntOverflow::wrapped) ==
       NVVM::MMAIntOverflow::satfinite)
     ss << ".satfinite";
@@ -2741,18 +2733,7 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
-LogicalResult NVVM::FenceSyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-  return success();
-}
-
 LogicalResult NVVM::FenceProxyOp::verify() {
-  if (getKind() == NVVM::ProxyKind::TENSORMAP)
-    return emitOpError() << "tensormap proxy is not a supported proxy kind";
-  if (getKind() == NVVM::ProxyKind::GENERIC)
-    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
@@ -2785,10 +2766,6 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
 }
 
 LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-
   if (getFromProxy() != NVVM::ProxyKind::GENERIC)
     return emitOpError("only generic is support for from_proxy attribute");
 
@@ -2979,28 +2956,196 @@ LogicalResult NVVM::ReduxOp::verify() {
       return emitOpError("nan attribute is supported only for f32 type");
   }
 
-  NVVM::ReduxKind kind = getKind();
+  NVVM::ReductionKind kind = getKind();
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
-  case NVVM::ReduxKind::AND:
-  case NVVM::ReduxKind::OR:
-  case NVVM::ReduxKind::XOR:
-  case NVVM::ReduxKind::MAX:
-  case NVVM::ReduxKind::MIN:
-  case NVVM::ReduxKind::UMAX:
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::ADD:
+  case NVVM::ReductionKind::AND:
+  case NVVM::ReductionKind::OR:
+  case NVVM::ReductionKind::XOR:
+  case NVVM::ReductionKind::MAX:
+  case NVVM::ReductionKind::MIN:
+  case NVVM::ReductionKind::UMAX:
+  case NVVM::ReductionKind::UMIN:
     if (!reduxType.isInteger(32))
       return emitOpError("'")
-             << stringifyEnum(kind) << "' redux kind unsupported with "
-             << reduxType << " type. Only supported type is 'i32'.";
+             << kind << "' reduction kind unsupported with " << reduxType
+             << " type. Only supported type is 'i32'.";
     break;
-  case NVVM::ReduxKind::FMIN:
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMIN:
+  case NVVM::ReductionKind::FMAX:
     if (!reduxType.isF32())
       return emitOpError("'")
-             << stringifyEnum(kind) << "' redux kind unsupported with "
-             << reduxType << " type. Only supported type is 'f32'.";
+             << kind << "' reduction kind unsupported with " << reduxType
+             << " type. Only supported type is 'f32'.";
     break;
+  }
+
+  return success();
+}
+
+LogicalResult NVVM::TensormapReplaceOp::verify() {
+  auto ord = getOrd();
+  Value newVal = getNewValue();
+  auto newValAttr = getNewValueAttr();
+  auto fieldName = stringifyEnum(getField());
+
+  if (ord && !llvm::is_contained({NVVM::TensormapField::BOX_DIM,
+                                  NVVM::TensormapField::GLOBAL_DIM,
+                                  NVVM::TensormapField::GLOBAL_STRIDE,
+                                  NVVM::TensormapField::ELEMENT_STRIDE},
+                                 getField()))
+    return emitOpError("ordinal is not supported for ")
+           << fieldName << " field";
+
+  auto invalidNewVal = [&](llvm::Twine type) -> std::string {
+    return llvm::Twine("new_value must be specified and must be an " + type +
+                       " for " + llvm::Twine(fieldName) + " field")
+        .str();
+  };
+
+  auto invalidNewValAttr = [&]() -> std::string {
+    return (llvm::Twine(
+                "new_value_attr must be specified and must be a valid ") +
+            llvm::Twine(fieldName) + " attribute for " + fieldName + " field")
+        .str();
+  };
+
+  switch (getField()) {
+  case NVVM::TensormapField::GLOBAL_ADDRESS:
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError(invalidNewVal("i64"));
+    break;
+  case NVVM::TensormapField::RANK:
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(invalidNewVal("i32"));
+    break;
+  case NVVM::TensormapField::GLOBAL_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for global_stride field");
+    if (!(newVal && newVal.getType().isInteger(64)))
+      return emitOpError(invalidNewVal("i64"));
+    break;
+  case NVVM::TensormapField::BOX_DIM:
+  case NVVM::TensormapField::GLOBAL_DIM:
+  case NVVM::TensormapField::ELEMENT_STRIDE:
+    if (!ord)
+      return emitOpError("ordinal is required for ")
+             << stringifyEnum(getField()) << " field";
+    if (!(newVal && newVal.getType().isInteger(32)))
+      return emitOpError(invalidNewVal("i32"));
+    break;
+  case NVVM::TensormapField::ELEMTYPE:
+    if (!(newValAttr && llvm::isa<TensormapElemtypeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::INTERLEAVE_LAYOUT:
+    if (!(newValAttr && llvm::isa<TensormapInterleaveLayoutAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::SWIZZLE_MODE:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleModeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::SWIZZLE_ATOMICITY:
+    if (!(newValAttr && llvm::isa<TensormapSwizzleAtomicityAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  case NVVM::TensormapField::FILL_MODE:
+    if (!(newValAttr && llvm::isa<TensormapFillModeAttr>(*newValAttr)))
+      return emitOpError(invalidNewValAttr());
+    break;
+  }
+
+  return success();
+}
+
+template <typename OpType>
+static LogicalResult verifyAddSubFOp(OpType op) {
+  mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
+  mlir::NVVM::SaturationMode satMode = op.getSat();
+  bool isFTZ = op.getFtz();
+
+  mlir::Type opType = op.getRes().getType();
+  mlir::Type opBaseType = isa<VectorType>(opType)
+                              ? cast<VectorType>(opType).getElementType()
+                              : opType;
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return op.emitOpError("FTZ and saturation are not supported for "
+                          "additions/subtractions involving f64 type");
+
+  if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
+                              rndMode == NVVM::FPRoundingMode::NONE))
+    return op.emitOpError("only RN rounding mode is supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN &&
+        rndMode != NVVM::FPRoundingMode::NONE)
+      return op.emitOpError("only RN rounding mode is supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return op.emitOpError("FTZ and saturation are not supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
+  }
+
+  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
+  // PTX instructions since the corresponding LLVM intrinsic is missing. This
+  // should be removed once the intrinsics for f16 addition (with FTZ only) are
+  // available.
+  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
+    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
+
+  return success();
+}
+
+LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+
+LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
+
+LogicalResult NVVM::FmaOp::verify() {
+  auto opType = getRes().getType();
+  mlir::NVVM::FPRoundingMode rndMode = getRnd();
+  mlir::NVVM::SaturationMode satMode = getSat();
+  bool isFTZ = getFtz();
+  bool isRelu = getRelu();
+  bool hasOOB = getOob();
+
+  auto getBaseFType = [](Type type) -> Type {
+    if (isa<VectorType>(type))
+      return cast<VectorType>(type).getElementType();
+    return type;
+  };
+
+  auto opBaseType = getBaseFType(opType);
+
+  if (rndMode == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode must be specified");
+
+  if (isRelu && satMode == NVVM::SaturationMode::SAT)
+    return emitOpError("relu and saturation are not supported together");
+
+  if (hasOOB && (satMode == NVVM::SaturationMode::SAT || isFTZ))
+    return emitOpError("oob is not supported with saturation or FTZ");
+
+  if (!(opBaseType.isF16() || opBaseType.isBF16()) && (isRelu || hasOOB))
+    return emitOpError("relu and oob are only supported for f16 and bf16");
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for f64 type");
+
+  if (opBaseType.isF16() && rndMode != NVVM::FPRoundingMode::RN)
+    return emitOpError(
+        "only RN rounding mode is supported for f16 and vector<2xf16>");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN)
+      return emitOpError(
+          "only RN rounding mode is supported for bf16 and vector<2xbf16>");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return emitOpError(
+          "FTZ and saturation are not supported for bf16 and vector<2xbf16>");
   }
 
   return success();
@@ -3080,6 +3225,30 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
                        "DONE: \n\t"
                        "}",
                        space);
+}
+
+//===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+struct ConvertFsubToFnegFadd : public OpRewritePattern<SubFOp> {
+  using OpRewritePattern<SubFOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubFOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value negRhs =
+        LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
+
+    rewriter.replaceOpWithNewOp<AddFOp>(op, op.getType(), op.getLhs(), negRhs,
+                                        op.getRnd(), op.getSat(), op.getFtz());
+    return success();
+  }
+};
+
+void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                         MLIRContext *context) {
+  patterns.add<ConvertFsubToFnegFadd>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4051,10 +4220,10 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
 llvm::Intrinsic::ID ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
                                                          bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+      .Case([&](mlir::Float6E2M3FNType) {
         return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
       })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+      .Case([&](mlir::Float6E3M2FNType) {
         return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
       })
       .Default([](mlir::Type) {
@@ -4079,13 +4248,13 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
   bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
       })
-      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
+      .Case([&](mlir::Float8E8M0FNUType) {
         if (hasRoundingModeRZ)
           return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
         else if (hasRoundingModeRP)
@@ -4106,10 +4275,10 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
 llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
                                                          bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
       })
       .Default([](mlir::Type) {
@@ -4144,11 +4313,11 @@ NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float8E4M3FNType>([&](Float8E4M3FNType type) {
+          .Case([&](Float8E4M3FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn;
           })
-          .Case<Float8E5M2Type>([&](Float8E5M2Type type) {
+          .Case([&](Float8E5M2Type type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn;
           })
@@ -4184,11 +4353,11 @@ NVVM::IDArgPair ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float6E2M3FNType>([&](Float6E2M3FNType type) {
+          .Case([&](Float6E2M3FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn;
           })
-          .Case<Float6E3M2FNType>([&](Float6E3M2FNType type) {
+          .Case([&](Float6E3M2FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn;
           })
@@ -4212,7 +4381,7 @@ NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float4E2M1FNType>([&](Float4E2M1FNType type) {
+          .Case([&](Float4E2M1FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn;
           })
@@ -4417,11 +4586,11 @@ llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite;
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite;
       })
@@ -4436,11 +4605,11 @@ llvm::Intrinsic::ID ConvertF32x4ToF6x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+      .Case([&](mlir::Float6E2M3FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite;
       })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+      .Case([&](mlir::Float6E3M2FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite;
       })
@@ -4455,7 +4624,7 @@ llvm::Intrinsic::ID ConvertF32x4ToF4x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float4E2M1FNType>([&](mlir::Float4E2M1FNType) {
+      .Case([&](mlir::Float4E2M1FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite;
       })
@@ -4544,6 +4713,8 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
+  } else {
+    setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
 }
 
@@ -4773,6 +4944,50 @@ PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(mt.lookupValue(thisOp.getSelector()));
 
   return {IDs[modeIndex], args};
+}
+
+mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::TensormapReplaceOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  if (thisOp.getOrd())
+    args.push_back(builder.getInt32(thisOp.getOrd().value()));
+  if (thisOp.getNewValue())
+    args.push_back(mt.lookupValue(thisOp.getNewValue()));
+  if (auto attr = thisOp.getNewValueAttr()) {
+    auto val =
+        llvm::TypeSwitch<mlir::Attribute, unsigned>(*attr)
+            .Case<TensormapElemtypeAttr, TensormapInterleaveLayoutAttr,
+                  TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr,
+                  TensormapFillModeAttr>([](auto attr) {
+              return static_cast<unsigned>(attr.getValue());
+            })
+            .Default([](auto attr) {
+              llvm_unreachable("Invalid attribute type");
+              return 0;
+            });
+    args.push_back(builder.getInt32(val));
+  }
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_tensormap_replace_global_address,
+      llvm::Intrinsic::nvvm_tensormap_replace_rank,
+      llvm::Intrinsic::nvvm_tensormap_replace_box_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_dim,
+      llvm::Intrinsic::nvvm_tensormap_replace_global_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_element_stride,
+      llvm::Intrinsic::nvvm_tensormap_replace_elemtype,
+      llvm::Intrinsic::nvvm_tensormap_replace_interleave_layout,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_mode,
+      llvm::Intrinsic::nvvm_tensormap_replace_swizzle_atomicity,
+      llvm::Intrinsic::nvvm_tensormap_replace_fill_mode,
+  };
+
+  unsigned fieldIndex = static_cast<unsigned>(thisOp.getField());
+
+  return {IDs[fieldIndex], args};
 }
 
 //===----------------------------------------------------------------------===//
@@ -5141,7 +5356,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -5154,7 +5369,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -5165,7 +5380,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5188,15 +5403,14 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
 }
 
 static LogicalResult verifyTcgen05MMABlockScaleOp(
-    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::Tcgen05MMAKind kind,
     NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
-
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == MMABlockScaleKind::MXF4NVF4)
+      kind == NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != MMABlockScaleKind::MXF4NVF4)
+      kind != NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -5239,7 +5453,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -5252,7 +5466,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -5265,7 +5479,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5370,6 +5584,93 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
   return {ID, args};
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld.red functions
+//===----------------------------------------------------------------------===//
+
+#define TCGEN05LDRED(SHAPE, NUM, TYPE)                                         \
+  llvm::Intrinsic::nvvm_tcgen05_ld_red_##SHAPE##_##NUM##_##TYPE
+
+mlir::NVVM::IDArgPair NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05LdRedOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  mlir::VectorType VecResTy =
+      cast<mlir::VectorType>(thisOp.getData().getType());
+  unsigned Num = VecResTy.getNumElements();
+  bool IsFloat = thisOp.getRedVal().getType().isF32();
+
+  llvm::Intrinsic::ID Shape32x32b[][2] = {
+      {notIntrinsic, notIntrinsic},
+      {TCGEN05LDRED(32x32b, x2, i32), TCGEN05LDRED(32x32b, x2, f32)},
+      {TCGEN05LDRED(32x32b, x4, i32), TCGEN05LDRED(32x32b, x4, f32)},
+      {TCGEN05LDRED(32x32b, x8, i32), TCGEN05LDRED(32x32b, x8, f32)},
+      {TCGEN05LDRED(32x32b, x16, i32), TCGEN05LDRED(32x32b, x16, f32)},
+      {TCGEN05LDRED(32x32b, x32, i32), TCGEN05LDRED(32x32b, x32, f32)},
+      {TCGEN05LDRED(32x32b, x64, i32), TCGEN05LDRED(32x32b, x64, f32)},
+      {TCGEN05LDRED(32x32b, x128, i32), TCGEN05LDRED(32x32b, x128, f32)},
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[][2] = {
+      {notIntrinsic, notIntrinsic},
+      {TCGEN05LDRED(16x32bx2, x2, i32), TCGEN05LDRED(16x32bx2, x2, f32)},
+      {TCGEN05LDRED(16x32bx2, x4, i32), TCGEN05LDRED(16x32bx2, x4, f32)},
+      {TCGEN05LDRED(16x32bx2, x8, i32), TCGEN05LDRED(16x32bx2, x8, f32)},
+      {TCGEN05LDRED(16x32bx2, x16, i32), TCGEN05LDRED(16x32bx2, x16, f32)},
+      {TCGEN05LDRED(16x32bx2, x32, i32), TCGEN05LDRED(16x32bx2, x32, f32)},
+      {TCGEN05LDRED(16x32bx2, x64, i32), TCGEN05LDRED(16x32bx2, x64, f32)},
+      {TCGEN05LDRED(16x32bx2, x128, i32), TCGEN05LDRED(16x32bx2, x128, f32)},
+  };
+
+  NVVM::Tcgen05LdStShape shape = thisOp.getShape();
+  unsigned ID = [&]() {
+    // `num` contains the length of vector and log2 of `num` returns the index
+    // into the shape array
+    unsigned idx = std::log2(Num);
+    switch (shape) {
+    case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+      return Shape32x32b[idx][IsFloat];
+    case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+      return Shape16x32bx2[idx][IsFloat];
+    default:
+      llvm_unreachable("unhandled tcgen05.ld lowering");
+    }
+  }();
+
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+
+  if (shape == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2)
+    args.push_back(mt.lookupValue(thisOp.getOffset()));
+
+  args.push_back(
+      builder.getInt32(thisOp.getOp() == NVVM::ReductionKind::MIN ? 0 : 1));
+
+  if (IsFloat) {
+    args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getAbs())));
+    args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getNan())));
+  }
+  return {ID, args};
+}
+
+LogicalResult Tcgen05LdRedOp::verify() {
+  VectorType data = cast<VectorType>(getData().getType());
+  Type redVal = getRedVal().getType();
+
+  if (data.getElementType() != redVal)
+    return emitError(
+        "type of reduction value and element type of vector data should match");
+
+  if (getOp() != NVVM::ReductionKind::MIN &&
+      getOp() != NVVM::ReductionKind::MAX)
+    return emitError("only min and max reduction kinds are supported");
+
+  if (redVal.isInteger() && (getAbs() || getNan())) {
+    return emitError("abs or nan is only applicable for f32 type");
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

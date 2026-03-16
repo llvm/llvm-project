@@ -5,7 +5,7 @@
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META2:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[X]], align 4, !annotation [[META1:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
 // CHECK-NEXT:    store i32 [[ADD]], ptr [[X]], align 4
@@ -17,5 +17,5 @@ int foo() {
     return x;
 }
 //.
-// CHECK: [[META2]] = !{!"auto-init"}
+// CHECK: [[META1]] = !{!"auto-init"}
 //.

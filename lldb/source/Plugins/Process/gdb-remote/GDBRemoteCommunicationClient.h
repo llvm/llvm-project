@@ -214,7 +214,7 @@ public:
 
   void GetRemoteQSupported();
 
-  bool GetVContSupported(char flavor);
+  bool GetVContSupported(llvm::StringRef flavor);
 
   bool GetpPacketSupported(lldb::tid_t tid);
 
@@ -262,9 +262,9 @@ public:
 
   bool GetGroupName(uint32_t gid, std::string &name);
 
-  bool HasFullVContSupport() { return GetVContSupported('A'); }
+  bool HasFullVContSupport() { return GetVContSupported("A"); }
 
-  bool HasAnyVContSupport() { return GetVContSupported('a'); }
+  bool HasAnyVContSupport() { return GetVContSupported("a"); }
 
   bool GetStopReply(StringExtractorGDBRemote &response);
 
@@ -403,6 +403,8 @@ public:
                        // the process to exit
       std::string
           *command_output, // Pass nullptr if you don't want the command output
+      std::string *separated_error_output, // Pass nullptr if you don't want the
+                                           // command error output
       const Timeout<std::micro> &timeout);
 
   llvm::ErrorOr<llvm::MD5::MD5Result> CalculateMD5(const FileSpec &file_spec);

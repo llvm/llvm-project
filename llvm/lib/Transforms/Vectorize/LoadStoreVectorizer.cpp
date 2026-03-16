@@ -380,10 +380,7 @@ class LoadStoreVectorizerLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  LoadStoreVectorizerLegacyPass() : FunctionPass(ID) {
-    initializeLoadStoreVectorizerLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  LoadStoreVectorizerLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 

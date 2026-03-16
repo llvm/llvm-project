@@ -10,8 +10,18 @@
 // CHECK-LABEL: define {{.*}}test
 uint4 test(bool p1) {
   // CHECK-SPIRV: %[[#entry_tok0:]] = call token @llvm.experimental.convergence.entry()
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func <4 x i32> @llvm.spv.wave.ballot(i1 %{{[a-zA-Z0-9]+}}) [ "convergencectrl"(token %[[#entry_tok0]]) ]
-  // CHECK-DXIL:  %[[RET:.*]] = call <4 x i32> @llvm.dx.wave.ballot(i1 %{{[a-zA-Z0-9]+}})
-  // CHECK:  ret <4 x i32> %[[RET]]
+  // CHECK-SPIRV: %[[SPIRVRET:.*]] = call spir_func <4 x i32> @llvm.spv.subgroup.ballot(i1 %{{[a-zA-Z0-9]+}}) [ "convergencectrl"(token %[[#entry_tok0]]) ]
+  // CHECK-DXIL: %[[WAB:.*]] = call { i32, i32, i32, i32 } @llvm.dx.wave.ballot.i32(i1 %{{[a-zA-Z0-9]+}})
+  // CHECK-DXIL-NEXT: extractvalue { i32, i32, i32, i32 } {{.*}} 0
+  // CHECK-DXIL-NEXT: insertelement <4 x i32> poison, i32 {{.*}}, i32 0
+  // CHECK-DXIL-NEXT: extractvalue { i32, i32, i32, i32 } {{.*}} 1
+  // CHECK-DXIL-NEXT: insertelement <4 x i32> {{.*}}, i32 {{.*}}, i32 1
+  // CHECK-DXIL-NEXT: extractvalue { i32, i32, i32, i32 } {{.*}} 2
+  // CHECK-DXIL-NEXT: insertelement <4 x i32> {{.*}}, i32 {{.*}}, i32 2
+  // CHECK-DXIL-NEXT: extractvalue { i32, i32, i32, i32 } {{.*}} 3
+  // CHECK-DXIL-NEXT: %[[DXILRET:.*]] = insertelement <4 x i32> {{.*}}, i32 {{.*}}, i32 3
+  // CHECK-DXIL-NEXT: ret <4 x i32> %[[DXILRET]]
+  // CHECK-SPIRV: ret <4 x i32> %[[SPIRVRET]]
+
   return WaveActiveBallot(p1);
 }

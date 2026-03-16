@@ -477,7 +477,7 @@ unsigned ARMMCCodeEmitter::NEONThumb2DataIPostEncoder(const MCInst &MI,
                                                  unsigned EncodedValue,
                                                  const MCSubtargetInfo &STI) const {
   if (isThumb2(STI)) {
-    // NEON Thumb2 data-processsing encodings are very simple: bit 24 is moved
+    // NEON Thumb2 data-processing encodings are very simple: bit 24 is moved
     // to bit 12 of the high half-word (i.e. bit 28), and bits 27-24 are
     // set to 1111.
     unsigned Bit24 = EncodedValue & 0x01000000;

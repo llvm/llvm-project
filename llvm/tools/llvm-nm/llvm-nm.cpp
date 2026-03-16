@@ -194,7 +194,6 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -213,7 +212,6 @@ static void error(llvm::Error E, StringRef FileName,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -1404,7 +1402,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(Err), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (ExportsAdded) {
-      EOS.flush();
       const char *Q = ExportsNameBuffer.c_str();
       for (unsigned K = 0; K < ExportsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1457,7 +1454,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(BErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (BindsAdded) {
-      BOS.flush();
       const char *Q = BindsNameBuffer.c_str();
       for (unsigned K = 0; K < BindsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1516,7 +1512,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(LErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (LazysAdded) {
-      LOS.flush();
       const char *Q = LazysNameBuffer.c_str();
       for (unsigned K = 0; K < LazysAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1584,7 +1579,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(WErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (WeaksAdded) {
-      WOS.flush();
       const char *Q = WeaksNameBuffer.c_str();
       for (unsigned K = 0; K < WeaksAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1675,7 +1669,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       }
     }
     if (FunctionStartsAdded) {
-      FOS.flush();
       const char *Q = FunctionStartsNameBuffer.c_str();
       for (unsigned K = 0; K < FunctionStartsAdded; K++) {
         SymbolList[I].Name = Q;

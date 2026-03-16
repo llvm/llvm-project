@@ -17,6 +17,7 @@
 #include "MCTargetDesc/NVPTXMCAsmInfo.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
 #include "NVPTX.h"
+#include "NVPTXDwarfDebug.h"
 #include "NVPTXMCExpr.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXRegisterInfo.h"
@@ -258,8 +259,8 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   };
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
-    const Align RetAlignment = TLI->getFunctionArgumentAlignment(
-        F, Ty, AttributeList::ReturnIndex, DL);
+    const Align RetAlignment =
+        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -442,14 +443,14 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
         O << ".explicitcluster\n";
 
       if (ClusterDim[0] != 0) {
-        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
+        assert(llvm::all_of(ClusterDim, not_equal_to(0)) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
                "should be non-zero as well");
 
         O << formatv(".reqnctapercluster {0:$[, ]}\n",
                      make_range(ClusterDim.begin(), ClusterDim.end()));
       } else {
-        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D == 0; }) &&
+        assert(llvm::all_of(ClusterDim, equal_to(0)) &&
                "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
                "should be 0 as well");
       }
@@ -674,6 +675,11 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // Emit header before any dwarf directives are emitted below.
   emitHeader(M, OS1, *STI);
   OutStreamer->emitRawText(OS1.str());
+}
+
+/// Create NVPTX-specific DwarfDebug handler.
+DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
+  return new NVPTXDwarfDebug(this);
 }
 
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
@@ -1354,12 +1360,12 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    auto GetOptimalAlignForParam = [TLI, &DL, F, &Arg](Type *Ty) -> Align {
+    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
       if (MaybeAlign StackAlign =
               getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
         return StackAlign.value();
 
-      Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
+      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign =
           Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
       return std::max(TypeAlign, ParamAlign.valueOrOne());
@@ -1376,7 +1382,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // size = typeallocsize of element type
       const Align OptimalAlign =
           IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : TLI->getFunctionByValParamAlign(
+                       : getFunctionByValParamAlign(
                              F, ETy, Arg.getParamAlign().valueOrOne(), DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym

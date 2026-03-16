@@ -13,6 +13,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
+#include "mlir/IR/Builders.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
@@ -232,6 +233,29 @@ public:
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
     switch (e->getCastKind()) {
+    case CK_LValueToRValueBitCast: {
+      if (dest.isIgnored()) {
+        cgf.emitAnyExpr(e->getSubExpr(), AggValueSlot::ignored(),
+                        /*ignoreResult=*/true);
+        break;
+      }
+
+      LValue sourceLV = cgf.emitLValue(e->getSubExpr());
+      Address sourceAddress =
+          sourceLV.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+      Address destAddress =
+          dest.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+      mlir::Value sizeVal = cgf.getBuilder().getConstInt(
+          loc, cgf.sizeTy,
+          cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
+      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
+                                    sourceAddress.getPointer(), sizeVal);
+
+      break;
+    }
     case CK_LValueToRValue:
       // If we're loading from a volatile type, force the destination
       // into existence.
@@ -354,17 +378,62 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
   }
+
+  /// Emit the initializer for a std::initializer_list initialized with a
+  /// real initializer list.
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXStdInitializerListExpr");
+    ASTContext &ctx = cgf.getContext();
+    CIRGenBuilderTy builder = cgf.getBuilder();
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+    LValue array = cgf.emitLValue(e->getSubExpr());
+    assert(array.isSimple() && "initializer_list array not a simple lvalue");
+    Address arrayPtr = array.getAddress();
+
+    const ConstantArrayType *arrayType =
+        ctx.getAsConstantArrayType(e->getSubExpr()->getType());
+    assert(arrayType && "std::initializer_list constructed from non-array");
+
+    auto *record = e->getType()->castAsRecordDecl();
+    RecordDecl::field_iterator field = record->field_begin();
+    assert(field != record->field_end() &&
+           ctx.hasSameType(field->getType()->getPointeeType(),
+                           arrayType->getElementType()) &&
+           "Expected std::initializer_list first field to be const E *");
+
+    // Start pointer.
+    AggValueSlot dest = ensureSlot(loc, e->getType());
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    LValue start =
+        cgf.emitLValueForFieldInitialization(destLV, *field, field->getName());
+
+    mlir::Value arrayStart = arrayPtr.emitRawPointer();
+    cgf.emitStoreThroughLValue(RValue::get(arrayStart), start);
+    ++field;
+    assert(field != record->field_end() &&
+           "Expected std::initializer_list to have two fields");
+
+    cir::ConstantOp size = builder.getConstInt(loc, arrayType->getSize());
+    LValue endOrLength =
+        cgf.emitLValueForFieldInitialization(destLV, *field, field->getName());
+    if (ctx.hasSameType(field->getType(), ctx.getSizeType())) {
+      // Length.
+      cgf.emitStoreThroughLValue(RValue::get(size), endOrLength);
+    } else {
+      cgf.cgm.errorNYI(
+          "Aggregate VisitCXXStdInitializerListExpr: field type != sizeTy");
+      return;
+    }
+
+    assert(++field == record->field_end() &&
+           "Expected std::initializer_list to only have two fields");
   }
+
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXScalarValueInitExpr");
   }
-  void VisitCXXTypeidExpr(CXXTypeidExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXTypeidExpr");
-  }
+  void VisitCXXTypeidExpr(CXXTypeidExpr *e) { emitAggLoadOfLValue(e); }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
     Visit(e->getSubExpr());
   }
@@ -761,7 +830,28 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
   CIRGenFunction::RunCleanupsScope cleanups(cgf);
-  Visit(e->getSubExpr());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
+  mlir::OpBuilder::InsertPoint scopeBegin;
+
+  // Explicitly introduce a scope for cleanup expressions, even though this
+  // overlaps with the RunCleanupsScope above.
+  //
+  // CIR does not yet model cleanup scopes explicitly, so a lexical scope is
+  // used as a temporary approximation. This is expected to be revisited once
+  // cleanup handling is redesigned.
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         scopeBegin = b.saveInsertionPoint();
+                       });
+
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(scopeBegin);
+    CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
+                                          builder.getInsertionBlock()};
+    Visit(e->getSubExpr());
+  }
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {

@@ -56,6 +56,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
       .Case("call-indirect-overlong", HasCallIndirectOverlong)
+      .Case("compact-imports", HasCompactImports)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
@@ -65,6 +66,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mutable-globals", HasMutableGlobals)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("reference-types", HasReferenceTypes)
+      .Case("relaxed-atomics", HasRelaxedAtomics)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
@@ -109,6 +111,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
+  if (HasRelaxedAtomics)
+    Builder.defineMacro("__wasm_relaxed_atomics__");
   if (SIMDLevel >= RelaxedSIMD)
     Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasSignExt)
@@ -119,6 +123,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  // Note that not all wasm features appear here.   For example,
+  // HasCompatctImports
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -191,11 +197,13 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
+    Features["compact-imports"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
     Features["gc"] = true;
     Features["multimemory"] = true;
+    Features["relaxed-atomics"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
@@ -245,6 +253,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-call-indirect-overlong") {
       HasCallIndirectOverlong = false;
+      continue;
+    }
+    if (Feature == "+compact-imports") {
+      HasCompactImports = true;
+      continue;
+    }
+    if (Feature == "-compact-imports") {
+      HasCompactImports = false;
       continue;
     }
     if (Feature == "+exception-handling") {
@@ -318,6 +334,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-reference-types") {
       HasReferenceTypes = false;
+      continue;
+    }
+    if (Feature == "+relaxed-atomics") {
+      HasRelaxedAtomics = true;
+      continue;
+    }
+    if (Feature == "-relaxed-atomics") {
+      HasRelaxedAtomics = false;
       continue;
     }
     if (Feature == "+relaxed-simd") {

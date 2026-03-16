@@ -515,13 +515,6 @@ requires 8 test vectors.
 Expressions such as ``((a0 && b0) || (a1 && b1) || ...)`` can cause the
 number of test vectors to increase exponentially.
 
-Also, if a boolean expression is embedded in the nest of another boolean
-expression but separated by a non-logical operator, this is also not supported.
-For example, in ``x = (a && b && c && func(d && f))``, the ``d && f`` case
-starts a new boolean expression that is separated from the other conditions by
-the operator ``func()``.  When this is encountered, a warning will be generated
-and the boolean expression will not be instrumented.
-
 Switch statements
 -----------------
 
