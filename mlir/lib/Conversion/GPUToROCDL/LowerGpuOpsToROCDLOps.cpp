@@ -106,18 +106,23 @@ static Value getLaneId(RewriterBase &rewriter, Location loc) {
 static constexpr int64_t kMaxThreadsPerBlockDim = 1024;
 
 /// Emits a call to an OCKL block/grid size function corresponding to
-/// `indexKind` with argument `dim`, querying for upper bounds in the context
-/// surrounding `contextOp` as a fallback for an unknown/unavailable
-/// `opUpperBound`.
-static Value getOcklDim(RewriterBase &rewriter,
-                        gpu::index_lowering::IndexKind indexKind,
-                        gpu::Dimension dim, Operation *contextOp,
-                        std::optional<uint32_t> opUpperBound) {
+/// `indexKind` with argument `dim`, except that if the context around
+/// `contextOp` gives an exact size for that dimension, return that as
+/// an `i64` constant instead.
+static Value getKnownOrOcklDim(RewriterBase &rewriter,
+                               gpu::index_lowering::IndexKind indexKind,
+                               gpu::Dimension dim, Operation *contextOp,
+                               std::optional<uint32_t> opUpperBound) {
   Location loc = contextOp->getLoc();
   MLIRContext *context = contextOp->getContext();
 
   auto i32Ty = IntegerType::get(context, 32);
   auto i64Ty = IntegerType::get(context, 64);
+
+  if (std::optional<uint32_t> knownDim =
+          gpu::getKnownDimensionSizeAround(contextOp, indexKind, dim))
+    return LLVM::ConstantOp::create(rewriter, loc,
+                                    rewriter.getI64IntegerAttr(*knownDim));
 
   int32_t dimParam = static_cast<int32_t>(dim);
 
@@ -145,14 +150,16 @@ static Value getOcklDim(RewriterBase &rewriter,
   auto callOp =
       LLVM::CallOp::create(rewriter, loc, funcOp, ValueRange{dimConst});
 
-  // Set range attribute on the call result if bounds are available.
-  auto range = gpu::index_lowering::getIndexOpRange(
-      contextOp, dim, opUpperBound, indexKind,
-      gpu::index_lowering::IntrType::Dim, /*bitWidth=*/64);
-  // Fall back to the hardware limit for block dimensions.
-  if (!range && indexKind == gpu::index_lowering::IndexKind::Block)
+  LLVM::ConstantRangeAttr range;
+  if (opUpperBound) {
+    range = LLVM::ConstantRangeAttr::get(
+        context, APInt(64, 1),
+        APInt(64, static_cast<uint64_t>(*opUpperBound) + 1));
+  } else if (indexKind == gpu::index_lowering::IndexKind::Block) {
+    // Set the hardware limit for block ranges as the bounds on block dim calls.
     range = LLVM::ConstantRangeAttr::get(context, APInt(64, 1),
                                          APInt(64, kMaxThreadsPerBlockDim + 1));
+  }
   if (range) {
     callOp.setResAttrsAttr(rewriter.getArrayAttr(rewriter.getDictionaryAttr(
         rewriter.getNamedAttr(LLVM::LLVMDialect::getRangeAttrName(), range))));
@@ -186,8 +193,8 @@ struct GPUDimOpToOcklCall final : ConvertOpToLLVMPattern<OpTy> {
     if (auto bound = op.getUpperBound())
       opUpperBound = static_cast<uint32_t>(bound->getZExtValue());
 
-    Value ocklCall =
-        getOcklDim(rewriter, indexKind, op.getDimension(), op, opUpperBound);
+    Value ocklCall = getKnownOrOcklDim(rewriter, indexKind, op.getDimension(),
+                                       op, opUpperBound);
     Value result = truncOrExtToLLVMType(rewriter, loc, ocklCall,
                                         *this->getTypeConverter());
     rewriter.replaceOp(op, result);
@@ -305,8 +312,8 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
 
       auto getBlockDim = [&](gpu::Dimension dim) {
         Value dim64 =
-            getOcklDim(rewriter, gpu::index_lowering::IndexKind::Block, dim, op,
-                       std::nullopt);
+            getKnownOrOcklDim(rewriter, gpu::index_lowering::IndexKind::Block,
+                              dim, op, std::nullopt);
         Value dimTrunc =
             LLVM::TruncOp::create(rewriter, loc, int32Type, dim64, flags);
         return dimTrunc;

@@ -50,12 +50,9 @@ func.func @subgroup_id_with_workgroup_sizes() -> index
   // GFX9-DAG: %[[IDX:.+]] = rocdl.workitem.id.x range <i32, 0, 64> : i32
   // GFX9-DAG: %[[IDY:.+]] = rocdl.workitem.id.y range <i32, 0, 4> : i32
   // GFX9-DAG: %[[IDZ:.+]] = rocdl.workitem.id.z range <i32, 0, 1> : i32
-  // GFX9-DAG: %[[DIMX_I64:.+]] = llvm.call @__ockl_get_local_size(%[[C0:.+]]) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 65>})
-  // Yes, this is checking after the call that uses it. This prevents collisions with other 0s.
-  // GFX9-DAG: %[[C0]] = llvm.mlir.constant(0 : i32) : i32
+  // GFX9-DAG: %[[DIMX_I64:.+]] = llvm.mlir.constant(64 : i64) : i64
   // GFX9-DAG: %[[DIMX:.+]] = llvm.trunc %[[DIMX_I64]] overflow<nsw, nuw> : i64 to i32
-  // GFX9-DAG: %[[DIMY_I64:.+]] = llvm.call @__ockl_get_local_size(%[[C1:.+]]) : (i32) -> (i64 {llvm.range = #llvm.constant_range<i64, 1, 5>})
-  // GFX9-DAG: %[[C1]] = llvm.mlir.constant(1 : i32) : i32
+  // GFX9-DAG: %[[DIMY_I64:.+]] = llvm.mlir.constant(4 : i64) : i64
   // GFX9-DAG: %[[DIMY:.+]] = llvm.trunc %[[DIMY_I64]] overflow<nsw, nuw> : i64 to i32
   // GFX9: %[[Z_DY:.+]] = llvm.mul %[[DIMY]], %[[IDZ]] overflow<nsw, nuw>
   // GFX9: %[[ZY:.+]] = llvm.add %[[IDY]], %[[Z_DY]] overflow<nsw, nuw>
