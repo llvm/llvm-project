@@ -511,7 +511,8 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
     return IsOneAs ? "wavefront-one-as" : "wavefront";
   case SyncScope::HIPCluster:
   case SyncScope::ClusterScope:
-    return IsOneAs ? "cluster-one-as" : "cluster";
+    assert(!IsOneAs && "OpenCL does not have cluster scope");
+    return "cluster";
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:

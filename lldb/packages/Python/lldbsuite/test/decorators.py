@@ -172,12 +172,28 @@ def skipTestIfFn(expected_fn, bugnumber=None):
         return skipTestIfFn_impl
 
 
-def _xfailForDebugInfo(expected_fn, bugnumber=None):
+def _xfailForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as expected-failure for a specific variant dimension.
+
+    Adds *expected_fn* to the decorated function's `__variant_xfail__`
+    dictionary under the key *variant_name*.  When the `LLDBTestCaseFactory`
+    metaclass expands the test method, it looks up *variant_name* in this
+    dictionary and calls the corresponding function with the concrete variant
+    value.  If the function returns a reason string, the expanded test method
+    is marked as expected failure via `unittest.expectedFailure`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__xfail_for_debug_info_cat_fn__ = expected_fn
+        xfail_dict = getattr(func, "__variant_xfail__", {})
+        xfail_dict[variant_name] = expected_fn
+        func.__variant_xfail__ = xfail_dict
         return func
 
     if callable(bugnumber):
@@ -186,12 +202,28 @@ def _xfailForDebugInfo(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
-def _skipForDebugInfo(expected_fn, bugnumber=None):
+def _skipForVariant(variant_name, expected_fn, bugnumber=None):
+    """Mark a test method as skipped for a specific variant dimension.
+
+    Adds *expected_fn* to the decorated function's `__variant_skip__`
+    dictionary under the key *variant_name*.  When the `LLDBTestCaseFactory`
+    metaclass expands the test method, it looks up *variant_name* in this
+    dictionary and calls the corresponding function with the concrete variant
+    value.  If the function returns a reason string, the expanded test method
+    is skipped via `unittest.skip(reason)`.
+
+    Args:
+        variant_name: The variant dimension name (e.g. `"debug_info"`).
+        expected_fn: Callable `(**{variant_name: value}) -> reason | None`.
+        bugnumber: Optional bug reference or the decorated function itself
+            (when the decorator is used without parentheses).
+    """
     def skipImpl(func):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
-
-        func.__skip_for_debug_info_cat_fn__ = expected_fn
+        skip_dict = getattr(func, "__variant_skip__", {})
+        skip_dict[variant_name] = expected_fn
+        func.__variant_skip__ = skip_dict
         return func
 
     if callable(bugnumber):
@@ -218,7 +250,7 @@ def _decorateTest(
     setting=None,
     asan=None,
 ):
-    def fn(actual_debug_info=None):
+    def fn(**actual_variants):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), lldbplatformutil.getPlatform()
         )
@@ -231,7 +263,9 @@ def _decorateTest(
         skip_for_arch = _match_decorator_property(
             archs, lldbplatformutil.getArchitecture()
         )
-        skip_for_debug_info = _match_decorator_property(debug_info, actual_debug_info)
+        skip_for_debug_info = _match_decorator_property(
+            debug_info, actual_variants.get("debug_info")
+        )
         skip_for_triple = _match_decorator_property(
             triple, lldb.selected_platform.GetTriple()
         )
@@ -311,11 +345,11 @@ def _decorateTest(
 
     if mode == DecorateMode.Skip:
         if debug_info:
-            return _skipForDebugInfo(fn, bugnumber)
+            return _skipForVariant("debug_info", fn, bugnumber)
         return skipTestIfFn(fn, bugnumber)
     elif mode == DecorateMode.Xfail:
         if debug_info:
-            return _xfailForDebugInfo(fn, bugnumber)
+            return _xfailForVariant("debug_info", fn, bugnumber)
         return expectedFailureIf(fn(), bugnumber)
     else:
         return None
@@ -1027,6 +1061,22 @@ def skipUnlessCompilerIsClang(func):
     return skipTestIfFn(is_compiler_clang)(func)
 
 
+def skipUnlessMSVC(func):
+    """Decorate the item to skip test unless msvc is available."""
+
+    def is_msvc_in_path():
+        result = subprocess.run(
+            ["cl.exe"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return f"Test requires MSVC to be in the Path."
+        return None
+
+    return skipTestIfFn(is_msvc_in_path)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -1093,6 +1143,17 @@ def is_running_under_asan():
     if "ASAN_OPTIONS" in os.environ:
         return "ASAN unsupported"
     return None
+
+
+def is_running_under_mte():
+    if configuration.mte_enabled:
+        return "MTE unsupported"
+    return None
+
+
+def skipIfMTE(func):
+    """Skip this test when running with MTE (Memory Tagging Extension) enabled."""
+    return skipTestIfFn(is_running_under_mte)(func)
 
 
 def skipUnlessAddressSanitizer(func):

@@ -2322,6 +2322,14 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   unsigned ResElts = cast<llvm::FixedVectorType>(VType)->getNumElements();
 
+  // For column-major matrix types, we insert elements directly at their
+  // column-major positions rather than inserting sequentially and shuffling.
+  const ConstantMatrixType *ColMajorMT = nullptr;
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
+      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+    ColMajorMT = MT;
+
   // Loop over initializers collecting the Value for each, and remembering
   // whether the source was swizzle (ExtVectorElementExpr).  This will allow
   // us to fold the shuffle for the swizzle into the shuffle for the vector
@@ -2376,7 +2384,11 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
           }
         }
       }
-      V = Builder.CreateInsertElement(V, Init, Builder.getInt32(CurIdx),
+      unsigned InsertIdx =
+          ColMajorMT
+              ? ColMajorMT->mapRowMajorToColumnMajorFlattenedIndex(CurIdx)
+              : CurIdx;
+      V = Builder.CreateInsertElement(V, Init, Builder.getInt32(InsertIdx),
                                       "vecinit");
       VIsPoisonShuffle = false;
       ++CurIdx;
@@ -2446,22 +2458,12 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   // Emit remaining default initializers
   for (/* Do not initialize i*/; CurIdx < ResElts; ++CurIdx) {
-    Value *Idx = Builder.getInt32(CurIdx);
+    unsigned InsertIdx =
+        ColMajorMT ? ColMajorMT->mapRowMajorToColumnMajorFlattenedIndex(CurIdx)
+                   : CurIdx;
+    Value *Idx = Builder.getInt32(InsertIdx);
     llvm::Value *Init = llvm::Constant::getNullValue(EltTy);
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
-  }
-
-  // Matrix initializer lists are in row-major order but the memory layout for
-  // codegen is determined by the -fmatrix-memory-layout flag (default:
-  // column-major). When the memory layout is column-major, we need to shuffle
-  // the elements from row-major to column-major order.
-  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                LangOptions::MatrixMemoryLayout::MatrixColMajor) {
-    SmallVector<int, 16> Mask;
-    for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I)
-      Mask.push_back(MT->mapColumnMajorToRowMajorFlattenedIndex(I));
-    V = Builder.CreateShuffleVector(V, Mask, "matrix.rowmajor2colmajor");
   }
 
   return V;
@@ -2539,7 +2541,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
                                       QualType DestTy, SourceLocation Loc) {
   SmallVector<LValue, 16> LoadList;
   CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
-  // Dest is either a vector or a builtin?
+  // Dest is either a vector, constant matrix, or a builtin
   // if its a vector create a temp alloca to store into and return that
   if (auto *VecTy = DestTy->getAs<VectorType>()) {
     assert(LoadList.size() >= VecTy->getNumElements() &&
@@ -2564,20 +2566,26 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
+    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
-    // V is an allocated temporary to build the truncated matrix into.
-    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
-      unsigned ColMajorIndex =
-          (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
-          (I / MatTy->getNumRows());
-      RValue RVal = CGF.EmitLoadOfLValue(LoadList[ColMajorIndex], Loc);
-      assert(RVal.isScalar() &&
-             "All flattened source values should be scalars.");
-      llvm::Value *Cast = CGF.EmitScalarConversion(
-          RVal.getScalarVal(), LoadList[ColMajorIndex].getType(),
-          MatTy->getElementType(), Loc);
-      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    // V is an allocated temporary for constructing the matrix.
+    for (unsigned Row = 0, RE = MatTy->getNumRows(); Row < RE; Row++) {
+      for (unsigned Col = 0, CE = MatTy->getNumColumns(); Col < CE; Col++) {
+        // When interpreted as a matrix, \p LoadList is *always* row-major order
+        // regardless of the default matrix memory layout.
+        unsigned LoadIdx = MatTy->getRowMajorFlattenedIndex(Row, Col);
+        RValue RVal = CGF.EmitLoadOfLValue(LoadList[LoadIdx], Loc);
+        assert(RVal.isScalar() &&
+               "All flattened source values should be scalars.");
+        llvm::Value *Cast = CGF.EmitScalarConversion(
+            RVal.getScalarVal(), LoadList[LoadIdx].getType(),
+            MatTy->getElementType(), Loc);
+        unsigned MatrixIdx = MatTy->getFlattenedIndex(Row, Col, IsRowMajor);
+        V = CGF.Builder.CreateInsertElement(V, Cast, MatrixIdx);
+      }
     }
     return V;
   }
@@ -2651,6 +2659,22 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // expects. It is desirable to remove this iff a better solution is found.
     if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
       return CGF.performAddrSpaceCast(Src, DstTy);
+
+    // FIXME: Similarly to the sret case above, we need to handle BitCasts that
+    // involve implicit address space conversions. This arises when the source
+    // language lacks explicit address spaces, but the target's data layout
+    // assigns different address spaces (e.g., program address space for
+    // function pointers). Since Sema operates on Clang types (which don't carry
+    // this information) and selects CK_BitCast, we must detect the address
+    // space mismatch here in CodeGen when lowering to LLVM types. The most
+    // common case is casting function pointers (which get the program AS from
+    // the data layout) to/from object pointers (which use the default AS).
+    // Ideally, this would be resolved at a higher level, but that would require
+    // exposing data layout details to Sema.
+    if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isPtrOrPtrVectorTy() &&
+        SrcTy->getPointerAddressSpace() != DstTy->getPointerAddressSpace()) {
+      return CGF.performAddrSpaceCast(Src, DstTy);
+    }
 
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
@@ -4187,7 +4211,9 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
   if (CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow) &&
       Ops.Ty->hasSignedIntegerRepresentation() &&
       !IsWidenedIntegerOp(CGF.getContext(), BO->getLHS()) &&
-      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType()) {
+      Ops.mayHaveIntegerOverflow() && !Ops.Ty.isWrapType() &&
+      !CGF.getContext().isTypeIgnoredBySanitizer(
+          SanitizerKind::SignedIntegerOverflow, Ops.Ty)) {
     llvm::IntegerType *Ty = cast<llvm::IntegerType>(Zero->getType());
 
     llvm::Value *IntMin =
