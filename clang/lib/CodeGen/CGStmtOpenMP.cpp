@@ -790,7 +790,7 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
 
       LocalAddrs.insert({FD, {Var, CopyAddr}});
     } else {
-      assert(C.capturesThis());
+      assert(C.capturesThis() && "Default case expected to be CXX 'this'");
       CXXThisValue =
           CGF.Builder.CreateAlignedLoad(PtrTy, Slot, PtrAlign, "this");
       Address SlotAddr(Slot, PtrTy, SlotAlign);
