@@ -8260,10 +8260,10 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         // if the ChunkWidth (I) plus the Potential Carry Bits is less than the
         // Register Width, we have enough "slack" at the top of the
         // register to let the carries pile up safely.
-	// Adding NumChunks I-bit values can produce at most
-	//   ceil(log2(NumChunks)) carry bits.
-	// Therefore the total number of bits required for the sum is:
-	//   I + ceil(log2(NumChunks)) <= LegalWidth
+        // Adding NumChunks I-bit values can produce at most
+        //   ceil(log2(NumChunks)) carry bits.
+        // Therefore the total number of bits required for the sum is:
+        //   I + ceil(log2(NumChunks)) <= LegalWidth
         if (I + llvm::bit_width(NumChunks - 1) <= LegalWidth) {
           BestChunkWidth = I;
           break;
