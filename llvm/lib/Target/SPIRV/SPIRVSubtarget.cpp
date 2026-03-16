@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "SPIRVSubtarget.h"
 
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVCommandLine.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
-#include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 
 #include "llvm/TargetParser/Host.h"
