@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zcmp -verify-machineinstrs < %s | FileCheck %s --check-prefix=ZCMP
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+xqccmp -verify-machineinstrs < %s | FileCheck %s --check-prefix=XQCCMP
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zcmp,+experimental-p -verify-machineinstrs < %s | FileCheck %s --check-prefix=ZCMP-P
+; RUN: llc -mtriple=riscv64 -mattr=+m,+zcmp,+experimental-p -verify-machineinstrs < %s | FileCheck %s --check-prefix=ZCMP-P64
 
 ; This source code exposed a crash in the RISC-V Zcmp move merging pass.
 ; The root cause was: mergeGPRPairInsns being called on targets without
@@ -49,6 +50,20 @@ define void @test(i32 %arg0, i32 %arg1) nounwind {
 ; ZCMP-P-NEXT:    #NO_APP
 ; ZCMP-P-NEXT:    padd.dw a0, a4, zero
 ; ZCMP-P-NEXT:    tail foo
+;
+; ZCMP-P64-LABEL: test:
+; ZCMP-P64:       # %bb.0: # %entry
+; ZCMP-P64-NEXT:    #APP
+; ZCMP-P64-NEXT:    csrr a4, 66
+; ZCMP-P64-NEXT:    #NO_APP
+; ZCMP-P64-NEXT:    #APP
+; ZCMP-P64-NEXT:    csrr a5, 67
+; ZCMP-P64-NEXT:    #NO_APP
+; ZCMP-P64-NEXT:    #APP
+; ZCMP-P64-NEXT:    #NO_APP
+; ZCMP-P64-NEXT:    mv a0, a4
+; ZCMP-P64-NEXT:    mv a1, a5
+; ZCMP-P64-NEXT:    tail foo
 entry:
   %0 = tail call i32 asm sideeffect "csrr $0, 0x42", "=r"()
   %1 = tail call i32 asm sideeffect "csrr $0, 0x43", "=r"()
