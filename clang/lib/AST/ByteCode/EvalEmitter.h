@@ -92,10 +92,6 @@ protected:
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, ParamOffset> Params;
-  /// Lambda captures.
-  llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
-  /// Offset of the This parameter in a lambda record.
-  ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;

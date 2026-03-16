@@ -6145,11 +6145,17 @@ let Predicates = [HasAVX512, NoVLX] in {
                 (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
                  timm:$src2)), sub_ymm)>;
 
+  def : Pat<(v4i64 (X86vsrai (v4i64 (X86VBroadcastld64 addr:$src1)), (i8 timm:$src2))),
+            (EXTRACT_SUBREG (v8i64 (VPSRAQZmbi addr:$src1, timm:$src2)), sub_ymm)>;
+
   def : Pat<(v2i64 (X86vsrai (v2i64 VR128X:$src1), (i8 timm:$src2))),
             (EXTRACT_SUBREG (v8i64
               (VPSRAQZri
                 (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
                  timm:$src2)), sub_xmm)>;
+
+  def : Pat<(v2i64 (X86vsrai (v2i64 (X86VBroadcastld64 addr:$src1)), (i8 timm:$src2))),
+            (EXTRACT_SUBREG (v8i64 (VPSRAQZmbi addr:$src1, timm:$src2)), sub_xmm)>;
 }
 
 //===-------------------------------------------------------------------===//

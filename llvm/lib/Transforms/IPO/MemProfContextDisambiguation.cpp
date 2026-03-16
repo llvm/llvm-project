@@ -1057,7 +1057,7 @@ public:
     for (auto &I : FunctionCalleesToSynthesizedCallsiteInfos) {
       auto *FS = I.first;
       for (auto &Callsite : I.second)
-        FS->addCallsite(*Callsite.second);
+        FS->addCallsite(std::move(*Callsite.second));
     }
   }
 

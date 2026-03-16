@@ -173,12 +173,12 @@ def DenseArrayAttr : DialectAttribute<(attr
 )>;
 
 def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
-def DenseIntOrFPElementsAttr : DialectAttribute<(attr
+def DenseTypedElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
   WithBuilder<"$_args",
     WithType<"SmallVector<char>",
-    WithParser<"succeeded(readDenseIntOrFPElementsAttr($_reader, type, $_var))",
-    WithPrinter<"writeDenseIntOrFPElementsAttr($_writer, $_name)">>>>:$rawData
+    WithParser<"succeeded(readDenseTypedElementsAttr($_reader, type, $_var))",
+    WithPrinter<"writeDenseTypedElementsAttr($_writer, $_name)">>>>:$rawData
 )>;
 
 def DenseStringElementsAttr : DialectAttribute<(attr
@@ -334,7 +334,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     UnknownLoc,
     DenseResourceElementsAttr,
     DenseArrayAttr,
-    DenseIntOrFPElementsAttr,
+    DenseTypedElementsAttr,
     DenseStringElementsAttr,
     SparseElementsAttr,
     DistinctAttr,

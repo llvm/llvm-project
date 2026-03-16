@@ -17,6 +17,7 @@ lldb_framework_dir = "@LLDB_FRAMEWORK_DIR_CONFIGURED@"
 lldb_libs_dir = "@LLDB_LIBS_DIR_CONFIGURED@"
 llvm_tools_dir = "@LLVM_TOOLS_DIR_CONFIGURED@"
 lldb_obj_root = "@LLDB_BINARY_DIR@"
+lldb_launcher = "@LLDB_LAUNCHER_CONFIGURED@"
 has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
@@ -55,6 +56,8 @@ if __name__ == '__main__':
     cmd.extend(['--lldb-obj-root', lldb_obj_root])
     cmd.extend(['--cmake-build-type', cmake_build_type])
     cmd.extend(wrapper_args)
+    if lldb_launcher:
+        cmd = [lldb_launcher] + cmd
     # Invoke dotest.py and return exit code.
     print(' '.join(cmd))
     sys.exit(subprocess.call(cmd))
