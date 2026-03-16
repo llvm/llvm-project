@@ -519,7 +519,7 @@ runTypeErasedDataflowAnalysis(
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
   const clang::CFG &CFG = ACFG.getCFG();
-  if (CFG.size() > MaxBlockVisits) {
+  if (CFG.size() > static_cast<size_t>(MaxBlockVisits)) {
     if (CFG.size() > NumBlockVisitsIfVisitEachReachableOnce(CFG)) {
       return llvm::createStringError(
           std::errc::timed_out, "number of blocks in cfg will lead to "
