@@ -4125,7 +4125,7 @@ subnormals are assumed to be preserved.
 The compilation mode is defined for an entire function and is specified by
 ``strictfp`` attribute. If this attribute is set, compilation occurs in strict
 mode. The value of the floating-point environment is specified by function
-attributes (such as :ref:`denormal_fpenv <denormal_fpenv>) and can be modified
+attributes (such as :ref:`denormal_fpenv <denormal_fpenv>`) and can be modified
 either by intrinsic functions like ``llvm.set_rounding`` or external functions
 like ``fesetround``.
 
