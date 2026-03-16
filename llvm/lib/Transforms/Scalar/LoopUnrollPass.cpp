@@ -1046,7 +1046,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
       UP.AllowExpensiveTripCount = true;
       UP.Force = true;
     }
-    UP.Runtime |= (PInfo.PragmaCount > 0);
     return;
   } else {
     if (PInfo.ExplicitUnroll && TripCount != 0) {
