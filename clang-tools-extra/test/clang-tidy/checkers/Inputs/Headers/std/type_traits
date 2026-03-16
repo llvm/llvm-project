@@ -1,4 +1,4 @@
-#include "cstddef.h"
+#include "cstddef"
 
 namespace std {
 
@@ -95,6 +95,20 @@ template <class T>
 using remove_cv_t = typename remove_cv<T>::type;
 
 template <class T>
+struct remove_const { using type = T; };
+template <class T>
+struct remove_const<const T> { using type = T; };
+template <class T>
+using remove_const_t = typename remove_const<T>::type;
+
+template <class T>
+struct add_cv { typedef const volatile T type; };
+template <class T>
+struct add_const { typedef const T type; };
+template <class T>
+struct add_volatile { typedef volatile T type; };
+
+template <class T>
 struct decay {
  private:
   typedef typename remove_reference<T>::type U;
@@ -122,6 +136,9 @@ struct is_same : false_type {};
 
 template <class T>
 struct is_same<T, T> : true_type {};
+
+template <class T, class U>
+inline constexpr bool is_same_v = is_same<T, U>::value;
 
 template <class T>
 struct is_void : is_same<void, typename remove_cv<T>::type> {};
@@ -193,6 +210,13 @@ using is_constructible = is_constructible_<void_t<>, T, Args...>;
 
 template <class T, class... Args>
 inline constexpr bool is_constructible_v = is_constructible<T, Args...>::value;
+
+template <class T>
+struct remove_cvref {
+  using type = remove_cv_t<remove_reference_t<T>>;
+};
+template <class T>
+using remove_cvref_t = typename remove_cvref<T>::type;
 
 template <class _Tp>
 struct __uncvref {
