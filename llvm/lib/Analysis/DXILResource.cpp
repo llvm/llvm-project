@@ -692,7 +692,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
   MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
   MDVals.push_back(getIntMD(Binding.LowerBound));
-  MDVals.push_back(getIntMD(Binding.Size));
+  MDVals.push_back(getIntMD(Binding.Size == 0 ? ~0u : Binding.Size));
 
   if (RTI.isCBuffer()) {
     MDVals.push_back(getIntMD(RTI.getCBufferSize(DL)));
@@ -1071,14 +1071,12 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
           Value *Name = CI->getArgOperand(4);
 
-          // UINT32_MAX (~0U) size means unbounded resource array;
+          // 0 size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
-          assert((Size == UINT32_MAX ||
-                  (uint64_t)LowerBound + (uint64_t)Size - 1ULL <=
-                      (uint64_t)UINT32_MAX) &&
+          assert((Size == 0 || (uint64_t)LowerBound + (uint64_t)Size - 1ULL <=
+                                   (uint64_t)UINT32_MAX) &&
                  "upper bound register overflow");
-          uint32_t UpperBound =
-              Size == UINT32_MAX ? UINT32_MAX : LowerBound + Size - 1;
+          uint32_t UpperBound = Size == 0 ? UINT32_MAX : LowerBound + Size - 1;
           Builder.trackBinding(RTI.getResourceClass(), Space, LowerBound,
                                UpperBound, Name);
         }
