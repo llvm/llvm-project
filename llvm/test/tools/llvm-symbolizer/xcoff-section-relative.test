@@ -57,6 +57,8 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
+  # .bar csect (XTY_SD): second function in its own csect.
   - Name:            .bar
     Value:           0x104
     Section:         .text
@@ -66,6 +68,8 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
+  # .my_const csect (XTY_SD, XMC_PR): read-only constant in TEXT section.
   - Name:            .my_const
     Value:           0x108
     Section:         .text
@@ -74,7 +78,9 @@ Symbols:
     AuxEntries:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
-        StorageMappingClass:  XMC_RO
+        StorageMappingClass:  XMC_PR
+        SectionOrLength:      4
+  # global_var csect at DATA+0x4 (non-zero offset to show DATA offsets work).
   - Name:            global_var
     Value:           0x204
     Section:         .data
@@ -84,3 +90,4 @@ Symbols:
       - Type:                 AUX_CSECT
         SymbolType:           XTY_SD
         StorageMappingClass:  XMC_RW
+        SectionOrLength:      4

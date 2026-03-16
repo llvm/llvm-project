@@ -45,6 +45,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <iostream>
 #include <string>
 
 using namespace llvm;
@@ -160,7 +161,7 @@ static StringRef getSpaceDelimitedWord(StringRef &Source) {
   return Result;
 }
 
-static Error makeStringError(StringRef Msg) {
+static Error makeStringError(const Twine &Msg) {
   return make_error<StringError>(Msg, inconvertibleErrorCode());
 }
 
