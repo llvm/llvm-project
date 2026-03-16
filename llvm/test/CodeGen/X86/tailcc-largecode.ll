@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false | FileCheck %s --check-prefixes=CHECK,JMP
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -mattr=jmpabs | FileCheck %s --check-prefixes=CHECK,JMPABS
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -code-model=large -enable-misched=false -mattr=jmpabs -relocation-model=pic | FileCheck %s --check-prefixes=CHECK,PIC
 
 declare tailcc i32 @callee(i32 %arg)
 define tailcc i32 @directcall(i32 %arg) {
@@ -10,6 +12,9 @@ entry:
 ;  JMP: jmpq    *[[REGISTER]]  # TAILCALL
 ;  JMPABS-NOT: movabsq
 ;  JMPABS:     jmpabs $callee  # TAILCALL
+;  PIC: movabsq $_GLOBAL_OFFSET_TABLE_
+;  PIC: movabsq $callee@GOT
+;  PIC: jmpq    *
   %res = tail call tailcc i32 @callee(i32 %arg)
   ret i32 %res
 }
@@ -51,6 +56,7 @@ define tailcc i32 @direct_manyargs() {
 ; the stack argument and the return adjustment will change too.)
 ;  CHECK: pushq
 ; Pass the stack argument.
+;  PIC: movabsq $_GLOBAL_OFFSET_TABLE
 ;  CHECK: movl $7, 16(%rsp)
 ; This is the large code model, so &manyargs_callee may not fit into
 ; the jmp instruction.  Put it into a register which won't be clobbered
@@ -58,6 +64,7 @@ define tailcc i32 @direct_manyargs() {
 ; arguments.
 ;  JMP: movabsq $manyargs_callee, %rax
 ;  JMPABS-NOT: movabsq
+;  PIC: movabsq $manyargs_callee@GOT
 ; Pass the register arguments, in the right registers.
 ;  CHECK: movl $1, %edi
 ;  CHECK: movl $2, %esi
@@ -70,6 +77,7 @@ define tailcc i32 @direct_manyargs() {
 ; And tail-call to the target.
 ;  JMP: jmpq *%rax  # TAILCALL
 ;  JMPABS: jmpabs $manyargs_callee  # TAILCALL
+;  PIC: jmpq    *
   %res = tail call tailcc i32 @manyargs_callee(i32 1, i32 2, i32 3, i32 4,
                                                i32 5, i32 6, i32 7)
   ret i32 %res
