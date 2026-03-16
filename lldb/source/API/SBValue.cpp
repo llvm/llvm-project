@@ -46,6 +46,7 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include <memory>
 
@@ -803,10 +804,8 @@ lldb::addr_t SBValue::GetValueAsAddress() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    bool success = true;
-    uint64_t ret_val = fail_value;
-    ret_val = value_sp->GetValueAsUnsigned(fail_value, &success);
-    if (!success)
+    auto [ret_val, type] = value_sp->GetPointerValue();
+    if (type != eAddressTypeLoad)
       return fail_value;
     ProcessSP process_sp = m_opaque_sp->GetProcessSP();
     if (!process_sp)

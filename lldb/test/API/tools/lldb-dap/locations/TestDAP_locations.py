@@ -37,7 +37,7 @@ class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertTrue(loc_var1["success"])
         self.assertTrue(loc_var1["body"]["source"]["path"].endswith("main.cpp"))
-        self.assertEqual(loc_var1["body"]["line"], 6)
+        self.assertEqual(loc_var1["body"]["line"], 10)
 
         # func_ptr has both a declaration and a valueLocation
         self.assertIn("declarationLocationReference", locals["func_ptr"].keys())
@@ -49,7 +49,7 @@ class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(
             decl_loc_func_ptr["body"]["source"]["path"].endswith("main.cpp")
         )
-        self.assertEqual(decl_loc_func_ptr["body"]["line"], 7)
+        self.assertEqual(decl_loc_func_ptr["body"]["line"], 11)
         val_loc_func_ptr = self.dap_server.request_locations(
             locals["func_ptr"]["valueLocationReference"]
         )
@@ -67,13 +67,33 @@ class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(
             decl_loc_func_ref["body"]["source"]["path"].endswith("main.cpp")
         )
-        self.assertEqual(decl_loc_func_ref["body"]["line"], 8)
+        self.assertEqual(decl_loc_func_ref["body"]["line"], 12)
         val_loc_func_ref = self.dap_server.request_locations(
             locals["func_ref"]["valueLocationReference"]
         )
         self.assertTrue(val_loc_func_ref["success"])
         self.assertTrue(val_loc_func_ref["body"]["source"]["path"].endswith("main.cpp"))
         self.assertEqual(val_loc_func_ref["body"]["line"], 3)
+
+        # member_ptr has both a declaration and a valueLocation
+        self.assertIn("declarationLocationReference", locals["member_ptr"].keys())
+        self.assertIn("valueLocationReference", locals["member_ptr"].keys())
+        decl_loc_member_ptr = self.dap_server.request_locations(
+            locals["member_ptr"]["declarationLocationReference"]
+        )
+        self.assertTrue(decl_loc_member_ptr["success"])
+        self.assertTrue(
+            decl_loc_member_ptr["body"]["source"]["path"].endswith("main.cpp")
+        )
+        self.assertEqual(decl_loc_member_ptr["body"]["line"], 13)
+        val_loc_member_ptr = self.dap_server.request_locations(
+            locals["member_ptr"]["valueLocationReference"]
+        )
+        self.assertTrue(val_loc_member_ptr["success"])
+        self.assertTrue(
+            val_loc_member_ptr["body"]["source"]["path"].endswith("main.cpp")
+        )
+        self.assertEqual(val_loc_member_ptr["body"]["line"], 6)
 
         # `evaluate` responses for function pointers also have locations associated
         eval_res = self.dap_server.request_evaluate("greet")
