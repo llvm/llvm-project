@@ -327,7 +327,8 @@ private:
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump(CodePtr PC = {}) const;
+  void dump() const { dump({}); }
+  void dump(CodePtr PC) const;
   void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 

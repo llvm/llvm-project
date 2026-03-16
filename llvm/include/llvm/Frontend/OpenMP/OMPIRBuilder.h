@@ -3337,7 +3337,7 @@ public:
   /// The `omp target` interface
   ///
   /// For more information about the usage of this interface,
-  /// \see offload/deviceRTLs/common/include/target.h
+  /// \see openmp/device/include/Interface.h
   ///
   ///{
 

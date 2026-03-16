@@ -34,6 +34,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <cinttypes>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -531,6 +532,42 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
       instance.u);
 }
 
+std::pair<std::optional<int64_t>, Reason> GetArgumentValueWithReason(
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
+    unsigned version) {
+  if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
+    if (auto *expr{parser::Unwrap<parser::Expr>(clause->u)}) {
+      if (auto value{GetIntValue(*expr)}) {
+        std::string name{GetUpperName(clauseId, version)};
+        Reason reason;
+        reason.Say(clause->source,
+            "%s clause was specified with argument %" PRId64 ""_because_en_US,
+            name.c_str(), *value);
+        return {*value, std::move(reason)};
+      }
+    }
+  }
+  return {std::nullopt, Reason()};
+}
+
+std::pair<std::optional<int64_t>, Reason> GetNumArgumentsWithReason(
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Clause clauseId,
+    unsigned version) {
+  if (auto *clause{parser::omp::FindClause(spec, clauseId)}) {
+    using ArgumentList = std::list<parser::ScalarIntExpr>;
+    if (auto *args{parser::Unwrap<ArgumentList>(clause->u)}) {
+      std::string name{GetUpperName(clauseId, version)};
+      auto num{static_cast<int64_t>(args->size())};
+      Reason reason;
+      reason.Say(clause->source,
+          "%s clause was specified with %" PRId64 " arguments"_because_en_US,
+          name.c_str(), num);
+      return {num, std::move(reason)};
+    }
+  }
+  return {std::nullopt, Reason()};
+}
+
 bool IsLoopTransforming(llvm::omp::Directive dir) {
   switch (dir) {
   // TODO case llvm::omp::Directive::OMPD_flatten:
@@ -723,9 +760,133 @@ bool IsTransformableLoop(const parser::ExecutionPartConstruct &epc) {
   return false;
 }
 
-LoopSequence::LoopSequence(
-    const parser::ExecutionPartConstruct &root, bool allowAllLoops)
-    : allowAllLoops_(allowAllLoops) {
+// Return the depth of the affected nests:
+//   {affected-depth, must-be-perfect-nest}.
+std::tuple<std::optional<int64_t>, bool, Reason> GetAffectedNestDepthWithReason(
+    const parser::OpenMPLoopConstruct &x, unsigned version) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  llvm::omp::Directive dir{beginSpec.DirId()};
+  bool allowsCollapse{llvm::omp::isAllowedClauseForDirective(
+      dir, llvm::omp::Clause::OMPC_collapse, version)};
+  bool allowsOrdered{llvm::omp::isAllowedClauseForDirective(
+      dir, llvm::omp::Clause::OMPC_ordered, version)};
+
+  if (allowsCollapse || allowsOrdered) {
+    auto [count, reason]{GetArgumentValueWithReason(
+        beginSpec, llvm::omp::Clause::OMPC_collapse, version)};
+    auto [vo, ro]{GetArgumentValueWithReason(
+        beginSpec, llvm::omp::Clause::OMPC_ordered, version)};
+    if (vo) {
+      if (!count || *count < *vo) {
+        count = vo;
+        reason = std::move(ro);
+      }
+    }
+    return {count, true, std::move(reason)};
+  }
+
+  if (IsLoopTransforming(dir)) {
+    switch (dir) {
+    case llvm::omp::Directive::OMPD_interchange: {
+      // Get the length of the argument list to PERMUTATION.
+      auto [num, reason]{GetNumArgumentsWithReason(
+          beginSpec, llvm::omp::Clause::OMPC_permutation, version)};
+      return {num, true, std::move(reason)};
+    }
+    case llvm::omp::Directive::OMPD_stripe:
+    case llvm::omp::Directive::OMPD_tile: {
+      // Get the length of the argument list to SIZES.
+      auto [num, reason]{GetNumArgumentsWithReason(
+          beginSpec, llvm::omp::Clause::OMPC_sizes, version)};
+      return {num, true, std::move(reason)};
+      return {std::nullopt, true, Reason()};
+    }
+    case llvm::omp::Directive::OMPD_fuse: {
+      // Get the value from the argument to DEPTH.
+      if (parser::omp::FindClause(beginSpec, llvm::omp::Clause::OMPC_depth)) {
+        auto [count, reason]{GetArgumentValueWithReason(
+            beginSpec, llvm::omp::Clause::OMPC_depth, version)};
+        return {count, true, std::move(reason)};
+      }
+      std::string name{
+          parser::omp::GetUpperName(llvm::omp::Clause::OMPC_depth, version)};
+      Reason reason;
+      reason.Say(beginSpec.source,
+          "%s clause was not specified, a value of 1 was assumed"_because_en_US,
+          name.c_str());
+      return {1, true, std::move(reason)};
+    }
+    case llvm::omp::Directive::OMPD_reverse:
+    case llvm::omp::Directive::OMPD_unroll:
+      return {1, false, Reason()};
+    // TODO: case llvm::omp::Directive::OMPD_flatten:
+    // TODO: case llvm::omp::Directive::OMPD_split:
+    default:
+      break;
+    }
+  }
+
+  return {std::nullopt, false, Reason()};
+}
+
+// Return the range of the affected nests in the sequence:
+//   {first, count, std::move(reason)}.
+std::tuple<std::optional<int64_t>, std::optional<int64_t>, Reason>
+GetAffectedLoopRangeWithReason(
+    const parser::OpenMPLoopConstruct &x, unsigned version) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  llvm::omp::Directive dir{beginSpec.DirId()};
+
+  if (dir == llvm::omp::Directive::OMPD_fuse) {
+    std::string name{GetUpperName(llvm::omp::Clause::OMPC_looprange, version)};
+    if (auto *clause{parser::omp::FindClause(
+            beginSpec, llvm::omp::Clause::OMPC_looprange)}) {
+      auto &range{DEREF(parser::Unwrap<parser::OmpLooprangeClause>(clause->u))};
+      std::optional<int64_t> first{GetIntValue(std::get<0>(range.t))};
+      std::optional<int64_t> count{GetIntValue(std::get<1>(range.t))};
+      if (!first || !count || *first <= 0 || *count <= 0) {
+        return {std::nullopt, std::nullopt, Reason()};
+      }
+      std::string name{parser::omp::GetUpperName(
+          llvm::omp::Clause::OMPC_looprange, version)};
+      Reason reason;
+      reason.Say(clause->source,
+          "%s clause was specified with a count of %" PRId64
+          " starting at loop %" PRId64 ""_because_en_US,
+          name.c_str(), *count, *first);
+      return {*first, *count, std::move(reason)};
+    }
+    // If LOOPRANGE was not found, return {1, -1}, where -1 means "the whole
+    // associated sequence".
+    Reason reason;
+    reason.Say(x.source,
+        "%s clause was not specified, a value of 1 was assumed"_because_en_US,
+        name.c_str());
+    return {1, -1, std::move(reason)};
+  }
+
+  assert(llvm::omp::getDirectiveAssociation(dir) ==
+          llvm::omp::Association::LoopNest &&
+      "Expecting loop-nest-associated construct");
+  // For loop-nest constructs, a single loop-nest is affected.
+  return {1, 1, Reason()};
+}
+
+std::optional<int64_t> GetRequiredCount(
+    std::optional<int64_t> first, std::optional<int64_t> count) {
+  if (first && count && *first > 0) {
+    if (*count > 0) {
+      return *first + *count - 1;
+    } else if (*count == -1) {
+      return -1;
+    }
+  }
+  return std::nullopt;
+}
+
+LoopSequence::LoopSequence(const parser::ExecutionPartConstruct &root,
+    unsigned version, bool allowAllLoops)
+    : version_(version), allowAllLoops_(allowAllLoops) {
   entry_ = createConstructEntry(root);
   assert(entry_ && "Expecting loop like code");
 
@@ -733,8 +894,10 @@ LoopSequence::LoopSequence(
   precalculate();
 }
 
-LoopSequence::LoopSequence(std::unique_ptr<Construct> entry, bool allowAllLoops)
-    : allowAllLoops_(allowAllLoops), entry_(std::move(entry)) {
+LoopSequence::LoopSequence(
+    std::unique_ptr<Construct> entry, unsigned version, bool allowAllLoops)
+    : version_(version), allowAllLoops_(allowAllLoops),
+      entry_(std::move(entry)) {
   createChildrenFromRange(entry_->location);
   precalculate();
 }
@@ -764,7 +927,8 @@ void LoopSequence::createChildrenFromRange(
   // case any code between consecutive children must be "transparent".
   for (auto &code : BlockRange(begin, end, BlockRange::Step::Over)) {
     if (auto entry{createConstructEntry(code)}) {
-      children_.push_back(LoopSequence(std::move(entry), allowAllLoops_));
+      children_.push_back(
+          LoopSequence(std::move(entry), version_, allowAllLoops_));
       if (!IsTransformableLoop(code)) {
         hasInvalidIC_ = true;
         hasOpaqueIC_ = true;
@@ -903,10 +1067,21 @@ LoopSequence::Depth LoopSequence::calculateDepths() const {
   case llvm::omp::Directive::OMPD_fuse:
     if (auto *clause{parser::omp::FindClause(
             beginSpec, llvm::omp::Clause::OMPC_depth)}) {
-      // FIXME: all loops must be fused for this
       auto &expr{parser::UnwrapRef<parser::Expr>(clause->u)};
       auto value{GetIntValue(expr)};
-      return Depth{value, value};
+      auto nestedLength{getNestedLength()};
+      // The result is a perfect nest only if all loop in the sequence
+      // are fused.
+      if (value && nestedLength) {
+        auto [first, count, _]{GetAffectedLoopRangeWithReason(omp, version_)};
+        if (auto required{GetRequiredCount(first, count)}) {
+          if (*required == -1 || *required == *nestedLength) {
+            return Depth{value, value};
+          }
+          return Depth{1, 1};
+        }
+      }
+      return Depth{std::nullopt, std::nullopt};
     }
     return Depth{1, 1};
   case llvm::omp::Directive::OMPD_interchange:
