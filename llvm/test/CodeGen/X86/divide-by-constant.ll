@@ -305,21 +305,26 @@ define i64 @PR23590(i64 %x) nounwind {
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    andl $134217727, %eax # imm = 0x7FFFFFF
+; X86-NEXT:    andl $1073741823, %eax # imm = 0x3FFFFFFF
 ; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrdl $27, %ecx, %edx
-; X86-NEXT:    andl $134217727, %edx # imm = 0x7FFFFFF
+; X86-NEXT:    shrdl $30, %ecx, %edx
+; X86-NEXT:    andl $1073741823, %edx # imm = 0x3FFFFFFF
 ; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    shrl $22, %edi
+; X86-NEXT:    shrl $28, %edi
 ; X86-NEXT:    addl %eax, %edi
 ; X86-NEXT:    addl %edx, %edi
 ; X86-NEXT:    movl $613566757, %edx # imm = 0x24924925
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %edx
-; X86-NEXT:    leal (,%edx,8), %eax
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    addl %edi, %edx
-; X86-NEXT:    subl %edx, %esi
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    leal (,%eax,8), %edx
+; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    addl %edi, %eax
+; X86-NEXT:    subl %eax, %esi
 ; X86-NEXT:    sbbl $0, %ecx
 ; X86-NEXT:    movl $-1227133513, %edx # imm = 0xB6DB6DB7
 ; X86-NEXT:    movl %esi, %eax

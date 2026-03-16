@@ -79,10 +79,10 @@ define iXLen2 @test_urem_5(iXLen2 %x) nounwind {
 define iXLen2 @test_urem_7(iXLen2 %x) nounwind {
 ; RV32-LABEL: test_urem_7:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 32768
-; RV32-NEXT:    slli a3, a1, 5
-; RV32-NEXT:    srli a4, a0, 27
-; RV32-NEXT:    srli a1, a1, 22
+; RV32-NEXT:    lui a2, 262144
+; RV32-NEXT:    slli a3, a1, 2
+; RV32-NEXT:    srli a4, a0, 30
+; RV32-NEXT:    srli a1, a1, 28
 ; RV32-NEXT:    or a3, a4, a3
 ; RV32-NEXT:    lui a4, 149797
 ; RV32-NEXT:    addi a2, a2, -1
@@ -92,6 +92,10 @@ define iXLen2 @test_urem_7(iXLen2 %x) nounwind {
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    addi a1, a4, -1755
 ; RV32-NEXT:    mulhu a1, a0, a1
+; RV32-NEXT:    sub a2, a0, a1
+; RV32-NEXT:    srli a2, a2, 1
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:    slli a2, a1, 3
 ; RV32-NEXT:    sub a1, a1, a2
 ; RV32-NEXT:    add a0, a0, a1
@@ -126,19 +130,20 @@ define iXLen2 @test_urem_7(iXLen2 %x) nounwind {
 define iXLen2 @test_urem_9(iXLen2 %x) nounwind {
 ; RV32-LABEL: test_urem_9:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 4096
-; RV32-NEXT:    slli a3, a1, 8
-; RV32-NEXT:    srli a4, a0, 24
-; RV32-NEXT:    srli a1, a1, 16
+; RV32-NEXT:    lui a2, 262144
+; RV32-NEXT:    slli a3, a1, 2
+; RV32-NEXT:    srli a4, a0, 30
+; RV32-NEXT:    srli a1, a1, 28
 ; RV32-NEXT:    or a3, a4, a3
-; RV32-NEXT:    lui a4, 116508
+; RV32-NEXT:    lui a4, 233017
 ; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    and a2, a3, a2
 ; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    addi a1, a4, 1821
+; RV32-NEXT:    addi a1, a4, -455
 ; RV32-NEXT:    mulhu a1, a0, a1
+; RV32-NEXT:    srli a1, a1, 1
 ; RV32-NEXT:    slli a2, a1, 3
 ; RV32-NEXT:    add a1, a2, a1
 ; RV32-NEXT:    sub a0, a0, a1
