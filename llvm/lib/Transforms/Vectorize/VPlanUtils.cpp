@@ -652,28 +652,31 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPValue *CanIV,
 
   // If CanIV is a region value, also try to find the increment via the
   // terminator of the exiting block.
-  if (auto *RegionV = dyn_cast<VPRegionValue>(CanIV)) {
-    auto *Region = RegionV->getDefiningRegion();
-    auto *ExitingLatch = cast<VPBasicBlock>(Region->getExiting());
-    auto *ExitingTerm = ExitingLatch->getTerminator();
-    VPInstruction *CanIVInc = nullptr;
-    if (match(ExitingTerm,
-              m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue())) &&
-        match(CanIVInc,
-              m_c_Add(m_Specific(CanIV),
-                      m_Specific(&Region->getPlan()->getVectorTripCount()))))
-      return CanIVInc;
+  auto *RegionV = dyn_cast<VPRegionValue>(CanIV);
+  if (!RegionV)
+    return nullptr;
 
-    VPValue *Cond = nullptr;
-    if (match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
-        match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),
-                                   m_VPValue())) &&
-        match(CanIVInc,
-              m_c_Add(m_CombineOr(m_Specific(CanIV),
-                                  m_c_Add(m_Specific(CanIV), m_LiveIn())),
-                      m_VPValue())))
-      return CanIVInc;
-  }
+  auto *Region = RegionV->getDefiningRegion();
+  auto *ExitingLatch = cast<VPBasicBlock>(Region->getExiting());
+  auto *ExitingTerm = ExitingLatch->getTerminator();
+  VPInstruction *CanIVInc = nullptr;
+  if (match(ExitingTerm,
+            m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue())) &&
+      match(CanIVInc,
+            m_c_Add(m_Specific(CanIV),
+                    m_Specific(&Region->getPlan()->getVectorTripCount()))))
+    return CanIVInc;
+
+  VPValue *Cond = nullptr;
+  if (match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
+      match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),
+                                 m_VPValue())) &&
+      match(CanIVInc,
+            m_c_Add(m_CombineOr(m_Specific(CanIV),
+                                m_c_Add(m_Specific(CanIV), m_LiveIn())),
+                    m_VPValue())))
+    return CanIVInc;
+
   return nullptr;
 }
 

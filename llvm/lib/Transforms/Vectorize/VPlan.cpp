@@ -749,12 +749,11 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
+  VPRegionValue *CanIV = getCanonicalIV();
   VPRegionBlock *NewRegion =
-      isReplicator()
-          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
-          : Plan.createLoopRegion(getCanonicalIVType(),
-                                  getCanonicalIVDebugLoc(), getName(), NewEntry,
-                                  NewExiting);
+      CanIV ? Plan.createLoopRegion(CanIV->getType(), CanIV->getDebugLoc(),
+                                    getName(), NewEntry, NewExiting)
+            : Plan.createReplicateRegion(NewEntry, NewExiting, getName());
 
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
@@ -1430,9 +1429,9 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
 
 #endif
 
-/// Returns true if there is a vector loop region and \p VPV is defined in a
-/// loop region.
-static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
+/// Returns true if \p VPV is defined in a loop region or if there are no vector
+/// loop regions.
+static bool isDefinedInsideLoopRegion(const VPValue *VPV) {
   if (isa<VPRegionValue>(VPV))
     return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
@@ -1441,7 +1440,7 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {
-  return !isDefinedInsideLoopRegions(this);
+  return !isDefinedInsideLoopRegion(this);
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });

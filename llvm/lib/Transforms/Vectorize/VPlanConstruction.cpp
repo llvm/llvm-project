@@ -430,12 +430,18 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // Get type info and debug location from the scalar phi corresponding to the
-  // canonical IV of the outermost (to be vectorized) loop.
+  // canonical IV of the outermost (to be vectorized) loop. Only the outermost
+  // header will have a canonical IV. Use its type for the canonical IVs for all
+  // regions.
   auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
   auto *ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
-  Type *CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
-  DebugLoc DL = ScalarCanIV->getDebugLoc();
+  Type *CanIVTy =
+      OutermostHeaderVPBB == HeaderVPB
+          ? ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType()
+          : nullptr;
+  DebugLoc DL = OutermostHeaderVPBB == HeaderVPB ? ScalarCanIV->getDebugLoc()
+                                                 : DebugLoc::getUnknown();
 
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
@@ -447,6 +453,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // the exit blocks, taking care to preserve the original predecessor &
   // successor order of blocks. Set region entry and exiting after both
   // HeaderVPB and LatchVPBB have been disconnected from their
+  // predecessors/successors.
   auto *R = Plan.createLoopRegion(CanIVTy, DL);
 
   // Transfer latch's successors to the region.
@@ -1146,7 +1153,7 @@ static constexpr uint32_t CheckBypassWeights[] = {1, 127};
 /// branch weights.
 static void addBypassBranch(VPlan &Plan, VPBasicBlock *CheckBlockVPBB,
                             VPValue *Cond, bool AddBranchWeights) {
-  DebugLoc DL = Plan.getVectorLoopRegion()->getCanonicalIVDebugLoc();
+  DebugLoc DL = Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc();
   auto *Term = VPBuilder(CheckBlockVPBB)
                    .createNaryOp(VPInstruction::BranchOnCond, {Cond}, DL);
   if (AddBranchWeights) {

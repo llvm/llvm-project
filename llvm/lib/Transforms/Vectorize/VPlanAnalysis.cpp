@@ -25,6 +25,13 @@ using namespace VPlanPatternMatch;
 #define DEBUG_TYPE "vplan"
 
 VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
+  if (auto LoopRegion = Plan.getVectorLoopRegion()) {
+    CanonicalIVTy = LoopRegion->getCanonicalIVType();
+    return;
+  }
+
+  // If there's no canonical IV, retrieve the type from the trip count
+  // expression.
   auto *TC = Plan.getTripCount();
   if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
     CanonicalIVTy = TCIRV->getType();
@@ -447,24 +454,21 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
-        auto *DefR = U->getDefiningRecipe();
-
-        // Ignore VPRegionValues and VPSymbolicValues, record invariant
-        // VPIRValues wrapping IR instructions, but skipping other values, like
-        // constants and arguments.
-        // FIXME: Might need some motivation why these values are ignored. If
-        // for example an argument is used inside the loop it will increase the
-        // register pressure (so shouldn't we add it to LoopInvariants).
-        if (!DefR) {
-          auto *IRV = dyn_cast<VPIRValue>(U);
-          if (IRV && isa<Instruction>(IRV->getValue()))
-            LoopInvariants.insert(U);
-          continue;
+        if (auto *DefR = U->getDefiningRecipe()) {
+          // Overwrite previous end points.
+          EndPoint[U] = Idx2Recipe.size();
+          Ends.insert(U);
+        } else if (auto *IRV = dyn_cast<VPIRValue>(U)) {
+          // Ignore non-recipe values such as arguments, constants, etc.
+          // FIXME: Might need some motivation why these values are ignored. If
+          // for example an argument is used inside the loop it will increase
+          // the register pressure (so shouldn't we add it to LoopInvariants).
+          if (!isa<Instruction>(IRV->getValue()))
+            continue;
+          // This recipe is outside the loop, record it and continue.
+          LoopInvariants.insert(U);
         }
-
-        // Overwrite previous end points.
-        EndPoint[U] = Idx2Recipe.size();
-        Ends.insert(U);
+        // Other types of VPValue are currently not tracked.
       }
     }
     if (VPBB == LoopRegion->getExiting()) {
