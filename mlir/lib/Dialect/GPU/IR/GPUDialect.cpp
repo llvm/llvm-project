@@ -1357,8 +1357,8 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << "' is undefined";
 
   // Check that `launch_func` refers to a well-formed kernel function.
-  Operation *kernelFunc =
-      symbolTable.lookupNearestSymbolFrom(module, launchOp.getKernelAttr());
+  Operation *kernelFunc = symbolTable.lookupNearestSymbolFrom(
+      kernelModule, launchOp.getKernelName());
   if (!kernelFunc)
     return launchOp.emitOpError("kernel function '")
            << launchOp.getKernel() << "' is undefined";
@@ -1390,7 +1390,7 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << actualNumArguments << " kernel operands but expected "
            << expectedNumArguments;
 
-  auto functionType = kernelGPUFunction.getFunctionType();
+  FunctionType functionType = kernelGPUFunction.getFunctionType();
   for (unsigned i = 0; i < expectedNumArguments; ++i) {
     if (launchOp.getKernelOperand(i).getType() != functionType.getInput(i)) {
       return launchOp.emitOpError("type of function argument ")
