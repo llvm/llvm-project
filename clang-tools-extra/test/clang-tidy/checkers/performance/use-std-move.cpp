@@ -289,6 +289,21 @@ void NonConvertibleNonTrivialMoveAssignInLoop(NonTrivialMoveAssign& target, NonT
     target = source;
 }
 
+// Check moving incomplete definition
+// ----------------------------------
+
+struct fwd_cls;
+struct fwd_cls {
+  void ConvertibleNonTrivialMoveAssignReferecingForwardDecl(fwd_cls src) {
+    // CHECK-MESSAGES: [[@LINE+2]]:13: warning: 'src' could be moved here [performance-use-std-move]
+    // CHECK-FIXES: *this = std::move(src);
+    *this = src;
+  }
+  fwd_cls &operator=(const fwd_cls &C);
+  fwd_cls &operator=(fwd_cls &&);
+};
+
+
 // Check moving for invalid / non profitable type or operation
 // -----------------------------------------------------------
 

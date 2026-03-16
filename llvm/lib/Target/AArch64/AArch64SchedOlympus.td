@@ -2407,7 +2407,7 @@ def : InstRW<[OlympusWrite_2c_1V], (instrs BIC_ZZZ)>;
 // BSL1N
 def : InstRW<[OlympusWrite_2c_1V], (instrs BSL1N_ZZZZ)>;
 // BSL2N
-def : InstRW<[OlympusWrite_2c_1V], (instrs BSL2N_ZZZZ)>;
+def : InstRW<[OlympusWrite_2c_1V], (instrs BSL2N_ZZZZ, EON_ZZZ)>;
 // BSL
 def : InstRW<[OlympusWrite_2c_1V], (instrs BSL_ZZZZ)>;
 // CLS
@@ -2486,7 +2486,7 @@ def : InstRW<[OlympusWrite_2c_1V], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]")>;
 // MOVPRFX (unpredicated)
 def : InstRW<[OlympusWrite_2c_1V], (instrs MOVPRFX_ZZ)>;
 // NBSL
-def : InstRW<[OlympusWrite_2c_1V], (instrs NBSL_ZZZZ)>;
+def : InstRW<[OlympusWrite_2c_1V], (instrs NBSL_ZZZZ, NAND_ZZZ, NOR_ZZZ)>;
 // NEG
 def : InstRW<[OlympusWrite_2c_1V], (instregex "^NEG_ZPmZ_[BHSD]")>;
 // NOT (vector)

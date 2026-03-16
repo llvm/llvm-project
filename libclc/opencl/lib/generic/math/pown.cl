@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clc/math/clc_pown.h"
+#include <clc/math/clc_pown.h>
 
 #define __CLC_FUNCTION pown
-#define __CLC_BODY "clc/shared/binary_def_with_int_second_arg.inc"
-#include "clc/math/gentype.inc"
+#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
+#include <clc/math/gentype.inc>

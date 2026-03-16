@@ -7,6 +7,12 @@ entry:
   ret void
 }
 
+; CHECK: error: invalid operand in inline asm: '#TEST $0'
+define void @test_p_no_modifier(ptr %p) {
+  call void asm sideeffect "#TEST $0", "p,~{dirflag},~{fpsr},~{flags}"(ptr %p)
+  ret void
+}
+
 ; CHECK: error: invalid operand in inline asm: '#TEST ${0:a}'
 define void @test_a_m(ptr %p) {
   call void asm sideeffect "#TEST ${0:a}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %p)

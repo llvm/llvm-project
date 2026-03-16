@@ -231,9 +231,12 @@ public:
     return createLoad(loc, ptr, /*isVolatile=*/false, alignment);
   }
 
+  mlir::Value createNot(mlir::Location loc, mlir::Value value) {
+    return cir::NotOp::create(*this, loc, value);
+  }
+
   mlir::Value createNot(mlir::Value value) {
-    return cir::UnaryOp::create(*this, value.getLoc(), value.getType(),
-                                cir::UnaryOpKind::Not, value);
+    return createNot(value.getLoc(), value);
   }
 
   /// Create a do-while operation.
@@ -272,9 +275,19 @@ public:
     return cir::ContinueOp::create(*this, loc);
   }
 
-  mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
-                            mlir::Value operand) {
-    return cir::UnaryOp::create(*this, loc, kind, operand);
+  mlir::Value createInc(mlir::Location loc, mlir::Value input,
+                        bool nsw = false) {
+    return cir::IncOp::create(*this, loc, input, nsw);
+  }
+
+  mlir::Value createDec(mlir::Location loc, mlir::Value input,
+                        bool nsw = false) {
+    return cir::DecOp::create(*this, loc, input, nsw);
+  }
+
+  mlir::Value createMinus(mlir::Location loc, mlir::Value input,
+                          bool nsw = false) {
+    return cir::MinusOp::create(*this, loc, input, nsw);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -518,6 +531,11 @@ public:
   mlir::Value createPtrIsNull(mlir::Value ptr) {
     mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
     return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
+  }
+
+  mlir::Value createPtrIsNotNull(mlir::Value ptr) {
+    mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
+    return createCompare(ptr.getLoc(), cir::CmpOpKind::ne, ptr, nullPtr);
   }
 
   mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,
