@@ -367,7 +367,7 @@ void VerifyPCHAction::ExecuteAction() {
       /*AllowConfigurationMismatch*/ true,
       /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
-  Reader->ReadAST(ModuleFileName::make_explicit(getCurrentFile()),
+  Reader->ReadAST(ModuleFileName::makeExplicit(getCurrentFile()),
                   Preamble ? serialization::MK_Preamble : serialization::MK_PCH,
                   SourceLocation(), ASTReader::ARR_ConfigurationMismatch);
 }

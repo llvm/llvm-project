@@ -275,7 +275,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   // listener.
   Reader.setListener(nullptr);
 
-  if (Reader.ReadAST(ModuleFileName::make_explicit(ModuleFilePath),
+  if (Reader.ReadAST(ModuleFileName::makeExplicit(ModuleFilePath),
                      serialization::MK_MainFile, SourceLocation(),
                      ASTReader::ARR_None) != ASTReader::Success)
     return false;

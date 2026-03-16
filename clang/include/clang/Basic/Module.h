@@ -105,26 +105,26 @@ public:
 /// other types of module files, this is just the file system path.
 class ModuleFileName {
   std::string Path;
-  std::optional<uint32_t> Separator;
+  std::optional<unsigned> Separator;
 
 public:
   /// Creates an empty module file name.
   ModuleFileName() = default;
 
   /// Creates a file name for an explicit module.
-  static ModuleFileName make_explicit(std::string Name) {
+  static ModuleFileName makeExplicit(std::string Name) {
     ModuleFileName File;
     File.Path = std::move(Name);
     return File;
   }
 
   /// Creates a file name for an explicit module.
-  static ModuleFileName make_explicit(StringRef Name) {
-    return make_explicit(Name.str());
+  static ModuleFileName makeExplicit(StringRef Name) {
+    return makeExplicit(Name.str());
   }
 
   /// Creates a file name for an implicit module.
-  static ModuleFileName make_implicit(std::string Name, uint32_t Separator) {
+  static ModuleFileName makeImplicit(std::string Name, unsigned Separator) {
     ModuleFileName File;
     File.Path = std::move(Name);
     File.Separator = Separator;
@@ -132,8 +132,8 @@ public:
   }
 
   /// Creates a file name for an implicit module.
-  static ModuleFileName make_implicit(StringRef Name, uint32_t Separator) {
-    return make_implicit(Name.str(), Separator);
+  static ModuleFileName makeImplicit(StringRef Name, unsigned Separator) {
+    return makeImplicit(Name.str(), Separator);
   }
 
   /// Returns the plain module file name.

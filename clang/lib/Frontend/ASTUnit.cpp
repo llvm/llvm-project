@@ -835,7 +835,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->HSOpts->ForceCheckCXX20ModulesInputFiles =
       HSOpts.ForceCheckCXX20ModulesInputFiles;
 
-  switch (AST->Reader->ReadAST(ModuleFileName::make_explicit(Filename),
+  switch (AST->Reader->ReadAST(ModuleFileName::makeExplicit(Filename),
                                serialization::MK_MainFile, SourceLocation(),
                                ASTReader::ARR_None)) {
   case ASTReader::Success:

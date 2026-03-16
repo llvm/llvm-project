@@ -659,7 +659,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   ASTReader::ListenerScope ReadModuleNamesListener(*Reader,
                                                    std::move(Listener));
 
-  switch (Reader->ReadAST(ModuleFileName::make_explicit(Path),
+  switch (Reader->ReadAST(ModuleFileName::makeExplicit(Path),
                           Preamble ? serialization::MK_Preamble
                                    : serialization::MK_PCH,
                           SourceLocation(), ASTReader::ARR_None)) {
@@ -1783,7 +1783,7 @@ static ModuleSource selectModuleSource(
   // via a module build pragma.
   auto BuiltModuleIt = BuiltModules.find(ModuleName);
   if (BuiltModuleIt != BuiltModules.end()) {
-    ModuleFilename = ModuleFileName::make_explicit(BuiltModuleIt->second);
+    ModuleFilename = ModuleFileName::makeExplicit(BuiltModuleIt->second);
     return MS_ModuleBuildPragma;
   }
 

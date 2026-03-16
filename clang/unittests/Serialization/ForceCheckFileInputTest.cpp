@@ -138,7 +138,7 @@ export int aa = 44;
   )cpp");
 
     auto ReadResult = Clang.getASTReader()->ReadAST(
-        ModuleFileName::make_explicit(BMIPath), serialization::MK_MainFile,
+        ModuleFileName::makeExplicit(BMIPath), serialization::MK_MainFile,
         SourceLocation(), ASTReader::ARR_None);
 
     // We shall be able to detect the content change here.

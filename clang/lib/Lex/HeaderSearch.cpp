@@ -212,7 +212,7 @@ ModuleFileName HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
   // First check the module name to pcm file map.
   auto i(HSOpts.PrebuiltModuleFiles.find(ModuleName));
   if (i != HSOpts.PrebuiltModuleFiles.end())
-    return ModuleFileName::make_explicit(i->second);
+    return ModuleFileName::makeExplicit(i->second);
 
   if (FileMapOnly || HSOpts.PrebuiltModulePaths.empty())
     return {};
@@ -232,7 +232,7 @@ ModuleFileName HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
     else
       llvm::sys::path::append(Result, ModuleName + ".pcm");
     if (getFileMgr().getOptionalFileRef(Result))
-      return ModuleFileName::make_explicit(Result);
+      return ModuleFileName::makeExplicit(Result);
   }
 
   return {};
@@ -249,7 +249,7 @@ ModuleFileName HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
     ModuleFileName FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
     if (!FileName.empty() && getFileMgr().getOptionalFileRef(FileName))
-      return ModuleFileName::make_explicit(FileName);
+      return ModuleFileName::makeExplicit(FileName);
   }
   return {};
 }
@@ -295,7 +295,7 @@ ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
     llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);
     llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
   }
-  return ModuleFileName::make_implicit(Result, Separator);
+  return ModuleFileName::makeImplicit(Result, Separator);
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName,

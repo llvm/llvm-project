@@ -1288,7 +1288,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles) {
     serialization::ModuleFile *Loaded = nullptr;
-    if (!CI.loadModuleFile(ModuleFileName::make_explicit(ModuleFile), Loaded))
+    if (!CI.loadModuleFile(ModuleFileName::makeExplicit(ModuleFile), Loaded))
       return false;
 
     if (Loaded && Loaded->StandardCXXModule)
