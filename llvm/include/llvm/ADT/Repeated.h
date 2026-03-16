@@ -16,10 +16,8 @@
 
 #include "llvm/ADT/iterator.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -75,9 +73,9 @@ public:
 /// `Repeated<T>` is also a proper random-access range: `begin()`/`end()`
 /// return iterators that always dereference to the same stored value.
 template <typename T> struct [[nodiscard]] Repeated {
-  /// Wrapper for the stored value, meant to be suitable for use as a
-  /// PointerUnion target in range types (e.g., TypeRange, ValueRange).
-  struct alignas(std::max(alignof(void *), alignof(T))) Storage {
+  /// Wrapper for the stored value used as a PointerUnion target in range
+  /// types (e.g., TypeRange, ValueRange).
+  struct Storage {
     T value;
   };
 
@@ -86,8 +84,7 @@ template <typename T> struct [[nodiscard]] Repeated {
 
   /// Create a `value` repeated `count` times.
   /// Uses the same argument order like STD container constructors.
-  template <typename U,
-            typename = std::enable_if_t<std::is_constructible_v<T, U &&>>>
+  template <typename U>
   Repeated(size_t count, U &&value)
       : storage{std::forward<U>(value)}, count(count) {}
 
