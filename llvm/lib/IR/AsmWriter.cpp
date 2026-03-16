@@ -669,9 +669,6 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     return;
   case Type::X86_AMXTyID:   OS << "x86_amx"; return;
   case Type::TokenTyID:     OS << "token"; return;
-  case Type::ByteTyID:
-    OS << 'b' << Ty->getByteBitWidth();
-    return;
   case Type::IntegerTyID:
     OS << 'i' << cast<IntegerType>(Ty)->getBitWidth();
     return;
@@ -1651,23 +1648,6 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (const auto *CB = dyn_cast<ConstantByte>(CV)) {
-    Type *Ty = CB->getType();
-
-    if (Ty->isVectorTy()) {
-      Out << "splat (";
-      WriterCtx.TypePrinter->print(Ty->getScalarType(), Out);
-      Out << " ";
-    }
-
-    Out << CB->getValue();
-
-    if (Ty->isVectorTy())
-      Out << ")";
-
-    return;
-  }
-
   if (const auto *CFP = dyn_cast<ConstantFP>(CV)) {
     Type *Ty = CFP->getType();
 
@@ -1793,8 +1773,7 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
     // options are removed.
     if (auto *SplatVal = CV->getSplatValue()) {
-      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal) ||
-          isa<ConstantByte>(SplatVal)) {
+      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
         Out << "splat (";
         writeAsOperandInternal(Out, SplatVal, WriterCtx, /*PrintType=*/true);
         Out << ')';
@@ -1841,8 +1820,7 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
     // options are removed.
     if (CE->getOpcode() == Instruction::ShuffleVector) {
       if (auto *SplatVal = CE->getSplatValue()) {
-        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal) ||
-            isa<ConstantByte>(SplatVal)) {
+        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
           Out << "splat (";
           writeAsOperandInternal(Out, SplatVal, WriterCtx, /*PrintType=*/true);
           Out << ')';

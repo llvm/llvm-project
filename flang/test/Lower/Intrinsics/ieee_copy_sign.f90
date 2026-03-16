@@ -1,32 +1,35 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK-LABEL: func @_QQmain
+! CHECK-LABEL: func.func @_QQmain()
 use ieee_arithmetic
 real(4) :: x = -2.0, y = huge(y)
 real(8) :: z = 2.0
 
-! CHECK-DAG: %[[V_0:[0-9]+]] = fir.address_of(@_QFEx) : !fir.ref<f32>
-! CHECK-DAG: %[[V_1:[0-9]+]] = fir.address_of(@_QFEy) : !fir.ref<f32>
-! CHECK-DAG: %[[V_2:[0-9]+]] = fir.address_of(@_QFEz) : !fir.ref<f64>
+! CHECK-DAG: %[[X_ADDR:.*]] = fir.address_of(@_QFEx) : !fir.ref<f32>
+! CHECK-DAG: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_ADDR]] {uniq_name = "_QFEx"}
+! CHECK-DAG: %[[Y_ADDR:.*]] = fir.address_of(@_QFEy) : !fir.ref<f32>
+! CHECK-DAG: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_ADDR]] {uniq_name = "_QFEy"}
+! CHECK-DAG: %[[Z_ADDR:.*]] = fir.address_of(@_QFEz) : !fir.ref<f64>
+! CHECK-DAG: %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z_ADDR]] {uniq_name = "_QFEz"}
 
-! CHECK-DAG: %[[V_6:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<f32>
-! CHECK-DAG: %[[V_7:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<f32>
-! CHECK:     %[[V_8:[0-9]+]] = math.copysign %[[V_6]], %[[V_7]] fastmath<contract> : f32
-! CHECK:     %[[V_9:[0-9]+]] = fir.call @_FortranAioOutputReal32(%{{.*}}, %[[V_8]]) fastmath<contract> : (!fir.ref<i8>, f32) -> i1
+! CHECK-DAG: %[[X_VAL:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<f32>
+! CHECK-DAG: %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f32>
+! CHECK:     %[[CS1:.*]] = math.copysign %[[X_VAL]], %[[Y_VAL]] fastmath<contract> : f32
+! CHECK:     fir.call @_FortranAioOutputReal32({{.*}}, %[[CS1]])
 
-! CHECK-DAG: %[[V_10:[0-9]+]] = fir.load %[[V_2]] : !fir.ref<f64>
-! CHECK-DAG: %[[V_11:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<f32>
-! CHECK:     %[[V_12:[0-9]+]] = arith.bitcast %[[V_10]] : f64 to i64
-! CHECK:     %[[V_13:[0-9]+]] = arith.bitcast %[[V_11]] : f32 to i32
-! CHECK:     %[[V_14:[0-9]+]] = arith.shrui %[[V_13]], %c31{{.*}} : i32
-! CHECK:     %[[V_15:[0-9]+]] = arith.shli %[[V_12]], %c1{{.*}} : i64
-! CHECK:     %[[V_16:[0-9]+]] = arith.shrui %[[V_15]], %c1{{.*}} : i64
-! CHECK-DAG: %[[V_17:[0-9]+]] = arith.shli %c1{{.*}}, %c63{{.*}} : i64
-! CHECK-DAG: %[[V_18:[0-9]+]] = arith.cmpi eq, %[[V_14]], %c0{{.*}} : i32
-! CHECK:     %[[V_19:[0-9]+]] = arith.select %[[V_18]], %c0{{.*}}, %[[V_17]] : i64
-! CHECK:     %[[V_20:[0-9]+]] = arith.ori %[[V_16]], %[[V_19]] : i64
-! CHECK:     %[[V_21:[0-9]+]] = arith.bitcast %[[V_20]] : i64 to f64
-! CHECK:     %[[V_22:[0-9]+]] = fir.call @_FortranAioOutputReal64(%{{.*}}, %[[V_21]]) fastmath<contract> : (!fir.ref<i8>, f64) -> i1
+! CHECK-DAG: %[[Z_VAL:.*]] = fir.load %[[Z_DECL]]#0 : !fir.ref<f64>
+! CHECK-DAG: %[[Y_VAL2:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f32>
+! CHECK:     %[[BIT_Z:.*]] = arith.bitcast %[[Z_VAL]] : f64 to i64
+! CHECK:     %[[BIT_Y:.*]] = arith.bitcast %[[Y_VAL2]] : f32 to i32
+! CHECK:     %[[S_Y:.*]] = arith.shrui %[[BIT_Y]], %c31{{.*}} : i32
+! CHECK:     %[[SL_Z:.*]] = arith.shli %[[BIT_Z]], %c1{{.*}} : i64
+! CHECK:     %[[SR_Z:.*]] = arith.shrui %[[SL_Z]], %c1{{.*}} : i64
+! CHECK-DAG: %[[S_BIT:.*]] = arith.shli %c1{{.*}}, %c63{{.*}} : i64
+! CHECK-DAG: %[[IS_P:.*]] = arith.cmpi eq, %[[S_Y]], %c0{{.*}} : i32
+! CHECK:     %[[S_VAL:.*]] = arith.select %[[IS_P]], %c0{{.*}}, %[[S_BIT]] : i64
+! CHECK:     %[[RES_BIT:.*]] = arith.ori %[[SR_Z]], %[[S_VAL]] : i64
+! CHECK:     %[[RES:.*]] = arith.bitcast %[[RES_BIT]] : i64 to f64
+! CHECK:     fir.call @_FortranAioOutputReal64({{.*}}, %[[RES]])
 
 print*, ieee_copy_sign(x,y), ieee_copy_sign(z,y)
 end
